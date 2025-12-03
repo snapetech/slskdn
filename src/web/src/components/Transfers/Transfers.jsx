@@ -1,14 +1,22 @@
 import './Transfers.css';
-import * as transfersLibrary from '../../lib/transfers';
+
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { toast } from 'react-toastify';
+
 import * as autoReplaceLibrary from '../../lib/autoReplace';
+import * as transfersLibrary from '../../lib/transfers';
 import { LoaderSegment, PlaceholderSegment } from '../Shared';
 import TransferGroup from './TransferGroup';
 import TransfersHeader from './TransfersHeader';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'react-toastify';
 
-const AUTO_REPLACE_INTERVAL_MS = 30000; // Check every 30 seconds
-const AUTO_REPLACE_THRESHOLD = 5.0; // 5% size difference threshold
+const AUTO_REPLACE_INTERVAL_MS = 30_000; // Check every 30 seconds
+const AUTO_REPLACE_THRESHOLD = 5; // 5% size difference threshold
 
 const Transfers = ({ direction, server }) => {
   const [connecting, setConnecting] = useState(true);
@@ -19,7 +27,7 @@ const Transfers = ({ direction, server }) => {
   const [removing, setRemoving] = useState(false);
 
   const [autoReplaceEnabled, setAutoReplaceEnabled] = useState(false);
-  const [autoReplaceThreshold] = useState(AUTO_REPLACE_THRESHOLD);
+  const autoReplaceThreshold = AUTO_REPLACE_THRESHOLD;
   const autoReplaceIntervalRef = useRef(null);
 
   const fetch = async () => {
@@ -41,7 +49,7 @@ const Transfers = ({ direction, server }) => {
     };
 
     init();
-    const interval = window.setInterval(fetch, 1_000);
+    const interval = window.setInterval(fetch, 1000);
 
     return () => {
       clearInterval(interval);
@@ -62,16 +70,23 @@ const Transfers = ({ direction, server }) => {
     const { filename, size, username } = file;
 
     try {
-      if (!suppressStateChange) setRetrying(true);
+      if (!suppressStateChange) {
+        setRetrying(true);
+      }
+
       await transfersLibrary.download({
         files: [{ filename, size }],
         username,
       });
-      if (!suppressStateChange) setRetrying(false);
+      if (!suppressStateChange) {
+        setRetrying(false);
+      }
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data ?? error?.message ?? error);
-      if (!suppressStateChange) setRetrying(false);
+      if (!suppressStateChange) {
+        setRetrying(false);
+      }
     }
   };
 
@@ -89,13 +104,20 @@ const Transfers = ({ direction, server }) => {
     const { id, username } = file;
 
     try {
-      if (!suppressStateChange) setCancelling(true);
+      if (!suppressStateChange) {
+        setCancelling(true);
+      }
+
       await transfersLibrary.cancel({ direction, id, username });
-      if (!suppressStateChange) setCancelling(false);
+      if (!suppressStateChange) {
+        setCancelling(false);
+      }
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data ?? error?.message ?? error);
-      if (!suppressStateChange) setCancelling(false);
+      if (!suppressStateChange) {
+        setCancelling(false);
+      }
     }
   };
 
@@ -113,13 +135,20 @@ const Transfers = ({ direction, server }) => {
     const { id, username } = file;
 
     try {
-      if (!suppressStateChange) setRemoving(true);
+      if (!suppressStateChange) {
+        setRemoving(true);
+      }
+
       await transfersLibrary.cancel({ direction, id, remove: true, username });
-      if (!suppressStateChange) setRemoving(false);
+      if (!suppressStateChange) {
+        setRemoving(false);
+      }
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data ?? error?.message ?? error);
-      if (!suppressStateChange) setRemoving(false);
+      if (!suppressStateChange) {
+        setRemoving(false);
+      }
     }
   };
 
@@ -135,13 +164,15 @@ const Transfers = ({ direction, server }) => {
 
   // Auto-replace logic for stuck downloads
   const processAutoReplace = useCallback(async () => {
-    if (!autoReplaceEnabled || direction !== 'download') return;
+    if (!autoReplaceEnabled || direction !== 'download') {
+      return;
+    }
 
     try {
       const result = await autoReplaceLibrary.processStuckDownloads({
         threshold: autoReplaceThreshold,
       });
-      
+
       if (result?.replaced > 0) {
         toast.success(`Auto-replaced ${result.replaced} stuck download(s)`);
       }
@@ -156,19 +187,17 @@ const Transfers = ({ direction, server }) => {
     if (autoReplaceEnabled && direction === 'download') {
       // Run immediately on enable
       processAutoReplace();
-      
+
       // Then run on interval
       autoReplaceIntervalRef.current = window.setInterval(
         processAutoReplace,
         AUTO_REPLACE_INTERVAL_MS,
       );
-      
+
       toast.info('Auto-replace enabled. Checking for stuck downloads...');
-    } else {
-      if (autoReplaceIntervalRef.current) {
-        clearInterval(autoReplaceIntervalRef.current);
-        autoReplaceIntervalRef.current = null;
-      }
+    } else if (autoReplaceIntervalRef.current) {
+      clearInterval(autoReplaceIntervalRef.current);
+      autoReplaceIntervalRef.current = null;
     }
 
     return () => {

@@ -1,5 +1,6 @@
 const urlBase = (window.urlBase === '/' ? '' : window.urlBase) || '';
-const developmentPort = window.port ?? 5_030;
+// eslint-disable-next-line n/no-process-env
+const developmentPort = window.port ?? (process.env.REACT_APP_SLSKD_PORT || 5030);
 const rootUrl =
   // eslint-disable-next-line n/no-process-env
   process.env.NODE_ENV === 'production'

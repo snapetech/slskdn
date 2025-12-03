@@ -61,11 +61,10 @@ const getRemovableFiles = ({ files, removeOption }) => {
 
 const TransfersHeader = ({
   autoReplaceEnabled = false,
-  autoReplaceThreshold = 5.0,
+  autoReplaceThreshold = 5,
   cancelling = false,
   direction,
   onAutoReplaceChange,
-  onAutoReplaceThresholdChange,
   onCancelAll,
   onRemoveAll,
   onRetryAll,
