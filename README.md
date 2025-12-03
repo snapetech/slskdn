@@ -1,3 +1,5 @@
+!! This is a fork of slskd.  This intent of this fork is to (eventually) integrate additional client features to the webui and daemon !!
+
 # slskd
 
 [![Build](https://img.shields.io/github/actions/workflow/status/slskd/slskd/ci.yml?branch=master&logo=github)](https://github.com/slskd/slskd/actions/workflows/ci.yml)
