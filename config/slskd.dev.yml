@@ -1,0 +1,32 @@
+# Development configuration for slskdn
+# DO NOT USE IN PRODUCTION
+
+soulseek:
+  username: slskdn_test_user
+  password: slskdn_test_pass_123
+  listen_port: 50300
+
+web:
+  port: 5030
+  https:
+    disabled: true
+  authentication:
+    api_keys:
+      - key: ${SLSKD_API_KEY}
+        role: administrator
+        description: Development API key
+
+directories:
+  downloads: /tmp/slskdn/downloads
+  incomplete: /tmp/slskdn/incomplete
+
+global:
+  download:
+    auto_replace_stuck: false
+    auto_replace_threshold: 5.0
+    auto_replace_interval: 60
+
+shares: []
+
+debug: true
+
