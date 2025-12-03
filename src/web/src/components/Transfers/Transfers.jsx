@@ -1,10 +1,14 @@
 import './Transfers.css';
 import * as transfersLibrary from '../../lib/transfers';
+import * as autoReplaceLibrary from '../../lib/autoReplace';
 import { LoaderSegment, PlaceholderSegment } from '../Shared';
 import TransferGroup from './TransferGroup';
 import TransfersHeader from './TransfersHeader';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
+
+const AUTO_REPLACE_INTERVAL_MS = 30000; // Check every 30 seconds
+const AUTO_REPLACE_THRESHOLD = 5.0; // 5% size difference threshold
 
 const Transfers = ({ direction, server }) => {
   const [connecting, setConnecting] = useState(true);
@@ -13,6 +17,10 @@ const Transfers = ({ direction, server }) => {
   const [retrying, setRetrying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [removing, setRemoving] = useState(false);
+
+  const [autoReplaceEnabled, setAutoReplaceEnabled] = useState(false);
+  const [autoReplaceThreshold] = useState(AUTO_REPLACE_THRESHOLD);
+  const autoReplaceIntervalRef = useRef(null);
 
   const fetch = async () => {
     try {
@@ -125,6 +133,58 @@ const Transfers = ({ direction, server }) => {
     setRemoving(false);
   };
 
+  // Auto-replace logic for stuck downloads
+  const processAutoReplace = useCallback(async () => {
+    if (!autoReplaceEnabled || direction !== 'download') return;
+
+    try {
+      const result = await autoReplaceLibrary.processStuckDownloads({
+        threshold: autoReplaceThreshold,
+      });
+      
+      if (result?.replaced > 0) {
+        toast.success(`Auto-replaced ${result.replaced} stuck download(s)`);
+      }
+    } catch (error) {
+      console.error('Auto-replace error:', error);
+      // Don't toast on every interval failure, just log it
+    }
+  }, [autoReplaceEnabled, autoReplaceThreshold, direction]);
+
+  // Set up auto-replace interval
+  useEffect(() => {
+    if (autoReplaceEnabled && direction === 'download') {
+      // Run immediately on enable
+      processAutoReplace();
+      
+      // Then run on interval
+      autoReplaceIntervalRef.current = window.setInterval(
+        processAutoReplace,
+        AUTO_REPLACE_INTERVAL_MS,
+      );
+      
+      toast.info('Auto-replace enabled. Checking for stuck downloads...');
+    } else {
+      if (autoReplaceIntervalRef.current) {
+        clearInterval(autoReplaceIntervalRef.current);
+        autoReplaceIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (autoReplaceIntervalRef.current) {
+        clearInterval(autoReplaceIntervalRef.current);
+      }
+    };
+  }, [autoReplaceEnabled, direction, processAutoReplace]);
+
+  const handleAutoReplaceChange = (enabled) => {
+    setAutoReplaceEnabled(enabled);
+    if (!enabled) {
+      toast.info('Auto-replace disabled');
+    }
+  };
+
   if (connecting) {
     return <LoaderSegment />;
   }
@@ -132,8 +192,11 @@ const Transfers = ({ direction, server }) => {
   return (
     <>
       <TransfersHeader
+        autoReplaceEnabled={autoReplaceEnabled}
+        autoReplaceThreshold={autoReplaceThreshold}
         cancelling={cancelling}
         direction={direction}
+        onAutoReplaceChange={handleAutoReplaceChange}
         onCancelAll={cancelAll}
         onRemoveAll={removeAll}
         onRetryAll={retryAll}
