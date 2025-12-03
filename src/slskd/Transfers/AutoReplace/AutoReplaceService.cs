@@ -322,11 +322,13 @@ namespace slskd.Transfers.AutoReplace
                     SearchScope.Network,
                     searchOptions);
 
-                // Poll for search completion with timeout
-                var maxWait = TimeSpan.FromMilliseconds(searchOptions.SearchTimeout + 5000);
-                var pollInterval = TimeSpan.FromMilliseconds(500);
+                // Poll for search completion with timeout - wait up to 30 seconds for search to complete
+                var maxWait = TimeSpan.FromSeconds(30);
+                var pollInterval = TimeSpan.FromMilliseconds(1000);
                 var waited = TimeSpan.Zero;
                 slskd.Search.Search searchWithResponses = null;
+
+                Log.Debug("Waiting for search {Id} to complete (max {MaxWait}s)...", searchId, maxWait.TotalSeconds);
 
                 while (waited < maxWait)
                 {
@@ -334,6 +336,7 @@ namespace slskd.Transfers.AutoReplace
                     waited += pollInterval;
 
                     searchWithResponses = await Searches.FindAsync(s => s.Id == searchId, includeResponses: true);
+
                     if (searchWithResponses?.State.HasFlag(SearchStates.Completed) == true)
                     {
                         Log.Debug("Search {Id} completed after {WaitMs}ms with state: {State}, responses: {ResponseCount}",
@@ -343,6 +346,8 @@ namespace slskd.Transfers.AutoReplace
                             searchWithResponses.Responses?.Count() ?? 0);
                         break;
                     }
+
+                    Log.Debug("Search {Id} still {State} after {WaitMs}ms...", searchId, searchWithResponses?.State, waited.TotalMilliseconds);
                 }
 
                 if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any())
