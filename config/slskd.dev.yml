@@ -1,31 +1,28 @@
 # Development configuration for slskdn
 # DO NOT USE IN PRODUCTION
 #
-# Environment variables can override these settings:
+# Required environment variables:
+#   SLSKD_API_KEY - API key for authentication
+#
+# Optional environment variables (override defaults via CLI or env):
 #   SLSKD_SLSK_USERNAME - Soulseek username
-#   SLSKD_SLSK_PASSWORD - Soulseek password  
-#   SLSKD_HTTP_PORT - Web UI port (default: 5033)
-#   SLSKD_DOWNLOADS_DIR - Downloads directory
-#   SLSKD_INCOMPLETE_DIR - Incomplete downloads directory
+#   SLSKD_SLSK_PASSWORD - Soulseek password
 
 soulseek:
-  username: ${SLSKD_SLSK_USERNAME:-slskdn_dev_user}
-  password: ${SLSKD_SLSK_PASSWORD:-slskdn_dev_pass}
-  listen_port: 50300
+  # Set via: --slsk-username or SLSKD_SLSK_USERNAME env var
+  listen_port: 50333
 
 web:
-  port: ${SLSKD_HTTP_PORT:-5033}
+  port: 5033
   https:
     disabled: true
   authentication:
-    api_keys:
-      - key: ${SLSKD_API_KEY}
-        role: administrator
-        description: Development API key
+    # API key must be set via SLSKD_API_KEY environment variable
+    disabled: false
 
 directories:
-  downloads: ${SLSKD_DOWNLOADS_DIR:-/tmp/slskdn/downloads}
-  incomplete: ${SLSKD_INCOMPLETE_DIR:-/tmp/slskdn/incomplete}
+  downloads: /tmp/slskdn/downloads
+  incomplete: /tmp/slskdn/incomplete
 
 global:
   download:
