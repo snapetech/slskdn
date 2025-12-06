@@ -1,0 +1,95 @@
+name: Upload to COPR
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload to COPR'
+        required: true
+
+jobs:
+  upload-copr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install copr-cli
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install copr-cli
+
+      - name: Configure COPR
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
+            echo "COPR credentials not configured. Skipping."
+            exit 0
+          fi
+          mkdir -p ~/.config
+          cat > ~/.config/copr << EOF
+          [copr-cli]
+          login = ${COPR_LOGIN}
+          username = slskdn
+          token = ${COPR_TOKEN}
+          copr_url = https://copr.fedorainfracloud.org
+          EOF
+
+      - name: Update spec version
+        run: |
+          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
+          sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
+          cat packaging/rpm/slskdn.spec | head -20
+
+      - name: Build SRPM
+        run: |
+          sudo apt-get install -y rpm
+          mkdir -p ~/rpmbuild/{SOURCES,SPECS,SRPMS}
+          
+          # Download source
+          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip
+          
+          # Copy supporting files
+          cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
+          cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
+          
+          # Build SRPM
+          rpmbuild -bs ~/rpmbuild/SPECS/slskdn.spec --define "_topdir $HOME/rpmbuild"
+          
+          SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
+          echo "srpm_path=$SRPM" >> $GITHUB_OUTPUT
+          echo "Built SRPM: $SRPM"
+
+      - name: Upload to COPR
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
+            echo "Skipping COPR upload - credentials not configured"
+            exit 0
+          fi
+          
+          SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
+          echo "Uploading SRPM to COPR: $SRPM"
+          copr-cli build slskdn "$SRPM" --nowait
+
