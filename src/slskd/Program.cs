@@ -666,6 +666,24 @@ namespace slskd
             services.AddSingleton<FileService>();
             services.AddSingleton<Transfers.AutoReplace.IAutoReplaceService, Transfers.AutoReplace.AutoReplaceService>();
 
+            // Source ranking services (smart scoring + download history)
+            var rankingDbPath = Path.Combine(Program.AppDirectory, "ranking.db");
+            services.AddDbContextFactory<Transfers.Ranking.SourceRankingDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={rankingDbPath}");
+            });
+
+            // Ensure ranking database is created
+            using (var rankingContext = new Transfers.Ranking.SourceRankingDbContext(
+                new DbContextOptionsBuilder<Transfers.Ranking.SourceRankingDbContext>()
+                    .UseSqlite($"Data Source={rankingDbPath}")
+                    .Options))
+            {
+                rankingContext.Database.EnsureCreated();
+            }
+
+            services.AddSingleton<Transfers.Ranking.ISourceRankingService, Transfers.Ranking.SourceRankingService>();
+
             // Wishlist services
             var wishlistDbPath = Path.Combine(Program.AppDirectory, "wishlist.db");
             services.AddDbContextFactory<Wishlist.WishlistDbContext>(options =>

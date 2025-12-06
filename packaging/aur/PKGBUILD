@@ -13,9 +13,9 @@ makedepends=('dotnet-sdk-8.0' 'nodejs' 'npm')
 optdepends=(
     'docker: for containerized deployment'
 )
-provides=('slskd')
-conflicts=('slskd' 'slskdn-bin')
-replaces=('slskd')
+provides=('slskd' 'slskd-bin')
+conflicts=('slskd' 'slskd-bin' 'slskdn-bin')
+replaces=('slskd' 'slskd-bin')
 backup=('etc/slskd/slskd.yml')
 install=slskd.install
 source=(
