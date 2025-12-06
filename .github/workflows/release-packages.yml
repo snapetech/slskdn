@@ -100,8 +100,8 @@ jobs:
 
       - name: Download Release Asset and Setup Sources
         run: |
-          # Download the zip with the version format expected by the spec
-          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.version }}-linux-x64.zip
+          # Download the zip - keep original tag-format filename
+          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip
           
           # Copy supporting files to SOURCES
           cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
@@ -110,11 +110,11 @@ jobs:
 
       - name: Update Spec Version and Build
         run: |
-          # Update version in spec
+          # Update version in spec (use dot format for RPM version)
           sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
           
-          # Fix Source0 URL to match actual release tag format
-          sed -i "s|download/%{version}/slskdn-%{version}|download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}|" packaging/rpm/slskdn.spec
+          # Fix Source0 to use exact tag-format filename
+          sed -i "s|^Source0:.*|Source0:        slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
           
           cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
 
