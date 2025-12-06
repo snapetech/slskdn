@@ -125,10 +125,15 @@ jobs:
 
       - name: Upload .rpm to Release
         if: success()
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          files: ~/rpmbuild/RPMS/x86_64/*.rpm
+        run: |
+          RPM_FILE=$(find /github/home/rpmbuild/RPMS -name "*.rpm" | head -1)
+          if [ -n "$RPM_FILE" ]; then
+            echo "Found RPM: $RPM_FILE"
+            gh release upload "${{ steps.version.outputs.tag }}" "$RPM_FILE" --clobber
+          else
+            echo "No RPM file found!"
+            find /github/home/rpmbuild -name "*.rpm" || true
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
