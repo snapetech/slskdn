@@ -108,6 +108,18 @@ const SearchDetail = ({
     Boolean(localStorage.getItem('slskd-default-search-filter')),
   );
 
+  // Sync hasSavedDefault across tabs/searches when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === 'slskd-default-search-filter') {
+        setHasSavedDefault(Boolean(event.newValue));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Fetch user download stats for smart ranking
   useEffect(() => {
     const fetchStats = async () => {

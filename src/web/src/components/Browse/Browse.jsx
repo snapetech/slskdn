@@ -84,9 +84,10 @@ const Browse = () => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-create tab if all closed
+  // Auto-create tab if all closed, and reset counter to keep numbers reasonable
   useEffect(() => {
     if (tabs.length === 0) {
+      tabCounter = 0; // Reset counter when starting fresh
       setTabs([createTab()]);
     }
   }, [tabs.length, createTab]);

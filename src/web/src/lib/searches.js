@@ -89,7 +89,7 @@ const getNthMatch = (string, regex, n) => {
   return undefined;
 };
 
-// Re-implementing correctly:
+// Parse size with unit (kb, mb, gb). Without unit, defaults to bytes.
 const parseSize = (value, unit) => {
   const parsedNumber = Number.parseInt(value, 10);
   switch (unit?.toLowerCase()) {
@@ -99,8 +99,10 @@ const parseSize = (value, unit) => {
       return parsedNumber * 1_024 * 1_024;
     case 'kb':
       return parsedNumber * 1_024;
+    case 'b':
     default:
-      return parsedNumber * 1_024 * 1_024;
+      // Without unit, treat as bytes (most intuitive for raw numbers)
+      return parsedNumber;
   }
 };
 
