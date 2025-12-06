@@ -39,6 +39,15 @@
   padding-right: .5em;
 }
 
+.chat-input {
+  width: 100%;
+}
+
+.chat-tabs {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 .conversation-menu {
   overflow-x: auto;
   box-shadow: unset !important;

@@ -186,12 +186,6 @@ class Chat extends Component {
     );
   };
 
-  initiateConversation = async (username, message) => {
-    await this.sendMessage(username, message);
-    await this.fetchConversations();
-    this.selectConversation(username);
-  };
-
   startConversation = async (username) => {
     // Just select/open the conversation without sending a message
     this.selectConversation(username);
@@ -204,9 +198,15 @@ class Chat extends Component {
   };
 
   render() {
-    const { active, conversations = [], loading } = this.state;
+    const {
+      active,
+      conversations = [],
+      loading,
+      usernameInput = '',
+    } = this.state;
     const messages = conversations[active]?.messages || [];
     const { user } = this.props.state;
+    const conversationNames = Object.keys(conversations);
 
     return (
       <div className="chats">
@@ -220,14 +220,38 @@ class Chat extends Component {
               size="big"
             />
           </div>
+          <Input
+            action={{
+              icon: 'chat',
+              onClick: () => {
+                if (this.state.usernameInput?.trim()) {
+                  this.startConversation(this.state.usernameInput.trim());
+                  this.setState({ usernameInput: '' });
+                }
+              },
+            }}
+            className="chat-input"
+            onChange={(event) =>
+              this.setState({ usernameInput: event.target.value })
+            }
+            onKeyUp={(event) => {
+              if (event.key === 'Enter' && this.state.usernameInput?.trim()) {
+                this.startConversation(this.state.usernameInput.trim());
+                this.setState({ usernameInput: '' });
+              }
+            }}
+            placeholder="Chat with user..."
+            size="big"
+            value={usernameInput}
+          />
+        </Segment>
+        {conversationNames.length > 0 && (
           <ChatMenu
             active={active}
             conversations={conversations}
-            initiateConversation={this.initiateConversation}
             onConversationChange={(name) => this.selectConversation(name)}
-            startConversation={this.startConversation}
           />
-        </Segment>
+        )}
         {Boolean(active) === false ? (
           <PlaceholderSegment
             caption="No chats to display"

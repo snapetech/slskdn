@@ -24,6 +24,15 @@
   padding-right: .5em;
 }
 
+.rooms-input {
+  width: 100%;
+}
+
+.room-tabs {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 .room-menu {
   overflow-x: auto;
   box-shadow: unset !important;

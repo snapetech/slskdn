@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   Dimmer,
+  Dropdown,
   Icon,
   Input,
   List,
@@ -20,6 +21,7 @@ import {
 
 const initialState = {
   active: '',
+  availableRooms: [],
   contextMenu: {
     message: null,
     open: false,
@@ -36,6 +38,7 @@ const initialState = {
     messages: [],
     users: [],
   },
+  roomSearchLoading: false,
 };
 
 class Rooms extends Component {
@@ -56,6 +59,7 @@ class Rooms extends Component {
       },
       async () => {
         await this.fetchJoinedRooms();
+        await this.fetchAvailableRooms();
         this.selectRoom(this.state.active || this.getFirstRoom());
         document.addEventListener('click', this.handleCloseContextMenu);
       },
@@ -73,6 +77,18 @@ class Rooms extends Component {
 
     this.setState({ intervals: initialState.intervals });
   }
+
+  fetchAvailableRooms = async () => {
+    this.setState({ roomSearchLoading: true });
+    try {
+      const available = await rooms.getAvailable();
+      this.setState({ availableRooms: available || [] });
+    } catch {
+      this.setState({ availableRooms: [] });
+    } finally {
+      this.setState({ roomSearchLoading: false });
+    }
+  };
 
   listRef = createRef();
 
@@ -259,7 +275,21 @@ class Rooms extends Component {
   }
 
   render() {
-    const { active = [], joined = [], loading, room } = this.state;
+    const {
+      active = [],
+      availableRooms = [],
+      joined = [],
+      loading,
+      room,
+      roomSearchLoading,
+    } = this.state;
+
+    const roomOptions = availableRooms.map((r) => ({
+      description: r.isPrivate ? 'Private' : '',
+      key: r.name,
+      text: `${r.name} (${r.userCount} users)`,
+      value: r.name,
+    }));
 
     return (
       <div className="rooms">
@@ -273,13 +303,30 @@ class Rooms extends Component {
               size="big"
             />
           </div>
+          <Dropdown
+            className="rooms-input"
+            clearable
+            fluid
+            loading={roomSearchLoading}
+            onChange={(_, { value }) => {
+              if (value) {
+                this.joinRoom(value);
+              }
+            }}
+            onOpen={() => this.fetchAvailableRooms()}
+            options={roomOptions}
+            placeholder="Search rooms..."
+            search
+            selection
+          />
+        </Segment>
+        {joined.length > 0 && (
           <RoomMenu
             active={active}
-            joinRoom={this.joinRoom}
             joined={joined}
             onRoomChange={(name) => this.selectRoom(name)}
           />
-        </Segment>
+        )}
         {active?.length === 0 ? (
           <PlaceholderSegment
             caption="No rooms to display"
