@@ -26,3 +26,18 @@
   margin-right: 0;
 }
 
+/* Dark theme for placeholder segment */
+.wishlist-container .ui.placeholder.segment {
+  background: #1b1c1d !important;
+  border-color: #444 !important;
+}
+
+.wishlist-container .ui.placeholder.segment .header,
+.wishlist-container .ui.placeholder.segment p {
+  color: #ccc !important;
+}
+
+.wishlist-container .ui.placeholder.segment .icon {
+  color: #888 !important;
+}
+

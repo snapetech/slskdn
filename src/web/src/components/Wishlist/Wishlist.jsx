@@ -316,8 +316,14 @@ const Wishlist = () => {
           placeholder
         />
       ) : items.length === 0 ? (
-        <Segment placeholder>
-          <Header icon>
+        <Segment
+          inverted
+          placeholder
+        >
+          <Header
+            icon
+            inverted
+          >
             <Icon name="star outline" />
             No wishlist items yet
           </Header>
