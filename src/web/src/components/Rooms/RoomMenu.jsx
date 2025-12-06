@@ -43,8 +43,8 @@ const RoomMenu = ({ active, joinRoom, joined, onRoomChange, ...rest }) => {
               icon: 'sign-in',
               onClick: handleJoinDirect,
             }}
-            onChange={(e) => setRoomInput(e.target.value)}
-            onKeyUp={(e) => e.key === 'Enter' && handleJoinDirect()}
+            onChange={(event) => setRoomInput(event.target.value)}
+            onKeyUp={(event) => event.key === 'Enter' && handleJoinDirect()}
             placeholder="Room name..."
             size="small"
             value={roomInput}

@@ -57,8 +57,8 @@ const ChatMenu = ({
               icon: 'chat',
               onClick: handleStartDirect,
             }}
-            onChange={(e) => setUsernameInput(e.target.value)}
-            onKeyUp={(e) => e.key === 'Enter' && handleStartDirect()}
+            onChange={(event) => setUsernameInput(event.target.value)}
+            onKeyUp={(event) => event.key === 'Enter' && handleStartDirect()}
             placeholder="Username..."
             size="small"
             value={usernameInput}
