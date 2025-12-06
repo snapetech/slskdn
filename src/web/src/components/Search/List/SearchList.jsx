@@ -2,13 +2,15 @@ import ErrorSegment from '../../Shared/ErrorSegment';
 import Switch from '../../Shared/Switch';
 import SearchListRow from './SearchListRow';
 import React from 'react';
-import { Card, Icon, Loader, Table } from 'semantic-ui-react';
+import { Button, Card, Icon, Loader, Popup, Table } from 'semantic-ui-react';
 
 const SearchList = ({
   connecting = false,
   error = undefined,
   onRemove = () => {},
+  onRemoveAll = () => {},
   onStop = () => {},
+  removingAll = false,
   searches = {},
 }) => {
   return (
@@ -17,6 +19,27 @@ const SearchList = ({
       raised
     >
       <Card.Content>
+        <div className="search-list-header">
+          <Popup
+            content="Clear all completed searches"
+            position="left center"
+            trigger={
+              <Button
+                color="red"
+                compact
+                disabled={removingAll || Object.keys(searches).length === 0}
+                icon
+                labelPosition="left"
+                loading={removingAll}
+                onClick={onRemoveAll}
+                size="small"
+              >
+                <Icon name="trash" />
+                Clear All
+              </Button>
+            }
+          />
+        </div>
         <div className="search-list-wrapper">
           <Switch
             connecting={

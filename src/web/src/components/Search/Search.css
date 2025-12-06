@@ -126,3 +126,9 @@
   display: inline;
   margin-left: auto;
 }
+
+.search-list-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}

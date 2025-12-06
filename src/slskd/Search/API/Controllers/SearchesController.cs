@@ -242,5 +242,24 @@ namespace slskd.Search.API
             await Searches.DeleteAsync(search);
             return NoContent();
         }
+
+        /// <summary>
+        ///     Deletes all completed searches.
+        /// </summary>
+        /// <response code="200">The searches were deleted successfully.</response>
+        /// <returns>The number of deleted searches.</returns>
+        [HttpDelete("")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(int), 200)]
+        public async Task<IActionResult> DeleteAll()
+        {
+            if (Program.IsRelayAgent)
+            {
+                return Forbid();
+            }
+
+            var count = await Searches.DeleteAllAsync();
+            return Ok(new { deleted = count });
+        }
     }
 }

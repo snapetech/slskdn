@@ -1,7 +1,11 @@
 import {
+  blockUser,
   filterResponse,
+  getBlockedUsers,
   getResponses,
+  getUserDownloadStats,
   parseFiltersFromString,
+  unblockUser,
 } from '../../../lib/searches';
 import { sleep } from '../../../lib/util';
 import ErrorSegment from '../../Shared/ErrorSegment';
@@ -9,10 +13,16 @@ import LoaderSegment from '../../Shared/LoaderSegment';
 import Switch from '../../Shared/Switch';
 import Response from '../Response';
 import SearchDetailHeader from './SearchDetailHeader';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { Button, Checkbox, Dropdown, Input, Segment } from 'semantic-ui-react';
 
 const sortDropdownOptions = [
+  {
+    key: 'smart',
+    text: '⭐ Smart Ranking (Best Overall)',
+    value: 'smart',
+  },
   {
     key: 'uploadSpeed',
     text: 'Upload Speed (Fastest to Slowest)',
@@ -23,7 +33,41 @@ const sortDropdownOptions = [
     text: 'Queue Depth (Least to Most)',
     value: 'queueLength',
   },
+  {
+    key: 'fileCount',
+    text: 'File Count (Most to Least)',
+    value: 'fileCount',
+  },
 ];
+
+// Smart ranking algorithm - combines multiple factors
+const calculateSmartScore = (response, userStats) => {
+  let score = 0;
+
+  // Upload speed score (0-40 points) - normalized to max 10MB/s
+  const speedScore = Math.min((response.uploadSpeed / 10_485_760) * 40, 40);
+  score += speedScore;
+
+  // Queue length score (0-30 points) - lower is better
+  const queueScore = Math.max(30 - response.queueLength * 3, 0);
+  score += queueScore;
+
+  // Free slot bonus (15 points)
+  if (response.hasFreeUploadSlot) {
+    score += 15;
+  }
+
+  // Past download history bonus (0-15 points)
+  const stats = userStats?.[response.username];
+  if (stats) {
+    // Successful downloads give positive score
+    score += Math.min(stats.successfulDownloads * 3, 10);
+    // Failed downloads subtract
+    score -= Math.min(stats.failedDownloads * 2, 5);
+  }
+
+  return score;
+};
 
 const SearchDetail = ({
   creating,
@@ -45,12 +89,42 @@ const SearchDetail = ({
 
   // filters and sorting options
   const [hiddenResults, setHiddenResults] = useState([]);
-  const [resultSort, setResultSort] = useState('uploadSpeed');
+  const [blockedUsers, setBlockedUsers] = useState(getBlockedUsers());
+  const [hideBlockedUsers, setHideBlockedUsers] = useState(true);
+  const [resultSort, setResultSort] = useState('smart');
   const [hideLocked, setHideLocked] = useState(true);
   const [hideNoFreeSlots, setHideNoFreeSlots] = useState(false);
   const [foldResults, setFoldResults] = useState(false);
   const [resultFilters, setResultFilters] = useState('');
   const [displayCount, setDisplayCount] = useState(5);
+  const [userStats, setUserStats] = useState({});
+
+  // Fetch user download stats for smart ranking
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const stats = await getUserDownloadStats();
+        setUserStats(stats);
+      } catch {
+        // Stats are optional, don't fail if unavailable
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  // Handle blocking/unblocking users
+  const handleBlockUser = useCallback((username) => {
+    const updated = blockUser(username);
+    setBlockedUsers(updated);
+    toast.info(`Blocked ${username} from search results`);
+  }, []);
+
+  const handleUnblockUser = useCallback((username) => {
+    const updated = unblockUser(username);
+    setBlockedUsers(updated);
+    toast.info(`Unblocked ${username}`);
+  }, []);
 
   // when the search transitions from !isComplete -> isComplete,
   // fetch the results from the server
@@ -81,7 +155,9 @@ const SearchDetail = ({
   // sets, so memoize it.
   const sortedAndFilteredResults = useMemo(() => {
     const sortOptions = {
+      fileCount: { field: 'fileCount', order: 'desc' },
       queueLength: { field: 'queueLength', order: 'asc' },
+      smart: { field: 'smartScore', order: 'desc' },
       uploadSpeed: { field: 'uploadSpeed', order: 'desc' },
     };
 
@@ -91,6 +167,7 @@ const SearchDetail = ({
 
     return results
       .filter((r) => !hiddenResults.includes(r.username))
+      .filter((r) => !(hideBlockedUsers && blockedUsers.includes(r.username)))
       .map((r) => {
         if (hideLocked) {
           return { ...r, lockedFileCount: 0, lockedFiles: [] };
@@ -101,6 +178,11 @@ const SearchDetail = ({
       .map((response) => filterResponse({ filters, response }))
       .filter((r) => r.fileCount + r.lockedFileCount > 0)
       .filter((r) => !(hideNoFreeSlots && !r.hasFreeUploadSlot))
+      .map((r) => ({
+        ...r,
+        downloadStats: userStats[r.username],
+        smartScore: calculateSmartScore(r, userStats),
+      }))
       .sort((a, b) => {
         if (order === 'asc') {
           return a[field] - b[field];
@@ -109,12 +191,15 @@ const SearchDetail = ({
         return b[field] - a[field];
       });
   }, [
+    blockedUsers,
     hiddenResults,
+    hideBlockedUsers,
     hideLocked,
     hideNoFreeSlots,
     resultFilters,
     resultSort,
     results,
+    userStats,
   ]);
 
   // when a user uses the action buttons, we will *probably* re-use this component,
@@ -208,6 +293,13 @@ const SearchDetail = ({
                 toggle
               />
               <Checkbox
+                checked={hideBlockedUsers}
+                className="search-options-hide-blocked"
+                label={`Hide Blocked Users (${blockedUsers.length})`}
+                onChange={() => setHideBlockedUsers(!hideBlockedUsers)}
+                toggle
+              />
+              <Checkbox
                 checked={foldResults}
                 className="search-options-fold-results"
                 label="Fold Results"
@@ -238,10 +330,15 @@ const SearchDetail = ({
           sortedAndFilteredResults.slice(0, displayCount).map((r) => (
             <Response
               disabled={disabled}
+              downloadStats={r.downloadStats}
+              isBlocked={blockedUsers.includes(r.username)}
               isInitiallyFolded={foldResults}
               key={r.username}
+              onBlock={() => handleBlockUser(r.username)}
               onHide={() => setHiddenResults([...hiddenResults, r.username])}
+              onUnblock={() => handleUnblockUser(r.username)}
               response={r}
+              smartScore={r.smartScore}
             />
           ))}
         {loaded &&

@@ -96,6 +96,12 @@ namespace slskd.Search
         /// <param name="age">The age after which records are eligible for pruning, in minutes.</param>
         /// <returns>The number of pruned records.</returns>
         Task<int> PruneAsync(int age);
+
+        /// <summary>
+        ///     Deletes all completed searches.
+        /// </summary>
+        /// <returns>The number of deleted searches.</returns>
+        Task<int> DeleteAllAsync();
     }
 
     /// <summary>
@@ -440,6 +446,38 @@ namespace slskd.Search
             catch (Exception ex)
             {
                 Log.Error(ex, "Failed to prune searches: {Message}", ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        ///     Deletes all completed searches.
+        /// </summary>
+        /// <returns>The number of deleted searches.</returns>
+        public async Task<int> DeleteAllAsync()
+        {
+            try
+            {
+                using var context = ContextFactory.CreateDbContext();
+
+                var allSearches = context.Searches
+                    .Where(s => s.State.HasFlag(SearchStates.Completed))
+                    .WithoutResponses()
+                    .ToList();
+
+                // defer the deletion to DeleteAsync() so that SignalR broadcasting works properly and the UI
+                // is updated in real time
+                foreach (var search in allSearches)
+                {
+                    await DeleteAsync(search);
+                }
+
+                Log.Information("Deleted {Count} searches", allSearches.Count);
+                return allSearches.Count;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to delete all searches: {Message}", ex.Message);
                 throw;
             }
         }

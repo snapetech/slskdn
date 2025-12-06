@@ -12,6 +12,48 @@ export const remove = ({ id }) => {
   return api.delete(`/searches/${encodeURIComponent(id)}`);
 };
 
+export const removeAll = () => {
+  return api.delete('/searches');
+};
+
+// User download stats for badges
+export const getUserDownloadStats = async () => {
+  return (await api.get('/transfers/downloads/user-stats')).data;
+};
+
+// Blocked users management (localStorage-based)
+const BLOCKED_USERS_KEY = 'slskdn_blocked_users';
+
+export const getBlockedUsers = () => {
+  try {
+    const blocked = localStorage.getItem(BLOCKED_USERS_KEY);
+    return blocked ? JSON.parse(blocked) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const blockUser = (username) => {
+  const blocked = getBlockedUsers();
+  if (!blocked.includes(username)) {
+    blocked.push(username);
+    localStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
+  }
+
+  return blocked;
+};
+
+export const unblockUser = (username) => {
+  let blocked = getBlockedUsers();
+  blocked = blocked.filter((u) => u !== username);
+  localStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
+  return blocked;
+};
+
+export const isUserBlocked = (username) => {
+  return getBlockedUsers().includes(username);
+};
+
 export const create = ({ id, searchText }) => {
   return api.post('/searches', { id, searchText });
 };

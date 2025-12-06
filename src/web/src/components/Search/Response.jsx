@@ -4,7 +4,7 @@ import { formatBytes, getDirectoryName } from '../../lib/util';
 import FileList from '../Shared/FileList';
 import React, { Component } from 'react';
 import { toast } from 'react-toastify';
-import { Button, Card, Icon, Label } from 'semantic-ui-react';
+import { Button, Card, Icon, Label, Popup } from 'semantic-ui-react';
 
 const buildTree = (response) => {
   let { files = [] } = response;
@@ -132,7 +132,14 @@ class Response extends Component {
   };
 
   render() {
-    const { response } = this.props;
+    const {
+      downloadStats,
+      isBlocked,
+      onBlock,
+      onUnblock,
+      response,
+      smartScore,
+    } = this.props;
     const free = response.hasFreeUploadSlot;
 
     const {
@@ -151,6 +158,18 @@ class Response extends Component {
       selectedFiles.reduce((total, f) => total + f.size, 0),
     );
 
+    // Determine badge color based on download history
+    const getBadgeColor = () => {
+      if (!downloadStats) return null;
+      if (downloadStats.successfulDownloads >= 5) return 'green';
+      if (downloadStats.successfulDownloads >= 1) return 'blue';
+      if (downloadStats.failedDownloads > downloadStats.successfulDownloads)
+        return 'orange';
+      return 'grey';
+    };
+
+    const badgeColor = getBadgeColor();
+
     return (
       <Card
         className="result-card"
@@ -168,13 +187,64 @@ class Response extends Component {
               name="circle"
             />
             {response.username}
-            <Icon
-              className="close-button"
-              color="red"
-              link
-              name="close"
-              onClick={() => this.props.onHide()}
-            />
+            {downloadStats && (
+              <Popup
+                content={`${downloadStats.successfulDownloads} successful, ${downloadStats.failedDownloads} failed downloads from this user`}
+                position="top center"
+                trigger={
+                  <Label
+                    color={badgeColor}
+                    size="tiny"
+                    style={{ marginLeft: '8px' }}
+                  >
+                    <Icon name="download" />
+                    {downloadStats.successfulDownloads}
+                  </Label>
+                }
+              />
+            )}
+            {smartScore !== undefined && (
+              <Popup
+                content={`Smart ranking score: ${smartScore.toFixed(1)} points`}
+                position="top center"
+                trigger={
+                  <Label
+                    color="purple"
+                    size="tiny"
+                    style={{ marginLeft: '4px' }}
+                  >
+                    <Icon name="star" />
+                    {smartScore.toFixed(0)}
+                  </Label>
+                }
+              />
+            )}
+            <span style={{ float: 'right' }}>
+              <Popup
+                content={
+                  isBlocked
+                    ? 'Unblock this user'
+                    : 'Block this user from search results'
+                }
+                position="top center"
+                trigger={
+                  <Icon
+                    color={isBlocked ? 'orange' : 'grey'}
+                    link
+                    name={isBlocked ? 'ban' : 'user cancel'}
+                    onClick={isBlocked ? onUnblock : onBlock}
+                    style={{ marginRight: '8px' }}
+                  />
+                }
+              />
+              <Icon
+                className="close-button"
+                color="red"
+                link
+                name="close"
+                onClick={() => this.props.onHide()}
+              />
+            </span>
           </Card.Header>
           <Card.Meta className="result-meta">
             <span>

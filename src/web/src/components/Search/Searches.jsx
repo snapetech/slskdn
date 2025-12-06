@@ -18,6 +18,7 @@ const Searches = ({ server } = {}) => {
   const [searches, setSearches] = useState({});
 
   const [removing, setRemoving] = useState(false);
+  const [removingAll, setRemovingAll] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -152,6 +153,25 @@ const Searches = ({ server } = {}) => {
     }
   };
 
+  // delete all searches
+  const removeAll = async () => {
+    try {
+      setRemovingAll(true);
+      const result = await library.removeAll();
+      setSearches({});
+      toast.success(`Cleared ${result?.data?.deleted ?? 'all'} searches`);
+      setRemovingAll(false);
+    } catch (removeAllError) {
+      console.error(removeAllError);
+      toast.error(
+        removeAllError?.response?.data ??
+          removeAllError?.message ??
+          removeAllError,
+      );
+      setRemovingAll(false);
+    }
+  };
+
   // stop an in-progress search
   const stop = async (search) => {
     try {
@@ -259,7 +279,9 @@ const Searches = ({ server } = {}) => {
           connecting={connecting}
           error={error}
           onRemove={remove}
+          onRemoveAll={removeAll}
           onStop={stop}
+          removingAll={removingAll}
           searches={searches}
         />
       )}
