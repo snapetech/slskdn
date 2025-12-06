@@ -106,18 +106,21 @@ const Searches = ({ server } = {}) => {
   // we do this if the user clicks the search icon, or repeats an existing search
   const create = async ({ navigate = false, search } = {}) => {
     const ref = inputRef?.current?.inputRef?.current;
-    const searchText = search || ref.value;
+    const searchText = search || ref?.value;
     const id = uuidv4();
+
+    if (!searchText) {
+      toast.error('Please enter a search phrase');
+      return;
+    }
 
     try {
       setCreating(true);
       await library.create({ id, searchText });
 
-      try {
+      if (ref) {
         ref.value = '';
         ref.focus();
-      } catch {
-        // we are probably repeating an existing search; the input isn't mounted.  no-op.
       }
 
       setCreating(false);
