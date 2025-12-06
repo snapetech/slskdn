@@ -1,0 +1,37 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create slskd user if it doesn't exist
+        if ! getent passwd slskd > /dev/null; then
+            useradd -r -s /usr/sbin/nologin -d /var/lib/slskd -c "slskd service account" slskd
+        fi
+        
+        # Create directories
+        install -dm755 -o slskd -g slskd /var/lib/slskd
+        install -dm755 -o slskd -g slskd /var/lib/slskd/downloads
+        install -dm755 -o slskd -g slskd /var/lib/slskd/incomplete
+        
+        # Reload systemd
+        systemctl daemon-reload || true
+        
+        echo ""
+        echo "🔋 slskdn has been installed!"
+        echo ""
+        echo "1. Edit the configuration:"
+        echo "   sudo nano /etc/slskd/slskd.yml"
+        echo ""
+        echo "2. Start the service:"
+        echo "   sudo systemctl enable --now slskd"
+        echo ""
+        echo "3. Access the web UI at:"
+        echo "   http://localhost:5030"
+        echo ""
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+

@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Binary is pre-built, skip build
+
+override_dh_auto_install:
+	# Install application
+	install -dm755 debian/slskdn/usr/lib/slskd
+	cp -r usr/lib/slskd/* debian/slskdn/usr/lib/slskd/
+	chmod +x debian/slskdn/usr/lib/slskd/slskd
+	
+	# Create symlink
+	install -dm755 debian/slskdn/usr/bin
+	ln -sf /usr/lib/slskd/slskd debian/slskdn/usr/bin/slskd
+	
+	# Install systemd service
+	install -Dm644 lib/systemd/system/slskd.service debian/slskdn/lib/systemd/system/slskd.service
+	
+	# Install config
+	install -Dm644 etc/slskd/slskd.yml debian/slskdn/etc/slskd/slskd.yml
+	
+	# Install sysusers
+	install -Dm644 usr/lib/sysusers.d/slskd.conf debian/slskdn/usr/lib/sysusers.d/slskd.conf
+
+override_dh_strip:
+	# Don't strip .NET binaries
+

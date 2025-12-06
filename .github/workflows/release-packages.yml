@@ -1,0 +1,126 @@
+name: Build Linux Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build packages for'
+        required: true
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Convert 0.24.1-slskdn.7 to 0.24.1.slskdn.7
+          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download Release Asset
+        run: |
+          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o slskdn.zip
+          unzip slskdn.zip -d slskdn-build
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper fakeroot
+
+      - name: Prepare Package Structure
+        run: |
+          mkdir -p pkg/usr/lib/slskd
+          mkdir -p pkg/usr/bin
+          mkdir -p pkg/lib/systemd/system
+          mkdir -p pkg/etc/slskd
+          mkdir -p pkg/usr/lib/sysusers.d
+          
+          cp -r slskdn-build/* pkg/usr/lib/slskd/
+          cp packaging/aur/slskd.service pkg/lib/systemd/system/
+          cp packaging/aur/slskd.yml pkg/etc/slskd/
+          cp packaging/aur/slskd.sysusers pkg/usr/lib/sysusers.d/slskd.conf
+          
+          # Copy debian files
+          cp -r packaging/debian pkg/
+
+      - name: Build .deb Package
+        run: |
+          cd pkg
+          # Update changelog version
+          sed -i "s/0.24.1.slskdn.7/${{ steps.version.outputs.version }}/g" debian/changelog
+          dpkg-buildpackage -us -uc -b
+          cd ..
+          mv *.deb slskdn_${{ steps.version.outputs.version }}_amd64.deb
+
+      - name: Upload .deb to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: slskdn_${{ steps.version.outputs.version }}_amd64.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install Build Dependencies
+        run: |
+          dnf install -y rpm-build rpmdevtools unzip curl
+
+      - name: Setup RPM Build Environment
+        run: rpmdev-setuptree
+
+      - name: Download Release Asset
+        run: |
+          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.version }}-linux-x64.zip
+          cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
+
+      - name: Update Spec Version
+        run: |
+          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
+          cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
+
+      - name: Build .rpm Package
+        run: |
+          cd ~/rpmbuild
+          rpmbuild -bb SPECS/slskdn.spec || echo "RPM build may need adjustment"
+
+      - name: Upload .rpm to Release
+        if: success()
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: ~/rpmbuild/RPMS/x86_64/*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

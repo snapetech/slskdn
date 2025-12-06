@@ -1,0 +1,33 @@
+Source: slskdn
+Section: net
+Priority: optional
+Maintainer: snapetech <slskdn@proton.me>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Homepage: https://github.com/snapetech/slskdn
+Vcs-Browser: https://github.com/snapetech/slskdn
+Vcs-Git: https://github.com/snapetech/slskdn.git
+Rules-Requires-Root: no
+
+Package: slskdn
+Architecture: amd64 arm64
+Depends: ${misc:Depends}
+Provides: slskd
+Conflicts: slskd
+Replaces: slskd
+Description: 🔋 The batteries-included Soulseek web client
+ A feature-rich fork of slskd with wishlist, smart ranking, tabbed
+ browsing, notifications, and more. Modern web UI for the Soulseek
+ file sharing network.
+ .
+ Features include:
+  - Wishlist with auto-download
+  - Smart source ranking based on speed, queue, and history
+  - Tabbed user browsing with persistent sessions
+  - Multi-select folder downloads with checkboxes
+  - Configurable search page size
+  - Max file size filter
+  - Delete files on disk when removing downloads
+  - Push notifications (Pushbullet, Ntfy, Pushover)
+  - PWA support for mobile
+

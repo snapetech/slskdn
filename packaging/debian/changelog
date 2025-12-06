@@ -1,0 +1,19 @@
+slskdn (0.24.1.slskdn.7-1) stable; urgency=medium
+
+  * Fix race condition in SourceRankingService history recording
+  * Update AUR package description with distinctive branding
+
+ -- snapetech <slskdn@proton.me>  Sat, 06 Dec 2025 10:00:00 +0000
+
+slskdn (0.24.1.slskdn.6-1) stable; urgency=medium
+
+  * Initial release of slskdn fork
+  * Wishlist feature with auto-download
+  * Smart source ranking
+  * Tabbed user browsing
+  * Multi-select folder downloads
+  * Push notifications support
+  * PWA manifest for mobile
+
+ -- snapetech <slskdn@proton.me>  Fri, 05 Dec 2025 12:00:00 +0000
+
