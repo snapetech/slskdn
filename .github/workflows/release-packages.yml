@@ -93,7 +93,7 @@ jobs:
 
       - name: Install Build Dependencies
         run: |
-          dnf install -y rpm-build rpmdevtools unzip curl
+          dnf install -y rpm-build rpmdevtools unzip curl systemd-rpm-macros
 
       - name: Setup RPM Build Environment
         run: rpmdev-setuptree
