@@ -166,7 +166,7 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
             <Form.Input
               label="Must Include (space separated)"
               onChange={(event) =>
-                handleChange('include', event.target.value.split(' '))
+                handleChange('include', event.target.value.split(' ').filter(t => t.trim()))
               }
               placeholder="remix instrumental"
               value={(filters.include || []).join(' ')}
@@ -174,7 +174,7 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
             <Form.Input
               label="Must Exclude (space separated)"
               onChange={(event) =>
-                handleChange('exclude', event.target.value.split(' '))
+                handleChange('exclude', event.target.value.split(' ').filter(t => t.trim()))
               }
               placeholder="live demo"
               value={(filters.exclude || []).join(' ')}

@@ -152,6 +152,10 @@ namespace slskd.Transfers.Ranking
                 {
                     // Race condition: another thread inserted first, retry to update
                     logger.LogDebug("Retrying history update for {Username} due to race condition (attempt {Attempt})", username, attempt + 1);
+
+                    // Small delay before retry to let database settle
+                    await Task.Delay(50 * (attempt + 1), cancellationToken);
+
                     if (attempt == maxRetries - 1)
                     {
                         logger.LogWarning(ex, "Failed to record history for {Username} after {MaxRetries} attempts", username, maxRetries);

@@ -253,11 +253,27 @@ namespace slskd.Wishlist
 
             var search = await SearchService.StartAsync(searchId, query, scope, searchOptions);
 
-            // Wait for search to complete
-            await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+            // Poll for search completion (up to 20 seconds)
+            var maxWait = TimeSpan.FromSeconds(20);
+            var pollInterval = TimeSpan.FromMilliseconds(500);
+            var waited = TimeSpan.Zero;
+            slskd.Search.Search searchWithResponses = null;
 
-            // Get full search with responses
-            var searchWithResponses = await SearchService.FindAsync(s => s.Id == searchId, includeResponses: true);
+            while (waited < maxWait)
+            {
+                await Task.Delay(pollInterval, cancellationToken);
+                waited += pollInterval;
+
+                searchWithResponses = await SearchService.FindAsync(s => s.Id == searchId, includeResponses: true);
+
+                if (searchWithResponses?.State.HasFlag(Soulseek.SearchStates.Completed) == true)
+                {
+                    break;
+                }
+            }
+
+            // If we timed out, get the final state anyway
+            searchWithResponses ??= await SearchService.FindAsync(s => s.Id == searchId, includeResponses: true);
 
             // Update wishlist item stats
             item.LastSearchedAt = DateTime.UtcNow;

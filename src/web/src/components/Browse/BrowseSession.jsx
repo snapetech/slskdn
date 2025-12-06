@@ -30,6 +30,33 @@ const initialState = {
   userNote: null,
 };
 
+const MAX_BROWSE_CACHE_ENTRIES = 50;
+const BROWSE_CACHE_PREFIX = 'slskd-browse-state-';
+
+// Cleanup old browse cache entries using LRU strategy
+const cleanupBrowseCache = () => {
+  try {
+    const cacheEntries = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(BROWSE_CACHE_PREFIX)) {
+        const data = localStorage.getItem(key);
+        cacheEntries.push({ key, size: data ? data.length : 0 });
+      }
+    }
+
+    if (cacheEntries.length > MAX_BROWSE_CACHE_ENTRIES) {
+      // Sort by size (larger = older/more complete browses, keep those)
+      // Remove smallest/oldest entries first
+      cacheEntries.sort((a, b) => a.size - b.size);
+      const toRemove = cacheEntries.slice(0, cacheEntries.length - MAX_BROWSE_CACHE_ENTRIES);
+      toRemove.forEach(entry => localStorage.removeItem(entry.key));
+    }
+  } catch (error) {
+    console.debug('Browse cache cleanup error:', error);
+  }
+};
+
 class BrowseSession extends Component {
   constructor(props) {
     super(props);
@@ -216,6 +243,8 @@ class BrowseSession extends Component {
           this.getStorageKey(),
           lzString.compress(JSON.stringify(this.state)),
         );
+        // Cleanup old cache entries to prevent unbounded growth
+        cleanupBrowseCache();
       } catch (error) {
         console.error(error);
       }

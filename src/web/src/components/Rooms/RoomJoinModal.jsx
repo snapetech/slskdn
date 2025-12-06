@@ -10,6 +10,7 @@ import {
   Input,
   Loader,
   Modal,
+  Segment,
   Table,
 } from 'semantic-ui-react';
 
@@ -110,64 +111,77 @@ const RoomJoinModal = ({ joinRoom: parentJoinRoom, ...modalOptions }) => {
               onChange={(_, event) => setFilter(event.value)}
               placeholder="Room Filter"
             />
-            <Table
-              celled
-              selectable
-            >
-              <Table.Header>
-                <Table.Row>
-                  <Table.HeaderCell onClick={() => setSortBy('name')}>
-                    Name
-                    <Icon
-                      link={sortBy === 'name'}
-                      name={
-                        sortBy === 'name' &&
-                        (sortOrder === 'asc' ? 'chevron up' : 'chevron down')
-                      }
-                      onClick={() =>
-                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                      }
-                    />
-                  </Table.HeaderCell>
-                  <Table.HeaderCell onClick={() => setSortBy('userCount')}>
-                    Users
-                    <Icon
-                      link={sortBy === 'userCount'}
-                      name={
-                        sortBy === 'userCount' &&
-                        (sortOrder === 'asc' ? 'chevron up' : 'chevron down')
-                      }
-                      onClick={() =>
-                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                      }
-                    />
-                  </Table.HeaderCell>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {sortedAvailable.map((room) => (
-                  <Table.Row
-                    key={room.name}
-                    onClick={() => setSelected(room.name)}
-                    style={isSelected(room) ? { fontWeight: 'bold' } : {}}
-                  >
-                    <Table.Cell>
-                      {isSelected(room) && (
-                        <Icon
-                          color="green"
-                          name="check"
-                        />
-                      )}
-                      {room.isPrivate && <Icon name="lock" />}
-                      {room.isOwned && <Icon name="chess queen" />}
-                      {room.isModerated && <Icon name="gavel" />}
-                      {room.name}
-                    </Table.Cell>
-                    <Table.Cell>{room.userCount}</Table.Cell>
+            {sortedAvailable.length === 0 ? (
+              <Segment
+                placeholder
+                textAlign="center"
+              >
+                <Header icon>
+                  <Icon name="comments outline" />
+                  No rooms available
+                </Header>
+                <p>Try refreshing or check your connection to the server.</p>
+              </Segment>
+            ) : (
+              <Table
+                celled
+                selectable
+              >
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell onClick={() => setSortBy('name')}>
+                      Name
+                      <Icon
+                        link={sortBy === 'name'}
+                        name={
+                          sortBy === 'name' &&
+                          (sortOrder === 'asc' ? 'chevron up' : 'chevron down')
+                        }
+                        onClick={() =>
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                        }
+                      />
+                    </Table.HeaderCell>
+                    <Table.HeaderCell onClick={() => setSortBy('userCount')}>
+                      Users
+                      <Icon
+                        link={sortBy === 'userCount'}
+                        name={
+                          sortBy === 'userCount' &&
+                          (sortOrder === 'asc' ? 'chevron up' : 'chevron down')
+                        }
+                        onClick={() =>
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                        }
+                      />
+                    </Table.HeaderCell>
                   </Table.Row>
-                ))}
-              </Table.Body>
-            </Table>
+                </Table.Header>
+                <Table.Body>
+                  {sortedAvailable.map((room) => (
+                    <Table.Row
+                      key={room.name}
+                      onClick={() => setSelected(room.name)}
+                      style={isSelected(room) ? { fontWeight: 'bold' } : {}}
+                    >
+                      <Table.Cell>
+                        {isSelected(room) && (
+                          <Icon
+                            color="green"
+                            name="check"
+                          />
+                        )}
+                        {room.isPrivate && <Icon name="lock" />}
+                        {room.isOwned && <Icon name="chess queen" />}
+                        {room.isModerated && <Icon name="gavel" />}
+                        {room.name}
+                      </Table.Cell>
+                      <Table.Cell>{room.userCount}</Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table>
+            )}
           </>
         )}
       </Modal.Content>
