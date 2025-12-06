@@ -6,11 +6,16 @@ Summary:        🔋 The batteries-included Soulseek web client
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn
 Source0:        https://github.com/snapetech/slskdn/releases/download/%{version}/slskdn-%{version}-linux-x64.zip
+Source1:        slskd.service
+Source2:        slskd.yml
+Source3:        slskd.conf
 
 BuildArch:      x86_64
+BuildRequires:  systemd-rpm-macros
+Requires:       systemd
 Provides:       slskd
 Conflicts:      slskd
-Obsoletes:      slskd
+Obsoletes:      slskd < %{version}
 
 %description
 A feature-rich fork of slskd with wishlist, smart ranking, tabbed
@@ -45,6 +50,7 @@ ln -sf %{_libdir}/slskd/slskd %{buildroot}%{_bindir}/slskd
 install -Dm644 %{SOURCE1} %{buildroot}%{_unitdir}/slskd.service
 
 # Install config
+install -dm755 %{buildroot}%{_sysconfdir}/slskd
 install -Dm644 %{SOURCE2} %{buildroot}%{_sysconfdir}/slskd/slskd.yml
 
 # Install sysusers
@@ -80,6 +86,7 @@ echo ""
 %systemd_postun_with_restart slskd.service
 
 %files
+%license %{_libdir}/slskd/LICENSE
 %{_libdir}/slskd/
 %{_bindir}/slskd
 %{_unitdir}/slskd.service
@@ -96,4 +103,3 @@ echo ""
 
 * Fri Dec 05 2025 snapetech <slskdn@proton.me> - 0.24.1.slskdn.6-1
 - Initial slskdn release
-

@@ -37,7 +37,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper fakeroot
+          sudo apt-get install -y devscripts debhelper fakeroot build-essential
 
       - name: Prepare Package Structure
         run: |
@@ -98,22 +98,30 @@ jobs:
       - name: Setup RPM Build Environment
         run: rpmdev-setuptree
 
-      - name: Download Release Asset
+      - name: Download Release Asset and Setup Sources
         run: |
+          # Download the zip with the version format expected by the spec
           curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.version }}-linux-x64.zip
+          
+          # Copy supporting files to SOURCES
           cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
           cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
           cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
 
-      - name: Update Spec Version
+      - name: Update Spec Version and Build
         run: |
+          # Update version in spec
           sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
+          
+          # Fix Source0 URL to match actual release tag format
+          sed -i "s|download/%{version}/slskdn-%{version}|download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}|" packaging/rpm/slskdn.spec
+          
           cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
 
       - name: Build .rpm Package
         run: |
           cd ~/rpmbuild
-          rpmbuild -bb SPECS/slskdn.spec || echo "RPM build may need adjustment"
+          rpmbuild -bb SPECS/slskdn.spec
 
       - name: Upload .rpm to Release
         if: success()
