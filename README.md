@@ -191,14 +191,41 @@ Set your preferred search filters once and forget them.
 
 ---
 
-### 📏 Advanced Search Filters & Page Size
+### 🔍 Advanced Search Filters & Page Size
 
-More control over your search results.
+Power user filtering with a visual interface.
 
 **How it works:**
-- **Max File Size**: New `maxfilesize` filter (e.g. `maxfs:500mb`)
-- **Page Size**: Configurable results per page (10, 25, 50, 100, All)
+- **Visual Filter Editor**: Click the "Advanced Filters" button to set filters with a GUI.
+  - Bitrate, Duration, File Size (Min/Max).
+  - Toggles for CBR, VBR, Lossless.
+- **Text Filters**: Still supports power-user text syntax (`minbr:320`).
+- **Page Size**: Configurable results per page (25, 50, 100, 200, 500).
 - Settings persist across sessions
+
+---
+
+### 📝 User Notes & Ratings
+
+Keep track of users with persistent notes and color-coded ratings.
+
+**How it works:**
+- Add notes to any user from Search Results or Browse views.
+- Assign color ratings (Red, Green, etc.) to visually tag users.
+- Notes and ratings appear as badges next to usernames.
+- Mark notes as "High Priority" for extra visibility.
+
+---
+
+### 💬 Improved Chat Rooms
+
+Enhanced interaction in chat rooms.
+
+**How it works:**
+- Right-click or use the context menu on users in the room list.
+- Quickly **Browse Files** of chat users.
+- Start **Private Chats** instantly.
+- Add **User Notes** directly from the chat list.
 
 ---
 

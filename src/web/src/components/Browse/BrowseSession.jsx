@@ -1,8 +1,10 @@
 /* eslint-disable promise/prefer-await-to-then */
 import './Browse.css';
 import * as transfers from '../../lib/transfers';
+import * as userNotes from '../../lib/userNotes';
 import * as users from '../../lib/users';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import UserNoteModal from '../Users/UserNoteModal';
 import Directory from './Directory';
 import DirectoryTree from './DirectoryTree';
 import * as lzString from 'lz-string';
@@ -25,6 +27,7 @@ const initialState = {
   separator: '\\',
   tree: [],
   username: '',
+  userNote: null,
 };
 
 class BrowseSession extends Component {
@@ -40,6 +43,7 @@ class BrowseSession extends Component {
     const userToBrowse = this.props.username;
 
     if (userToBrowse) {
+      this.fetchUserNote(userToBrowse);
       // Try to load cached data first
       const hasCachedData = this.loadState();
 
@@ -70,6 +74,15 @@ class BrowseSession extends Component {
       this.handleVisibilityChange,
     );
   }
+
+  fetchUserNote = async (username) => {
+    try {
+      const response = await userNotes.getNote({ username });
+      this.setState({ userNote: response.data });
+    } catch {
+      this.setState({ userNote: null });
+    }
+  };
 
   // Start polling only when needed (during active browse)
   startPolling = () => {
@@ -110,6 +123,7 @@ class BrowseSession extends Component {
     this.setState(
       { browseError: undefined, browseState: 'pending', username },
       () => {
+        this.fetchUserNote(username);
         // Start polling only while browse is in progress
         this.startPolling();
 
@@ -379,6 +393,7 @@ class BrowseSession extends Component {
       selectedDirectory,
       separator,
       tree,
+      userNote,
       username,
     } = this.state;
     const { locked, name } = selectedDirectory;
@@ -466,6 +481,27 @@ class BrowseSession extends Component {
                             name="circle"
                           />
                           {username}
+                          {userNote && (
+                            <Icon
+                              color={userNote.color || 'grey'}
+                              name={userNote.icon || 'sticky note'}
+                              style={{ marginLeft: '8px' }}
+                              title={userNote.note}
+                            />
+                          )}
+                          <UserNoteModal
+                            onClose={() => this.fetchUserNote(username)}
+                            trigger={
+                              <Icon
+                                color="grey"
+                                link
+                                name="pencil alternate"
+                                size="small"
+                                style={{ marginLeft: '4px', opacity: 0.5 }}
+                              />
+                            }
+                            username={username}
+                          />
                         </span>
                         <Icon
                           link

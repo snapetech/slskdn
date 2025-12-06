@@ -1,4 +1,5 @@
 import './Rooms.css';
+import UserContextMenu from '../Shared/UserContextMenu';
 import React, { useMemo } from 'react';
 import { Flag, Icon, List, Popup } from 'semantic-ui-react';
 
@@ -48,7 +49,9 @@ const RoomUserList = ({ users }) => {
               content={getDetails(user)}
               trigger={getFlag(user)}
             />
-            {user.username}
+            <UserContextMenu username={user.username}>
+              <span style={{ cursor: 'pointer' }}>{user.username}</span>
+            </UserContextMenu>
           </List.Content>
         </List.Item>
       ))}

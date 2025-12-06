@@ -276,3 +276,28 @@ export const filterResponse = ({
     lockedFiles: filteredLockedFiles,
   };
 };
+
+export const serializeFiltersToString = (filters) => {
+  const parts = [];
+
+  if (filters.include && filters.include.length > 0)
+    parts.push(...filters.include);
+  if (filters.exclude && filters.exclude.length > 0)
+    parts.push(...filters.exclude.map((term) => `-${term}`));
+
+  if (filters.minBitRate) parts.push(`minbr:${filters.minBitRate}`);
+  if (filters.minBitDepth) parts.push(`minbd:${filters.minBitDepth}`);
+  if (filters.minFileSize) parts.push(`minfs:${filters.minFileSize}`);
+  if (filters.maxFileSize && filters.maxFileSize < Number.MAX_SAFE_INTEGER)
+    parts.push(`maxfs:${filters.maxFileSize}`);
+  if (filters.minLength) parts.push(`minlen:${filters.minLength}`);
+  if (filters.minFilesInFolder)
+    parts.push(`minfif:${filters.minFilesInFolder}`);
+
+  if (filters.isVBR) parts.push('isvbr');
+  if (filters.isCBR) parts.push('iscbr');
+  if (filters.isLossless) parts.push('islossless');
+  if (filters.isLossy) parts.push('islossy');
+
+  return parts.join(' ');
+};

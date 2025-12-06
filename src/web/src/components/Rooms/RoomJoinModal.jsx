@@ -1,6 +1,7 @@
 import './Rooms.css';
 import * as rooms from '../../lib/rooms';
 import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Button,
   Dimmer,
@@ -24,9 +25,15 @@ const RoomJoinModal = ({ joinRoom: parentJoinRoom, ...modalOptions }) => {
   useEffect(() => {
     const getAvailableRooms = async () => {
       setLoading(true);
-      const availableResult = await rooms.getAvailable();
-      setAvailable(availableResult);
-      setLoading(false);
+      try {
+        const availableResult = await rooms.getAvailable();
+        setAvailable(availableResult || []);
+      } catch {
+        toast.error('Failed to load room list');
+        setAvailable([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     if (open) getAvailableRooms();

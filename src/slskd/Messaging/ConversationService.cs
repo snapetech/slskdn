@@ -396,7 +396,15 @@ namespace slskd.Messaging
                 context.Conversations.Add(new Conversation { Username = username, IsActive = true });
             }
 
-            context.SaveChanges();
+            try
+            {
+                context.SaveChanges();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE constraint failed: Conversations.Username") == true)
+            {
+                // Duplicate insert under contention; safe to ignore
+                Log.Debug("Ignored duplicate conversation insert for {Username}", username);
+            }
         }
     }
 }

@@ -7,15 +7,24 @@ import {
   parseFiltersFromString,
   unblockUser,
 } from '../../../lib/searches';
+import { getAllNotes } from '../../../lib/userNotes';
 import { sleep } from '../../../lib/util';
 import ErrorSegment from '../../Shared/ErrorSegment';
 import LoaderSegment from '../../Shared/LoaderSegment';
 import Switch from '../../Shared/Switch';
 import Response from '../Response';
 import SearchDetailHeader from './SearchDetailHeader';
+import SearchFilterModal from './SearchFilterModal';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
-import { Button, Checkbox, Dropdown, Input, Segment } from 'semantic-ui-react';
+import {
+  Button,
+  Checkbox,
+  Dropdown,
+  Icon,
+  Input,
+  Segment,
+} from 'semantic-ui-react';
 
 const sortDropdownOptions = [
   {
@@ -104,6 +113,25 @@ const SearchDetail = ({
   );
   const [displayCount, setDisplayCount] = useState(pageSize);
   const [userStats, setUserStats] = useState({});
+  const [userNotes, setUserNotes] = useState({});
+
+  const fetchUserNotes = useCallback(async () => {
+    try {
+      const response = await getAllNotes();
+      const notesMap = response.data.reduce((accumulator, note) => {
+        accumulator[note.username] = note;
+        return accumulator;
+      }, {});
+      setUserNotes(notesMap);
+    } catch (error_) {
+      console.error('Failed to fetch user notes', error_);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserNotes();
+  }, [fetchUserNotes]);
+
   const [hasSavedDefault, setHasSavedDefault] = useState(
     Boolean(localStorage.getItem('slskd-default-search-filter')),
   );
@@ -389,6 +417,18 @@ const SearchDetail = ({
                       title="Clear saved default filter"
                     />
                   )}
+                  <SearchFilterModal
+                    filterString={resultFilters}
+                    onChange={setResultFilters}
+                    trigger={
+                      <Button
+                        icon
+                        title="Advanced Filters"
+                      >
+                        <Icon name="sliders horizontal" />
+                      </Button>
+                    }
+                  />
                 </Button.Group>
               }
               className="search-filter"
@@ -412,9 +452,11 @@ const SearchDetail = ({
               key={r.username}
               onBlock={() => handleBlockUser(r.username)}
               onHide={() => setHiddenResults([...hiddenResults, r.username])}
+              onNoteUpdate={fetchUserNotes}
               onUnblock={() => handleUnblockUser(r.username)}
               response={r}
               smartScore={r.smartScore}
+              userNote={userNotes[r.username]}
             />
           ))}
         {loaded &&

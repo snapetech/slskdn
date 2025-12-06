@@ -2,6 +2,7 @@ import * as transfers from '../../lib/transfers';
 import { getDirectoryContents } from '../../lib/users';
 import { formatBytes, getDirectoryName } from '../../lib/util';
 import FileList from '../Shared/FileList';
+import UserNoteModal from '../Users/UserNoteModal';
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -21,6 +22,25 @@ const buildTree = (response) => {
         : dict[directory].concat(selectable);
     return dict;
   }, {});
+};
+
+const getBadgeColor = (downloadStats) => {
+  if (!downloadStats) return null;
+  if (downloadStats.successfulDownloads >= 5) return 'green';
+  if (downloadStats.successfulDownloads >= 1) return 'blue';
+  if (downloadStats.failedDownloads > downloadStats.successfulDownloads)
+    return 'orange';
+  return 'grey';
+};
+
+const getSelectedFiles = (tree) => {
+  return Object.keys(tree)
+    .reduce((list, dict) => list.concat(tree[dict]), [])
+    .filter((f) => f.selected);
+};
+
+const getSelectedSize = (selectedFiles) => {
+  return formatBytes(selectedFiles.reduce((total, f) => total + f.size, 0));
 };
 
 class Response extends Component {
@@ -132,14 +152,76 @@ class Response extends Component {
     this.setState((previousState) => ({ isFolded: !previousState.isFolded }));
   };
 
+  renderDownloadAction = (
+    selectedFiles,
+    selectedSize,
+    downloadRequest,
+    downloadError,
+  ) => {
+    if (selectedFiles.length === 0) return null;
+
+    return (
+      <Card.Content extra>
+        <span>
+          <Button
+            color="green"
+            content="Download"
+            disabled={this.props.disabled || downloadRequest === 'inProgress'}
+            icon="download"
+            label={{
+              as: 'a',
+              basic: false,
+              content: `${selectedFiles.length} file${
+                selectedFiles.length === 1 ? '' : 's'
+              }, ${selectedSize}`,
+            }}
+            labelPosition="right"
+            onClick={() =>
+              this.download(this.props.response.username, selectedFiles)
+            }
+          />
+          {downloadRequest === 'inProgress' && (
+            <Icon
+              loading
+              name="circle notch"
+              size="large"
+            />
+          )}
+          {downloadRequest === 'complete' && (
+            <Icon
+              color="green"
+              name="checkmark"
+              size="large"
+            />
+          )}
+          {downloadRequest === 'error' && (
+            <span>
+              <Icon
+                color="red"
+                name="x"
+                size="large"
+              />
+              <Label>
+                {downloadError.data +
+                  ` (HTTP ${downloadError.status} ${downloadError.statusText})`}
+              </Label>
+            </span>
+          )}
+        </span>
+      </Card.Content>
+    );
+  };
+
   render() {
     const {
       downloadStats,
       isBlocked,
       onBlock,
+      onNoteUpdate,
       onUnblock,
       response,
       smartScore,
+      userNote,
     } = this.props;
     const free = response.hasFreeUploadSlot;
 
@@ -151,25 +233,9 @@ class Response extends Component {
       tree,
     } = this.state;
 
-    const selectedFiles = Object.keys(tree)
-      .reduce((list, dict) => list.concat(tree[dict]), [])
-      .filter((f) => f.selected);
-
-    const selectedSize = formatBytes(
-      selectedFiles.reduce((total, f) => total + f.size, 0),
-    );
-
-    // Determine badge color based on download history
-    const getBadgeColor = () => {
-      if (!downloadStats) return null;
-      if (downloadStats.successfulDownloads >= 5) return 'green';
-      if (downloadStats.successfulDownloads >= 1) return 'blue';
-      if (downloadStats.failedDownloads > downloadStats.successfulDownloads)
-        return 'orange';
-      return 'grey';
-    };
-
-    const badgeColor = getBadgeColor();
+    const selectedFiles = getSelectedFiles(tree);
+    const selectedSize = getSelectedSize(selectedFiles);
+    const badgeColor = getBadgeColor(downloadStats);
 
     return (
       <Card
@@ -229,6 +295,36 @@ class Response extends Component {
                 }
               />
             )}
+            {userNote && (
+              <Popup
+                content={userNote.note || 'User Note'}
+                position="top center"
+                trigger={
+                  <Label
+                    circular
+                    color={userNote.color || 'grey'}
+                    empty={!userNote.icon}
+                    icon={userNote.icon}
+                    size="tiny"
+                    style={{ marginLeft: '4px' }}
+                  />
+                }
+              />
+            )}
+            <UserNoteModal
+              onClose={onNoteUpdate}
+              trigger={
+                <Icon
+                  color="grey"
+                  link
+                  name="pencil alternate"
+                  size="small"
+                  style={{ marginLeft: '4px', opacity: 0.5 }}
+                  title="Edit User Note"
+                />
+              }
+              username={response.username}
+            />
             <span style={{ float: 'right' }}>
               <Popup
                 content={
@@ -294,53 +390,11 @@ class Response extends Component {
             />
           ))}
         </Card.Content>
-        {selectedFiles.length > 0 && (
-          <Card.Content extra>
-            <span>
-              <Button
-                color="green"
-                content="Download"
-                disabled={
-                  this.props.disabled || downloadRequest === 'inProgress'
-                }
-                icon="download"
-                label={{
-                  as: 'a',
-                  basic: false,
-                  content: `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}, ${selectedSize}`,
-                }}
-                labelPosition="right"
-                onClick={() => this.download(response.username, selectedFiles)}
-              />
-              {downloadRequest === 'inProgress' && (
-                <Icon
-                  loading
-                  name="circle notch"
-                  size="large"
-                />
-              )}
-              {downloadRequest === 'complete' && (
-                <Icon
-                  color="green"
-                  name="checkmark"
-                  size="large"
-                />
-              )}
-              {downloadRequest === 'error' && (
-                <span>
-                  <Icon
-                    color="red"
-                    name="x"
-                    size="large"
-                  />
-                  <Label>
-                    {downloadError.data +
-                      ` (HTTP ${downloadError.status} ${downloadError.statusText})`}
-                  </Label>
-                </span>
-              )}
-            </span>
-          </Card.Content>
+        {this.renderDownloadAction(
+          selectedFiles,
+          selectedSize,
+          downloadRequest,
+          downloadError,
         )}
       </Card>
     );

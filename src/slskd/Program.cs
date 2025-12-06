@@ -711,6 +711,24 @@ namespace slskd
             services.AddSingleton<IPushbulletService, PushbulletService>();
             services.AddSingleton<Integrations.Notifications.INotificationService, Integrations.Notifications.NotificationService>();
 
+            // User Notes services
+            var userNotesDbPath = Path.Combine(Program.AppDirectory, "user_notes.db");
+            services.AddDbContextFactory<Users.Notes.UserNotesDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={userNotesDbPath}");
+            });
+
+            // Ensure user notes database is created
+            using (var userNotesContext = new Users.Notes.UserNotesDbContext(
+                new DbContextOptionsBuilder<Users.Notes.UserNotesDbContext>()
+                    .UseSqlite($"Data Source={userNotesDbPath}")
+                    .Options))
+            {
+                userNotesContext.Database.EnsureCreated();
+            }
+
+            services.AddSingleton<Users.Notes.IUserNoteService, Users.Notes.UserNoteService>();
+
             return services;
         }
 
@@ -856,19 +874,16 @@ namespace slskd
                     options.AddPolicy(AuthPolicy.Any, policy =>
                     {
                         policy.AuthenticationSchemes.Add(PassthroughAuthentication.AuthenticationScheme);
-                        policy.RequireAuthenticatedUser();
                     });
 
                     options.AddPolicy(AuthPolicy.ApiKeyOnly, policy =>
                     {
                         policy.AuthenticationSchemes.Add(PassthroughAuthentication.AuthenticationScheme);
-                        policy.RequireAuthenticatedUser();
                     });
 
                     options.AddPolicy(AuthPolicy.JwtOnly, policy =>
                     {
                         policy.AuthenticationSchemes.Add(PassthroughAuthentication.AuthenticationScheme);
-                        policy.RequireAuthenticatedUser();
                     });
                 });
 

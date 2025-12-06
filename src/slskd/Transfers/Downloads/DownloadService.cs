@@ -839,7 +839,17 @@ namespace slskd.Transfers.Downloads
         /// <returns>A value indicating whether the download was successfully failed.</returns>
         public bool TryFail(Guid id, Exception exception)
         {
-            var t = Find(t => t.Id == id);
+            Transfer t;
+            try
+            {
+                t = Find(t => t.Id == id);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Occurs during shutdown when the service provider/db context is already disposed.
+                Log.Debug("Ignoring TryFail for {TransferId} because services are disposed during shutdown", id);
+                return false;
+            }
 
             if (t is null)
             {

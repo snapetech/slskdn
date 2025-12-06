@@ -294,10 +294,14 @@ namespace slskd
                     Log.Information("Version {CurrentVersion} is up to date.", Program.SemanticVersion);
                 }
             }
+            catch (FormatException ex)
+            {
+                Log.Warning("Failed to parse latest version string: {Message}", ex.Message);
+                // Ignore parse errors to avoid noisy warnings on malformed tags
+            }
             catch (Exception ex)
             {
                 Log.Warning("Failed to check version: {Message}", ex.Message);
-                throw;
             }
         }
 
