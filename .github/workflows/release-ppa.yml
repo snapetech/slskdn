@@ -1,0 +1,99 @@
+name: Upload to PPA
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload to PPA'
+        required: true
+
+jobs:
+  upload-ppa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Convert 0.24.1-slskdn.7 to 0.24.1.slskdn.7 for debian version
+          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper dput gnupg
+
+      - name: Import GPG Key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "GPG_PRIVATE_KEY secret not set. Skipping PPA upload."
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          # Trust the key
+          KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 "^pub" | tail -1 | awk '{print $1}')
+          echo "$KEY_ID:6:" | gpg --import-ownertrust
+
+      - name: Download Release Asset
+        run: |
+          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o slskdn.zip
+          unzip slskdn.zip -d slskdn-${{ steps.version.outputs.version }}
+
+      - name: Prepare Source Package
+        run: |
+          # Create tarball for orig source
+          tar -czvf slskdn_${{ steps.version.outputs.version }}.orig.tar.gz slskdn-${{ steps.version.outputs.version }}
+          
+          # Copy debian directory
+          cp -r packaging/debian slskdn-${{ steps.version.outputs.version }}/
+          
+          # Update changelog
+          cd slskdn-${{ steps.version.outputs.version }}
+          cat > debian/changelog << EOF
+          slskdn (${{ steps.version.outputs.version }}-1ppa1~jammy) jammy; urgency=medium
+          
+            * Release ${{ steps.version.outputs.tag }}
+          
+           -- slskdn <slskdn@proton.me>  $(date -R)
+          EOF
+
+      - name: Build Source Package
+        run: |
+          cd slskdn-${{ steps.version.outputs.version }}
+          debuild -S -sa -k96A07606FE65392F
+
+      - name: Configure dput
+        run: |
+          mkdir -p ~/.dput.cf
+          cat > ~/.dput.cf << EOF
+          [slskdn-ppa]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~keefshape/ubuntu/slskdn/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          EOF
+
+      - name: Upload to PPA
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
+            exit 0
+          fi
+          dput slskdn-ppa ../slskdn_${{ steps.version.outputs.version }}-1ppa1~jammy_source.changes
+
