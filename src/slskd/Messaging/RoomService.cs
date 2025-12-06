@@ -180,20 +180,27 @@ namespace slskd.Messaging
 
         private async void Client_LoggedIn(object sender, EventArgs e)
         {
-            var autoJoinRooms = OptionsMonitor.CurrentValue.Rooms;
-
-            if (autoJoinRooms.Any())
+            try
             {
-                Logger.Information("Auto-joining room(s) {Rooms}", string.Join(", ", autoJoinRooms));
-                await TryJoinAsync(autoJoinRooms);
+                var autoJoinRooms = OptionsMonitor.CurrentValue.Rooms;
+
+                if (autoJoinRooms.Any())
+                {
+                    Logger.Information("Auto-joining room(s) {Rooms}", string.Join(", ", autoJoinRooms));
+                    await TryJoinAsync(autoJoinRooms);
+                }
+
+                var previouslyJoinedRooms = RoomTracker.Rooms.Keys.Except(autoJoinRooms);
+
+                if (previouslyJoinedRooms.Any())
+                {
+                    Logger.Information("Attempting to rejoin room(s) {Rooms}", string.Join(", ", previouslyJoinedRooms));
+                    await TryJoinAsync(previouslyJoinedRooms.ToArray());
+                }
             }
-
-            var previouslyJoinedRooms = RoomTracker.Rooms.Keys.Except(autoJoinRooms);
-
-            if (previouslyJoinedRooms.Any())
+            catch (Exception ex)
             {
-                Logger.Information("Attempting to rejoin room(s) {Rooms}", string.Join(", ", previouslyJoinedRooms));
-                await TryJoinAsync(previouslyJoinedRooms.ToArray());
+                Logger.Error(ex, "Error during post-login room operations");
             }
         }
 
