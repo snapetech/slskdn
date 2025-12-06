@@ -12,6 +12,8 @@ Source3:        slskd.conf
 
 BuildArch:      x86_64
 BuildRequires:  systemd-rpm-macros
+# Required for user creation in %pre
+Requires(pre):  shadow-utils
 Requires:       systemd
 Provides:       slskd
 
