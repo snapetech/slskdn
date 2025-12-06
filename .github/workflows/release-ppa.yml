@@ -94,5 +94,8 @@ jobs:
             echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
             exit 0
           fi
-          dput slskdn-ppa ../slskdn_${{ steps.version.outputs.version }}-1ppa1~jammy_source.changes
+          ls -la *.changes || true
+          CHANGES_FILE=$(find . -name "*.changes" -type f | head -1)
+          echo "Found changes file: $CHANGES_FILE"
+          dput slskdn-ppa "$CHANGES_FILE"
 
