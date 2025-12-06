@@ -7,7 +7,7 @@ export const getAll = async ({ direction }) => {
 
   if (!Array.isArray(response)) {
     console.warn('got non-array response from transfers API', response);
-    return undefined;
+    return [];
   }
 
   return response;
