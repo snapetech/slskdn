@@ -96,7 +96,7 @@ namespace slskd
             IMessagingService messagingService,
             IShareService shareService,
             ISearchService searchService,
-            IPushbulletService pushbulletService,
+            Integrations.Notifications.INotificationService notificationService,
             IRelayService relayService,
             IHubContext<ApplicationHub> applicationHub,
             IHubContext<LogsHub> logHub)
@@ -152,7 +152,7 @@ namespace slskd
 
             Transfers = transferService;
             BrowseTracker = browseTracker;
-            Pushbullet = pushbulletService;
+            Notifications = notificationService;
 
             RoomService = roomService;
             Users = userService;
@@ -221,7 +221,7 @@ namespace slskd
         private SemaphoreSlim OptionsSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private SemaphoreSlim EnqueueRequestRateLimiter { get; } = new SemaphoreSlim(20, 20);
         private Options PreviousOptions { get; set; }
-        private IPushbulletService Pushbullet { get; }
+        private Integrations.Notifications.INotificationService Notifications { get; }
         private DateTime SharesRefreshStarted { get; set; }
         private IManagedState<State> State { get; }
         private ITransferService Transfers { get; init; }
@@ -971,17 +971,16 @@ namespace slskd
 
             Messaging.Conversations.HandleMessageAsync(args.Username, PrivateMessage.FromEventArgs(args));
 
-            if (Options.Integration.Pushbullet.Enabled && !args.Replayed)
+            if (!args.Replayed)
             {
-                _ = Pushbullet.PushAsync($"Private Message from {args.Username}", args.Username, args.Message);
+                _ = Notifications.SendPrivateMessageAsync(args.Username, args.Message);
             }
         }
 
         private void Client_RoomMessageReceived(object sender, RoomMessageReceivedEventArgs args)
         {
             // note: this event is also subscribed in the RoomService class
-            // this handler is only used for pushbullet.
-            // todo: refactor pushbullet so that it uses events
+            // this handler is only used for notifications.
             if (Users.IsBlacklisted(args.Username))
             {
                 return;
@@ -989,9 +988,9 @@ namespace slskd
 
             var message = RoomMessage.FromEventArgs(args, DateTime.UtcNow);
 
-            if (Options.Integration.Pushbullet.Enabled && message.Message.Contains(Client.Username))
+            if (message.Message.Contains(Client.Username))
             {
-                _ = Pushbullet.PushAsync($"Room Mention by {message.Username} in {message.RoomName}", message.RoomName, message.Message);
+                _ = Notifications.SendRoomMentionAsync(message.RoomName, message.Username, message.Message);
             }
         }
 

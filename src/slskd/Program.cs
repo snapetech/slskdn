@@ -691,6 +691,7 @@ namespace slskd
             services.AddSingleton<IFTPService, FTPService>();
 
             services.AddSingleton<IPushbulletService, PushbulletService>();
+            services.AddSingleton<Integrations.Notifications.INotificationService, Integrations.Notifications.NotificationService>();
 
             return services;
         }

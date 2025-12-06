@@ -2218,6 +2218,18 @@ namespace slskd
             public PushbulletOptions Pushbullet { get; init; } = new PushbulletOptions();
 
             /// <summary>
+            ///     Gets Ntfy options.
+            /// </summary>
+            [Validate]
+            public NtfyOptions Ntfy { get; init; } = new NtfyOptions();
+
+            /// <summary>
+            ///     Gets Pushover options.
+            /// </summary>
+            [Validate]
+            public PushoverOptions Pushover { get; init; } = new PushoverOptions();
+
+            /// <summary>
             ///     Webhook configuration.
             /// </summary>
             public class WebhookOptions
@@ -2567,6 +2579,152 @@ namespace slskd
                     if (Enabled && string.IsNullOrWhiteSpace(AccessToken))
                     {
                         results.Add(new ValidationResult($"The Enabled field is true, but no AccessToken has been specified."));
+                    }
+
+                    return results;
+                }
+            }
+
+            /// <summary>
+            ///     Ntfy options.
+            /// </summary>
+            public class NtfyOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether the Ntfy integration is enabled.
+                /// </summary>
+                [Argument(default, "ntfy")]
+                [EnvironmentVariable("NTFY")]
+                [Description("enable Ntfy integration")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the Ntfy topic URL.
+                /// </summary>
+                [Argument(default, "ntfy-url")]
+                [EnvironmentVariable("NTFY_URL")]
+                [Description("Ntfy topic URL (e.g. https://ntfy.sh/mytopic)")]
+                public string Url { get; init; }
+
+                /// <summary>
+                ///     Gets the Ntfy access token (optional).
+                /// </summary>
+                [Argument(default, "ntfy-token")]
+                [EnvironmentVariable("NTFY_TOKEN")]
+                [Description("Ntfy access token (optional)")]
+                [Secret]
+                public string AccessToken { get; init; }
+
+                /// <summary>
+                ///     Gets the prefix for Ntfy notification titles.
+                /// </summary>
+                [Argument(default, "ntfy-prefix")]
+                [EnvironmentVariable("NTFY_NOTIFICATION_PREFIX")]
+                [Description("prefix for Ntfy notification titles")]
+                public string NotificationPrefix { get; init; } = "slskd";
+
+                /// <summary>
+                ///     Gets a value indicating whether an Ntfy notification should be sent when a private message is received.
+                /// </summary>
+                [Argument(default, "ntfy-notify-on-pm")]
+                [EnvironmentVariable("NTFY_NOTIFY_ON_PRIVATE_MESSAGE")]
+                [Description("send Ntfy notifications when private messages are received")]
+                public bool NotifyOnPrivateMessage { get; init; } = true;
+
+                /// <summary>
+                ///     Gets a value indicating whether an Ntfy notification should be sent when the currently logged
+                ///     in user's username is mentioned in a room.
+                /// </summary>
+                [Argument(default, "ntfy-notify-on-room-mention")]
+                [EnvironmentVariable("NTFY_NOTIFY_ON_ROOM_MENTION")]
+                [Description("send Ntfy notifications when the username is mentioned in a chat room")]
+                public bool NotifyOnRoomMention { get; init; } = true;
+
+                /// <summary>
+                ///     Extended validation.
+                /// </summary>
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    var results = new List<ValidationResult>();
+
+                    if (Enabled && string.IsNullOrWhiteSpace(Url))
+                    {
+                        results.Add(new ValidationResult($"The Enabled field is true, but no Url has been specified for Ntfy."));
+                    }
+
+                    return results;
+                }
+            }
+
+            /// <summary>
+            ///     Pushover options.
+            /// </summary>
+            public class PushoverOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether the Pushover integration is enabled.
+                /// </summary>
+                [Argument(default, "pushover")]
+                [EnvironmentVariable("PUSHOVER")]
+                [Description("enable Pushover integration")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the Pushover user key.
+                /// </summary>
+                [Argument(default, "pushover-user-key")]
+                [EnvironmentVariable("PUSHOVER_USER_KEY")]
+                [Description("Pushover user key")]
+                [Secret]
+                public string UserKey { get; init; }
+
+                /// <summary>
+                ///     Gets the Pushover API token.
+                /// </summary>
+                [Argument(default, "pushover-token")]
+                [EnvironmentVariable("PUSHOVER_TOKEN")]
+                [Description("Pushover API token")]
+                [Secret]
+                public string Token { get; init; }
+
+                /// <summary>
+                ///     Gets the prefix for Pushover notification titles.
+                /// </summary>
+                [Argument(default, "pushover-prefix")]
+                [EnvironmentVariable("PUSHOVER_NOTIFICATION_PREFIX")]
+                [Description("prefix for Pushover notification titles")]
+                public string NotificationPrefix { get; init; } = "slskd";
+
+                /// <summary>
+                ///     Gets a value indicating whether a Pushover notification should be sent when a private message is received.
+                /// </summary>
+                [Argument(default, "pushover-notify-on-pm")]
+                [EnvironmentVariable("PUSHOVER_NOTIFY_ON_PRIVATE_MESSAGE")]
+                [Description("send Pushover notifications when private messages are received")]
+                public bool NotifyOnPrivateMessage { get; init; } = true;
+
+                /// <summary>
+                ///     Gets a value indicating whether a Pushover notification should be sent when the currently logged
+                ///     in user's username is mentioned in a room.
+                /// </summary>
+                [Argument(default, "pushover-notify-on-room-mention")]
+                [EnvironmentVariable("PUSHOVER_NOTIFY_ON_ROOM_MENTION")]
+                [Description("send Pushover notifications when the username is mentioned in a chat room")]
+                public bool NotifyOnRoomMention { get; init; } = true;
+
+                /// <summary>
+                ///     Extended validation.
+                /// </summary>
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    var results = new List<ValidationResult>();
+
+                    if (Enabled)
+                    {
+                        if (string.IsNullOrWhiteSpace(UserKey))
+                            results.Add(new ValidationResult($"The Enabled field is true, but no UserKey has been specified for Pushover."));
+                        if (string.IsNullOrWhiteSpace(Token))
+                            results.Add(new ValidationResult($"The Enabled field is true, but no Token has been specified for Pushover."));
                     }
 
                     return results;
