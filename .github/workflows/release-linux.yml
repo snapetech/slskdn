@@ -1,0 +1,139 @@
+name: Release Linux Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build'
+        required: true
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
+
+      - name: Build Frontend
+        working-directory: src/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Backend
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-linux-${{ matrix.arch }} \
+            --self-contained true \
+            -r linux-${{ matrix.arch }}
+
+      - name: Copy Web Assets
+        run: |
+          cp -r src/web/build/* publish-linux-${{ matrix.arch }}/wwwroot/
+
+      - name: Get Version
+        id: version
+        run: |
+          TAG=${{ github.event.inputs.tag || github.ref_name }}
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Create Tarball
+        run: |
+          cd publish-linux-${{ matrix.arch }}
+          tar -czvf ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz .
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: slskdn-linux-${{ matrix.arch }}
+          path: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+
+  update-aur:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Version
+        id: version
+        run: |
+          TAG=${{ github.ref_name }}
+          # Convert 0.24.1-slskdn.3 to 0.24.1.slskdn.3 for PKGBUILD
+          PKGVER=$(echo $TAG | sed 's/-slskdn/.slskdn/')
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT
+
+      - name: Download x64 Tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: slskdn-linux-x64
+
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          SHA=$(sha256sum slskdn-${{ steps.version.outputs.tag }}-linux-x64.tar.gz | cut -d' ' -f1)
+          echo "sha256=${SHA}" >> $GITHUB_OUTPUT
+
+      - name: Update PKGBUILD
+        run: |
+          cd packaging/aur
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD-bin
+          sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' 'SKIP' 'SKIP' 'SKIP')/" PKGBUILD-bin
+
+      - name: Setup SSH for AUR
+        if: ${{ secrets.AUR_SSH_KEY != '' }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          echo "Host aur.archlinux.org" >> ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/aur" >> ~/.ssh/config
+          echo "  User aur" >> ~/.ssh/config
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+
+      - name: Push to AUR
+        if: ${{ secrets.AUR_SSH_KEY != '' }}
+        run: |
+          git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
+          cd aur-repo
+          cp ../packaging/aur/PKGBUILD-bin PKGBUILD
+          cp ../packaging/aur/slskdn.service .
+          cp ../packaging/aur/slskdn.yml .
+          cp ../packaging/aur/slskdn.sysusers .
+          makepkg --printsrcinfo > .SRCINFO
+          git add -A
+          git commit -m "Update to ${{ steps.version.outputs.tag }}" || true
+          git push || echo "AUR push failed - may need manual intervention"
