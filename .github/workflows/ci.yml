@@ -15,7 +15,7 @@ env:
 jobs:
   build:
     name: Build and Test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -51,7 +51,7 @@ jobs:
   
   publish:
     name: Publish
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     strategy:
@@ -99,7 +99,7 @@ jobs:
   
   docker:
     name: Build Docker Image
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -171,7 +171,7 @@ jobs:
 
   release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build, publish, docker]
     if: startsWith(github.ref, 'refs/tags/')
     steps:
