@@ -1,11 +1,25 @@
 import './Chat.css';
 import SendMessageModal from './SendMessageModal';
-import React from 'react';
-import { Button, Icon, Label, Menu } from 'semantic-ui-react';
+import React, { useState } from 'react';
+import { Button, Icon, Input, Label, Menu } from 'semantic-ui-react';
 
-const ChatMenu = ({ active, conversations, onConversationChange, ...rest }) => {
+const ChatMenu = ({
+  active,
+  conversations,
+  onConversationChange,
+  startConversation,
+  ...rest
+}) => {
+  const [usernameInput, setUsernameInput] = useState('');
   const names = Object.keys(conversations);
   const isActive = (name) => active === name;
+
+  const handleStartDirect = () => {
+    if (usernameInput.trim()) {
+      startConversation(usernameInput.trim());
+      setUsernameInput('');
+    }
+  };
 
   return (
     <Menu
@@ -37,6 +51,19 @@ const ChatMenu = ({ active, conversations, onConversationChange, ...rest }) => {
         </Menu.Item>
       ))}
       <Menu.Menu position="right">
+        <Menu.Item>
+          <Input
+            action={{
+              icon: 'chat',
+              onClick: handleStartDirect,
+            }}
+            onChange={(e) => setUsernameInput(e.target.value)}
+            onKeyUp={(e) => e.key === 'Enter' && handleStartDirect()}
+            placeholder="Username..."
+            size="small"
+            value={usernameInput}
+          />
+        </Menu.Item>
         <SendMessageModal
           centered
           size="small"
@@ -44,8 +71,9 @@ const ChatMenu = ({ active, conversations, onConversationChange, ...rest }) => {
             <Button
               className="add-button"
               icon
+              title="Send message with text"
             >
-              <Icon name="plus" />
+              <Icon name="edit" />
             </Button>
           }
           {...rest}

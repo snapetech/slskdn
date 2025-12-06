@@ -1,11 +1,19 @@
 import './Rooms.css';
 import RoomJoinModal from './RoomJoinModal';
-import React from 'react';
-import { Button, Icon, Menu } from 'semantic-ui-react';
+import React, { useState } from 'react';
+import { Button, Icon, Input, Menu } from 'semantic-ui-react';
 
-const RoomMenu = ({ active, joined, onRoomChange, ...rest }) => {
+const RoomMenu = ({ active, joinRoom, joined, onRoomChange, ...rest }) => {
+  const [roomInput, setRoomInput] = useState('');
   const names = [...joined];
   const isActive = (name) => active === name;
+
+  const handleJoinDirect = () => {
+    if (roomInput.trim()) {
+      joinRoom(roomInput.trim());
+      setRoomInput('');
+    }
+  };
 
   return (
     <Menu
@@ -29,15 +37,30 @@ const RoomMenu = ({ active, joined, onRoomChange, ...rest }) => {
         </Menu.Item>
       ))}
       <Menu.Menu position="right">
+        <Menu.Item>
+          <Input
+            action={{
+              icon: 'sign-in',
+              onClick: handleJoinDirect,
+            }}
+            onChange={(e) => setRoomInput(e.target.value)}
+            onKeyUp={(e) => e.key === 'Enter' && handleJoinDirect()}
+            placeholder="Room name..."
+            size="small"
+            value={roomInput}
+          />
+        </Menu.Item>
         <RoomJoinModal
           centered
+          joinRoom={joinRoom}
           size="small"
           trigger={
             <Button
               className="add-button"
               icon
+              title="Browse rooms"
             >
-              <Icon name="plus" />
+              <Icon name="list" />
             </Button>
           }
           {...rest}

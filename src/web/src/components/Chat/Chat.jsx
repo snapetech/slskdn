@@ -192,6 +192,11 @@ class Chat extends Component {
     this.selectConversation(username);
   };
 
+  startConversation = async (username) => {
+    // Just select/open the conversation without sending a message
+    this.selectConversation(username);
+  };
+
   deleteConversation = async (username) => {
     await chat.remove({ username });
     await this.fetchConversations();
@@ -220,6 +225,7 @@ class Chat extends Component {
             conversations={conversations}
             initiateConversation={this.initiateConversation}
             onConversationChange={(name) => this.selectConversation(name)}
+            startConversation={this.startConversation}
           />
         </Segment>
         {Boolean(active) === false ? (
