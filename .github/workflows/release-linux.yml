@@ -132,13 +132,32 @@ jobs:
           echo "  User aur" >> ~/.ssh/config
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
           
-          # Clone and update AUR repo
+          # Configure git
+          git config --global user.email "slskdn@users.noreply.github.com"
+          git config --global user.name "slskdn CI"
+          
+          # Clone and update AUR repo (slskdn-bin)
           git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
           cd aur-repo
           cp ../packaging/aur/PKGBUILD-bin PKGBUILD
-          cp ../packaging/aur/slskdn.service .
-          cp ../packaging/aur/slskdn.yml .
-          cp ../packaging/aur/slskdn.sysusers .
+          cp ../packaging/aur/slskd.service .
+          cp ../packaging/aur/slskd.yml .
+          cp ../packaging/aur/slskd.sysusers .
+          cp ../packaging/aur/slskd.install .
+          makepkg --printsrcinfo > .SRCINFO
+          git add -A
+          git commit -m "Update to ${{ steps.version.outputs.tag }}" || true
+          git push || echo "AUR push failed - may need manual intervention"
+          cd ..
+          
+          # Clone and update AUR repo (slskdn source)
+          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-repo-src || mkdir aur-repo-src
+          cd aur-repo-src
+          cp ../packaging/aur/PKGBUILD .
+          cp ../packaging/aur/slskd.service .
+          cp ../packaging/aur/slskd.yml .
+          cp ../packaging/aur/slskd.sysusers .
+          cp ../packaging/aur/slskd.install .
           makepkg --printsrcinfo > .SRCINFO
           git add -A
           git commit -m "Update to ${{ steps.version.outputs.tag }}" || true
