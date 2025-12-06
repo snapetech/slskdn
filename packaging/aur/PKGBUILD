@@ -1,4 +1,4 @@
-# Maintainer: snapetech <snapetech@github.com>
+# Maintainer: snapetech <slskdn@proton.me>
 # slskdn - drop-in replacement for slskd with enhanced features (build from source)
 pkgname=slskdn
 _pkgname=slskd

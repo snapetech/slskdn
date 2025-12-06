@@ -141,8 +141,8 @@ jobs:
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
           
           # Configure git
-          git config --global user.email "slskdn@users.noreply.github.com"
-          git config --global user.name "slskdn CI"
+          git config --global user.email "slskdn@proton.me"
+          git config --global user.name "slskdn"
           
           # Clone and update AUR repo (slskdn-bin)
           git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
