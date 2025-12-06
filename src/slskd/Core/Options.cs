@@ -1402,28 +1402,28 @@ namespace slskd
             /// <summary>
             ///     Gets the list of download destinations.
             /// </summary>
-            public DestinationOption[] Folders { get; init; } = Array.Empty<DestinationOption>();
+            public List<DestinationOption> Folders { get; init; } = new List<DestinationOption>();
+        }
+
+        /// <summary>
+        ///     A download destination folder.
+        /// </summary>
+        public class DestinationOption
+        {
+            /// <summary>
+            ///     Gets the display name for this destination.
+            /// </summary>
+            public string Name { get; init; }
 
             /// <summary>
-            ///     A download destination folder.
+            ///     Gets the path to this destination.
             /// </summary>
-            public class DestinationOption
-            {
-                /// <summary>
-                ///     Gets the display name for this destination.
-                /// </summary>
-                public string Name { get; init; }
+            public string Path { get; init; }
 
-                /// <summary>
-                ///     Gets the path to this destination.
-                /// </summary>
-                public string Path { get; init; }
-
-                /// <summary>
-                ///     Gets a value indicating whether this is the default destination.
-                /// </summary>
-                public bool Default { get; init; } = false;
-            }
+            /// <summary>
+            ///     Gets a value indicating whether this is the default destination.
+            /// </summary>
+            public bool Default { get; init; } = false;
         }
 
         /// <summary>

@@ -10,10 +10,10 @@
 
 soulseek:
   # Set via: --slsk-username or SLSKD_SLSK_USERNAME env var
-  listen_port: 50333
+  listen_port: 51399
 
 web:
-  port: 5033
+  port: 5099
   https:
     disabled: true
   authentication:
