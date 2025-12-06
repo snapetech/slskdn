@@ -32,7 +32,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dput gnupg
+          sudo apt-get install -y devscripts debhelper dput gnupg build-essential
 
       - name: Import GPG Key
         env:
@@ -73,7 +73,7 @@ jobs:
       - name: Build Source Package
         run: |
           cd slskdn-${{ steps.version.outputs.version }}
-          debuild -S -sa -k96A07606FE65392F
+          debuild -S -sa -d -k96A07606FE65392F
 
       - name: Configure dput
         run: |
