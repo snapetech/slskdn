@@ -26,7 +26,7 @@
 **slskdn** is a feature-rich fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdn takes the opposite approach**:
 > **Everything built-in. No scripts required.**
 
-If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdn is for you.
+If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdn is for you. We also think that when someone takes the time to contribute working code, having a conversation about it is the least one can do.
 
 ## Features
 
@@ -135,6 +135,7 @@ Install slskdn as an app on your phone.
 - Add to Home Screen on iOS/Android, standalone mode
 
 ## Quick Start
+Getting started is simple—we don't believe in gatekeeping.
 
 ### Arch Linux (AUR)
 **Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
@@ -205,6 +206,7 @@ dotnet run --project src/slskd/slskd.csproj
 | Tabbed browsing | ❌ | ✅ |
 | Smart source ranking | ❌ | ✅ |
 | PWA support | ❌ | ✅ |
+| Open to community feedback | 🔒 | ✅ |
 
 ## Configuration
 slskdn uses the same config format as slskd, with additional options:
@@ -245,6 +247,8 @@ destinations:
 slskdn follows slskd's version numbers with a suffix: `0.24.1-slskdn.1` = First slskdn release based on slskd 0.24.1
 
 ## Contributing
+We welcome contributions from *everyone*—first-timers and veterans alike. No prior commit history required.
+
 1. **Pick an issue** from our [Issue Tracker](https://github.com/snapetech/slskdn/issues)
 2. **Fork the repo** and create a feature branch
 3. **Submit a PR** with your changes
@@ -254,7 +258,7 @@ cd src/web && npm install && npm start  # Frontend
 ```
 
 ## Upstream Contributions
-Features that prove stable may be submitted as PRs to upstream slskd. Our auto-replace feature was first: [slskd PR #1553](https://github.com/slskd/slskd/pull/1553). We aim to be a **proving ground**, not a permanent fork.
+Features that prove stable may be submitted as PRs to upstream slskd. Our auto-replace feature was first: [slskd PR #1553](https://github.com/slskd/slskd/pull/1553). We aim to be a **proving ground**, not a permanent fork. We believe good software comes from open dialogue—not just with established contributors, but with everyone who has something to offer. Our door is always open.
 
 ## License
 [GNU Affero General Public License v3.0](LICENSE), same as slskd.
@@ -266,4 +270,4 @@ Features that prove stable may be submitted as PRs to upstream slskd. Our auto-r
 
 </small>
 
-<p align="center"><strong>slskdn</strong> — Because "just write a script" isn't always the answer.</p>
+<p align="center"><strong>slskdn</strong> — For users who'd rather download music than learn Python.</p>
