@@ -123,17 +123,19 @@ jobs:
           cd ~/rpmbuild
           rpmbuild -bb SPECS/slskdn.spec
 
-      - name: Upload .rpm to Release
-        if: success()
+      - name: Find RPM
+        id: find_rpm
         run: |
           RPM_FILE=$(find /github/home/rpmbuild/RPMS -name "*.rpm" | head -1)
-          if [ -n "$RPM_FILE" ]; then
-            echo "Found RPM: $RPM_FILE"
-            gh release upload "${{ steps.version.outputs.tag }}" "$RPM_FILE" --clobber
-          else
-            echo "No RPM file found!"
-            find /github/home/rpmbuild -name "*.rpm" || true
-          fi
+          echo "rpm_path=$RPM_FILE" >> $GITHUB_OUTPUT
+          echo "Found RPM: $RPM_FILE"
+
+      - name: Upload .rpm to Release
+        if: steps.find_rpm.outputs.rpm_path != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: ${{ steps.find_rpm.outputs.rpm_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
