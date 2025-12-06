@@ -1,3 +1,20 @@
+// <copyright file="NotificationService.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU Affero General Public License as published
+//     by the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//     GNU Affero General Public License for more details.
+//
+//     You should have received a copy of the GNU Affero General Public License
+//     along with this program.  If not, see https://www.gnu.org/licenses/.
+// </copyright>
+
 namespace slskd.Integrations.Notifications
 {
     using System;
@@ -14,7 +31,7 @@ namespace slskd.Integrations.Notifications
     public class NotificationService : INotificationService
     {
         private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(30);
-        private readonly ConcurrentDictionary<string, DateTime> _lastNotificationTimes = new();
+        private readonly ConcurrentDictionary<string, DateTime> LastNotificationTimes = new();
 
         public NotificationService(
             IHttpClientFactory httpClientFactory,
@@ -32,41 +49,6 @@ namespace slskd.Integrations.Notifications
         private ILogger<NotificationService> Log { get; }
         private IOptionsMonitor<slskd.Options> OptionsMonitor { get; }
         private IPushbulletService Pushbullet { get; }
-
-        /// <summary>
-        /// Checks if a notification should be rate limited based on the cache key.
-        /// Returns true if the notification should be sent, false if rate limited.
-        /// </summary>
-        private bool ShouldSendNotification(string cacheKey)
-        {
-            var now = DateTime.UtcNow;
-
-            if (_lastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
-            {
-                if (now - lastTime < RateLimitWindow)
-                {
-                    Log.LogDebug("Rate limiting notification for key {CacheKey}", cacheKey);
-                    return false;
-                }
-            }
-
-            _lastNotificationTimes[cacheKey] = now;
-
-            // Clean up old entries periodically (keep dict from growing unbounded)
-            if (_lastNotificationTimes.Count > 1000)
-            {
-                var cutoff = now - RateLimitWindow;
-                foreach (var kvp in _lastNotificationTimes)
-                {
-                    if (kvp.Value < cutoff)
-                    {
-                        _lastNotificationTimes.TryRemove(kvp.Key, out _);
-                    }
-                }
-            }
-
-            return true;
-        }
 
         public async Task SendAsync(string title, string body, string cacheKey = null)
         {
@@ -178,7 +160,7 @@ namespace slskd.Integrations.Notifications
                     new KeyValuePair<string, string>("token", options.Token),
                     new KeyValuePair<string, string>("user", options.UserKey),
                     new KeyValuePair<string, string>("title", $"{options.NotificationPrefix}: {title}"),
-                    new KeyValuePair<string, string>("message", body)
+                    new KeyValuePair<string, string>("message", body),
                 });
 
                 var response = await client.PostAsync("https://api.pushover.net/1/messages.json", content);
@@ -188,6 +170,41 @@ namespace slskd.Integrations.Notifications
             {
                 Log.LogError(ex, "Failed to send Pushover notification");
             }
+        }
+
+        /// <summary>
+        /// Checks if a notification should be rate limited based on the cache key.
+        /// Returns true if the notification should be sent, false if rate limited.
+        /// </summary>
+        private bool ShouldSendNotification(string cacheKey)
+        {
+            var now = DateTime.UtcNow;
+
+            if (LastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
+            {
+                if (now - lastTime < RateLimitWindow)
+                {
+                    Log.LogDebug("Rate limiting notification for key {CacheKey}", cacheKey);
+                    return false;
+                }
+            }
+
+            LastNotificationTimes[cacheKey] = now;
+
+            // Clean up old entries periodically (keep dict from growing unbounded)
+            if (LastNotificationTimes.Count > 1000)
+            {
+                var cutoff = now - RateLimitWindow;
+                foreach (var kvp in LastNotificationTimes)
+                {
+                    if (kvp.Value < cutoff)
+                    {
+                        LastNotificationTimes.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }

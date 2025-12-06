@@ -88,4 +88,3 @@ namespace slskd.Wishlist
         public Guid? LastSearchId { get; set; }
     }
 }
-

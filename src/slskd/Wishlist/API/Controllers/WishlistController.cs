@@ -255,4 +255,3 @@ namespace slskd.Wishlist.API
         public int? MaxResults { get; set; }
     }
 }
-

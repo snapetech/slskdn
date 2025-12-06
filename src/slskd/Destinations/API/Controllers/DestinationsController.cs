@@ -72,7 +72,9 @@ namespace slskd.Destinations.API
                 {
                     // Skip if this is the same as the default
                     if (dest.Path == defaultPath)
+                    {
                         continue;
+                    }
 
                     destinations.Add(new DestinationResponse
                     {
@@ -229,4 +231,3 @@ namespace slskd.Destinations.API
         public bool Writable { get; set; }
     }
 }
-

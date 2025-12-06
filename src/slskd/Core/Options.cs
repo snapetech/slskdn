@@ -2752,9 +2752,14 @@ namespace slskd
                     if (Enabled)
                     {
                         if (string.IsNullOrWhiteSpace(UserKey))
+                        {
                             results.Add(new ValidationResult($"The Enabled field is true, but no UserKey has been specified for Pushover."));
+                        }
+
                         if (string.IsNullOrWhiteSpace(Token))
+                        {
                             results.Add(new ValidationResult($"The Enabled field is true, but no Token has been specified for Pushover."));
+                        }
                     }
 
                     return results;

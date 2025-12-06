@@ -267,4 +267,3 @@ namespace slskd.Transfers.Ranking
         }
     }
 }
-

@@ -219,7 +219,9 @@ namespace slskd.Wishlist
             foreach (var item in enabledItems)
             {
                 if (cancellationToken.IsCancellationRequested)
+                {
                     break;
+                }
 
                 try
                 {
@@ -352,4 +354,3 @@ namespace slskd.Wishlist
         }
     }
 }
-

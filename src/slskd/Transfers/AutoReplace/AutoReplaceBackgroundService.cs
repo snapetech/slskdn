@@ -244,4 +244,3 @@ namespace slskd.Transfers.AutoReplace
         public int IntervalSeconds { get; set; }
     }
 }
-

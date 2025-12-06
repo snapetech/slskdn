@@ -297,6 +297,7 @@ namespace slskd
             catch (FormatException ex)
             {
                 Log.Warning("Failed to parse latest version string: {Message}", ex.Message);
+
                 // Ignore parse errors to avoid noisy warnings on malformed tags
             }
             catch (Exception ex)

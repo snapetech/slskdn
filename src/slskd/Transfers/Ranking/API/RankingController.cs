@@ -72,4 +72,3 @@ namespace slskd.Transfers.Ranking.API
         }
     }
 }
-
