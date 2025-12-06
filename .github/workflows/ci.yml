@@ -212,3 +212,9 @@ jobs:
           files: release/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger AUR Update
+        run: |
+          gh workflow run release-linux.yml -f tag=${{ env.TAG }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

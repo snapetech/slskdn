@@ -28,8 +28,7 @@ public enum EventType
     DownloadFileComplete = 2,
     DownloadDirectoryComplete = 3,
     UploadFileComplete = 4,
-
-    // UploadDirectoryComplete = 5,
+    DownloadFileFailed = 5,
     PrivateMessageReceived = 6,
     RoomMessageReceived = 7,
     Noop = int.MaxValue,
@@ -50,6 +49,15 @@ public sealed record DownloadFileCompleteEvent : Event
     public required string LocalFilename { get; init; }
     public required string RemoteFilename { get; init; }
     public required Transfer Transfer { get; init; }
+}
+
+public sealed record DownloadFileFailedEvent : Event
+{
+    public override EventType Type => EventType.DownloadFileFailed;
+    public override int Version { get; } = 0;
+    public required string RemoteFilename { get; init; }
+    public required Transfer Transfer { get; init; }
+    public string ErrorMessage { get; init; }
 }
 
 public sealed record DownloadDirectoryCompleteEvent : Event

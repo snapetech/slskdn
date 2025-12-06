@@ -59,16 +59,16 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "version=${TAG}" >> $GITHUB_OUTPUT
 
-      - name: Create Tarball
+      - name: Create Zip
         run: |
           cd publish-linux-${{ matrix.arch }}
-          tar -czvf ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz .
+          zip -r ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip .
 
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
-          files: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+          files: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -76,12 +76,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: slskdn-linux-${{ matrix.arch }}
-          path: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+          path: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
 
   update-aur:
     needs: build-linux
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    # Run on both release events and workflow_dispatch (triggered by CI after release)
     
     steps:
       - name: Checkout
@@ -90,7 +90,8 @@ jobs:
       - name: Get Version
         id: version
         run: |
-          TAG=${{ github.ref_name }}
+          # Get tag from either workflow_dispatch input or release ref
+          TAG=${{ github.event.inputs.tag || github.ref_name }}
           # Convert 0.24.1-slskdn.3 to 0.24.1.slskdn.3 for PKGBUILD
           PKGVER=$(echo $TAG | sed 's/-slskdn/.slskdn/')
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -104,8 +105,15 @@ jobs:
       - name: Calculate SHA256
         id: sha
         run: |
-          SHA=$(sha256sum slskdn-${{ steps.version.outputs.tag }}-linux-x64.tar.gz | cut -d' ' -f1)
-          echo "sha256=${SHA}" >> $GITHUB_OUTPUT
+          # Find the zip (name may vary)
+          ZIPFILE=$(ls slskdn-*-linux-x64.zip 2>/dev/null | head -1)
+          if [ -z "$ZIPFILE" ]; then
+            echo "No zip found, skipping SHA calculation"
+            echo "sha256=SKIP" >> $GITHUB_OUTPUT
+          else
+            SHA=$(sha256sum "$ZIPFILE" | cut -d' ' -f1)
+            echo "sha256=${SHA}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Update PKGBUILD
         run: |

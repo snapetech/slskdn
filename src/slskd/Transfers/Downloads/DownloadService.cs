@@ -862,6 +862,16 @@ namespace slskd.Transfers.Downloads
             try
             {
                 Update(t);
+
+                // Raise failure event for ranking history tracking
+                EventBus.Raise(new Events.DownloadFileFailedEvent
+                {
+                    Timestamp = t.EndedAt.Value,
+                    RemoteFilename = t.Filename,
+                    Transfer = t,
+                    ErrorMessage = exception.Message,
+                });
+
                 return true;
             }
             catch (Exception ex)

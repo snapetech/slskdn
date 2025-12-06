@@ -47,8 +47,9 @@ namespace slskd.Transfers.Ranking
             this.contextFactory = contextFactory;
             this.logger = logger;
 
-            // Subscribe to download completion events to track history
-            eventBus.Subscribe<DownloadFileCompleteEvent>("SourceRankingService", OnDownloadComplete);
+            // Subscribe to download events to track history
+            eventBus.Subscribe<DownloadFileCompleteEvent>("SourceRankingService.Success", OnDownloadComplete);
+            eventBus.Subscribe<DownloadFileFailedEvent>("SourceRankingService.Failure", OnDownloadFailed);
         }
 
         private async Task OnDownloadComplete(DownloadFileCompleteEvent evt)
@@ -61,6 +62,19 @@ namespace slskd.Transfers.Ranking
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to record download success for {Username}", evt.Transfer.Username);
+            }
+        }
+
+        private async Task OnDownloadFailed(DownloadFileFailedEvent evt)
+        {
+            try
+            {
+                await RecordFailureAsync(evt.Transfer.Username);
+                logger.LogDebug("Recorded failed download from {Username}: {Error}", evt.Transfer.Username, evt.ErrorMessage);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to record download failure for {Username}", evt.Transfer.Username);
             }
         }
 
