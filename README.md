@@ -25,6 +25,9 @@
   <a href="https://ghcr.io/snapetech/slskdn">
     <img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker">
   </a>
+  <a href="https://aur.archlinux.org/packages/slskdn-bin">
+    <img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR">
+  </a>
   <img src="https://img.shields.io/badge/base-slskd%200.24.1-purple" alt="Based on slskd">
   <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License">
@@ -244,6 +247,27 @@ Install slskdn as an app on your phone.
 ---
 
 ## Quick Start
+
+### Arch Linux (AUR)
+
+**Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
+
+```bash
+# Binary package (recommended)
+yay -S slskdn-bin
+
+# Or build from source
+yay -S slskdn
+```
+
+Then enable and start:
+```bash
+sudo systemctl enable --now slskd
+```
+
+Access at http://localhost:5030
+
+---
 
 ### With Docker
 
