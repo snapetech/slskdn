@@ -73,12 +73,11 @@ jobs:
       - name: Build Source Package
         run: |
           cd slskdn-${{ steps.version.outputs.version }}
-          debuild -S -sa -d -k96A07606FE65392F
+          debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
 
       - name: Configure dput
         run: |
-          mkdir -p ~/.dput.cf
-          cat > ~/.dput.cf << EOF
+          cat > ~/.dput.cf << 'EOF'
           [slskdn-ppa]
           fqdn = ppa.launchpad.net
           method = ftp
