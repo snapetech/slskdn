@@ -1,7 +1,7 @@
 import React from 'react';
-import { List } from 'semantic-ui-react';
+import { Icon, List } from 'semantic-ui-react';
 
-const subtree = (root, selectedDirectoryName, onSelect) => {
+const subtree = (root, selectedDirectoryName, onSelect, onDownload) => {
   return (root || []).map((d) => {
     const selected = d.name === selectedDirectoryName;
     // const dimIfLocked = { opacity: d.locked ? 0.5 : 1 };
@@ -32,9 +32,19 @@ const subtree = (root, selectedDirectoryName, onSelect) => {
               onClick={(event) => onSelect(event, d)}
             >
               {d.name.split('\\').pop().split('/').pop()}
+              <Icon
+                className="browse-folder-download-icon"
+                name="download"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDownload(d);
+                }}
+                style={{ marginLeft: '0.5em', opacity: 0.7 }}
+                title="Download folder"
+              />
             </List.Header>
             <List.List>
-              {subtree(d.children, selectedDirectoryName, onSelect)}
+              {subtree(d.children, selectedDirectoryName, onSelect, onDownload)}
             </List.List>
           </List.Content>
         </List.Item>
@@ -43,7 +53,7 @@ const subtree = (root, selectedDirectoryName, onSelect) => {
   });
 };
 
-const DirectoryTree = ({ onSelect, selectedDirectoryName, tree }) =>
-  subtree(tree, selectedDirectoryName, onSelect);
+const DirectoryTree = ({ onDownload, onSelect, selectedDirectoryName, tree }) =>
+  subtree(tree, selectedDirectoryName, onSelect, onDownload);
 
 export default DirectoryTree;

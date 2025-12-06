@@ -3,6 +3,7 @@ import { getDirectoryContents } from '../../lib/users';
 import { formatBytes, getDirectoryName } from '../../lib/util';
 import FileList from '../Shared/FileList';
 import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Button, Card, Icon, Label, Popup } from 'semantic-ui-react';
 
@@ -186,7 +187,16 @@ class Response extends Component {
               color={free ? 'green' : 'yellow'}
               name="circle"
             />
-            {response.username}
+            <Link
+              style={{ color: 'inherit' }}
+              title="Browse files"
+              to={{
+                pathname: '/browse',
+                state: { user: response.username },
+              }}
+            >
+              {response.username}
+            </Link>
             {downloadStats && (
               <Popup
                 content={`${downloadStats.successfulDownloads} successful, ${downloadStats.failedDownloads} failed downloads from this user`}
