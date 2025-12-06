@@ -72,11 +72,27 @@ class TransferGroup extends Component {
     );
   };
 
-  removeAll = async (direction, username, selected) => {
+  removeAll = async (direction, username, selected, deleteFile = false) => {
+    if (
+      deleteFile &&
+      // eslint-disable-next-line no-alert
+      !window.confirm(
+        `Are you sure you want to PERMANENTLY delete ${selected.length} file(s) from disk? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
     await Promise.all(
       selected.map((file) =>
         transfers
-          .cancel({ direction, id: file.id, remove: true, username })
+          .cancel({
+            deleteFile,
+            direction,
+            id: file.id,
+            remove: true,
+            username,
+          })
           .then(() => this.removeFileSelection(file)),
       ),
     );
@@ -182,13 +198,25 @@ class TransferGroup extends Component {
                 <Button.Or />
               )}
               {allRemovable && (
-                <Button
-                  content={`Remove${all}`}
-                  icon="trash alternate"
-                  onClick={() =>
-                    this.removeAll(direction, user.username, selected)
-                  }
-                />
+                <Button.Group>
+                  <Button
+                    content={`Remove${all}`}
+                    icon="trash alternate"
+                    onClick={() =>
+                      this.removeAll(direction, user.username, selected)
+                    }
+                  />
+                  {direction === 'download' && (
+                    <Button
+                      color="red"
+                      icon="trash"
+                      onClick={() =>
+                        this.removeAll(direction, user.username, selected, true)
+                      }
+                      title="Remove and Delete File(s) from Disk"
+                    />
+                  )}
+                </Button.Group>
               )}
             </Button.Group>
           </Card.Content>

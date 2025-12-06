@@ -129,7 +129,11 @@ const Transfers = ({ direction, server }) => {
     setCancelling(false);
   };
 
-  const remove = async ({ file, suppressStateChange = false }) => {
+  const remove = async ({
+    deleteFile = false,
+    file,
+    suppressStateChange = false,
+  }) => {
     const { id, username } = file;
 
     try {
@@ -137,7 +141,13 @@ const Transfers = ({ direction, server }) => {
         setRemoving(true);
       }
 
-      await transfersLibrary.cancel({ direction, id, remove: true, username });
+      await transfersLibrary.cancel({
+        deleteFile,
+        direction,
+        id,
+        remove: true,
+        username,
+      });
       if (!suppressStateChange) {
         setRemoving(false);
       }
@@ -150,11 +160,11 @@ const Transfers = ({ direction, server }) => {
     }
   };
 
-  const removeAll = async (transfersToRemove) => {
+  const removeAll = async (transfersToRemove, deleteFile = false) => {
     setRemoving(true);
     await Promise.all(
       transfersToRemove.map((file) =>
-        remove({ file, suppressStateChange: true }),
+        remove({ deleteFile, file, suppressStateChange: true }),
       ),
     );
     setRemoving(false);

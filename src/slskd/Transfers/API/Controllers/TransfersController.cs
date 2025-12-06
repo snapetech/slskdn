@@ -76,7 +76,7 @@ namespace slskd.Transfers.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
-        public IActionResult CancelDownloadAsync([FromRoute, Required] string username, [FromRoute, Required] string id, [FromQuery] bool remove = false)
+        public IActionResult CancelDownloadAsync([FromRoute, Required] string username, [FromRoute, Required] string id, [FromQuery] bool remove = false, [FromQuery] bool deleteFile = false)
         {
             if (Program.IsRelayAgent)
             {
@@ -94,7 +94,7 @@ namespace slskd.Transfers.API
 
                 if (remove)
                 {
-                    Transfers.Downloads.Remove(guid);
+                    Transfers.Downloads.Remove(guid, deleteFile);
                 }
 
                 return NoContent();

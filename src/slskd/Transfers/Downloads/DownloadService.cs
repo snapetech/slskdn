@@ -98,7 +98,8 @@ namespace slskd.Transfers.Downloads
         /// </summary>
         /// <remarks>This is a soft delete; the record is retained for historical retrieval.</remarks>
         /// <param name="id">The unique identifier of the download.</param>
-        void Remove(Guid id);
+        /// <param name="deleteFile">Optionally delete the file from disk.</param>
+        void Remove(Guid id, bool deleteFile = false);
 
         /// <summary>
         ///     Cancels the download matching the specified <paramref name="id"/>, if it is in progress.
@@ -711,7 +712,7 @@ namespace slskd.Transfers.Downloads
         /// </summary>
         /// <remarks>This is a soft delete; the record is retained for historical retrieval.</remarks>
         /// <param name="id">The unique identifier of the download.</param>
-        public void Remove(Guid id)
+        public void Remove(Guid id, bool deleteFile = false)
         {
             try
             {
@@ -730,6 +731,39 @@ namespace slskd.Transfers.Downloads
                 if (!transfer.State.HasFlag(TransferStates.Completed))
                 {
                     throw new InvalidOperationException($"Invalid attempt to remove a download before it is complete");
+                }
+
+                if (deleteFile)
+                {
+                    try
+                    {
+                        var baseDirectory = transfer.State.HasFlag(TransferStates.Succeeded)
+                            ? OptionsMonitor.CurrentValue.Directories.Downloads
+                            : OptionsMonitor.CurrentValue.Directories.Incomplete;
+
+                        var localFilename = transfer.Filename.ToLocalFilename(baseDirectory);
+
+                        if (System.IO.File.Exists(localFilename))
+                        {
+                            System.IO.File.Delete(localFilename);
+                            Log.Information("Deleted file {Filename} for removed download {Id}", localFilename, id);
+
+                            var directory = System.IO.Path.GetDirectoryName(localFilename);
+                            if (System.IO.Directory.Exists(directory) && !System.IO.Directory.EnumerateFileSystemEntries(directory).Any())
+                            {
+                                System.IO.Directory.Delete(directory);
+                                Log.Debug("Deleted empty directory {Directory}", directory);
+                            }
+                        }
+                        else
+                        {
+                            Log.Warning("File {Filename} not found for deletion", localFilename);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Failed to delete file for download {Id}", id);
+                    }
                 }
 
                 transfer.Removed = true;

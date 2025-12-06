@@ -95,8 +95,13 @@ const SearchDetail = ({
   const [hideLocked, setHideLocked] = useState(true);
   const [hideNoFreeSlots, setHideNoFreeSlots] = useState(false);
   const [foldResults, setFoldResults] = useState(false);
-  const [resultFilters, setResultFilters] = useState('');
-  const [displayCount, setDisplayCount] = useState(5);
+  const [resultFilters, setResultFilters] = useState(
+    localStorage.getItem('slskd-default-search-filter') || '',
+  );
+  const [pageSize, setPageSize] = useState(
+    Number.parseInt(localStorage.getItem('slskd-search-page-size') || '25', 10),
+  );
+  const [displayCount, setDisplayCount] = useState(pageSize);
   const [userStats, setUserStats] = useState({});
 
   // Fetch user download stats for smart ranking
@@ -209,7 +214,16 @@ const SearchDetail = ({
     setError(undefined);
     setResults([]);
     setHiddenResults([]);
-    setDisplayCount(5);
+    setDisplayCount(pageSize);
+  };
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+    localStorage.setItem('slskd-search-page-size', newSize);
+    // If we're showing less than the new page size, expand to fill it
+    if (displayCount < newSize) {
+      setDisplayCount(newSize);
+    }
   };
 
   const create = async ({ navigate, search: searchForCreate }) => {
@@ -220,6 +234,11 @@ const SearchDetail = ({
   const remove = async () => {
     reset();
     onRemove(search);
+  };
+
+  const saveAsDefault = () => {
+    localStorage.setItem('slskd-default-search-filter', resultFilters);
+    toast.success('Search filters saved as default');
   };
 
   const filteredCount = results?.length - sortedAndFilteredResults.length;
@@ -277,6 +296,21 @@ const SearchDetail = ({
                 sortDropdownOptions.find((o) => o.value === resultSort).text
               }
             />
+            <Dropdown
+              button
+              className="search-options-pagesize"
+              floating
+              onChange={(_event, { value }) => handlePageSizeChange(value)}
+              options={[
+                { key: '10', text: '10 per page', value: 10 },
+                { key: '25', text: '25 per page', value: 25 },
+                { key: '50', text: '50 per page', value: 50 },
+                { key: '100', text: '100 per page', value: 100 },
+                { key: 'all', text: 'Show All', value: 999_999 },
+              ]}
+              style={{ marginLeft: '0.5em' }}
+              text={pageSize >= 999_999 ? 'Show All' : `${pageSize} per page`}
+            />
             <div className="search-option-toggles">
               <Checkbox
                 checked={hideLocked}
@@ -309,18 +343,28 @@ const SearchDetail = ({
             </div>
             <Input
               action={
-                Boolean(resultFilters) && {
-                  color: 'red',
-                  icon: 'x',
-                  onClick: () => setResultFilters(''),
-                }
+                <Button.Group>
+                  {Boolean(resultFilters) && (
+                    <Button
+                      color="red"
+                      icon="x"
+                      onClick={() => setResultFilters('')}
+                    />
+                  )}
+                  <Button
+                    color="blue"
+                    icon="save"
+                    onClick={saveAsDefault}
+                    title="Save as default filter"
+                  />
+                </Button.Group>
               }
               className="search-filter"
               label={{ content: 'Filter', icon: 'filter' }}
               onChange={(_event, data) => setResultFilters(data.value)}
               placeholder="
                 lackluster container -bothersome iscbr|isvbr islossless|islossy 
-                minbitrate:320 minbitdepth:24 minfilesize:10 minfilesinfolder:8 minlength:5000
+                minbr:320 minfilesize:100mb maxfilesize:2gb minfilesinfolder:8 minlength:5000
               "
               value={resultFilters}
             />
@@ -346,11 +390,12 @@ const SearchDetail = ({
             <Button
               className="showmore-button"
               fluid
-              onClick={() => setDisplayCount(displayCount + 5)}
+              onClick={() => setDisplayCount(displayCount + pageSize)}
               primary
               size="large"
             >
-              Show {remainingCount > 5 ? 5 : remainingCount} More Results{' '}
+              Show {remainingCount > pageSize ? pageSize : remainingCount} More
+              Results{' '}
               {`(${remainingCount} remaining, ${filteredCount} hidden by filter(s))`}
             </Button>
           ) : filteredCount > 0 ? (

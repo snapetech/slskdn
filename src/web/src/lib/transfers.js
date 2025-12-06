@@ -23,9 +23,15 @@ export const download = ({ username, files = [], destination }) => {
   );
 };
 
-export const cancel = ({ direction, username, id, remove = false }) => {
+export const cancel = ({
+  direction,
+  username,
+  id,
+  remove = false,
+  deleteFile = false,
+}) => {
   return api.delete(
-    `/transfers/${direction}s/${encodeURIComponent(username)}/${encodeURIComponent(id)}?remove=${remove}`,
+    `/transfers/${direction}s/${encodeURIComponent(username)}/${encodeURIComponent(id)}?remove=${remove}&deleteFile=${deleteFile}`,
   );
 };
 
