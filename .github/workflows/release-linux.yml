@@ -114,10 +114,12 @@ jobs:
           sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' 'SKIP' 'SKIP' 'SKIP')/" PKGBUILD-bin
 
       - name: Setup SSH for AUR
-        if: ${{ secrets.AUR_SSH_KEY != '' }}
+        if: secrets.AUR_SSH_KEY != ''
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
           echo "Host aur.archlinux.org" >> ~/.ssh/config
           echo "  IdentityFile ~/.ssh/aur" >> ~/.ssh/config
@@ -125,7 +127,7 @@ jobs:
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
 
       - name: Push to AUR
-        if: ${{ secrets.AUR_SSH_KEY != '' }}
+        if: secrets.AUR_SSH_KEY != ''
         run: |
           git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
           cd aur-repo
