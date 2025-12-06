@@ -13,9 +13,9 @@ makedepends=('unzip')
 optdepends=(
     'docker: for containerized deployment'
 )
-provides=('slskd')
-conflicts=('slskd')
-replaces=('slskd')
+provides=('slskd' 'slskd-bin')
+conflicts=('slskd' 'slskd-bin')
+replaces=('slskd' 'slskd-bin')
 backup=('etc/slskd/slskd.yml')
 options=('!strip')
 install=slskd.install

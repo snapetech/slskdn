@@ -26,6 +26,7 @@ namespace slskd.Transfers.AutoReplace
     using Microsoft.Extensions.Options;
     using Serilog;
     using slskd.Search;
+    using slskd.Transfers.Ranking;
     using Soulseek;
     using SlskdTransfer = slskd.Transfers.Transfer;
 
@@ -261,16 +262,19 @@ namespace slskd.Transfers.AutoReplace
         /// <param name="searchService">The search service.</param>
         /// <param name="soulseekClient">The Soulseek client.</param>
         /// <param name="optionsMonitor">The options monitor.</param>
+        /// <param name="rankingService">The source ranking service.</param>
         public AutoReplaceService(
             ITransferService transferService,
             ISearchService searchService,
             ISoulseekClient soulseekClient,
-            IOptionsMonitor<slskd.Options> optionsMonitor)
+            IOptionsMonitor<slskd.Options> optionsMonitor,
+            ISourceRankingService rankingService)
         {
             Transfers = transferService;
             Searches = searchService;
             Client = soulseekClient;
             OptionsMonitor = optionsMonitor;
+            RankingService = rankingService;
         }
 
         private ITransferService Transfers { get; }
@@ -280,6 +284,8 @@ namespace slskd.Transfers.AutoReplace
         private ISoulseekClient Client { get; }
 
         private IOptionsMonitor<slskd.Options> OptionsMonitor { get; }
+
+        private ISourceRankingService RankingService { get; }
 
         private ILogger Log { get; } = Serilog.Log.ForContext<AutoReplaceService>();
 
@@ -391,16 +397,33 @@ namespace slskd.Transfers.AutoReplace
                     }
                 }
 
-                // Sort by: size difference, free slot, queue length, speed
-                candidates = candidates
-                    .OrderBy(c => c.SizeDiffPercent)
-                    .ThenByDescending(c => c.HasFreeUploadSlot)
-                    .ThenBy(c => c.QueueLength)
-                    .ThenByDescending(c => c.UploadSpeed)
-                    .Take(10)
-                    .ToList();
+                // Use smart ranking service for scoring
+                var sourceCandidates = candidates.Select(c => new SourceCandidate
+                {
+                    Username = c.Username,
+                    Filename = c.Filename,
+                    Size = c.Size,
+                    HasFreeUploadSlot = c.HasFreeUploadSlot,
+                    QueueLength = c.QueueLength,
+                    UploadSpeed = c.UploadSpeed,
+                    SizeDiffPercent = c.SizeDiffPercent,
+                });
 
-                Log.Information("Found {Count} alternative candidates for: {SearchText}", candidates.Count, searchText);
+                var rankedSources = await RankingService.RankSourcesAsync(sourceCandidates, cancellationToken);
+
+                // Convert back to AlternativeCandidate, taking top 10
+                candidates = rankedSources.Take(10).Select(r => new AlternativeCandidate
+                {
+                    Username = r.Username,
+                    Filename = r.Filename,
+                    Size = r.Size,
+                    SizeDiffPercent = r.SizeDiffPercent ?? 0,
+                    HasFreeUploadSlot = r.HasFreeUploadSlot,
+                    QueueLength = r.QueueLength,
+                    UploadSpeed = r.UploadSpeed,
+                }).ToList();
+
+                Log.Information("Found {Count} alternative candidates for: {SearchText} (using smart ranking)", candidates.Count, searchText);
             }
             catch (Exception ex)
             {
@@ -501,6 +524,9 @@ namespace slskd.Transfers.AutoReplace
 
                 try
                 {
+                    // Record this as a failure for ranking purposes
+                    await RankingService.RecordFailureAsync(download.Username, cancellationToken);
+
                     // Find alternatives
                     var alternatives = await FindAlternativesAsync(
                         new FindAlternativeRequest

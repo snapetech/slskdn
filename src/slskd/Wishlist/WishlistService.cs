@@ -27,6 +27,8 @@ namespace slskd.Wishlist
     using Microsoft.Extensions.Options;
     using Serilog;
     using slskd.Search;
+    using slskd.Transfers;
+    using slskd.Transfers.Ranking;
     using Soulseek;
     using SlskdSearch = slskd.Search.Search;
 
@@ -75,18 +77,24 @@ namespace slskd.Wishlist
             IDbContextFactory<WishlistDbContext> contextFactory,
             ISearchService searchService,
             ISoulseekClient soulseekClient,
-            IOptionsMonitor<slskd.Options> optionsMonitor)
+            IOptionsMonitor<slskd.Options> optionsMonitor,
+            ISourceRankingService rankingService,
+            IDownloadService downloadService)
         {
             ContextFactory = contextFactory;
             SearchService = searchService;
             Client = soulseekClient;
             OptionsMonitor = optionsMonitor;
+            RankingService = rankingService;
+            DownloadService = downloadService;
         }
 
         private IDbContextFactory<WishlistDbContext> ContextFactory { get; }
         private ISearchService SearchService { get; }
         private ISoulseekClient Client { get; }
         private IOptionsMonitor<slskd.Options> OptionsMonitor { get; }
+        private ISourceRankingService RankingService { get; }
+        private IDownloadService DownloadService { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<WishlistService>();
 
         /// <inheritdoc/>
@@ -245,18 +253,86 @@ namespace slskd.Wishlist
 
             var search = await SearchService.StartAsync(searchId, query, scope, searchOptions);
 
+            // Wait for search to complete
+            await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+
+            // Get full search with responses
+            var searchWithResponses = await SearchService.FindAsync(s => s.Id == searchId, includeResponses: true);
+
             // Update wishlist item stats
             item.LastSearchedAt = DateTime.UtcNow;
             item.LastSearchId = searchId;
             item.TotalSearchCount++;
-            item.LastMatchCount = search.ResponseCount;
+            item.LastMatchCount = searchWithResponses?.ResponseCount ?? 0;
 
             context.WishlistItems.Update(item);
             await context.SaveChangesAsync(cancellationToken);
 
-            Log.Information("Wishlist search {Id} completed with {Count} responses", searchId, search.ResponseCount);
+            Log.Information("Wishlist search {Id} completed with {Count} responses", searchId, item.LastMatchCount);
+
+            // If auto-download is enabled and we have results, download the best ones
+            if (item.AutoDownload && searchWithResponses?.Responses?.Any() == true)
+            {
+                await AutoDownloadBestResultsAsync(searchWithResponses, cancellationToken);
+            }
 
             return search;
+        }
+
+        private async Task AutoDownloadBestResultsAsync(SlskdSearch search, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Collect all files from all responses
+                var candidates = new List<SourceCandidate>();
+
+                foreach (var response in search.Responses)
+                {
+                    foreach (var file in response.Files)
+                    {
+                        candidates.Add(new SourceCandidate
+                        {
+                            Username = response.Username,
+                            Filename = file.Filename,
+                            Size = file.Size,
+                            HasFreeUploadSlot = response.HasFreeUploadSlot,
+                            QueueLength = (int)response.QueueLength,
+                            UploadSpeed = response.UploadSpeed,
+                        });
+                    }
+                }
+
+                if (candidates.Count == 0)
+                {
+                    return;
+                }
+
+                // Rank all candidates using smart scoring
+                var rankedCandidates = await RankingService.RankSourcesAsync(candidates, cancellationToken);
+
+                // Take the top result (best scored)
+                var best = rankedCandidates.FirstOrDefault();
+                if (best == null)
+                {
+                    return;
+                }
+
+                Log.Information(
+                    "Auto-downloading best result: {Filename} from {Username} (score: {Score:F1})",
+                    best.Filename,
+                    best.Username,
+                    best.SmartScore);
+
+                // Enqueue the download
+                await DownloadService.EnqueueAsync(
+                    best.Username,
+                    new[] { (best.Filename, best.Size) },
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error auto-downloading wishlist results: {Message}", ex.Message);
+            }
         }
     }
 }
