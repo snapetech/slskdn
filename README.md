@@ -1,323 +1,25 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png" width="128" height="128" alt="slskdn logo">
-</p>
 
-<h1 align="center">slskdn</h1>
+# slskdn
 
-<p align="center">
-  <strong>The batteries-included Soulseek web client</strong>
-</p>
+[Releases](https://github.com/snapetech/slskdn/releases) · [Issues](https://github.com/snapetech/slskdn/issues) · [Quick Start](#quick-start)
 
-<p align="center">
-  <a href="https://github.com/snapetech/slskdn/releases">Releases</a> •
-  <a href="https://github.com/snapetech/slskdn/issues">Issues</a> •
-  <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a>
-</p>
+CI ![CI](https://github.com/snapetech/slskdn/actions/workflows/ci.yml/badge.svg) · AUR ![AUR](https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR) · Docker `ghcr.io/snapetech/slskdn` · Base: slskd 0.24.1
 
-<p align="center">
-  <a href="https://github.com/snapetech/slskdn/actions/workflows/ci.yml">
-    <img src="https://github.com/snapetech/slskdn/actions/workflows/ci.yml/badge.svg" alt="CI">
-  </a>
-  <a href="https://github.com/snapetech/slskdn/releases">
-    <img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version">
-  </a>
-  <a href="https://ghcr.io/snapetech/slskdn">
-    <img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker">
-  </a>
-  <a href="https://aur.archlinux.org/packages/slskdn-bin">
-    <img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR">
-  </a>
-  <img src="https://img.shields.io/badge/base-slskd%200.24.1-purple" alt="Based on slskd">
-  <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License">
-  </a>
-</p>
+**slskdn** is the batteries-included fork of slskd. Same core, but with built-in wishlist, smart ranking, tabbed browsing, advanced filters, user notes, notifications, and packaged builds.
 
----
-
-## What is slskdn?
-
-**slskdn** is a feature-rich fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client.
-
-While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdn takes the opposite approach**:
-
-> **Everything built-in. No scripts required.**
-
-If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdn is for you.
-
----
-
-## Features
-
-### 🔄 Auto-Replace Stuck Downloads
-
-Downloads get stuck. Users go offline. Transfers time out. Instead of manually searching for alternatives, slskdn does it automatically.
-
-**How it works:**
-- Toggle switch in the Downloads page header ("Auto-Replace")
-- Detects stuck downloads (timed out, errored, rejected, cancelled)
-- Searches the network for alternative sources
-- Filters by file extension and size threshold (default 5%)
-- Ranks alternatives by size match, free slots, queue depth, and speed
-- Automatically cancels the stuck download and enqueues the best alternative
-
-**CLI Options:**
-```bash
---auto-replace-enabled                    # Enable auto-replace
---auto-replace-max-size-diff-percent 5.0  # Size threshold
---auto-replace-interval 60                # Check interval in seconds
-```
-
----
-
-### ⭐ Wishlist / Background Search
-
-Save searches that run automatically in the background. Never miss rare content again.
-
-**How it works:**
-- New **Wishlist** item in the navigation sidebar
-- Add searches with custom filters and max results
-- Toggle auto-download for each wishlist item
-- Configurable background search interval
-- Track matches and run history per item
-- Manual "Run Now" button for each search
-
-**CLI Options:**
-```bash
---wishlist-enabled              # Enable wishlist feature
---wishlist-interval 60          # Check interval in minutes
---wishlist-auto-download        # Auto-download found items
---wishlist-max-results 100      # Max results per search
-```
-
----
-
-### 📁 Multiple Download Destinations
-
-Configure multiple download folders and choose where files go.
-
-```yaml
-# In your slskd.yml config:
-destinations:
-  folders:
-    - name: "Music"
-      path: "/downloads/music"
-      default: true
-    - name: "Audiobooks"
-      path: "/downloads/audiobooks"
-    - name: "Other"
-      path: "/downloads/other"
-```
-
----
-
-### 🗑️ Clear All Searches
-
-One-click cleanup for your search history.
-
-**How it works:**
-- Red **"Clear All"** button in the top-right of the search list
-- Removes all completed searches at once
-- Real-time UI update via SignalR
-- Shows toast notification with count of cleared searches
-
----
-
-### 🧠 Smart Search Result Ranking
-
-Intelligent sorting that considers multiple factors to show you the best sources first.
-
-**How it works:**
-- New default sort: **"⭐ Smart Ranking (Best Overall)"**
-- Combines multiple factors into a single score:
-  - Upload speed (up to 40 points)
-  - Queue length (up to 30 points, lower is better)
-  - Free upload slot bonus (15 points)
-  - Past download history bonus/penalty (+/- 15 points)
-- Purple badge shows smart score next to each username
-- Also adds **"File Count"** sort option
-
----
-
-### 📊 User Download History Badges
-
-See at a glance which users you've successfully downloaded from before.
-
-**How it works:**
-- Color-coded badges appear next to usernames in search results:
-  - 🟢 **Green** = 5+ successful downloads from this user
-  - 🔵 **Blue** = 1-4 successful downloads
-  - 🟠 **Orange** = More failures than successes
-- Hover over badge to see exact success/failure counts
-- Helps identify reliable sources quickly
-
----
-
-### 🚫 Block Users from Search Results
-
-Hide specific users from your search results.
-
-**How it works:**
-- Click the user icon (👤✕) on any search result to block that user
-- **"Hide Blocked Users (N)"** toggle shows count of blocked users
-- Blocked users show orange ban icon - click to unblock
-- Block list stored locally in browser (localStorage)
-- Persists across sessions
-
----
-
-### 🗑️ Delete Files on Disk
-
-Clean up unwanted downloads directly from the UI.
-
-**How it works:**
-- New **"Remove and Delete File(s) from Disk"** button in Downloads
-- Deletes the file from the filesystem AND removes it from the list
-- Removes parent directory if empty
-- Includes confirmation dialog to prevent accidents
-
----
-
-### 💾 Save Search Filters
-
-Set your preferred search filters once and forget them.
-
-**How it works:**
-- Enter your filters (e.g. `isLossless minbr:320`)
-- Click the **Save** icon in the filter input
-- Filters will auto-load for all future searches
-- Great for always filtering out lossy or low-quality files
-
----
-
-### 🔍 Advanced Search Filters & Page Size
-
-Power user filtering with a visual interface.
-
-**How it works:**
-- **Visual Filter Editor**: Click the "Advanced Filters" button to set filters with a GUI.
-  - Bitrate, Duration, File Size (Min/Max).
-  - Toggles for CBR, VBR, Lossless.
-- **Text Filters**: Still supports power-user text syntax (`minbr:320`).
-- **Page Size**: Configurable results per page (25, 50, 100, 200, 500).
-- Settings persist across sessions
-
----
-
-### 📝 User Notes & Ratings
-
-Keep track of users with persistent notes and color-coded ratings.
-
-**How it works:**
-- Add notes to any user from Search Results or Browse views.
-- Assign color ratings (Red, Green, etc.) to visually tag users.
-- Notes and ratings appear as badges next to usernames.
-- Mark notes as "High Priority" for extra visibility.
-
----
-
-### 💬 Improved Chat Rooms
-
-Enhanced interaction in chat rooms.
-
-**How it works:**
-- Right-click or use the context menu on users in the room list.
-- Quickly **Browse Files** of chat users.
-- Start **Private Chats** instantly.
-- Add **User Notes** directly from the chat list.
-
----
-
-### 📂 Multi-Select Folder Downloads
-
-Download multiple folders at once with checkbox selection.
-
-**How it works:**
-- In Browse view, folders display in a collapsible tree view
-- Check the boxes next to any folders you want to download
-- Click "Download Selected" to queue all files from selected folders
-- Recursively collects all files in folders and subfolders
-- File counts shown in badges next to each folder
-
----
-
-### 📱 Ntfy & Pushover Notifications
-
-Get notified on your phone when important things happen.
-
-**How it works:**
-- Native support for **Ntfy** and **Pushover**
-- Notifications for Private Messages and Room Mentions
-- Configure via `slskd.yml` or environment variables
-
----
-
-### 📑 Tabbed Browsing
-
-Browse multiple users at once.
-
-**How it works:**
-- Open multiple users in separate tabs
-- Switch between them without losing your place
-- State is preserved for each tab independently
-- Browse data cached per-user to avoid re-fetching
-
----
-
-### 🧠 Unified Smart Source Ranking
-
-All automatic downloads use intelligent source selection based on your history.
-
-**How it works:**
-- Tracks success/failure rates per user across ALL downloads
-- Auto-replace and wishlist auto-download use smart scoring
-- Scoring factors: upload speed (40pts), queue length (30pts), free slot (15pts), your history with user (+/-15pts)
-- API endpoint at `/api/v0/ranking` to query history and rank sources
-- Better sources = faster, more reliable downloads
-
----
-
-### 📱 PWA & Mobile Support
-
-Install slskdn as an app on your phone.
-
-**How it works:**
-- Add to Home Screen on iOS/Android
-- Standalone mode (no browser UI)
-- Native look and feel
-
----
+## Highlights
+- Wishlist/background search with optional auto-download.
+- Unified smart source ranking (manual, auto-replace, wishlist) + history badges + per-user notes.
+- Advanced search filters GUI, save/clear defaults, max size/min size, configurable page size, block users.
+- Tabbed browse with per-user cache, refresh button, persistent tabs, checkbox tree + multi-folder download, delete-on-disk.
+- Notifications (Ntfy/Pushover), PWA/mobile friendly, chat room context menu, inline user notes.
+- Packages: Docker (GHCR), Arch AUR (`slskdn-bin`/`slskdn`), release zips (with .deb/.rpm workflows), drop-in for existing slskd config.
 
 ## Quick Start
-
-### Arch Linux (AUR)
-
-**Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
-
-```bash
-# Binary package (recommended)
-yay -S slskdn-bin
-
-# Or build from source
-yay -S slskdn
-```
-
-Then enable and start:
-```bash
-sudo systemctl enable --now slskd
-```
-
-Access at http://localhost:5030
-
----
-
-### With Docker
-
+### Docker
 ```bash
 docker run -d \
-  -p 5030:5030 \
-  -p 50300:50300 \
+  -p 5030:5030 -p 50300:50300 \
   -e SLSKD_SLSK_USERNAME=your_username \
   -e SLSKD_SLSK_PASSWORD=your_password \
   -v /path/to/downloads:/downloads \
@@ -326,177 +28,72 @@ docker run -d \
   ghcr.io/snapetech/slskdn:latest
 ```
 
-### With Docker Compose
-
-```yaml
-version: "3"
-services:
-  slskdn:
-    image: ghcr.io/snapetech/slskdn:latest
-    container_name: slskdn
-    ports:
-      - "5030:5030"    # Web UI
-      - "50300:50300"  # Soulseek listen port
-    environment:
-      - SLSKD_SLSK_USERNAME=your_username
-      - SLSKD_SLSK_PASSWORD=your_password
-    volumes:
-      - ./app:/app
-      - ./downloads:/downloads
-      - ./music:/music:ro  # Read-only share
-    restart: unless-stopped
-```
-
-### From Source
-
+### Arch Linux (AUR)
 ```bash
-# Clone the repo
-git clone https://github.com/snapetech/slskdn.git
-cd slskdn
-
-# Install .NET SDK 8.0 (if needed)
-curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
-export PATH="$HOME/.dotnet:$PATH"
-
-# Run the backend
-dotnet run --project src/slskd/slskd.csproj
-
-# In another terminal, run the frontend (for development)
-cd src/web
-npm install
-npm start
+yay -S slskdn-bin   # binary, recommended
+# or
+yay -S slskdn       # build from source
+sudo systemctl enable --now slskd
 ```
 
----
+### Release Zip (Linux/Windows)
+```bash
+curl -LO https://github.com/snapetech/slskdn/releases/latest/download/slskdn-<version>-linux-x64.zip
+unzip slskdn-*-linux-x64.zip
+./slskd
+```
 
-## Comparison with slskd
+### From Source (dev)
+```bash
+dotnet run --project src/slskd/slskd.csproj
+cd src/web && npm install && npm start
+```
 
-| Feature | slskd | slskdn |
-|---------|-------|--------|
-| Core Soulseek functionality | ✅ | ✅ |
-| Web UI | ✅ | ✅ |
-| REST API | ✅ | ✅ |
-| Auto-replace stuck downloads | ❌ | ✅ |
-| Wishlist/background search | ❌ | ✅ |
-| Multiple download destinations | ❌ | ✅ |
-| Clear all searches | ❌ | ✅ |
-| Smart result ranking | ❌ | ✅ |
-| User download history badges | ❌ | ✅ |
-| Block users from search | ❌ | ✅ |
-| Delete files on disk | ❌ | ✅ |
-| Save default filters | ❌ | ✅ |
-| Max filesize filter | ❌ | ✅ |
-| Configurable page size | ❌ | ✅ |
-| Multi-select folder downloads | ❌ | ✅ |
-| Ntfy/Pushover notifications | ❌ | ✅ |
-| Tabbed browsing | ❌ | ✅ |
-| Smart source ranking | ❌ | ✅ |
-| PWA support | ❌ | ✅ |
+## Key UI Tips
+- **Advanced Filters**: Click “Advanced Filters” in Search. Set bitrate/size/length/include/exclude; save or clear defaults. Text syntax still works (`minbr:320 maxfs:500mb -live`).
+- **User Notes**: Pencil icon in search/browse/chat → add note + color + high priority. Badges show on users.
+- **Smart Ranking**: Default sort; used for manual downloads, auto-replace, wishlist. Purple score badge; history badges (green/blue/orange) reflect your success rate.
+- **Tabbed Browse**: “+” adds tab; names update after first search; tabs persist (localStorage). Refresh icon re-fetches and refreshes cache. Checkbox tree → Download Selected.
+- **Delete on Disk**: Downloads page → Remove and Delete. Cleans empty directories too.
+- **Notifications**: Configure ntfy/pushover in config/env; get PM/mention alerts.
+- **PWA**: Add to Home Screen; works well on mobile.
 
----
-
-## Configuration
-
-slskdn uses the same configuration format as slskd, with additional options:
-
+## Configuration (minimal)
 ```yaml
 soulseek:
   username: your_username
   password: your_password
   listen_port: 50300
-
 directories:
   downloads: /downloads
   incomplete: /downloads/incomplete
-
 shares:
   directories:
     - /music
-
 web:
   port: 5030
   authentication:
     username: admin
     password: change_me
-
-# slskdn-specific options
+# slskdn extras
 global:
   download:
     auto_replace_stuck: true
-    auto_replace_threshold: 5.0
-    auto_replace_interval: 60
   wishlist:
     enabled: true
-    interval: 60
-    auto_download: false
-
-destinations:
-  folders:
-    - name: "Music"
-      path: "/downloads/music"
-      default: true
-    - name: "Other"
-      path: "/downloads/other"
 ```
+Environment variables override config (e.g., `SLSKD_SLSK_USERNAME`, `SLSKD_SLSK_PASSWORD`, `SLSKD_HTTP_AUTH_DISABLED=true` for local testing).
 
----
+## Differences vs slskd (quick)
+- Wishlist/background search + auto-download.
+- Auto-replace stuck downloads.
+- Tabbed browse with cached trees + multi-folder download + delete-on-disk.
+- Advanced filter GUI, saved defaults, max filesize, page size, block users.
+- User notes, smart ranking with history badges, unified scoring for manual/API/auto.
+- Notifications (Ntfy/Pushover), PWA, room user context menu.
 
 ## Versioning
-
-slskdn follows slskd's version numbers with a suffix:
-
-- `0.24.1-slskdn.1` = First slskdn release based on slskd 0.24.1
-- `0.25.0-slskdn.1` = First slskdn release based on slskd 0.25.0
-
-This makes it easy to see which upstream version you're based on.
-
----
-
-## Contributing
-
-We welcome contributions! Here's how to help:
-
-1. **Pick an issue** from our [Issue Tracker](https://github.com/snapetech/slskdn/issues)
-2. **Fork the repo** and create a feature branch
-3. **Submit a PR** with your changes
-
-### Development Setup
-
-```bash
-# Backend (C#/.NET 8)
-cd src/slskd
-dotnet watch run
-
-# Frontend (React)
-cd src/web
-npm install
-npm start
-```
-
----
-
-## Upstream Contributions
-
-Features that prove stable in slskdn may be submitted as PRs to upstream slskd. Our auto-replace feature was the first: [slskd PR #1553](https://github.com/slskd/slskd/pull/1553).
-
-We aim to be a **proving ground**, not a permanent fork.
-
----
+`<upstream>-slskdn.<n>` (e.g., `0.24.1-slskdn.8`) — same upstream base with a fork suffix.
 
 ## License
-
-slskdn is licensed under the [GNU Affero General Public License v3.0](LICENSE), the same as slskd.
-
----
-
-## Acknowledgments
-
-- [slskd](https://github.com/slskd/slskd) - The excellent foundation we're building on
-- [Soulseek.NET](https://github.com/jpdillingham/Soulseek.NET) - The .NET Soulseek library
-- The Soulseek community
-
----
-
-<p align="center">
-  <strong>slskdn</strong> — Because "just write a script" isn't always the answer.
-</p>
+[AGPL-3.0](LICENSE) (same as slskd).
