@@ -1,0 +1,151 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force sync even if no new commits'
+        required: false
+        default: 'false'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "slskdn-bot"
+          git config user.email "slskdn@users.noreply.github.com"
+
+      - name: Add Upstream Remote
+        run: |
+          git remote add upstream https://github.com/slskd/slskd.git || true
+          git fetch upstream
+
+      - name: Check for New Commits
+        id: check
+        run: |
+          # Get the last synced commit (stored in .upstream-sync file or use merge-base)
+          UPSTREAM_HEAD=$(git rev-parse upstream/master)
+          MERGE_BASE=$(git merge-base HEAD upstream/master)
+          
+          echo "upstream_head=${UPSTREAM_HEAD}" >> $GITHUB_OUTPUT
+          echo "merge_base=${MERGE_BASE}" >> $GITHUB_OUTPUT
+          
+          # Count new commits
+          NEW_COMMITS=$(git rev-list --count ${MERGE_BASE}..upstream/master)
+          echo "new_commits=${NEW_COMMITS}" >> $GITHUB_OUTPUT
+          
+          if [ "$NEW_COMMITS" -gt 0 ] || [ "${{ github.event.inputs.force }}" == "true" ]; then
+            echo "should_sync=true" >> $GITHUB_OUTPUT
+            echo "📦 Found $NEW_COMMITS new upstream commits to merge"
+          else
+            echo "should_sync=false" >> $GITHUB_OUTPUT
+            echo "✅ Already up to date with upstream"
+          fi
+
+      - name: Attempt Merge
+        id: merge
+        if: steps.check.outputs.should_sync == 'true'
+        run: |
+          echo "Attempting to merge upstream/master..."
+          
+          # Try the merge
+          if git merge upstream/master --no-edit -m "chore: Sync upstream slskd changes"; then
+            echo "merge_success=true" >> $GITHUB_OUTPUT
+            echo "✅ Merge successful!"
+            
+            # Get list of changes for the summary
+            CHANGES=$(git log --oneline ${{ steps.check.outputs.merge_base }}..upstream/master | head -20)
+            echo "changes<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "merge_success=false" >> $GITHUB_OUTPUT
+            echo "❌ Merge conflicts detected!"
+            
+            # Get conflicting files
+            CONFLICTS=$(git diff --name-only --diff-filter=U)
+            echo "conflicts<<EOF" >> $GITHUB_OUTPUT
+            echo "$CONFLICTS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            # Abort the merge
+            git merge --abort
+          fi
+
+      - name: Push Changes
+        if: steps.merge.outputs.merge_success == 'true'
+        run: |
+          git push origin master
+          echo "✅ Changes pushed to master"
+
+      - name: Create Issue on Conflict
+        if: steps.merge.outputs.merge_success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conflicts = `${{ steps.merge.outputs.conflicts }}`;
+            const newCommits = `${{ steps.check.outputs.new_commits }}`;
+            
+            // Check if there's already an open sync issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'upstream-sync'
+            });
+            
+            if (issues.data.length > 0) {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: `## Sync attempt failed again\n\n**Date:** ${new Date().toISOString()}\n**New commits:** ${newCommits}\n\n### Conflicting files:\n\`\`\`\n${conflicts}\n\`\`\`\n\nManual intervention required.`
+              });
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🔄 Upstream sync failed - merge conflicts',
+                labels: ['upstream-sync', 'needs-attention'],
+                body: `## Upstream Sync Failed\n\nThe automated sync from [slskd/slskd](https://github.com/slskd/slskd) encountered merge conflicts.\n\n**New upstream commits:** ${newCommits}\n\n### Conflicting files:\n\`\`\`\n${conflicts}\n\`\`\`\n\n### How to resolve:\n\n\`\`\`bash\n# Fetch upstream\ngit remote add upstream https://github.com/slskd/slskd.git\ngit fetch upstream\n\n# Merge and resolve conflicts\ngit merge upstream/master\n# ... resolve conflicts ...\ngit add .\ngit commit\ngit push\n\`\`\`\n\nClose this issue once resolved.`
+              });
+            }
+
+      - name: Summary
+        run: |
+          echo "## Upstream Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check.outputs.should_sync }}" == "false" ]; then
+            echo "✅ **Already up to date** - no new upstream commits" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.merge.outputs.merge_success }}" == "true" ]; then
+            echo "✅ **Sync successful** - merged ${{ steps.check.outputs.new_commits }} commits" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Merged commits:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.merge.outputs.changes }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Sync failed** - merge conflicts" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Conflicting files:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.merge.outputs.conflicts }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "A GitHub issue has been created for manual resolution." >> $GITHUB_STEP_SUMMARY
+          fi
+

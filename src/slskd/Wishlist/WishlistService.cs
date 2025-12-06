@@ -27,7 +27,7 @@ namespace slskd.Wishlist
     using Microsoft.Extensions.Options;
     using Serilog;
     using slskd.Search;
-    using slskd.Transfers;
+    using slskd.Transfers.Downloads;
     using slskd.Transfers.Ranking;
     using Soulseek;
     using SlskdSearch = slskd.Search.Search;
