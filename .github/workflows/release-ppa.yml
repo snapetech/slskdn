@@ -47,9 +47,25 @@ jobs:
           KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 "^pub" | tail -1 | awk '{print $1}')
           echo "$KEY_ID:6:" | gpg --import-ownertrust
 
-      - name: Download Release Asset
+      - name: Wait for Release Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o slskdn.zip
+          # Wait up to 10 minutes for CI to upload the asset
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          for i in {1..20}; do
+            echo "Attempt $i: Checking for asset..."
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdn.zip; then
+              echo "Asset downloaded successfully"
+              break
+            fi
+            if [ $i -eq 20 ]; then
+              echo "Asset not available after 10 minutes"
+              exit 1
+            fi
+            echo "Asset not ready, waiting 30s..."
+            sleep 30
+          done
           unzip slskdn.zip -d slskdn-${{ steps.version.outputs.version }}
 
       - name: Prepare Source Package

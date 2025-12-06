@@ -29,16 +29,25 @@ jobs:
           VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Download Release Asset
+      - name: Wait for Release Asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
-          curl -fL \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/octet-stream" \
-            "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" \
-            -o slskdn.zip
+          # Wait up to 10 minutes for CI to upload the asset
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          for i in {1..20}; do
+            echo "Attempt $i: Checking for asset..."
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdn.zip; then
+              echo "Asset downloaded successfully"
+              break
+            fi
+            if [ $i -eq 20 ]; then
+              echo "Asset not available after 10 minutes"
+              exit 1
+            fi
+            echo "Asset not ready, waiting 30s..."
+            sleep 30
+          done
           unzip -q slskdn.zip -d slskdn-build
 
       - name: Install Build Dependencies
@@ -105,17 +114,25 @@ jobs:
       - name: Setup RPM Build Environment
         run: rpmdev-setuptree
 
-      - name: Download Release Asset and Setup Sources
+      - name: Wait for Release Asset and Setup Sources
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
-          # Download the zip - keep original tag-format filename
-          curl -fL \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/octet-stream" \
-            "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" \
-            -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip
+          # Wait up to 10 minutes for CI to upload the asset
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          for i in {1..20}; do
+            echo "Attempt $i: Checking for asset..."
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip; then
+              echo "Asset downloaded successfully"
+              break
+            fi
+            if [ $i -eq 20 ]; then
+              echo "Asset not available after 10 minutes"
+              exit 1
+            fi
+            echo "Asset not ready, waiting 30s..."
+            sleep 30
+          done
           
           # Copy supporting files to SOURCES
           cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
