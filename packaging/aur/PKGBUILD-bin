@@ -25,7 +25,7 @@ source=(
     "slskd.yml"
     "slskd.sysusers"
 )
-sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')  # Note: sha256sum is dynamically updated by CI workflow
 
 package() {
     # Install application to /usr/lib/slskd (same location as original slskd)

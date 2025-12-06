@@ -107,39 +107,57 @@ namespace slskd.Transfers.Ranking
         /// <inheritdoc/>
         public async Task RecordSuccessAsync(string username, CancellationToken cancellationToken = default)
         {
-            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-            var entry = await context.DownloadHistory.FindAsync(new object[] { username }, cancellationToken);
-            if (entry == null)
-            {
-                entry = new DownloadHistoryEntry { Username = username };
-                context.DownloadHistory.Add(entry);
-            }
-
-            entry.Successes++;
-            entry.LastUpdated = DateTime.UtcNow;
-
-            await context.SaveChangesAsync(cancellationToken);
-            logger.LogDebug("Recorded success for {Username}: {Successes}/{Failures}", username, entry.Successes, entry.Failures);
+            await RecordHistoryAsync(username, isSuccess: true, cancellationToken);
         }
 
         /// <inheritdoc/>
         public async Task RecordFailureAsync(string username, CancellationToken cancellationToken = default)
         {
-            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+            await RecordHistoryAsync(username, isSuccess: false, cancellationToken);
+        }
 
-            var entry = await context.DownloadHistory.FindAsync(new object[] { username }, cancellationToken);
-            if (entry == null)
+        private async Task RecordHistoryAsync(string username, bool isSuccess, CancellationToken cancellationToken)
+        {
+            const int maxRetries = 3;
+            for (int attempt = 0; attempt < maxRetries; attempt++)
             {
-                entry = new DownloadHistoryEntry { Username = username };
-                context.DownloadHistory.Add(entry);
+                try
+                {
+                    await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+                    var entry = await context.DownloadHistory.FindAsync(new object[] { username }, cancellationToken);
+                    if (entry == null)
+                    {
+                        entry = new DownloadHistoryEntry { Username = username };
+                        context.DownloadHistory.Add(entry);
+                    }
+
+                    if (isSuccess)
+                    {
+                        entry.Successes++;
+                    }
+                    else
+                    {
+                        entry.Failures++;
+                    }
+
+                    entry.LastUpdated = DateTime.UtcNow;
+
+                    await context.SaveChangesAsync(cancellationToken);
+                    logger.LogDebug("Recorded {Type} for {Username}: {Successes}/{Failures}",
+                        isSuccess ? "success" : "failure", username, entry.Successes, entry.Failures);
+                    return;
+                }
+                catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE constraint") == true)
+                {
+                    // Race condition: another thread inserted first, retry to update
+                    logger.LogDebug("Retrying history update for {Username} due to race condition (attempt {Attempt})", username, attempt + 1);
+                    if (attempt == maxRetries - 1)
+                    {
+                        logger.LogWarning(ex, "Failed to record history for {Username} after {MaxRetries} attempts", username, maxRetries);
+                    }
+                }
             }
-
-            entry.Failures++;
-            entry.LastUpdated = DateTime.UtcNow;
-
-            await context.SaveChangesAsync(cancellationToken);
-            logger.LogDebug("Recorded failure for {Username}: {Successes}/{Failures}", username, entry.Successes, entry.Failures);
         }
 
         /// <inheritdoc/>
