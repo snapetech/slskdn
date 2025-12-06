@@ -1,0 +1,15 @@
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/bin/Debug/net8.0/AsyncVoidBugTest
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/bin/Debug/net8.0/AsyncVoidBugTest.deps.json
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/bin/Debug/net8.0/AsyncVoidBugTest.runtimeconfig.json
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/bin/Debug/net8.0/AsyncVoidBugTest.dll
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/bin/Debug/net8.0/AsyncVoidBugTest.pdb
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.GeneratedMSBuildEditorConfig.editorconfig
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.AssemblyInfoInputs.cache
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.AssemblyInfo.cs
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.csproj.CoreCompileInputs.cache
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.sourcelink.json
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.dll
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/refint/AsyncVoidBugTest.dll
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.pdb
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/AsyncVoidBugTest.genruntimeconfig.cache
+/home/keith/Documents/Code/slskdn/tests/AsyncVoidBugTest/obj/Debug/net8.0/ref/AsyncVoidBugTest.dll
