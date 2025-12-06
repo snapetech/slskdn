@@ -1,0 +1,147 @@
+name: Check Upstream Access
+
+on:
+  schedule:
+    # Run daily at 9am UTC (polite, not aggressive)
+    - cron: '0 9 * * *'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  check-access:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if upstream accepts contributions
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking if slskd/slskd is open to contributions..."
+          
+          # Try to check if we can interact with the repo
+          # This doesn't create anything, just tests the waters
+          CAN_ACCESS=$(gh api repos/slskd/slskd/issues -X GET --silent 2>&1) || true
+          
+          if echo "$CAN_ACCESS" | grep -qi "interact\|restricted\|limit"; then
+            echo "status=locked" >> $GITHUB_OUTPUT
+            echo "🔒 Upstream still has interaction limits enabled"
+          else
+            echo "status=open" >> $GITHUB_OUTPUT  
+            echo "✅ Upstream may be open to contributions!"
+          fi
+          
+          # Also check if README already has checkmark (already updated)
+          if grep -q "Open to community feedback | ✅ | ✅" README.md; then
+            echo "already_updated=true" >> $GITHUB_OUTPUT
+            echo "README already shows upstream as open"
+          else
+            echo "already_updated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update README and create PR
+        if: steps.check.outputs.status == 'open' && steps.check.outputs.already_updated == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --repo ${{ github.repository }} --head "upstream-unlocked" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR #$EXISTING_PR already exists"
+            exit 0
+          fi
+          
+          # Create branch and update README
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout -b upstream-unlocked
+          
+          # Update the padlock to checkmark
+          sed -i 's/| Open to community feedback | 🔒 | ✅ |/| Open to community feedback | ✅ | ✅ |/' README.md
+          
+          # Verify the change was made
+          if git diff --quiet README.md; then
+            echo "No changes to README (pattern not found or already updated)"
+            exit 0
+          fi
+          
+          git add README.md
+          git commit -m "docs: upstream is now open to community feedback 🎉"
+          git push origin upstream-unlocked
+          
+          # Create PR
+          gh pr create --repo ${{ github.repository }} \
+            --title "🎉 Update README: Upstream is open to contributions!" \
+            --head "upstream-unlocked" \
+            --base "master" \
+            --body "## Upstream Access Restored!
+
+The daily check detected that **slskd/slskd** interaction limits have been removed or relaxed.
+
+### Changes in this PR
+- Updated comparison table: \`🔒\` → \`✅\` for 'Open to community feedback'
+
+### Next Steps
+1. **Verify manually** that you can create issues/PRs at https://github.com/slskd/slskd
+2. **Submit bug fixes** documented in \`docs/upstream-bug-testing.md\`:
+   - \`fix/async-void-roomservice\` - try-catch wrapper for crash prevention
+   - \`fix/searches-undefined-return\` - return [] instead of undefined
+   - \`fix/transfers-undefined-return\` - return [] instead of undefined
+3. **Merge this PR** once upstream contributions are submitted
+
+---
+*This PR was created automatically by the check-upstream-access workflow.*"
+          
+          echo "Created PR to update README"
+
+      - name: Create notification issue if unlocked
+        if: steps.check.outputs.status == 'open' && steps.check.outputs.already_updated == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if we already have a notification issue open
+          EXISTING=$(gh issue list --repo ${{ github.repository }} --label "upstream-unlocked" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          
+          if [ -z "$EXISTING" ]; then
+            gh label create "upstream-unlocked" --description "Upstream slskd is open to contributions" --color "2ea44f" --force 2>/dev/null || true
+            
+            gh issue create --repo ${{ github.repository }} \
+              --title "🎉 Upstream slskd may be open to contributions!" \
+              --label "upstream-unlocked" \
+              --body "The daily check detected that slskd/slskd interaction limits may have changed.
+
+**A PR has been created automatically to update the README.**
+
+**Action items:**
+1. Manually verify you can create issues/PRs at https://github.com/slskd/slskd
+2. If confirmed, submit the bug fixes documented in \`docs/upstream-bug-testing.md\`
+3. Review and merge the auto-generated PR to update the comparison table
+
+*This issue was created automatically by the check-upstream-access workflow.*"
+            echo "Created notification issue"
+          else
+            echo "Notification issue #$EXISTING already exists"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Upstream Access Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check.outputs.status }}" == "locked" ]; then
+            echo "### 🔒 Status: Still Locked" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "slskd/slskd still has interaction limits enabled." >> $GITHUB_STEP_SUMMARY
+            echo "We'll check again tomorrow. Patience is a virtue." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ Status: Possibly Open!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.check.outputs.already_updated }}" == "true" ]; then
+              echo "README already updated. Time to submit those PRs!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "A PR has been created to update the README." >> $GITHUB_STEP_SUMMARY
+              echo "Time to submit those upstream bug fixes!" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
