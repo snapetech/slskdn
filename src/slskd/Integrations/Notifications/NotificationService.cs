@@ -1,6 +1,7 @@
 namespace slskd.Integrations.Notifications
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Net.Http;
     using System.Net.Http.Headers;
@@ -12,6 +13,9 @@ namespace slskd.Integrations.Notifications
 
     public class NotificationService : INotificationService
     {
+        private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(30);
+        private readonly ConcurrentDictionary<string, DateTime> _lastNotificationTimes = new();
+
         public NotificationService(
             IHttpClientFactory httpClientFactory,
             IOptionsMonitor<slskd.Options> optionsMonitor,
@@ -28,6 +32,41 @@ namespace slskd.Integrations.Notifications
         private ILogger<NotificationService> Log { get; }
         private IOptionsMonitor<slskd.Options> OptionsMonitor { get; }
         private IPushbulletService Pushbullet { get; }
+
+        /// <summary>
+        /// Checks if a notification should be rate limited based on the cache key.
+        /// Returns true if the notification should be sent, false if rate limited.
+        /// </summary>
+        private bool ShouldSendNotification(string cacheKey)
+        {
+            var now = DateTime.UtcNow;
+
+            if (_lastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
+            {
+                if (now - lastTime < RateLimitWindow)
+                {
+                    Log.LogDebug("Rate limiting notification for key {CacheKey}", cacheKey);
+                    return false;
+                }
+            }
+
+            _lastNotificationTimes[cacheKey] = now;
+
+            // Clean up old entries periodically (keep dict from growing unbounded)
+            if (_lastNotificationTimes.Count > 1000)
+            {
+                var cutoff = now - RateLimitWindow;
+                foreach (var kvp in _lastNotificationTimes)
+                {
+                    if (kvp.Value < cutoff)
+                    {
+                        _lastNotificationTimes.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
+            return true;
+        }
 
         public async Task SendAsync(string title, string body, string cacheKey = null)
         {
@@ -51,6 +90,13 @@ namespace slskd.Integrations.Notifications
 
         public async Task SendPrivateMessageAsync(string username, string message)
         {
+            // Rate limit per username
+            var cacheKey = $"pm:{username}";
+            if (!ShouldSendNotification(cacheKey))
+            {
+                return;
+            }
+
             var options = OptionsMonitor.CurrentValue.Integration;
             var title = $"Private Message from {username}";
 
@@ -72,6 +118,13 @@ namespace slskd.Integrations.Notifications
 
         public async Task SendRoomMentionAsync(string room, string username, string message)
         {
+            // Rate limit per room+username combination
+            var cacheKey = $"room:{room}:{username}";
+            if (!ShouldSendNotification(cacheKey))
+            {
+                return;
+            }
+
             var options = OptionsMonitor.CurrentValue.Integration;
             var title = $"Room Mention by {username} in {room}";
 
