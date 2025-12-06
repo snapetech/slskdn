@@ -113,11 +113,17 @@ jobs:
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD-bin
           sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' 'SKIP' 'SKIP' 'SKIP')/" PKGBUILD-bin
 
-      - name: Setup SSH for AUR
-        if: secrets.AUR_SSH_KEY != ''
+      - name: Setup and Push to AUR
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ AUR_SSH_KEY not configured. Skipping AUR push."
+            echo "To enable automatic AUR updates, add AUR_SSH_KEY secret."
+            exit 0
+          fi
+          
+          # Setup SSH
           mkdir -p ~/.ssh
           echo "$AUR_SSH_KEY" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
@@ -125,10 +131,8 @@ jobs:
           echo "  IdentityFile ~/.ssh/aur" >> ~/.ssh/config
           echo "  User aur" >> ~/.ssh/config
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-
-      - name: Push to AUR
-        if: secrets.AUR_SSH_KEY != ''
-        run: |
+          
+          # Clone and update AUR repo
           git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
           cd aur-repo
           cp ../packaging/aur/PKGBUILD-bin PKGBUILD
