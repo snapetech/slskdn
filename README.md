@@ -16,9 +16,19 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version">
-  <img src="https://img.shields.io/badge/base-slskd%200.24.1-blue" alt="Based on slskd">
-  <img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License">
+  <a href="https://github.com/snapetech/slskdn/actions/workflows/ci.yml">
+    <img src="https://github.com/snapetech/slskdn/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://github.com/snapetech/slskdn/releases">
+    <img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version">
+  </a>
+  <a href="https://ghcr.io/snapetech/slskdn">
+    <img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker">
+  </a>
+  <img src="https://img.shields.io/badge/base-slskd%200.24.1-purple" alt="Based on slskd">
+  <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License">
+  </a>
 </p>
 
 ---
