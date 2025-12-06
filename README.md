@@ -154,6 +154,85 @@ Hide specific users from your search results.
 
 ---
 
+### 🗑️ Delete Files on Disk
+
+Clean up unwanted downloads directly from the UI.
+
+**How it works:**
+- New **"Remove and Delete File(s) from Disk"** button in Downloads
+- Deletes the file from the filesystem AND removes it from the list
+- Removes parent directory if empty
+- Includes confirmation dialog to prevent accidents
+
+---
+
+### 💾 Save Search Filters
+
+Set your preferred search filters once and forget them.
+
+**How it works:**
+- Enter your filters (e.g. `isLossless minbr:320`)
+- Click the **Save** icon in the filter input
+- Filters will auto-load for all future searches
+- Great for always filtering out lossy or low-quality files
+
+---
+
+### 📏 Advanced Search Filters & Page Size
+
+More control over your search results.
+
+**How it works:**
+- **Max File Size**: New `maxfilesize` filter (e.g. `maxfs:500mb`)
+- **Page Size**: Configurable results per page (10, 25, 50, 100, All)
+- Settings persist across sessions
+
+---
+
+### 📂 Recursive Folder Download
+
+Download entire directories with a single click.
+
+**How it works:**
+- In Browse view, look for the download icon next to any folder
+- Recursively collects all files in that folder and subfolders
+- One-click to queue everything
+
+---
+
+### 📱 Ntfy & Pushover Notifications
+
+Get notified on your phone when important things happen.
+
+**How it works:**
+- Native support for **Ntfy** and **Pushover**
+- Notifications for Private Messages and Room Mentions
+- Configure via `slskd.yml` or environment variables
+
+---
+
+### 📑 Tabbed Browsing
+
+Browse multiple users at once.
+
+**How it works:**
+- Open multiple users in separate tabs
+- Switch between them without losing your place
+- State is preserved for each tab independently
+
+---
+
+### 📱 PWA & Mobile Support
+
+Install slskdn as an app on your phone.
+
+**How it works:**
+- Add to Home Screen on iOS/Android
+- Standalone mode (no browser UI)
+- Native look and feel
+
+---
+
 ## Quick Start
 
 ### With Docker
@@ -227,6 +306,14 @@ npm start
 | Smart result ranking | ❌ | ✅ |
 | User download history badges | ❌ | ✅ |
 | Block users from search | ❌ | ✅ |
+| Delete files on disk | ❌ | ✅ |
+| Save default filters | ❌ | ✅ |
+| Max filesize filter | ❌ | ✅ |
+| Configurable page size | ❌ | ✅ |
+| Recursive folder download | ❌ | ✅ |
+| Ntfy/Pushover notifications | ❌ | ✅ |
+| Tabbed browsing | ❌ | ✅ |
+| PWA support | ❌ | ✅ |
 
 ---
 
