@@ -703,6 +703,11 @@ namespace slskd
             services.AddSingleton<Wishlist.IWishlistService, Wishlist.WishlistService>();
             services.AddHostedService(provider => (Wishlist.WishlistService)provider.GetRequiredService<Wishlist.IWishlistService>());
 
+            // Auto-replace services
+            services.AddSingleton<Transfers.AutoReplace.IAutoReplaceService, Transfers.AutoReplace.AutoReplaceService>();
+            services.AddSingleton<Transfers.AutoReplace.AutoReplaceBackgroundService>();
+            services.AddHostedService(provider => provider.GetRequiredService<Transfers.AutoReplace.AutoReplaceBackgroundService>());
+
             services.AddSingleton<IRelayService, RelayService>();
 
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();

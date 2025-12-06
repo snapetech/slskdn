@@ -269,6 +269,12 @@ namespace slskd
         public WishlistOptions Wishlist { get; init; } = new WishlistOptions();
 
         /// <summary>
+        ///     Gets auto-replace options.
+        /// </summary>
+        [Validate]
+        public AutoReplaceOptions AutoReplace { get; init; } = new AutoReplaceOptions();
+
+        /// <summary>
         ///     Gets download destination options.
         /// </summary>
         [Validate]
@@ -1392,6 +1398,30 @@ namespace slskd
             [Description("maximum results per wishlist search")]
             [Range(10, 1000)]
             public int MaxResults { get; init; } = 100;
+        }
+
+        /// <summary>
+        ///     Auto-replace options for automatic retry/replacement of stuck downloads.
+        /// </summary>
+        public class AutoReplaceOptions
+        {
+            /// <summary>
+            ///     Gets the interval between auto-replace cycles, in seconds.
+            /// </summary>
+            [Argument(default, "auto-replace-interval")]
+            [EnvironmentVariable("AUTO_REPLACE_INTERVAL")]
+            [Description("interval between auto-replace cycles in seconds")]
+            [Range(60, int.MaxValue)]
+            public int IntervalSeconds { get; init; } = 300;
+
+            /// <summary>
+            ///     Gets the maximum size difference percentage for alternative sources.
+            /// </summary>
+            [Argument(default, "auto-replace-threshold")]
+            [EnvironmentVariable("AUTO_REPLACE_THRESHOLD")]
+            [Description("maximum size difference percentage for alternative sources")]
+            [Range(1, 100)]
+            public double SizeThresholdPercent { get; init; } = 5.0;
         }
 
         /// <summary>
