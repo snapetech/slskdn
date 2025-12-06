@@ -52,19 +52,39 @@ jobs:
           copr_url = https://copr.fedorainfracloud.org
           EOF
 
+      - name: Wait for Release Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Wait up to 10 minutes for CI to upload the asset
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          mkdir -p ~/rpmbuild/SOURCES
+          for i in {1..20}; do
+            echo "Attempt $i: Checking for asset..."
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip; then
+              echo "Asset downloaded successfully"
+              ls -la ~/rpmbuild/SOURCES/
+              break
+            fi
+            if [ $i -eq 20 ]; then
+              echo "Asset not available after 10 minutes"
+              exit 1
+            fi
+            echo "Asset not ready, waiting 30s..."
+            sleep 30
+          done
+
       - name: Update spec version
         run: |
           sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
-          sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
+          # Use local filename (not URL) so SRPM includes the file instead of COPR downloading it
+          sed -i "s|^Source0:.*|Source0:        slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
           cat packaging/rpm/slskdn.spec | head -20
 
       - name: Build SRPM
         run: |
           sudo apt-get install -y rpm
-          mkdir -p ~/rpmbuild/{SOURCES,SPECS,SRPMS}
-          
-          # Download source
-          curl -sL "https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip
+          mkdir -p ~/rpmbuild/{SPECS,SRPMS}
           
           # Copy supporting files
           cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
@@ -72,12 +92,13 @@ jobs:
           cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
           cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
           
-          # Build SRPM
+          # Build SRPM (source already downloaded in previous step)
           rpmbuild -bs ~/rpmbuild/SPECS/slskdn.spec --define "_topdir $HOME/rpmbuild"
           
           SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
           echo "srpm_path=$SRPM" >> $GITHUB_OUTPUT
           echo "Built SRPM: $SRPM"
+          rpm -qpl "$SRPM" | head -20
 
       - name: Upload to COPR
         env:
