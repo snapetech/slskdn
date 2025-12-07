@@ -14,6 +14,8 @@
   <a href="https://github.com/snapetech/slskdn/releases"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version"></a>
   <a href="https://ghcr.io/snapetech/slskdn"><img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker"></a>
   <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR"></a>
+  <a href="https://copr.fedorainfracloud.org/coprs/slskdn/slskdn/"><img src="https://img.shields.io/badge/copr-slskdn%2Fslskdn-51A2DA?logo=fedora" alt="COPR"></a>
+  <a href="https://launchpad.net/~slskdn/+archive/ubuntu/slskdn"><img src="https://img.shields.io/badge/ppa-slskdn%2Fslskdn-E95420?logo=ubuntu" alt="PPA"></a>
   <img src="https://img.shields.io/badge/base-slskd%200.24.1-purple" alt="Based on slskd">
   <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
 </p>
