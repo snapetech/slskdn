@@ -10,11 +10,13 @@ on:
         required: true
 
 jobs:
-  upload-ppa:
+  build-and-upload:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Get Version
         id: version
@@ -28,6 +30,36 @@ jobs:
           # Convert 0.24.1-slskdn.7 to 0.24.1.slskdn.7 for debian version
           VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
+
+      - name: Build Frontend
+        working-directory: src/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Backend
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-linux-x64 \
+            --self-contained true \
+            -r linux-x64
+
+      - name: Copy Web Assets
+        run: |
+          cp -r src/web/build/* publish-linux-x64/wwwroot/
 
       - name: Install Build Dependencies
         run: |
@@ -47,34 +79,16 @@ jobs:
           KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 "^pub" | tail -1 | awk '{print $1}')
           echo "$KEY_ID:6:" | gpg --import-ownertrust
 
-      - name: Wait for Release Asset
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare Source Structure
         run: |
-          # Wait up to 10 minutes for CI to upload the asset
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
-          for i in {1..20}; do
-            echo "Attempt $i: Checking for asset..."
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdn.zip; then
-              echo "Asset downloaded successfully"
-              break
-            fi
-            if [ $i -eq 20 ]; then
-              echo "Asset not available after 10 minutes"
-              exit 1
-            fi
-            echo "Asset not ready, waiting 30s..."
-            sleep 30
-          done
-          
           # Create proper directory structure for debian packaging
           mkdir -p slskdn-${{ steps.version.outputs.version }}/usr/lib/slskd
           mkdir -p slskdn-${{ steps.version.outputs.version }}/lib/systemd/system
           mkdir -p slskdn-${{ steps.version.outputs.version }}/etc/slskd
           mkdir -p slskdn-${{ steps.version.outputs.version }}/usr/lib/sysusers.d
           
-          # Extract binary files to the right location
-          unzip slskdn.zip -d slskdn-${{ steps.version.outputs.version }}/usr/lib/slskd
+          # Copy binary files from our build
+          cp -r publish-linux-x64/* slskdn-${{ steps.version.outputs.version }}/usr/lib/slskd/
           
           # Copy service files from packaging
           cp packaging/aur/slskd.service slskdn-${{ steps.version.outputs.version }}/lib/systemd/system/
@@ -127,4 +141,3 @@ jobs:
           CHANGES_FILE=$(find . -name "*.changes" -type f | head -1)
           echo "Found changes file: $CHANGES_FILE"
           dput slskdn-ppa "$CHANGES_FILE"
-

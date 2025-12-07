@@ -10,11 +10,13 @@ on:
         required: true
 
 jobs:
-  upload-copr:
+  build-and-upload:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Get Version
         id: version
@@ -28,10 +30,48 @@ jobs:
           VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Install copr-cli
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
+
+      - name: Build Frontend
+        working-directory: src/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Backend
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-linux-x64 \
+            --self-contained true \
+            -r linux-x64
+
+      - name: Copy Web Assets
+        run: |
+          cp -r src/web/build/* publish-linux-x64/wwwroot/
+
+      - name: Create Zip
+        run: |
+          cd publish-linux-x64
+          zip -r ../slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip .
+          cd ..
+          mkdir -p ~/rpmbuild/SOURCES
+          cp slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip ~/rpmbuild/SOURCES/
+
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip
+          sudo apt-get install -y python3-pip rpm
           pip3 install copr-cli
 
       - name: Configure COPR
@@ -52,38 +92,15 @@ jobs:
           copr_url = https://copr.fedorainfracloud.org
           EOF
 
-      - name: Wait for Release Asset
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Wait up to 10 minutes for CI to upload the asset
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
-          mkdir -p ~/rpmbuild/SOURCES
-          for i in {1..20}; do
-            echo "Attempt $i: Checking for asset..."
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip; then
-              echo "Asset downloaded successfully"
-              ls -la ~/rpmbuild/SOURCES/
-              break
-            fi
-            if [ $i -eq 20 ]; then
-              echo "Asset not available after 10 minutes"
-              exit 1
-            fi
-            echo "Asset not ready, waiting 30s..."
-            sleep 30
-          done
-
       - name: Update spec version
         run: |
           sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
-          # Use local filename (not URL) so SRPM includes the file instead of COPR downloading it
+          # Use local filename (not URL) so SRPM includes the file
           sed -i "s|^Source0:.*|Source0:        slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
           cat packaging/rpm/slskdn.spec | head -20
 
       - name: Build SRPM
         run: |
-          sudo apt-get install -y rpm
           mkdir -p ~/rpmbuild/{SPECS,SRPMS}
           
           # Copy supporting files
@@ -92,11 +109,10 @@ jobs:
           cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
           cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
           
-          # Build SRPM (source already downloaded in previous step)
+          # Build SRPM
           rpmbuild -bs ~/rpmbuild/SPECS/slskdn.spec --define "_topdir $HOME/rpmbuild"
           
           SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
-          echo "srpm_path=$SRPM" >> $GITHUB_OUTPUT
           echo "Built SRPM: $SRPM"
           rpm -qpl "$SRPM" | head -20
 
@@ -113,4 +129,3 @@ jobs:
           SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
           echo "Uploading SRPM to COPR: $SRPM"
           copr-cli build slskdn "$SRPM" --nowait
-
