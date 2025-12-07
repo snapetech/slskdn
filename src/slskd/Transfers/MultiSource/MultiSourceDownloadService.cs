@@ -242,7 +242,8 @@ namespace slskd.Transfers.MultiSource
                 while (failedCount > 0 && retryAttempt < maxRetries)
                 {
                     retryAttempt++;
-                    var successfulSources = sourceStats.Where(s => s.Value > 0 && !failedUsers.ContainsKey(s.Key))
+                    var successfulSources = sourceStats
+                        .Where(s => s.Value > 0 && !failedUsers.ContainsKey(s.Key) && !status.IsPeerInTimeout(s.Key))
                         .Select(s => s.Key).ToList();
 
                     // If we don't have enough proven sources, try other candidates (excluding failed ones)
@@ -250,21 +251,22 @@ namespace slskd.Transfers.MultiSource
                     if (successfulSources.Count < 3)
                     {
                         var candidates = request.Sources
-                            .Where(s => !failedUsers.ContainsKey(s.Username))
+                            .Where(s => !failedUsers.ContainsKey(s.Username) && !status.IsPeerInTimeout(s.Username))
                             .Select(s => s.Username)
                             .ToList();
 
                         if (candidates.Count > 0)
                         {
-                            Log.Warning("[SWARM] Only {Count} proven sources. Retrying with {Candidates} candidates (excluding failed).",
+                            Log.Warning("[SWARM] Only {Count} proven sources. Retrying with {Candidates} candidates (excluding failed/timed-out).",
                                 successfulSources.Count, candidates.Count);
                             successfulSources = candidates;
                         }
                         else
                         {
-                            // Desperation: Purge blacklist and retry everyone
-                            Log.Warning("[SWARM] All sources failed/blacklisted. Purging blacklist and retrying everyone.");
+                            // Desperation: Clear all timeouts and blacklist, retry everyone
+                            Log.Warning("[SWARM] All sources failed/timed-out. Clearing timeouts and retrying everyone.");
                             failedUsers.Clear();
+                            status.PeerTimeouts.Clear();
                             successfulSources = request.Sources.Select(s => s.Username).ToList();
                         }
                     }
@@ -435,6 +437,14 @@ namespace slskd.Transfers.MultiSource
                     if (completedChunks.Count >= status.TotalChunks)
                     {
                         break;
+                    }
+
+                    // Check if this peer is in timeout (was too slow recently)
+                    if (status.IsPeerInTimeout(username))
+                    {
+                        Log.Debug("[SWARM] {Username} is in timeout, waiting...", username);
+                        await Task.Delay(5000, cancellationToken); // Check again in 5s
+                        continue;
                     }
 
                     // Try to grab a chunk from the queue
@@ -651,8 +661,10 @@ namespace slskd.Transfers.MultiSource
             MultiSourceDownloadStatus status,
             CancellationToken cancellationToken)
         {
-            const int minSpeedBps = 5 * 1024;  // 5 KB/s minimum
-            const int slowDurationMs = 15000;   // 15 seconds of slow = too slow
+            const int absoluteMinSpeedBps = 5 * 1024;  // 5 KB/s absolute floor
+            const double minSpeedPercent = 0.15;       // 15% of best speed
+            const int slowDurationMs = 10000;          // 10 seconds of slow = too slow
+            const int peerTimeoutSeconds = 30;         // Timeout duration for slow peers
 
             var result = new ChunkResult
             {
@@ -699,13 +711,23 @@ namespace slskd.Transfers.MultiSource
                         var speedBps = bytesInInterval / 2; // 2 second interval (approx)
                         lastBytes = currentBytes;
 
+                        // Update best speed if this is faster
+                        if (speedBps > 0)
+                        {
+                            status.UpdateBestSpeed(speedBps);
+                        }
+
+                        // Dynamic threshold: 15% of best speed, minimum 5 KB/s
+                        var dynamicMinSpeed = Math.Max(absoluteMinSpeedBps, (long)(status.BestSpeedBps * minSpeedPercent));
+
                         // Log live rate periodically (every 2s)
                         if (currentBytes > 0)
                         {
-                            Log.Debug("[SWARM] {Username} rate: {Speed:F1} KB/s", username, speedBps / 1024.0);
+                            Log.Debug("[SWARM] {Username} rate: {Speed:F1} KB/s (threshold: {Threshold:F1} KB/s)",
+                                username, speedBps / 1024.0, dynamicMinSpeed / 1024.0);
                         }
 
-                        if (speedBps < minSpeedBps && currentBytes > 0)
+                        if (speedBps < dynamicMinSpeed && currentBytes > 0)
                         {
                             slowSince ??= DateTime.UtcNow;
                             var slowDuration = (DateTime.UtcNow - slowSince.Value).TotalMilliseconds;
@@ -715,9 +737,11 @@ namespace slskd.Transfers.MultiSource
                                 // Only cycle out if we have other workers available
                                 if (status.ActiveWorkers > 1)
                                 {
-                                    Log.Warning("[SWARM] {Username} too slow ({Speed:F1} KB/s for {Duration:F0}s) - cycling out",
-                                        username, speedBps / 1024.0, slowDuration / 1000.0);
+                                    Log.Warning("[SWARM] {Username} too slow ({Speed:F1} KB/s < {Threshold:F1} KB/s for {Duration:F0}s) - timeout {Timeout}s",
+                                        username, speedBps / 1024.0, dynamicMinSpeed / 1024.0, slowDuration / 1000.0, peerTimeoutSeconds);
                                     result.Error = $"Too slow: {speedBps / 1024.0:F1} KB/s for {slowDuration / 1000.0:F0}s";
+                                    // Set timeout instead of blacklist - peer can retry later
+                                    status.SetPeerTimeout(username, TimeSpan.FromSeconds(peerTimeoutSeconds));
                                     cts.Cancel();
                                     return;
                                 }
