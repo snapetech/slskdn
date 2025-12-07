@@ -33,9 +33,9 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
 - [x] **GitHub Releases** - Windows, macOS, Linux binaries
 
 ### 🔴 High Priority (Large User Base)
-- [ ] **Unraid Community Apps** - Popular NAS/homelab OS
-  - Requires XML template in Community Apps repo
-  - Docker-based, should be straightforward
+- [x] **Unraid Community Apps** - Popular NAS/homelab OS ✅
+  - Template at `packaging/unraid/slskdn.xml`
+  - Users can add repo manually, pending official CA submission
 - [ ] **TrueNAS SCALE Apps** - Growing NAS platform
   - Helm chart or ix-chart format
 - [ ] **Synology Package Center** - Huge NAS market share

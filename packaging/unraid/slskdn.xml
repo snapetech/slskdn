@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>slskdn</Name>
+  <Repository>ghcr.io/snapetech/slskdn:latest</Repository>
+  <Registry>https://ghcr.io/v2/snapetech/slskdn</Registry>
+  <Branch>
+    <Tag>latest</Tag>
+    <TagDescription>Latest stable release</TagDescription>
+  </Branch>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/snapetech/slskdn/issues</Support>
+  <Project>https://github.com/snapetech/slskdn</Project>
+  <Overview>
+slskdn is a feature-rich Soulseek web client - a batteries-included fork of slskd.
+
+FEATURES:
+- Auto-replace stuck downloads with alternative sources
+- Wishlist / background search with auto-download
+- Smart source ranking based on speed, queue, and history
+- User notes and download history badges
+- Block users from search results
+- Multiple download destinations
+- Delete files on disk from UI
+- Push notifications (Ntfy, Pushover, Pushbullet)
+- Tabbed browse sessions
+- Clear all searches button
+- And more...
+
+No scripts required. Everything built-in.
+  </Overview>
+  <Category>MediaApp:Music Downloaders</Category>
+  <WebUI>http://[IP]:[PORT:5030]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/snapetech/slskdn/master/packaging/unraid/slskdn.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <Description>slskdn - Feature-rich Soulseek web client with auto-replace, wishlist, smart ranking, and more. Batteries included.</Description>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Publish>
+      <Port>
+        <HostPort>5030</HostPort>
+        <ContainerPort>5030</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+      <Port>
+        <HostPort>5031</HostPort>
+        <ContainerPort>5031</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+      <Port>
+        <HostPort>50300</HostPort>
+        <ContainerPort>50300</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+    </Publish>
+  </Networking>
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/appdata/slskdn</HostDir>
+      <ContainerDir>/app</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/downloads/slskdn</HostDir>
+      <ContainerDir>/downloads</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/media/music</HostDir>
+      <ContainerDir>/music</ContainerDir>
+      <Mode>ro</Mode>
+    </Volume>
+  </Data>
+  <Environment>
+    <Variable>
+      <Value>1000</Value>
+      <Name>PUID</Name>
+    </Variable>
+    <Variable>
+      <Value>1000</Value>
+      <Name>PGID</Name>
+    </Variable>
+    <Variable>
+      <Value>America/Chicago</Value>
+      <Name>TZ</Name>
+    </Variable>
+  </Environment>
+  <!-- User-configurable settings -->
+  <Config Name="Web UI Port" Target="5030" Default="5030" Mode="tcp" Description="Port for the web interface" Type="Port" Display="always" Required="true" Mask="false">5030</Config>
+  <Config Name="HTTPS Port" Target="5031" Default="5031" Mode="tcp" Description="Port for HTTPS (uses self-signed cert)" Type="Port" Display="advanced" Required="false" Mask="false">5031</Config>
+  <Config Name="Soulseek Port" Target="50300" Default="50300" Mode="tcp" Description="Port for incoming Soulseek connections (must be forwarded in router)" Type="Port" Display="always" Required="true" Mask="false">50300</Config>
+  <Config Name="App Data" Target="/app" Default="/mnt/user/appdata/slskdn" Mode="rw" Description="Application data, config, and databases" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/slskdn</Config>
+  <Config Name="Downloads" Target="/downloads" Default="/mnt/user/downloads/slskdn" Mode="rw" Description="Where downloaded files are saved" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/downloads/slskdn</Config>
+  <Config Name="Music Library" Target="/music" Default="/mnt/user/media/music" Mode="ro" Description="Your music collection to share (read-only recommended)" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/media/music</Config>
+  <Config Name="PUID" Target="PUID" Default="1000" Mode="" Description="User ID for file permissions (run 'id' in terminal)" Type="Variable" Display="advanced" Required="false" Mask="false">1000</Config>
+  <Config Name="PGID" Target="PGID" Default="1000" Mode="" Description="Group ID for file permissions (run 'id' in terminal)" Type="Variable" Display="advanced" Required="false" Mask="false">1000</Config>
+  <Config Name="Timezone" Target="TZ" Default="America/Chicago" Mode="" Description="Your timezone (e.g., America/New_York, Europe/London)" Type="Variable" Display="always" Required="false" Mask="false">America/Chicago</Config>
+  <Config Name="Soulseek Username" Target="SLSKD_SLSK_USERNAME" Default="" Mode="" Description="Your Soulseek username (or set in web UI)" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Soulseek Password" Target="SLSKD_SLSK_PASSWORD" Default="" Mode="" Description="Your Soulseek password (or set in web UI)" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+</Container>
+
