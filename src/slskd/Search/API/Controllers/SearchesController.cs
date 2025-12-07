@@ -171,12 +171,12 @@ namespace slskd.Search.API
         /// <summary>
         ///     Gets the list of active and completed searches.
         /// </summary>
-        /// <param name="limit">Maximum number of searches to return (default 500, 0 for unlimited).</param>
+        /// <param name="limit">Maximum number of searches to return (0 for unlimited, which is the default).</param>
         /// <param name="offset">Number of searches to skip (for pagination).</param>
         /// <returns>The list of searches.</returns>
         [HttpGet("")]
         [Authorize(Policy = AuthPolicy.Any)]
-        public async Task<IActionResult> GetAll([FromQuery] int limit = 500, [FromQuery] int offset = 0)
+        public async Task<IActionResult> GetAll([FromQuery] int limit = 0, [FromQuery] int offset = 0)
         {
             if (Program.IsRelayAgent)
             {

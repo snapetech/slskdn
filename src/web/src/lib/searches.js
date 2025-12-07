@@ -1,7 +1,7 @@
 import api from './api';
 
-export const getAll = async () => {
-  return (await api.get('/searches')).data;
+export const getAll = async (limit = 500) => {
+  return (await api.get(`/searches?limit=${limit}`)).data;
 };
 
 export const stop = ({ id }) => {
