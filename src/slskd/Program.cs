@@ -723,6 +723,10 @@ namespace slskd
             // Mesh sync service (Phase 3)
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
 
+            // Backfill scheduler service (Phase 4)
+            services.AddSingleton<Backfill.IBackfillSchedulerService, Backfill.BackfillSchedulerService>();
+            services.AddHostedService(provider => (Backfill.BackfillSchedulerService)provider.GetRequiredService<Backfill.IBackfillSchedulerService>());
+
             services.AddSingleton<IRelayService, RelayService>();
 
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
