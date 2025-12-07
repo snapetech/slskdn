@@ -97,23 +97,29 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT
 
-      - name: Download x64 Tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: slskdn-linux-x64
-
-      - name: Calculate SHA256
+      - name: Download and Calculate SHA256 from Release
         id: sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Find the zip (name may vary)
-          ZIPFILE=$(ls slskdn-*-linux-x64.zip 2>/dev/null | head -1)
-          if [ -z "$ZIPFILE" ]; then
-            echo "No zip found, skipping SHA calculation"
-            echo "sha256=SKIP" >> $GITHUB_OUTPUT
-          else
-            SHA=$(sha256sum "$ZIPFILE" | cut -d' ' -f1)
-            echo "sha256=${SHA}" >> $GITHUB_OUTPUT
-          fi
+          # Download the ACTUAL release asset (from main CI) to get correct hash
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          echo "Downloading from: $ASSET_URL"
+          
+          for i in {1..20}; do
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o release-linux-x64.zip; then
+              echo "Downloaded successfully"
+              SHA=$(sha256sum release-linux-x64.zip | cut -d' ' -f1)
+              echo "sha256=${SHA}" >> $GITHUB_OUTPUT
+              echo "SHA256: $SHA"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting 30s..."
+            sleep 30
+          done
+          
+          echo "Failed to download release asset after 10 minutes"
+          echo "sha256=SKIP" >> $GITHUB_OUTPUT
 
       - name: Update PKGBUILDs
         run: |
