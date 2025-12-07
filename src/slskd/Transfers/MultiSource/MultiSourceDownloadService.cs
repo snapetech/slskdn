@@ -233,20 +233,28 @@ namespace slskd.Transfers.MultiSource
 
                 // If chunks remain, retry with workers that SUCCEEDED
                 var retryAttempt = 0;
-                const int maxRetries = 3;
+                const int maxRetries = 5;
 
                 while (failedCount > 0 && retryAttempt < maxRetries)
                 {
                     retryAttempt++;
                     var successfulSources = sourceStats.Where(s => s.Value > 0).Select(s => s.Key).ToList();
 
+                    // If we don't have enough proven sources, try everyone again (desperation mode)
+                    // This prevents stalling on a single peer
+                    if (successfulSources.Count < 3)
+                    {
+                        Log.Warning("[SWARM] Only {Count} proven sources. Retrying with ALL original sources.", successfulSources.Count);
+                        successfulSources = request.Sources.Select(s => s.Username).ToList();
+                    }
+
                     if (successfulSources.Count == 0)
                     {
-                        Log.Warning("[SWARM] No successful sources to retry with");
+                        Log.Warning("[SWARM] No sources available to retry with");
                         break;
                     }
 
-                    Log.Information("[SWARM] Retry {Attempt}/{Max}: {Missing} chunks remaining, using {Sources} proven sources",
+                    Log.Information("[SWARM] Retry {Attempt}/{Max}: {Missing} chunks remaining, using {Sources} sources",
                         retryAttempt, maxRetries, failedCount, successfulSources.Count);
 
                     // Re-enqueue missing chunks
