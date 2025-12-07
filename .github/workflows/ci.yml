@@ -226,8 +226,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger AUR Update
+      - name: Trigger Package Workflows
         run: |
+          echo "Triggering package builds for ${{ env.TAG }}..."
           gh workflow run release-linux.yml -f tag=${{ env.TAG }}
+          gh workflow run release-copr.yml -f tag=${{ env.TAG }}
+          gh workflow run release-ppa.yml -f tag=${{ env.TAG }}
+          gh workflow run release-packages.yml -f tag=${{ env.TAG }}
+          echo "All package workflows triggered!"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
