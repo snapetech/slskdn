@@ -199,4 +199,3 @@ namespace slskd.Transfers.MultiSource
         ContentSha256,
     }
 }
-

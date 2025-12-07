@@ -254,11 +254,11 @@ namespace slskd.Transfers.MultiSource
 
                         if (candidates.Count > 0)
                         {
-                            Log.Warning("[SWARM] Only {Count} proven sources. Retrying with {Candidates} candidates (excluding failed).", 
+                            Log.Warning("[SWARM] Only {Count} proven sources. Retrying with {Candidates} candidates (excluding failed).",
                                 successfulSources.Count, candidates.Count);
                             successfulSources = candidates;
                         }
-                        else 
+                        else
                         {
                             // Desperation: Purge blacklist and retry everyone
                             Log.Warning("[SWARM] All sources failed/blacklisted. Purging blacklist and retrying everyone.");
@@ -729,8 +729,23 @@ namespace slskd.Transfers.MultiSource
                 }
 
                 // Stop speed monitor
-                try { cts.Cancel(); } catch { }
-                try { await speedMonitorTask.ConfigureAwait(false); } catch { }
+                try
+                {
+                    cts.Cancel();
+                }
+                catch
+                {
+                    // Ignore
+                }
+
+                try
+                {
+                    await speedMonitorTask.ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Ignore
+                }
 
                 stopwatch.Stop();
                 result.BytesDownloaded = limitedStream.BytesWritten;

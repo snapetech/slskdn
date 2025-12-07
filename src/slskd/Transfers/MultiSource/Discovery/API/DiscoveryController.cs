@@ -88,7 +88,7 @@ namespace slskd.Transfers.MultiSource.Discovery.API
 
             Log.Information("[Discovery API] Starting discovery for: {SearchTerm}", request.SearchTerm);
 
-            await Discovery.StartAsync(
+            await Discovery.StartDiscoveryAsync(
                 request.SearchTerm,
                 request.EnableHashVerification ?? true, // Default ON for FLAC testing
                 HttpContext.RequestAborted);
@@ -114,7 +114,7 @@ namespace slskd.Transfers.MultiSource.Discovery.API
                 return Ok(new { message = "Discovery not running" });
             }
 
-            await Discovery.StopAsync();
+            await Discovery.StopDiscoveryAsync();
 
             return Ok(new
             {
@@ -197,4 +197,3 @@ namespace slskd.Transfers.MultiSource.Discovery.API
         public bool? EnableHashVerification { get; set; }
     }
 }
-

@@ -24,13 +24,14 @@ namespace slskd.Transfers.MultiSource.Discovery
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Data.Sqlite;
+    using Microsoft.Extensions.Hosting;
     using Serilog;
     using Soulseek;
 
     /// <summary>
     ///     Service for continuous background discovery of file sources.
     /// </summary>
-    public class SourceDiscoveryService : ISourceDiscoveryService
+    public class SourceDiscoveryService : IHostedService, ISourceDiscoveryService
     {
         /// <summary>
         ///     Search window duration in milliseconds (4 minutes 30 seconds).
@@ -75,13 +76,27 @@ namespace slskd.Transfers.MultiSource.Discovery
         }
 
         /// <inheritdoc/>
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            log.Information("[Discovery] Service started.");
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            log.Information("[Discovery] Service stopping.");
+            await StopDiscoveryAsync();
+        }
+
+        /// <inheritdoc/>
         public bool IsRunning => discoveryTask != null && !discoveryTask.IsCompleted;
 
         /// <inheritdoc/>
         public string CurrentSearchTerm { get; private set; }
 
         /// <inheritdoc/>
-        public async Task StartAsync(string searchTerm, bool enableHashVerification = true, CancellationToken cancellationToken = default)
+        public async Task StartDiscoveryAsync(string searchTerm, bool enableHashVerification = true, CancellationToken cancellationToken = default)
         {
             if (IsRunning)
             {
@@ -105,7 +120,7 @@ namespace slskd.Transfers.MultiSource.Discovery
         }
 
         /// <inheritdoc/>
-        public async Task StopAsync()
+        public async Task StopDiscoveryAsync()
         {
             if (!IsRunning)
             {
@@ -483,4 +498,3 @@ namespace slskd.Transfers.MultiSource.Discovery
         }
     }
 }
-

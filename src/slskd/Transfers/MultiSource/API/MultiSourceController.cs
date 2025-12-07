@@ -186,18 +186,18 @@ namespace slskd.Transfers.MultiSource.API
                 .OrderBy(f => f.FullPath)
                 .ToList();
 
-            // Group by directory for easier browsing
-            var directories = files
-                .GroupBy(f => IOPath.GetDirectoryName(f.FullPath)?.Replace("\\", "/") ?? "")
-                .Select(g => new
-                {
-                    Directory = g.Key.Split('/').LastOrDefault() ?? g.Key,
-                    FullDirectory = g.Key,
-                    FileCount = g.Count(),
-                    Files = g.Take(20).ToList(), // Limit files shown per dir
-                })
-                .OrderBy(d => d.Directory)
-                .ToList();
+                // Group by directory for easier browsing
+                var directories = files
+                    .GroupBy(f => IOPath.GetDirectoryName(f.FullPath)?.Replace("\\", "/") ?? string.Empty)
+                    .Select(g => new
+                    {
+                        Directory = g.Key.Split('/').LastOrDefault() ?? g.Key,
+                        FullDirectory = g.Key,
+                        FileCount = g.Count(),
+                        Files = g.Take(20).ToList(), // Limit files shown per dir
+                    })
+                    .OrderBy(d => d.Directory)
+                    .ToList();
 
             return Ok(new
             {

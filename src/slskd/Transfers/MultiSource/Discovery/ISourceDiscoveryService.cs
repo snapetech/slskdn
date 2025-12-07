@@ -48,13 +48,13 @@ namespace slskd.Transfers.MultiSource.Discovery
         /// <param name="enableHashVerification">Whether to verify FLAC hashes (enabled by default for FLAC testing).</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Task.</returns>
-        Task StartAsync(string searchTerm, bool enableHashVerification = true, CancellationToken cancellationToken = default);
+        Task StartDiscoveryAsync(string searchTerm, bool enableHashVerification = true, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Stops the discovery process.
         /// </summary>
         /// <returns>Task.</returns>
-        Task StopAsync();
+        Task StopDiscoveryAsync();
 
         /// <summary>
         ///     Gets discovered sources for a specific file size.
@@ -146,4 +146,3 @@ namespace slskd.Transfers.MultiSource.Discovery
         public int FilesWithHash { get; set; }
     }
 }
-
