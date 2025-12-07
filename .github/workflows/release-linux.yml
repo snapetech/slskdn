@@ -115,11 +115,14 @@ jobs:
             echo "sha256=${SHA}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update PKGBUILD
+      - name: Update PKGBUILDs
         run: |
           cd packaging/aur
+          # Update binary package PKGBUILD
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD-bin
           sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' 'SKIP' 'SKIP' 'SKIP')/" PKGBUILD-bin
+          # Update source package PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD
 
       - name: Setup and Push to AUR
         env:

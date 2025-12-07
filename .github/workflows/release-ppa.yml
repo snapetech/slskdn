@@ -103,10 +103,13 @@ jobs:
           # Copy debian directory
           cp -r packaging/debian slskdn-${{ steps.version.outputs.version }}/
           
+          # Use timestamp-based PPA revision to avoid conflicts on rebuilds
+          PPA_REV=$(date +%Y%m%d%H%M)
+          
           # Update changelog
           cd slskdn-${{ steps.version.outputs.version }}
           cat > debian/changelog << EOF
-          slskdn (${{ steps.version.outputs.version }}-1ppa1~jammy) jammy; urgency=medium
+          slskdn (${{ steps.version.outputs.version }}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
           
             * Release ${{ steps.version.outputs.tag }}
           
