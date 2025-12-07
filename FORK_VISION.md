@@ -37,11 +37,11 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Wishlist/Background Search** | HIGH | [#957](https://github.com/slskd/slskd/issues/957) Open | Save searches that run periodically. Auto-download when matches found. Desktop clients have had this for 20 years. |
-| **Auto-Retry Failed Downloads** | HIGH | [#959](https://github.com/slskd/slskd/issues/959) Open | Automatic retries with configurable attempts and delays. Our auto-replace goes beyond this. |
-| **Scheduled Rate Limits** | MEDIUM | [#985](https://github.com/slskd/slskd/issues/985) Open | Day/night upload/download speed schedules. Like qBittorrent's scheduler. |
+| **Wishlist/Background Search** | HIGH | slskd #957 Open | Save searches that run periodically. Auto-download when matches found. Desktop clients have had this for 20 years. |
+| **Auto-Retry Failed Downloads** | HIGH | slskd #959 Open | Automatic retries with configurable attempts and delays. Our auto-replace goes beyond this. |
+| **Scheduled Rate Limits** | MEDIUM | slskd #985 Open | Day/night upload/download speed schedules. Like qBittorrent's scheduler. |
 | **Auto-Clear Uploads/Downloads** | MEDIUM | Implemented | Already in slskd 0.21+ but we can extend with more granular controls. |
-| **Download Queue Position Polling** | LOW | [#921](https://github.com/slskd/slskd/issues/921) Open | Auto-refresh queue positions for all queued files. |
+| **Download Queue Position Polling** | LOW | slskd #921 Open | Auto-refresh queue positions for all queued files. |
 
 ---
 
@@ -49,13 +49,13 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Smart Result Ranking** | HIGH | [#746](https://github.com/slskd/slskd/issues/746) Open | Weighted algorithm: past downloads from user, group membership, speed, queue depth. Not just simple sorts. |
-| **User Download History Badge** | HIGH | [#744](https://github.com/slskd/slskd/issues/744) Open | Show how many times you've downloaded from each user in search results. Trust indicator. |
-| **Consensus Track Matching** | MEDIUM | [#747](https://github.com/slskd/slskd/issues/747) Open | Compare search results against each other to find "canonical" album releases. |
-| **Search by MusicBrainz/Discogs ID** | MEDIUM | [#186](https://github.com/slskd/slskd/issues/186) Open | Search for albums by metadata ID, ensure complete tracklists. |
-| **Track List Matching** | MEDIUM | [#189](https://github.com/slskd/slskd/issues/189) Open | Filter results that don't match desired track list. |
-| **Clear All Searches Button** | HIGH | [#1315](https://github.com/slskd/slskd/issues/1315) Open | One-click clear of accumulated searches. Simple but much-requested. |
-| **Default Search Filters** | LOW | [#813](https://github.com/slskd/slskd/issues/813) Open | Save filter presets (e.g., "islossless" as default). |
+| **Smart Result Ranking** | HIGH | slskd #746 Open | Weighted algorithm: past downloads from user, group membership, speed, queue depth. Not just simple sorts. |
+| **User Download History Badge** | HIGH | slskd #744 Open | Show how many times you've downloaded from each user in search results. Trust indicator. |
+| **Consensus Track Matching** | MEDIUM | slskd #747 Open | Compare search results against each other to find "canonical" album releases. |
+| **Search by MusicBrainz/Discogs ID** | MEDIUM | slskd #186 Open | Search for albums by metadata ID, ensure complete tracklists. |
+| **Track List Matching** | MEDIUM | slskd #189 Open | Filter results that don't match desired track list. |
+| **Clear All Searches Button** | HIGH | slskd #1315 Open | One-click clear of accumulated searches. Simple but much-requested. |
+| **Default Search Filters** | LOW | slskd #813 Open | Save filter presets (e.g., "islossless" as default). |
 
 ---
 
@@ -63,10 +63,10 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Block Users from Search Results** | HIGH | [#1379](https://github.com/slskd/slskd/issues/1379) Open | Hide fake/scam users from ever appearing. |
-| **Visual Group Indicators** | MEDIUM | [#745](https://github.com/slskd/slskd/issues/745) Open | Icons in search results for users in your groups. |
-| **File Type Restrictions per Group** | MEDIUM | [#1033](https://github.com/slskd/slskd/issues/1033) Open | Only share certain file types with certain groups. |
-| **Download Quotas per Group** | LOW | [#388](https://github.com/slskd/slskd/issues/388) Closed | Limit downloads per user/group by count or size. |
+| **Block Users from Search Results** | HIGH | slskd #1379 Open | Hide fake/scam users from ever appearing. |
+| **Visual Group Indicators** | MEDIUM | slskd #745 Open | Icons in search results for users in your groups. |
+| **File Type Restrictions per Group** | MEDIUM | slskd #1033 Open | Only share certain file types with certain groups. |
+| **Download Quotas per Group** | LOW | slskd #388 Closed | Limit downloads per user/group by count or size. |
 
 ---
 
@@ -74,11 +74,11 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Traffic Ticker** | MEDIUM | [Discussion #547](https://github.com/slskd/slskd/discussions/547) | Real-time upload/download activity feed in the UI. |
-| **Transfer Statistics API** | MEDIUM | [#1023](https://github.com/slskd/slskd/issues/1023) Open | Aggregate stats endpoint for widgets (homepage dashboards). |
-| **Prometheus Metrics UI** | LOW | [#609](https://github.com/slskd/slskd/issues/609) Open | View metrics graphs without external Prometheus setup. |
-| **Who's Browsing/Downloading** | LOW | [#258](https://github.com/slskd/slskd/issues/258) Open | See who's viewing your profile or downloading your files. |
-| **Chat Upload Context** | LOW | [#615](https://github.com/slskd/slskd/issues/615) Open | See what a user has downloaded from you when chatting. |
+| **Traffic Ticker** | MEDIUM | slskd discussion #547 | Real-time upload/download activity feed in the UI. |
+| **Transfer Statistics API** | MEDIUM | slskd #1023 Open | Aggregate stats endpoint for widgets (homepage dashboards). |
+| **Prometheus Metrics UI** | LOW | slskd #609 Open | View metrics graphs without external Prometheus setup. |
+| **Who's Browsing/Downloading** | LOW | slskd #258 Open | See who's viewing your profile or downloading your files. |
+| **Chat Upload Context** | LOW | slskd #615 Open | See what a user has downloaded from you when chatting. |
 
 ---
 
@@ -86,11 +86,11 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Multiple Destination Folders** | HIGH | [#704](https://github.com/slskd/slskd/issues/704) Open | Choose destination per download (Music/Movies/Books). |
-| **Preserve Remote Path Structure** | MEDIUM | [#1362](https://github.com/slskd/slskd/issues/1362) Open | Avoid folder collisions (multiple "Artwork" folders). |
-| **Recursive Folder Download** | MEDIUM | [#807](https://github.com/slskd/slskd/issues/807) Open | Download folder trees from browse, not just single-level. |
-| **Delete Files on Remove** | MEDIUM | [#1361](https://github.com/slskd/slskd/issues/1361) Open | Remove failed downloads from disk when clearing. |
-| **Resumable Downloads** | LOW | [#406](https://github.com/slskd/slskd/issues/406) Open | Resume partial downloads after restart. |
+| **Multiple Destination Folders** | HIGH | slskd #704 Open | Choose destination per download (Music/Movies/Books). |
+| **Preserve Remote Path Structure** | MEDIUM | slskd #1362 Open | Avoid folder collisions (multiple "Artwork" folders). |
+| **Recursive Folder Download** | MEDIUM | slskd #807 Open | Download folder trees from browse, not just single-level. |
+| **Delete Files on Remove** | MEDIUM | slskd #1361 Open | Remove failed downloads from disk when clearing. |
+| **Resumable Downloads** | LOW | slskd #406 Open | Resume partial downloads after restart. |
 
 ---
 
@@ -98,9 +98,9 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Native Lidarr Integration** | HIGH | [#451](https://github.com/slskd/slskd/issues/451) Closed | Built-in *ARR support without external plugins. |
-| **Email Notifications** | LOW | [#814](https://github.com/slskd/slskd/issues/814) Open | SMTP alerts for private messages/mentions. |
-| **Unread Message Badge** | LOW | [#270](https://github.com/slskd/slskd/issues/270) Open | Notification indicator without opening Chat. |
+| **Native Lidarr Integration** | HIGH | slskd #451 Closed | Built-in *ARR support without external plugins. |
+| **Email Notifications** | LOW | slskd #814 Open | SMTP alerts for private messages/mentions. |
+| **Unread Message Badge** | LOW | slskd #270 Open | Notification indicator without opening Chat. |
 
 ---
 
@@ -108,10 +108,10 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Dark Mode** | HIGH | [#832](https://github.com/slskd/slskd/issues/832) Closed | Native dark theme (currently relies on browser extensions). |
-| **Download Sorting** | MEDIUM | [Discussion #1534](https://github.com/slskd/slskd/discussions/1534) | Sort downloads/uploads by various criteria. |
-| **Create Chat Rooms** | LOW | [#1258](https://github.com/slskd/slskd/issues/1258) Open | Create public/private rooms from UI. |
-| **Predictable Search URLs** | LOW | [#1170](https://github.com/slskd/slskd/issues/1170) Open | Bookmarkable search URLs for browser integration. |
+| **Dark Mode** | HIGH | slskd #832 Closed | Native dark theme (currently relies on browser extensions). |
+| **Download Sorting** | MEDIUM | slskd discussion #1534 | Sort downloads/uploads by various criteria. |
+| **Create Chat Rooms** | LOW | slskd #1258 Open | Create public/private rooms from UI. |
+| **Predictable Search URLs** | LOW | slskd #1170 Open | Bookmarkable search URLs for browser integration. |
 
 ---
 
