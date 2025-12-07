@@ -201,3 +201,7 @@ The following analysis outlines potential extension points within the existing S
 
 1.  **No dynamic source discovery**: Pool is built once at start; new sources aren't discovered mid-download (Search could be re-run).
 2.  **Progress reporting**: Live progress could be improved for frontend integration.
+
+## Source Info
+
+1. https://github.com/nicotine-plus/nicotine-plus/blob/master/doc/SLSKPROTOCOL.md
