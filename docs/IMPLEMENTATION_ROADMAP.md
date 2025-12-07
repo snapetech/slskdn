@@ -655,12 +655,24 @@ Beacons announce to ALL keys. Seekers query ALL keys and merge/dedupe results.
 9. ⬜ Integrate mesh sync triggers into peer interactions (needs Soulseek transport)
 
 ### Sprint 4: DHT Rendezvous (Phase 6) ⬜ NEXT
-10. ⬜ Select/integrate BitTorrent DHT library
-11. ⬜ Implement `DhtRendezvousService` (bootstrap, announce, discover)
-12. ⬜ Implement `MeshOverlayServer` (TCP listener, handshake)
-13. ⬜ Implement `MeshOverlayConnector` (outbound connections)
-14. ⬜ NAT detection / beacon capability check
-15. ⬜ Integration with existing `MeshSyncService`
+
+#### 🔴 SECURITY HARDENING (DO FIRST - CRITICAL)
+10. ⬜ **TLS 1.3 for all overlay connections** - NO PLAINTEXT
+11. ⬜ **Length-prefixed message framing** - prevent unbounded reads
+12. ⬜ **Strict message validation** - regex patterns, bounds checks
+13. ⬜ **Rate limiting** - per-IP, per-connection, global limits
+14. ⬜ **Input sanitization** - validate all peer data before use
+15. ⬜ **Connection timeouts** - connect, handshake, read, idle
+16. ⬜ **Blocklist system** - ban misbehaving IPs/peers
+
+#### Core Implementation
+17. ⬜ Select/integrate BitTorrent DHT library (MonoTorrent recommended)
+18. ⬜ Implement `DhtRendezvousService` (bootstrap, announce, discover)
+19. ⬜ Implement `MeshOverlayServer` (TLS listener, secure handshake)
+20. ⬜ Implement `MeshOverlayConnector` (TLS client, validation)
+21. ⬜ NAT detection / beacon capability check (UPnP/STUN)
+22. ⬜ Integration with existing `MeshSyncService`
+23. ⬜ Certificate management (self-signed + pinning)
 
 ### Sprint 5: Polish & Testing
 16. ✅ API endpoints for hash DB / capabilities / mesh / backfill (complete)
@@ -700,6 +712,67 @@ Beacons announce to ALL keys. Seekers query ALL keys and merge/dedupe results.
 | Database growth | Periodic cleanup of stale entries |
 | Protocol compatibility | All extensions invisible to legacy clients |
 | Privacy concerns | Only share file hashes, not browsing history |
+
+---
+
+## 🔴 CRITICAL: Overlay Security Requirements
+
+**The overlay protocol (Phase 6) creates a new attack surface. These requirements are MANDATORY before any production deployment.**
+
+### Security Checklist
+
+| # | Requirement | Priority | Status |
+|---|-------------|----------|--------|
+| S1 | TLS 1.3 encryption for ALL overlay connections | 🔴 CRITICAL | ⬜ |
+| S2 | Length-prefixed message framing (4-byte header) | 🔴 CRITICAL | ⬜ |
+| S3 | Message size limits (4KB max per message) | 🔴 CRITICAL | ⬜ |
+| S4 | Strict JSON schema validation | 🔴 CRITICAL | ⬜ |
+| S5 | Username regex validation (`^[a-zA-Z0-9_\-\.]+$`) | 🔴 CRITICAL | ⬜ |
+| S6 | Hash format validation (hex only, exact lengths) | 🔴 CRITICAL | ⬜ |
+| S7 | Connection rate limiting (3/IP, 10/min global) | 🟠 HIGH | ⬜ |
+| S8 | Message rate limiting (10/sec per connection) | 🟠 HIGH | ⬜ |
+| S9 | Connection timeouts (10s connect, 5s handshake) | 🟠 HIGH | ⬜ |
+| S10 | Idle timeout with keepalive (5min idle, 2min ping) | 🟠 HIGH | ⬜ |
+| S11 | IP blocklist for repeat offenders | 🟠 HIGH | ⬜ |
+| S12 | Certificate pinning (TOFU model) | 🟡 MEDIUM | ⬜ |
+| S13 | Soulseek username verification | 🟡 MEDIUM | ⬜ |
+| S14 | Peer diversity checks (anti-eclipse) | 🟡 MEDIUM | ⬜ |
+
+### Threat Model
+
+| Threat | Impact | Mitigation |
+|--------|--------|------------|
+| **Message Injection** | Remote code execution, crashes | S2, S3, S4, S5, S6 |
+| **Man-in-the-Middle** | Hash poisoning, data theft | S1, S12 |
+| **DoS (Connection Flood)** | Service unavailable | S7, S9, S11 |
+| **DoS (Message Flood)** | CPU/memory exhaustion | S3, S8, S10 |
+| **Buffer Overflow** | Memory corruption, RCE | S2, S3 |
+| **Username Spoofing** | Impersonation attacks | S5, S13 |
+| **Eclipse Attack** | Isolation, hash poisoning | S14 |
+
+### Implementation Notes
+
+```csharp
+// CORRECT: Length-prefixed, bounded read
+var lengthBytes = new byte[4];
+await stream.ReadExactlyAsync(lengthBytes, ct);
+var length = BinaryPrimitives.ReadInt32BigEndian(lengthBytes);
+if (length <= 0 || length > 4096) throw new ProtocolException();
+var buffer = new byte[length];
+await stream.ReadExactlyAsync(buffer, ct);
+
+// WRONG: Unbounded read - NEVER DO THIS
+var json = await new StreamReader(stream).ReadToEndAsync(); // 💀 VULNERABLE
+```
+
+```csharp
+// CORRECT: TLS wrapper
+var sslStream = new SslStream(tcpClient.GetStream(), false);
+await sslStream.AuthenticateAsServerAsync(cert, false, SslProtocols.Tls13, true);
+
+// WRONG: Plain TCP - NEVER DO THIS
+var stream = tcpClient.GetStream(); // 💀 PLAINTEXT
+```
 
 ---
 

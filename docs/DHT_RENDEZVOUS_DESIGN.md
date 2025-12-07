@@ -228,16 +228,267 @@ mesh:
 
 ---
 
+## Hash Database Transport - Design Decision
+
+### The Question: How Do FLAC Hashes Travel Between Clients?
+
+Phase 3 defines the mesh sync *protocol* (HELLO, REQ_DELTA, PUSH_DELTA, etc.), but doesn't specify the *transport*. We evaluated four options:
+
+### Option 1: Over Soulseek Connections ❌ REJECTED
+
+| Approach | Problem |
+|----------|---------|
+| Custom message type | Breaks protocol compatibility with server/other clients |
+| Abuse "private message" | Hacky, fragile, could get flagged |
+| Overload file transfer | Too complex, confuses other clients |
+
+**Verdict:** Soulseek protocol is fixed. Adding custom messages risks compatibility issues and detection. We want to be invisible to the Soulseek network.
+
+### Option 2: Over Overlay TCP Connection ✅ CHOSEN APPROACH
+
+**This is our transport mechanism.**
+
+```
+Phase 6 DHT Rendezvous    →    Overlay TCP Connection    →    Phase 3 Mesh Sync
+     (find peers)                  (persistent pipe)            (hash exchange)
+```
+
+The overlay TCP connection established during DHT rendezvous serves dual purpose:
+1. **Handshake** - Proves both sides are slskdn-capable
+2. **Transport** - Becomes the pipe for all mesh sync traffic
+
+**Benefits:**
+- Completely separate from Soulseek protocol
+- Single persistent connection per mesh neighbor
+- Can be TLS encrypted (see Security section)
+- No compatibility concerns
+- Low overhead
+
+### Option 3: Store Hashes in BitTorrent DHT ❌ REJECTED
+
+| Problem | Why |
+|---------|-----|
+| Wrong scale | DHT is for `(infohash → IP:port)`, not content databases |
+| Abuse | Would dump our data onto strangers' torrent clients |
+| Churn | DHT entries expire; constant re-announcement needed |
+| Size | Our DB could be gigabytes; DHT values are tiny |
+
+**Verdict:** DHT is for peer discovery only, not data storage.
+
+### Option 4: HTTP API Between Clients ❌ REJECTED
+
+| Problem | Why |
+|---------|-----|
+| Extra port | Requires additional port forwarding |
+| NAT harder | HTTP NAT traversal is more complex |
+| Auth overhead | Need to handle API authentication |
+| Overkill | Raw TCP is simpler and sufficient |
+
+**Verdict:** Unnecessary complexity when overlay TCP works.
+
+---
+
 ## Security Considerations
+
+### ⚠️ CRITICAL: Security Hardening Required
+
+**The overlay protocol creates a new attack surface. This MUST be hardened before production use.**
+
+### Threat Model
+
+| Threat | Severity | Description |
+|--------|----------|-------------|
+| **Message Injection** | CRITICAL | Malicious peer sends crafted messages to exploit parser |
+| **Man-in-the-Middle** | HIGH | Attacker intercepts overlay traffic, modifies hashes |
+| **DoS via Connection Flood** | HIGH | Attacker opens thousands of connections |
+| **Buffer Overflow** | HIGH | Oversized messages crash or exploit client |
+| **Username Spoofing** | MEDIUM | Attacker claims to be different Soulseek user |
+| **Eclipse Attack** | MEDIUM | Attacker controls all your mesh neighbors |
+| **DHT Poisoning** | MEDIUM | Attacker floods DHT with fake endpoints |
+| **Privacy Leak** | LOW | IP addresses exposed via DHT |
+
+### Security Requirements (MANDATORY)
+
+#### 1. TLS Encryption (REQUIRED)
+
+**All overlay connections MUST use TLS 1.3.**
+
+```csharp
+// Server-side (beacon)
+var sslStream = new SslStream(tcpClient.GetStream(), false);
+await sslStream.AuthenticateAsServerAsync(
+    serverCertificate,
+    clientCertificateRequired: false,
+    SslProtocols.Tls13,
+    checkCertificateRevocation: true);
+
+// Client-side (seeker)
+var sslStream = new SslStream(tcpClient.GetStream(), false, ValidateServerCertificate);
+await sslStream.AuthenticateAsClientAsync(targetHost);
+```
+
+**Certificate Options:**
+- Self-signed per-client (pin on first connect, TOFU model)
+- Let's Encrypt (if clients have domain names)
+- Shared CA for slskdn network (complex but strongest)
+
+**Minimum:** Self-signed + certificate pinning after first successful handshake.
+
+#### 2. Message Validation (REQUIRED)
+
+**Every incoming message MUST be validated before processing.**
+
+```csharp
+public class MessageValidator
+{
+    public const int MAX_MESSAGE_SIZE = 4096;        // 4KB max
+    public const int MAX_USERNAME_LENGTH = 64;
+    public const int MAX_FEATURES_COUNT = 20;
+    public const int MAX_DELTA_ENTRIES = 1000;
+    
+    public static bool ValidateMeshHello(MeshHello msg)
+    {
+        // Magic check - EXACT match required
+        if (msg.Magic != "SLSKDNM1") return false;
+        
+        // Type check
+        if (msg.Type != "mesh_hello" && msg.Type != "mesh_hello_ack") return false;
+        
+        // Version bounds
+        if (msg.Version < 1 || msg.Version > 100) return false;
+        
+        // Username validation - alphanumeric + limited special chars
+        if (string.IsNullOrEmpty(msg.Username)) return false;
+        if (msg.Username.Length > MAX_USERNAME_LENGTH) return false;
+        if (!Regex.IsMatch(msg.Username, @"^[a-zA-Z0-9_\-\.]+$")) return false;
+        
+        // Features validation
+        if (msg.Features?.Count > MAX_FEATURES_COUNT) return false;
+        
+        // Port bounds
+        if (msg.SoulseekPorts?.Peer < 0 || msg.SoulseekPorts?.Peer > 65535) return false;
+        if (msg.SoulseekPorts?.File < 0 || msg.SoulseekPorts?.File > 65535) return false;
+        
+        return true;
+    }
+}
+```
+
+#### 3. Length-Prefixed Framing (REQUIRED)
+
+**Never read unbounded data. Always use length-prefixed messages.**
+
+```csharp
+// Message format: [4-byte length][JSON payload]
+public async Task<T> ReadMessageAsync<T>(Stream stream, CancellationToken ct)
+{
+    // Read length prefix (big-endian)
+    var lengthBytes = new byte[4];
+    await stream.ReadExactlyAsync(lengthBytes, ct);
+    var length = BinaryPrimitives.ReadInt32BigEndian(lengthBytes);
+    
+    // Validate length BEFORE allocating
+    if (length <= 0 || length > MAX_MESSAGE_SIZE)
+        throw new ProtocolViolationException($"Invalid message length: {length}");
+    
+    // Now safe to allocate and read
+    var buffer = new byte[length];
+    await stream.ReadExactlyAsync(buffer, ct);
+    
+    return JsonSerializer.Deserialize<T>(buffer);
+}
+```
+
+#### 4. Rate Limiting (REQUIRED)
+
+```csharp
+public class OverlayRateLimiter
+{
+    // Connection rate limits
+    public const int MAX_CONNECTIONS_PER_IP = 3;
+    public const int MAX_CONNECTIONS_PER_MINUTE = 10;
+    public const int MAX_TOTAL_CONNECTIONS = 100;
+    
+    // Message rate limits
+    public const int MAX_MESSAGES_PER_SECOND = 10;
+    public const int MAX_DELTA_REQUESTS_PER_HOUR = 60;
+    
+    // Backoff on violations
+    public const int VIOLATION_BACKOFF_SECONDS = 300;  // 5 min
+    public const int MAX_VIOLATIONS_BEFORE_BAN = 3;
+    
+    private readonly ConcurrentDictionary<IPAddress, RateLimitState> _states;
+}
+```
+
+#### 5. Input Sanitization (REQUIRED)
+
+**Never trust any data from peers.**
+
+```csharp
+public class HashDbEntry
+{
+    // Validate hash format - must be hex
+    public static bool ValidateFlacKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return false;
+        if (key.Length != 16) return false;  // 64-bit = 16 hex chars
+        return Regex.IsMatch(key, @"^[a-f0-9]+$");
+    }
+    
+    // Validate byte hash - must be SHA256 hex
+    public static bool ValidateByteHash(string hash)
+    {
+        if (string.IsNullOrEmpty(hash)) return false;
+        if (hash.Length != 64) return false;  // SHA256 = 64 hex chars
+        return Regex.IsMatch(hash, @"^[a-f0-9]+$");
+    }
+    
+    // Validate file size - reasonable bounds
+    public static bool ValidateFileSize(long size)
+    {
+        return size > 0 && size < 10_000_000_000;  // Max 10GB
+    }
+}
+```
+
+#### 6. Peer Verification (RECOMMENDED)
+
+**Verify claimed Soulseek username via actual Soulseek connection.**
+
+```csharp
+// After overlay handshake claims username "FooUser":
+// 1. Connect to FooUser via normal Soulseek
+// 2. Request their UserInfo
+// 3. Check for slskdn_caps tag
+// 4. If mismatch → disconnect overlay, add to blocklist
+```
+
+#### 7. Connection Timeouts (REQUIRED)
+
+```csharp
+public static class OverlayTimeouts
+{
+    public static readonly TimeSpan Connect = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan Handshake = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan Read = TimeSpan.FromSeconds(30);
+    public static readonly TimeSpan Idle = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan Keepalive = TimeSpan.FromMinutes(2);
+}
+```
+
+### Security Mitigations Summary
 
 | Threat | Mitigation |
 |--------|------------|
-| **Impersonation** | Username is in handshake; can verify via Soulseek connection later |
-| **DoS via fake announcements** | Rate-limit connections per IP; validate handshake before registering |
-| **Eclipse attack** | Query multiple infohashes; verify peers can actually communicate |
-| **Privacy (IP exposure)** | Only overlay IP exposed; same as normal Soulseek usage |
-| **Malicious peers** | Disconnect on invalid messages; maintain blocklist |
-| **DHT poisoning** | Use multiple rendezvous keys; validate responses |
+| **Message Injection** | Strict validation, length-prefixed framing, regex patterns |
+| **Man-in-the-Middle** | TLS 1.3 mandatory, certificate pinning |
+| **DoS (Connection)** | Rate limiting per IP, max connections, backoff |
+| **DoS (Message)** | Message rate limits, max sizes, timeouts |
+| **Buffer Overflow** | Length validation before allocation, bounded buffers |
+| **Username Spoofing** | Soulseek verification handshake |
+| **Eclipse Attack** | Multiple DHT keys, peer diversity checks |
+| **DHT Poisoning** | Validate endpoints respond correctly |
 
 ---
 
