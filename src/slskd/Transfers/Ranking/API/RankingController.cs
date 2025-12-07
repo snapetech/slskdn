@@ -8,17 +8,18 @@ namespace slskd.Transfers.Ranking.API
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     /// <summary>
     ///     Ranking and download history API.
     /// </summary>
-    [Route("api/v0/[controller]")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiVersion("0")]
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
-    [Authorize]
     public class RankingController : ControllerBase
     {
         private readonly ISourceRankingService rankingService;
@@ -38,6 +39,7 @@ namespace slskd.Transfers.Ranking.API
         /// <param name="username">The username to get history for.</param>
         /// <returns>The user's download history.</returns>
         [HttpGet("history/{username}")]
+        [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(UserDownloadHistory), 200)]
         public async Task<IActionResult> GetHistory([FromRoute] string username)
         {
@@ -51,6 +53,7 @@ namespace slskd.Transfers.Ranking.API
         /// <param name="usernames">The usernames to get history for.</param>
         /// <returns>A dictionary of username to download history.</returns>
         [HttpPost("history")]
+        [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(IDictionary<string, UserDownloadHistory>), 200)]
         public async Task<IActionResult> GetHistories([FromBody] List<string> usernames)
         {
@@ -64,6 +67,7 @@ namespace slskd.Transfers.Ranking.API
         /// <param name="candidates">The candidates to rank.</param>
         /// <returns>The ranked candidates, best first.</returns>
         [HttpPost("rank")]
+        [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(IEnumerable<RankedSource>), 200)]
         public async Task<IActionResult> RankSources([FromBody] List<SourceCandidate> candidates)
         {
