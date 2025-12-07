@@ -27,6 +27,9 @@ namespace slskd.Transfers.MultiSource
     using System.Threading.Tasks;
     using Serilog;
     using Soulseek;
+    using slskd.HashDb;
+    using slskd.HashDb.Models;
+    using slskd.Mesh;
 
     /// <summary>
     ///     Service for verifying file content identity across multiple Soulseek sources.
@@ -42,13 +45,97 @@ namespace slskd.Transfers.MultiSource
         ///     Initializes a new instance of the <see cref="ContentVerificationService"/> class.
         /// </summary>
         /// <param name="soulseekClient">The Soulseek client.</param>
-        public ContentVerificationService(ISoulseekClient soulseekClient)
+        /// <param name="hashDb">The hash database service (optional).</param>
+        /// <param name="meshSync">The mesh sync service (optional).</param>
+        public ContentVerificationService(
+            ISoulseekClient soulseekClient,
+            IHashDbService hashDb = null,
+            IMeshSyncService meshSync = null)
         {
             Client = soulseekClient;
+            HashDb = hashDb;
+            MeshSync = meshSync;
         }
 
         private ISoulseekClient Client { get; }
+        private IHashDbService HashDb { get; }
+        private IMeshSyncService MeshSync { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<ContentVerificationService>();
+
+        /// <summary>
+        ///     Attempts to look up a known hash from the local database.
+        /// </summary>
+        /// <param name="filename">The filename.</param>
+        /// <param name="fileSize">The file size.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>The known hash, or null if not found.</returns>
+        public async Task<string> TryGetKnownHashAsync(string filename, long fileSize, CancellationToken cancellationToken = default)
+        {
+            if (HashDb == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var flacKey = HashDbEntry.GenerateFlacKey(filename, fileSize);
+                var entry = await HashDb.LookupHashAsync(flacKey, cancellationToken);
+
+                if (entry != null)
+                {
+                    Log.Debug("[HASHDB] Cache hit for {Filename} ({Size} bytes): {Hash}",
+                        Path.GetFileName(filename), fileSize, entry.ByteHash?.Substring(0, 16) + "...");
+
+                    // Increment use count
+                    await HashDb.IncrementHashUseCountAsync(flacKey, cancellationToken);
+                    return entry.ByteHash;
+                }
+
+                Log.Debug("[HASHDB] Cache miss for {Filename} ({Size} bytes)", Path.GetFileName(filename), fileSize);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[HASHDB] Error looking up hash for {Filename}", filename);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     Stores a verified hash in the database and publishes to mesh.
+        /// </summary>
+        /// <param name="filename">The filename.</param>
+        /// <param name="fileSize">The file size.</param>
+        /// <param name="hash">The SHA256 hash of first 32KB.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task StoreVerifiedHashAsync(string filename, long fileSize, string hash, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrEmpty(hash))
+            {
+                return;
+            }
+
+            try
+            {
+                // Store in local hash database
+                if (HashDb != null)
+                {
+                    await HashDb.StoreHashFromVerificationAsync(filename, fileSize, hash, cancellationToken: cancellationToken);
+                    Log.Debug("[HASHDB] Stored hash for {Filename}: {Hash}", Path.GetFileName(filename), hash.Substring(0, 16) + "...");
+                }
+
+                // Publish to mesh for other slskdn clients
+                if (MeshSync != null)
+                {
+                    var flacKey = HashDbEntry.GenerateFlacKey(filename, fileSize);
+                    await MeshSync.PublishHashAsync(flacKey, hash, fileSize, cancellationToken: cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[HASHDB] Error storing hash for {Filename}", filename);
+            }
+        }
 
         /// <inheritdoc/>
         public async Task<ContentVerificationResult> VerifySourcesAsync(
@@ -71,6 +158,15 @@ namespace slskd.Transfers.MultiSource
                 sourcesToVerify.Count,
                 request.Filename,
                 request.FileSize);
+
+            // Phase 5 Integration: Try to get known hash from database first
+            var knownHash = await TryGetKnownHashAsync(request.Filename, request.FileSize, cancellationToken);
+            if (knownHash != null)
+            {
+                Log.Information("[HASHDB] Using cached hash for {Filename}, will verify {Count} sources against it",
+                    Path.GetFileName(request.Filename), sourcesToVerify.Count);
+                result.ExpectedHash = knownHash;
+            }
 
             // Verify all candidates in parallel
             var verificationTasks = new List<Task<(string Username, string Hash, VerificationMethod Method, long TimeMs, string Error)>>();
@@ -122,6 +218,13 @@ namespace slskd.Transfers.MultiSource
                 result.FailedSources.Count,
                 result.BestSources.Count);
 
+            // Phase 5 Integration: Store the best hash in the database for future lookups
+            if (result.BestSources.Count > 0)
+            {
+                var bestHash = result.BestSources.First().ContentHash;
+                await StoreVerifiedHashAsync(request.Filename, request.FileSize, bestHash, cancellationToken);
+            }
+
             return result;
         }
 
@@ -153,9 +256,10 @@ namespace slskd.Transfers.MultiSource
 
             try
             {
-                // Determine how much data we need
+                // Always use 32KB for byte-level verification (not just FLAC header)
+                // Different encodes can have identical FLAC headers but diverge in compressed data
                 var isFlac = filename.EndsWith(".flac", StringComparison.OrdinalIgnoreCase);
-                var bytesNeeded = isFlac ? FlacStreamInfoParser.MinimumBytesNeeded : VerificationChunkSize;
+                var bytesNeeded = VerificationChunkSize;  // Always 32KB for SHA256 verification
 
                 // Don't verify files smaller than our chunk size
                 if (fileSize < bytesNeeded)
@@ -198,30 +302,26 @@ namespace slskd.Transfers.MultiSource
 
                 var data = memoryStream.ToArray();
 
-                // Compute hash based on file type
-                string hash;
-                VerificationMethod method;
+                // ALWAYS use SHA256 of actual bytes for verification
+                // FLAC audio MD5 only verifies decoded audio, NOT compressed bytes!
+                // Different encodes can have same audio MD5 but different bytes - causes corruption when mixed
+                using var sha256 = SHA256.Create();
+                var hashBytes = sha256.ComputeHash(data);
+                var hash = BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+                var method = VerificationMethod.ContentSha256;
 
+                // Log FLAC metadata for debugging if available
                 if (isFlac && FlacStreamInfoParser.TryParse(data, out var streamInfo))
                 {
-                    hash = streamInfo.AudioMd5Hex;
-                    method = VerificationMethod.FlacStreamInfoMd5;
-
                     Log.Debug(
-                        "FLAC verification for {Username}: MD5={Hash}, SampleRate={SampleRate}, Channels={Channels}",
+                        "FLAC byte verification for {Username}: SHA256={Hash}, AudioMD5={AudioMd5}, SampleRate={SampleRate}",
                         username,
-                        hash,
-                        streamInfo.SampleRate,
-                        streamInfo.Channels);
+                        hash.Substring(0, 16) + "...",
+                        streamInfo.AudioMd5Hex?.Substring(0, 16) + "...",
+                        streamInfo.SampleRate);
                 }
                 else
                 {
-                    // Fall back to SHA256 of content
-                    using var sha256 = SHA256.Create();
-                    var hashBytes = sha256.ComputeHash(data);
-                    hash = BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
-                    method = VerificationMethod.ContentSha256;
-
                     Log.Debug(
                         "Content verification for {Username}: SHA256={Hash} (first {Bytes} bytes)",
                         username,

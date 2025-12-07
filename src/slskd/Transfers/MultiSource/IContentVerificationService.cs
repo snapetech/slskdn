@@ -109,6 +109,16 @@ namespace slskd.Transfers.MultiSource
         public List<FailedSource> FailedSources { get; set; } = new();
 
         /// <summary>
+        ///     Gets or sets the expected hash from the hash database (if found).
+        /// </summary>
+        public string ExpectedHash { get; set; }
+
+        /// <summary>
+        ///     Gets a value indicating whether the hash was found in the database.
+        /// </summary>
+        public bool WasCached => !string.IsNullOrEmpty(ExpectedHash);
+
+        /// <summary>
         ///     Gets the hash with the most verified sources (best candidate for multi-source).
         /// </summary>
         public string BestHash

@@ -27,6 +27,9 @@ namespace slskd.Transfers.MultiSource
     using System.Threading.Tasks;
     using Serilog;
     using Soulseek;
+    using slskd.HashDb;
+    using slskd.HashDb.Models;
+    using slskd.Mesh;
     using IODirectory = System.IO.Directory;
     using IOPath = System.IO.Path;
     using FileStream = System.IO.FileStream;
@@ -49,15 +52,23 @@ namespace slskd.Transfers.MultiSource
         /// </summary>
         /// <param name="soulseekClient">The Soulseek client.</param>
         /// <param name="contentVerificationService">The content verification service.</param>
+        /// <param name="hashDb">The hash database service (optional).</param>
+        /// <param name="meshSync">The mesh sync service (optional).</param>
         public MultiSourceDownloadService(
             ISoulseekClient soulseekClient,
-            IContentVerificationService contentVerificationService)
+            IContentVerificationService contentVerificationService,
+            IHashDbService hashDb = null,
+            IMeshSyncService meshSync = null)
         {
             Client = soulseekClient;
             ContentVerification = contentVerificationService;
+            HashDb = hashDb;
+            MeshSync = meshSync;
         }
 
         private ISoulseekClient Client { get; }
+        private IHashDbService HashDb { get; }
+        private IMeshSyncService MeshSync { get; }
         private IContentVerificationService ContentVerification { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<MultiSourceDownloadService>();
         /// <inheritdoc/>
@@ -405,6 +416,9 @@ namespace slskd.Transfers.MultiSource
                     result.TotalTimeMs,
                     (request.FileSize / 1024.0 / 1024.0) / (result.TotalTimeMs / 1000.0),
                     result.SourcesUsed);
+
+                // Phase 5 Integration: Store hash after successful download
+                await PublishDownloadedHashAsync(request.Filename, request.FileSize, finalHash, cancellationToken);
 
                 return result;
             }
@@ -901,6 +915,39 @@ namespace slskd.Transfers.MultiSource
             finally
             {
                 status.DecrementActiveChunks();
+            }
+        }
+
+        /// <summary>
+        ///     Publishes the hash of a successfully downloaded file to the hash database and mesh.
+        /// </summary>
+        private async Task PublishDownloadedHashAsync(string filename, long fileSize, string hash, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(hash))
+            {
+                return;
+            }
+
+            try
+            {
+                // Store in local hash database
+                if (HashDb != null)
+                {
+                    await HashDb.StoreHashFromVerificationAsync(filename, fileSize, hash, cancellationToken: cancellationToken);
+                    Log.Debug("[HASHDB] Stored downloaded file hash: {Filename} -> {Hash}", IOPath.GetFileName(filename), hash.Substring(0, 16) + "...");
+                }
+
+                // Publish to mesh for other slskdn clients
+                if (MeshSync != null)
+                {
+                    var flacKey = HashDbEntry.GenerateFlacKey(filename, fileSize);
+                    await MeshSync.PublishHashAsync(flacKey, hash, fileSize, cancellationToken: cancellationToken);
+                    Log.Debug("[MESH] Published hash to mesh: {Key} -> {Hash}", flacKey, hash.Substring(0, 16) + "...");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[HASHDB] Error publishing hash for {Filename}", filename);
             }
         }
 
