@@ -61,8 +61,10 @@ namespace slskd.Search
         ///     Returns a list of all completed and in-progress searches, with responses omitted, matching the optional <paramref name="expression"/>.
         /// </summary>
         /// <param name="expression">An optional expression used to match searches.</param>
+        /// <param name="limit">Maximum number of searches to return (default 500, 0 for unlimited).</param>
+        /// <param name="offset">Number of searches to skip (for pagination).</param>
         /// <returns>The list of searches matching the specified expression, or all searches if no expression is specified.</returns>
-        Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = null);
+        Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = null, int limit = 500, int offset = 0);
 
         /// <summary>
         ///     Updates the specified <paramref name="search"/>.
@@ -193,17 +195,31 @@ namespace slskd.Search
         ///     Returns a list of all completed and in-progress searches, with responses omitted, matching the optional <paramref name="expression"/>.
         /// </summary>
         /// <param name="expression">An optional expression used to match searches.</param>
+        /// <param name="limit">Maximum number of searches to return (default 500, 0 for unlimited).</param>
+        /// <param name="offset">Number of searches to skip (for pagination).</param>
         /// <returns>The list of searches matching the specified expression, or all searches if no expression is specified.</returns>
-        public Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = null)
+        public Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = null, int limit = 500, int offset = 0)
         {
             expression ??= s => true;
             using var context = ContextFactory.CreateDbContext();
 
-            return context.Searches
+            var query = context.Searches
                 .AsNoTracking()
                 .Where(expression)
-                .WithoutResponses()
-                .ToListAsync();
+                .OrderByDescending(s => s.StartedAt)
+                .WithoutResponses();
+
+            if (offset > 0)
+            {
+                query = query.Skip(offset);
+            }
+
+            if (limit > 0)
+            {
+                query = query.Take(limit);
+            }
+
+            return query.ToListAsync();
         }
 
         /// <summary>
