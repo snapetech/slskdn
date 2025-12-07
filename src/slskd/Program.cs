@@ -717,6 +717,9 @@ namespace slskd
             // Capability discovery service (Phase 1)
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 
+            // Hash database service (Phase 2)
+            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(Program.AppDirectory));
+
             services.AddSingleton<IRelayService, RelayService>();
 
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
