@@ -711,6 +711,8 @@ namespace slskd
             // Multi-source download services (experimental)
             services.AddSingleton<Transfers.MultiSource.IContentVerificationService, Transfers.MultiSource.ContentVerificationService>();
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
+            services.AddSingleton<Transfers.MultiSource.Discovery.ISourceDiscoveryService, Transfers.MultiSource.Discovery.SourceDiscoveryService>();
+            services.AddHostedService(provider => provider.GetRequiredService<Transfers.MultiSource.Discovery.ISourceDiscoveryService>() as Transfers.MultiSource.Discovery.SourceDiscoveryService);
 
             services.AddSingleton<IRelayService, RelayService>();
 

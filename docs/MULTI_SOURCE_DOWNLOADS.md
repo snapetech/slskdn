@@ -143,9 +143,61 @@ After extensive testing, the following improvements have stabilized the swarm be
    ✅ FLAC verification PASSED
 ```
 
+## Protocol Extension Proposals
+
+The following analysis outlines potential extension points within the existing Soulseek protocol to support advanced features like capability negotiation and multi-part transfer coordination, while maintaining backward compatibility.
+
+**Note:** In all implementation scenarios, preference and compatibility with legacy clients and the standard network protocol must be preserved. Extensions should degrade gracefully and remain invisible to non-supporting clients.
+
+### Viable Extension Targets
+
+#### 1. User Info Map (`UserInfoRequest` / `UserInfoResponse`)
+*   **Structure:** Map of keys → values (strings, integers, etc.).
+*   **Implementation:** Introduce a custom key (e.g., `"slskdn_caps"`) containing a JSON object or base64-encoded flags.
+    *   *Example:* `{"mp_enabled": true, "version": "1.1"}`
+*   **Compatibility:** Legacy clients typically ignore unknown keys, making this a low-risk method for capability negotiation.
+
+#### 2. Queue Upload Request – "Reason" Field (`QueueUploadRequest`)
+*   **Structure:** Contains Filename, User, and a "Reason" string intended for display.
+*   **Implementation:** Overload the reason field with structured metadata.
+    *   *Example:* `reason="multipart:chunk=2/4;start=1048576;length=1048576"`
+*   **Compatibility:** Standard clients will display the raw string. While functional, this may impact user experience on legacy clients (Nicotine+, etc.) if the string is parsed literally for display. Testing required.
+
+#### 3. Client Version String
+*   **Structure:** Sent during login or peer connection establishment.
+*   **Implementation:** Append a capability token to the version string.
+    *   *Example:* `"slskdn/1.0+mp"`
+*   **Compatibility:** Allows for passive discovery of extension support without altering message structures.
+
+#### 4. Dummy Shared Files
+*   **Implementation:** Host virtual files with reserved names (e.g., `__slskdn_caps__`, `__chunkhash_meta__`).
+*   **Mechanism:** A request for these files serves as an intent to negotiate or retrieve metadata. The file itself does not need to exist on disk; the request triggers the handshake logic.
+*   **Compatibility:** Acts as a standard file request to legacy clients (which will simply return "File not found"), but triggers specific behavior in `slskdn` nodes.
+
+### Experimental / Risky Targets
+
+#### 5. Search Result Item Tags
+*   **Structure:** Metadata tags (bitrate, duration, etc.) sent with search results.
+*   **Implementation:** Inject custom tags (e.g., `tag["slskdn_hash"] = "sha1:..."`) for content verification or grouping.
+*   **Risk:** The central Soulseek server or other nodes may strip unknown tags. Reliability is unproven.
+
+### Non-Viable Methods
+
+*   **Custom Message IDs:** Utilizing IDs beyond the known 16-bit range is unsafe and likely to cause disconnection or errors.
+*   **Binary Header Modification:** The file transfer header is a fixed format with no reserved space for extensions.
+*   **Message Length Modification:** Altering message lengths or appending trailing bytes violates the protocol and will result in parsing errors.
+
+### Summary
+
+| Target | Method | Risk Profile | Use Case |
+| :--- | :--- | :--- | :--- |
+| **User Info** | Add `"slskdn_caps"` key | Safe | Capability negotiation |
+| **Client Version** | Append `+mp` or `+ext` | Safe | Passive discovery |
+| **Dummy File** | Request reserved filename | Mild | Active handshake / Metadata retrieval |
+| **Queue Reason** | Structured string overload | Mild | Segmented transfer coordination |
+| **Search Tags** | Custom metadata tags | High | Content deduplication (Unreliable) |
+
 ## Known Issues / TODO
 
 1.  **No dynamic source discovery**: Pool is built once at start; new sources aren't discovered mid-download (Search could be re-run).
 2.  **Progress reporting**: Live progress could be improved for frontend integration.
-
-
