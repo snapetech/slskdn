@@ -353,9 +353,31 @@ POST /api/v0/backfill/enable      → Enable/disable scheduler
 - Skips slskdn peers (use mesh sync instead)
 - Publishes discovered hashes to mesh
 
-### Phase 5: Integration ⬜ PENDING
+### Phase 5: Integration ✅ COMPLETE
 
-Will integrate hash database with content verification for instant lookups
+Integrated HashDb and MeshSync with existing multi-source download system.
+
+**Hash Resolution Pipeline:**
+```
+1. Local HashDb lookup (instant cache hit)
+2. If miss: verify sources via network download
+3. Store best hash in HashDb
+4. Publish to mesh for other slskdn clients
+```
+
+**ContentVerificationService:**
+- `TryGetKnownHashAsync()` - check database before verification
+- `StoreVerifiedHashAsync()` - store + publish after verification
+- Sets `ExpectedHash` and `WasCached` in result
+
+**MultiSourceDownloadService:**
+- `PublishDownloadedHashAsync()` - stores hash after successful download
+- Publishes to both HashDb and MeshSync
+
+**Benefits:**
+- Instant verification for previously seen files
+- Hash propagation across slskdn network
+- Reduced network overhead for popular files
 
 ---
 

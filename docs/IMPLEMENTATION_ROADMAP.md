@@ -293,70 +293,49 @@ CREATE TABLE MeshPeerState (
 
 ---
 
-## Phase 5: Integration with Existing Multi-Source System
+## Phase 5: Integration with Existing Multi-Source System ✅ COMPLETE
 
-### 5.1 Hash Resolution Pipeline
+> **Status:** Implemented and tested. Commit `e3f069bf`
 
-Modify `ContentVerificationService` to use new hash resolution order:
+### 5.1 Hash Resolution Pipeline ✅
 
 ```
 1. Local HashDb lookup (instant)
-   → If found: return hash, source='local_db'
+   → If found: return hash, set ExpectedHash
 
-2. Mesh query to N neighbors (fast, ~1-2s)
-   → If found: store locally, return hash, source='mesh'
+2. If miss: verify sources via network download
+   → Download 32KB from each source
+   → Compute SHA256 hash
 
-3. If peer supports_dht:
-   → Skip to step 5 (don't probe them, mesh will sync)
+3. Store best hash in HashDb
 
-4. Legacy verification (current behavior):
-   → Download 42-64KB, parse FLAC header
-   → Store hash locally
-   → Publish to mesh
-
-5. Return hash or null
+4. Publish to mesh for other slskdn clients
 ```
 
-### 5.2 Files to Modify
+### 5.2 Files Modified ✅
 
 - `src/slskd/Transfers/MultiSource/ContentVerificationService.cs`
   - Inject `IHashDbService`, `IMeshSyncService`
-  - Add hash resolution pipeline before falling back to header download
-  
+  - `TryGetKnownHashAsync()` - lookup hash from database
+  - `StoreVerifiedHashAsync()` - store and publish after verification
+  - `VerifySourcesAsync` checks database first
+
+- `src/slskd/Transfers/MultiSource/IContentVerificationService.cs`
+  - Added `ExpectedHash` property to result
+  - Added `WasCached` property
+
 - `src/slskd/Transfers/MultiSource/MultiSourceDownloadService.cs`
-  - After successful download, publish hash to mesh
-  
-- `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
-  - Update to use new `FlacInventory` table instead of `DiscoveredFiles`
-  - Add capability detection during discovery
+  - Inject `IHashDbService`, `IMeshSyncService`
+  - `PublishDownloadedHashAsync()` - stores hash after successful download
 
-### 5.3 API Endpoints to Add
+### 5.3 API Endpoints (All Complete) ✅
 
-```
-GET  /api/v0/hashdb/stats
-     → Hash database statistics
-
-GET  /api/v0/hashdb/lookup?key={flacKey}
-     → Look up hash by key
-
-GET  /api/v0/hashdb/search?size={size}&filename={pattern}
-     → Search hash database
-
-GET  /api/v0/mesh/stats
-     → Mesh sync statistics
-
-GET  /api/v0/mesh/peers
-     → List mesh-capable peers
-
-POST /api/v0/mesh/sync/{username}
-     → Trigger manual sync with peer
-
-GET  /api/v0/backfill/stats
-     → Backfill scheduler statistics
-
-POST /api/v0/backfill/trigger
-     → Manually trigger backfill cycle (for testing)
-```
+| Endpoint | Description | Phase |
+|----------|-------------|-------|
+| `GET /api/v0/capabilities/*` | Capability discovery | Phase 1 |
+| `GET /api/v0/hashdb/*` | Hash database operations | Phase 2 |
+| `GET /api/v0/mesh/*` | Mesh sync operations | Phase 3 |
+| `GET /api/v0/backfill/*` | Backfill scheduler | Phase 4 |
 
 ---
 
@@ -367,9 +346,9 @@ POST /api/v0/backfill/trigger
 2. ✅ Create `CapabilityService` with UserInfo tag (Phase 1 - commit `2847b35d`)
 3. ✅ Create `HashDbService` with new schema (Phase 2 - commit `b790d696`)
 
-### Sprint 2: Hash Resolution (In Progress)
-4. ⬜ Integrate hash lookup into `ContentVerificationService`
-5. ⬜ Add passive hash collection from downloads
+### Sprint 2: Hash Resolution ✅ COMPLETE
+4. ✅ Integrate hash lookup into `ContentVerificationService` (commit `e3f069bf`)
+5. ✅ Add passive hash collection from downloads (commit `e3f069bf`)
 6. ✅ Create `BackfillSchedulerService` (commit `df3f605f`)
 
 ### Sprint 3: Mesh Sync ✅ COMPLETE
@@ -377,11 +356,11 @@ POST /api/v0/backfill/trigger
 8. ✅ Add mesh delta sync logic
 9. ⬜ Integrate mesh sync triggers into peer interactions (needs Soulseek transport)
 
-### Sprint 4: Polish & Testing (Pending)
-10. ✅ API endpoints for hash DB / capabilities (complete)
+### Sprint 4: Polish & Testing (In Progress)
+10. ✅ API endpoints for hash DB / capabilities / mesh / backfill (complete)
 11. ⬜ Web UI integration (optional)
 12. ⬜ Load testing with real network
-13. ⬜ Documentation updates
+13. ✅ Documentation updates
 
 ---
 
