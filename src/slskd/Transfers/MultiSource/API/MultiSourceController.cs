@@ -401,7 +401,7 @@ namespace slskd.Transfers.MultiSource.API
         }
 
         /// <summary>
-        ///     SWARM/RACE MODE: Queue ALL sources to download full file.
+        ///     SWARM MODE: Download file using multiple sources in parallel.
         ///     First to complete wins. No chunking (Soulseek doesn't support it well).
         /// </summary>
         /// <param name="request">The swarm download request.</param>
@@ -415,7 +415,7 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Filename and size are required. Use search term for filename, exact size in bytes.");
             }
 
-            Log.Information("[SWARM] Starting RACE MODE: {Filename} ({Size} bytes)", request.Filename, request.Size);
+            Log.Information("[SWARM] Starting swarm download: {Filename} ({Size} bytes)", request.Filename, request.Size);
 
             // Search for ALL sources
             var searchTerm = request.Filename;

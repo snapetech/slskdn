@@ -76,16 +76,22 @@ Search and download in one call:
 }
 ```
 
-## Test Scripts
+## Test Script
 
-- `swarm-test.sh` - Main test script with pool management
-  - `./swarm-test.sh refresh "search term" 30` - Build fresh pool
-  - `./swarm-test.sh targets` - Show available files
-  - `./swarm-test.sh swarm SIZE CHUNK_KB` - Run swarm download
-  - `./swarm-test.sh auto` - Full auto test
+`test-swarm.sh` - Interactive menu-driven test tool:
 
-- `build-pool.sh` - Build and manage source pools
-- `race-download.sh` - Alternative "race mode" (all sources download full file, first wins)
+```bash
+export SLSK_USER=your_username
+export SLSK_PASS=your_password
+./test-swarm.sh
+```
+
+Features:
+- Browse files by source count
+- Select any file to start swarm download
+- Press `/` anytime to add new artist to discovery pool
+- Background discovery rotates through all artists
+- Press `r` to reset partial-support flags
 
 ## Configuration
 
