@@ -409,6 +409,7 @@ namespace slskd.Transfers.MultiSource
             ConcurrentQueue<ChunkInfo> chunkQueue,
             ConcurrentDictionary<int, ChunkResult> completedChunks,
             ConcurrentDictionary<string, int> sourceStats,
+            ConcurrentDictionary<string, bool> failedUsers,
             string tempDir,
             MultiSourceDownloadStatus status,
             CancellationToken cancellationToken)
@@ -659,6 +660,12 @@ namespace slskd.Transfers.MultiSource
                         var bytesInInterval = currentBytes - lastBytes;
                         var speedBps = bytesInInterval / 2; // 2 second interval (approx)
                         lastBytes = currentBytes;
+
+                        // Log live rate periodically (every 2s)
+                        if (currentBytes > 0)
+                        {
+                            Log.Debug("[SWARM] {Username} rate: {Speed:F1} KB/s", username, speedBps / 1024.0);
+                        }
 
                         if (speedBps < minSpeedBps && currentBytes > 0)
                         {
