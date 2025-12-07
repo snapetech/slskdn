@@ -456,28 +456,46 @@ namespace slskd.Transfers.MultiSource
                         }
                         else
                         {
-                            consecutiveFailures++;
+                            // Don't count "Too slow" as a hard failure that kills the worker
+                            // This keeps the worker alive to try other chunks (or retry later)
+                            var isSpeedFailure = result.Error?.Contains("Too slow") == true;
+                            if (!isSpeedFailure)
+                            {
+                                consecutiveFailures++;
+                            }
+
                             Log.Warning("[SWARM] ✗ {Username} chunk {Index}: {Error} (fail {Fails}/{Max})",
                                 username, chunk.Index, result.Error, consecutiveFailures, maxConsecutiveFailures);
 
                             // Put chunk back for another worker
                             chunkQueue.Enqueue(chunk);
 
-                            // Only exit if too many consecutive failures
+                            // Only exit if too many consecutive HARD failures
                             if (consecutiveFailures >= maxConsecutiveFailures)
                             {
                                 Log.Warning("[SWARM] {Username} giving up after {Fails} consecutive failures", username, consecutiveFailures);
                                 break;
                             }
 
-                            // Small delay before retry
-                            await Task.Delay(500, cancellationToken);
+                            // Delay before retry - longer for speed failures to let others grab it
+                            await Task.Delay(isSpeedFailure ? 2000 : 500, cancellationToken);
                         }
                     }
                     catch (OperationCanceledException)
                     {
                         chunkQueue.Enqueue(chunk);
-                        break;
+                        
+                        // If main token cancelled, exit
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        // Otherwise it's likely a speed cancellation from within DownloadChunkAsync
+                        // Back off and continue
+                        Log.Warning("[SWARM] {Username} dropped chunk {Index} (cancellation) - backing off", username, chunk.Index);
+                        await Task.Delay(2000, cancellationToken);
+                        continue;
                     }
                     catch (Exception ex)
                     {

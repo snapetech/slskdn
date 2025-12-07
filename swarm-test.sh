@@ -160,13 +160,28 @@ run_swarm() {
     local error=$(echo "$result" | jq -r '.error // "none"')
     local sources_used=$(echo "$result" | jq -r '.sourcesUsed')
     local time_ms=$(echo "$result" | jq -r '.totalTimeMs')
+    local output_path=$(echo "$result" | jq -r '.outputPath // empty')
     
-    if [ "$success" = "true" ]; then
+    if [ "$success" == "true" ]; then
         local speed_mbps=$(echo "scale=2; $size / 1024 / 1024 / ($time_ms / 1000)" | bc 2>/dev/null || echo "?")
         echo "✅ SUCCESS!"
         echo "   Sources used: $sources_used"
         echo "   Time: ${time_ms}ms"
         echo "   Speed: ${speed_mbps} MB/s"
+        echo "   Output: $output_path"
+        
+        # Verify FLAC integrity if applicable
+        if [[ "$output_path" == *".flac" ]] && command -v flac >/dev/null; then
+            echo ""
+            echo "🔍 Verifying FLAC integrity..."
+            if flac -t "$output_path" 2>&1 | grep -q "ok"; then
+                echo "   ✅ FLAC verification PASSED"
+            else
+                echo "   ❌ FLAC verification FAILED"
+                flac -t "$output_path" 2>&1 | head -5
+            fi
+        fi
+        
         echo ""
         echo "Chunk distribution:"
         echo "$result" | jq -r '.chunks | group_by(.username) | map({user: .[0].username, count: length}) | sort_by(-.count) | .[] | "   \(.user): \(.count) chunks"'
