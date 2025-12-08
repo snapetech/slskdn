@@ -27,7 +27,7 @@ jobs:
             TAG="${{ github.ref_name }}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          VERSION=$(echo "$TAG" | sed 's/-slskdN/.slskdN/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Setup .NET
@@ -63,10 +63,10 @@ jobs:
       - name: Create Zip
         run: |
           cd publish-linux-x64
-          zip -r ../slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip .
+          zip -r ../slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip .
           cd ..
           mkdir -p ~/rpmbuild/SOURCES
-          cp slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip ~/rpmbuild/SOURCES/
+          cp slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip ~/rpmbuild/SOURCES/
 
       - name: Install Dependencies
         run: |
@@ -87,17 +87,17 @@ jobs:
           cat > ~/.config/copr << EOF
           [copr-cli]
           login = ${COPR_LOGIN}
-          username = slskdn
+          username = slskdN
           token = ${COPR_TOKEN}
           copr_url = https://copr.fedorainfracloud.org
           EOF
 
       - name: Update spec version
         run: |
-          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
+          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdN.spec
           # Use local filename (not URL) so SRPM includes the file
-          sed -i "s|^Source0:.*|Source0:        slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
-          cat packaging/rpm/slskdn.spec | head -20
+          sed -i "s|^Source0:.*|Source0:        slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdN.spec
+          cat packaging/rpm/slskdN.spec | head -20
 
       - name: Build SRPM
         run: |
@@ -107,10 +107,10 @@ jobs:
           cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
           cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
           cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
-          cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
+          cp packaging/rpm/slskdN.spec ~/rpmbuild/SPECS/
           
           # Build SRPM
-          rpmbuild -bs ~/rpmbuild/SPECS/slskdn.spec --define "_topdir $HOME/rpmbuild"
+          rpmbuild -bs ~/rpmbuild/SPECS/slskdN.spec --define "_topdir $HOME/rpmbuild"
           
           SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
           echo "Built SRPM: $SRPM"
@@ -128,4 +128,4 @@ jobs:
           
           SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
           echo "Uploading SRPM to COPR: $SRPM"
-          copr-cli build slskdn "$SRPM" --nowait
+          copr-cli build slskdN "$SRPM" --nowait

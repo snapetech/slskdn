@@ -1,10 +1,10 @@
-# slskdn AUR Packages
+# slskdN AUR Packages
 
 This directory contains PKGBUILD files for the Arch User Repository (AUR).
 
 ## Drop-in Replacement
 
-**slskdn is a drop-in replacement for slskd.** Both packages use identical paths:
+**slskdN is a drop-in replacement for slskd.** Both packages use identical paths:
 
 | Resource | Path |
 |----------|------|
@@ -22,30 +22,30 @@ This means:
 
 ## Packages
 
-### slskdn-bin (Recommended)
+### slskdN-bin (Recommended)
 
 Binary package - quick installation, no build dependencies.
 
 ```bash
-yay -S slskdn-bin
+yay -S slskdN-bin
 ```
 
-### slskdn
+### slskdN
 
 Source package - builds from source, requires build dependencies.
 
 ```bash
-yay -S slskdn
+yay -S slskdN
 ```
 
 ## Upgrading from slskd
 
-Simply replace slskd with slskdn:
+Simply replace slskd with slskdN:
 
 ```bash
 # If using pacman/yay
 yay -R slskd        # Remove old package
-yay -S slskdn-bin   # Install slskdn
+yay -S slskdN-bin   # Install slskdN
 
 # Service continues to work
 sudo systemctl restart slskd
@@ -57,7 +57,7 @@ Your config at `/etc/slskd/slskd.yml` and data at `/var/lib/slskd/` are preserve
 
 ```bash
 # Install
-yay -S slskdn-bin
+yay -S slskdN-bin
 
 # Edit config
 sudo nano /etc/slskd/slskd.yml
@@ -97,8 +97,8 @@ shares:
 
 ```bash
 # Clone
-git clone https://aur.archlinux.org/slskdn-bin.git
-cd slskdn-bin
+git clone https://aur.archlinux.org/slskdN-bin.git
+cd slskdN-bin
 
 # Build and install
 makepkg -si

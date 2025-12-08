@@ -27,8 +27,8 @@ jobs:
             TAG="${{ github.ref_name }}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          # Convert 0.24.1-slskdn.7 to 0.24.1.slskdn.7 for debian version
-          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          # Convert 0.24.1-slskdN.7 to 0.24.1.slskdN.7 for debian version
+          VERSION=$(echo "$TAG" | sed 's/-slskdN/.slskdN/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Setup .NET
@@ -82,52 +82,52 @@ jobs:
       - name: Prepare Source Structure
         run: |
           # Create proper directory structure for debian packaging
-          mkdir -p slskdn-${{ steps.version.outputs.version }}/usr/lib/slskd
-          mkdir -p slskdn-${{ steps.version.outputs.version }}/lib/systemd/system
-          mkdir -p slskdn-${{ steps.version.outputs.version }}/etc/slskd
-          mkdir -p slskdn-${{ steps.version.outputs.version }}/usr/lib/sysusers.d
+          mkdir -p slskdN-${{ steps.version.outputs.version }}/usr/lib/slskd
+          mkdir -p slskdN-${{ steps.version.outputs.version }}/lib/systemd/system
+          mkdir -p slskdN-${{ steps.version.outputs.version }}/etc/slskd
+          mkdir -p slskdN-${{ steps.version.outputs.version }}/usr/lib/sysusers.d
           
           # Copy binary files from our build
-          cp -r publish-linux-x64/* slskdn-${{ steps.version.outputs.version }}/usr/lib/slskd/
+          cp -r publish-linux-x64/* slskdN-${{ steps.version.outputs.version }}/usr/lib/slskd/
           
           # Copy service files from packaging
-          cp packaging/aur/slskd.service slskdn-${{ steps.version.outputs.version }}/lib/systemd/system/
-          cp packaging/aur/slskd.yml slskdn-${{ steps.version.outputs.version }}/etc/slskd/
-          cp packaging/aur/slskd.sysusers slskdn-${{ steps.version.outputs.version }}/usr/lib/sysusers.d/slskd.conf
+          cp packaging/aur/slskd.service slskdN-${{ steps.version.outputs.version }}/lib/systemd/system/
+          cp packaging/aur/slskd.yml slskdN-${{ steps.version.outputs.version }}/etc/slskd/
+          cp packaging/aur/slskd.sysusers slskdN-${{ steps.version.outputs.version }}/usr/lib/sysusers.d/slskd.conf
 
       - name: Prepare Source Package
         run: |
           # Create tarball for orig source
-          tar -czvf slskdn_${{ steps.version.outputs.version }}.orig.tar.gz slskdn-${{ steps.version.outputs.version }}
+          tar -czvf slskdn_${{ steps.version.outputs.version }}.orig.tar.gz slskdN-${{ steps.version.outputs.version }}
           
           # Copy debian directory
-          cp -r packaging/debian slskdn-${{ steps.version.outputs.version }}/
+          cp -r packaging/debian slskdN-${{ steps.version.outputs.version }}/
           
           # Use timestamp-based PPA revision to avoid conflicts on rebuilds
           PPA_REV=$(date +%Y%m%d%H%M)
           
           # Update changelog
-          cd slskdn-${{ steps.version.outputs.version }}
+          cd slskdN-${{ steps.version.outputs.version }}
           cat > debian/changelog << EOF
-          slskdn (${{ steps.version.outputs.version }}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
+          slskdN (${{ steps.version.outputs.version }}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
           
             * Release ${{ steps.version.outputs.tag }}
           
-           -- slskdn <slskdn@proton.me>  $(date -R)
+           -- slskdN <slskdN@proton.me>  $(date -R)
           EOF
 
       - name: Build Source Package
         run: |
-          cd slskdn-${{ steps.version.outputs.version }}
+          cd slskdN-${{ steps.version.outputs.version }}
           debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
 
       - name: Configure dput
         run: |
           cat > ~/.dput.cf << 'EOF'
-          [slskdn-ppa]
+          [slskdN-ppa]
           fqdn = ppa.launchpad.net
           method = ftp
-          incoming = ~keefshape/ubuntu/slskdn/
+          incoming = ~keefshape/ubuntu/slskdN/
           login = anonymous
           allow_unsigned_uploads = 0
           EOF
@@ -143,4 +143,4 @@ jobs:
           ls -la *.changes || true
           CHANGES_FILE=$(find . -name "*.changes" -type f | head -1)
           echo "Found changes file: $CHANGES_FILE"
-          dput slskdn-ppa "$CHANGES_FILE"
+          dput slskdN-ppa "$CHANGES_FILE"

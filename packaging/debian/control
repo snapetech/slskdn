@@ -1,15 +1,15 @@
-Source: slskdn
+Source: slskdN
 Section: net
 Priority: optional
-Maintainer: snapetech <slskdn@proton.me>
+Maintainer: snapetech <slskdN@proton.me>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.6.0
-Homepage: https://github.com/snapetech/slskdn
-Vcs-Browser: https://github.com/snapetech/slskdn
-Vcs-Git: https://github.com/snapetech/slskdn.git
+Homepage: https://github.com/snapetech/slskdN
+Vcs-Browser: https://github.com/snapetech/slskdN
+Vcs-Git: https://github.com/snapetech/slskdN.git
 Rules-Requires-Root: no
 
-Package: slskdn
+Package: slskdN
 Architecture: amd64 arm64
 Depends: ${misc:Depends}
 Provides: slskd

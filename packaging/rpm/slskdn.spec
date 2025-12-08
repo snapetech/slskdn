@@ -1,11 +1,11 @@
-Name:           slskdn
-Version:        0.24.1.slskdn.7
+Name:           slskdN
+Version:        0.24.1.slskdN.7
 Release:        1%{?dist}
 Summary:        🔋 The batteries-included Soulseek web client
 
 License:        AGPL-3.0-or-later
-URL:            https://github.com/snapetech/slskdn
-Source0:        https://github.com/snapetech/slskdn/releases/download/%{version}/slskdn-%{version}-linux-x64.zip
+URL:            https://github.com/snapetech/slskdN
+Source0:        https://github.com/snapetech/slskdN/releases/download/%{version}/slskdN-%{version}-linux-x64.zip
 Source1:        slskd.service
 Source2:        slskd.yml
 Source3:        slskd.conf
@@ -74,7 +74,7 @@ getent passwd slskd >/dev/null || useradd -r -s /sbin/nologin -d %{_sharedstated
 %post
 %systemd_post slskd.service
 echo ""
-echo "🔋 slskdn has been installed!"
+echo "🔋 slskdN has been installed!"
 echo ""
 echo "1. Edit the configuration:"
 echo "   sudo nano /etc/slskd/slskd.yml"
@@ -104,9 +104,9 @@ echo ""
 %dir %attr(755,slskd,slskd) %{_sharedstatedir}/slskd/incomplete
 
 %changelog
-* Sat Dec 06 2025 snapetech <slskdn@proton.me> - 0.24.1.slskdn.7-1
+* Sat Dec 06 2025 snapetech <slskdN@proton.me> - 0.24.1.slskdN.7-1
 - Fix race condition in SourceRankingService
 - Update branding
 
-* Fri Dec 05 2025 snapetech <slskdn@proton.me> - 0.24.1.slskdn.6-1
-- Initial slskdn release
+* Fri Dec 05 2025 snapetech <slskdN@proton.me> - 0.24.1.slskdN.6-1
+- Initial slskdN release

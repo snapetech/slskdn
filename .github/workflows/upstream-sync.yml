@@ -24,8 +24,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "slskdn"
-          git config user.email "slskdn@proton.me"
+          git config user.name "slskdN"
+          git config user.email "slskdN@proton.me"
 
       - name: Add Upstream Remote
         run: |

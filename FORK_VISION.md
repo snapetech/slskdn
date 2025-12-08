@@ -1,8 +1,8 @@
-# slskdn - The Rich-Featured Soulseek Client
+# slskdN - The Rich-Featured Soulseek Client
 
-⚡ Positioning Statement for slskdn Enhancements
+⚡ Positioning Statement for slskdN Enhancements
 
-slskdn is a forward-leaning Soulseek client that remains firmly grounded in the spirit and structure of the original network and client. We believe in preserving Soulseek’s unique one-to-one sharing culture, human-scale interaction, and community-driven ethos — while offering opt-in tools for those who want more speed, flexibility, or experimentation.
+slskdN is a forward-leaning Soulseek client that remains firmly grounded in the spirit and structure of the original network and client. We believe in preserving Soulseek’s unique one-to-one sharing culture, human-scale interaction, and community-driven ethos — while offering opt-in tools for those who want more speed, flexibility, or experimentation.
 
 Our approach to both application and protocol extension is additive, not disruptive. We aim to enhance Soulseek with optional features like multipart downloads, improved reliability, and smarter client coordination, without breaking compatibility with existing clients or infringing on the core protocol. Where possible, we will reuse existing behaviors and extend them gracefully so that legacy clients continue to operate unchanged, and enhanced clients can interoperate seamlessly.
 
@@ -17,7 +17,7 @@ From issue discussions:
 - *"I'll wait until someone asks for it to worry about it"*
 - *"External plugins have emerged for this"*
 
-**slskdn** takes the opposite approach: **Batteries Included.**
+**slskdN** takes the opposite approach: **Batteries Included.**
 
 Not everyone wants to write Python scripts, set up cron jobs, or integrate third-party tools. Some users want a fully-featured client that works out of the box—like the rich desktop clients (Nicotine+, SoulseekQt) but with slskd's modern web interface.
 
@@ -25,7 +25,7 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 ## Vision Statement
 
-> **slskdn is a feature-rich Soulseek web client for users who want everything built-in.**
+> **slskdN is a feature-rich Soulseek web client for users who want everything built-in.**
 > 
 > No scripts. No external integrations. No assembly required.
 
@@ -157,7 +157,7 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 ## Upstream Contribution Strategy
 
-Features implemented in slskdn that prove popular and stable will be submitted as PRs to upstream slskd. Our auto-replace feature is the first example (PR #1553).
+Features implemented in slskdN that prove popular and stable will be submitted as PRs to upstream slskd. Our auto-replace feature is the first example (PR #1553).
 
 We aim to be a **proving ground** for features, not a permanent fork.
 
@@ -166,7 +166,7 @@ We aim to be a **proving ground** for features, not a permanent fork.
 ## Getting Started
 
 ```bash
-# Clone slskdn
+# Clone slskdN
 git clone https://github.com/snapetech/slskdn.git
 
 # Run with Docker
@@ -188,5 +188,5 @@ We welcome contributions! Priority areas:
 
 ---
 
-*slskdn - Because "just write a script" isn't always the answer.*
+*slskdN - Because "just write a script" isn't always the answer.*
 

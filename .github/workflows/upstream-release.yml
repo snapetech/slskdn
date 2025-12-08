@@ -35,9 +35,9 @@ jobs:
           echo "upstream_version=${UPSTREAM_VERSION}" >> $GITHUB_OUTPUT
           
           # Get our current base version (from latest release tag)
-          OUR_LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-slskdn.0")
-          # Extract base version (e.g., 0.24.1 from 0.24.1-slskdn.5)
-          CURRENT_BASE=$(echo "$OUR_LATEST" | sed 's/-slskdn.*//')
+          OUR_LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-slskdN.0")
+          # Extract base version (e.g., 0.24.1 from 0.24.1-slskdN.5)
+          CURRENT_BASE=$(echo "$OUR_LATEST" | sed 's/-slskdN.*//')
           echo "Our current base: $CURRENT_BASE"
           echo "current_base=${CURRENT_BASE}" >> $GITHUB_OUTPUT
           
@@ -47,7 +47,7 @@ jobs:
             echo "new_release=true" >> $GITHUB_OUTPUT
             
             # Calculate new version
-            NEW_VERSION="${UPSTREAM_VERSION}-slskdn.1"
+            NEW_VERSION="${UPSTREAM_VERSION}-slskdN.1"
             echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           else
             echo "✅ Already synced with upstream release $UPSTREAM_VERSION"
@@ -68,8 +68,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "slskdn"
-          git config user.email "slskdn@proton.me"
+          git config user.name "slskdN"
+          git config user.email "slskdN@proton.me"
 
       - name: Add Upstream and Fetch
         run: |
@@ -113,7 +113,7 @@ jobs:
               repo: context.repo.repo,
               title: `🚨 Upstream release ${upstreamVersion} requires manual merge`,
               labels: ['upstream-sync', 'needs-attention', 'release-blocked'],
-              body: `## New Upstream Release Detected\n\nslskd has released **${upstreamVersion}** but automatic merge failed.\n\n### Conflicting files:\n\`\`\`\n${conflicts}\n\`\`\`\n\n### To resolve:\n\n\`\`\`bash\ngit remote add upstream https://github.com/slskd/slskd.git\ngit fetch upstream --tags\ngit merge upstream/master\n# resolve conflicts\ngit add .\ngit commit\ngit push\n\n# Then create the release tag:\ngit tag ${upstreamVersion}-slskdn.1\ngit push origin ${upstreamVersion}-slskdn.1\n\`\`\`\n\nThe new slskdn release should be **${upstreamVersion}-slskdn.1**`
+              body: `## New Upstream Release Detected\n\nslskd has released **${upstreamVersion}** but automatic merge failed.\n\n### Conflicting files:\n\`\`\`\n${conflicts}\n\`\`\`\n\n### To resolve:\n\n\`\`\`bash\ngit remote add upstream https://github.com/slskd/slskd.git\ngit fetch upstream --tags\ngit merge upstream/master\n# resolve conflicts\ngit add .\ngit commit\ngit push\n\n# Then create the release tag:\ngit tag ${upstreamVersion}-slskdN.1\ngit push origin ${upstreamVersion}-slskdN.1\n\`\`\`\n\nThe new slskdN release should be **${upstreamVersion}-slskdN.1**`
             });
 
       - name: Push Changes
@@ -125,7 +125,7 @@ jobs:
         if: steps.merge.outputs.merge_success == 'true'
         run: |
           NEW_VERSION="${{ needs.check-upstream-release.outputs.new_version }}"
-          PKGVER=$(echo "$NEW_VERSION" | sed 's/-slskdn/.slskdn/')
+          PKGVER=$(echo "$NEW_VERSION" | sed 's/-slskdN/.slskdN/')
           
           # Update PKGBUILD-bin
           sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packaging/aur/PKGBUILD-bin
@@ -156,11 +156,11 @@ jobs:
           OLD_BASE="${{ needs.check-upstream-release.outputs.current_base }}"
           
           cat > /tmp/release-notes.md << EOF
-          ## slskdn ${NEW_VERSION}
+          ## slskdN ${NEW_VERSION}
           
           ### 🔄 Upstream Sync Release
           
-          This release syncs slskdn with **slskd ${UPSTREAM_VERSION}**.
+          This release syncs slskdN with **slskd ${UPSTREAM_VERSION}**.
           
           See [slskd ${UPSTREAM_VERSION} release notes](https://github.com/slskd/slskd/releases/tag/${UPSTREAM_VERSION}) for upstream changes.
           
@@ -168,7 +168,7 @@ jobs:
           
           **Drop-in replacement for slskd** - Install via AUR and your existing config/data at \`/var/lib/slskd/\` is preserved.
           
-          ### slskdn Features (on top of slskd)
+          ### slskdN Features (on top of slskd)
           - 🔍 **Wishlist** - Track and auto-search for music you want
           - 🧠 **Smart source ranking** with download history
           - 📄 **Configurable search page size** (25/50/100 results)
@@ -182,7 +182,7 @@ jobs:
           
           ### Installation (Arch Linux)
           \`\`\`bash
-          yay -S slskdn-bin
+          yay -S slskdN-bin
           \`\`\`
           
           ### Docker

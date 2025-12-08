@@ -25,8 +25,8 @@ jobs:
             TAG="${{ github.ref_name }}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          # Convert 0.24.1-slskdn.7 to 0.24.1.slskdn.7
-          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          # Convert 0.24.1-slskdN.7 to 0.24.1.slskdN.7
+          VERSION=$(echo "$TAG" | sed 's/-slskdN/.slskdN/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Wait for Release Asset
@@ -34,10 +34,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Wait up to 10 minutes for CI to upload the asset
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip"
           for i in {1..20}; do
             echo "Attempt $i: Checking for asset..."
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdn.zip; then
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdN.zip; then
               echo "Asset downloaded successfully"
               break
             fi
@@ -48,7 +48,7 @@ jobs:
             echo "Asset not ready, waiting 30s..."
             sleep 30
           done
-          unzip -q slskdn.zip -d slskdn-build
+          unzip -q slskdN.zip -d slskdN-build
 
       - name: Install Build Dependencies
         run: |
@@ -63,7 +63,7 @@ jobs:
           mkdir -p pkg/etc/slskd
           mkdir -p pkg/usr/lib/sysusers.d
           
-          cp -r slskdn-build/* pkg/usr/lib/slskd/
+          cp -r slskdN-build/* pkg/usr/lib/slskd/
           cp packaging/aur/slskd.service pkg/lib/systemd/system/
           cp packaging/aur/slskd.yml pkg/etc/slskd/
           cp packaging/aur/slskd.sysusers pkg/usr/lib/sysusers.d/slskd.conf
@@ -75,7 +75,7 @@ jobs:
         run: |
           cd pkg
           # Update changelog version
-          sed -i "s/0.24.1.slskdn.7/${{ steps.version.outputs.version }}/g" debian/changelog
+          sed -i "s/0.24.1.slskdN.7/${{ steps.version.outputs.version }}/g" debian/changelog
           dpkg-buildpackage -us -uc -b
           cd ..
           mv *.deb slskdn_${{ steps.version.outputs.version }}_amd64.deb
@@ -104,7 +104,7 @@ jobs:
             TAG="${{ github.ref_name }}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
+          VERSION=$(echo "$TAG" | sed 's/-slskdN/.slskdN/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install Build Dependencies
@@ -119,10 +119,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Wait up to 10 minutes for CI to upload the asset
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip"
           for i in {1..20}; do
             echo "Attempt $i: Checking for asset..."
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip; then
+            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip; then
               echo "Asset downloaded successfully"
               break
             fi
@@ -142,17 +142,17 @@ jobs:
       - name: Update Spec Version and Build
         run: |
           # Update version in spec (use dot format for RPM version)
-          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
+          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdN.spec
           
           # Fix Source0 to use exact tag-format filename
-          sed -i "s|^Source0:.*|Source0:        slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdn.spec
+          sed -i "s|^Source0:.*|Source0:        slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip|" packaging/rpm/slskdN.spec
           
-          cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
+          cp packaging/rpm/slskdN.spec ~/rpmbuild/SPECS/
 
       - name: Build .rpm Package
         run: |
           cd ~/rpmbuild
-          rpmbuild -bb SPECS/slskdn.spec
+          rpmbuild -bb SPECS/slskdN.spec
 
       - name: Find RPM
         id: find_rpm

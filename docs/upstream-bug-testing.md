@@ -32,7 +32,7 @@ private async void Client_LoggedIn(object sender, EventArgs e)
 }
 ```
 
-### slskdn Fixed Code
+### slskdN Fixed Code
 ```csharp
 private async void Client_LoggedIn(object sender, EventArgs e)
 {
@@ -80,7 +80,7 @@ But RoomService.cs does NOT have this protection - it's inconsistent with the re
 
 ### Test Result
 - **Upstream**: Process would crash on unhandled exception (inconsistent with Application.cs pattern)
-- **slskdn**: Exception is caught and logged, process continues (matches Application.cs pattern)
+- **slskdN**: Exception is caught and logged, process continues (matches Application.cs pattern)
 
 ---
 
@@ -106,7 +106,7 @@ export const getResponses = async ({ id }) => {
 };
 ```
 
-### slskdn Fixed Code
+### slskdN Fixed Code
 ```javascript
 // src/web/src/lib/searches.js line 69-80
 export const getResponses = async ({ id }) => {
@@ -129,14 +129,14 @@ export const getResponses = async ({ id }) => {
 const result = undefined;  // what getResponses returns
 result.map(x => x);  // ❌ TypeError: Cannot read property 'map' of undefined
 
-// In slskdn:
+// In slskdN:
 const result = [];  // what getResponses returns  
 result.map(x => x);  // ✅ Returns [] safely
 ```
 
 ### Test Result
 - **Upstream**: Returns `undefined`, causes crash on iteration
-- **slskdn**: Returns `[]`, safe iteration
+- **slskdN**: Returns `[]`, safe iteration
 
 ---
 
@@ -162,7 +162,7 @@ export const getAll = async ({ direction }) => {
 };
 ```
 
-### slskdn Fixed Code
+### slskdN Fixed Code
 ```javascript
 // src/web/src/lib/transfers.js line 3-14
 export const getAll = async ({ direction }) => {
@@ -181,7 +181,7 @@ export const getAll = async ({ direction }) => {
 
 ### Test Result
 - **Upstream**: Returns `undefined`, causes crash on iteration
-- **slskdn**: Returns `[]`, safe iteration
+- **slskdN**: Returns `[]`, safe iteration
 
 ---
 
@@ -220,7 +220,7 @@ public Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = 
 }
 ```
 
-### slskdn Fixed Code
+### slskdN Fixed Code
 ```csharp
 // SearchesController.cs - adds optional pagination params
 [HttpGet("")]
@@ -282,7 +282,7 @@ Found on user's instance:
 
 ### Test Result
 - **Upstream**: Returns all 153k searches, browser hangs indefinitely
-- **slskdn**: Frontend requests limit=500, loads instantly
+- **slskdN**: Frontend requests limit=500, loads instantly
 
 ### API Compatibility
 - Default `limit=0` preserves upstream behavior (unlimited)
@@ -293,7 +293,7 @@ Found on user's instance:
 
 ## Summary
 
-| Bug | File | Upstream | slskdn | Severity |
+| Bug | File | Upstream | slskdN | Severity |
 |-----|------|----------|--------|----------|
 | async-void-roomservice | RoomService.cs | No try-catch | try-catch wrapper | High (process crash) |
 | searches-undefined-return | searches.js | return undefined | return [] | Medium (UI crash) |
@@ -306,6 +306,6 @@ All fixes are:
 - ✅ Minimal and focused
 - ✅ Non-breaking changes (API defaults preserved)
 - ✅ Follow existing code patterns
-- ✅ Tested in slskdn
+- ✅ Tested in slskdN
 
 

@@ -1,4 +1,4 @@
-# slskdn TODO
+# slskdN TODO
 
 ## Persistent Tabbed Interface for Rooms and Chat
 
@@ -23,10 +23,10 @@ Implement a tabbed interface for Rooms and Chat, similar to how Browse currently
 
 ## Additional Packaging & Distribution Channels
 
-Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR).
+Expand slskdN availability beyond current channels (AUR, COPR, PPA, Docker/GHCR).
 
 ### ✅ Currently Available
-- [x] **AUR** (Arch Linux) - `slskdn-bin`, `slskdn`
+- [x] **AUR** (Arch Linux) - `slskdN-bin`, `slskdN`
 - [x] **COPR** (Fedora/RHEL/openSUSE) - RPM packages
 - [x] **Ubuntu PPA** - Debian packages
 - [x] **Docker** - `ghcr.io/snapetech/slskdn`
@@ -34,7 +34,7 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
 
 ### 🔴 High Priority (Large User Base)
 - [x] **Unraid Community Apps** - Popular NAS/homelab OS ✅
-  - Template at `packaging/unraid/slskdn.xml`
+  - Template at `packaging/unraid/slskdN.xml`
   - Users can add repo manually, pending official CA submission
 - [ ] **TrueNAS SCALE Apps** - Growing NAS platform
   - Helm chart or ix-chart format

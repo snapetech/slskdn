@@ -4,7 +4,7 @@ on:
     branches: [ master ]
     tags: 
       - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-slskdn.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-slskdN.[0-9]+"
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -107,7 +107,7 @@ jobs:
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: slskdn-${{ env.VERSION }}-${{ matrix.runtime }}
+          name: slskdN-${{ env.VERSION }}-${{ matrix.runtime }}
           path: dist/${{ matrix.runtime }}
   
   docker:
@@ -202,19 +202,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: slskdn-*
+          pattern: slskdN-*
 
       - name: Prepare Release Assets
         run: |
           mkdir -p release
-          for dir in artifacts/slskdn-*; do
-            runtime=$(basename "$dir" | sed "s/slskdn-${{ env.VERSION }}-//")
+          for dir in artifacts/slskdN-*; do
+            runtime=$(basename "$dir" | sed "s/slskdN-${{ env.VERSION }}-//")
             echo "Processing $runtime..."
             cd "$dir"
             if [ -f "slskd" ]; then
               chmod +x slskd
             fi
-            zip -r "../../release/slskdn-${{ env.TAG }}-$runtime.zip" .
+            zip -r "../../release/slskdN-${{ env.TAG }}-$runtime.zip" .
             cd ../..
           done
           ls -la release/

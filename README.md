@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png" width="100" height="100" alt="slskdn logo">
+  <img src="https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png" width="100" height="100" alt="slskdN logo">
 </p>
 <h1 align="center">slskdN</h1>
 <p align="center"><strong>The batteries-included Soulseek web client</strong></p>
@@ -14,9 +14,9 @@
   <a href="https://github.com/snapetech/slskdn/actions/workflows/ci.yml"><img src="https://github.com/snapetech/slskdn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/snapetech/slskdn/releases"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version"></a>
   <a href="https://ghcr.io/snapetech/slskdn"><img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker"></a>
-  <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR"></a>
-  <a href="https://copr.fedorainfracloud.org/coprs/slskdn/slskdn/"><img src="https://img.shields.io/badge/copr-slskdn%2Fslskdn-51A2DA?logo=fedora" alt="COPR"></a>
-  <a href="https://launchpad.net/~slskdn/+archive/ubuntu/slskdn"><img src="https://img.shields.io/badge/ppa-slskdn%2Fslskdn-E95420?logo=ubuntu" alt="PPA"></a>
+  <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdN-bin?logo=archlinux&label=AUR" alt="AUR"></a>
+  <a href="https://copr.fedorainfracloud.org/coprs/slskdN/slskdN/"><img src="https://img.shields.io/badge/copr-slskdN%2Fslskdn-51A2DA?logo=fedora" alt="COPR"></a>
+  <a href="https://launchpad.net/~slskdN/+archive/ubuntu/slskdN"><img src="https://img.shields.io/badge/ppa-slskdN%2Fslskdn-E95420?logo=ubuntu" alt="PPA"></a>
   <img src="https://img.shields.io/badge/base-slskd%200.24.1-purple" alt="Based on slskd">
   <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
   <a href="https://discord.gg/NRzj8xycQZ"><img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
@@ -26,16 +26,16 @@
 
 <small>
 
-## What is slskdn?
-**slskdn** is a feature-rich fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdn takes the opposite approach**:
+## What is slskdN?
+**slskdN** is a feature-rich fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
 > **Everything built-in. No scripts required.**
 
-If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdn is for you. We also think that when someone takes the time to contribute working code, having a conversation about it is the least one can do.
+If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. We also think that when someone takes the time to contribute working code, having a conversation about it is the least one can do.
 
 ## Features
 
 ### 🔄 Auto-Replace Stuck Downloads
-Downloads get stuck. Users go offline. Transfers time out. Instead of manually searching for alternatives, slskdn does it automatically.
+Downloads get stuck. Users go offline. Transfers time out. Instead of manually searching for alternatives, slskdN does it automatically.
 - Toggle switch in Downloads header ("Auto-Replace")
 - Detects stuck downloads (timed out, errored, rejected, cancelled)
 - Searches network for alternatives, filters by extension and size (default 5%)
@@ -135,7 +135,7 @@ All automatic downloads use intelligent source selection based on your history.
 - API endpoint at `/api/v0/ranking`
 
 ### 📱 PWA & Mobile Support
-Install slskdn as an app on your phone.
+Install slskdN as an app on your phone.
 - Add to Home Screen on iOS/Android, standalone mode
 
 ## Quick Start
@@ -144,8 +144,8 @@ Getting started is simple—we don't believe in gatekeeping.
 ### Arch Linux (AUR)
 **Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
 ```bash
-yay -S slskdn-bin          # Binary package (recommended)
-yay -S slskdn              # Or build from source
+yay -S slskdN-bin          # Binary package (recommended)
+yay -S slskdN              # Or build from source
 sudo systemctl enable --now slskd
 ```
 Access at http://localhost:5030
@@ -158,7 +158,7 @@ docker run -d \
   -e SLSKD_SLSK_PASSWORD=your_password \
   -v /path/to/downloads:/downloads \
   -v /path/to/app:/app \
-  --name slskdn \
+  --name slskdN \
   ghcr.io/snapetech/slskdn:latest
 ```
 
@@ -166,9 +166,9 @@ docker run -d \
 ```yaml
 version: "3"
 services:
-  slskdn:
+  slskdN:
     image: ghcr.io/snapetech/slskdn:latest
-    container_name: slskdn
+    container_name: slskdN
     ports:
       - "5030:5030"
       - "50300:50300"
@@ -184,7 +184,7 @@ services:
 
 ### From Source
 ```bash
-git clone https://github.com/snapetech/slskdn.git && cd slskdn
+git clone https://github.com/snapetech/slskdn.git && cd slskdN
 curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
 export PATH="$HOME/.dotnet:$PATH"
 dotnet run --project src/slskd/slskd.csproj
@@ -192,7 +192,7 @@ dotnet run --project src/slskd/slskd.csproj
 
 ## Comparison with slskd
 
-| Feature | slskd | slskdn |
+| Feature | slskd | slskdN |
 |---------|:-----:|:------:|
 | Core Soulseek functionality | ✅ | ✅ |
 | Web UI & REST API | ✅ | ✅ |
@@ -213,7 +213,7 @@ dotnet run --project src/slskd/slskd.csproj
 | Open to community feedback | 🔒 | ✅ |
 
 ## Configuration
-slskdn uses the same config format as slskd, with additional options:
+slskdN uses the same config format as slskd, with additional options:
 ```yaml
 soulseek:
   username: your_username
@@ -230,7 +230,7 @@ web:
   authentication:
     username: admin
     password: change_me
-# slskdn-specific
+# slskdN-specific
 global:
   download:
     auto_replace_stuck: true
@@ -248,12 +248,12 @@ destinations:
 ```
 
 ## Versioning
-slskdn follows slskd's version numbers with a suffix: `0.24.1-slskdn.1` = First slskdn release based on slskd 0.24.1
+slskdN follows slskd's version numbers with a suffix: `0.24.1-slskdN.1` = First slskdN release based on slskd 0.24.1
 
 Detailed documentation for configuration options can be found [here](https://github.com/slskd/slskd/blob/master/docs/config.md), and an example of the YAML configuration file can be reviewed [here](https://github.com/slskd/slskd/blob/master/config/slskd.example.yml).
 
 ## Reverse Proxy
-slskdn may require extra configuration when running it behind a reverse proxy. Refer [here](https://github.com/slskd/slskd/blob/master/docs/reverse_proxy.md) for a short guide.
+slskdN may require extra configuration when running it behind a reverse proxy. Refer [here](https://github.com/slskd/slskd/blob/master/docs/reverse_proxy.md) for a short guide.
 
 ## Contributing
 We welcome contributions from *everyone*—first-timers and veterans alike. No prior commit history required.
@@ -299,4 +299,4 @@ If you're reading this code, you should assume that:
 
 </small>
 
-<p align="center"><strong>slskdn</strong> — For users who'd rather download music than learn Python.</p>
+<p align="center"><strong>slskdN</strong> — For users who'd rather download music than learn Python.</p>

@@ -1,12 +1,12 @@
-# Maintainer: snapetech <slskdn@proton.me>
-# 🔋 slskdn - The batteries-included Soulseek web client
-pkgname=slskdn-bin
+# Maintainer: snapetech <slskdN@proton.me>
+# 🔋 slskdN - The batteries-included Soulseek web client
+pkgname=slskdN-bin
 _pkgname=slskd
-pkgver=null.slskdn.1
+pkgver=null.slskdN.1
 pkgrel=1
 pkgdesc="🔋 The batteries-included Soulseek web client. A feature-rich fork of slskd with wishlist, smart ranking, tabbed browsing & more"
 arch=('x86_64')
-url="https://github.com/snapetech/slskdn"
+url="https://github.com/snapetech/slskdN"
 license=('AGPL-3.0-or-later')
 depends=()
 makedepends=('unzip')
@@ -20,7 +20,7 @@ backup=('etc/slskd/slskd.yml')
 options=('!strip')
 install=slskd.install
 source=(
-    "https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-${pkgver//.slskdn/-slskdn}-linux-x64.zip"
+    "https://github.com/snapetech/slskdN/releases/download/${pkgver//.slskdN/-slskdN}/slskdN-${pkgver//.slskdN/-slskdN}-linux-x64.zip"
     "slskd.service"
     "slskd.yml"
     "slskd.sysusers"

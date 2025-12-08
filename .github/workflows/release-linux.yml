@@ -62,21 +62,21 @@ jobs:
       - name: Create Zip
         run: |
           cd publish-linux-${{ matrix.arch }}
-          zip -r ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip .
+          zip -r ../slskdN-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip .
 
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
-          files: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
+          files: slskdN-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: slskdn-linux-${{ matrix.arch }}
-          path: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
+          name: slskdN-linux-${{ matrix.arch }}
+          path: slskdN-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
 
   update-aur:
     needs: build-linux
@@ -92,8 +92,8 @@ jobs:
         run: |
           # Get tag from either workflow_dispatch input or release ref
           TAG=${{ github.event.inputs.tag || github.ref_name }}
-          # Convert 0.24.1-slskdn.3 to 0.24.1.slskdn.3 for PKGBUILD
-          PKGVER=$(echo $TAG | sed 's/-slskdn/.slskdn/')
+          # Convert 0.24.1-slskdN.3 to 0.24.1.slskdN.3 for PKGBUILD
+          PKGVER=$(echo $TAG | sed 's/-slskdN/.slskdN/')
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT
 
@@ -103,7 +103,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Download the ACTUAL release asset (from main CI) to get correct hash
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdN-${{ steps.version.outputs.tag }}-linux-x64.zip"
           echo "Downloading from: $ASSET_URL"
           
           for i in {1..20}; do
@@ -150,8 +150,8 @@ jobs:
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
           
           # Configure git
-          git config --global user.email "slskdn@proton.me"
-          git config --global user.name "slskdn"
+          git config --global user.email "slskdN@proton.me"
+          git config --global user.name "slskdN"
           
           # Function to generate .SRCINFO from PKGBUILD (without makepkg)
           generate_srcinfo() {
@@ -179,8 +179,8 @@ jobs:
             echo "pkgname = ${pkgname}"
           }
           
-          # Clone and update AUR repo (slskdn-bin)
-          git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
+          # Clone and update AUR repo (slskdN-bin)
+          git clone ssh://aur@aur.archlinux.org/slskdN-bin.git aur-repo || mkdir aur-repo
           cd aur-repo
           cp ../packaging/aur/PKGBUILD-bin PKGBUILD
           cp ../packaging/aur/slskd.service .
@@ -193,8 +193,8 @@ jobs:
           git push || echo "AUR push failed - may need manual intervention"
           cd ..
           
-          # Clone and update AUR repo (slskdn source)
-          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-repo-src || mkdir aur-repo-src
+          # Clone and update AUR repo (slskdN source)
+          git clone ssh://aur@aur.archlinux.org/slskdN.git aur-repo-src || mkdir aur-repo-src
           cd aur-repo-src
           cp ../packaging/aur/PKGBUILD .
           cp ../packaging/aur/slskd.service .

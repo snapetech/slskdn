@@ -1,4 +1,4 @@
-# Development configuration for slskdn
+# Development configuration for slskdN
 # DO NOT USE IN PRODUCTION
 #
 # Required environment variables:
@@ -21,8 +21,8 @@ web:
     disabled: false
 
 directories:
-  downloads: /tmp/slskdn/downloads
-  incomplete: /tmp/slskdn/incomplete
+  downloads: /tmp/slskdN/downloads
+  incomplete: /tmp/slskdN/incomplete
 
 global:
   download:

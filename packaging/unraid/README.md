@@ -1,10 +1,10 @@
-# slskdn Unraid Template
+# slskdN Unraid Template
 
-This template allows you to easily install slskdn on Unraid via Community Applications.
+This template allows you to easily install slskdN on Unraid via Community Applications.
 
 ## Quick Install (Manual)
 
-If slskdn isn't in the official Community Apps yet, you can add it manually:
+If slskdN isn't in the official Community Apps yet, you can add it manually:
 
 1. In Unraid, go to **Settings → Docker → Template Repositories**
 2. Add this URL:
@@ -12,15 +12,15 @@ If slskdn isn't in the official Community Apps yet, you can add it manually:
    https://github.com/snapetech/slskdn
    ```
 3. Click **Save**
-4. Go to **Apps** and search for "slskdn"
+4. Go to **Apps** and search for "slskdN"
 5. Click **Install**
 
 ## Default Paths
 
 | Setting | Container Path | Default Host Path |
 |---------|---------------|-------------------|
-| App Data | `/app` | `/mnt/user/appdata/slskdn` |
-| Downloads | `/downloads` | `/mnt/user/downloads/slskdn` |
+| App Data | `/app` | `/mnt/user/appdata/slskdN` |
+| Downloads | `/downloads` | `/mnt/user/downloads/slskdN` |
 | Music Library | `/music` | `/mnt/user/media/music` |
 
 ## Default Ports
