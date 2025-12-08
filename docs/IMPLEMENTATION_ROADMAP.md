@@ -654,25 +654,73 @@ Beacons announce to ALL keys. Seekers query ALL keys and merge/dedupe results.
 8. ✅ Add mesh delta sync logic
 9. ⬜ Integrate mesh sync triggers into peer interactions (needs Soulseek transport)
 
-### Sprint 4: DHT Rendezvous (Phase 6) ⬜ NEXT
+### Sprint 4: DHT Rendezvous (Phase 6) ⬜ IN PROGRESS
 
-#### 🔴 SECURITY HARDENING (DO FIRST - CRITICAL)
-10. ⬜ **TLS 1.3 for all overlay connections** - NO PLAINTEXT
-11. ⬜ **Length-prefixed message framing** - prevent unbounded reads
-12. ⬜ **Strict message validation** - regex patterns, bounds checks
-13. ⬜ **Rate limiting** - per-IP, per-connection, global limits
-14. ⬜ **Input sanitization** - validate all peer data before use
-15. ⬜ **Connection timeouts** - connect, handshake, read, idle
-16. ⬜ **Blocklist system** - ban misbehaving IPs/peers
+#### 🔴 SECURITY HARDENING (COMPLETE ✅)
 
-#### Core Implementation
-17. ⬜ Select/integrate BitTorrent DHT library (MonoTorrent recommended)
-18. ⬜ Implement `DhtRendezvousService` (bootstrap, announce, discover)
-19. ⬜ Implement `MeshOverlayServer` (TLS listener, secure handshake)
-20. ⬜ Implement `MeshOverlayConnector` (TLS client, validation)
-21. ⬜ NAT detection / beacon capability check (UPnP/STUN)
-22. ⬜ Integration with existing `MeshSyncService`
-23. ⬜ Certificate management (self-signed + pinning)
+| # | Task | Status | File(s) |
+|---|------|--------|---------|
+| S1 | TLS 1.3 for ALL overlay connections | ✅ | `MeshOverlayConnection.cs` |
+| S2 | Length-prefixed message framing (4-byte header) | ✅ | `SecureMessageFramer.cs` |
+| S3 | Message size limits (4KB max) | ✅ | `SecureMessageFramer.cs` |
+| S4 | Strict JSON schema validation | ✅ | `MessageValidator.cs` |
+| S5 | Username regex (`^[a-zA-Z0-9_\-\.]+$`) | ✅ | `MessageValidator.cs` |
+| S6 | Hash format validation (hex only) | ✅ | `MessageValidator.cs` |
+| S7 | Connection rate limiting (3/IP, 10/min) | ✅ | `OverlayRateLimiter.cs` |
+| S8 | Message rate limiting (10/sec) | ✅ | `OverlayRateLimiter.cs` |
+| S9 | Connection timeouts (10s/5s/30s/5min) | ✅ | `OverlayTimeouts.cs` |
+| S10 | Idle timeout + keepalive | ✅ | `MeshOverlayConnection.cs` |
+| S11 | IP blocklist for offenders | ✅ | `OverlayBlocklist.cs` |
+| S12 | Certificate pinning (TOFU) | ✅ | `CertificatePinStore.cs` |
+| S13 | Soulseek username verification | ⬜ | Future enhancement |
+| S14 | Peer diversity checks (anti-eclipse) | ⬜ | Future enhancement |
+
+#### Core DHT Implementation
+
+| # | Task | Status | File(s) |
+|---|------|--------|---------|
+| D1 | Overlay message types | ✅ | `Messages/OverlayMessages.cs` |
+| D2 | DhtRendezvousService interface | ✅ | `IDhtRendezvousService.cs` |
+| D3 | DhtRendezvousService impl | ✅ | `DhtRendezvousService.cs` |
+| D4 | MeshOverlayServer interface | ✅ | `IMeshOverlayServer.cs` |
+| D5 | MeshOverlayServer impl (TLS) | ✅ | `MeshOverlayServer.cs` |
+| D6 | MeshOverlayConnector interface | ✅ | `IMeshOverlayConnector.cs` |
+| D7 | MeshOverlayConnector impl (TLS) | ✅ | `MeshOverlayConnector.cs` |
+| D8 | NAT detection (placeholder) | ✅ | `DhtRendezvousService.cs` (basic) |
+| D9 | MeshSyncService integration | 🔄 | Needs handoff logic |
+| D10 | Certificate management | ✅ | `CertificateManager.cs` |
+| D11 | API endpoints | ✅ | `API/DhtRendezvousController.cs` |
+| D12 | BitTorrent DHT integration | ⬜ | MonoTorrent (future) |
+| D13 | Service registration | ⬜ | `Program.cs` |
+
+#### Phase 6 Files to Create
+
+```
+src/slskd/DhtRendezvous/
+├── API/
+│   └── DhtRendezvousController.cs
+├── Messages/
+│   └── OverlayMessages.cs
+├── Security/
+│   ├── CertificateManager.cs
+│   ├── CertificatePinStore.cs
+│   ├── MessageValidator.cs
+│   ├── OverlayBlocklist.cs
+│   ├── OverlayRateLimiter.cs
+│   ├── OverlayTimeouts.cs
+│   ├── OverlayTlsProvider.cs
+│   ├── PeerDiversityChecker.cs
+│   ├── PeerVerificationService.cs
+│   └── SecureMessageFramer.cs
+├── DhtRendezvousService.cs
+├── IDhtRendezvousService.cs
+├── IMeshOverlayConnector.cs
+├── IMeshOverlayServer.cs
+├── MeshOverlayConnection.cs
+├── MeshOverlayConnector.cs
+├── MeshOverlayServer.cs
+└── NatDetectionService.cs
+```
 
 ### Sprint 5: Polish & Testing
 16. ✅ API endpoints for hash DB / capabilities / mesh / backfill (complete)
