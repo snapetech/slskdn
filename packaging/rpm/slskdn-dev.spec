@@ -1,7 +1,7 @@
 Name:           slskdn-dev
 Version:        0.24.1.dev.202412080000
 Release:        1%{?dist}
-Summary:        🧪 DEV: Batteries-included Soulseek client with multi-source downloads & DHT mesh
+Summary:        🔋 DEV: The batteries included, EXPERIMENTAL fork of slskd
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn/tree/experimental/multi-source-swarm
@@ -28,7 +28,8 @@ Obsoletes:      slskd < %{version}
 %description
 🧪 DEVELOPMENT BUILD - Tracks experimental/multi-source-swarm branch
 
-A feature-rich fork of slskd with cutting-edge experimental features:
+The batteries included, **EXPERIMENTAL** fork of slskd. Feature-rich,
+including cutting-edge experimental features:
 
 Multi-Source Downloads (Swarm Mode):
 - Download files from multiple peers simultaneously
