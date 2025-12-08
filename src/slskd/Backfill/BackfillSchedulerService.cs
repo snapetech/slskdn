@@ -30,6 +30,7 @@ namespace slskd.Backfill
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh;
+    using slskd.Transfers.MultiSource;
 
     /// <summary>
     ///     Service for scheduling conservative header probing to discover FLAC hashes.
@@ -249,74 +250,89 @@ namespace slskd.Backfill
                     using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     cts.CancelAfter(TimeSpan.FromSeconds(config.TransferTimeoutSeconds));
 
-                    // Use Soulseek client to download partial file
-                    // Note: We download up to MaxHeaderBytes and then cancel
-                    var options = new TransferOptions(
-                        stateChanged: (args) =>
-                        {
-                            if (args.Transfer.BytesTransferred >= config.MaxHeaderBytes)
-                            {
-                                // We have enough bytes, cancel the transfer
-                                cts.Cancel();
-                            }
-                        },
-                        progressUpdated: (args) =>
-                        {
-                            if (args.Transfer.BytesTransferred >= config.MaxHeaderBytes)
-                            {
-                                cts.Cancel();
-                            }
-                        });
+                    using var memoryStream = new System.IO.MemoryStream(config.MaxHeaderBytes);
+                    var limitedStream = new LimitedWriteStream(memoryStream, config.MaxHeaderBytes, cts);
 
-                    // For now, simulate the header read since actual Soulseek download
-                    // would require more integration work
-                    // In production, this would be:
-                    // var transfer = await soulseekClient.DownloadAsync(peerId, path, ...);
-
-                    // Simulated result - in real implementation, parse FLAC header
-                    result.Success = false;
-                    result.Error = "Backfill requires Soulseek download integration";
-                    result.BytesRead = 0;
-                }
-                catch (OperationCanceledException) when (bytesRead >= 42)
-                {
-                    // We got enough bytes before timeout
-                    result.BytesRead = bytesRead;
-
-                    // Parse FLAC header to get hash
-                    var hash = ParseFlacHeader(buffer, bytesRead);
-                    if (hash != null)
+                    try
                     {
-                        result.Success = true;
-                        result.Hash = hash;
-                        result.FlacKey = HashDbEntry.GenerateFlacKey(path, size);
+                        await soulseekClient.DownloadAsync(
+                            username: peerId,
+                            remoteFilename: path,
+                            outputStreamFactory: () => Task.FromResult<System.IO.Stream>(limitedStream),
+                            size: size,
+                            startOffset: 0,
+                            cancellationToken: cts.Token,
+                            options: new TransferOptions(
+                                maximumLingerTime: 1000,
+                                disposeOutputStreamOnCompletion: false));
+                    }
+                    catch (OperationCanceledException) when (limitedStream.LimitReached)
+                    {
+                        // Expected: we got enough bytes
+                    }
 
-                        // Update inventory
-                        await hashDb.UpdateFlacHashAsync(fileId, hash, HashSource.BackfillSniff, cancellationToken);
-
-                        // Store in hash DB
-                        await hashDb.StoreHashFromVerificationAsync(path, size, hash, cancellationToken: cancellationToken);
-
-                        // Publish to mesh
-                        await meshSync.PublishHashAsync(result.FlacKey, hash, size, cancellationToken: cancellationToken);
-
-                        // Increment backfill count
-                        await hashDb.IncrementPeerBackfillCountAsync(peerId, cancellationToken);
-
-                        log.Information("[BACKFILL] ✓ Discovered hash for {Peer}/{Path}: {Hash}", peerId, System.IO.Path.GetFileName(path), hash.Substring(0, 16));
+                    if (limitedStream.BytesWritten > 0)
+                    {
+                        var data = memoryStream.ToArray();
+                        bytesRead = data.Length;
+                        Array.Copy(data, buffer, Math.Min(data.Length, buffer.Length));
+                        
+                        // Treat as success if we got enough bytes to parse
+                        if (bytesRead >= 42)
+                        {
+                            // Proceed to parse below
+                        }
+                        else
+                        {
+                            throw new Exception($"Only read {bytesRead} bytes, need at least 42 for FLAC header");
+                        }
                     }
                     else
                     {
-                        result.Error = "Failed to parse FLAC header";
-                        await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
+                        throw new Exception("No data received");
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException || bytesRead < 42)
                 {
+                    // If we didn't get enough bytes, fail
+                    result.Success = false;
                     result.Error = ex.Message;
-                    await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
-                    log.Debug("[BACKFILL] ✗ Failed {Peer}/{Path}: {Error}", peerId, System.IO.Path.GetFileName(path), ex.Message);
+                    throw; // Re-throw to catch block below
                 }
+
+                // Parse FLAC header to get hash
+                var hash = ParseFlacHeader(buffer, bytesRead);
+                if (hash != null)
+                {
+                    result.Success = true;
+                    result.Hash = hash;
+                    result.FlacKey = HashDbEntry.GenerateFlacKey(path, size);
+
+                    // Update inventory
+                    await hashDb.UpdateFlacHashAsync(fileId, hash, HashSource.BackfillSniff, cancellationToken);
+
+                    // Store in hash DB
+                    await hashDb.StoreHashFromVerificationAsync(path, size, hash, cancellationToken: cancellationToken);
+
+                    // Publish to mesh
+                    await meshSync.PublishHashAsync(result.FlacKey, hash, size, cancellationToken: cancellationToken);
+
+                    // Increment backfill count
+                    await hashDb.IncrementPeerBackfillCountAsync(peerId, cancellationToken);
+
+                    log.Information("[BACKFILL] ✓ Discovered hash for {Peer}/{Path}: {Hash}", peerId, System.IO.Path.GetFileName(path), hash.Substring(0, 16));
+                }
+                else
+                {
+                    result.Error = "Failed to parse FLAC header";
+                    await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Error = ex.Message;
+                await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
+                log.Debug("[BACKFILL] ✗ Failed {Peer}/{Path}: {Error}", peerId, System.IO.Path.GetFileName(path), ex.Message);
             }
             finally
             {

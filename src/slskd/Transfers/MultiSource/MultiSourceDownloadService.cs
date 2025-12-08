@@ -15,143 +15,147 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
-namespace slskd.Transfers.MultiSource
+namespace slskd.Transfers.MultiSource;
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Soulseek;
+using slskd.HashDb;
+using slskd.HashDb.Models;
+using slskd.Mesh;
+using IODirectory = System.IO.Directory;
+using IOPath = System.IO.Path;
+using FileStream = System.IO.FileStream;
+using FileMode = System.IO.FileMode;
+using FileAccess = System.IO.FileAccess;
+using Stream = System.IO.Stream;
+
+/// <summary>
+///     Experimental multi-source download service.
+/// </summary>
+public class MultiSourceDownloadService : IMultiSourceDownloadService
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Security.Cryptography;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Serilog;
-    using Soulseek;
-    using slskd.HashDb;
-    using slskd.HashDb.Models;
-    using slskd.Mesh;
-    using IODirectory = System.IO.Directory;
-    using IOPath = System.IO.Path;
-    using FileStream = System.IO.FileStream;
-    using FileMode = System.IO.FileMode;
-    using FileAccess = System.IO.FileAccess;
-    using Stream = System.IO.Stream;
+    /// <summary>
+    ///     Default chunk size for parallel downloads (1MB).
+    /// </summary>
+    public const int DefaultChunkSize = 512 * 1024;  // 512KB - balance between overhead amortization and failure recovery
+
+    private readonly ILogger<MultiSourceDownloadService> _logger;
+    private readonly ISoulseekClient _client;
+    private readonly IContentVerificationService _contentVerification;
+    private readonly IHashDbService? _hashDb;
+    private readonly IMeshSyncService? _meshSync;
 
     /// <summary>
-    ///     Experimental multi-source download service.
+    ///     Initializes a new instance of the <see cref="MultiSourceDownloadService"/> class.
     /// </summary>
-    public class MultiSourceDownloadService : IMultiSourceDownloadService
+    /// <param name="logger">The logger.</param>
+    /// <param name="soulseekClient">The Soulseek client.</param>
+    /// <param name="contentVerificationService">The content verification service.</param>
+    /// <param name="hashDb">The hash database service (optional).</param>
+    /// <param name="meshSync">The mesh sync service (optional).</param>
+    public MultiSourceDownloadService(
+        ILogger<MultiSourceDownloadService> logger,
+        ISoulseekClient soulseekClient,
+        IContentVerificationService contentVerificationService,
+        IHashDbService? hashDb = null,
+        IMeshSyncService? meshSync = null)
     {
-        /// <summary>
-        ///     Default chunk size for parallel downloads (1MB).
-        /// </summary>
-        public const int DefaultChunkSize = 512 * 1024;  // 512KB - balance between overhead amortization and failure recovery
+        _logger = logger;
+        _client = soulseekClient;
+        _contentVerification = contentVerificationService;
+        _hashDb = hashDb;
+        _meshSync = meshSync;
+    }
 
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="MultiSourceDownloadService"/> class.
-        /// </summary>
-        /// <param name="soulseekClient">The Soulseek client.</param>
-        /// <param name="contentVerificationService">The content verification service.</param>
-        /// <param name="hashDb">The hash database service (optional).</param>
-        /// <param name="meshSync">The mesh sync service (optional).</param>
-        public MultiSourceDownloadService(
-            ISoulseekClient soulseekClient,
-            IContentVerificationService contentVerificationService,
-            IHashDbService hashDb = null,
-            IMeshSyncService meshSync = null)
+    /// <inheritdoc/>
+    public ConcurrentDictionary<Guid, MultiSourceDownloadStatus> ActiveDownloads { get; } = new();
+
+    /// <inheritdoc/>
+    public async Task<ContentVerificationResult> FindVerifiedSourcesAsync(
+        string filename,
+        long fileSize,
+        string excludeUsername = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Extract just the filename for searching
+        var searchTerm = IOPath.GetFileNameWithoutExtension(filename);
+
+        _logger.LogInformation("Searching for alternative sources: {SearchTerm}", searchTerm);
+
+        // Search for the file
+        var searchResults = new List<SearchResponse>();
+        var searchOptions = new SearchOptions(
+            filterResponses: true,
+            minimumResponseFileCount: 1,
+            responseLimit: 50);
+
+        try
         {
-            Client = soulseekClient;
-            ContentVerification = contentVerificationService;
-            HashDb = hashDb;
-            MeshSync = meshSync;
+            await _client.SearchAsync(
+                SearchQuery.FromText(searchTerm),
+                responseHandler: (response) => searchResults.Add(response),
+                options: searchOptions,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Search failed: {Message}", ex.Message);
         }
 
-        private ISoulseekClient Client { get; }
-        private IHashDbService HashDb { get; }
-        private IMeshSyncService MeshSync { get; }
-        private IContentVerificationService ContentVerification { get; }
-        private ILogger Log { get; } = Serilog.Log.ForContext<MultiSourceDownloadService>();
-        /// <inheritdoc/>
-        public ConcurrentDictionary<Guid, MultiSourceDownloadStatus> ActiveDownloads { get; } = new();
+        // Find exact matches (same filename, same size)
+        var originalFilename = IOPath.GetFileName(filename);
+        var candidates = new List<string>();
 
-        /// <inheritdoc/>
-        public async Task<ContentVerificationResult> FindVerifiedSourcesAsync(
-            string filename,
-            long fileSize,
-            string excludeUsername = null,
-            CancellationToken cancellationToken = default)
+        foreach (var response in searchResults)
         {
-            // Extract just the filename for searching
-            var searchTerm = IOPath.GetFileNameWithoutExtension(filename);
-
-            Log.Information("Searching for alternative sources: {SearchTerm}", searchTerm);
-
-            // Search for the file
-            var searchResults = new List<SearchResponse>();
-            var searchOptions = new SearchOptions(
-                filterResponses: true,
-                minimumResponseFileCount: 1,
-                responseLimit: 50);
-
-            try
+            if (excludeUsername != null && response.Username.Equals(excludeUsername, StringComparison.OrdinalIgnoreCase))
             {
-                await Client.SearchAsync(
-                    SearchQuery.FromText(searchTerm),
-                    responseHandler: (response) => searchResults.Add(response),
-                    options: searchOptions,
-                    cancellationToken: cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Search failed: {Message}", ex.Message);
+                continue;
             }
 
-            // Find exact matches (same filename, same size)
-            var originalFilename = IOPath.GetFileName(filename);
-            var candidates = new List<string>();
-
-            foreach (var response in searchResults)
+            foreach (var file in response.Files)
             {
-                if (excludeUsername != null && response.Username.Equals(excludeUsername, StringComparison.OrdinalIgnoreCase))
+                var responseFilename = IOPath.GetFileName(file.Filename);
+                if (responseFilename.Equals(originalFilename, StringComparison.OrdinalIgnoreCase) &&
+                    file.Size == fileSize)
                 {
-                    continue;
-                }
-
-                foreach (var file in response.Files)
-                {
-                    var responseFilename = IOPath.GetFileName(file.Filename);
-                    if (responseFilename.Equals(originalFilename, StringComparison.OrdinalIgnoreCase) &&
-                        file.Size == fileSize)
+                    if (!candidates.Contains(response.Username))
                     {
-                        if (!candidates.Contains(response.Username))
-                        {
-                            candidates.Add(response.Username);
-                        }
+                        candidates.Add(response.Username);
                     }
                 }
             }
-
-            Log.Information("Found {Count} candidate sources with exact match", candidates.Count);
-
-            if (candidates.Count == 0)
-            {
-                return new ContentVerificationResult
-                {
-                    Filename = filename,
-                    FileSize = fileSize,
-                };
-            }
-
-            // Verify sources
-            return await ContentVerification.VerifySourcesAsync(
-                new ContentVerificationRequest
-                {
-                    Filename = filename,
-                    FileSize = fileSize,
-                    CandidateUsernames = candidates,
-                },
-                cancellationToken);
         }
+
+        _logger.LogInformation("Found {Count} candidate sources with exact match", candidates.Count);
+
+        if (candidates.Count == 0)
+        {
+            return new ContentVerificationResult
+            {
+                Filename = filename,
+                FileSize = fileSize,
+            };
+        }
+
+        // Verify sources
+        return await _contentVerification.VerifySourcesAsync(
+            new ContentVerificationRequest
+            {
+                Filename = filename,
+                FileSize = fileSize,
+                CandidateUsernames = candidates,
+            },
+            cancellationToken);
+    }
 
         /// <inheritdoc/>
         public async Task<MultiSourceDownloadResult> DownloadAsync(
@@ -190,7 +194,7 @@ namespace slskd.Transfers.MultiSource
                 var chunks = CalculateChunksFixed(request.FileSize, chunkSize);
                 status.TotalChunks = chunks.Count;
 
-                Log.Information(
+                _logger.LogInformation(
                     "SWARM DOWNLOAD: {Filename} ({Size} bytes) = {Chunks} chunks from {Sources} sources",
                     request.Filename,
                     request.FileSize,
@@ -244,12 +248,16 @@ namespace slskd.Transfers.MultiSource
 
                 // Check results after first pass
                 var failedCount = chunks.Count - completedChunks.Count;
-                Log.Information("[SWARM] First pass: {Completed}/{Total} chunks", completedChunks.Count, chunks.Count);
+                _logger.LogInformation("[SWARM] First pass: {Completed}/{Total} chunks", completedChunks.Count, chunks.Count);
 
                 // If chunks remain, keep retrying until complete or truly stuck
                 var retryAttempt = 0;
                 var stuckCount = 0;  // Track consecutive retries with no progress
                 const int maxStuckRetries = 3;  // Give up after 3 retries with ZERO progress
+                
+                // Limit concurrency for retries to avoid flooding resources
+                const int MaxConcurrentRetryWorkers = 10;
+                using var workerSemaphore = new SemaphoreSlim(MaxConcurrentRetryWorkers);
 
                 while (failedCount > 0 && stuckCount < maxStuckRetries)
                 {
@@ -269,14 +277,14 @@ namespace slskd.Transfers.MultiSource
 
                         if (candidates.Count > 0)
                         {
-                            Log.Warning("[SWARM] Only {Count} proven sources. Retrying with {Candidates} candidates (excluding failed/timed-out).",
+                            _logger.LogWarning("[SWARM] Only {Count} proven sources. Retrying with {Candidates} candidates (excluding failed/timed-out).",
                                 successfulSources.Count, candidates.Count);
                             successfulSources = candidates;
                         }
                         else
                         {
                             // Desperation: Clear all timeouts and blacklist, retry everyone
-                            Log.Warning("[SWARM] All sources failed/timed-out. Clearing timeouts and retrying everyone.");
+                            _logger.LogWarning("[SWARM] All sources failed/timed-out. Clearing timeouts and retrying everyone.");
                             failedUsers.Clear();
                             status.PeerTimeouts.Clear();
                             successfulSources = request.Sources.Select(s => s.Username).ToList();
@@ -285,11 +293,11 @@ namespace slskd.Transfers.MultiSource
 
                     if (successfulSources.Count == 0)
                     {
-                        Log.Warning("[SWARM] No sources available to retry with");
+                        _logger.LogWarning("[SWARM] No sources available to retry with");
                         break;
                     }
 
-                    Log.Information("[SWARM] Retry {Attempt}: {Missing} chunks remaining, using {Sources} sources (stuck={Stuck}/{MaxStuck})",
+                    _logger.LogInformation("[SWARM] Retry {Attempt}: {Missing} chunks remaining, using {Sources} sources (stuck={Stuck}/{MaxStuck})",
                         retryAttempt, failedCount, successfulSources.Count, stuckCount, maxStuckRetries);
 
                     // Re-enqueue missing chunks
@@ -315,18 +323,26 @@ namespace slskd.Transfers.MultiSource
                         {
                             retryTasks.Add(Task.Run(async () =>
                             {
-                                await RunSourceWorkerAsync(
-                                    source,
-                                    request.Filename,
-                                    request.FileSize,
-                                    chunkQueue,
-                                    chunks,
-                                    completedChunks,
-                                    sourceStats,
-                                    failedUsers,
-                                    tempDir,
-                                    status,
-                                    cancellationToken);
+                                await workerSemaphore.WaitAsync(cancellationToken);
+                                try
+                                {
+                                    await RunSourceWorkerAsync(
+                                        source,
+                                        request.Filename,
+                                        request.FileSize,
+                                        chunkQueue,
+                                        chunks,
+                                        completedChunks,
+                                        sourceStats,
+                                        failedUsers,
+                                        tempDir,
+                                        status,
+                                        cancellationToken);
+                                }
+                                finally
+                                {
+                                    workerSemaphore.Release();
+                                }
                             }, cancellationToken));
                         }
                     }
@@ -338,13 +354,13 @@ namespace slskd.Transfers.MultiSource
                     if (newFailedCount >= failedCount)
                     {
                         stuckCount++;
-                        Log.Warning("[SWARM] Retry {Attempt} made NO progress ({Stuck}/{MaxStuck} stuck rounds)",
+                        _logger.LogWarning("[SWARM] Retry {Attempt} made NO progress ({Stuck}/{MaxStuck} stuck rounds)",
                             retryAttempt, stuckCount, maxStuckRetries);
                     }
                     else
                     {
                         stuckCount = 0;  // Reset - we made progress!
-                        Log.Information("[SWARM] After retry {Attempt}: {Completed}/{Total} chunks (+{Progress})",
+                        _logger.LogInformation("[SWARM] After retry {Attempt}: {Completed}/{Total} chunks (+{Progress})",
                             retryAttempt, completedChunks.Count, chunks.Count, failedCount - newFailedCount);
                     }
                     
@@ -360,20 +376,20 @@ namespace slskd.Transfers.MultiSource
                     result.Success = false;
                     status.State = MultiSourceDownloadState.Failed;
 
-                    Log.Error("[SWARM] FAILED: {Failed}/{Total} chunks missing after all retries", failedCount, chunks.Count);
+                    _logger.LogError("[SWARM] FAILED: {Failed}/{Total} chunks missing after all retries", failedCount, chunks.Count);
                     return result;
                 }
 
                 // Log source distribution
-                Log.Information("[SWARM] SUCCESS! Chunk distribution:");
+                _logger.LogInformation("[SWARM] SUCCESS! Chunk distribution:");
                 foreach (var stat in sourceStats.OrderByDescending(s => s.Value))
                 {
-                    Log.Information("  {Username}: {Count} chunks", stat.Key, stat.Value);
+                    _logger.LogInformation("  {Username}: {Count} chunks", stat.Key, stat.Value);
                 }
 
                 // Assemble chunks
                 status.State = MultiSourceDownloadState.Assembling;
-                Log.Information("Assembling {Count} chunks into final file", chunks.Count);
+                _logger.LogInformation("Assembling {Count} chunks into final file", chunks.Count);
 
                 await AssembleChunksAsync(tempDir, chunks.Count, request.OutputPath, cancellationToken);
 
@@ -384,7 +400,7 @@ namespace slskd.Transfers.MultiSource
 
                 if (request.ExpectedHash != null && !finalHash.Equals(request.ExpectedHash, StringComparison.OrdinalIgnoreCase))
                 {
-                    Log.Warning(
+                    _logger.LogWarning(
                         "Final hash mismatch! Expected: {Expected}, Got: {Actual}",
                         request.ExpectedHash,
                         finalHash);
@@ -410,7 +426,7 @@ namespace slskd.Transfers.MultiSource
                 result.Success = true;
                 status.State = MultiSourceDownloadState.Completed;
 
-                Log.Information(
+                _logger.LogInformation(
                     "SWARM SUCCESS: {Filename} in {Time}ms ({Speed:F2} MB/s) from {Sources} sources",
                     request.Filename,
                     result.TotalTimeMs,
@@ -424,7 +440,7 @@ namespace slskd.Transfers.MultiSource
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "SWARM DOWNLOAD FAILED: {Message}", ex.Message);
+                _logger.LogError(ex, "SWARM DOWNLOAD FAILED: {Message}", ex.Message);
                 result.Error = ex.Message;
                 result.Success = false;
                 status.State = MultiSourceDownloadState.Failed;
@@ -456,7 +472,7 @@ namespace slskd.Transfers.MultiSource
             const int maxConsecutiveFailures = 3;
 
             status.IncrementActiveWorkers();
-            Log.Information("[SWARM] Worker started: {Username}", username);
+            _logger.LogInformation("[SWARM] Worker started: {Username}", username);
 
             try
             {
@@ -471,7 +487,7 @@ namespace slskd.Transfers.MultiSource
                     // Check if this peer is in timeout (was too slow recently)
                     if (status.IsPeerInTimeout(username))
                     {
-                        Log.Debug("[SWARM] {Username} is in timeout, waiting...", username);
+                        _logger.LogDebug("[SWARM] {Username} is in timeout, waiting...", username);
                         await Task.Delay(5000, cancellationToken); // Check again in 5s
                         continue;
                     }
@@ -499,7 +515,7 @@ namespace slskd.Transfers.MultiSource
                                 StartOffset = incompleteChunkData.StartOffset,
                                 EndOffset = incompleteChunkData.EndOffset,
                             };
-                            Log.Debug("[SWARM] {Username} stealing chunk {Index} (speculative)", username, chunk.Index);
+                            _logger.LogDebug("[SWARM] {Username} stealing chunk {Index} (speculative)", username, chunk.Index);
                         }
                         else
                         {
@@ -556,13 +572,13 @@ namespace slskd.Transfers.MultiSource
                                 {
                                     System.IO.File.Delete(workerTempPath);
                                 }
-                                Log.Debug("[SWARM] {Username} completed chunk {Index} but another worker won the race", username, chunk.Index);
+                                _logger.LogDebug("[SWARM] {Username} completed chunk {Index} but another worker won the race", username, chunk.Index);
                                 continue;
                             }
                             sourceStats.AddOrUpdate(username, 1, (_, count) => count + 1);
                             consecutiveFailures = 0; // Reset on success
 
-                            Log.Information(
+                            _logger.LogInformation(
                                 "[SWARM] ✓ {Username} chunk {Index} @ {Speed:F0} KB/s [{Completed}/{Total}]",
                                 username,
                                 chunk.Index,
@@ -579,7 +595,7 @@ namespace slskd.Transfers.MultiSource
                             // Immediately blacklist peers who reject - they won't support ANY chunks
                             if (isRejection)
                             {
-                                Log.Warning("[SWARM] {Username} rejected partial download - blacklisting", username);
+                                _logger.LogWarning("[SWARM] {Username} rejected partial download - blacklisting", username);
                                 failedUsers.TryAdd(username, true);
                                 chunkQueue.Enqueue(chunk);
                                 break; // Exit this worker immediately
@@ -592,7 +608,7 @@ namespace slskd.Transfers.MultiSource
                                 consecutiveFailures++;
                             }
 
-                            Log.Warning("[SWARM] ✗ {Username} chunk {Index}: {Error} (fail {Fails}/{Max})",
+                            _logger.LogWarning("[SWARM] ✗ {Username} chunk {Index}: {Error} (fail {Fails}/{Max})",
                                 username, chunk.Index, result.Error, consecutiveFailures, maxConsecutiveFailures);
 
                             // Put chunk back for another worker
@@ -601,7 +617,7 @@ namespace slskd.Transfers.MultiSource
                             // Only exit if too many consecutive HARD failures
                             if (consecutiveFailures >= maxConsecutiveFailures)
                             {
-                                Log.Warning("[SWARM] {Username} giving up after {Fails} consecutive failures", username, consecutiveFailures);
+                                _logger.LogWarning("[SWARM] {Username} giving up after {Fails} consecutive failures", username, consecutiveFailures);
                                 failedUsers.TryAdd(username, true);
                                 break;
                             }
@@ -622,21 +638,21 @@ namespace slskd.Transfers.MultiSource
 
                         // Otherwise it's likely a speed cancellation from within DownloadChunkAsync
                         // Back off and continue
-                        Log.Warning("[SWARM] {Username} dropped chunk {Index} (cancellation) - backing off", username, chunk.Index);
+                        _logger.LogWarning("[SWARM] {Username} dropped chunk {Index} (cancellation) - backing off", username, chunk.Index);
                         await Task.Delay(2000, cancellationToken);
                         continue;
                     }
                     catch (Exception ex)
                     {
                         consecutiveFailures++;
-                        Log.Warning("[SWARM] ✗ {Username} chunk {Index} exception: {Message} (fail {Fails}/{Max})",
+                        _logger.LogWarning("[SWARM] ✗ {Username} chunk {Index} exception: {Message} (fail {Fails}/{Max})",
                             username, chunk.Index, ex.Message, consecutiveFailures, maxConsecutiveFailures);
 
                         chunkQueue.Enqueue(chunk);
 
                         if (consecutiveFailures >= maxConsecutiveFailures)
                         {
-                            Log.Warning("[SWARM] {Username} giving up after {Fails} consecutive failures", username, consecutiveFailures);
+                            _logger.LogWarning("[SWARM] {Username} giving up after {Fails} consecutive failures", username, consecutiveFailures);
                             failedUsers.TryAdd(username, true);
                             break;
                         }
@@ -648,7 +664,7 @@ namespace slskd.Transfers.MultiSource
             finally
             {
                 status.DecrementActiveWorkers();
-                Log.Information("[SWARM] Worker finished: {Username} (Completed: {Count})", username, sourceStats.GetValueOrDefault(username, 0));
+                _logger.LogInformation("[SWARM] Worker finished: {Username} (Completed: {Count})", username, sourceStats.GetValueOrDefault(username, 0));
             }
         }
 
@@ -731,7 +747,7 @@ namespace slskd.Transfers.MultiSource
             {
                 var chunkSize = endOffset - startOffset;
 
-                Log.Debug(
+                _logger.LogDebug(
                     "Downloading chunk from {Username}: {Start}-{End} ({Size} bytes of {FileSize})",
                     username,
                     startOffset,
@@ -785,7 +801,7 @@ namespace slskd.Transfers.MultiSource
                         // Log live rate periodically (every 2s)
                         if (currentBytes > 0)
                         {
-                            Log.Debug("[SWARM] {Username} rate: {Speed:F1} KB/s (threshold: {Threshold:F1} KB/s)",
+                            _logger.LogDebug("[SWARM] {Username} rate: {Speed:F1} KB/s (threshold: {Threshold:F1} KB/s)",
                                 username, speedBps / 1024.0, dynamicMinSpeed / 1024.0);
                         }
 
@@ -799,7 +815,7 @@ namespace slskd.Transfers.MultiSource
                                 // Only cycle out if we have other workers available
                                 if (status.ActiveWorkers > 1)
                                 {
-                                    Log.Warning("[SWARM] {Username} too slow ({Speed:F1} KB/s < {Threshold:F1} KB/s for {Duration:F0}s) - timeout {Timeout}s",
+                                    _logger.LogWarning("[SWARM] {Username} too slow ({Speed:F1} KB/s < {Threshold:F1} KB/s for {Duration:F0}s) - timeout {Timeout}s",
                                         username, speedBps / 1024.0, dynamicMinSpeed / 1024.0, slowDuration / 1000.0, peerTimeoutSeconds);
                                     result.Error = $"Too slow: {speedBps / 1024.0:F1} KB/s for {slowDuration / 1000.0:F0}s";
                                     // Set timeout instead of blacklist - peer can retry later
@@ -809,7 +825,7 @@ namespace slskd.Transfers.MultiSource
                                 }
                                 else
                                 {
-                                    Log.Warning("[SWARM] {Username} is slow ({Speed:F1} KB/s) but is the LAST WORKER - keeping alive",
+                                    _logger.LogWarning("[SWARM] {Username} is slow ({Speed:F1} KB/s) but is the LAST WORKER - keeping alive",
                                         username, speedBps / 1024.0);
                                     slowSince = DateTime.UtcNow; // Reset timer to avoid log spam
                                 }
@@ -826,7 +842,7 @@ namespace slskd.Transfers.MultiSource
                 {
                     // Pass the file size (required when startOffset > 0)
                     // The limited stream will cancel after we get our chunk
-                    await Client.DownloadAsync(
+                    await _client.DownloadAsync(
                         username: username,
                         remoteFilename: filename,
                         outputStreamFactory: () => Task.FromResult<Stream>(limitedStream),
@@ -840,7 +856,7 @@ namespace slskd.Transfers.MultiSource
                 catch (OperationCanceledException) when (limitedStream.LimitReached)
                 {
                     // Expected - we cancelled after getting our chunk
-                    Log.Debug("Chunk complete (cancelled remaining) from {Username}", username);
+                    _logger.LogDebug("Chunk complete (cancelled remaining) from {Username}", username);
                 }
                 catch (OperationCanceledException) when (result.Error?.Contains("Too slow") == true)
                 {
@@ -884,7 +900,7 @@ namespace slskd.Transfers.MultiSource
                     status.IncrementCompletedChunks();
 
                     // Detailed timing log
-                    Log.Information(
+                    _logger.LogInformation(
                         "[CHUNK] {Username}: {Size}KB in {Total}ms | TTFB:{TTFB}ms Transfer:{Transfer}ms | Overhead:{Overhead:F0}% | Speed:{Speed:F0}KB/s (raw:{RawSpeed:F0}KB/s)",
                         username,
                         chunkSize / 1024,
@@ -909,7 +925,7 @@ namespace slskd.Transfers.MultiSource
                 result.Error = ex.Message;
                 result.Success = false;
 
-                Log.Warning(ex, "Chunk download failed from {Username}: {Message}", username, ex.Message);
+                _logger.LogWarning(ex, "Chunk download failed from {Username}: {Message}", username, ex.Message);
                 return result;
             }
             finally
@@ -931,23 +947,23 @@ namespace slskd.Transfers.MultiSource
             try
             {
                 // Store in local hash database
-                if (HashDb != null)
+                if (_hashDb != null)
                 {
-                    await HashDb.StoreHashFromVerificationAsync(filename, fileSize, hash, cancellationToken: cancellationToken);
-                    Log.Debug("[HASHDB] Stored downloaded file hash: {Filename} -> {Hash}", IOPath.GetFileName(filename), hash.Substring(0, 16) + "...");
+                    await _hashDb.StoreHashFromVerificationAsync(filename, fileSize, hash, cancellationToken: cancellationToken);
+                    _logger.LogDebug("[HASHDB] Stored downloaded file hash: {Filename} -> {Hash}", IOPath.GetFileName(filename), hash.Substring(0, 16) + "...");
                 }
 
                 // Publish to mesh for other slskdn clients
-                if (MeshSync != null)
+                if (_meshSync != null)
                 {
                     var flacKey = HashDbEntry.GenerateFlacKey(filename, fileSize);
-                    await MeshSync.PublishHashAsync(flacKey, hash, fileSize, cancellationToken: cancellationToken);
-                    Log.Debug("[MESH] Published hash to mesh: {Key} -> {Hash}", flacKey, hash.Substring(0, 16) + "...");
+                    await _meshSync.PublishHashAsync(flacKey, hash, fileSize, cancellationToken: cancellationToken);
+                    _logger.LogDebug("[MESH] Published hash to mesh: {Key} -> {Hash}", flacKey, hash.Substring(0, 16) + "...");
                 }
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[HASHDB] Error publishing hash for {Filename}", filename);
+                _logger.LogWarning(ex, "[HASHDB] Error publishing hash for {Filename}", filename);
             }
         }
 
@@ -977,4 +993,4 @@ namespace slskd.Transfers.MultiSource
             return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
         }
     }
-}
+
