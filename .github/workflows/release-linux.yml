@@ -3,6 +3,10 @@ name: Release Linux Packages
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: []  # Run on all branches/tags
   workflow_dispatch:
     inputs:
       tag:
@@ -12,6 +16,13 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    # Only run if: manual trigger, release published, or CI completed successfully on a tag
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_run' && 
+       github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, '0.'))
     strategy:
       matrix:
         arch: [x64, arm64]
@@ -90,8 +101,14 @@ jobs:
       - name: Get Version
         id: version
         run: |
-          # Get tag from either workflow_dispatch input or release ref
-          TAG=${{ github.event.inputs.tag || github.ref_name }}
+          # Get tag from workflow_dispatch input, workflow_run, or release ref
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          elif [ "${{ github.event_name }}" == "workflow_run" ]; then
+            TAG="${{ github.event.workflow_run.head_branch }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
           # Convert 0.24.1-slskdN.3 to 0.24.1.slskdn.3 for PKGBUILD
           PKGVER=$(echo $TAG | sed 's/-slskdn/.slskdn/')
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
