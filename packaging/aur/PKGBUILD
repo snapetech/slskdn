@@ -24,10 +24,8 @@ source=(
     "slskd.yml"
     "slskd.sysusers"
 )
-sha256sums=('SKIP'
-            '9e2f4b0496fd32b7f3264fe47db54bfa516d99ef0307a4aaa5aad98350f588e9'
-            'a170afada9ec8673ab696506756e1b5d971ee4f67560af795f359c9bd53645df'
-            '28b6c2c8d969a91bc8b5ae3e7289562928fff39ed07b92973e5b93fa45033056')
+# Note: First hash is SKIP (tarball changes each release), others are static file hashes
+sha256sums=('SKIP' '9e2f4b0496fd32b7f3264fe47db54bfa516d99ef0307a4aaa5aad98350f588e9' 'a170afada9ec8673ab696506756e1b5d971ee4f67560af795f359c9bd53645df' '28b6c2c8d969a91bc8b5ae3e7289562928fff39ed07b92973e5b93fa45033056')
 
 build() {
     cd "${srcdir}/slskdn-${pkgver//.slskdn/-slskdn}"
