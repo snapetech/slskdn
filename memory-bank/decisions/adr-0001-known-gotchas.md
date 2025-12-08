@@ -229,38 +229,227 @@ builder.Services.AddScoped<IMyService, MyService>();
 
 ---
 
-## 📦 Packaging Gotchas
+## 📦 Packaging Gotchas (MAJOR PAIN POINT)
 
-### 11. Case Sensitivity in Package Names
+> ⚠️ **These issues caused 10+ CI failures each. Read carefully.**
 
-**The Issue**: Package names must be lowercase for Debian/AUR/RPM.
+### 11. Case Sensitivity EVERYWHERE
 
-- ✅ `slskdn` (lowercase)
-- ❌ `slskdN` (mixed case)
+**The Issue**: Package names, URLs, and filenames must be **consistently lowercase**.
 
-**Affected files**:
+| Context | Correct | Wrong |
+|---------|---------|-------|
+| Package name | `slskdn` | `slskdN` |
+| GitHub tag | `0.24.1-slskdn.22` | `0.24.1-slskdN.22` |
+| Zip filename | `slskdn-0.24.1-...` | `slskdN-0.24.1-...` |
+| COPR project | `slskdn` | `slskdN` |
+| PPA changelog | `slskdn (0.24.1...)` | `slskdN (0.24.1...)` |
+
+**Files that MUST use lowercase**:
 - `packaging/aur/PKGBUILD*`
 - `packaging/debian/changelog`
 - `packaging/rpm/*.spec`
 - `.github/workflows/*.yml`
+- `packaging/homebrew/Formula/slskdn.rb`
 
 ---
 
-### 12. Checksum Files Must Be Single-Line
+### 12. SHA256 Checksum Formats
 
-**The Issue**: Multi-line checksum files break CI.
+**The Issue**: Different packaging systems want checksums in different formats.
 
-**Wrong**:
-```
+| System | Format | Example |
+|--------|--------|---------|
+| AUR PKGBUILD | Single-line array | `sha256sums=('abc123...' 'def456...')` |
+| Homebrew | Quoted string | `sha256 "abc123..."` |
+| Flatpak | Plain value | `sha256: abc123...` |
+| Snap | Prefixed | `source-checksum: sha256/abc123...` |
+| Chocolatey | PowerShell var | `$checksum = "abc123..."` |
+| Nix flake | Quoted string | `sha256 = "abc123...";` |
+
+**Multi-line PKGBUILD breaks makepkg**:
+```bash
+# WRONG - breaks AUR
 sha256sums=(
   'abc123...'
+  'def456...'
 )
+
+# CORRECT - single line
+sha256sums=('abc123...' 'def456...')
 ```
 
-**Correct**:
+---
+
+### 13. SKIP vs Actual Hash in AUR
+
+**The Issue**: AUR packages need `SKIP` for the source tarball (changes each release) but real hashes for static files.
+
+```bash
+# PKGBUILD source array order:
+source=(
+    "tarball.tar.gz"    # Index 0 - SKIP (changes)
+    "slskd.service"     # Index 1 - real hash (static)
+    "slskd.yml"         # Index 2 - real hash (static)
+    "slskd.sysusers"    # Index 3 - real hash (static)
+)
+
+# Matching sha256sums:
+sha256sums=('SKIP' '9e2f4b...' 'a170af...' '28b6c2...')
 ```
-sha256sums=('abc123...')
+
+**The Cycle**:
+1. Model updates tarball hash
+2. AUR build fails (tarball changed)
+3. Model sets to SKIP
+4. Model accidentally SKIPs the static files too
+5. AUR build fails (missing hashes)
+
+---
+
+### 14. Version Format Conversion
+
+**The Issue**: GitHub tags use `-slskdn` but PKGBUILD uses `.slskdn`.
+
+```bash
+# GitHub tag format
+0.24.1-slskdn.22
+
+# PKGBUILD pkgver format (no hyphens allowed)
+0.24.1.slskdn.22
+
+# Conversion in workflows:
+PKGVER=$(echo $TAG | sed 's/-slskdn/.slskdn/')
 ```
+
+**Files that need conversion**:
+- `.github/workflows/release-linux.yml`
+- `.github/workflows/release-copr.yml`
+- `packaging/aur/PKGBUILD*`
+
+---
+
+### 15. URL Patterns Must Match Release Assets
+
+**The Issue**: Download URLs must exactly match the uploaded asset names.
+
+**Asset naming pattern** (from `release-linux.yml`):
+```
+slskdn-{TAG}-linux-x64.zip
+slskdn-{TAG}-linux-arm64.zip
+slskdn-{TAG}-osx-x64.zip
+slskdn-{TAG}-osx-arm64.zip
+slskdn-{TAG}-win-x64.zip
+```
+
+**Common mistakes**:
+- `slskdN-...` (wrong case)
+- `slskdn-linux-x64.zip` (missing version)
+- `slskdn_{TAG}_linux_x64.zip` (wrong separators)
+
+---
+
+### 16. Homebrew Formula Architecture Blocks
+
+**The Issue**: Homebrew needs separate `on_arm` and `on_intel` blocks for macOS.
+
+```ruby
+on_macos do
+  on_arm do
+    url "...osx-arm64.zip"
+    sha256 "..."
+  end
+  on_intel do
+    url "...osx-x64.zip"
+    sha256 "..."
+  end
+end
+
+on_linux do
+  url "...linux-x64.zip"
+  sha256 "..."
+end
+```
+
+**Don't**: Use a single URL for all platforms.
+
+---
+
+### 17. Workflow Timing Issues
+
+**The Issue**: Packaging workflows run before release assets are uploaded.
+
+**The Cycle**:
+1. Release published
+2. Packaging workflow triggered immediately
+3. Asset download fails (not uploaded yet)
+4. Workflow fails
+5. Manual re-run required
+
+**Solution in `release-linux.yml`**:
+```yaml
+# Retry loop with 30s delays
+for i in {1..20}; do
+  if curl -fsSL "$ASSET_URL" -o release.zip; then
+    exit 0
+  fi
+  sleep 30
+done
+```
+
+---
+
+### 18. AUR Directory Cleanup
+
+**The Issue**: AUR git clone fails if directory exists from previous run.
+
+```bash
+# WRONG - fails if aur-repo exists
+git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo
+
+# CORRECT - clean first
+rm -rf aur-repo
+git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo
+```
+
+---
+
+### 19. COPR/PPA Need Different Spec Files
+
+**The Issue**: COPR uses `.spec` files, PPA uses `debian/` directory.
+
+**COPR** (`packaging/rpm/slskdn.spec`):
+- RPM spec format
+- `%{version}` macro
+- `BuildRequires` / `Requires`
+
+**PPA** (`packaging/debian/`):
+- `changelog` (specific format!)
+- `control`
+- `rules`
+- `copyright`
+
+**Changelog format is STRICT**:
+```
+slskdn (0.24.1-slskdn.22-1) jammy; urgency=medium
+
+  * Release 0.24.1-slskdn.22
+
+ -- snapetech <slskdn@proton.me>  Sun, 08 Dec 2024 12:00:00 +0000
+```
+
+Note: TWO spaces before `--`, specific date format.
+
+---
+
+### 20. Self-Hosted Runner Paths
+
+**The Issue**: Self-hosted runners (kspld0, kspls0) have different paths than GitHub-hosted.
+
+**GitHub-hosted**: `/home/runner/work/...`
+**Self-hosted**: `/home/github/actions-runner/_work/...`
+
+**Don't**: Hardcode paths. Use `$GITHUB_WORKSPACE`.
 
 ---
 
