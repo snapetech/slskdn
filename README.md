@@ -221,7 +221,36 @@ dotnet run --project src/slskd/slskd.csproj
 | Smart source ranking | ❌ | ✅ |
 | Multi-source downloads | ❌ | 🧪 |
 | PWA support | ❌ | ✅ |
+| Distributed hash mesh | ❌ | 🔜 |
+| BitTorrent DHT discovery | ❌ | 🔜 |
+| NAT traversal assistance | ❌ | 🔜 |
+| Security hardening | ❌ | 🔜 |
 | Open to community feedback | 🔒 | ✅ |
+
+## 🔜 Upcoming Features
+
+Features currently in development across our experimental branches:
+
+### 🌐 Multi-Source Swarm Downloads *(experimental/multi-source-swarm)*
+- **Swarm mode** — Download chunks from multiple peers simultaneously (BitTorrent-style)
+- **Distributed hash database** — SQLite-backed content verification with mesh sync
+- **Epidemic mesh protocol** — Gossip-based hash sharing between slskdN clients
+- **BitTorrent DHT rendezvous** — Decentralized peer discovery for mesh bootstrap
+- **Capability discovery** — Auto-detect other slskdN clients on the network
+- **Backfill scheduler** — Conservative header probing for long-tail content
+- **CONNECT_ASSIST** — Signaling-first NAT traversal to help firewalled users
+- **Karma system** — Earn reputation by helping relay connections and sharing hashes
+
+### 🔒 Security Hardening *(experimental/security)*
+- **PathGuard** — Path traversal protection with sandboxing and symlink validation
+- **Byzantine consensus** — Multi-peer verification for untrusted content
+- **Honeypot detection** — Identify and avoid malicious peers
+- **Canary traps** — Detect unauthorized redistribution of shared files
+- **Probabilistic verification** — Efficient content integrity checking
+- **Rate limiting** — Abuse prevention and resource protection
+- **Security dashboard** — Real-time monitoring and threat visualization
+
+> 💡 Want to try these features early? Check out our experimental branches on GitHub!
 
 ## Configuration
 slskdN uses the same config format as slskd, with additional options:
