@@ -132,16 +132,16 @@ body {
     align-items: center;
     background: linear-gradient(180deg, rgba(13,17,22,0.92) 0%, rgba(13,17,22,0.98) 100%);
     border-bottom: 1px solid rgba(88,166,255,0.1);
-    padding: 4px 16px;
-    font-size: 11px;
+    padding: 6px 24px;
+    font-size: 16px;
     color: #6e7681;
-    gap: 16px;
+    gap: 24px;
 }
 
 .slskdn-status-items {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 18px;
 }
 
 .slskdn-status-item {
@@ -175,32 +175,32 @@ body {
 }
 
 .slskdn-status-item .icon {
-    font-size: 10px !important;
+    font-size: 15px !important;
     margin: 0 !important;
     filter: drop-shadow(0 0 2px currentColor);
 }
 
 .slskdn-status-item .ui.label {
-    font-size: 10px !important;
-    padding: 2px 6px !important;
+    font-size: 14px !important;
+    padding: 3px 9px !important;
     box-shadow: 0 0 8px rgba(251,189,35,0.3);
 }
 
 .slskdn-status-divider {
     color: rgba(88,166,255,0.2);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 .slskdn-status-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 18px;
 }
 
 .slskdn-status-link {
     color: #58a6ff;
     text-decoration: none;
-    font-size: 10px;
+    font-size: 14px;
     opacity: 0.7;
     transition: all 0.2s ease;
 }
@@ -215,8 +215,8 @@ body {
     border: none;
     color: #6e7681;
     cursor: pointer;
-    font-size: 14px;
-    padding: 0 4px;
+    font-size: 20px;
+    padding: 0 6px;
     line-height: 1;
     transition: all 0.2s ease;
 }
