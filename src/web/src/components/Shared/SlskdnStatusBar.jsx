@@ -2,15 +2,33 @@ import { urlBase } from '../../config';
 import * as slskdnAPI from '../../lib/slskdn';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Icon, Label } from 'semantic-ui-react';
+import { Icon, Label, Popup } from 'semantic-ui-react';
 
 const STORAGE_KEY = 'slskdn-status-bar-visible';
+const KARMA_STORAGE_KEY = 'slskdn-karma';
 
 const formatNumber = (value) => {
   if (value === undefined || value === null) return '0';
   if (value >= 1_000_000) return (value / 1_000_000).toFixed(1) + 'M';
   if (value >= 1_000) return (value / 1_000).toFixed(1) + 'K';
   return value.toString();
+};
+
+// Get karma color based on value
+const getKarmaColor = (karma) => {
+  if (karma >= 100) return '#fbbf24'; // Gold
+  if (karma >= 50) return '#22c55e'; // Green
+  if (karma >= 10) return '#3b82f6'; // Blue
+  return '#6b7280'; // Gray
+};
+
+// Get karma tier name
+const getKarmaTier = (karma) => {
+  if (karma >= 100) return 'Network Guardian';
+  if (karma >= 50) return 'Trusted Relay';
+  if (karma >= 10) return 'Active Helper';
+  if (karma > 0) return 'Contributor';
+  return 'New Member';
 };
 
 // Export for use in App.jsx
@@ -30,6 +48,7 @@ const SlskdnStatusBar = () => {
     activeSwarms: 0,
     hashCount: 0,
     isSyncing: false,
+    karma: 0,
     meshPeers: 0,
     seqId: 0,
   });
@@ -39,11 +58,14 @@ const SlskdnStatusBar = () => {
     const fetchStats = async () => {
       try {
         const data = await slskdnAPI.getSlskdnStats();
+        // Get karma from localStorage for now (backend karma system is future work)
+        const storedKarma = parseInt(localStorage.getItem(KARMA_STORAGE_KEY) || '0', 10);
         setStats({
           activeSwarms: data.swarmJobs?.length ?? 0,
           backfillActive: data.backfill?.isActive ?? false,
           hashCount: data.hashDb?.totalEntries ?? 0,
           isSyncing: data.mesh?.isSyncing ?? false,
+          karma: data.karma?.total ?? storedKarma,
           meshPeers: data.mesh?.connectedPeerCount ?? 0,
           seqId: data.hashDb?.currentSeqId ?? data.mesh?.localSeqId ?? 0,
         });
@@ -72,6 +94,7 @@ const SlskdnStatusBar = () => {
     backfillActive,
     hashCount,
     isSyncing,
+    karma,
     meshPeers,
     seqId,
   } = stats;
@@ -163,6 +186,35 @@ const SlskdnStatusBar = () => {
             </span>
           </>
         )}
+
+        <span className="slskdn-status-divider">│</span>
+        <Popup
+          content={
+            <div>
+              <strong>{getKarmaTier(karma)}</strong>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', opacity: 0.8 }}>
+                Earn karma by helping relay connections and sharing hashes
+              </p>
+            </div>
+          }
+          position="bottom center"
+          size="small"
+          trigger={
+            <span
+              className="slskdn-status-item slskdn-karma"
+              title={`Karma: ${karma} - ${getKarmaTier(karma)}`}
+            >
+              <Icon
+                name="trophy"
+                size="small"
+                style={{ color: getKarmaColor(karma) }}
+              />
+              <span style={{ color: getKarmaColor(karma) }}>
+                {karma}
+              </span>
+            </span>
+          }
+        />
       </div>
 
       <div className="slskdn-status-right">
