@@ -1,23 +1,27 @@
-# Agent Instructions for slskdN (Experimental Branch)
+# Agent Instructions for slskdN
 
-> This file defines how AI coding assistants should behave in this repository.  
-> **Note**: This is the experimental/multi-source-swarm branch with security hardening.
+> This file defines how AI coding assistants should behave in this repository.
 
 ---
 
-## Before Starting Any Work
+## Before Starting ANY Work
 
-1. **Read context files** (in order):
-   - `memory-bank/projectbrief.md` - Understand experimental features and constraints
-   - `memory-bank/tasks.md` - See current task list (prioritize security items)
-   - `memory-bank/activeContext.md` - Know what's currently being worked on
-   - `CLEANUP_TODO.md` - Review hardening tasks
+### Required Reading (in order)
 
-2. **For non-trivial changes**, create or update a task in `memory-bank/tasks.md`
+1. **`memory-bank/decisions/adr-0001-known-gotchas.md`** - Critical bugs to avoid
+2. **`memory-bank/decisions/adr-0002-code-patterns.md`** - Exact patterns to follow
+3. **`memory-bank/decisions/adr-0003-anti-slop-rules.md`** - What NOT to do
+4. **`memory-bank/activeContext.md`** - Current session state
 
-3. **Check existing code patterns** before implementing new features
+### Before Writing Code
 
-4. **Security-sensitive changes** require extra scrutiny - check `docs/SECURITY_IMPLEMENTATION_STATUS.md`
+```bash
+# ALWAYS grep for existing patterns first
+grep -rn "similar pattern" src/slskd/
+grep -rn "similar component" src/web/src/components/
+```
+
+If you skip this step, you WILL generate slop.
 
 ---
 
@@ -29,7 +33,7 @@
 - Follow existing patterns in `src/slskd/`
 - Use file-scoped namespaces (C# 10+)
 - Use `_privateField` naming for injected dependencies
-- **Prefer `ILogger<T>` over `Serilog.Log.ForContext`** (standardization in progress)
+- Prefer `ILogger<T>` over `Serilog.Log.ForContext`
 - Run `./bin/lint` before committing
 
 **Frontend (React/JSX)**:
@@ -37,12 +41,6 @@
 - Use Semantic UI React components
 - Maintain compatibility with React 16.8.6 (no hooks that require newer versions)
 - Keep state management simple (no Redux unless already used)
-
-**Security Components** (`src/slskd/Common/Security/`):
-- All security services are in `Common/Security/`
-- Use `SecurityEventSink` for event logging
-- Follow existing patterns (PathGuard, ContentSafety, etc.)
-- Add unit tests for any new security logic
 
 ### Copyright Headers [[memory:11969255]]
 
@@ -63,27 +61,6 @@
 - `Transfers/MultiSource/`
 - `Transfers/Ranking/`
 - `Users/Notes/`
-- `DhtRendezvous/`
-- `Common/Security/`
-
----
-
-## Experimental Branch Specific Rules
-
-### Multi-Source Downloads
-- Code is in `src/slskd/Transfers/MultiSource/`
-- **Known issue**: Unbounded concurrency in retry loops (needs SemaphoreSlim)
-- Test with `./swarm-download-test.sh` scripts
-
-### Security Framework
-- 30 components in `src/slskd/Common/Security/`
-- 121 unit tests in `tests/slskd.Tests.Unit/Security/`
-- Enable with: `builder.Services.AddSlskdnSecurity(builder.Configuration)`
-- **Integration needed**: Wire into transfer handlers
-
-### DHT Rendezvous
-- Code is in `src/slskd/DhtRendezvous/`
-- Still experimental, needs testing
 
 ---
 
@@ -105,8 +82,6 @@
 
 5. **Run lint**: `./bin/lint`
 
-6. **For security changes**: Ensure unit tests cover edge cases
-
 ---
 
 ## Decision Records
@@ -120,13 +95,24 @@ For significant architectural decisions:
 
 ## What NOT To Do
 
-- **Don't** silently overwrite human-written notes; append with timestamps
-- **Don't** create new abstractions without checking if similar patterns exist
-- **Don't** add dependencies without documenting why
-- **Don't** break API compatibility with upstream slskd
-- **Don't** modify upstream files unnecessarily (prefer extending)
-- **Don't** bypass security validation in file handling code
-- **Don't** use unbounded parallelism (use SemaphoreSlim for worker pools)
+See `memory-bank/decisions/adr-0003-anti-slop-rules.md` for the full list.
+
+**Critical**:
+- ❌ Factory/wrapper/builder patterns (use DI directly)
+- ❌ Defensive null checks on internal code
+- ❌ Swallowing exceptions with catch-return-null
+- ❌ Logging method entry/exit
+- ❌ `async Task.FromResult()` for sync operations
+- ❌ Class components in React (use function + hooks)
+- ❌ Returning `undefined` from API lib functions (return `[]`)
+- ❌ `async void` without try-catch (crashes the process)
+
+**General**:
+- Don't silently overwrite human-written notes; append with timestamps
+- Don't create new abstractions without checking if similar patterns exist
+- Don't add dependencies without documenting why
+- Don't break API compatibility with upstream slskd
+- Don't modify upstream files unnecessarily (prefer extending)
 
 ---
 
@@ -137,18 +123,21 @@ For significant architectural decisions:
 | Run backend | `./bin/watch` |
 | Run frontend | `cd src/web && npm start` |
 | Run tests | `dotnet test` |
-| Run security tests | `dotnet test --filter "FullyQualifiedName~Security"` |
 | Lint | `./bin/lint` |
 | Build release | `./bin/build` |
 
 | File | Purpose |
 |------|---------|
+| `memory-bank/decisions/adr-0001-known-gotchas.md` | **READ FIRST** - Critical bugs |
+| `memory-bank/decisions/adr-0002-code-patterns.md` | **READ FIRST** - Exact patterns |
+| `memory-bank/decisions/adr-0003-anti-slop-rules.md` | **READ FIRST** - What not to do |
+| `memory-bank/decisions/adr-0004-pr-checklist.md` | Pre-commit validation |
 | `memory-bank/projectbrief.md` | Project overview & constraints |
 | `memory-bank/tasks.md` | Task backlog (source of truth) |
 | `memory-bank/activeContext.md` | Current work context |
 | `memory-bank/progress.md` | Work log |
-| `memory-bank/scratch.md` | Temporary notes |
-| `CLEANUP_TODO.md` | Hardening tasks |
-| `docs/SECURITY_IMPLEMENTATION_STATUS.md` | Security component status |
-| `docs/FRONTEND_MIGRATION_PLAN.md` | React/Vite migration plan |
+| `memory-bank/scratch.md` | Temporary notes, commands |
+| `FORK_VISION.md` | Feature roadmap |
+| `DEVELOPMENT_HISTORY.md` | Release history |
+| `TODO.md` | Human-maintained todo list |
 
