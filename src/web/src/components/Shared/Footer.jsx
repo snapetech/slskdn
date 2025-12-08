@@ -2,6 +2,8 @@ import './Footer.css';
 import React from 'react';
 import { Icon } from 'semantic-ui-react';
 
+const GITHUB_BASE = 'https://github.com/snapetech/slskdn';
+
 const Footer = () => {
   const year = new Date().getFullYear();
 
@@ -11,17 +13,17 @@ const Footer = () => {
         <span className="slskdn-footer-copyright">
           © {year}{' '}
           <a
-            href="https://github.com/snapetech/slskdn"
+            href={GITHUB_BASE}
             rel="noopener noreferrer"
             target="_blank"
           >
-            slskdn
+            slskdN
           </a>
         </span>
         <span className="slskdn-footer-divider">•</span>
         <a
           className="slskdn-footer-link"
-          href="https://github.com/snapetech/slskdn"
+          href={GITHUB_BASE}
           rel="noopener noreferrer"
           target="_blank"
           title="GitHub"
@@ -40,7 +42,42 @@ const Footer = () => {
         </a>
         <span className="slskdn-footer-divider">•</span>
         <span className="slskdn-footer-quote">
-          <em>"slop on top"</em> 🍦🤖✨
+          <a
+            className="slskdn-footer-emoji-link"
+            href={`${GITHUB_BASE}#what-is-slskdn`}
+            rel="noopener noreferrer"
+            target="_blank"
+            title="What is slskdN?"
+          >
+            <em>"slop on top"</em>
+          </a>{' '}
+          <a
+            className="slskdn-footer-emoji-link"
+            href={`${GITHUB_BASE}#what-is-slskdn`}
+            rel="noopener noreferrer"
+            target="_blank"
+            title="Our Philosophy"
+          >
+            🍦
+          </a>
+          <a
+            className="slskdn-footer-emoji-link"
+            href={`${GITHUB_BASE}#use-of-ai-in-this-project`}
+            rel="noopener noreferrer"
+            target="_blank"
+            title="AI-Assisted Development"
+          >
+            🤖
+          </a>
+          <a
+            className="slskdn-footer-emoji-link"
+            href={`${GITHUB_BASE}#features`}
+            rel="noopener noreferrer"
+            target="_blank"
+            title="Features"
+          >
+            ✨
+          </a>
         </span>
       </div>
     </footer>

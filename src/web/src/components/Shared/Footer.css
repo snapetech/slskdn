@@ -61,6 +61,24 @@
     font-style: italic;
 }
 
+.slskdn-footer-emoji-link {
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    padding: 0 1px;
+    border-radius: 3px;
+}
+
+.slskdn-footer-emoji-link:hover {
+    color: #58a6ff;
+    background: rgba(88, 166, 255, 0.15);
+    text-decoration: none;
+}
+
+.slskdn-footer-emoji-link:hover em {
+    color: #58a6ff;
+}
+
 /* Light theme adjustments */
 html:not(.dark) .slskdn-footer {
     background: linear-gradient(180deg, transparent 0%, rgba(240, 240, 240, 0.95) 100%);
@@ -88,5 +106,14 @@ html:not(.dark) .slskdn-footer-link {
 
 html:not(.dark) .slskdn-footer-quote {
     color: rgba(0, 0, 0, 0.4);
+}
+
+html:not(.dark) .slskdn-footer-emoji-link:hover {
+    color: #0969da;
+    background: rgba(9, 105, 218, 0.1);
+}
+
+html:not(.dark) .slskdn-footer-emoji-link:hover em {
+    color: #0969da;
 }
 
