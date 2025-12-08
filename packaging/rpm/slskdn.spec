@@ -1,11 +1,11 @@
-Name:           slskdN
-Version:        0.24.1.slskdN.7
+Name:           slskdn
+Version:        0.24.1.slskdn.7
 Release:        1%{?dist}
 Summary:        🔋 The batteries included, EXPERIMENTAL fork of slskd
 
 License:        AGPL-3.0-or-later
-URL:            https://github.com/snapetech/slskdN
-Source0:        https://github.com/snapetech/slskdN/releases/download/%{version}/slskdN-%{version}-linux-x64.zip
+URL:            https://github.com/snapetech/slskdn
+Source0:        slskdN-%{version}-linux-x64.zip
 Source1:        slskd.service
 Source2:        slskd.yml
 Source3:        slskd.conf
