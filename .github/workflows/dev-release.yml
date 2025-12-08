@@ -246,6 +246,9 @@ jobs:
             su builder -c 'makepkg --printsrcinfo' > .SRCINFO
           "
           
+          # Fix ownership after docker (docker runs as root and changes permissions)
+          sudo chown -R $(id -u):$(id -g) .
+          
           cat PKGBUILD
           cat .SRCINFO
 
@@ -352,7 +355,7 @@ jobs:
           
           echo "Uploading SRPM to COPR: $SRPM_PATH"
           # Upload to slskdn-dev project (separate from stable)
-          copr-cli build slskdn-dev "$SRPM_PATH" --nowait
+          copr-cli build slskdn/slskdn-dev "$SRPM_PATH" --nowait
 
   ppa:
     name: Publish to PPA
