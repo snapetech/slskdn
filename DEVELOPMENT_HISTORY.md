@@ -1,4 +1,4 @@
-# slskdn Development History
+# slskdN Development History
 
 ## Phase Summary
 
@@ -118,12 +118,12 @@
 
 | Feature | Status | Release | Notes |
 |---------|--------|---------|-------|
-| AUR Binary Package | ✅ Done | .6 | `yay -S slskdn-bin` |
-| AUR Source Package | ✅ Done | .7 | `yay -S slskdn` |
+| AUR Binary Package | ✅ Done | .6 | `yay -S slskdN-bin` |
+| AUR Source Package | ✅ Done | .7 | `yay -S slskdN` |
 | Fedora COPR | ✅ Done | .13 | RPM packages |
 | Ubuntu PPA | ✅ Done | .13 | Debian packages |
 | Docker (GHCR) | ✅ Done | .1 | `ghcr.io/snapetech/slskdn` |
-| Self-Hosted CI Runners | ✅ Done | .14 | kspld0 + kspls0 |
+| Self-Hosted CI Runners | ✅ Done | .14 | Private runners |
 | Automated Release CI | ✅ Done | .11 | Full CI/CD pipeline |
 | Upstream Sync Workflow | ✅ Done | .14 | Auto-merge upstream |
 
@@ -193,5 +193,4 @@
 ---
 
 *Last updated: December 7, 2025 (Release .18)*
-
 
