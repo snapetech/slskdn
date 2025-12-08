@@ -134,12 +134,17 @@ jobs:
       # docker tags aren't compatible with semver, therefore + can't be used to delimit the version and SHA
       # https://github.com/opencontainers/distribution-spec/issues/154
       # CONTAINER_VERSION is used in Docker tags and must use a hyphen (-) delimiter between the tag and SHA
-      # APP_VERSION is passed as a Docker build arg and used to publish the app and must use a plus (+) delimiter between the tag and SHA
+      # APP_VERSION is passed as a Docker build arg and used to publish the app and must use a hyphen (-) for NuGet compatibility
       - name: Set Environment Variables
         run: |
-          echo "TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
-          echo "CONTAINER_VERSION=$(git describe --tags --abbrev=0).$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "APP_VERSION=$(git describe --tags --abbrev=0).$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)+$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          # Get the latest slskdn tag only
+          TAG=$(git tag --sort=-version:refname | grep -E '^\d+\.\d+\.\d+-slskdn\.\d+$' | head -n1)
+          if [ -z "$TAG" ]; then
+            TAG="0.24.1-slskdn.19"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "CONTAINER_VERSION=${TAG}.$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "APP_VERSION=${TAG}.$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "REVISION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "BUILD_DATE=$(date --iso-8601=s)" >> $GITHUB_ENV
 
