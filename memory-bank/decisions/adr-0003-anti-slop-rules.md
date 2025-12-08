@@ -395,14 +395,400 @@ public class MyService : IMyService, IDisposable
 
 ---
 
+---
+
+## Rule 16: Don't Over-Comment Obvious Code
+
+**Problem**: AI adds comments that describe what the code literally does.
+
+**Slop**:
+```csharp
+// Get the user from the database
+var user = await GetUserAsync(username);
+
+// Check if user is null
+if (user == null)
+{
+    // Return not found
+    return NotFound();
+}
+
+// Return the user
+return Ok(user);
+```
+
+**Correct**: Only comment *why*, not *what*.
+
+```csharp
+var user = await GetUserAsync(username);
+if (user == null)
+    return NotFound();
+
+// Include share stats for the profile view
+return Ok(new { user, shares = await GetShareStatsAsync(username) });
+```
+
+---
+
+## Rule 17: Don't Create Unnecessary Intermediate Variables
+
+**Problem**: AI creates variables that are used exactly once on the next line.
+
+**Slop**:
+```csharp
+var userService = UserService;
+var username = request.Username;
+var user = await userService.GetAsync(username);
+var result = Ok(user);
+return result;
+```
+
+**Correct**: Chain naturally, create variables only when they add clarity.
+
+```csharp
+return Ok(await UserService.GetAsync(request.Username));
+```
+
+---
+
+## Rule 18: Don't Add Regions
+
+**Problem**: AI adds `#region` blocks that hide code and add noise.
+
+**Slop**:
+```csharp
+#region Private Methods
+
+private void DoSomething() { }
+
+#endregion
+
+#region Public Methods
+
+public void DoSomethingPublic() { }
+
+#endregion
+```
+
+**Correct**: Just write the code. If a file needs regions, it's too big.
+
+---
+
+## Rule 19: Don't Repeat Yourself in Error Messages
+
+**Problem**: AI creates redundant error messages.
+
+**Slop**:
+```csharp
+throw new InvalidOperationException($"Invalid operation: Cannot perform operation because the operation is not valid");
+```
+
+**Correct**: Be concise and specific.
+
+```csharp
+throw new InvalidOperationException("User is not online");
+```
+
+---
+
+## Rule 20: Don't Use LINQ When a Simple Loop is Clearer
+
+**Problem**: AI chains LINQ operations that are harder to read than a loop.
+
+**Slop**:
+```csharp
+var result = items
+    .Where(x => x.IsActive)
+    .Select(x => new { x.Id, x.Name })
+    .GroupBy(x => x.Name)
+    .Select(g => new { Name = g.Key, Count = g.Count() })
+    .OrderByDescending(x => x.Count)
+    .Take(10)
+    .ToList();
+```
+
+**Correct**: Use LINQ for simple transforms, loops for complex logic.
+
+```csharp
+// Simple LINQ is fine
+var activeItems = items.Where(x => x.IsActive).ToList();
+
+// Complex? Use a method with clear name
+var topNames = GetTopNamesByFrequency(items, 10);
+```
+
+---
+
+## Rule 21: Don't Add Empty Catch Blocks
+
+**Problem**: AI adds catch blocks that do nothing.
+
+**Slop**:
+```csharp
+try
+{
+    await DoSomethingAsync();
+}
+catch
+{
+    // ignore
+}
+```
+
+**Correct**: Either handle the error meaningfully or don't catch it.
+
+```csharp
+// If you truly need to ignore, be explicit about why
+try
+{
+    await TryCleanupAsync(); // Best-effort cleanup, failure is acceptable
+}
+catch (IOException)
+{
+    // Cleanup failure is non-fatal, continue with shutdown
+}
+```
+
+---
+
+## Rule 22: Don't Create "Manager" or "Helper" Classes
+
+**Problem**: AI creates vague classes with unclear responsibilities.
+
+**Slop**:
+```csharp
+public class TransferManager { }
+public class UserHelper { }
+public class DataProcessor { }
+public class ServiceHandler { }
+```
+
+**Correct**: Name classes after what they *are* or what they *do* specifically.
+
+```csharp
+public class TransferService { }  // It's a service
+public class DownloadQueue { }    // It's a queue
+public class ShareScanner { }     // It scans shares
+```
+
+---
+
+## Rule 23: Don't Add Unnecessary Async/Await
+
+**Problem**: AI adds async/await when just returning a Task is fine.
+
+**Slop**:
+```csharp
+public async Task<User> GetUserAsync(string username)
+{
+    return await repository.FindAsync(username);
+}
+```
+
+**Correct**: Just return the Task directly when there's no additional work.
+
+```csharp
+public Task<User> GetUserAsync(string username)
+{
+    return repository.FindAsync(username);
+}
+```
+
+(Exception: Keep async/await if you need the stack trace for debugging or have a using block)
+
+---
+
+## Rule 24: Don't Use String Concatenation for Paths
+
+**Problem**: AI concatenates paths with `+` or string interpolation.
+
+**Slop**:
+```csharp
+var path = baseDir + "/" + subDir + "/" + filename;
+var path2 = $"{baseDir}/{subDir}/{filename}";
+```
+
+**Correct**: Use `Path.Combine()`.
+
+```csharp
+var path = Path.Combine(baseDir, subDir, filename);
+```
+
+---
+
+## Rule 25: Don't Create Constants Files
+
+**Problem**: AI creates a `Constants.cs` file to hold random values.
+
+**Slop**:
+```csharp
+public static class Constants
+{
+    public const int MaxRetries = 3;
+    public const string DefaultUsername = "anonymous";
+    public const int BufferSize = 4096;
+}
+```
+
+**Correct**: Put constants where they're used.
+
+```csharp
+// In the class that uses them
+public class DownloadService
+{
+    private const int MaxRetries = 3;
+    private const int BufferSize = 4096;
+}
+```
+
+---
+
+## Rule 26: Frontend - Don't Destructure Props Then Immediately Spread
+
+**Problem**: AI destructures props then spreads them.
+
+**Slop**:
+```jsx
+const MyComponent = ({ onClick, className, ...rest }) => {
+  return <button onClick={onClick} className={className} {...rest} />;
+};
+```
+
+**Correct**: Either destructure what you need or spread everything.
+
+```jsx
+const MyComponent = (props) => {
+  return <button {...props} />;
+};
+
+// Or if you need to modify
+const MyComponent = ({ className, ...rest }) => {
+  return <button className={`my-button ${className}`} {...rest} />;
+};
+```
+
+---
+
+## Rule 27: Frontend - Don't Create Wrapper Components for Styling
+
+**Problem**: AI creates components that just add a className.
+
+**Slop**:
+```jsx
+const PrimaryButton = ({ children, ...props }) => (
+  <Button className="primary-button" {...props}>{children}</Button>
+);
+
+const SecondaryButton = ({ children, ...props }) => (
+  <Button className="secondary-button" {...props}>{children}</Button>
+);
+```
+
+**Correct**: Just use the className directly, or use CSS.
+
+```jsx
+<Button className="primary-button">Click me</Button>
+```
+
+---
+
+## Rule 28: Don't Use Boolean Parameters
+
+**Problem**: AI adds boolean parameters that make call sites unreadable.
+
+**Slop**:
+```csharp
+await ProcessAsync(user, true, false, true);
+```
+
+**Correct**: Use named parameters, enums, or options objects.
+
+```csharp
+await ProcessAsync(user, includeHistory: true, forceRefresh: false);
+
+// Or better, options object
+await ProcessAsync(user, new ProcessOptions { IncludeHistory = true });
+```
+
+---
+
+## Rule 29: Don't Add "Utils" Namespaces
+
+**Problem**: AI creates catch-all utility namespaces.
+
+**Slop**:
+```csharp
+namespace slskd.Utils
+{
+    public static class StringUtils { }
+    public static class DateUtils { }
+    public static class FileUtils { }
+}
+```
+
+**Correct**: Put utilities in the namespace where they're used, or use extension methods.
+
+```csharp
+namespace slskd.Transfers
+{
+    internal static class TransferPathExtensions { }
+}
+```
+
+---
+
+## Rule 30: Don't Generate Boilerplate Equals/GetHashCode
+
+**Problem**: AI adds Equals/GetHashCode overrides that aren't needed.
+
+**Slop**:
+```csharp
+public class User
+{
+    public string Username { get; set; }
+
+    public override bool Equals(object obj)
+    {
+        return obj is User user && Username == user.Username;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Username);
+    }
+}
+```
+
+**Correct**: Only override if you actually need value equality. For DTOs/entities, the default reference equality is usually fine.
+
+---
+
 ## Summary: The Golden Rules
 
-1. **Follow existing patterns** - grep the codebase first
+1. **Grep first** - search the codebase before writing new code
 2. **Less is more** - don't add code that doesn't serve a purpose
 3. **Trust internal code** - validate at boundaries only
 4. **Let errors propagate** - don't swallow exceptions
 5. **Keep it simple** - no factories, no wrappers, no abstractions without need
 6. **Match the style** - if the codebase uses X, use X
+7. **Name things clearly** - no Manager, Helper, Utils, Handler
+8. **Comment why, not what** - code should be self-documenting
+9. **One thing per commit** - atomic, focused changes
+10. **Test the happy path** - don't over-test edge cases that can't happen
+
+---
+
+## Quick Self-Check
+
+Before submitting code, ask yourself:
+
+- [ ] Did I grep for existing patterns first?
+- [ ] Would a senior developer look at this and say "why?"
+- [ ] Am I adding code just because "it might be useful"?
+- [ ] Is there a simpler way to do this?
+- [ ] Does this match how the rest of the codebase does it?
+
+If you answered "no" to the first question, stop and grep first.
 
 ---
 
