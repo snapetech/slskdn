@@ -1,6 +1,7 @@
-import "./Security.css";
-import * as securityApi from "../../../lib/security";
-import React, { useCallback, useEffect, useState } from "react";
+import './Security.css';
+
+import * as securityApi from '../../../lib/security';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button,
   Dimmer,
@@ -10,7 +11,7 @@ import {
   Message,
   Segment,
   Statistic,
-} from "semantic-ui-react";
+} from 'semantic-ui-react';
 
 const Security = () => {
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ const Security = () => {
       setDashboard(dashboardData);
       setError(null);
     } catch (fetchError) {
-      setError(fetchError.message || "Failed to load security data");
+      setError(fetchError.message || 'Failed to load security data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -41,7 +42,10 @@ const Security = () => {
   if (loading) {
     return (
       <Segment placeholder>
-        <Dimmer active inverted>
+        <Dimmer
+          active
+          inverted
+        >
           <Loader>Loading Security Status...</Loader>
         </Dimmer>
       </Segment>
@@ -79,7 +83,10 @@ const Security = () => {
         />
       </div>
 
-      <Statistic.Group size="small" widths={4}>
+      <Statistic.Group
+        size="small"
+        widths={4}
+      >
         <Statistic color="blue">
           <Statistic.Value>
             {stats.networkGuardStats?.globalConnections ?? 0}
@@ -112,21 +119,21 @@ const Security = () => {
           Security Overview
         </Header>
         <p>
-          <strong>Network Guard:</strong> Rate limiting and connection caps are{" "}
-          {stats.networkGuardStats ? "active" : "inactive"}.
+          <strong>Network Guard:</strong> Rate limiting and connection caps are{' '}
+          {stats.networkGuardStats ? 'active' : 'inactive'}.
         </p>
         <p>
-          <strong>Peer Reputation:</strong>{" "}
-          {stats.reputationStats?.trustedPeers ?? 0} trusted,{" "}
+          <strong>Peer Reputation:</strong>{' '}
+          {stats.reputationStats?.trustedPeers ?? 0} trusted,{' '}
           {stats.reputationStats?.untrustedPeers ?? 0} untrusted peers.
         </p>
         <p>
-          <strong>Violations:</strong> {stats.violationStats?.trackedIps ?? 0}{" "}
+          <strong>Violations:</strong> {stats.violationStats?.trackedIps ?? 0}{' '}
           IPs, {stats.violationStats?.trackedUsernames ?? 0} usernames tracked.
         </p>
         <p>
-          <strong>Crypto Health:</strong> Entropy checks:{" "}
-          {stats.entropyStats?.checkCount ?? 0}, Warnings:{" "}
+          <strong>Crypto Health:</strong> Entropy checks:{' '}
+          {stats.entropyStats?.checkCount ?? 0}, Warnings:{' '}
           {stats.entropyStats?.warningCount ?? 0}
         </p>
       </Segment>

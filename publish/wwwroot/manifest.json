@@ -1,0 +1,21 @@
+{
+  "background_color": "#1b1c1d",
+  "display": "standalone",
+  "icons": [
+    {
+      "sizes": "192x192",
+      "src": "logo192.png",
+      "type": "image/png"
+    },
+    {
+      "sizes": "512x512",
+      "src": "logo512.png",
+      "type": "image/png"
+    }
+  ],
+  "name": "slskdn - Soulseek Client",
+  "short_name": "slskd",
+  "start_url": ".",
+  "theme_color": "#2185d0"
+}
+
