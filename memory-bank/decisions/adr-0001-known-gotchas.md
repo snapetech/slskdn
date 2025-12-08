@@ -444,7 +444,7 @@ Note: TWO spaces before `--`, specific date format.
 
 ### 20. Self-Hosted Runner Paths
 
-**The Issue**: Self-hosted runners (kspld0, kspls0) have different paths than GitHub-hosted.
+**The Issue**: Self-hosted runners have different paths than GitHub-hosted.
 
 **GitHub-hosted**: `/home/runner/work/...`
 **Self-hosted**: `/home/github/actions-runner/_work/...`
