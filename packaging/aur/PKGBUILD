@@ -2,7 +2,7 @@
 # 🔋 slskdN - The batteries-included Soulseek web client (build from source)
 pkgname=slskdN
 _pkgname=slskd
-pkgver=null.slskdN.1
+pkgver=0.24.1-slskdn.22
 pkgrel=1
 pkgdesc="🔋 The batteries included, ***EXPERIMENTAL*** fork of slskd. Feature-rich, including wishlist, smart ranking, tabbed browsing, notifications & more"
 arch=('x86_64' 'aarch64')
