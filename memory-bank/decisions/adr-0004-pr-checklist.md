@@ -8,6 +8,22 @@ Run through this checklist before committing. If any check fails, fix it.
 
 ---
 
+## 🚨 FIRST: Did You Fix a Bug?
+
+**If you fixed ANY bug during this session, STOP and document it NOW.**
+
+1. Open `memory-bank/decisions/adr-0001-known-gotchas.md`
+2. Add an entry describing:
+   - What went wrong
+   - Why it happened
+   - How to prevent it
+3. Commit the gotcha: `git commit -m "docs: Add gotcha for [description]"`
+4. THEN continue with this checklist
+
+**This is not optional. Skip this and the bug WILL come back.**
+
+---
+
 ## Backend (C#)
 
 ### 1. No New Abstractions

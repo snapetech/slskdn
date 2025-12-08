@@ -6,6 +6,26 @@ alwaysApply: true
 
 # Memory Bank System
 
+## 🚨 HIGHEST PRIORITY: Document Bugs You Fix
+
+**When you fix a bug (especially one you or another AI caused), IMMEDIATELY add it to `memory-bank/decisions/adr-0001-known-gotchas.md`.**
+
+Do this BEFORE continuing other work. This prevents the same bug from being reintroduced.
+
+```markdown
+## Entry format for adr-0001-known-gotchas.md:
+
+### bug-short-name
+- **What**: Brief description of what went wrong
+- **Why**: Root cause
+- **Fix**: How to prevent it
+- **Files**: Affected files
+```
+
+**If you've fixed the same type of bug twice, it MUST be documented. No exceptions.**
+
+---
+
 ## Before Writing ANY Code
 
 1. **Read the gotchas**: `memory-bank/decisions/adr-0001-known-gotchas.md`

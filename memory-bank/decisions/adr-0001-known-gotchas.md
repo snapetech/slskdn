@@ -1,10 +1,52 @@
 # ADR-0001: Known Gotchas & Anti-Patterns
 
-> **Status**: Active  
+> **Status**: Active (Living Document)  
 > **Date**: 2025-12-08  
 > **Author**: AI-assisted development sessions
 
 This document captures known issues, anti-patterns, and "gotchas" that AI models and developers have encountered. **Read this before making changes.**
+
+---
+
+## ⚠️ FOR AI AGENTS: ADD TO THIS FILE IMMEDIATELY
+
+**When you fix a bug, ADD IT HERE before doing anything else.**
+
+This is not optional. This is the highest priority action after fixing a bug.
+
+### When to add an entry:
+- You fixed a bug that you or another AI introduced
+- You fixed the same type of bug more than once
+- You discovered a non-obvious pattern that causes errors
+- You spent >5 minutes debugging something that should have been documented
+
+### Entry template:
+```markdown
+### N. short-descriptive-name
+
+**The Bug**: One sentence description.
+
+**Files Affected**:
+- `path/to/file.cs`
+
+**Wrong**:
+```code
+// bad code
+```
+
+**Correct**:
+```code
+// good code
+```
+
+**Why This Keeps Happening**: Explanation of the root cause.
+```
+
+### After adding:
+1. Commit immediately: `git commit -m "docs: Add gotcha for [description]"`
+2. Then continue with other work
+
+**If you skip this step, the same bug WILL happen again. Document it NOW.**
 
 ---
 

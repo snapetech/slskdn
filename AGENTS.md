@@ -4,6 +4,28 @@
 
 ---
 
+## 🚨 CRITICAL: Document Bugs You Fix
+
+**If you fix a bug caused by your own implementation (or any implementation), IMMEDIATELY add it to `memory-bank/decisions/adr-0001-known-gotchas.md`.**
+
+This is **highest priority** - do it before moving on to other work.
+
+### When to document:
+- You fixed a bug you or another AI introduced
+- You fixed the same type of bug twice
+- You discovered a pattern that causes crashes/errors
+- You found a "gotcha" that isn't obvious
+
+### How to document:
+1. Open `memory-bank/decisions/adr-0001-known-gotchas.md`
+2. Add entry under appropriate section (Critical/High/Accidental Cycles)
+3. Include: What went wrong, why, and how to prevent it
+4. Commit immediately with message: `docs: Add gotcha for [brief description]`
+
+**Do NOT wait until end of session. Do NOT skip this step. Future you will thank past you.**
+
+---
+
 ## Before Starting ANY Work
 
 ### Required Reading (in order)
