@@ -233,19 +233,41 @@ body {
 
 /* slskdn toggle button in nav bar */
 .slskdn-toggle.item {
-    padding: 0 8px !important;
+    padding: 4px 6px !important;
     min-width: auto !important;
+    margin: 0 2px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .slskdn-toggle .icon {
     margin: 0 !important;
-    filter: drop-shadow(0 0 4px rgba(88,166,255,0.6));
-    animation: toggle-pulse 2s ease-in-out infinite;
+    font-size: 14px !important;
 }
 
-@keyframes toggle-pulse {
-    0%, 100% { filter: drop-shadow(0 0 3px rgba(88,166,255,0.4)); opacity: 0.7; }
-    50% { filter: drop-shadow(0 0 8px rgba(88,166,255,0.8)); opacity: 1; }
+/* When status bar is hidden (toggle off) - subtle grey */
+.slskdn-toggle:not(.active) .icon {
+    opacity: 0.5;
+}
+
+/* When status bar is shown (toggle on) - green glow */
+.slskdn-toggle.active .icon {
+    filter: drop-shadow(0 0 4px rgba(33,186,69,0.7));
+}
+
+.slskdn-toggle:hover .icon {
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Nav badge styles */
+.menu-icon-group .ui.label.floating {
+    top: -0.6em !important;
+    right: -0.6em !important;
+    font-size: 9px !important;
+    min-width: 1.4em !important;
+    min-height: 1.4em !important;
+    padding: 2px 4px !important;
 }
 
 .navigation {

@@ -750,6 +750,7 @@ namespace slskd
             services.AddSingleton<DhtRendezvous.Security.PeerDiversityChecker>();
             services.AddSingleton<Capabilities.CapabilityFileService>();
             services.AddSingleton<Mesh.SmallWorldNeighborService>();
+            services.AddHostedService<DhtRendezvous.DhtPeerGreetingService>();
             services.AddSingleton<DhtRendezvous.Security.OverlayRateLimiter>();
             services.AddSingleton<DhtRendezvous.Security.OverlayBlocklist>();
             services.AddSingleton<DhtRendezvous.Security.CertificateManager>(sp =>

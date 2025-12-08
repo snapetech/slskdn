@@ -22,3 +22,16 @@ export const send = ({ username, message }) => {
 export const remove = ({ username }) => {
   return api.delete(`/conversations/${encodeURIComponent(username)}`);
 };
+
+/**
+ * Get the count of conversations with unread messages.
+ * @returns {Promise<number>} Number of conversations with unread messages
+ */
+export const getUnreadCount = async () => {
+  try {
+    const conversations = await getAll();
+    return conversations.filter((c) => c.hasUnAcknowledgedMessages).length;
+  } catch {
+    return 0;
+  }
+};

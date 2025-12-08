@@ -36,9 +36,16 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     public const int MinNeighbors = 3;
     
     /// <summary>
-    /// Event raised when a new neighbor is registered.
+    /// Raised when a new neighbor is added to the mesh.
     /// </summary>
     public event EventHandler<MeshNeighborEventArgs>? NeighborAdded;
+    
+    /// <summary>
+    /// Raised when the very first neighbor is added (mesh bootstrap complete).
+    /// </summary>
+    public event EventHandler<MeshNeighborEventArgs>? FirstNeighborConnected;
+    
+    private bool _firstNeighborEventFired = false;
     
     /// <summary>
     /// Event raised when a neighbor is removed.
@@ -106,13 +113,23 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             _connectionsByUsername[connection.Username] = connection;
             _connectionsByEndpoint[connection.RemoteEndPoint] = connection;
             
+            var isFirstNeighbor = Count == 1 && !_firstNeighborEventFired;
+            
             _logger.LogInformation(
-                "Registered mesh neighbor {Username} from {Endpoint} (total: {Count})",
+                "Registered mesh neighbor {Username} from {Endpoint} (total: {Count}){First}",
                 connection.Username,
                 connection.RemoteEndPoint,
-                Count);
+                Count,
+                isFirstNeighbor ? " 🎉 First neighbor connected!" : "");
             
             NeighborAdded?.Invoke(this, new MeshNeighborEventArgs(connection));
+            
+            // Fire first neighbor event only once per session
+            if (isFirstNeighbor)
+            {
+                _firstNeighborEventFired = true;
+                FirstNeighborConnected?.Invoke(this, new MeshNeighborEventArgs(connection));
+            }
             
             return true;
         }

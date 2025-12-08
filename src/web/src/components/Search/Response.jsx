@@ -158,24 +158,33 @@ class Response extends Component {
     downloadRequest,
     downloadError,
   ) => {
-    if (selectedFiles.length === 0) return null;
+    const noSelection = selectedFiles.length === 0;
 
     return (
       <Card.Content extra>
         <span>
           <Button
-            color="green"
+            basic={noSelection}
+            color={noSelection ? 'grey' : 'green'}
             content="Download"
-            disabled={this.props.disabled || downloadRequest === 'inProgress'}
+            disabled={
+              noSelection ||
+              this.props.disabled ||
+              downloadRequest === 'inProgress'
+            }
             icon="download"
-            label={{
-              as: 'a',
-              basic: false,
-              content: `${selectedFiles.length} file${
-                selectedFiles.length === 1 ? '' : 's'
-              }, ${selectedSize}`,
-            }}
-            labelPosition="right"
+            label={
+              noSelection
+                ? undefined
+                : {
+                    as: 'a',
+                    basic: false,
+                    content: `${selectedFiles.length} file${
+                      selectedFiles.length === 1 ? '' : 's'
+                    }, ${selectedSize}`,
+                  }
+            }
+            labelPosition={noSelection ? undefined : 'right'}
             onClick={() =>
               this.download(this.props.response.username, selectedFiles)
             }
