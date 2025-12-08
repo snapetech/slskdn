@@ -21,4 +21,3 @@ export const deleteNote = ({ username }) => {
 export const getAllNotes = () => {
   return api.get('/users/notes');
 };
-

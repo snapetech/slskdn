@@ -55,4 +55,3 @@ const UserContextMenu = ({ children, trigger, username }) => {
 };
 
 export default UserContextMenu;
-
