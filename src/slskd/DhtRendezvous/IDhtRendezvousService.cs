@@ -118,11 +118,18 @@ public sealed class DhtRendezvousStats
     public string DhtState { get; init; } = "Unknown";
     public int DiscoveredPeerCount { get; init; }
     public int ActiveMeshConnections { get; init; }
+    
+    /// <summary>Count of verified slskdn beacons (successful handshakes).</summary>
+    public int VerifiedBeaconCount { get; init; }
+    
     public long TotalPeersDiscovered { get; init; }
     public long TotalConnectionsAttempted { get; init; }
     public long TotalConnectionsSucceeded { get; init; }
     public DateTimeOffset? LastAnnounceTime { get; init; }
     public DateTimeOffset? LastDiscoveryTime { get; init; }
     public DateTimeOffset? StartedAt { get; init; }
+    
+    /// <summary>The rendezvous infohashes we announce/query (hex).</summary>
+    public IReadOnlyList<string> RendezvousInfohashes { get; init; } = Array.Empty<string>();
 }
 

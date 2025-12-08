@@ -63,6 +63,7 @@ public class DhtRendezvousController : ControllerBase
             DhtNodeCount = stats.DhtNodeCount,
             DiscoveredPeerCount = stats.DiscoveredPeerCount,
             ActiveMeshConnections = stats.ActiveMeshConnections,
+            VerifiedBeaconCount = stats.VerifiedBeaconCount,
             TotalPeersDiscovered = stats.TotalPeersDiscovered,
             TotalConnectionsAttempted = stats.TotalConnectionsAttempted,
             TotalConnectionsSucceeded = stats.TotalConnectionsSucceeded,
@@ -72,6 +73,7 @@ public class DhtRendezvousController : ControllerBase
             UptimeSeconds = stats.StartedAt.HasValue
                 ? (long)(DateTimeOffset.UtcNow - stats.StartedAt.Value).TotalSeconds
                 : 0,
+            RendezvousInfohashes = stats.RendezvousInfohashes,
         });
     }
     
@@ -307,6 +309,7 @@ public sealed class DhtStatusResponse
     public int DhtNodeCount { get; init; }
     public int DiscoveredPeerCount { get; init; }
     public int ActiveMeshConnections { get; init; }
+    public int VerifiedBeaconCount { get; init; }
     public long TotalPeersDiscovered { get; init; }
     public long TotalConnectionsAttempted { get; init; }
     public long TotalConnectionsSucceeded { get; init; }
@@ -314,6 +317,7 @@ public sealed class DhtStatusResponse
     public DateTimeOffset? LastDiscoveryTime { get; init; }
     public DateTimeOffset? StartedAt { get; init; }
     public long UptimeSeconds { get; init; }
+    public IReadOnlyList<string> RendezvousInfohashes { get; init; } = Array.Empty<string>();
 }
 
 public sealed class DiscoveredPeerResponse

@@ -414,12 +414,19 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             DhtState = _dhtEngine?.State.ToString() ?? "NotStarted",
             DiscoveredPeerCount = DiscoveredPeerCount,
             ActiveMeshConnections = ActiveMeshConnections,
+            VerifiedBeaconCount = (int)_totalConnectionsSucceeded,
             TotalPeersDiscovered = _totalPeersDiscovered,
             TotalConnectionsAttempted = _totalConnectionsAttempted,
             TotalConnectionsSucceeded = _totalConnectionsSucceeded,
             LastAnnounceTime = _lastAnnounceTime,
             LastDiscoveryTime = _lastDiscoveryTime,
             StartedAt = _startedAt,
+            RendezvousInfohashes = new[]
+            {
+                MainInfohash.ToHex(),
+                BackupInfohash1.ToHex(),
+                BackupInfohash2.ToHex(),
+            },
         };
     }
     
