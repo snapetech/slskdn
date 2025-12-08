@@ -1,0 +1,68 @@
+---
+description: Security hardening rules for experimental branch
+globs: ["src/slskd/Common/Security/**/*", "src/slskd/Transfers/**/*", "src/slskd/Files/**/*"]
+alwaysApply: false
+---
+
+# Security Hardening Rules
+
+This rule applies when working on security-sensitive code.
+
+## Security Framework Overview
+
+30 security components in `src/slskd/Common/Security/`:
+
+### Foundation (Phase 1)
+- `PathGuard.cs` - Directory traversal prevention
+- `ContentSafety.cs` - Magic byte verification
+- `ViolationTracker.cs` - Auto-escalating bans
+- `NetworkGuard.cs` - Rate limiting
+
+### Trust & Verification (Phase 2-3)
+- `CryptographicCommitment.cs` - Bait-and-switch prevention
+- `ByzantineConsensus.cs` - Multi-source verification
+- `PeerReputation.cs` - Behavioral scoring
+
+### Intelligence (Phase 4)
+- `Honeypot.cs` - Decoy files
+- `CanaryTraps.cs` - Leak tracking
+
+## Required Practices
+
+### Path Handling
+- Always use `PathGuard.NormalizeAndValidate()` for user-provided paths
+- Never trust Base64-decoded paths without validation
+- Check for `..` traversal after URL decoding
+
+### File Operations
+- Use `ContentSafety` to verify file types match extensions
+- Check for executable content (PE/ELF/Mach-O headers)
+- Validate file sizes before processing
+
+### Concurrency
+- Use `SemaphoreSlim` for download worker pools
+- Cap parallel operations at 10-20 workers
+- Never spawn unbounded `Task.Run` loops
+
+### Event Logging
+- Use `SecurityEventSink.Report()` for all security events
+- Include: event type, severity, message, IP, username
+- Subscribe to `HighSeverityEvent` for critical alerts
+
+## Testing Requirements
+
+- Add tests for path traversal attempts
+- Test with malformed/malicious inputs
+- Verify rate limiting behavior
+- Test ban escalation logic
+
+## Integration Checklist
+
+When adding security to a new area:
+
+1. [ ] Add PathGuard validation for file paths
+2. [ ] Add ContentSafety checks for downloads
+3. [ ] Wire ViolationTracker for abuse detection
+4. [ ] Add PeerReputation updates for transfer outcomes
+5. [ ] Log security events to SecurityEventSink
+6. [ ] Add unit tests for edge cases

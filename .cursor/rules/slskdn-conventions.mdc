@@ -1,0 +1,73 @@
+---
+description: slskdN coding conventions and project-specific rules
+globs: ["src/**/*"]
+alwaysApply: true
+---
+
+# slskdN Coding Conventions (Experimental Branch)
+
+## Copyright Headers
+
+### New slskdN Files
+```csharp
+// <copyright file="FileName.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+```
+
+### Existing Upstream Files
+Keep original `company="slskd Team"` attribution unchanged.
+
+### Fork-Specific Directories (Always slskdN headers)
+- `Capabilities/`
+- `HashDb/`
+- `Mesh/`
+- `Backfill/`
+- `Transfers/MultiSource/`
+- `Transfers/Ranking/`
+- `Users/Notes/`
+- `DhtRendezvous/`
+- `Common/Security/`
+
+## Backend (C#)
+
+- Use file-scoped namespaces (C# 10+)
+- Use `_privateField` naming for injected dependencies
+- **Prefer `ILogger<T>` over `Serilog.Log.ForContext`** (standardization in progress)
+- Follow patterns in existing `src/slskd/` code
+- Run `./bin/lint` before committing
+
+## Frontend (React/JSX)
+
+- Use Semantic UI React components
+- Maintain React 16.8.6 compatibility
+- Follow patterns in `src/web/src/components/`
+- Use existing state management patterns (no new Redux)
+
+## Security Code
+
+When working in `src/slskd/Common/Security/`:
+
+- Use `SecurityEventSink` for all security event logging
+- Follow existing component patterns (PathGuard, ContentSafety, etc.)
+- Add unit tests in `tests/slskd.Tests.Unit/Security/`
+- Document security decisions in code comments
+
+## Concurrency Rules
+
+- **Never use unbounded Task.Run loops**
+- Use `SemaphoreSlim` for worker pools (cap at 10-20 workers)
+- Use `Parallel.ForEachAsync` with `MaxDegreeOfParallelism` when appropriate
+
+## API Compatibility
+
+- Maintain compatibility with upstream slskd API
+- Document any API extensions in `docs/`
+- Prefer extending over modifying upstream code
+
+## Testing
+
+- Add unit tests for new backend features in `tests/slskd.Tests.Unit/`
+- Security tests go in `tests/slskd.Tests.Unit/Security/`
+- Run `dotnet test` before submitting changes
+- Run `dotnet test --filter "FullyQualifiedName~Security"` for security-only tests
