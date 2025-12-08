@@ -60,17 +60,25 @@ const SlskdnStatusBar = () => {
         const data = await slskdnAPI.getSlskdnStats();
         // Get karma from localStorage for now (backend karma system is future work)
         const storedKarma = parseInt(localStorage.getItem(KARMA_STORAGE_KEY) || '0', 10);
+        
+        // Safely extract values with fallbacks
+        const hashDb = data?.hashDb || {};
+        const mesh = data?.mesh || {};
+        const backfill = data?.backfill || {};
+        const swarmJobs = data?.swarmJobs || [];
+        
         setStats({
-          activeSwarms: data.swarmJobs?.length ?? 0,
-          backfillActive: data.backfill?.isActive ?? false,
-          hashCount: data.hashDb?.totalEntries ?? 0,
-          isSyncing: data.mesh?.isSyncing ?? false,
-          karma: data.karma?.total ?? storedKarma,
-          meshPeers: data.mesh?.connectedPeerCount ?? 0,
-          seqId: data.hashDb?.currentSeqId ?? data.mesh?.localSeqId ?? 0,
+          activeSwarms: Array.isArray(swarmJobs) ? swarmJobs.length : 0,
+          backfillActive: Boolean(backfill.isActive),
+          hashCount: Number(hashDb.totalEntries) || 0,
+          isSyncing: Boolean(mesh.isSyncing),
+          karma: Number(data?.karma?.total) || storedKarma,
+          meshPeers: Number(mesh.connectedPeerCount) || 0,
+          seqId: Number(hashDb.currentSeqId) || Number(mesh.localSeqId) || 0,
         });
       } catch (error) {
-        console.error('Failed to fetch slskdn stats for status bar:', error);
+        // Silently handle errors - status bar is non-critical
+        console.debug('Status bar fetch error (non-critical):', error?.message || error);
       }
     };
 
@@ -149,6 +157,25 @@ const SlskdnStatusBar = () => {
           />
           <span className={isSyncing ? 'syncing' : ''}>seq:{seqId}</span>
         </Link>
+
+        {karma !== undefined && karma !== null && (
+          <>
+            <span className="slskdn-status-divider">│</span>
+            <span
+              className="slskdn-status-item"
+              title="Your karma on the Soulseek network"
+            >
+              <Icon
+                color={karma > 0 ? 'green' : karma < 0 ? 'red' : 'grey'}
+                name="heart"
+                size="small"
+              />
+              <span className={karma > 0 ? 'active' : ''}>
+                {karma > 0 ? '+' : ''}{karma}
+              </span>
+            </span>
+          </>
+        )}
 
         {activeSwarms > 0 && (
           <>
