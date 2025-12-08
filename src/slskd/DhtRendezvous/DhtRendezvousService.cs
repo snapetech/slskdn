@@ -513,4 +513,36 @@ public sealed class DhtRendezvousOptions
     /// Minimum mesh neighbors before triggering discovery.
     /// </summary>
     public int MinNeighbors { get; set; } = 3;
+    
+    /// <summary>
+    /// Enable UPnP/NAT-PMP port mapping.
+    /// WARNING: UPnP has known security issues. Only enable if you understand the risks
+    /// and need automatic port forwarding. Most users should manually configure port
+    /// forwarding or use a VPN instead.
+    /// Default: false (opt-in only)
+    /// </summary>
+    public bool EnableUpnp { get; set; } = false;
+    
+    /// <summary>
+    /// Enable STUN for public IP detection.
+    /// Uses external STUN servers to detect your public IP address.
+    /// This is generally safe but does contact external servers.
+    /// Default: true
+    /// </summary>
+    public bool EnableStun { get; set; } = true;
+    
+    /// <summary>
+    /// Enable Soulseek username verification for overlay peers.
+    /// Verifies that peers control the Soulseek account they claim by checking
+    /// for a challenge token in their UserInfo description.
+    /// Default: false (adds latency to handshake)
+    /// </summary>
+    public bool EnableUsernameVerification { get; set; } = false;
+    
+    /// <summary>
+    /// Enable peer diversity checks (anti-eclipse attack protection).
+    /// Ensures mesh neighbors come from diverse IP ranges and ASNs.
+    /// Default: true
+    /// </summary>
+    public bool EnablePeerDiversity { get; set; } = true;
 }

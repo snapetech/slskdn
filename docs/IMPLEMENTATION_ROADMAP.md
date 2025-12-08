@@ -48,12 +48,12 @@ This document maps out the complete implementation path for building out the mul
 |---------|----------|------------|--------|
 | ~~**Phase 6: BitTorrent DHT Rendezvous**~~ | ~~HIGH~~ | ~~High~~ | ✅ DONE |
 | ~~Web UI for DHT status/hash database~~ | ~~LOW~~ | ~~Medium~~ | ✅ DONE |
-| Capability File sharing (`__slskdn_caps__`) | LOW | Low | Future |
+| ~~Capability File sharing (`__slskdn_caps__`)~~ | ~~LOW~~ | ~~Low~~ | ✅ Phase 6.5 |
 | Queue Reason field overloading | LOW | Low | Future |
-| Small-world neighbor optimization | LOW | Medium | Future |
-| UPnP/STUN NAT detection | MEDIUM | Medium | Future |
-| Soulseek username verification (S13) | LOW | Medium | Future |
-| Peer diversity checks (S14) | LOW | Medium | Future |
+| ~~Small-world neighbor optimization~~ | ~~LOW~~ | ~~Medium~~ | ✅ Phase 6.5 |
+| ~~UPnP/STUN NAT detection~~ | ~~MEDIUM~~ | ~~Medium~~ | ✅ Phase 6.5 |
+| ~~Soulseek username verification (S13)~~ | ~~LOW~~ | ~~Medium~~ | ✅ Phase 6.5 |
+| ~~Peer diversity checks (S14)~~ | ~~LOW~~ | ~~Medium~~ | ✅ Phase 6.5 |
 
 ---
 
@@ -724,6 +724,19 @@ src/slskd/DhtRendezvous/
 ├── MeshOverlayServer.cs
 └── NatDetectionService.cs
 ```
+
+### Sprint 4.5: Enhancements (Phase 6.5) ✅ COMPLETE
+
+| # | Task | Status | File(s) |
+|---|------|--------|---------|
+| E1 | UPnP/NAT-PMP port mapping | ✅ | `NatDetectionService.cs` (opt-in) |
+| E2 | STUN public IP detection | ✅ | `NatDetectionService.cs` |
+| E3 | Soulseek username verification | ✅ | `PeerVerificationService.cs` |
+| E4 | Peer diversity checks (anti-eclipse) | ✅ | `PeerDiversityChecker.cs` |
+| E5 | Capability file sharing | ✅ | `CapabilityFileService.cs` |
+| E6 | Small-world neighbor optimization | ✅ | `SmallWorldNeighborService.cs` |
+
+**Note:** UPnP is **disabled by default** (`EnableUpnp = false`) due to known security vulnerabilities. Users must explicitly opt-in if they need automatic port forwarding. STUN is enabled by default as it's generally safe.
 
 ### Sprint 5: Polish & Testing
 16. ✅ API endpoints for hash DB / capabilities / mesh / backfill (complete)

@@ -737,8 +737,19 @@ namespace slskd
                     AnnounceIntervalSeconds = 900,
                     DiscoveryIntervalSeconds = 600,
                     MinNeighbors = 3,
+                    EnableUpnp = false,         // Opt-in only - UPnP has security issues
+                    EnableStun = true,          // Generally safe - just detects public IP
+                    EnableUsernameVerification = false, // Adds latency
+                    EnablePeerDiversity = true, // Anti-eclipse protection
                 };
             });
+            
+            // Phase 6.5: NAT detection, peer verification, diversity, small-world
+            services.AddSingleton<DhtRendezvous.NatDetectionService>();
+            services.AddSingleton<DhtRendezvous.Security.PeerVerificationService>();
+            services.AddSingleton<DhtRendezvous.Security.PeerDiversityChecker>();
+            services.AddSingleton<Capabilities.CapabilityFileService>();
+            services.AddSingleton<Mesh.SmallWorldNeighborService>();
             services.AddSingleton<DhtRendezvous.Security.OverlayRateLimiter>();
             services.AddSingleton<DhtRendezvous.Security.OverlayBlocklist>();
             services.AddSingleton<DhtRendezvous.Security.CertificateManager>(sp =>
