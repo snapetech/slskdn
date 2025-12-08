@@ -1,5 +1,4 @@
 import './Security.css';
-import * as securityApi from '../../../lib/security';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button,
@@ -11,6 +10,7 @@ import {
   Segment,
   Statistic,
 } from 'semantic-ui-react';
+import * as securityApi from '../../../lib/security';
 
 const Security = () => {
   const [loading, setLoading] = useState(true);
@@ -127,8 +127,9 @@ const Security = () => {
           {stats.reputationStats?.untrustedPeers ?? 0} untrusted peers.
         </p>
         <p>
-          <strong>Violations:</strong> {stats.violationStats?.trackedIps ?? 0}{' '}
-          IPs, {stats.violationStats?.trackedUsernames ?? 0} usernames tracked.
+          <strong>Violations:</strong>{' '}
+          {stats.violationStats?.trackedIps ?? 0} IPs,{' '}
+          {stats.violationStats?.trackedUsernames ?? 0} usernames tracked.
         </p>
         <p>
           <strong>Crypto Health:</strong> Entropy checks:{' '}
