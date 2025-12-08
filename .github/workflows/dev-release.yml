@@ -52,16 +52,16 @@ jobs:
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d%H%M)
-          # Version format: 0.24.1.dev.YYYYMMDDHHMM.shortsha
-          DEV_VERSION="${BASE_VERSION}.dev.${TIMESTAMP}"
-          FULL_VERSION="${DEV_VERSION}+${SHORT_SHA}"
+          # Version format: 0.24.1-dev.YYYYMMDDHHMM (NuGet compatible)
+          # Note: NuGet doesn't support + for build metadata, use - for prerelease
+          DEV_VERSION="${BASE_VERSION}-dev.${TIMESTAMP}"
           
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
-          echo "version=${FULL_VERSION}" >> $GITHUB_OUTPUT
-          echo "VERSION=${FULL_VERSION}" >> $GITHUB_ENV
+          echo "version=${DEV_VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${DEV_VERSION}" >> $GITHUB_ENV
           
-          echo "📦 Building version: ${FULL_VERSION}"
+          echo "📦 Building version: ${DEV_VERSION} (commit: ${SHORT_SHA})"
 
       - name: Build Frontend
         working-directory: src/web
@@ -229,8 +229,11 @@ jobs:
           # Copy the dev PKGBUILD template
           cp ../packaging/aur/PKGBUILD-dev PKGBUILD
           
+          # Convert version for Arch (replace - with .)
+          ARCH_VERSION=$(echo "${{ needs.build.outputs.dev_version }}" | sed 's/-/./')
+          
           # Update version and checksum
-          sed -i "s/^pkgver=.*/pkgver=${{ needs.build.outputs.dev_version }}/" PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
           sed -i "s/^_commit=.*/_commit=${{ needs.build.outputs.short_sha }}/" PKGBUILD
           sed -i "s/sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' 'SKIP' 'SKIP' 'SKIP')/" PKGBUILD
           
@@ -301,8 +304,11 @@ jobs:
           # Use the dev spec template
           cp packaging/rpm/slskdn-dev.spec ~/rpmbuild/SPECS/
           
+          # Convert version for RPM (replace - with .)
+          RPM_VERSION=$(echo "${{ needs.build.outputs.dev_version }}" | sed 's/-/./')
+          
           # Update version
-          sed -i "s/^Version:.*/Version:        ${{ needs.build.outputs.dev_version }}/" ~/rpmbuild/SPECS/slskdn-dev.spec
+          sed -i "s/^Version:.*/Version:        ${RPM_VERSION}/" ~/rpmbuild/SPECS/slskdn-dev.spec
           
           cat ~/rpmbuild/SPECS/slskdn-dev.spec | head -30
 
