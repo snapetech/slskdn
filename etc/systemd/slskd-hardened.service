@@ -1,0 +1,129 @@
+# Hardened systemd unit file for slskd
+# SECURITY: Maximum isolation and privilege restriction
+#
+# Installation:
+#   1. Copy to /etc/systemd/system/slskd.service
+#   2. Create slskd user: sudo useradd -r -s /usr/sbin/nologin -d /var/lib/slskd slskd
+#   3. Create directories: sudo mkdir -p /var/lib/slskd /var/log/slskd
+#   4. Set permissions: sudo chown -R slskd:slskd /var/lib/slskd /var/log/slskd
+#   5. Enable: sudo systemctl enable slskd
+#   6. Start: sudo systemctl start slskd
+
+[Unit]
+Description=slskd - Soulseek Client
+Documentation=https://github.com/slskd/slskd
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=slskd
+Group=slskd
+
+# Working directory
+WorkingDirectory=/var/lib/slskd
+
+# Environment
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+Environment=DOTNET_NOLOGO=1
+
+# Main executable
+ExecStart=/usr/lib/slskd/slskd --app-dir /var/lib/slskd --config /etc/slskd/slskd.yml
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+WatchdogSec=60
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=4096
+MemoryMax=2G
+TasksMax=256
+
+# ============================================
+# SECURITY HARDENING
+# ============================================
+
+# Filesystem protection
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+
+# Read-write paths (adjust for your setup)
+ReadWritePaths=/var/lib/slskd
+ReadWritePaths=/var/log/slskd
+# Add your media directories:
+# ReadOnlyPaths=/srv/media
+# ReadWritePaths=/srv/downloads
+
+# No write access to /etc except config
+ReadOnlyPaths=/etc
+BindReadOnlyPaths=/etc/slskd
+
+# Namespace isolation
+PrivateUsers=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# Network restrictions
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+# Allow outbound to Soulseek servers and local network
+# Adjust these for your network:
+IPAddressAllow=localhost
+IPAddressAllow=192.168.0.0/16
+IPAddressAllow=10.0.0.0/8
+IPAddressAllow=0.0.0.0/0
+
+# Capability restrictions
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# System call filtering
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount @swap @reboot @obsolete
+
+# Prevent privilege escalation
+RestrictSUIDSGID=yes
+
+# Memory protection
+MemoryDenyWriteExecute=yes
+
+# Restrict namespaces
+RestrictNamespaces=yes
+
+# Lock personality
+LockPersonality=yes
+
+# Umask for file creation
+UMask=0077
+
+# Remove all capabilities if possible
+# (uncomment if slskd doesn't need any)
+# CapabilityBoundingSet=
+
+# Seccomp (additional system call filtering)
+# SystemCallErrorNumber=EPERM
+
+# ============================================
+# LOGGING
+# ============================================
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=slskd
+SyslogFacility=daemon
+
+[Install]
+WantedBy=multi-user.target
+
