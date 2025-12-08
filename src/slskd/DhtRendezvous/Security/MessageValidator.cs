@@ -7,6 +7,8 @@ namespace slskd.DhtRendezvous.Security;
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using slskd.DhtRendezvous.Messages;
 
@@ -75,6 +77,40 @@ public static partial class MessageValidator
     
     [GeneratedRegex(@"^[a-zA-Z0-9\-_]+$", RegexOptions.Compiled)]
     private static partial Regex NonceRegex();
+
+    // Pre-computed magic bytes for constant-time comparison
+    private static readonly byte[] ExpectedMagicBytes = Encoding.UTF8.GetBytes(OverlayProtocol.Magic);
+    
+    /// <summary>
+    /// Constant-time string comparison to prevent timing attacks.
+    /// SECURITY: Use this for any security-critical string comparisons.
+    /// </summary>
+    public static bool ConstantTimeEquals(string? a, string? b)
+    {
+        if (a is null || b is null)
+        {
+            return a is null && b is null;
+        }
+        
+        var aBytes = Encoding.UTF8.GetBytes(a);
+        var bBytes = Encoding.UTF8.GetBytes(b);
+        
+        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+    }
+    
+    /// <summary>
+    /// Validates the protocol magic string using constant-time comparison.
+    /// </summary>
+    private static bool ValidateMagic(string? magic)
+    {
+        if (magic is null)
+        {
+            return false;
+        }
+        
+        var magicBytes = Encoding.UTF8.GetBytes(magic);
+        return CryptographicOperations.FixedTimeEquals(magicBytes, ExpectedMagicBytes);
+    }
     
     /// <summary>
     /// Validates a mesh hello message.
@@ -88,10 +124,10 @@ public static partial class MessageValidator
             return ValidationResult.Fail("Message is null");
         }
         
-        // Magic MUST match exactly
-        if (message.Magic != OverlayProtocol.Magic)
+        // SECURITY: Use constant-time comparison for magic to prevent timing attacks
+        if (!ValidateMagic(message.Magic))
         {
-            return ValidationResult.Fail($"Invalid magic: expected '{OverlayProtocol.Magic}'");
+            return ValidationResult.Fail("Invalid protocol magic");
         }
         
         // Version bounds
@@ -147,9 +183,9 @@ public static partial class MessageValidator
             return ValidationResult.Fail("Message is null");
         }
         
-        if (message.Magic != OverlayProtocol.Magic)
+        if (!ValidateMagic(message.Magic))
         {
-            return ValidationResult.Fail($"Invalid magic: expected '{OverlayProtocol.Magic}'");
+            return ValidationResult.Fail("Invalid protocol magic");
         }
         
         if (message.Version < MinVersion || message.Version > MaxVersion)
@@ -200,9 +236,9 @@ public static partial class MessageValidator
             return ValidationResult.Fail("Message is null");
         }
         
-        if (message.Magic != OverlayProtocol.Magic)
+        if (!ValidateMagic(message.Magic))
         {
-            return ValidationResult.Fail("Invalid magic");
+            return ValidationResult.Fail("Invalid protocol magic");
         }
         
         // Timestamp must be reasonable (within last 24 hours to prevent replay)
@@ -226,9 +262,9 @@ public static partial class MessageValidator
             return ValidationResult.Fail("Message is null");
         }
         
-        if (message.Magic != OverlayProtocol.Magic)
+        if (!ValidateMagic(message.Magic))
         {
-            return ValidationResult.Fail("Invalid magic");
+            return ValidationResult.Fail("Invalid protocol magic");
         }
         
         return ValidationResult.Success;
@@ -244,9 +280,9 @@ public static partial class MessageValidator
             return ValidationResult.Fail("Message is null");
         }
         
-        if (message.Magic != OverlayProtocol.Magic)
+        if (!ValidateMagic(message.Magic))
         {
-            return ValidationResult.Fail("Invalid magic");
+            return ValidationResult.Fail("Invalid protocol magic");
         }
         
         if (message.Reason is not null && message.Reason.Length > MaxReasonLength)

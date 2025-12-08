@@ -298,3 +298,98 @@ public sealed class BlocklistStats
     public int TotalBlocked => BlockedIpCount + BlockedUsernameCount;
 }
 
+
+/// <summary>
+/// Tracks violations for a specific IP address.
+/// </summary>
+public sealed class ViolationRecord
+{
+    /// <summary>
+    /// Recent violations within the time window.
+    /// </summary>
+    public Queue<Violation> RecentViolations { get; } = new();
+    
+    /// <summary>
+    /// Total violations ever recorded.
+    /// </summary>
+    public long TotalViolations { get; set; }
+    
+    /// <summary>
+    /// Number of automatic bans triggered.
+    /// </summary>
+    public int AutoBanCount { get; set; }
+    
+    /// <summary>
+    /// When the last violation occurred.
+    /// </summary>
+    public DateTimeOffset? LastViolation { get; set; }
+    
+    /// <summary>
+    /// First violation timestamp.
+    /// </summary>
+    public DateTimeOffset FirstViolation { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>
+/// A single recorded violation.
+/// </summary>
+public sealed class Violation
+{
+    public required ViolationType Type { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+    public string? Details { get; init; }
+}
+
+/// <summary>
+/// Types of security violations.
+/// </summary>
+public enum ViolationType
+{
+    /// <summary>Invalid or malformed message.</summary>
+    InvalidMessage,
+    
+    /// <summary>Protocol violation (bad magic, wrong version).</summary>
+    ProtocolViolation,
+    
+    /// <summary>Rate limit exceeded.</summary>
+    RateLimitExceeded,
+    
+    /// <summary>Failed authentication attempt.</summary>
+    AuthenticationFailure,
+    
+    /// <summary>Certificate pin mismatch (potential MITM).</summary>
+    CertificateMismatch,
+    
+    /// <summary>Path traversal attempt.</summary>
+    PathTraversal,
+    
+    /// <summary>Dangerous content detected.</summary>
+    DangerousContent,
+    
+    /// <summary>Suspicious behavior pattern.</summary>
+    SuspiciousBehavior,
+    
+    /// <summary>Abuse or harassment.</summary>
+    Abuse,
+    
+    /// <summary>Other violation.</summary>
+    Other,
+}
+
+/// <summary>
+/// Action taken in response to a violation.
+/// </summary>
+public enum ViolationAction
+{
+    /// <summary>No action taken (under threshold).</summary>
+    None,
+    
+    /// <summary>Warning threshold reached.</summary>
+    Warning,
+    
+    /// <summary>Temporary ban applied.</summary>
+    TemporaryBan,
+    
+    /// <summary>Permanent ban applied.</summary>
+    PermanentBan,
+}
