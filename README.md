@@ -134,6 +134,16 @@ All automatic downloads use intelligent source selection based on your history.
 - Tracks success/failure rates per user, used by auto-replace and wishlist
 - API endpoint at `/api/v0/ranking`
 
+### 🚀 Multi-Source Downloads *(Experimental)*
+Download files from multiple peers simultaneously for faster, more reliable transfers.
+- **Parallel chunk downloads** from multiple sources
+- **Automatic source discovery** finds all peers with matching files
+- **Intelligent stitching** assembles chunks seamlessly
+- **Failure resilience** continues from other sources if one fails
+- **Network-friendly** — distributes load instead of hammering single users
+
+📖 **[Full network impact analysis](docs/multipart-downloads.md)**
+
 ### 📱 PWA & Mobile Support
 Install slskdN as an app on your phone.
 - Add to Home Screen on iOS/Android, standalone mode
@@ -209,6 +219,7 @@ dotnet run --project src/slskd/slskd.csproj
 | Ntfy/Pushover notifications | ❌ | ✅ |
 | Tabbed browsing | ❌ | ✅ |
 | Smart source ranking | ❌ | ✅ |
+| Multi-source downloads | ❌ | 🧪 |
 | PWA support | ❌ | ✅ |
 | Open to community feedback | 🔒 | ✅ |
 
