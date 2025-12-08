@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png" width="100" height="100" alt="slskdN logo">
 </p>
-<h1 align="center">slskdN</h1>
+<h1 align="center">slskdN(OT)</h1>
 <p align="center"><strong>The batteries-included Soulseek web client</strong></p>
 <p align="center">
   <a href="https://github.com/snapetech/slskdn/releases">Releases</a> •
@@ -27,10 +27,10 @@
 <small>
 
 ## What is slskdN?
-**slskdN** is a feature-rich fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
+**slskdN(OT)** (as in, NOT slskd), is a richly feature-added fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
 > **Everything built-in. No scripts required.**
 
-If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. We also think that when someone takes the time to contribute working code, having a conversation about it is the least one can do.
+If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN(OT) is for you. We also think that when someone takes the time to contribute working code, having a conversation about it is the least one can do.
 
 ## Features
 
