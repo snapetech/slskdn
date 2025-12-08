@@ -1,5 +1,5 @@
-// <copyright file="TelemetryService.cs" company="slskd Team">
-//     Copyright (c) slskd Team. All rights reserved.
+// <copyright file="TelemetryService.cs" company="slskdN">
+//     Copyright (c) slskdN. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
 //     it under the terms of the GNU Affero General Public License as published
@@ -15,14 +15,16 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
-namespace slskd;
+namespace slskd.Telemetry;
 
 public class TelemetryService
 {
-    public TelemetryService(PrometheusService prometheusService)
+    public TelemetryService(PrometheusService prometheusService, ReportsService reportsService)
     {
         Prometheus = prometheusService;
+        Reports = reportsService;
     }
 
     public PrometheusService Prometheus { get; }
+    public ReportsService Reports { get; }
 }
