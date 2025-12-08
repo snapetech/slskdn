@@ -22,10 +22,12 @@ namespace slskd.Mesh
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
     using Serilog;
     using slskd.Capabilities;
+    using slskd.DhtRendezvous.Security;
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh.Messages;
@@ -149,6 +151,32 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<MeshMessage> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default)
         {
+            // SECURITY: Validate username before any processing
+            var usernameValidation = MessageValidator.ValidateUsername(fromUser);
+            if (!usernameValidation.IsValid)
+            {
+                log.Warning("[MESH] Rejecting message from invalid username: {Error}", usernameValidation.Error);
+                stats.RejectedMessages++;
+                return null;
+            }
+
+            // SECURITY: Validate message is not null
+            if (message == null)
+            {
+                log.Warning("[MESH] Rejecting null message from {Peer}", fromUser);
+                stats.RejectedMessages++;
+                return null;
+            }
+
+            // SECURITY: Validate message-specific constraints before processing
+            var messageValidation = ValidateIncomingMessage(fromUser, message);
+            if (!messageValidation.IsValid)
+            {
+                log.Warning("[MESH] Rejecting invalid message from {Peer}: {Error}", fromUser, messageValidation.Error);
+                stats.RejectedMessages++;
+                return null;
+            }
+
             var state = GetOrCreatePeerState(fromUser);
             state.LastSeen = DateTime.UtcNow;
             state.IsMeshCapable = true;
@@ -161,6 +189,71 @@ namespace slskd.Mesh
                 MeshMessageType.ReqKey => await HandleReqKeyAsync(fromUser, (MeshReqKeyMessage)message, cancellationToken),
                 _ => null,
             };
+        }
+
+        /// <summary>
+        ///     Validates incoming mesh messages for security.
+        /// </summary>
+        private ValidationResult ValidateIncomingMessage(string fromUser, MeshMessage message)
+        {
+            switch (message)
+            {
+                case MeshReqDeltaMessage req:
+                    if (req.SinceSeqId < 0)
+                    {
+                        return ValidationResult.Fail($"Invalid SinceSeqId: {req.SinceSeqId}");
+                    }
+                    if (req.MaxEntries < 0 || req.MaxEntries > MaxEntriesPerSync * 2)
+                    {
+                        return ValidationResult.Fail($"Invalid MaxEntries: {req.MaxEntries}");
+                    }
+                    break;
+
+                case MeshPushDeltaMessage push:
+                    if (push.Entries == null)
+                    {
+                        return ValidationResult.Fail("Entries list is null");
+                    }
+                    if (push.Entries.Count > MaxEntriesPerSync * 2)
+                    {
+                        return ValidationResult.Fail($"Too many entries: {push.Entries.Count} > {MaxEntriesPerSync * 2}");
+                    }
+                    if (push.LatestSeqId < 0)
+                    {
+                        return ValidationResult.Fail($"Invalid LatestSeqId: {push.LatestSeqId}");
+                    }
+                    break;
+
+                case MeshReqKeyMessage reqKey:
+                    var keyValidation = MessageValidator.ValidateFlacKey(reqKey.FlacKey);
+                    if (!keyValidation.IsValid)
+                    {
+                        return keyValidation;
+                    }
+                    break;
+
+                case MeshHelloMessage hello:
+                    if (hello.LatestSeqId < 0)
+                    {
+                        return ValidationResult.Fail($"Invalid LatestSeqId: {hello.LatestSeqId}");
+                    }
+                    if (hello.HashCount < 0)
+                    {
+                        return ValidationResult.Fail($"Invalid HashCount: {hello.HashCount}");
+                    }
+                    // ClientId and ClientVersion are informational, just length-check them
+                    if (hello.ClientId?.Length > 64)
+                    {
+                        return ValidationResult.Fail("ClientId too long");
+                    }
+                    if (hello.ClientVersion?.Length > 64)
+                    {
+                        return ValidationResult.Fail("ClientVersion too long");
+                    }
+                    break;
+            }
+
+            return ValidationResult.Success;
         }
 
         /// <inheritdoc/>
@@ -198,7 +291,7 @@ namespace slskd.Mesh
                 MetaFlags = metaFlags,
             }, cancellationToken);
 
-            log.Debug("[MESH] Published hash {Key} -> {Hash}", flacKey, byteHash.Substring(0, Math.Min(16, byteHash.Length)));
+            log.Debug("[MESH] Published hash {Key} -> {Hash}", flacKey, byteHash?.Length >= 16 ? byteHash.Substring(0, 16) + "..." : byteHash ?? "(null)");
 
             // The hash will propagate to peers during next sync session
             // No immediate push - epidemic model relies on pull-based delta sync
@@ -265,29 +358,88 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<int> MergeEntriesAsync(string fromUser, IEnumerable<MeshHashEntry> entries, CancellationToken cancellationToken = default)
         {
-            var hashEntries = entries.Select(e => new HashDbEntry
+            // SECURITY: Validate each entry before merging
+            var validatedEntries = new List<HashDbEntry>();
+            var skipped = 0;
+            var entryList = entries.ToList();
+
+            foreach (var entry in entryList)
             {
-                FlacKey = e.FlacKey,
-                ByteHash = e.ByteHash,
-                Size = e.Size,
-                MetaFlags = e.MetaFlags,
-            });
+                // Validate FLAC key
+                var keyValidation = MessageValidator.ValidateFlacKey(entry.FlacKey);
+                if (!keyValidation.IsValid)
+                {
+                    log.Debug("[MESH] Skipping entry with invalid FlacKey from {Peer}: {Error}", fromUser, keyValidation.Error);
+                    skipped++;
+                    continue;
+                }
 
-            var merged = await hashDb.MergeEntriesFromMeshAsync(hashEntries, cancellationToken);
+                // Validate byte hash
+                var hashValidation = MessageValidator.ValidateSha256Hash(entry.ByteHash);
+                if (!hashValidation.IsValid)
+                {
+                    log.Debug("[MESH] Skipping entry with invalid ByteHash from {Peer}: {Error}", fromUser, hashValidation.Error);
+                    skipped++;
+                    continue;
+                }
 
-            stats.TotalEntriesReceived += entries.Count();
-            stats.TotalEntriesMerged += merged;
+                // Validate file size
+                var sizeValidation = MessageValidator.ValidateFileSize(entry.Size);
+                if (!sizeValidation.IsValid)
+                {
+                    log.Debug("[MESH] Skipping entry with invalid Size from {Peer}: {Error}", fromUser, sizeValidation.Error);
+                    skipped++;
+                    continue;
+                }
 
-            // Update peer state
-            var state = GetOrCreatePeerState(fromUser);
-            var maxSeq = entries.Max(e => e.SeqId);
-            if (maxSeq > state.LastSeqSeen)
-            {
-                state.LastSeqSeen = maxSeq;
-                await hashDb.UpdatePeerLastSeqSeenAsync(fromUser, maxSeq, cancellationToken);
+                // Validate SeqId
+                if (entry.SeqId < 0)
+                {
+                    log.Debug("[MESH] Skipping entry with negative SeqId from {Peer}: {SeqId}", fromUser, entry.SeqId);
+                    skipped++;
+                    continue;
+                }
+
+                validatedEntries.Add(new HashDbEntry
+                {
+                    FlacKey = entry.FlacKey,
+                    ByteHash = entry.ByteHash,
+                    Size = entry.Size,
+                    MetaFlags = entry.MetaFlags,
+                });
             }
 
-            log.Information("[MESH] Merged {Merged}/{Total} entries from {Peer}", merged, entries.Count(), fromUser);
+            if (skipped > 0)
+            {
+                log.Warning("[MESH] Skipped {Skipped}/{Total} invalid entries from {Peer}", skipped, entryList.Count, fromUser);
+                stats.SkippedEntries += skipped;
+            }
+
+            if (validatedEntries.Count == 0)
+            {
+                log.Warning("[MESH] No valid entries to merge from {Peer}", fromUser);
+                return 0;
+            }
+
+            var merged = await hashDb.MergeEntriesFromMeshAsync(validatedEntries, cancellationToken);
+
+            stats.TotalEntriesReceived += entryList.Count;
+            stats.TotalEntriesMerged += merged;
+
+            // Update peer state - only consider validated entries for max seq
+            var state = GetOrCreatePeerState(fromUser);
+            var validSeqIds = entryList.Where(e => e.SeqId >= 0).Select(e => e.SeqId).ToList();
+            if (validSeqIds.Count > 0)
+            {
+                var maxSeq = validSeqIds.Max();
+                if (maxSeq > state.LastSeqSeen)
+                {
+                    state.LastSeqSeen = maxSeq;
+                    await hashDb.UpdatePeerLastSeqSeenAsync(fromUser, maxSeq, cancellationToken);
+                }
+            }
+
+            log.Information("[MESH] Merged {Merged}/{Valid} valid entries from {Peer} ({Skipped} skipped)", merged, validatedEntries.Count, fromUser, skipped);
             return merged;
         }
 

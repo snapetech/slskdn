@@ -34,6 +34,12 @@ public static class OverlayTimeouts
     public static readonly TimeSpan MessageRead = TimeSpan.FromSeconds(30);
     
     /// <summary>
+    /// Maximum time to wait for any single message write.
+    /// SECURITY: Shorter than read timeout to prevent slow clients from holding connections.
+    /// </summary>
+    public static readonly TimeSpan MessageWrite = TimeSpan.FromSeconds(5);
+    
+    /// <summary>
     /// Maximum time connection can be idle before disconnect.
     /// </summary>
     public static readonly TimeSpan Idle = TimeSpan.FromMinutes(5);

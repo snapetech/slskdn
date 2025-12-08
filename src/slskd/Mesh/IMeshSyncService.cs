@@ -160,6 +160,12 @@ namespace slskd.Mesh
 
         /// <summary>Gets or sets our current sequence ID.</summary>
         public long CurrentSeqId { get; set; }
+
+        /// <summary>Gets or sets count of messages rejected due to validation failures.</summary>
+        public long RejectedMessages { get; set; }
+
+        /// <summary>Gets or sets count of entries skipped during merge due to validation failures.</summary>
+        public long SkippedEntries { get; set; }
     }
 
     /// <summary>

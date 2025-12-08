@@ -42,6 +42,9 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private long _totalAccepted;
     private long _totalRejected;
     
+    // Helper for deserializing raw messages (stateless, just need the JSON options)
+    private readonly SecureMessageFramer _framerInstance = new(Stream.Null);
+    
     private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
     private int ListenPortConfig => _dhtOptions.OverlayPort;
     
@@ -227,6 +230,11 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     {
                         case PinCheckResult.NotPinned:
                             // First time seeing this user - pin their certificate
+                            // SECURITY: Log at INFO level for TOFU visibility
+                            _logger.LogInformation(
+                                "TOFU: First connection from {Username}, pinning certificate {Thumbprint}",
+                                hello.Username,
+                                connection.CertificateThumbprint?[..16] + "...");
                             _pinStore.SetPin(hello.Username, connection.CertificateThumbprint);
                             break;
                         
@@ -334,7 +342,15 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     switch (messageType)
                     {
                         case Messages.OverlayMessageType.Ping:
-                            var ping = new SecureMessageFramer(new MemoryStream(rawMessage)).DeserializeMessage<Messages.PingMessage>(rawMessage);
+                            var ping = _framerInstance.DeserializeMessage<Messages.PingMessage>(rawMessage);
+                            // SECURITY: Validate ping message before responding
+                            var pingValidation = MessageValidator.ValidatePing(ping);
+                            if (!pingValidation.IsValid)
+                            {
+                                _logger.LogWarning("Invalid ping from {Username}: {Error}", connection.Username, pingValidation.Error);
+                                _rateLimiter.RecordViolation(connection.RemoteAddress);
+                                break;
+                            }
                             await connection.WriteMessageAsync(new Messages.PongMessage { Timestamp = ping.Timestamp }, cancellationToken);
                             break;
                         
@@ -343,15 +359,23 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             break;
                         
                         case Messages.OverlayMessageType.Disconnect:
-                            _logger.LogDebug("Received disconnect from {Username}", connection.Username);
+                            var disconnect = _framerInstance.DeserializeMessage<Messages.DisconnectMessage>(rawMessage);
+                            var disconnectValidation = MessageValidator.ValidateDisconnect(disconnect);
+                            if (!disconnectValidation.IsValid)
+                            {
+                                _logger.LogWarning("Invalid disconnect from {Username}: {Error}", connection.Username, disconnectValidation.Error);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Received disconnect from {Username}: {Reason}", connection.Username, disconnect?.Reason ?? "no reason");
+                            }
                             goto cleanup;
                         
                         default:
                             // Forward to mesh sync service for handling
                             if (connection.Username is not null)
                             {
-                                // TODO: Integrate with IMeshSyncService message handling
-                                _logger.LogTrace("Received message type {Type} from {Username}", messageType, connection.Username);
+                                await HandleMeshMessageAsync(connection, rawMessage, messageType, cancellationToken);
                             }
                             break;
                     }
@@ -383,6 +407,52 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _rateLimiter.RecordDisconnection(connection.RemoteAddress);
         _rateLimiter.RemoveConnection(connection.ConnectionId);
         await connection.DisposeAsync();
+    }
+    
+    /// <summary>
+    /// Handle mesh protocol messages by forwarding to MeshSyncService.
+    /// </summary>
+    private async Task HandleMeshMessageAsync(MeshOverlayConnection connection, byte[] rawMessage, string? messageType, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to parse as a mesh message
+            Mesh.Messages.MeshMessage? meshMessage = messageType switch
+            {
+                "mesh_sync_hello" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshHelloMessage>(rawMessage),
+                "mesh_req_delta" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshReqDeltaMessage>(rawMessage),
+                "mesh_push_delta" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshPushDeltaMessage>(rawMessage),
+                "mesh_req_key" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshReqKeyMessage>(rawMessage),
+                "mesh_ack" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshAckMessage>(rawMessage),
+                _ => null,
+            };
+            
+            if (meshMessage == null)
+            {
+                _logger.LogDebug("Unknown message type {Type} from {Username}, ignoring", messageType, connection.Username);
+                return;
+            }
+            
+            _logger.LogDebug("Forwarding {Type} message from {Username} to MeshSyncService", messageType, connection.Username);
+            
+            // Forward to mesh sync service
+            var response = await _meshSyncService.HandleMessageAsync(connection.Username!, meshMessage, cancellationToken);
+            
+            // Send response if any
+            if (response != null)
+            {
+                await connection.WriteMessageAsync(response, cancellationToken);
+            }
+        }
+        catch (ProtocolViolationException ex)
+        {
+            _logger.LogWarning("Protocol violation parsing mesh message from {Username}: {Error}", connection.Username, ex.Message);
+            _rateLimiter.RecordViolation(connection.RemoteAddress);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error handling mesh message from {Username}", connection.Username);
+        }
     }
     
     public MeshOverlayServerStats GetStats()

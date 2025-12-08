@@ -40,7 +40,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private DhtEngine? _dhtEngine;
     private IDhtListener? _dhtListener;
     
-    private readonly ConcurrentBag<IPEndPoint> _discoveredPeers = new();
+    // SECURITY: Use a bounded collection to prevent memory exhaustion
+    private readonly ConcurrentDictionary<string, IPEndPoint> _discoveredPeers = new();
+    private const int MaxDiscoveredPeers = 1000;
     private DateTimeOffset? _lastAnnounceTime;
     private DateTimeOffset? _lastDiscoveryTime;
     private DateTimeOffset? _startedAt;
@@ -70,7 +72,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     public bool IsBeaconCapable { get; private set; }
     public bool IsDhtRunning => _dhtEngine?.State == DhtState.Ready;
     public int DhtNodeCount => _dhtEngine?.NodeCount ?? 0;
-    public int DiscoveredPeerCount => _discoveredPeers.Count;
+    public int DiscoveredPeerCount => _discoveredPeers.Values.Count;
     public int ActiveMeshConnections => _registry.Count;
     
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -216,7 +218,8 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         _dhtEngine.StateChanged += OnDhtStateChanged;
         
         // Create UDP listener for DHT on a random port (standard DHT port range)
-        var dhtPort = _options.DhtPort > 0 ? _options.DhtPort : new Random().Next(6881, 6999);
+        // SECURITY: Use cryptographic RNG for port selection
+        var dhtPort = _options.DhtPort > 0 ? _options.DhtPort : System.Security.Cryptography.RandomNumberGenerator.GetInt32(6881, 7000);
         _dhtListener = MonoTorrent.Factories.Default.CreateDhtListener(new IPEndPoint(IPAddress.Any, dhtPort));
         
         if (_dhtListener is null)
@@ -224,7 +227,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             throw new InvalidOperationException("Failed to create DHT listener");
         }
         
-        _logger.LogDebug("Created DHT listener on port {Port}", dhtPort);
+        _logger.LogDebug("Created DHT listener for port {Port}", dhtPort);
         
         // Attach listener to engine
         await _dhtEngine.SetListenerAsync(_dhtListener);
@@ -256,7 +259,19 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             await _dhtEngine.StartAsync();
         }
         
-        _logger.LogInformation("DHT engine started, state: {State}", _dhtEngine.State);
+        // SECURITY: Verify we actually bound to the expected port after startup
+        // Note: LocalEndPoint may not be available until after engine starts
+        var actualEndpoint = _dhtListener.LocalEndPoint;
+        if (actualEndpoint is not null && actualEndpoint.Port != dhtPort)
+        {
+            _logger.LogWarning(
+                "DHT listener bound to unexpected port! Expected {Expected}, got {Actual}. Possible local attack.",
+                dhtPort,
+                actualEndpoint.Port);
+        }
+        
+        _logger.LogInformation("DHT engine started on port {Port}, state: {State}", 
+            actualEndpoint?.Port ?? dhtPort, _dhtEngine.State);
     }
     
     private void OnPeersFound(object? sender, PeersFoundEventArgs e)
@@ -289,11 +304,18 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 }
                 
                 var endpoint = new IPEndPoint(ip, uri.Port);
+                var endpointKey = $"{ip}:{uri.Port}";
+                
+                // SECURITY: Cap discovered peers to prevent memory exhaustion
+                if (_discoveredPeers.Count >= MaxDiscoveredPeers)
+                {
+                    _logger.LogDebug("Discovered peers at capacity ({Max}), skipping {Endpoint}", MaxDiscoveredPeers, endpoint);
+                    continue;
+                }
                 
                 // Don't add ourselves or already-known peers
-                if (!_discoveredPeers.Contains(endpoint))
+                if (_discoveredPeers.TryAdd(endpointKey, endpoint))
                 {
-                    _discoveredPeers.Add(endpoint);
                     Interlocked.Increment(ref _totalPeersDiscovered);
                     _logger.LogDebug("Discovered new mesh peer: {Endpoint}", endpoint);
                     
@@ -396,7 +418,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     
     public IReadOnlyList<IPEndPoint> GetDiscoveredPeers()
     {
-        return _discoveredPeers.ToList();
+        return _discoveredPeers.Values.ToList();
     }
     
     public IReadOnlyList<MeshPeerInfo> GetMeshPeers()
@@ -435,8 +457,11 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     /// </summary>
     public void AddPeerEndpoint(IPEndPoint endpoint)
     {
-        _discoveredPeers.Add(endpoint);
-        _logger.LogDebug("Added manual peer endpoint {Endpoint}", endpoint);
+        var key = $"{endpoint.Address}:{endpoint.Port}";
+        if (_discoveredPeers.TryAdd(key, endpoint))
+        {
+            _logger.LogDebug("Added manual peer endpoint {Endpoint}", endpoint);
+        }
     }
     
     private bool ShouldAnnounce()

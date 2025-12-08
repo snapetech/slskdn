@@ -21,7 +21,9 @@ public sealed class CertificateManager
 {
     private readonly ILogger<CertificateManager> _logger;
     private readonly string _certificatePath;
+    private readonly string _passwordPath;
     private X509Certificate2? _serverCertificate;
+    private string? _certificatePassword;
     private readonly object _lock = new();
     
     /// <summary>
@@ -38,6 +40,7 @@ public sealed class CertificateManager
     {
         _logger = logger;
         _certificatePath = Path.Combine(appDirectory, "overlay_cert.pfx");
+        _passwordPath = Path.Combine(appDirectory, "overlay_cert.key");
     }
     
     /// <summary>
@@ -152,7 +155,7 @@ public sealed class CertificateManager
     }
     
     /// <summary>
-    /// Save certificate to file.
+    /// Save certificate to file with password protection.
     /// </summary>
     private void SaveCertificate(X509Certificate2 certificate, string path)
     {
@@ -162,8 +165,15 @@ public sealed class CertificateManager
             Directory.CreateDirectory(directory);
         }
         
-        var pfxBytes = certificate.Export(X509ContentType.Pfx);
+        // SECURITY: Generate a random password for the PFX
+        var password = GenerateRandomPassword();
+        _certificatePassword = password;
+        
+        var pfxBytes = certificate.Export(X509ContentType.Pfx, password);
         File.WriteAllBytes(path, pfxBytes);
+        
+        // Save password to separate file
+        File.WriteAllText(_passwordPath, password);
         
         // Set restrictive permissions (Unix only)
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
@@ -171,6 +181,7 @@ public sealed class CertificateManager
             try
             {
                 File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                File.SetUnixFileMode(_passwordPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             }
             catch (Exception ex)
             {
@@ -178,15 +189,49 @@ public sealed class CertificateManager
             }
         }
         
-        _logger.LogDebug("Saved certificate to {Path}", path);
+        _logger.LogDebug("Saved certificate to {Path} with password protection", path);
     }
     
     /// <summary>
     /// Load certificate from file.
     /// </summary>
-    private static X509Certificate2 LoadCertificate(string path)
+    private X509Certificate2 LoadCertificate(string path)
     {
-        return new X509Certificate2(path);
+        // Try to load password from file
+        string? password = null;
+        if (File.Exists(_passwordPath))
+        {
+            try
+            {
+                password = File.ReadAllText(_passwordPath).Trim();
+                _certificatePassword = password;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not read certificate password file");
+            }
+        }
+        
+        // Try loading with password first, then without (for backwards compatibility)
+        try
+        {
+            return new X509Certificate2(path, password, X509KeyStorageFlags.Exportable);
+        }
+        catch (CryptographicException) when (password != null)
+        {
+            _logger.LogWarning("Certificate password mismatch, trying without password (legacy)");
+            return new X509Certificate2(path);
+        }
+    }
+    
+    /// <summary>
+    /// Generate a cryptographically random password.
+    /// </summary>
+    private static string GenerateRandomPassword()
+    {
+        var bytes = new byte[32];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+        return Convert.ToBase64String(bytes);
     }
 }
 

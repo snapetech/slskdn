@@ -342,7 +342,8 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         ThrowIfNotActive();
         
         using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
-        writeCts.CancelAfter(OverlayTimeouts.MessageRead);
+        // SECURITY: Use shorter write timeout to prevent slow clients from holding connections
+        writeCts.CancelAfter(OverlayTimeouts.MessageWrite);
         
         await _framer.WriteMessageAsync(message, writeCts.Token);
         LastActivity = DateTimeOffset.UtcNow;

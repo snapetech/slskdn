@@ -68,11 +68,10 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         var successCount = 0;
         var shuffled = candidates.ToList();
         
-        // Shuffle for fairness
-        var rng = new Random();
+        // SECURITY: Use cryptographic RNG for peer selection to prevent prediction attacks
         for (var i = shuffled.Count - 1; i > 0; i--)
         {
-            var j = rng.Next(i + 1);
+            var j = System.Security.Cryptography.RandomNumberGenerator.GetInt32(i + 1);
             (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
         }
         
@@ -171,6 +170,11 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     switch (pinResult)
                     {
                         case PinCheckResult.NotPinned:
+                            // SECURITY: Log at INFO level for TOFU visibility
+                            _logger.LogInformation(
+                                "TOFU: First connection to {Username}, pinning certificate {Thumbprint}",
+                                ack.Username,
+                                connection.CertificateThumbprint?[..16] + "...");
                             _pinStore.SetPin(ack.Username, connection.CertificateThumbprint);
                             break;
                         
