@@ -1,0 +1,109 @@
+name: Update Homebrew Tap
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  update-tap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Get Release Info
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # For manual run, fetch latest release tag
+            LATEST_TAG=$(curl -s https://api.github.com/repos/snapetech/slskdn/releases/latest | jq -r .tag_name)
+            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate Hashes
+        id: hashes
+        run: |
+          TAG=${{ steps.release.outputs.tag }}
+          BASE_URL="https://github.com/snapetech/slskdn/releases/download/${TAG}"
+          
+          # Linux x64
+          LINUX_URL="${BASE_URL}/slskdn-${TAG}-linux-x64.zip"
+          curl -L -o linux.zip "$LINUX_URL"
+          LINUX_SHA=$(sha256sum linux.zip | awk '{print $1}')
+          
+          # macOS arm64
+          OSX_ARM_URL="${BASE_URL}/slskdn-${TAG}-osx-arm64.zip"
+          curl -L -o osx_arm.zip "$OSX_ARM_URL"
+          OSX_ARM_SHA=$(sha256sum osx_arm.zip | awk '{print $1}')
+          
+          # macOS Intel
+          OSX_INTEL_URL="${BASE_URL}/slskdn-${TAG}-osx-x64.zip"
+          curl -L -o osx_intel.zip "$OSX_INTEL_URL"
+          OSX_INTEL_SHA=$(sha256sum osx_intel.zip | awk '{print $1}')
+
+          echo "linux_sha=$LINUX_SHA" >> $GITHUB_OUTPUT
+          echo "osx_arm_sha=$OSX_ARM_SHA" >> $GITHUB_OUTPUT
+          echo "osx_intel_sha=$OSX_INTEL_SHA" >> $GITHUB_OUTPUT
+          echo "linux_url=$LINUX_URL" >> $GITHUB_OUTPUT
+          echo "osx_arm_url=$OSX_ARM_URL" >> $GITHUB_OUTPUT
+          echo "osx_intel_url=$OSX_INTEL_URL" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew Tap
+        env:
+          GH_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          # Clone the tap repo
+          git clone https://x-access-token:${GH_TOKEN}@github.com/snapetech/homebrew-slskdn.git tap-repo
+          cd tap-repo
+          
+          # Update the Formula
+          mkdir -p Formula
+          cat > Formula/slskdn.rb <<INNEREOF
+          class Slskdn < Formula
+            desc "Batteries-included Soulseek web client"
+            homepage "https://github.com/snapetech/slskdn"
+            license "AGPL-3.0-or-later"
+            version "${{ steps.release.outputs.version }}"
+          
+            on_macos do
+              on_arm do
+                url "${{ steps.hashes.outputs.osx_arm_url }}"
+                sha256 "${{ steps.hashes.outputs.osx_arm_sha }}"
+              end
+              on_intel do
+                url "${{ steps.hashes.outputs.osx_intel_url }}"
+                sha256 "${{ steps.hashes.outputs.osx_intel_sha }}"
+              end
+            end
+          
+            on_linux do
+              url "${{ steps.hashes.outputs.linux_url }}"
+              sha256 "${{ steps.hashes.outputs.linux_sha }}"
+            end
+          
+            def install
+              # Install all files to libexec
+              libexec.install Dir["*"]
+              
+              # Create a shim in bin that points to the binary in libexec
+              # We rename the command to 'slskdn' to match the package name
+              (bin/"slskdn").write_exec_script libexec/"slskd"
+            end
+          
+            test do
+              assert_match "slskd", shell_output("#{bin}/slskdn --help", 1)
+            end
+          end
+INNEREOF
+          
+          # Commit and push
+          git config user.name "slskdn-bot"
+          git config user.email "slskdn@proton.me"
+          git add Formula/slskdn.rb
+          git commit -m "Update slskdn to ${{ steps.release.outputs.version }}"
+          git push origin main

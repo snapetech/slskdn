@@ -155,11 +155,19 @@ Getting started is simple—we don't believe in gatekeeping.
 ### Arch Linux (AUR)
 **Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
 ```bash
-yay -S slskdN-bin          # Binary package (recommended)
-yay -S slskdN              # Or build from source
+yay -S slskdn-bin          # Binary package (recommended)
+yay -S slskdn              # Or build from source
 sudo systemctl enable --now slskd
 ```
 Access at http://localhost:5030
+
+### Homebrew (macOS/Linux)
+Install the pre-built binary:
+```bash
+brew tap snapetech/slskdn
+brew install slskdn
+```
+(Once the tap is set up)
 
 ### With Docker
 ```bash
