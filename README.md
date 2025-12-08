@@ -250,6 +250,11 @@ destinations:
 ## Versioning
 slskdn follows slskd's version numbers with a suffix: `0.24.1-slskdn.1` = First slskdn release based on slskd 0.24.1
 
+Detailed documentation for configuration options can be found [here](https://github.com/slskd/slskd/blob/master/docs/config.md), and an example of the YAML configuration file can be reviewed [here](https://github.com/slskd/slskd/blob/master/config/slskd.example.yml).
+
+## Reverse Proxy
+slskdn may require extra configuration when running it behind a reverse proxy. Refer [here](https://github.com/slskd/slskd/blob/master/docs/reverse_proxy.md) for a short guide.
+
 ## Contributing
 We welcome contributions from *everyone*—first-timers and veterans alike. No prior commit history required.
 
