@@ -428,7 +428,7 @@ jobs:
           sed -i 's/^Package: slskdn$/Package: slskdn-dev/' debian/control
           sed -i 's/^Conflicts: slskd$/Conflicts: slskd, slskdn/' debian/control
           sed -i 's/^Replaces: slskd$/Replaces: slskd, slskdn/' debian/control
-          sed -i 's/slskdn - /slskdn-dev - DEV: /' debian/control
+          sed -i 's/^Description:.*/Description: 🔋 DEV: The batteries included, ***EXPERIMENTAL*** fork of slskd. Feature-rich, including multi-source downloads, DHT mesh sync, swarm mode \& more/' debian/control
           
           # Use timestamp-based PPA revision
           PPA_REV=$(date +%Y%m%d%H%M)

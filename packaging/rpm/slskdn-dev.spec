@@ -1,7 +1,7 @@
 Name:           slskdn-dev
 Version:        0.24.1.dev.202412080000
 Release:        1%{?dist}
-Summary:        🔋 DEV: The batteries included, EXPERIMENTAL fork of slskd
+Summary:        🔋 DEV: The batteries included, ***EXPERIMENTAL*** fork of slskd. Feature-rich, including multi-source downloads, DHT mesh sync, swarm mode & more
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn/tree/experimental/multi-source-swarm
@@ -26,35 +26,7 @@ Conflicts:      slskdn
 Obsoletes:      slskd < %{version}
 
 %description
-🧪 DEVELOPMENT BUILD - Tracks experimental/multi-source-swarm branch
-
-The batteries included, **EXPERIMENTAL** fork of slskd. Feature-rich,
-including cutting-edge experimental features:
-
-Multi-Source Downloads (Swarm Mode):
-- Download files from multiple peers simultaneously
-- Content-verified chunked transfers
-- Dynamic peer speed ranking with automatic failover
-- Speculative execution for fast chunk completion
-
-DHT Mesh Network:
-- Distributed hash table for FLAC content verification
-- Gossip-based mesh synchronization between slskdn clients
-- BitTorrent DHT rendezvous for peer discovery
-- TLS-secured overlay connections
-
-Hash Database:
-- Local SQLite database of verified FLAC hashes
-- Automatic backfill from non-DHT peers
-- Mesh sync with sequence-based delta updates
-
-Plus all stable slskdn features:
-- Wishlist with auto-download
-- Smart source ranking
-- Tabbed user browsing
-- Push notifications
-
-⚠️  This is a development build and may contain bugs!
+🔋 DEV: The batteries included, ***EXPERIMENTAL*** fork of slskd. Feature-rich, including multi-source downloads, DHT mesh sync, swarm mode & more
 
 %prep
 %setup -q -c
