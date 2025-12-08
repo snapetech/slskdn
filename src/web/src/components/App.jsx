@@ -1,13 +1,11 @@
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 import { urlBase } from '../config';
-import * as chat from '../lib/chat';
 import { createApplicationHubConnection } from '../lib/hubFactory';
 import * as relayAPI from '../lib/relay';
 import { connect, disconnect } from '../lib/server';
 import * as session from '../lib/session';
 import { isPassthroughEnabled } from '../lib/token';
-import * as transfers from '../lib/transfers';
 import AppContext from './AppContext';
 import Browse from './Browse/Browse';
 import Chat from './Chat/Chat';
@@ -31,7 +29,6 @@ import {
   Button,
   Header,
   Icon,
-  Label,
   Loader,
   Menu,
   Modal,
@@ -44,17 +41,12 @@ const initialState = {
   applicationState: {},
   error: false,
   initialized: false,
-  // Track to detect new completions
-  lastDownloadCount: 0,
   login: {
     error: undefined,
     pending: false,
   },
-  // Badge counters for navigation
-  newDownloadsCount: 0,
   retriesExhausted: false,
   statusBarVisible: isStatusBarVisible(),
-  unreadChatCount: 0,
 };
 
 const ModeSpecificConnectButton = ({
@@ -187,10 +179,6 @@ class App extends Component {
     // Listen for status bar toggle from the status bar's close button
     window.addEventListener('slskdn-status-toggle', this.handleStatusBarToggle);
 
-    // Start badge counter polling (every 5 seconds)
-    this.badgeInterval = setInterval(this.updateBadgeCounts, 5_000);
-    this.updateBadgeCounts();
-
     this.init();
   }
 
@@ -199,49 +187,7 @@ class App extends Component {
       'slskdn-status-toggle',
       this.handleStatusBarToggle,
     );
-    if (this.badgeInterval) {
-      clearInterval(this.badgeInterval);
-    }
   }
-
-  updateBadgeCounts = async () => {
-    try {
-      // Update unread chat count
-      const unreadChatCount = await chat.getUnreadCount();
-
-      // Update download count - track new completions
-      const allDownloads = await transfers.getAll({ direction: 'download' });
-      const completedCount = allDownloads.filter(
-        (d) => d.state && d.state.includes('Completed, Succeeded'),
-      ).length;
-
-      // Check if we're currently viewing downloads
-      const isViewingDownloads =
-        window.location.pathname.includes('/downloads');
-
-      this.setState((previousState) => {
-        // Only increment new downloads counter if not viewing downloads
-        let newDownloadsCount = previousState.newDownloadsCount;
-        if (
-          !isViewingDownloads &&
-          completedCount > previousState.lastDownloadCount
-        ) {
-          newDownloadsCount += completedCount - previousState.lastDownloadCount;
-        } else if (isViewingDownloads) {
-          // Reset counter when viewing downloads
-          newDownloadsCount = 0;
-        }
-
-        return {
-          lastDownloadCount: completedCount,
-          newDownloadsCount,
-          unreadChatCount,
-        };
-      });
-    } catch {
-      // Ignore errors during badge updates
-    }
-  };
 
   handleStatusBarToggle = () => {
     this.setState({ statusBarVisible: isStatusBarVisible() });
@@ -471,19 +417,7 @@ class App extends Component {
                 </Link>
                 <Link to={`${urlBase}/downloads`}>
                   <Menu.Item>
-                    <Icon.Group className="menu-icon-group">
-                      <Icon name="download" />
-                      {this.state.newDownloadsCount > 0 && (
-                        <Label
-                          circular
-                          color="green"
-                          floating
-                          size="mini"
-                        >
-                          {this.state.newDownloadsCount}
-                        </Label>
-                      )}
-                    </Icon.Group>
+                    <Icon name="download" />
                     Downloads
                   </Menu.Item>
                 </Link>
@@ -501,19 +435,7 @@ class App extends Component {
                 </Link>
                 <Link to={`${urlBase}/chat`}>
                   <Menu.Item>
-                    <Icon.Group className="menu-icon-group">
-                      <Icon name="comment" />
-                      {this.state.unreadChatCount > 0 && (
-                        <Label
-                          circular
-                          color="red"
-                          floating
-                          size="mini"
-                        >
-                          {this.state.unreadChatCount}
-                        </Label>
-                      )}
-                    </Icon.Group>
+                    <Icon name="comment" />
                     Chat
                   </Menu.Item>
                 </Link>

@@ -29,6 +29,12 @@ export const remove = ({ username }) => {
  */
 export const getUnreadCount = async () => {
   try {
+    // Don't make API calls if we don't have a token
+    const token =
+      localStorage.getItem('slskd-token') ||
+      sessionStorage.getItem('slskd-token');
+    if (!token) return 0;
+
     const conversations = await getAll();
     return conversations.filter((c) => c.hasUnAcknowledgedMessages).length;
   } catch {
