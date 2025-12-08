@@ -1,0 +1,191 @@
+.security-dashboard {
+  padding: 0.5em;
+}
+
+.security-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.security-header .ui.header {
+  margin: 0;
+}
+
+.security-stats {
+  margin-bottom: 1.5em !important;
+}
+
+.security-stats .statistic {
+  margin: 0 !important;
+}
+
+.security-stats .column {
+  text-align: center;
+  padding: 1em !important;
+}
+
+.security-cards {
+  margin-bottom: 1.5em !important;
+}
+
+.security-cards .card {
+  background: rgba(0, 0, 0, 0.2) !important;
+}
+
+.security-cards .card .header {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.security-cards .card .header .icon {
+  margin: 0 !important;
+}
+
+.security-cards .table {
+  background: transparent !important;
+}
+
+.security-cards .table td {
+  border: none !important;
+  padding: 0.4em 0 !important;
+}
+
+.security-cards .ui.progress {
+  margin: 0 !important;
+}
+
+.security-cards .extra .button {
+  margin: 0 !important;
+}
+
+.security-events-preview {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+.security-events-preview .table {
+  background: transparent !important;
+}
+
+.security-events-preview .table td {
+  border: none !important;
+  padding: 0.3em 0.5em !important;
+}
+
+.security-events-preview .button {
+  margin-top: 0.5em !important;
+}
+
+/* Severity colors */
+.ui.label.red {
+  background-color: #db2828 !important;
+}
+
+.ui.label.orange {
+  background-color: #f2711c !important;
+}
+
+.ui.label.yellow {
+  background-color: #fbbd08 !important;
+  color: #333 !important;
+}
+
+.ui.label.blue {
+  background-color: #2185d0 !important;
+}
+
+/* Dark theme adjustments */
+.security-dashboard .ui.card,
+.security-dashboard .ui.cards > .card {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.security-dashboard .ui.card > .content,
+.security-dashboard .ui.cards > .card > .content {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.security-dashboard .ui.table tr td {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.security-dashboard .ui.statistic > .value,
+.security-dashboard .ui.statistics .statistic > .value {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.security-dashboard .ui.statistic > .label,
+.security-dashboard .ui.statistics .statistic > .label {
+  color: rgba(255, 255, 255, 0.6) !important;
+  text-transform: uppercase;
+  font-size: 0.7em !important;
+}
+
+/* Modal dark theme */
+.security-dashboard .ui.modal {
+  background: #1b1c1d !important;
+}
+
+.security-dashboard .ui.modal > .header {
+  background: #1b1c1d !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.security-dashboard .ui.modal > .content {
+  background: #1b1c1d !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.security-dashboard .ui.modal > .actions {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Responsive adjustments */
+@media only screen and (max-width: 768px) {
+  .security-stats .column {
+    padding: 0.5em !important;
+  }
+
+  .security-stats .statistic .value {
+    font-size: 1.5em !important;
+  }
+
+  .security-cards.ui.cards {
+    margin: 0 !important;
+  }
+
+  .security-cards .card {
+    margin: 0.5em 0 !important;
+  }
+}
+
+/* Compact table styling */
+.security-dashboard .ui.compact.table td {
+  padding: 0.5em 0.7em !important;
+}
+
+.security-dashboard code {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9em;
+}
+
+/* Animation for refresh */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.security-dashboard .refreshing {
+  animation: pulse 1s infinite;
+}
+
