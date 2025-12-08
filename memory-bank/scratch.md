@@ -12,6 +12,34 @@
 
 ---
 
+## Quick Reference: Security Components (30 total)
+
+### Phase 1 - Foundation (8)
+- `PathGuard.cs` - Path traversal prevention
+- `ContentSafety.cs` - Magic byte verification
+- `ViolationTracker.cs` - Auto-escalating bans
+- `ConnectionFingerprint.cs` - Forensic logging
+- `PeerReputation.cs` - Behavioral scoring
+- `PrivacyMode.cs` - Metadata minimization
+- `ParanoidMode.cs` - Server validation
+- `NetworkGuard.cs` - Rate limiting
+
+### Phase 2-3 - Trust (5)
+- `CryptographicCommitment.cs` - Bait-and-switch prevention
+- `ProofOfStorage.cs` - Chunk challenges
+- `ByzantineConsensus.cs` - 2/3+1 voting
+- `ProbabilisticVerification.cs` - Random sampling
+- `TemporalConsistency.cs` - Change tracking
+
+### Phase 4 - Intelligence (5)
+- `EntropyMonitor.cs` - RNG health
+- `FingerprintDetection.cs` - Port scan detection
+- `Honeypot.cs` - Decoy files
+- `CanaryTraps.cs` - Invisible watermarking
+- `AsymmetricDisclosure.cs` - 6-tier trust model
+
+---
+
 ## Ideas Parking Lot
 
 ### Multi-Source Improvements
@@ -39,9 +67,33 @@
 - Some AI-added npm packages may be unused (yaml, uuid)
 
 ### Architecture Questions
-- Should PathGuard be a static utility or injected service?
-- DownloadWorker extraction - what interface should it implement?
-- How to share security services between transfer handlers cleanly?
+- Should PathGuard be a static utility or injected service? → **Answer: Static utility with optional DI wrapper**
+- DownloadWorker extraction - what interface should it implement? → **Answer: IDownloadWorker with CancellationToken support**
+- How to share security services between transfer handlers cleanly? → **Answer: SecurityServices aggregate class**
+
+---
+
+## Common Commands
+
+```bash
+# Run backend
+./bin/watch
+
+# Run frontend
+cd src/web && npm start
+
+# Run all tests
+dotnet test
+
+# Run security tests only
+dotnet test --filter "FullyQualifiedName~Security"
+
+# Lint
+./bin/lint
+
+# Build release
+./bin/build
+```
 
 ---
 
