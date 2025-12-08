@@ -40,8 +40,8 @@ jobs:
       - name: Set Environment Variables
         id: version
         run: |
-          # Get the latest tag (fallback to a known tag if none found)
-          TAG=$(git tag --sort=-version:refname | head -n1)
+          # Get the latest slskdn tag only
+          TAG=$(git tag --sort=-version:refname | grep -E '^\d+\.\d+\.\d+-slskdn\.\d+$' | head -n1)
           if [ -z "$TAG" ]; then
             TAG="0.24.1-slskdn.19"
           fi
