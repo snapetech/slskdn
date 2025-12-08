@@ -1,0 +1,262 @@
+name: Update Packaging
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  update-nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get Release Info
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG=$(curl -s https://api.github.com/repos/snapetech/slskdn/releases/latest | jq -r .tag_name)
+          else
+            TAG=${{ github.event.release.tag_name }}
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Calculate Hashes
+        id: hashes
+        run: |
+          TAG=${{ steps.release.outputs.tag }}
+          BASE="https://github.com/snapetech/slskdn/releases/download/${TAG}"
+          
+          calc_hash() {
+            curl -L -o tmp.zip "$1"
+            sha256sum tmp.zip | awk '{print $1}'
+            rm tmp.zip
+          }
+
+          echo "linux_x64=$(calc_hash ${BASE}/slskdn-${TAG}-linux-x64.zip)" >> $GITHUB_OUTPUT
+          echo "linux_arm64=$(calc_hash ${BASE}/slskdn-${TAG}-linux-arm64.zip)" >> $GITHUB_OUTPUT
+          echo "osx_x64=$(calc_hash ${BASE}/slskdn-${TAG}-osx-x64.zip)" >> $GITHUB_OUTPUT
+          echo "osx_arm64=$(calc_hash ${BASE}/slskdn-${TAG}-osx-arm64.zip)" >> $GITHUB_OUTPUT
+
+      - name: Update flake.nix
+        run: |
+          TAG=${{ steps.release.outputs.tag }}
+          # Rewrite the file with new version and hashes
+          cat > flake.nix <<INNEREOF
+          {
+            description = "Batteries-included Soulseek web client";
+
+            inputs = {
+              nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+              flake-utils.url = "github:numtide/flake-utils";
+            };
+
+            outputs = { self, nixpkgs, flake-utils }:
+              flake-utils.lib.eachDefaultSystem (system:
+                let
+                  pkgs = nixpkgs.legacyPackages.\${system};
+                  version = "${TAG}";
+                  
+                  sources = {
+                    "x86_64-linux" = {
+                      url = "https://github.com/snapetech/slskdn/releases/download/\${version}/slskdn-\${version}-linux-x64.zip";
+                      sha256 = "${{ steps.hashes.outputs.linux_x64 }}";
+                    };
+                    "aarch64-linux" = {
+                      url = "https://github.com/snapetech/slskdn/releases/download/\${version}/slskdn-\${version}-linux-arm64.zip";
+                      sha256 = "${{ steps.hashes.outputs.linux_arm64 }}";
+                    };
+                    "x86_64-darwin" = {
+                      url = "https://github.com/snapetech/slskdn/releases/download/\${version}/slskdn-\${version}-osx-x64.zip";
+                      sha256 = "${{ steps.hashes.outputs.osx_x64 }}";
+                    };
+                    "aarch64-darwin" = {
+                      url = "https://github.com/snapetech/slskdn/releases/download/\${version}/slskdn-\${version}-osx-arm64.zip";
+                      sha256 = "${{ steps.hashes.outputs.osx_arm64 }}";
+                    };
+                  };
+                in
+                {
+                  packages.default = if builtins.hasAttr system sources then
+                    let
+                      srcConfig = sources.\${system};
+                    in
+                    pkgs.stdenv.mkDerivation {
+                      pname = "slskdn";
+                      inherit version;
+
+                      src = pkgs.fetchurl {
+                        inherit (srcConfig) url sha256;
+                      };
+
+                      nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper ];
+
+                      unpackPhase = "unzip \$src";
+
+                      installPhase = ''
+                        mkdir -p \$out/libexec/slskdn \$out/bin
+                        cp -r * \$out/libexec/slskdn/
+                        chmod +x \$out/libexec/slskdn/slskd
+                        
+                        makeWrapper \$out/libexec/slskdn/slskd \$out/bin/slskdn \\
+                          --prefix LD_LIBRARY_PATH : \${pkgs.lib.makeLibraryPath [ pkgs.icu pkgs.openssl ]}
+                      '';
+                    }
+                  else
+                    throw "Unsupported system: \${system}";
+                }
+              );
+          }
+INNEREOF
+
+      - name: Commit Nix Update
+        run: |
+          git config user.name "slskdn-bot"
+          git config user.email "slskdn@proton.me"
+          git add flake.nix
+          git commit -m "chore: Update flake.nix to ${{ steps.release.outputs.tag }}" || echo "No changes"
+          git push
+
+  update-flatpak:
+    runs-on: ubuntu-latest
+    needs: update-nix
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      
+      - name: Get Release Info
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG=$(curl -s https://api.github.com/repos/snapetech/slskdn/releases/latest | jq -r .tag_name)
+          else
+            TAG=${{ github.event.release.tag_name }}
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Update Manifest
+        run: |
+          TAG=${{ steps.release.outputs.tag }}
+          URL="https://github.com/snapetech/slskdn/releases/download/${TAG}/slskdn-${TAG}-linux-x64.zip"
+          curl -L -o tmp.zip "$URL"
+          SHA=$(sha256sum tmp.zip | awk '{print $1}')
+          rm tmp.zip
+          
+          FILE="packaging/flatpak/org.slskdn.slskdn.yml"
+          sed -i "s|url: .*|url: $URL|" $FILE
+          sed -i "s|sha256: .*|sha256: $SHA|" $FILE
+          
+      - name: Commit Flatpak Update
+        run: |
+          git config user.name "slskdn-bot"
+          git config user.email "slskdn@proton.me"
+          git add packaging/flatpak/org.slskdn.slskdn.yml
+          git commit -m "chore: Update Flatpak manifest to ${{ steps.release.outputs.tag }}" || echo "No changes"
+          git push
+
+  winget-pr:
+    runs-on: ubuntu-latest
+    needs: update-flatpak
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get Release Info
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG=$(curl -s https://api.github.com/repos/snapetech/slskdn/releases/latest | jq -r .tag_name)
+          else
+            TAG=${{ github.event.release.tag_name }}
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          
+      - name: Prepare Winget Submission
+        env:
+          GH_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "Skipping Winget PR: WINGET_GITHUB_TOKEN not set"
+            exit 0
+          fi
+          
+          TAG=${{ steps.release.outputs.tag }}
+          VERSION=$TAG
+          
+          URL="https://github.com/snapetech/slskdn/releases/download/${TAG}/slskdn-${TAG}-win-x64.zip"
+          curl -L -o win.zip "$URL"
+          SHA=$(sha256sum win.zip | awk '{print $1}')
+          rm win.zip
+          
+          git config --global user.name "slskdn-bot"
+          git config --global user.email "slskdn@proton.me"
+          
+          git clone https://x-access-token:${GH_TOKEN}@github.com/snapetech/winget-pkgs.git winget-pkgs
+          cd winget-pkgs
+          
+          git remote add upstream https://github.com/microsoft/winget-pkgs.git
+          git fetch upstream
+          git reset --hard upstream/master
+          
+          BRANCH="update-slskdn-${VERSION}"
+          git checkout -b $BRANCH
+          
+          PKG_DIR="manifests/s/snapetech/slskdn/${VERSION}"
+          mkdir -p $PKG_DIR
+          
+          cat > $PKG_DIR/snapetech.slskdn.installer.yaml <<INNEREOF
+          PackageIdentifier: snapetech.slskdn
+          PackageVersion: $VERSION
+          InstallerLocale: en-US
+          MinimumOSVersion: 10.0.0.0
+          InstallerType: zip
+          Installers:
+            - Architecture: x64
+              InstallerUrl: $URL
+              InstallerSha256: $SHA
+              NestedInstallerType: portable
+              NestedInstallerFiles:
+                - RelativeFilePath: slskd/slskd.exe
+                  PortableCommandAlias: slskdn
+          ManifestType: installer
+          ManifestVersion: 1.5.0
+INNEREOF
+          
+          cat > $PKG_DIR/snapetech.slskdn.locale.en-US.yaml <<INNEREOF
+          PackageIdentifier: snapetech.slskdn
+          PackageVersion: $VERSION
+          PackageLocale: en-US
+          Publisher: snapetech
+          PublisherUrl: https://github.com/snapetech/slskdn
+          PublisherSupportUrl: https://github.com/snapetech/slskdn/issues
+          PackageName: slskdn
+          PackageUrl: https://github.com/snapetech/slskdn
+          License: AGPL-3.0-or-later
+          LicenseUrl: https://github.com/snapetech/slskdn/blob/master/LICENSE
+          ShortDescription: Batteries-included Soulseek web client
+          Tags:
+            - soulseek
+            - p2p
+            - file-sharing
+            - music
+          ManifestType: defaultLocale
+          ManifestVersion: 1.5.0
+INNEREOF
+          
+          cat > $PKG_DIR/snapetech.slskdn.yaml <<INNEREOF
+          PackageIdentifier: snapetech.slskdn
+          PackageVersion: $VERSION
+          DefaultLocale: en-US
+          ManifestType: version
+          ManifestVersion: 1.5.0
+INNEREOF
+          
+          git add .
+          git commit -m "New version: snapetech.slskdn version $VERSION"
+          git push -u origin $BRANCH
+          
+          gh pr create --repo microsoft/winget-pkgs \
+            --title "Update snapetech.slskdn to $VERSION" \
+            --body "Updates slskdn to version $VERSION. Release notes: https://github.com/snapetech/slskdn/releases/tag/$TAG" \
+            --base master \
+            --head snapetech:$BRANCH
