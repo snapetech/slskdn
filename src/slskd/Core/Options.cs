@@ -36,6 +36,7 @@ namespace slskd
     using slskd.Relay;
     using slskd.Shares;
     using slskd.Validation;
+    using slskd.DhtRendezvous;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
     using YamlDotNet.Serialization;
@@ -243,6 +244,12 @@ namespace slskd
         /// </summary>
         [Validate]
         public GlobalOptions Global { get; init; } = new GlobalOptions();
+
+        /// <summary>
+        ///     Gets the DhtRendezvous options.
+        /// </summary>
+        [YamlMember(Alias = "dht")]
+        public DhtRendezvousOptions DhtRendezvous { get; init; } = new DhtRendezvousOptions();
 
         /// <summary>
         ///     Gets user groups.

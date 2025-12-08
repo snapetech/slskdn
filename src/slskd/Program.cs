@@ -76,6 +76,9 @@ namespace slskd
     using slskd.Common.Security;
     using slskd.Validation;
     using slskd.Common.Security;
+    using slskd.DhtRendezvous;
+    using slskd.DhtRendezvous.Security;
+    using slskd.Transfers.MultiSource.Discovery;
     using Soulseek;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
@@ -699,11 +702,17 @@ namespace slskd
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 
             // DhtRendezvous services (BitTorrent DHT peer discovery)
-            services.AddSingleton<DhtRendezvous.IDhtRendezvousService, DhtRendezvous.DhtRendezvousService>();
-            // If DhtRendezvousService is a BackgroundService/IHostedService, register it as such
-            // Assuming it implements IHostedService based on 'Rendezvous' name implying background work
-            // Checking file content next to be sure, but standard pattern is usually AddHostedService pointing to the singleton
-            services.AddHostedService(p => (DhtRendezvous.DhtRendezvousService)p.GetRequiredService<DhtRendezvous.IDhtRendezvousService>());
+            services.AddSingleton(OptionsAtStartup.DhtRendezvous);
+            services.AddSingleton<CertificateManager>();
+            services.AddSingleton<CertificatePinStore>();
+            services.AddSingleton<OverlayRateLimiter>();
+            services.AddSingleton<OverlayBlocklist>();
+            services.AddSingleton<MeshNeighborRegistry>();
+            services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();
+            services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
+
+            services.AddSingleton<IDhtRendezvousService, DhtRendezvousService>();
+            services.AddHostedService(p => (DhtRendezvousService)p.GetRequiredService<IDhtRendezvousService>());
 
             // Backfill services (Long-tail content discovery)
             services.AddSingleton<Backfill.IBackfillSchedulerService, Backfill.BackfillSchedulerService>();
@@ -713,6 +722,7 @@ namespace slskd
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
 
             // Multi-source download services (Swarm)
+            services.AddSingleton<ISourceDiscoveryService, SourceDiscoveryService>();
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
             services.AddSingleton<Transfers.MultiSource.IContentVerificationService, Transfers.MultiSource.ContentVerificationService>();
 
