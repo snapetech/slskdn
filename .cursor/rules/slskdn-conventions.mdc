@@ -4,7 +4,9 @@ globs: ["src/**/*"]
 alwaysApply: true
 ---
 
-# slskdN Coding Conventions (Experimental Branch)
+# slskdN Coding Conventions
+
+> **Read first**: `memory-bank/decisions/adr-0002-code-patterns.md` and `adr-0003-anti-slop-rules.md`
 
 ## Copyright Headers
 
@@ -19,55 +21,103 @@ alwaysApply: true
 Keep original `company="slskd Team"` attribution unchanged.
 
 ### Fork-Specific Directories (Always slskdN headers)
-- `Capabilities/`
-- `HashDb/`
-- `Mesh/`
-- `Backfill/`
-- `Transfers/MultiSource/`
-- `Transfers/Ranking/`
-- `Users/Notes/`
-- `DhtRendezvous/`
-- `Common/Security/`
+- `Capabilities/`, `HashDb/`, `Mesh/`, `Backfill/`
+- `Transfers/MultiSource/`, `Transfers/Ranking/`
+- `Users/Notes/`, `Wishlist/`, `DhtRendezvous/`
 
 ## Backend (C#)
 
-- Use file-scoped namespaces (C# 10+)
-- Use `_privateField` naming for injected dependencies
-- **Prefer `ILogger<T>` over `Serilog.Log.ForContext`** (standardization in progress)
-- Follow patterns in existing `src/slskd/` code
-- Run `./bin/lint` before committing
+### Service Pattern
+```csharp
+// Interface + Implementation together
+public interface IMyService { }
+public class MyService : IMyService
+{
+    public MyService(IOptionsMonitor<Options> optionsMonitor, ILogger<MyService> logger)
+    {
+        OptionsMonitor = optionsMonitor;
+        Logger = logger;
+    }
+    private IOptionsMonitor<Options> OptionsMonitor { get; }
+    private ILogger Logger { get; }
+}
+```
+
+### DI Registration (in Program.cs)
+```csharp
+services.AddSingleton<IMyService, MyService>();
+// For hosted services:
+services.AddHostedService(p => p.GetRequiredService<MyService>());
+```
+
+### Options Access
+- **Singleton**: `IOptionsMonitor<Options>` → `OptionsMonitor.CurrentValue`
+- **Scoped**: `IOptionsSnapshot<Options>`
+- **Startup-only**: `OptionsAtStartup`
+
+### Async Event Handlers (CRITICAL)
+```csharp
+private async void Client_Event(object s, EventArgs e)
+{
+    try { await DoWorkAsync(); }
+    catch (Exception ex) { Logger.Error(ex, "..."); }
+}
+```
+
+### Don't Do
+- ❌ Factory patterns (use DI directly)
+- ❌ Defensive null checks on internal code
+- ❌ Try-catch that swallows errors
+- ❌ Logging method entry/exit
+- ❌ `async Task.FromResult()` for sync operations
+- ❌ IDisposable without disposable resources
 
 ## Frontend (React/JSX)
 
-- Use Semantic UI React components
-- Maintain React 16.8.6 compatibility
-- Follow patterns in `src/web/src/components/`
-- Use existing state management patterns (no new Redux)
+### Component Pattern
+```jsx
+const MyComponent = ({ prop }) => {
+  const [data, setData] = useState([]);
+  const fetch = async () => {
+    try {
+      const response = await myLib.getAll();
+      setData(response);
+    } catch (error) {
+      toast.error(error?.response?.data ?? error?.message ?? error);
+    }
+  };
+  useEffect(() => { fetch(); }, []);
+  return <div>...</div>;
+};
+```
 
-## Security Code
+### API Library Pattern (CRITICAL)
+```javascript
+export const getAll = async () => {
+  const response = (await api.get('/endpoint')).data;
+  return Array.isArray(response) ? response : [];  // NEVER return undefined
+};
+```
 
-When working in `src/slskd/Common/Security/`:
-
-- Use `SecurityEventSink` for all security event logging
-- Follow existing component patterns (PathGuard, ContentSafety, etc.)
-- Add unit tests in `tests/slskd.Tests.Unit/Security/`
-- Document security decisions in code comments
-
-## Concurrency Rules
-
-- **Never use unbounded Task.Run loops**
-- Use `SemaphoreSlim` for worker pools (cap at 10-20 workers)
-- Use `Parallel.ForEachAsync` with `MaxDegreeOfParallelism` when appropriate
-
-## API Compatibility
-
-- Maintain compatibility with upstream slskd API
-- Document any API extensions in `docs/`
-- Prefer extending over modifying upstream code
+### Don't Do
+- ❌ Class components (use function + hooks)
+- ❌ PropTypes (not used in this codebase)
+- ❌ TypeScript (this is plain JS)
+- ❌ New state management libraries
+- ❌ React 17+ features (we're on 16.8.6)
 
 ## Testing
 
-- Add unit tests for new backend features in `tests/slskd.Tests.Unit/`
-- Security tests go in `tests/slskd.Tests.Unit/Security/`
-- Run `dotnet test` before submitting changes
-- Run `dotnet test --filter "FullyQualifiedName~Security"` for security-only tests
+- Tests go in `tests/slskd.Tests.Unit/`
+- Use `[InlineAutoData]` for edge cases with fixed values
+- Run `dotnet test` before committing
+
+## Quick Reference
+
+| Task | Location |
+|------|----------|
+| Add service | `src/slskd/MyFeature/`, register in `Program.cs` |
+| Add API | `src/slskd/MyFeature/API/MyFeatureController.cs` |
+| Add frontend lib | `src/web/src/lib/myFeature.js` |
+| Add component | `src/web/src/components/MyFeature/` |
+| Add route | `src/web/src/App.jsx` |
