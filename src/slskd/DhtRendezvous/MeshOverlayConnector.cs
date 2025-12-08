@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using slskd.DhtRendezvous.Security;
 
 /// <summary>
@@ -20,12 +21,12 @@ using slskd.DhtRendezvous.Security;
 public sealed class MeshOverlayConnector : IMeshOverlayConnector
 {
     private readonly ILogger<MeshOverlayConnector> _logger;
+    private readonly IOptionsMonitor<slskd.Options> _optionsMonitor;
     private readonly CertificateManager _certificateManager;
     private readonly CertificatePinStore _pinStore;
     private readonly OverlayRateLimiter _rateLimiter;
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
-    private readonly string _localUsername;
     
     private int _pendingConnections;
     private long _successfulConnections;
@@ -36,22 +37,24 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     /// </summary>
     public const int MaxConcurrentAttempts = 3;
     
+    private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
+    
     public MeshOverlayConnector(
         ILogger<MeshOverlayConnector> logger,
+        IOptionsMonitor<slskd.Options> optionsMonitor,
         CertificateManager certificateManager,
         CertificatePinStore pinStore,
         OverlayRateLimiter rateLimiter,
         OverlayBlocklist blocklist,
-        MeshNeighborRegistry registry,
-        string localUsername)
+        MeshNeighborRegistry registry)
     {
         _logger = logger;
+        _optionsMonitor = optionsMonitor;
         _certificateManager = certificateManager;
         _pinStore = pinStore;
         _rateLimiter = rateLimiter;
         _blocklist = blocklist;
         _registry = registry;
-        _localUsername = localUsername;
     }
     
     public int PendingConnections => _pendingConnections;
@@ -149,7 +152,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             try
             {
                 // Perform handshake
-                var ack = await connection.PerformClientHandshakeAsync(_localUsername, cancellationToken: cancellationToken);
+                var ack = await connection.PerformClientHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
                 
                 // Check if username is blocked
                 if (_blocklist.IsBlocked(ack.Username))

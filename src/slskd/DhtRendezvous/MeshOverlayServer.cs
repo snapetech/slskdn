@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using slskd.DhtRendezvous.Security;
 using slskd.Mesh;
 
@@ -25,14 +26,14 @@ using ProtocolViolationException = slskd.DhtRendezvous.Security.ProtocolViolatio
 public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 {
     private readonly ILogger<MeshOverlayServer> _logger;
+    private readonly IOptionsMonitor<slskd.Options> _optionsMonitor;
     private readonly CertificateManager _certificateManager;
     private readonly CertificatePinStore _pinStore;
     private readonly OverlayRateLimiter _rateLimiter;
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
     private readonly IMeshSyncService _meshSyncService;
-    private readonly string _localUsername;
-    private readonly int _listenPort;
+    private readonly DhtRendezvousOptions _dhtOptions;
     
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
@@ -41,30 +42,33 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private long _totalAccepted;
     private long _totalRejected;
     
+    private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
+    private int ListenPortConfig => _dhtOptions.OverlayPort;
+    
     public MeshOverlayServer(
         ILogger<MeshOverlayServer> logger,
+        IOptionsMonitor<slskd.Options> optionsMonitor,
         CertificateManager certificateManager,
         CertificatePinStore pinStore,
         OverlayRateLimiter rateLimiter,
         OverlayBlocklist blocklist,
         MeshNeighborRegistry registry,
         IMeshSyncService meshSyncService,
-        string localUsername,
-        int listenPort = 50305)
+        DhtRendezvousOptions dhtOptions)
     {
         _logger = logger;
+        _optionsMonitor = optionsMonitor;
         _certificateManager = certificateManager;
         _pinStore = pinStore;
         _rateLimiter = rateLimiter;
         _blocklist = blocklist;
         _registry = registry;
         _meshSyncService = meshSyncService;
-        _localUsername = localUsername;
-        _listenPort = listenPort;
+        _dhtOptions = dhtOptions;
     }
     
     public bool IsListening => _listener is not null;
-    public int ListenPort => _listenPort;
+    public int ListenPort => ListenPortConfig;
     public int ActiveConnections => _registry.Count;
     public long TotalConnectionsAccepted => _totalAccepted;
     public long TotalConnectionsRejected => _totalRejected;
@@ -78,7 +82,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         }
         
         _cts = new CancellationTokenSource();
-        _listener = new TcpListener(IPAddress.Any, _listenPort);
+        _listener = new TcpListener(IPAddress.Any, ListenPortConfig);
         
         try
         {
@@ -87,13 +91,13 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             
             _logger.LogInformation(
                 "Mesh overlay server started on port {Port}",
-                _listenPort);
+                ListenPortConfig);
             
             _acceptLoopTask = AcceptLoopAsync(_cts.Token);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start mesh overlay server on port {Port}", _listenPort);
+            _logger.LogError(ex, "Failed to start mesh overlay server on port {Port}", ListenPortConfig);
             _listener.Stop();
             _listener = null;
             throw;
@@ -203,7 +207,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             try
             {
                 // Perform protocol handshake
-                var hello = await connection.PerformServerHandshakeAsync(_localUsername, cancellationToken: cancellationToken);
+                var hello = await connection.PerformServerHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
                 
                 // Check if username is blocked
                 if (_blocklist.IsBlocked(hello.Username))
@@ -386,7 +390,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         return new MeshOverlayServerStats
         {
             IsListening = IsListening,
-            ListenPort = _listenPort,
+            ListenPort = ListenPortConfig,
             ActiveConnections = ActiveConnections,
             TotalConnectionsAccepted = TotalConnectionsAccepted,
             TotalConnectionsRejected = TotalConnectionsRejected,

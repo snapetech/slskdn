@@ -687,11 +687,11 @@ Beacons announce to ALL keys. Seekers query ALL keys and merge/dedupe results.
 | D6 | MeshOverlayConnector interface | ✅ | `IMeshOverlayConnector.cs` |
 | D7 | MeshOverlayConnector impl (TLS) | ✅ | `MeshOverlayConnector.cs` |
 | D8 | NAT detection (placeholder) | ✅ | `DhtRendezvousService.cs` (basic) |
-| D9 | MeshSyncService integration | 🔄 | Needs handoff logic |
+| D9 | MeshSyncService integration | 🔄 | Needs full handoff logic |
 | D10 | Certificate management | ✅ | `CertificateManager.cs` |
 | D11 | API endpoints | ✅ | `API/DhtRendezvousController.cs` |
 | D12 | BitTorrent DHT integration | ⬜ | MonoTorrent (future) |
-| D13 | Service registration | ⬜ | `Program.cs` |
+| D13 | Service registration | ✅ | `Program.cs` |
 
 #### Phase 6 Files to Create
 

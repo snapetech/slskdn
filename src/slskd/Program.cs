@@ -727,6 +727,36 @@ namespace slskd
             services.AddSingleton<Backfill.IBackfillSchedulerService, Backfill.BackfillSchedulerService>();
             services.AddHostedService(provider => (Backfill.BackfillSchedulerService)provider.GetRequiredService<Backfill.IBackfillSchedulerService>());
 
+            // DHT Rendezvous Layer (Phase 6)
+            services.AddSingleton<DhtRendezvous.DhtRendezvousOptions>(sp =>
+            {
+                return new DhtRendezvous.DhtRendezvousOptions
+                {
+                    Enabled = true,
+                    OverlayPort = 50305,
+                    AnnounceIntervalSeconds = 900,
+                    DiscoveryIntervalSeconds = 600,
+                    MinNeighbors = 3,
+                };
+            });
+            services.AddSingleton<DhtRendezvous.Security.OverlayRateLimiter>();
+            services.AddSingleton<DhtRendezvous.Security.OverlayBlocklist>();
+            services.AddSingleton<DhtRendezvous.Security.CertificateManager>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<DhtRendezvous.Security.CertificateManager>>();
+                return new DhtRendezvous.Security.CertificateManager(logger, Program.AppDirectory);
+            });
+            services.AddSingleton<DhtRendezvous.Security.CertificatePinStore>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<DhtRendezvous.Security.CertificatePinStore>>();
+                return new DhtRendezvous.Security.CertificatePinStore(logger, Program.AppDirectory);
+            });
+            services.AddSingleton<DhtRendezvous.MeshNeighborRegistry>();
+            services.AddSingleton<DhtRendezvous.IMeshOverlayServer, DhtRendezvous.MeshOverlayServer>();
+            services.AddSingleton<DhtRendezvous.IMeshOverlayConnector, DhtRendezvous.MeshOverlayConnector>();
+            services.AddSingleton<DhtRendezvous.IDhtRendezvousService, DhtRendezvous.DhtRendezvousService>();
+            services.AddHostedService(provider => (DhtRendezvous.DhtRendezvousService)provider.GetRequiredService<DhtRendezvous.IDhtRendezvousService>());
+
             services.AddSingleton<IRelayService, RelayService>();
 
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
