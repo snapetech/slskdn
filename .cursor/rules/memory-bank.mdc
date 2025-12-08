@@ -1,0 +1,47 @@
+---
+description: Memory Bank - Persistent context for AI-assisted development
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Memory Bank Rules
+
+This project uses a memory-bank system for persistent AI context across sessions.
+
+## Required Reading Before Work
+
+Before starting any non-trivial task, read these files in order:
+
+1. `memory-bank/projectbrief.md` - Project overview, tech stack, constraints
+2. `memory-bank/tasks.md` - Current task list (source of truth)
+3. `memory-bank/activeContext.md` - What's currently being worked on
+
+## Required Updates After Work
+
+After completing significant work:
+
+1. Update task status in `memory-bank/tasks.md`
+2. Append progress entry to `memory-bank/progress.md` with timestamp
+3. Update `memory-bank/activeContext.md` with next steps
+
+## Scratch Pad
+
+Use `memory-bank/scratch.md` for:
+- Temporary thinking/reasoning
+- Ideas that need more exploration
+- Session-specific notes
+
+This file can be truncated when too long.
+
+## Task Management
+
+- Add new tasks to `memory-bank/tasks.md` instead of ephemeral chat todos
+- Use format: `- [ ] **T-NNN**: Task Title`
+- Include: Status, Priority, Branch, Related issues, Notes
+- Mark complete with date when done
+
+## Decision Records
+
+For significant architectural decisions:
+- Create `memory-bank/decisions/adr-NNNN-title.md`
+- Reference in code comments where relevant

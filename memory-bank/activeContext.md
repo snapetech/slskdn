@@ -1,0 +1,57 @@
+# Active Context
+
+> What is currently being worked on in this repository.  
+> Update this file when starting or finishing work.
+
+---
+
+## Current Session
+
+- **Current Task**: None active
+- **Branch**: `master`
+- **Environment**: Local dev
+- **Last Activity**: Repository setup for memory-bank system
+
+---
+
+## Recent Context
+
+### Last Session Summary
+- Set up memory-bank structure for AI-assisted development
+- No active feature work in progress
+
+### Blocking Issues
+- None currently
+
+### Next Steps
+1. Review `tasks.md` for next priority item
+2. Create branch for selected task
+3. Update this file with new context
+
+---
+
+## Environment Notes
+
+- **Backend Port**: 5030 (default)
+- **Frontend Dev Port**: 3000 (CRA default)
+- **.NET Version**: 8.0
+- **Node Version**: Check `package.json` engines
+
+---
+
+## Quick Commands
+
+```bash
+# Start backend (watch mode)
+./bin/watch
+
+# Start frontend dev server
+cd src/web && npm start
+
+# Run all tests
+dotnet test
+
+# Build release
+./bin/build
+```
+
