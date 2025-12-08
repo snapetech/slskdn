@@ -149,7 +149,24 @@ namespace slskd.Files
             }
 
             // important! we must fully expand the given paths with GetFullPath() to resolve a given relative directory, like '..'
-            bool IsAllowed(string path) => AllowedDirectories.Any(allowed => path.StartsWith(allowed));
+            bool IsAllowed(string path)
+            {
+                return AllowedDirectories.Any(allowed =>
+                {
+                    // Exact match is allowed
+                    if (path.Equals(allowed, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    // Must be a child directory (prevent prefix bypass like /downloads-secret)
+                    var allowedPrefix = allowed.EndsWith(Path.DirectorySeparatorChar)
+                        ? allowed
+                        : allowed + Path.DirectorySeparatorChar;
+
+                    return path.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase);
+                });
+            }
 
             // if any of the resolved directory paths aren't rooted in one of the allowed directories, forbid the entire request
             if (!directories.All(directory => IsAllowed(directory)))
@@ -207,7 +224,24 @@ namespace slskd.Files
             }
 
             // important! we must fully expand the given paths with GetFullPath() to resolve a given relative directory, like '..'
-            bool IsAllowed(string path) => AllowedDirectories.Any(allowed => path.StartsWith(allowed));
+            bool IsAllowed(string path)
+            {
+                return AllowedDirectories.Any(allowed =>
+                {
+                    // Exact match is allowed
+                    if (path.Equals(allowed, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    // Must be a child directory (prevent prefix bypass like /downloads-secret)
+                    var allowedPrefix = allowed.EndsWith(Path.DirectorySeparatorChar)
+                        ? allowed
+                        : allowed + Path.DirectorySeparatorChar;
+
+                    return path.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase);
+                });
+            }
 
             // if any of the resolved file paths aren't rooted in one of the allowed directories, forbid the entire request
             if (!files.All(file => IsAllowed(file)))
