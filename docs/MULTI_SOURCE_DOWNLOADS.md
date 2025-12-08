@@ -379,6 +379,59 @@ Integrated HashDb and MeshSync with existing multi-source download system.
 - Hash propagation across slskdn network
 - Reduced network overhead for popular files
 
+### Phase 6: BitTorrent DHT Rendezvous Layer 🔄 IN PROGRESS
+
+Implements a decentralized peer discovery mechanism using BitTorrent DHT as a rendezvous point.
+
+**The Cold Start Problem:**
+When a new `slskdn` client starts, it has no mesh neighbors to sync with. Phase 6 solves this by using the public BitTorrent DHT as a "bulletin board" where `slskdn` clients advertise their presence.
+
+**Key Concepts:**
+- **Beacons**: Publicly reachable clients that announce to DHT and accept inbound connections
+- **Seekers**: NAT'd clients that query DHT and connect outbound to beacons
+- **Overlay Port**: Separate TCP port (default 50305) for mesh handshake and sync
+
+**Transport Decision:**
+The overlay TCP connection established via DHT rendezvous is reused for Phase 3 mesh sync messages. We do NOT:
+- Store hashes in the BitTorrent DHT (wrong scale)
+- Tunnel mesh traffic over Soulseek (breaks protocol)
+- Use HTTP between clients (unnecessary complexity)
+
+**Security Hardening (ALL COMPLETE ✅):**
+| Requirement | Implementation |
+|-------------|----------------|
+| TLS 1.3 mandatory | `MeshOverlayConnection.cs` |
+| Length-prefixed framing | `SecureMessageFramer.cs` (4-byte header, 4KB max) |
+| Strict validation | `MessageValidator.cs` (regex, bounds, hex-only) |
+| Rate limiting | `OverlayRateLimiter.cs` (3/IP, 10 msg/sec) |
+| Certificate pinning | `CertificatePinStore.cs` (TOFU model) |
+| IP/username blocklist | `OverlayBlocklist.cs` |
+
+**Core Components (COMPLETE ✅):**
+- `DhtRendezvousService` - DHT bootstrap, announce, discovery loops
+- `MeshOverlayServer` - TLS TCP listener for inbound connections
+- `MeshOverlayConnector` - TLS client for outbound connections
+- `MeshNeighborRegistry` - Track active mesh peers (max 10)
+- `MeshOverlayConnection` - Secure connection wrapper with handshake
+
+**API Endpoints:**
+```
+GET  /api/v0/dht/status            → DHT node status, beacon capability
+GET  /api/v0/dht/peers             → Discovered overlay endpoints
+POST /api/v0/dht/announce          → Force DHT announce (beacon only)
+POST /api/v0/dht/discover          → Force discovery cycle
+GET  /api/v0/overlay/connections   → Active mesh connections
+GET  /api/v0/overlay/stats         → Server/connector/rate limiter stats
+GET  /api/v0/overlay/blocklist     → Blocked IPs and usernames
+POST /api/v0/overlay/blocklist/ip  → Block an IP
+POST /api/v0/overlay/blocklist/username → Block a username
+```
+
+**Remaining Work:**
+- Service registration in `Program.cs`
+- BitTorrent DHT library integration (MonoTorrent)
+- Proper NAT detection (UPnP/STUN)
+
 ---
 
 ## Distributed Hash Network & Non-Abusive Backfill Architecture
