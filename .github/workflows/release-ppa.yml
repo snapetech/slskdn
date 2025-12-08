@@ -109,11 +109,11 @@ jobs:
           # Update changelog
           cd slskdN-${{ steps.version.outputs.version }}
           cat > debian/changelog << EOF
-          slskdN (${{ steps.version.outputs.version }}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
+          slskdn (${{ steps.version.outputs.version }}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
           
             * Release ${{ steps.version.outputs.tag }}
           
-           -- slskdN <slskdN@proton.me>  $(date -R)
+           -- slskdn <slskdn@proton.me>  $(date -R)
           EOF
 
       - name: Build Source Package
@@ -124,10 +124,10 @@ jobs:
       - name: Configure dput
         run: |
           cat > ~/.dput.cf << 'EOF'
-          [slskdN-ppa]
+          [slskdn-ppa]
           fqdn = ppa.launchpad.net
           method = ftp
-          incoming = ~keefshape/ubuntu/slskdN/
+          incoming = ~keefshape/ubuntu/slskdn/
           login = anonymous
           allow_unsigned_uploads = 0
           EOF
@@ -143,4 +143,4 @@ jobs:
           ls -la *.changes || true
           CHANGES_FILE=$(find . -name "*.changes" -type f | head -1)
           echo "Found changes file: $CHANGES_FILE"
-          dput slskdN-ppa "$CHANGES_FILE"
+          dput slskdn-ppa "$CHANGES_FILE"
