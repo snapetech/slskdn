@@ -57,19 +57,24 @@ namespace slskd.Transfers.MultiSource.Discovery
         /// <summary>
         ///     Initializes a new instance of the <see cref="SourceDiscoveryService"/> class.
         /// </summary>
+        /// <param name="appDirectory">The application data directory.</param>
         /// <param name="soulseekClient">The Soulseek client.</param>
         /// <param name="verificationService">The content verification service.</param>
         public SourceDiscoveryService(
+            string appDirectory,
             ISoulseekClient soulseekClient,
             IContentVerificationService verificationService)
         {
             client = soulseekClient;
             this.verificationService = verificationService;
 
-            // Store DB in the app data directory
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var slskdPath = Path.Combine(appDataPath, "slskd");
-            System.IO.Directory.CreateDirectory(slskdPath);
+            // Store DB in the app data directory (not LocalApplicationData which can be /slskd in containers)
+            var slskdPath = Path.Combine(appDirectory, "discovery");
+            if (!Directory.Exists(slskdPath))
+            {
+                Directory.CreateDirectory(slskdPath);
+            }
+
             dbPath = Path.Combine(slskdPath, "discovery.db");
 
             InitializeDatabase();

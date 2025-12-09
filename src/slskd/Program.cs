@@ -724,7 +724,10 @@ namespace slskd
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
 
             // Multi-source download services (Swarm)
-            services.AddSingleton<ISourceDiscoveryService, SourceDiscoveryService>();
+            services.AddSingleton<ISourceDiscoveryService>(sp => new SourceDiscoveryService(
+                Program.AppDirectory,
+                sp.GetRequiredService<ISoulseekClient>(),
+                sp.GetRequiredService<Transfers.MultiSource.IContentVerificationService>()));
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
             services.AddSingleton<Transfers.MultiSource.IContentVerificationService, Transfers.MultiSource.ContentVerificationService>();
 

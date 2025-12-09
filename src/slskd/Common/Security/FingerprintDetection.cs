@@ -191,12 +191,16 @@ public sealed class FingerprintDetection : IDisposable
 
             if (profile.IsScanner)
             {
-                _logger.LogWarning(
-                    "Scanner detected from {Ip}: {Indicators}",
-                    ip,
-                    string.Join(", ", indicators.Select(i => i.Type)));
+                // Don't log warnings for private/local IPs (e.g., web UI polling APIs rapidly)
+                if (!IsPrivateOrLocalIp(ip))
+                {
+                    _logger.LogWarning(
+                        "Scanner detected from {Ip}: {Indicators}",
+                        ip,
+                        string.Join(", ", indicators.Select(i => i.Type)));
 
-                ReconnaissanceDetected?.Invoke(this, new ReconnaissanceEventArgs(evt));
+                    ReconnaissanceDetected?.Invoke(this, new ReconnaissanceEventArgs(evt));
+                }
             }
         }
 
@@ -208,6 +212,74 @@ public sealed class FingerprintDetection : IDisposable
             PortsProbed = profile.PortsProbed.Count,
             FirstSeen = profile.FirstSeen,
         };
+    }
+
+    /// <summary>
+    /// Check if an IP address is a private/local address.
+    /// </summary>
+    private static bool IsPrivateOrLocalIp(IPAddress ip)
+    {
+        // Handle IPv4-mapped IPv6 addresses
+        if (ip.IsIPv4MappedToIPv6)
+        {
+            ip = ip.MapToIPv4();
+        }
+
+        // Loopback (127.x.x.x or ::1)
+        if (IPAddress.IsLoopback(ip))
+        {
+            return true;
+        }
+
+        // IPv4 private ranges
+        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            var bytes = ip.GetAddressBytes();
+
+            // 10.0.0.0/8
+            if (bytes[0] == 10)
+            {
+                return true;
+            }
+
+            // 172.16.0.0/12
+            if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+            {
+                return true;
+            }
+
+            // 192.168.0.0/16
+            if (bytes[0] == 192 && bytes[1] == 168)
+            {
+                return true;
+            }
+
+            // 169.254.0.0/16 (link-local)
+            if (bytes[0] == 169 && bytes[1] == 254)
+            {
+                return true;
+            }
+        }
+
+        // IPv6 private ranges (fe80::/10, fc00::/7)
+        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        {
+            var bytes = ip.GetAddressBytes();
+
+            // Link-local (fe80::/10)
+            if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80)
+            {
+                return true;
+            }
+
+            // Unique local (fc00::/7)
+            if ((bytes[0] & 0xfe) == 0xfc)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
