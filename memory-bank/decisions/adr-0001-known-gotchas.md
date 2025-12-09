@@ -271,6 +271,35 @@ builder.Services.AddScoped<IMyService, MyService>();
 
 ---
 
+### 10b. YAML Heredocs with Special Characters
+
+**The Bug**: GitHub Actions workflows with inline heredocs containing `${}`, `#{}`, or `\$` break YAML parsing.
+
+**Files Affected**:
+- `.github/workflows/release-homebrew.yml`
+- `.github/workflows/release-packaging.yml`
+
+**Wrong**:
+```yaml
+- name: Generate file
+  run: |
+    cat > file.nix <<EOF
+    let pkgs = nixpkgs.\${system};  # 💀 YAML parser chokes on this
+    EOF
+```
+
+**Correct**: Use external scripts in `packaging/scripts/`:
+```yaml
+- name: Generate file
+  run: |
+    chmod +x packaging/scripts/update-nix.sh
+    packaging/scripts/update-nix.sh "${{ steps.release.outputs.tag }}"
+```
+
+**Why This Keeps Happening**: Models inline heredocs for "simplicity" without realizing Nix `${}` and Ruby `#{}` break YAML.
+
+---
+
 ## 📦 Packaging Gotchas (MAJOR PAIN POINT)
 
 > ⚠️ **These issues caused 10+ CI failures each. Read carefully.**
