@@ -935,5 +935,42 @@ The type or namespace name 'Common' does not exist in the namespace 'slskd'
 
 ---
 
+## Workflow File Pattern Mismatch in Download Step
+
+**The Problem**: The `packages` job fails with "no assets match the file pattern" when trying to download the zip from the dev release.
+
+**Root Cause**: Mismatch between the actual filename and the download pattern:
+- Build job creates: `slskdn-dev-linux-x64.zip` (no timestamp)
+- Packages job tried to download: `slskdn-dev-*-linux-x64.zip` (wildcard for timestamp that doesn't exist)
+
+**Error Message**:
+```
+gh release download dev --pattern "slskdn-dev-*-linux-x64.zip"
+no assets match the file pattern
+```
+
+**Why This Breaks**:
+1. The `build` job creates `slskdn-dev-linux-x64.zip` without a timestamp in the filename
+2. The `release` job uploads this file to the `dev` tag as-is
+3. The `packages` job tries to download with a wildcard pattern expecting a timestamp
+4. The wildcard doesn't match, so no file is downloaded
+
+**The Fix**:
+```yaml
+# packages job - Download from Dev Release step
+gh release download dev \
+  --repo ${{ github.repository }} \
+  --pattern "slskdn-dev-linux-x64.zip"  # Exact filename, no wildcard
+```
+
+**Prevention**:
+- When adding workflow download steps, check what the ACTUAL filename is from the upload step
+- Don't use wildcards unless the filename actually varies
+- The timestamp is in the VERSION/tag, not in the zip filename for dev builds
+
+**Note**: The timestamped dev tag (e.g., `dev-20251209-212425`) is separate from the floating `dev` tag. The `dev` tag always points to the latest dev build and contains `slskdn-dev-linux-x64.zip`.
+
+---
+
 *Last updated: 2025-12-09*
 

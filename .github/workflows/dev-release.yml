@@ -542,8 +542,8 @@ jobs:
         run: |
           gh release download dev \
             --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-*-linux-x64.zip"
-          unzip slskdn-dev-*-linux-x64.zip -d slskdn-build
+            --pattern "slskdn-dev-linux-x64.zip"
+          unzip slskdn-dev-linux-x64.zip -d slskdn-build
 
       - name: Install Build Dependencies
         run: |
