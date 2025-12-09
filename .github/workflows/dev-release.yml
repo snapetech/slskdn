@@ -24,6 +24,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       dev_version: ${{ steps.version.outputs.dev_version }}
       short_sha: ${{ steps.version.outputs.short_sha }}
+      timestamp: ${{ steps.version.outputs.timestamp }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,14 +52,15 @@ jobs:
         id: version
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date +%Y%m%d%H%M)
-          # Version format: 0.24.1-dev.YYYYMMDDHHMM (NuGet compatible)
-          # Note: NuGet doesn't support + for build metadata, use - for prerelease
-          DEV_VERSION="${BASE_VERSION}-dev.${TIMESTAMP}"
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          # Version format: 0.24.1-dev-YYYYMMDD-HHMMSS (tag format)
+          # For NuGet/PKGBUILD: replace hyphens in timestamp portion
+          DEV_VERSION="${BASE_VERSION}-dev-${TIMESTAMP}"
           
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
           echo "version=${DEV_VERSION}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
           echo "VERSION=${DEV_VERSION}" >> $GITHUB_ENV
           
           echo "📦 Building version: ${DEV_VERSION} (commit: ${SHORT_SHA})"
@@ -478,10 +480,133 @@ jobs:
           echo "Found changes file: $CHANGES_FILE"
           dput slskdn-ppa "$CHANGES_FILE"
 
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: experimental/multi-source-swarm
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: slskdn-dev-linux-x64
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Dev Image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ needs.build.outputs.version }}
+          tags: |
+            ghcr.io/snapetech/slskdn:dev-${{ needs.build.outputs.timestamp }}
+            ghcr.io/snapetech/slskdn:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  packages:
+    name: Build Packages (.deb and .rpm)
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: experimental/multi-source-swarm
+
+      - name: Download from Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download dev \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-*-linux-x64.zip"
+          unzip slskdn-dev-*-linux-x64.zip -d slskdn-build
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper fakeroot build-essential rpm
+
+      - name: Prepare Package Structure
+        run: |
+          mkdir -p pkg/usr/lib/slskd
+          mkdir -p pkg/usr/bin
+          mkdir -p pkg/lib/systemd/system
+          mkdir -p pkg/etc/slskd
+          mkdir -p pkg/usr/lib/sysusers.d
+          
+          cp -r slskdn-build/* pkg/usr/lib/slskd/
+          cp packaging/aur/slskd.service pkg/lib/systemd/system/
+          cp packaging/aur/slskd.yml pkg/etc/slskd/
+          cp packaging/aur/slskd.sysusers pkg/usr/lib/sysusers.d/slskd.conf
+          
+          cp -r packaging/debian pkg/
+
+      - name: Build .deb Package
+        run: |
+          cd pkg
+          VERSION="${{ needs.build.outputs.dev_version }}"
+          sed -i "s/slskdn (.*)/slskdn-dev (${VERSION}-1) unstable; urgency=medium/" debian/changelog
+          sed -i "s/^Source: slskdn$/Source: slskdn-dev/" debian/control
+          sed -i "s/^Package: slskdn$/Package: slskdn-dev/" debian/control
+          dpkg-buildpackage -us -uc -b
+          cd ..
+          mv *.deb slskdn-dev_${{ needs.build.outputs.dev_version }}_amd64.deb
+
+      - name: Build .rpm Package  
+        run: |
+          # Create RPM build environment
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          
+          # Copy sources
+          cp -r slskdn-build ~/rpmbuild/BUILD/slskdn-dev-${{ needs.build.outputs.dev_version }}
+          cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
+          
+          # Update spec for dev build
+          sed "s/^Name:.*/Name:           slskdn-dev/" packaging/rpm/slskdn.spec > ~/rpmbuild/SPECS/slskdn-dev.spec
+          sed -i "s/^Version:.*/Version:        ${{ needs.build.outputs.dev_version }}/" ~/rpmbuild/SPECS/slskdn-dev.spec
+          
+          # Build RPM
+          rpmbuild -bb ~/rpmbuild/SPECS/slskdn-dev.spec
+          
+          # Find and move RPM
+          find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} slskdn-dev-${{ needs.build.outputs.dev_version }}.x86_64.rpm \;
+
+      - name: Upload Packages to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev
+          files: |
+            slskdn-dev_${{ needs.build.outputs.dev_version }}_amd64.deb
+            slskdn-dev-${{ needs.build.outputs.dev_version }}.x86_64.rpm
+
   notify:
     name: Notify
     runs-on: ubuntu-latest
-    needs: [build, release, aur, copr, ppa]
+    needs: [build, release, aur, copr, ppa, docker, packages]
     if: always()
     steps:
       - name: Summary
@@ -496,6 +621,8 @@ jobs:
           echo "- AUR (slskdn-dev): ${{ needs.aur.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- COPR (slskdn-dev): ${{ needs.copr.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- PPA (slskdn-dev): ${{ needs.ppa.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker: ${{ needs.docker.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Packages (.deb/.rpm): ${{ needs.packages.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Install Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
@@ -505,6 +632,9 @@ jobs:
           echo "# Fedora/RHEL (COPR)" >> $GITHUB_STEP_SUMMARY
           echo "sudo dnf copr enable slskdn/slskdn-dev" >> $GITHUB_STEP_SUMMARY
           echo "sudo dnf install slskdn-dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Docker" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/snapetech/slskdn:dev-latest" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "# Ubuntu/Debian (PPA)" >> $GITHUB_STEP_SUMMARY
           echo "sudo add-apt-repository ppa:keefshape/slskdn" >> $GITHUB_STEP_SUMMARY
