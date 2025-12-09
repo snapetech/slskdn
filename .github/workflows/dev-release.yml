@@ -110,6 +110,38 @@ jobs:
         with:
           name: slskdn-dev-linux-x64
 
+      - name: Create Timestamped Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "🧪 Dev Build ${{ needs.build.outputs.dev_version }}"
+          body: |
+            ## Development Build ${{ needs.build.outputs.dev_version }}
+            
+            **Commit:** ${{ needs.build.outputs.short_sha }}
+            **Built:** ${{ github.event.head_commit.timestamp }}
+            
+            ### ⚠️ Experimental Features
+            - 🔀 Multi-source swarm downloads
+            - 🌐 DHT mesh network with content verification
+            - 🔗 BitTorrent DHT rendezvous for peer discovery
+            - 🔒 TLS-secured mesh connections
+            - 📊 Distributed hash database with mesh sync
+            
+            ### Changes in this build
+            See commit ${{ needs.build.outputs.short_sha }} for details.
+            
+            ### Installation
+            **Package Managers** (recommended):
+            - Arch: `yay -S slskdn-dev`
+            - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn-dev && sudo dnf install slskdn-dev`
+            - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn-dev`
+            - Docker: `docker pull ghcr.io/snapetech/slskdn:dev-latest`
+            
+            **Direct Download**: Extract the zip below and run `./slskd`
+          prerelease: false
+          files: slskdn-dev-linux-x64.zip
+
       - name: Delete Previous Dev Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
