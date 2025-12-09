@@ -1015,5 +1015,44 @@ packages:
 
 ---
 
+## PPA Rejects Upload: Version Comparison with Hyphens
+
+**The Problem**: Launchpad PPA rejects the upload with "Version older than that in the archive" even though the new version has a later timestamp.
+
+**Root Cause**: Debian version string comparison treats hyphens differently than dots. The version `0.24.1-dev-20251209-214612` is considered OLDER than `0.24.1-dev.202512092002` because of how dpkg compares version strings.
+
+**Error Message**:
+```
+Rejected: slskdn-dev_0.24.1-dev-20251209-214612-1ppa202512092148~jammy.dsc: 
+Version older than that in the archive. 
+0.24.1-dev-20251209-214612-1ppa202512092148~jammy <= 0.24.1-dev.202512092002-1ppa202512092006~jammy
+```
+
+**Why This Breaks**:
+Debian's `dpkg --compare-versions` treats hyphens as version separators, not as part of the version string:
+- `0.24.1-dev-20251209-214612` is parsed as epoch `0`, version `0.24.1`, and the rest as debian revision
+- `0.24.1-dev.202512092002` with dots keeps the full version number intact
+- The comparison logic makes the hyphenated version appear older
+
+**The Fix**:
+Convert ALL hyphens to dots in the PPA version string:
+
+```bash
+VERSION="${{ needs.build.outputs.dev_version }}"  # 0.24.1-dev-20251209-214612
+DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')    # 0.24.1.dev.20251209.214612
+
+# Use DEB_VERSION in changelog
+slskdn-dev (${DEB_VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
+```
+
+**Critical**: This is the SAME issue as the AUR/RPM version problem, but it manifests differently - not as a build error, but as a PPA rejection during upload. You MUST convert hyphens to dots for ALL Debian-based packaging (AUR, RPM, DEB, PPA).
+
+**Prevention**:
+- ALWAYS use `sed 's/-/./g'` (global replace) for ANY package version strings
+- Check EVERY place where `$VERSION` or `dev_version` is used in packaging workflows
+- Test PPA uploads don't get rejected with "Version older than that in the archive"
+
+---
+
 *Last updated: 2025-12-09*
 

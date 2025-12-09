@@ -418,9 +418,11 @@ jobs:
       - name: Prepare Source Package
         run: |
           VERSION="${{ needs.build.outputs.dev_version }}"
+          # Convert version for Debian (replace ALL hyphens with dots)
+          DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')
           
           # Create tarball for orig source
-          tar -czvf slskdn-dev_${VERSION}.orig.tar.gz slskdn-dev-${VERSION}
+          tar -czvf slskdn-dev_${DEB_VERSION}.orig.tar.gz slskdn-dev-${VERSION}
           
           # Copy and modify debian directory for -dev package
           cp -r packaging/debian slskdn-dev-${VERSION}/
@@ -436,9 +438,9 @@ jobs:
           # Use timestamp-based PPA revision
           PPA_REV=$(date +%Y%m%d%H%M)
           
-          # Update changelog for slskdn-dev
+          # Update changelog for slskdn-dev (use DEB_VERSION with dots)
           cat > debian/changelog << EOF
-          slskdn-dev (${VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
+          slskdn-dev (${DEB_VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
 
             * Development build from experimental/multi-source-swarm
             * Multi-source swarm downloads
