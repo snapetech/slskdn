@@ -464,6 +464,86 @@ POST /api/v0/overlay/blocklist/username → Block a username
 
 ---
 
+## Passive FLAC Hash Discovery
+
+> **Important**: This section clarifies how the hash database gets populated. Understanding this prevents confusion about why hashes aren't appearing.
+
+### The Three Sources of FLAC Discovery
+
+The HashDb/FlacInventory system discovers FLAC files from three sources:
+
+| Source | Trigger | What Happens | Hash Status |
+|--------|---------|--------------|-------------|
+| **Our Searches** | We search for music | FLAC files from results added to FlacInventory | `none` |
+| **Our Downloads** | We download a FLAC | First 32KB hashed, stored in HashDb | `known` |
+| **Incoming Interactions** | Users search us or download from us | Their username tracked for future browse | (indirect) |
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. PASSIVE DISCOVERY (No network cost)                      │
+│                                                             │
+│    SearchService raises SearchResponsesReceivedEvent        │
+│              ↓                                              │
+│    HashDbService extracts FLAC files from responses         │
+│              ↓                                              │
+│    UpsertFlacEntryAsync(peer, path, size, hash_status=none) │
+│                                                             │
+│    Application.cs tracks users who search/download from us  │
+│              ↓                                              │
+│    (Future: Browse their shares to discover more FLACs)     │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. HASH ACQUISITION (Multiple paths)                        │
+│                                                             │
+│    a) Download completion → Hash first 32KB → "known"       │
+│    b) Mesh sync → Receive hash from other slskdn → "known"  │
+│    c) Backfill probe → Download 32KB header → "known"       │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. HASH PROPAGATION                                         │
+│                                                             │
+│    New hash discovered locally                              │
+│              ↓                                              │
+│    Published to MeshSync                                    │
+│              ↓                                              │
+│    Other slskdn clients receive via epidemic sync           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Events
+
+| Event | Publisher | Subscriber | Purpose |
+|-------|-----------|------------|---------|
+| `SearchResponsesReceivedEvent` | SearchService | HashDbService | Discover FLACs from search results |
+| `DownloadFileCompleteEvent` | TransferService | HashDbService | Hash downloaded files |
+| `UserSearchedUsEvent` (proposed) | Application | HashDbService | Track users for future browse |
+| `UserDownloadedFromUsEvent` (proposed) | Application | HashDbService | Track users for future browse |
+
+### Why Hashes Weren't Appearing (The Bug)
+
+The original implementation only hashed files during **multi-source downloads** via `ContentVerificationService`. Regular downloads and searches didn't trigger any hashing or inventory population.
+
+**Fix Applied**:
+1. `HashDbService` now subscribes to `DownloadFileCompleteEvent` to hash regular downloads
+2. `HashDbService` now subscribes to `SearchResponsesReceivedEvent` to populate FlacInventory from search results
+3. (TODO) Track incoming interactions to discover more peers to browse
+
+### Passive vs Active Discovery
+
+| Mode | Network Cost | How It Works |
+|------|--------------|--------------|
+| **Passive** | Zero | Extract FLACs from search results we already received |
+| **Semi-Passive** | Low | Browse shares of users who interact with us |
+| **Active (Backfill)** | Controlled | Download 32KB headers from FlacInventory candidates |
+
+The system is designed to be **passive-first**: populate the inventory from normal operations, then let the BackfillScheduler gradually fill in hashes under strict rate limits.
+
+---
+
 ## Distributed Hash Network & Non-Abusive Backfill Architecture
 
 This section defines the complete architecture for building a distributed FLAC hash database across `slskdn` nodes, enabling instant content verification without redundant header probing.

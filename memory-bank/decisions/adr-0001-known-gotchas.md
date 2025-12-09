@@ -606,5 +606,53 @@ eventBus.Subscribe<DownloadFileCompleteEvent>("HashDbService.DownloadComplete", 
 
 ---
 
+### 20. Passive FLAC Discovery Architecture - Understanding the Design
+
+**The Confusion**: The HashDb/FlacInventory was expected to populate "passively" but wasn't.
+
+**The Design (Clarified)**:
+
+The passive FLAC discovery system has **three sources** of FLAC files:
+
+1. **Search Results** - When WE search, we see other users' files → add to `FlacInventory` with `hash_status='none'`
+2. **Downloads** - When we download a FLAC → compute hash → store with `hash_status='known'`
+3. **Incoming Interactions** - When users search us or download from us → track their username → optionally browse them later
+
+**How FlacInventory Gets Populated**:
+
+| Source | Event | Action |
+|--------|-------|--------|
+| Our searches | `SearchResponsesReceivedEvent` | Upsert FLAC files to FlacInventory (hash_status='none') |
+| Our downloads | `DownloadFileCompleteEvent` | Hash first 32KB, store in HashDb, update FlacInventory |
+| Mesh sync | `MeshSyncService` | Receive hashes from other slskdn clients |
+| Backfill | `BackfillSchedulerService` | Probe files in FlacInventory where hash_status='none' |
+
+**How Hashes Get Discovered**:
+
+```
+FlacInventory (hash_status='none')
+         ↓
+BackfillSchedulerService picks candidates
+         ↓
+Downloads first 32KB header
+         ↓
+Computes SHA256 hash
+         ↓
+Updates HashDb + FlacInventory
+         ↓
+Publishes to MeshSync
+```
+
+**Key Insight**: The `BackfillSchedulerService` is the "engine" that converts `hash_status='none'` entries into `hash_status='known'`. But it needs the `FlacInventory` to be populated first, which happens via search results and incoming interactions.
+
+**Files Involved**:
+- `src/slskd/HashDb/HashDbService.cs` - Subscribes to events, populates FlacInventory
+- `src/slskd/Search/SearchService.cs` - Raises `SearchResponsesReceivedEvent`
+- `src/slskd/Events/Types/Events.cs` - Defines `SearchResponsesReceivedEvent`
+- `src/slskd/Backfill/BackfillSchedulerService.cs` - Probes FlacInventory entries
+- `src/slskd/Application.cs` - Handles incoming searches/uploads (peer tracking)
+
+---
+
 *Last updated: 2025-12-09*
 

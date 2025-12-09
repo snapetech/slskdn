@@ -118,16 +118,19 @@ namespace slskd.Search
         /// <param name="optionsMonitor"></param>
         /// <param name="soulseekClient"></param>
         /// <param name="contextFactory">The database context to use.</param>
+        /// <param name="eventBus">The event bus for raising search events (optional).</param>
         public SearchService(
             IHubContext<SearchHub> searchHub,
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
-            IDbContextFactory<SearchDbContext> contextFactory)
+            IDbContextFactory<SearchDbContext> contextFactory,
+            slskd.Events.EventBus eventBus = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
             Client = soulseekClient;
             ContextFactory = contextFactory;
+            EventBus = eventBus;
         }
 
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; }
@@ -135,6 +138,7 @@ namespace slskd.Search
 
         private ISoulseekClient Client { get; }
         private IDbContextFactory<SearchDbContext> ContextFactory { get; }
+        private slskd.Events.EventBus EventBus { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<Application>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IHubContext<SearchHub> SearchHub { get; set; }
@@ -366,6 +370,15 @@ namespace slskd.Search
                         search.Responses = responses.Select(r => Response.FromSoulseekSearchResponse(r));
 
                         Update(search);
+
+                        // Raise event for passive FLAC discovery (HashDb will pick up FLAC files)
+                        if (EventBus != null && responses.Count > 0)
+                        {
+                            EventBus.Raise(new slskd.Events.SearchResponsesReceivedEvent
+                            {
+                                Responses = responses,
+                            });
+                        }
 
                         // zero responses before broadcasting, as we don't want to blast this
                         // data out over the SignalR socket

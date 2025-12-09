@@ -59,11 +59,107 @@ namespace slskd.HashDb
             currentSeqId = GetLatestSeqIdSync();
             log.Information("[HashDb] Initialized at {Path}, current seq_id: {SeqId}", dbPath, currentSeqId);
 
-            // Subscribe to download completion events to automatically hash downloaded files
+            // Subscribe to events for hash discovery
             if (eventBus != null)
             {
+                // Hash downloaded files
                 eventBus.Subscribe<DownloadFileCompleteEvent>("HashDbService.DownloadComplete", OnDownloadCompleteAsync);
-                log.Information("[HashDb] Subscribed to download completion events for automatic hashing");
+
+                // Discover FLAC files from search results for passive hash gathering
+                eventBus.Subscribe<SearchResponsesReceivedEvent>("HashDbService.SearchResponses", OnSearchResponsesReceivedAsync);
+
+                // Track peers who interact with us (for future passive browsing)
+                eventBus.Subscribe<PeerSearchedUsEvent>("HashDbService.PeerSearchedUs", OnPeerSearchedUsAsync);
+                eventBus.Subscribe<PeerDownloadedFromUsEvent>("HashDbService.PeerDownloadedFromUs", OnPeerDownloadedFromUsAsync);
+
+                log.Information("[HashDb] Subscribed to download, search, and peer interaction events for hash discovery");
+            }
+        }
+
+        /// <summary>
+        ///     Handles when a peer searches us - track them for future passive FLAC discovery.
+        /// </summary>
+        private async Task OnPeerSearchedUsAsync(PeerSearchedUsEvent evt)
+        {
+            try
+            {
+                // Track this peer - they're active on the network and might have FLACs we want
+                await GetOrCreatePeerAsync(evt.Username);
+                await TouchPeerAsync(evt.Username);
+                log.Debug("[HashDb] Tracked peer {Username} who searched us (had results: {HadResults})", evt.Username, evt.HadResults);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Error tracking peer {Username} from search", evt.Username);
+            }
+        }
+
+        /// <summary>
+        ///     Handles when a peer downloads from us - track them for future passive FLAC discovery.
+        /// </summary>
+        private async Task OnPeerDownloadedFromUsAsync(PeerDownloadedFromUsEvent evt)
+        {
+            try
+            {
+                // Track this peer - they're active and downloading, good candidate for FLAC discovery
+                await GetOrCreatePeerAsync(evt.Username);
+                await TouchPeerAsync(evt.Username);
+                log.Debug("[HashDb] Tracked peer {Username} who downloaded {File}", evt.Username, Path.GetFileName(evt.Filename));
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Error tracking peer {Username} from download", evt.Username);
+            }
+        }
+
+        /// <summary>
+        ///     Handles search responses by discovering FLAC files for the inventory.
+        /// </summary>
+        private async Task OnSearchResponsesReceivedAsync(SearchResponsesReceivedEvent evt)
+        {
+            try
+            {
+                var flacCount = 0;
+                var skippedCount = 0;
+
+                foreach (var response in evt.Responses)
+                {
+                    foreach (var file in response.Files)
+                    {
+                        // Only interested in FLAC files large enough to hash
+                        if (!file.Filename.EndsWith(".flac", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (file.Size < HashChunkSize)
+                        {
+                            skippedCount++;
+                            continue;
+                        }
+
+                        // Add to inventory for backfill probing
+                        var entry = new FlacInventoryEntry
+                        {
+                            PeerId = response.Username,
+                            Path = file.Filename,
+                            Size = file.Size,
+                            HashStatusStr = "none",
+                        };
+
+                        await UpsertFlacEntryAsync(entry);
+                        flacCount++;
+                    }
+                }
+
+                if (flacCount > 0)
+                {
+                    log.Information("[HashDb] Discovered {Count} FLAC files from search results ({Skipped} too small)", flacCount, skippedCount);
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Error processing search responses for FLAC discovery");
             }
         }
 

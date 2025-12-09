@@ -100,7 +100,8 @@ namespace slskd
             Integrations.Notifications.INotificationService notificationService,
             IRelayService relayService,
             IHubContext<ApplicationHub> applicationHub,
-            IHubContext<LogsHub> logHub)
+            IHubContext<LogsHub> logHub,
+            Events.EventBus eventBus)
         {
             Console.CancelKeyPress += (_, args) =>
             {
@@ -166,6 +167,8 @@ namespace slskd
             LogHub = logHub;
             Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
 
+            EventBus = eventBus;
+
             Client = soulseekClient;
 
             Client.DiagnosticGenerated += Client_DiagnosticGenerated;
@@ -228,6 +231,7 @@ namespace slskd
         private ITransferService Transfers { get; init; }
         private IHubContext<ApplicationHub> ApplicationHub { get; set; }
         private IHubContext<LogsHub> LogHub { get; set; }
+        private Events.EventBus EventBus { get; set; }
         private IUserService Users { get; set; }
         private IShareService Shares { get; set; }
         private ISearchService Search { get; set; }
@@ -750,6 +754,13 @@ namespace slskd
                         throw new DownloadEnqueueException($"Too many {(over.Files ? "files" : "megabytes")} today");
                     }
                 }
+
+                // Raise event for passive FLAC discovery - this user is downloading from us
+                EventBus.Raise(new Events.PeerDownloadedFromUsEvent
+                {
+                    Username = username,
+                    Filename = filename
+                });
 
                 await Transfers.Uploads.EnqueueAsync(username, filename);
             }
@@ -1538,6 +1549,14 @@ namespace slskd
                     Log.Debug("Sending search response with {Count} files to {Username} for query '{Query}'", results.Count(), username, query.SearchText);
 
                     Metrics.Search.ResponsesSent.Inc(1);
+
+                    // Raise event for passive FLAC discovery - this user searched us and we had results
+                    EventBus.Raise(new Events.PeerSearchedUsEvent
+                    {
+                        Username = username,
+                        SearchText = query.SearchText,
+                        HadResults = true
+                    });
 
                     return new SearchResponse(
                         Client.Username,

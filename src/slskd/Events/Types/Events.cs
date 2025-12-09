@@ -18,8 +18,11 @@
 namespace slskd.Events;
 
 using System;
+using System.Collections.Generic;
 using slskd.Messaging;
-using slskd.Transfers;
+using Soulseek;
+
+using Transfer = slskd.Transfers.Transfer;
 
 public enum EventType
 {
@@ -31,6 +34,9 @@ public enum EventType
     DownloadFileFailed = 5,
     PrivateMessageReceived = 6,
     RoomMessageReceived = 7,
+    SearchResponsesReceived = 8,
+    PeerSearchedUs = 9,
+    PeerDownloadedFromUs = 10,
     Noop = int.MaxValue,
 }
 
@@ -96,4 +102,37 @@ public sealed record NoopEvent : Event
 {
     public override EventType Type => EventType.Noop;
     public override int Version { get; } = 0;
+}
+
+/// <summary>
+///     Event raised when search responses are received, for passive FLAC discovery.
+/// </summary>
+public sealed record SearchResponsesReceivedEvent : Event
+{
+    public override EventType Type => EventType.SearchResponsesReceived;
+    public override int Version { get; } = 0;
+    public required IEnumerable<SearchResponse> Responses { get; init; }
+}
+
+/// <summary>
+///     Event raised when a peer searches us, for tracking potential FLAC sources.
+/// </summary>
+public sealed record PeerSearchedUsEvent : Event
+{
+    public override EventType Type => EventType.PeerSearchedUs;
+    public override int Version { get; } = 0;
+    public required string Username { get; init; }
+    public required string SearchText { get; init; }
+    public required bool HadResults { get; init; }
+}
+
+/// <summary>
+///     Event raised when a peer downloads from us, for tracking potential FLAC sources.
+/// </summary>
+public sealed record PeerDownloadedFromUsEvent : Event
+{
+    public override EventType Type => EventType.PeerDownloadedFromUs;
+    public override int Version { get; } = 0;
+    public required string Username { get; init; }
+    public required string Filename { get; init; }
 }
