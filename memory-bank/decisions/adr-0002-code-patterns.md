@@ -632,18 +632,19 @@ Dev builds MUST include timestamps to differentiate multiple builds on the same 
 
 **Format**: `dev-YYYYMMDD-HHMMSS`
 
-**Example**: `dev-20251209-135823` (December 9, 2025 at 13:58:23)
+**Example**: `dev-20251209-203936` (December 9, 2025 at 20:39:36 UTC)
 
 **Where This Applies**:
-- Git tag name: `dev-20251209-135823`
-- Release filename: `slskdn-dev-20251209-135823-linux-x64.zip`
-- GitHub release title: `Dev Build 20251209-135823`
-- PKGBUILD pkgver: `0.24.1.dev.20251209135823`
-- Release notes header: `dev-20251209-135823`
+- Git tag name: `dev-20251209-203936`
+- Release filename: `slskdn-dev-20251209-203936-linux-x64.zip`
+- GitHub release title: `Dev Build 20251209-203936`
+- PKGBUILD pkgver: `0.24.1.dev.20251209203936`
+- Release notes header: `dev-20251209-203936`
+- Docker tags: `ghcr.io/snapetech/slskdn:dev-20251209-203936` and `ghcr.io/snapetech/slskdn:dev-latest`
 
 **Workflow Implementation**:
 ```bash
-# Generate timestamp
+# Generate timestamp (UTC)
 TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
 TAG="dev-${TIMESTAMP}"
 
@@ -651,10 +652,23 @@ TAG="dev-${TIMESTAMP}"
 ZIP="slskdn-dev-${TIMESTAMP}-linux-x64.zip"
 
 # Use in AUR
-PKGVER="0.24.1.dev.${TIMESTAMP//-/}"  # Remove hyphen: 20251209135823
+PKGVER="0.24.1.dev.${TIMESTAMP//-/}"  # Remove hyphen: 20251209203936
 ```
 
-**Why**: Multiple dev builds can happen on the same day. Without timestamps, tags/releases collide and users can't tell which build they have.
+**Triggering Dev Builds**:
+- Dev builds are triggered ONLY by pushing tags matching `dev-*`
+- NOT triggered on every commit to experimental branches
+- Create and push tag: `git tag -a dev-$(date -u +%Y%m%d-%H%M%S) -m "Dev build" && git push origin dev-*`
+
+**Distribution Channels** (all automatic on tag push):
+- GitHub Release (with .zip, .deb, .rpm assets)
+- AUR: `slskdn-dev` package
+- COPR: `slskdn/slskdn-dev` repository
+- PPA: `ppa:keefshape/slskdn` (slskdn-dev package)
+- Docker: `ghcr.io/snapetech/slskdn:dev-latest` and timestamped tags
+- Direct .deb and .rpm downloads from GitHub release
+
+**Why**: Multiple dev builds can happen on the same day. Without timestamps, tags/releases collide and users can't tell which build they have. Triggering only on tags prevents unwanted builds on every experimental branch commit.
 
 ---
 
