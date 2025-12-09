@@ -696,7 +696,9 @@ namespace slskd
 
             // Multi-source feature services
             // HashDb - content-addressed storage for file verification
-            services.AddSingleton<HashDb.IHashDbService>(_ => new HashDb.HashDbService(Program.AppDirectory));
+            // Subscribes to download events to automatically hash completed downloads
+            // Uses IServiceProvider for lazy resolution of IMeshSyncService (avoids circular dependency)
+            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(Program.AppDirectory, sp.GetRequiredService<EventBus>(), sp));
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();

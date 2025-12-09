@@ -1,0 +1,84 @@
+---
+description: Project coding conventions (customize for your project)
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Coding Conventions
+
+> **⚠️ CUSTOMIZE THIS FILE for your project's language and framework**
+
+## General Rules
+
+1. **Match existing style** - Grep first, copy patterns
+2. **No unnecessary abstractions** - No factories, wrappers, managers without need
+3. **Validate at boundaries only** - Trust internal code
+4. **Let errors propagate** - Don't swallow exceptions
+5. **Meaningful logs only** - No entry/exit spam
+
+## Code Style
+
+### [Your Language] Guidelines
+
+<!-- Customize for your language -->
+
+```
+# Example for Python:
+# - Use type hints
+# - Use f-strings for formatting
+# - Prefer list comprehensions over map/filter
+# - Use pathlib for file paths
+
+# Example for JavaScript/TypeScript:
+# - Use const by default
+# - Use async/await over .then()
+# - Use optional chaining (?.)
+# - Return [] not undefined from functions that return arrays
+
+# Example for C#:
+# - Use file-scoped namespaces
+# - Use primary constructors where appropriate
+# - Use pattern matching
+# - Wrap async void event handlers in try-catch
+```
+
+## File Organization
+
+<!-- Customize for your project structure -->
+
+```
+src/
+├── [main code]
+tests/
+├── [test code]
+```
+
+## Naming Conventions
+
+| Thing | Convention | Example |
+|-------|------------|---------|
+| Files | [your convention] | `user_service.py` |
+| Classes | [your convention] | `UserService` |
+| Functions | [your convention] | `get_user` |
+| Variables | [your convention] | `user_count` |
+| Constants | [your convention] | `MAX_RETRIES` |
+
+## Don't Do
+
+- ❌ Create interfaces for single implementations
+- ❌ Add null checks everywhere
+- ❌ Wrap everything in try-catch
+- ❌ Add logging to every function
+- ❌ Create DTOs for simple data
+- ❌ Make everything configurable
+- ❌ Use async when not needed
+- ❌ Invent new patterns
+
+## Do
+
+- ✅ Grep for existing patterns first
+- ✅ Match the existing style exactly
+- ✅ Keep functions small and focused
+- ✅ Use descriptive names
+- ✅ Commit often
+- ✅ Document bugs you fix

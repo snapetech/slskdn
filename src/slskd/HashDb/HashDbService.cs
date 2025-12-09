@@ -20,32 +20,143 @@ namespace slskd.HashDb
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Security.Cryptography;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Data.Sqlite;
     using Serilog;
     using slskd.Capabilities;
+    using slskd.Events;
     using slskd.HashDb.Models;
+    using slskd.Mesh;
 
     /// <summary>
     ///     SQLite-based hash database service.
     /// </summary>
     public class HashDbService : IHashDbService
     {
+        /// <summary>
+        ///     Size of verification chunk for hashing (32KB).
+        /// </summary>
+        private const int HashChunkSize = 32768;
+
         private readonly string dbPath;
         private readonly ILogger log = Log.ForContext<HashDbService>();
+        private readonly IServiceProvider serviceProvider;
         private long currentSeqId;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="HashDbService"/> class.
         /// </summary>
         /// <param name="appDirectory">The application data directory.</param>
-        public HashDbService(string appDirectory)
+        /// <param name="eventBus">The event bus for subscribing to download events (optional).</param>
+        /// <param name="serviceProvider">Service provider for lazy resolution of mesh sync (optional).</param>
+        public HashDbService(string appDirectory, EventBus eventBus = null, IServiceProvider serviceProvider = null)
         {
+            this.serviceProvider = serviceProvider;
             dbPath = Path.Combine(appDirectory, "hashdb.db");
             InitializeDatabase();
             currentSeqId = GetLatestSeqIdSync();
             log.Information("[HashDb] Initialized at {Path}, current seq_id: {SeqId}", dbPath, currentSeqId);
+
+            // Subscribe to download completion events to automatically hash downloaded files
+            if (eventBus != null)
+            {
+                eventBus.Subscribe<DownloadFileCompleteEvent>("HashDbService.DownloadComplete", OnDownloadCompleteAsync);
+                log.Information("[HashDb] Subscribed to download completion events for automatic hashing");
+            }
+        }
+
+        /// <summary>
+        ///     Handles download completion by hashing the file and storing in the database.
+        /// </summary>
+        private async Task OnDownloadCompleteAsync(DownloadFileCompleteEvent evt)
+        {
+            try
+            {
+                var localFilename = evt.LocalFilename;
+                var fileSize = evt.Transfer.Size;
+
+                // Only hash files that are large enough
+                if (fileSize < HashChunkSize)
+                {
+                    log.Debug("[HashDb] Skipping hash for {Filename}: file too small ({Size} bytes)", localFilename, fileSize);
+                    return;
+                }
+
+                // Check if we already have a hash for this file
+                var flacKey = HashDbEntry.GenerateFlacKey(evt.RemoteFilename, fileSize);
+                var existing = await LookupHashAsync(flacKey);
+                if (existing != null)
+                {
+                    log.Debug("[HashDb] Hash already exists for {Filename}", localFilename);
+                    await IncrementHashUseCountAsync(flacKey);
+                    return;
+                }
+
+                // Hash the first 32KB of the downloaded file
+                var hash = await ComputeFileHashAsync(localFilename);
+                if (hash == null)
+                {
+                    log.Warning("[HashDb] Failed to compute hash for {Filename}", localFilename);
+                    return;
+                }
+
+                // Store the hash locally
+                await StoreHashFromVerificationAsync(evt.RemoteFilename, fileSize, hash);
+                log.Information("[HashDb] Stored hash for downloaded file {Filename}: {Hash}", Path.GetFileName(localFilename), hash.Substring(0, 16) + "...");
+
+                // Publish to mesh for other slskdn clients (lazy resolution to avoid circular dependency)
+                if (serviceProvider != null)
+                {
+                    var meshSync = serviceProvider.GetService(typeof(IMeshSyncService)) as IMeshSyncService;
+                    if (meshSync != null)
+                    {
+                        await meshSync.PublishHashAsync(flacKey, hash, fileSize);
+                        log.Debug("[HashDb] Published hash to mesh: {Key}", flacKey);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex, "[HashDb] Error hashing downloaded file {Filename}", evt.LocalFilename);
+            }
+        }
+
+        /// <summary>
+        ///     Computes SHA256 hash of the first 32KB of a file.
+        /// </summary>
+        private async Task<string> ComputeFileHashAsync(string filename)
+        {
+            try
+            {
+                if (!File.Exists(filename))
+                {
+                    return null;
+                }
+
+                var buffer = new byte[HashChunkSize];
+                int bytesRead;
+
+                using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, HashChunkSize, useAsync: true))
+                {
+                    bytesRead = await fs.ReadAsync(buffer, 0, HashChunkSize);
+                }
+
+                if (bytesRead == 0)
+                {
+                    return null;
+                }
+
+                using var sha256 = SHA256.Create();
+                var hashBytes = sha256.ComputeHash(buffer, 0, bytesRead);
+                return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Error reading file for hashing: {Filename}", filename);
+                return null;
+            }
         }
 
         /// <inheritdoc/>
