@@ -1,5 +1,0 @@
-/*******************************
-         Site Overrides
-*******************************/
-
-@invertedBackground: var(--inverted-menu-background);

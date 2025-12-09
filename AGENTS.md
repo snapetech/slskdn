@@ -1,165 +1,166 @@
-# Agent Instructions for slskdN
+# AI Agent Instructions
 
-> This file defines how AI coding assistants should behave in this repository.
+Read this file first. Then read the memory bank.
+
+---
+
+## 🚨 CRITICAL: Save Your Work Often
+
+**Commit after every meaningful change.** Don't batch up hours of work.
+
+```bash
+git add -A && git commit -m "type: Brief description"
+```
+
+If you fix a bug, commit it immediately. If you add a feature, commit it immediately. If you refactor something, commit it immediately.
+
+**Why?** Context windows end. Sessions crash. Work gets lost. Commit often.
 
 ---
 
 ## 🚨 CRITICAL: Document Bugs You Fix
 
-**If you fix a bug caused by your own implementation (or any implementation), IMMEDIATELY add it to `memory-bank/decisions/adr-0001-known-gotchas.md`.**
+**If you fix a bug, add it to `memory-bank/decisions/adr-0001-known-gotchas.md` BEFORE doing anything else.**
 
-This is **highest priority** - do it before moving on to other work.
+This is not optional. This prevents the same bug from happening again.
 
-### When to document:
-- You fixed a bug you or another AI introduced
-- You fixed the same type of bug twice
-- You discovered a pattern that causes crashes/errors
-- You found a "gotcha" that isn't obvious
+Template:
+```markdown
+### N. short-descriptive-name
 
-### How to document:
-1. Open `memory-bank/decisions/adr-0001-known-gotchas.md`
-2. Add entry under appropriate section (Critical/High/Accidental Cycles)
-3. Include: What went wrong, why, and how to prevent it
-4. Commit immediately with message: `docs: Add gotcha for [brief description]`
+**The Bug**: One sentence description.
 
-**Do NOT wait until end of session. Do NOT skip this step. Future you will thank past you.**
+**Files Affected**:
+- `path/to/file`
+
+**Wrong**:
+```code
+// bad code
+```
+
+**Correct**:
+```code
+// good code
+```
+
+**Why This Keeps Happening**: Root cause explanation.
+```
 
 ---
 
-## Before Starting ANY Work
+## Before Starting Work
 
-### Required Reading (in order)
+1. **Read context files**:
+   ```
+   memory-bank/projectbrief.md   # What is this project?
+   memory-bank/activeContext.md  # What was I working on?
+   memory-bank/tasks.md          # What needs to be done?
+   ```
 
-1. **`memory-bank/decisions/adr-0001-known-gotchas.md`** - Critical bugs to avoid
-2. **`memory-bank/decisions/adr-0002-code-patterns.md`** - Exact patterns to follow
-3. **`memory-bank/decisions/adr-0003-anti-slop-rules.md`** - What NOT to do
-4. **`memory-bank/activeContext.md`** - Current session state
+2. **Check for gotchas**:
+   ```
+   memory-bank/decisions/adr-0001-known-gotchas.md
+   ```
 
-### Before Writing Code
-
-```bash
-# ALWAYS grep for existing patterns first
-grep -rn "similar pattern" src/slskd/
-grep -rn "similar component" src/web/src/components/
-```
-
-If you skip this step, you WILL generate slop.
+3. **Grep before you write**:
+   ```bash
+   grep -rn "pattern" src/
+   ```
+   Don't invent new patterns. Use what exists.
 
 ---
 
 ## During Development
 
 ### Code Style
+- Match existing patterns exactly
+- Don't add abstractions that don't exist
+- Don't add defensive null checks internally
+- Don't add logging spam
+- Don't create interfaces for single implementations
 
-**Backend (C#)**:
-- Follow existing patterns in `src/slskd/`
-- Use file-scoped namespaces (C# 10+)
-- Use `_privateField` naming for injected dependencies
-- Prefer `ILogger<T>` over `Serilog.Log.ForContext`
-- Run `./bin/lint` before committing
+### Commits
+- One logical change per commit
+- Format: `type: Brief description`
+- Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`
 
-**Frontend (React/JSX)**:
-- Follow patterns in `src/web/src/components/`
-- Use Semantic UI React components
-- Maintain compatibility with React 16.8.6 (no hooks that require newer versions)
-- Keep state management simple (no Redux unless already used)
+### CLI Efficiency
+```bash
+# GOOD: Chained
+dotnet build && dotnet test
 
-### Copyright Headers [[memory:11969255]]
+# GOOD: Parallel
+task1 & task2 & wait
 
-**New files for slskdN features**:
-```csharp
-// <copyright file="MyNewFeature.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
+# GOOD: Piped
+find . -name "*.cs" | xargs grep "TODO"
+
+# BAD: Sequential separate commands
+dotnet build
+dotnet test
 ```
-
-**Existing upstream files**: Keep original `company="slskd Team"` attribution.
-
-**Fork-specific directories** (always use slskdN headers):
-- `Capabilities/`
-- `HashDb/`
-- `Mesh/`
-- `Backfill/`
-- `Transfers/MultiSource/`
-- `Transfers/Ranking/`
-- `Users/Notes/`
 
 ---
 
 ## After Completing Work
 
-1. **Update `memory-bank/tasks.md`**:
-   - Mark task as complete with date
-   - Add any follow-up tasks discovered
+1. **Update progress**:
+   ```
+   memory-bank/progress.md  # Add timestamped entry
+   ```
 
-2. **Update `memory-bank/progress.md`**:
-   - Append timestamped summary of what was done
-   - Note any surprises or decisions made
+2. **Update active context**:
+   ```
+   memory-bank/activeContext.md  # What's the current state?
+   ```
 
-3. **Update `memory-bank/activeContext.md`**:
-   - Clear current task if finished
-   - Update "Next Steps" section
-
-4. **Run tests**: `dotnet test`
-
-5. **Run lint**: `./bin/lint`
-
----
-
-## Decision Records
-
-For significant architectural decisions:
-1. Create `memory-bank/decisions/adr-NNNN-title.md`
-2. Use the ADR template format (Context, Decision, Consequences)
-3. Reference the ADR in relevant code comments
+3. **Commit everything**:
+   ```bash
+   git add -A && git commit -m "type: description"
+   ```
 
 ---
 
-## What NOT To Do
+## What NOT to Do
 
-See `memory-bank/decisions/adr-0003-anti-slop-rules.md` for the full list.
-
-**Critical**:
-- ❌ Factory/wrapper/builder patterns (use DI directly)
-- ❌ Defensive null checks on internal code
-- ❌ Swallowing exceptions with catch-return-null
-- ❌ Logging method entry/exit
-- ❌ `async Task.FromResult()` for sync operations
-- ❌ Class components in React (use function + hooks)
-- ❌ Returning `undefined` from API lib functions (return `[]`)
-- ❌ `async void` without try-catch (crashes the process)
-
-**General**:
-- Don't silently overwrite human-written notes; append with timestamps
-- Don't create new abstractions without checking if similar patterns exist
-- Don't add dependencies without documenting why
-- Don't break API compatibility with upstream slskd
-- Don't modify upstream files unnecessarily (prefer extending)
+- ❌ Don't invent new abstractions or patterns
+- ❌ Don't add code "just in case"
+- ❌ Don't swallow exceptions silently
+- ❌ Don't add configuration for everything
+- ❌ Don't create factories/wrappers/managers without need
+- ❌ Don't batch up work - commit often
+- ❌ Don't fix bugs without documenting them
 
 ---
 
-## Quick Reference
+## File Reference
 
-| Action | Command |
-|--------|---------|
-| Run backend | `./bin/watch` |
-| Run frontend | `cd src/web && npm start` |
-| Run tests | `dotnet test` |
-| Lint | `./bin/lint` |
-| Build release | `./bin/build` |
+| File | Purpose | When to Update |
+|------|---------|----------------|
+| `projectbrief.md` | Project overview | Rarely |
+| `tasks.md` | Task list | When tasks change |
+| `activeContext.md` | Current state | Every session |
+| `progress.md` | Work log | After completing work |
+| `scratch.md` | Quick notes | Anytime |
+| `decisions/*.md` | Architecture decisions | When making decisions |
 
-| File | Purpose |
-|------|---------|
-| `memory-bank/decisions/adr-0001-known-gotchas.md` | **READ FIRST** - Critical bugs |
-| `memory-bank/decisions/adr-0002-code-patterns.md` | **READ FIRST** - Exact patterns |
-| `memory-bank/decisions/adr-0003-anti-slop-rules.md` | **READ FIRST** - What not to do |
-| `memory-bank/decisions/adr-0004-pr-checklist.md` | Pre-commit validation |
-| `memory-bank/projectbrief.md` | Project overview & constraints |
-| `memory-bank/tasks.md` | Task backlog (source of truth) |
-| `memory-bank/activeContext.md` | Current work context |
-| `memory-bank/progress.md` | Work log |
-| `memory-bank/scratch.md` | Temporary notes, commands |
-| `FORK_VISION.md` | Feature roadmap |
-| `DEVELOPMENT_HISTORY.md` | Release history |
-| `TODO.md` | Human-maintained todo list |
+---
 
+## Quick Commands
+
+```bash
+# Check what's changed
+git status && git diff --stat
+
+# Commit current work
+git add -A && git commit -m "type: description"
+
+# Push changes
+git push origin $(git branch --show-current)
+
+# Search codebase
+grep -rn "pattern" src/
+
+# Find files
+find . -name "*.ext" -type f
+```

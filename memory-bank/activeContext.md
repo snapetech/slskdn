@@ -1,65 +1,47 @@
 # Active Context
 
-> What is currently being worked on in this repository.  
-> Update this file when starting or finishing work.
+> What's happening right now. Update this every session.
 
----
+## Current Task
 
-## 🚨 Before Ending Your Session
+**Task**: [None - just set up]  
+**Branch**: `main`  
+**Status**: Ready to start
 
-**Did you fix any bugs? Document them in `adr-0001-known-gotchas.md` NOW.**
+## Recent Changes
 
-This is the #1 most important thing to do before ending a session. Future AI agents (and humans) will thank you.
+- [None yet]
 
----
+## Next Steps
 
-## Current Session
+1. Customize `projectbrief.md` for your project
+2. Add your first task to `tasks.md`
+3. Start working
 
-- **Current Task**: None active
-- **Branch**: `master`
-- **Environment**: Local dev
-- **Last Activity**: Repository setup for memory-bank system
+## Known Issues
 
----
-
-## Recent Context
-
-### Last Session Summary
-- Set up memory-bank structure for AI-assisted development
-- No active feature work in progress
-
-### Blocking Issues
-- None currently
-
-### Next Steps
-1. Review `tasks.md` for next priority item
-2. Create branch for selected task
-3. Update this file with new context
-
----
+- [None yet]
 
 ## Environment Notes
 
-- **Backend Port**: 5030 (default)
-- **Frontend Dev Port**: 3000 (CRA default)
-- **.NET Version**: 8.0
-- **Node Version**: Check `package.json` engines
+```bash
+# Current working directory
+pwd
+
+# Active branch
+git branch --show-current
+
+# Uncommitted changes
+git status --short
+```
 
 ---
 
-## Quick Commands
+## 🚨 Before Ending Session
 
-```bash
-# Start backend (watch mode)
-./bin/watch
+1. **Commit your work**: `git add -A && git commit -m "type: description"`
+2. **Update this file** with current state
+3. **Document any bugs** you fixed in `decisions/adr-0001-known-gotchas.md`
+4. **Log progress** in `progress.md`
 
-# Start frontend dev server
-cd src/web && npm start
-
-# Run all tests
-dotnet test
-
-# Build release
-./bin/build
-```
-
+**Don't lose your work. Commit often.**

@@ -1,6 +1,0 @@
-/*******************************
-    User Variable Overrides
-*******************************/
-@background: var(--smui-segment-background, @white);
-
-@border: var(--smui-segment-border, @borderWidth solid @borderColor);

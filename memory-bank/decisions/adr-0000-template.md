@@ -1,8 +1,8 @@
-# ADR-0000: Template
+# ADR-NNNN: [Title]
 
-> **Status**: Template  
+> **Status**: [Proposed | Accepted | Deprecated | Superseded]  
 > **Date**: YYYY-MM-DD  
-> **Author**: [Name]
+> **Author**: [Name or "AI-assisted"]
 
 ## Context
 
@@ -31,5 +31,4 @@ What other options were considered and why were they rejected?
 
 ## References
 
-- Links to related issues, PRs, or documentation
-
+- [Link to related issue/PR/doc]

@@ -1,118 +1,59 @@
 ---
-description: Memory Bank - Persistent context for AI-assisted development
+description: How to use the memory bank system
 globs: ["**/*"]
 alwaysApply: true
 ---
 
-# Memory Bank System
+# Memory Bank Usage
 
-## 🚨 HIGHEST PRIORITY: Document Bugs You Fix
+## On Session Start
 
-**When you fix a bug (especially one you or another AI caused), IMMEDIATELY add it to `memory-bank/decisions/adr-0001-known-gotchas.md`.**
+Read these files in order:
+1. `memory-bank/projectbrief.md` - What is this project?
+2. `memory-bank/activeContext.md` - What was being worked on?
+3. `memory-bank/tasks.md` - What needs to be done?
+4. `memory-bank/decisions/adr-0001-known-gotchas.md` - What to avoid?
 
-Do this BEFORE continuing other work. This prevents the same bug from being reintroduced.
+## During Work
 
-```markdown
-## Entry format for adr-0001-known-gotchas.md:
-
-### bug-short-name
-- **What**: Brief description of what went wrong
-- **Why**: Root cause
-- **Fix**: How to prevent it
-- **Files**: Affected files
-```
-
-**If you've fixed the same type of bug twice, it MUST be documented. No exceptions.**
-
----
-
-## Before Writing ANY Code
-
-1. **Read the gotchas**: `memory-bank/decisions/adr-0001-known-gotchas.md`
-2. **Read the patterns**: `memory-bank/decisions/adr-0002-code-patterns.md`
-3. **Read the anti-slop rules**: `memory-bank/decisions/adr-0003-anti-slop-rules.md`
-4. **Check active context**: `memory-bank/activeContext.md`
-
-## Grep Before You Write
-
-Before creating any new code, search for existing patterns:
-
+### Before Writing Code
 ```bash
-# Find how similar services are structured
-grep -rn "public class.*Service" src/slskd/
-
-# Find how API endpoints are defined
-grep -rn "\[Http" src/slskd/*/API/
-
-# Find how frontend components fetch data
-grep -rn "const fetch = async" src/web/src/components/
+# ALWAYS grep first
+grep -rn "similar_pattern" src/
 ```
+
+### After Fixing a Bug
+**IMMEDIATELY** add to `memory-bank/decisions/adr-0001-known-gotchas.md`
+
+This is highest priority. Don't skip it.
+
+### Commit Often
+```bash
+git add -A && git commit -m "type: description"
+```
+
+Don't batch work. Commit after every meaningful change.
+
+## On Session End
+
+1. Update `memory-bank/activeContext.md` with current state
+2. Add entry to `memory-bank/progress.md`
+3. Commit everything
 
 ## File Purposes
 
-| File | Purpose | When to Update |
-|------|---------|----------------|
-| `projectbrief.md` | Vision, tech stack, constraints | Rarely |
-| `tasks.md` | Task list (source of truth) | After completing/adding tasks |
-| `activeContext.md` | Current session state | Start/end of each session |
-| `progress.md` | Chronological work log | After completing work |
-| `scratch.md` | Temp notes, quick reference | Anytime |
-| `decisions/adr-*.md` | Architectural decisions | When making significant choices |
+| File | Purpose | Update Frequency |
+|------|---------|------------------|
+| `projectbrief.md` | Project overview | Rarely |
+| `activeContext.md` | Current state | Every session |
+| `tasks.md` | Task tracking | When tasks change |
+| `progress.md` | Work log | After completing work |
+| `scratch.md` | Quick notes | Anytime |
+| `decisions/*.md` | Decisions & gotchas | When relevant |
 
 ## Critical Rules
 
-### API Library Functions MUST Return Safe Values
-```javascript
-// CORRECT
-return Array.isArray(response) ? response : [];
-
-// WRONG - causes crashes
-return response;  // might be undefined
-```
-
-### Async Event Handlers MUST Have Try-Catch
-```csharp
-// CORRECT
-private async void Handler(object s, EventArgs e)
-{
-    try { await Work(); }
-    catch (Exception ex) { Logger.Error(ex, "..."); }
-}
-
-// WRONG - crashes the process
-private async void Handler(object s, EventArgs e)
-{
-    await Work();
-}
-```
-
-### Don't Add Abstractions That Don't Exist
-- No factory patterns
-- No wrapper classes
-- No defensive null checks on internal code
-- No logging method entry/exit
-
-## Task Format
-
-```markdown
-- [ ] **T-NNN**: Task Title
-  - Status: pending | in-progress | done
-  - Priority: P0 | P1 | P2
-  - Branch: `branch-name`
-  - Notes: relevant details
-```
-
-## Progress Entry Format
-
-```markdown
-## YYYY-MM-DD HH:MM
-
-### Completed
-- What was done
-
-### Decisions
-- Why certain choices were made
-
-### Next
-- What to do next
-```
+1. **Grep before you write** - Use existing patterns
+2. **Commit often** - Don't lose work
+3. **Document bugs** - Add to gotchas immediately
+4. **Keep it simple** - No unnecessary abstractions
