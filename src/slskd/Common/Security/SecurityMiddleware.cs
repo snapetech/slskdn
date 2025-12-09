@@ -99,12 +99,15 @@ public sealed class SecurityMiddleware
 
         try
         {
-            // Record connection for fingerprint detection
-            _fingerprintDetection?.RecordConnection(
-                remoteIp,
-                context.Connection.RemotePort,
-                context.Request.Protocol,
-                context.Request.Headers.UserAgent.ToString());
+            // Record connection for fingerprint detection (skip private IPs to reduce noise)
+            if (!isPrivateIp)
+            {
+                _fingerprintDetection?.RecordConnection(
+                    remoteIp,
+                    context.Connection.RemotePort,
+                    context.Request.Protocol,
+                    context.Request.Headers.UserAgent.ToString());
+            }
 
             // Check for reconnaissance patterns (skip for private IPs - high false positive rate)
             if (!isPrivateIp && _fingerprintDetection?.IsKnownScanner(remoteIp) == true)

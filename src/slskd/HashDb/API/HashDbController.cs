@@ -285,7 +285,7 @@ namespace slskd.HashDb.API
             // Count total searches and remaining
             var totalSearches = await context.Searches.CountAsync();
             var remainingSearches = lastProcessedAt.HasValue
-                ? await context.Searches.CountAsync(s => s.StartedAt < lastProcessedAt.Value)
+                ? await context.Searches.CountAsync(s => s.StartedAt < lastProcessedAt.Value.UtcDateTime)
                 : totalSearches;
 
             if (remainingSearches == 0 && !reset)
@@ -308,7 +308,7 @@ namespace slskd.HashDb.API
 
             if (lastProcessedAt.HasValue)
             {
-                query = query.Where(s => s.StartedAt < lastProcessedAt.Value);
+                query = query.Where(s => s.StartedAt < lastProcessedAt.Value.UtcDateTime);
             }
 
             var searches = await query

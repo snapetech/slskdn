@@ -1090,5 +1090,36 @@ yay -S package-name  # Will fetch fresh PKGBUILD from AUR
 
 ---
 
+## EF Core Can't Translate DateTimeOffset to DateTime Comparison
+
+**The Problem**: Backfill endpoint throws 500 error with "The LINQ expression could not be translated" when trying to compare `Search.StartedAt` (DateTime) with a DateTimeOffset value.
+
+**Root Cause**: Entity Framework Core cannot translate implicit conversions between `DateTimeOffset` and `DateTime` to SQL. When you write `s.StartedAt < lastProcessedAt.Value` where `StartedAt` is `DateTime` and `lastProcessedAt` is `DateTimeOffset?`, EF can't generate the SQL query.
+
+**Error Message**:
+```
+System.InvalidOperationException: The LINQ expression 'DbSet<Search>()
+    .Count(s => (DateTimeOffset)s.StartedAt < __lastProcessedAt_Value_0)' could not be translated.
+```
+
+**The Fix**:
+Convert `DateTimeOffset` to `DateTime` explicitly using `.UtcDateTime` before the comparison:
+
+```csharp
+// WRONG - EF can't translate this:
+await context.Searches.CountAsync(s => s.StartedAt < lastProcessedAt.Value);
+
+// CORRECT - EF can translate this:
+await context.Searches.CountAsync(s => s.StartedAt < lastProcessedAt.Value.UtcDateTime);
+```
+
+**Prevention**:
+- Always check the database column type before writing LINQ queries
+- Use `.UtcDateTime` when comparing `DateTimeOffset` with `DateTime` in EF queries
+- Test API endpoints that use LINQ queries against the database
+- EF will throw this at runtime, not compile time, so manual testing is required
+
+---
+
 *Last updated: 2025-12-09*
 
