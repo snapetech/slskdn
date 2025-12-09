@@ -188,6 +188,58 @@ namespace slskd.Transfers
 
 ---
 
+## Core Principles
+
+### 6. Network Health First
+
+**All features must consider Soulseek network health.** slskdn is a good network citizen.
+
+- **Rate limit** any operations that contact remote peers (browsing, header probing, hash discovery)
+- **Prefer manual triggers** over automatic aggressive scanning (e.g., "Backfill from History" button)
+- **Be conservative** with bandwidth - the BackfillScheduler intentionally throttles discovery
+- **Don't overwhelm peers** - space out requests, respect failures, back off on errors
+
+```csharp
+// CORRECT - conservative, user-triggered
+[HttpPost("backfill/from-history")]
+public async Task<IActionResult> BackfillFromSearchHistory()
+{
+    // User explicitly requested this - it's okay to process history
+    var count = await HashDb.BackfillFromSearchHistoryAsync(searchContextFactory);
+    return Ok(new { message = $"Added {count} FLAC entries to inventory." });
+}
+
+// WRONG - aggressive automatic scanning
+protected override async Task ExecuteAsync(CancellationToken ct)
+{
+    while (!ct.IsCancellationRequested)
+    {
+        await ScanAllPeersAggressively();  // ❌ Don't do this
+        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+    }
+}
+```
+
+### 6b. UI Buttons Must Have Tooltips
+
+**Every button should have a helpful mouseover tooltip** explaining what it does and why.
+
+```jsx
+// CORRECT - helpful tooltip
+<Popup
+  content="Scan your search history to discover FLAC files from past searches. This populates the inventory with files that can be probed for content hashes."
+  position="top right"
+  trigger={
+    <Button onClick={handleBackfill}>Backfill from History</Button>
+  }
+/>
+
+// WRONG - no explanation
+<Button onClick={handleBackfill}>Backfill</Button>
+```
+
+---
+
 ## Frontend (React/JSX) Patterns
 
 ### 7. Component Structure
@@ -382,6 +434,47 @@ var results = await connection.QueryAsync<MyDto>(
     "SELECT * FROM MyTable WHERE SomeField = @Value",
     new { Value = someValue });
 ```
+
+### HashDb Schema Migrations
+
+The HashDb uses a versioned migration system. See `docs/HASHDB_SCHEMA.md` for full documentation.
+
+```csharp
+// Adding a new migration in HashDbMigrations.cs
+new Migration
+{
+    Version = 3,  // Increment CurrentVersion too!
+    Name = "Add new feature columns",
+    Apply = conn =>
+    {
+        // SQLite: one ALTER per command
+        var alters = new[]
+        {
+            "ALTER TABLE MyTable ADD COLUMN new_col TEXT",
+            "ALTER TABLE MyTable ADD COLUMN another_col INTEGER"
+        };
+        foreach (var sql in alters)
+        {
+            try
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = sql;
+                cmd.ExecuteNonQuery();
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+            {
+                // Column already exists - idempotent
+            }
+        }
+    },
+},
+```
+
+**Rules**:
+- Never modify existing migrations
+- Always increment `CurrentVersion` when adding migrations
+- Handle "duplicate column" errors for idempotency
+- Use transactions (automatic) for rollback on failure
 
 ---
 

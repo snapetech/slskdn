@@ -17,6 +17,7 @@
 
 namespace slskd.HashDb
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
@@ -37,6 +38,11 @@ namespace slskd.HashDb
         ///     Gets statistics about the hash database.
         /// </summary>
         HashDbStats GetStats();
+
+        /// <summary>
+        ///     Gets the current schema version of the database.
+        /// </summary>
+        int GetSchemaVersion();
 
         // ========== Peer Management ==========
 
@@ -167,6 +173,31 @@ namespace slskd.HashDb
         ///     Resets daily backfill counters (called at midnight).
         /// </summary>
         Task ResetDailyBackfillCountersAsync(CancellationToken cancellationToken = default);
+
+        // ========== History Backfill ==========
+
+        /// <summary>
+        ///     Backfills FLAC inventory from search history responses.
+        /// </summary>
+        /// <param name="responses">Search responses to process.</param>
+        /// <param name="maxFiles">Maximum files to process (default unlimited).</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Number of FLAC files discovered.</returns>
+        Task<int> BackfillFromSearchResponsesAsync(IEnumerable<Search.Response> responses, int maxFiles = int.MaxValue, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets the backfill progress marker (timestamp of last processed search).
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>The timestamp of the oldest processed search, or null if no progress.</returns>
+        Task<DateTimeOffset?> GetBackfillProgressAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Sets the backfill progress marker.
+        /// </summary>
+        /// <param name="oldestProcessed">Timestamp of the oldest search processed in this batch.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        Task SetBackfillProgressAsync(DateTimeOffset oldestProcessed, CancellationToken cancellationToken = default);
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from 'semantic-ui-react';
 
 const GITHUB_BASE = 'https://github.com/snapetech/slskdn';
+const SLSKD_GITHUB = 'https://github.com/slskd/slskd';
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -18,6 +19,15 @@ const Footer = () => {
             target="_blank"
           >
             slskdN
+          </a>
+          {' · built on the most excellent '}
+          <a
+            href={SLSKD_GITHUB}
+            rel="noopener noreferrer"
+            target="_blank"
+            title="slskd - the original project"
+          >
+            slskd
           </a>
         </span>
         <span className="slskdn-footer-divider">•</span>

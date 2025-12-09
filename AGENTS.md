@@ -47,6 +47,27 @@ If you skip this step, you WILL generate slop.
 
 ---
 
+## Core Principles
+
+### Network Health First 🌐
+
+**slskdn prioritizes Soulseek network health in ALL design decisions.**
+
+- Features like passive FLAC discovery, backfill scheduling, and hash probing are **intentionally conservative**
+- When implementing features that contact remote peers (browsing, downloading headers, probing files):
+  - Always consider **rate limiting** and **bandwidth impact**
+  - Be a **good network citizen** - don't overwhelm peers
+  - **Manual triggers** (like buttons) are preferred over automatic aggressive scanning
+  - Give users **control** over network impact
+
+### UI Buttons Need Tooltips 💬
+
+Every button must have a helpful mouseover tooltip (using Semantic UI's `Popup` component) explaining:
+- What the button does
+- Why a user might want to click it
+
+---
+
 ## During Development
 
 ### Code Style

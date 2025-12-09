@@ -269,73 +269,12 @@ namespace slskd.HashDb
         {
             using var conn = GetConnection();
 
-            var schema = @"
-                -- Peer tracking with capabilities
-                CREATE TABLE IF NOT EXISTS Peers (
-                    peer_id TEXT PRIMARY KEY,
-                    caps INTEGER DEFAULT 0,
-                    client_version TEXT,
-                    last_seen INTEGER NOT NULL,
-                    last_cap_check INTEGER,
-                    backfills_today INTEGER DEFAULT 0,
-                    backfill_reset_date INTEGER
-                );
-
-                -- FLAC file inventory with hash tracking
-                CREATE TABLE IF NOT EXISTS FlacInventory (
-                    file_id TEXT PRIMARY KEY,
-                    peer_id TEXT NOT NULL,
-                    path TEXT NOT NULL,
-                    size INTEGER NOT NULL,
-                    discovered_at INTEGER NOT NULL,
-                    hash_status TEXT DEFAULT 'none',
-                    hash_value TEXT,
-                    hash_source TEXT,
-                    flac_audio_md5 TEXT,
-                    sample_rate INTEGER,
-                    channels INTEGER,
-                    bit_depth INTEGER,
-                    duration_samples INTEGER
-                );
-
-                -- DHT/Mesh hash database (content-addressed)
-                CREATE TABLE IF NOT EXISTS HashDb (
-                    flac_key TEXT PRIMARY KEY,
-                    byte_hash TEXT NOT NULL,
-                    size INTEGER NOT NULL,
-                    meta_flags INTEGER,
-                    first_seen_at INTEGER NOT NULL,
-                    last_updated_at INTEGER NOT NULL,
-                    seq_id INTEGER,
-                    use_count INTEGER DEFAULT 1
-                );
-
-                -- Mesh sync state per peer
-                CREATE TABLE IF NOT EXISTS MeshPeerState (
-                    peer_id TEXT PRIMARY KEY,
-                    last_sync_time INTEGER,
-                    last_seq_seen INTEGER DEFAULT 0
-                );
-
-                -- Key-value store for misc state
-                CREATE TABLE IF NOT EXISTS HashDbState (
-                    key TEXT PRIMARY KEY,
-                    value TEXT
-                );
-
-                -- Indexes
-                CREATE INDEX IF NOT EXISTS idx_inventory_peer ON FlacInventory(peer_id);
-                CREATE INDEX IF NOT EXISTS idx_inventory_size ON FlacInventory(size);
-                CREATE INDEX IF NOT EXISTS idx_inventory_hash ON FlacInventory(hash_value);
-                CREATE INDEX IF NOT EXISTS idx_inventory_status ON FlacInventory(hash_status);
-                CREATE INDEX IF NOT EXISTS idx_hashdb_size ON HashDb(size);
-                CREATE INDEX IF NOT EXISTS idx_hashdb_seq ON HashDb(seq_id);
-                CREATE INDEX IF NOT EXISTS idx_hashdb_hash ON HashDb(byte_hash);
-            ";
-
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = schema;
-            cmd.ExecuteNonQuery();
+            // Run versioned migrations
+            var migrationsApplied = Migrations.HashDbMigrations.RunMigrations(conn);
+            if (migrationsApplied > 0)
+            {
+                log.Information("[HashDb] Applied {Count} migrations", migrationsApplied);
+            }
         }
 
         private long GetLatestSeqIdSync()
@@ -389,6 +328,13 @@ namespace slskd.HashDb
             }
 
             return stats;
+        }
+
+        /// <inheritdoc/>
+        public int GetSchemaVersion()
+        {
+            using var conn = GetConnection();
+            return Migrations.HashDbMigrations.GetCurrentVersion(conn);
         }
 
         // ========== Peer Management ==========
@@ -858,6 +804,105 @@ namespace slskd.HashDb
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        // ========== History Backfill ==========
+
+        /// <inheritdoc/>
+        public async Task<int> BackfillFromSearchResponsesAsync(IEnumerable<Search.Response> responses, int maxFiles = int.MaxValue, CancellationToken cancellationToken = default)
+        {
+            var flacCount = 0;
+            var skippedCount = 0;
+
+            foreach (var response in responses)
+            {
+                if (flacCount >= maxFiles)
+                {
+                    break;
+                }
+
+                if (string.IsNullOrEmpty(response.Username))
+                {
+                    continue;
+                }
+
+                foreach (var file in response.Files)
+                {
+                    if (cancellationToken.IsCancellationRequested || flacCount >= maxFiles)
+                    {
+                        break;
+                    }
+
+                    // Only interested in FLAC files large enough to hash
+                    if (!file.Filename.EndsWith(".flac", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (file.Size < HashChunkSize)
+                    {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Add to inventory for backfill probing
+                    var entry = new FlacInventoryEntry
+                    {
+                        PeerId = response.Username,
+                        Path = file.Filename,
+                        Size = file.Size,
+                        HashStatusStr = "none",
+                    };
+
+                    await UpsertFlacEntryAsync(entry, cancellationToken);
+                    flacCount++;
+                }
+
+                // Also track the peer
+                await GetOrCreatePeerAsync(response.Username, cancellationToken);
+            }
+
+            if (flacCount > 0 || skippedCount > 0)
+            {
+                log.Information("[HashDb] Backfilled {Count} FLAC files from search history ({Skipped} too small)", flacCount, skippedCount);
+            }
+
+            return flacCount;
+        }
+
+        /// <inheritdoc/>
+        public async Task<DateTimeOffset?> GetBackfillProgressAsync(CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT value FROM HashDbState WHERE key = 'backfill_progress'";
+
+            var result = await cmd.ExecuteScalarAsync(cancellationToken);
+            if (result == null || result == DBNull.Value)
+            {
+                return null;
+            }
+
+            if (long.TryParse(result.ToString(), out var timestamp))
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(timestamp);
+            }
+
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public async Task SetBackfillProgressAsync(DateTimeOffset oldestProcessed, CancellationToken cancellationToken = default)
+        {
+            var timestamp = oldestProcessed.ToUnixTimeSeconds();
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO HashDbState (key, value) VALUES ('backfill_progress', @value)
+                ON CONFLICT(key) DO UPDATE SET value = @value";
+            cmd.Parameters.AddWithValue("@value", timestamp.ToString());
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         // ========== Helpers ==========
 
         private static Peer ReadPeer(SqliteDataReader reader)
@@ -876,7 +921,7 @@ namespace slskd.HashDb
 
         private static FlacInventoryEntry ReadFlacEntry(SqliteDataReader reader)
         {
-            return new FlacInventoryEntry
+            var entry = new FlacInventoryEntry
             {
                 FileId = reader.GetString(reader.GetOrdinal("file_id")),
                 PeerId = reader.GetString(reader.GetOrdinal("peer_id")),
@@ -892,6 +937,60 @@ namespace slskd.HashDb
                 BitDepth = reader.IsDBNull(reader.GetOrdinal("bit_depth")) ? null : reader.GetInt32(reader.GetOrdinal("bit_depth")),
                 DurationSamples = reader.IsDBNull(reader.GetOrdinal("duration_samples")) ? null : reader.GetInt64(reader.GetOrdinal("duration_samples")),
             };
+
+            // Read new optional columns (may not exist in older DBs)
+            TryReadOptionalString(reader, "full_file_hash", v => entry.FullFileHash = v);
+            TryReadOptionalInt(reader, "min_block_size", v => entry.MinBlockSize = v);
+            TryReadOptionalInt(reader, "max_block_size", v => entry.MaxBlockSize = v);
+            TryReadOptionalString(reader, "encoder_info", v => entry.EncoderInfo = v);
+            TryReadOptionalString(reader, "album_hash", v => entry.AlbumHash = v);
+            TryReadOptionalInt(reader, "probe_fail_count", v => entry.ProbeFailCount = v ?? 0);
+            TryReadOptionalString(reader, "probe_fail_reason", v => entry.ProbeFailReason = v);
+            TryReadOptionalLong(reader, "last_probe_at", v => entry.LastProbeAt = v);
+
+            return entry;
+        }
+
+        private static void TryReadOptionalString(SqliteDataReader reader, string column, Action<string> setter)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal(column);
+                if (!reader.IsDBNull(ordinal))
+                {
+                    setter(reader.GetString(ordinal));
+                }
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Column doesn't exist in this DB version - ignore
+            }
+        }
+
+        private static void TryReadOptionalInt(SqliteDataReader reader, string column, Action<int?> setter)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal(column);
+                setter(reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal));
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Column doesn't exist in this DB version - ignore
+            }
+        }
+
+        private static void TryReadOptionalLong(SqliteDataReader reader, string column, Action<long?> setter)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal(column);
+                setter(reader.IsDBNull(ordinal) ? null : reader.GetInt64(ordinal));
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Column doesn't exist in this DB version - ignore
+            }
         }
 
         private static HashDbEntry ReadHashEntry(SqliteDataReader reader)

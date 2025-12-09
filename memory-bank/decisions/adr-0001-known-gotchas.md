@@ -654,5 +654,161 @@ Publishes to MeshSync
 
 ---
 
+---
+
+### 21. API Calls Before Login - Infinite Loop Danger
+
+**The Bug**: Components that make API calls on mount will cause infinite loops or errors when rendered on the login page (before authentication).
+
+**Files Affected**:
+- `src/web/src/components/LoginForm.jsx`
+- `src/web/src/components/Shared/Footer.jsx`
+- Any component rendered before login
+
+**Wrong**:
+```jsx
+// In LoginForm.jsx - BAD: Footer makes API calls
+import Footer from './Shared/Footer';
+
+const LoginForm = () => {
+  return (
+    <>
+      <LoginContent />
+      <Footer /> {/* 💀 If Footer fetches data on mount, this breaks */}
+    </>
+  );
+};
+
+// In Footer.jsx - BAD: API call on mount
+const Footer = () => {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    api.getStats().then(setStats); // 💀 401 error before login!
+  }, []);
+
+  return <footer>...</footer>;
+};
+```
+
+**Correct**:
+```jsx
+// Footer.jsx - GOOD: Pure static component, no API calls
+const Footer = () => {
+  const year = new Date().getFullYear();
+
+  return (
+    <footer>
+      © {year} <a href="https://github.com/...">slskdN</a>
+      {/* All content is static - no useEffect, no API calls */}
+    </footer>
+  );
+};
+```
+
+**Why This Keeps Happening**: Models add "helpful" features like version info or stats to footers without considering the login page context.
+
+**Rule**: Components rendered before login (LoginForm, Footer on login, error pages) MUST be pure/static with ZERO API calls.
+
+---
+
+### 22. HashDb Schema Migrations - Versioned Upgrades
+
+**The System**: HashDb uses a versioned migration system (`HashDbMigrations.cs`) that runs automatically on startup.
+
+**Key Files**:
+- `src/slskd/HashDb/Migrations/HashDbMigrations.cs` - Migration definitions
+- `docs/HASHDB_SCHEMA.md` - Schema documentation
+
+**How It Works**:
+1. `__HashDbMigrations` table tracks applied versions
+2. On startup, `RunMigrations()` compares current vs target version
+3. Pending migrations run in order, each in a transaction
+4. Failed migrations roll back automatically
+
+**Adding New Columns** (SQLite gotcha):
+```csharp
+// WRONG - SQLite doesn't support multiple ALTER in one command
+cmd.CommandText = @"
+    ALTER TABLE Foo ADD COLUMN bar TEXT;
+    ALTER TABLE Foo ADD COLUMN baz INTEGER;
+";
+
+// CORRECT - Execute each ALTER separately
+var alters = new[] {
+    "ALTER TABLE Foo ADD COLUMN bar TEXT",
+    "ALTER TABLE Foo ADD COLUMN baz INTEGER"
+};
+foreach (var sql in alters)
+{
+    using var alterCmd = conn.CreateCommand();
+    alterCmd.CommandText = sql;
+    alterCmd.ExecuteNonQuery();
+}
+```
+
+**Handling Existing Columns** (idempotent migrations):
+```csharp
+try
+{
+    alterCmd.ExecuteNonQuery();
+}
+catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+{
+    // Column already exists - skip
+}
+```
+
+**Check Current Version**:
+```bash
+curl http://localhost:5030/api/v0/hashdb/schema
+```
+
+**Rule**: Always increment `CurrentVersion` when adding migrations. Never modify existing migrations.
+
+---
+
+### 23. Missing `using` Directives - Check ALL Related Files
+
+**The Bug**: Adding a type (e.g., `DateTimeOffset`) to an interface but only adding the `using System;` directive to one file, then having to fix each file one-by-one as compilation fails.
+
+**Files Affected**:
+- Any file that shares types across interface/implementation/controller boundaries
+
+**Wrong Workflow**:
+```
+1. Add DateTimeOffset to IHashDbService.cs
+2. Add "using System;" to IHashDbService.cs
+3. Compile → ERROR in HashDbController.cs
+4. Add "using System;" to HashDbController.cs
+5. Compile → ERROR in HashDbService.cs
+6. Add "using System;" to HashDbService.cs
+7. Finally compiles ✅ (wasted 3 compile cycles)
+```
+
+**Correct Workflow**:
+```
+1. Add DateTimeOffset to IHashDbService.cs
+2. BEFORE compiling, grep for all files that might need the type:
+   grep -l "IHashDbService\|HashDb" src/slskd/HashDb/**/*.cs
+3. Add "using System;" to ALL relevant files in one pass
+4. Compile once ✅
+```
+
+**Pre-Compile Checklist** when adding new types:
+```bash
+# Find all files in the feature directory
+find src/slskd/MyFeature -name "*.cs" -type f
+
+# Or grep for files using the interface/class
+grep -rl "IMyService\|MyService" src/slskd/MyFeature/
+```
+
+**Why This Keeps Happening**: AI models fix errors incrementally instead of thinking ahead about which files share the same types.
+
+**Rule**: When adding a new type to an interface, check ALL files in the same namespace/feature directory and add necessary `using` directives BEFORE attempting to compile.
+
+---
+
 *Last updated: 2025-12-09*
 

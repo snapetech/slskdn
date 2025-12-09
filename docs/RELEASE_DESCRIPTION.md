@@ -30,3 +30,31 @@
 
 > **Note:** This build is experimental and not intended for production use. Use the stable `main` branch for upstream-compatible releases.
 
+---
+
+## Release .19 – `dev-2025-12-09`
+
+**Branch/tag:** `experimental/multi-source-swarm` / `dev-2025-12-09`  
+**Ship date:** 2025-12-09  
+**Purpose:** Deliver the HashDb/passive hash discovery work, UI polish, and documentation/migration patterns that make the mesh-enabled stack testable while keeping client UX consistent.
+
+### Highlights
+
+1. **HashDb maturity**
+   - Passive FLAC discovery now ingests search responses plus peers who search or download us, with `PeerSearchedUsEvent`/`PeerDownloadedFromUsEvent` lifting usernames and shares into `FlacInventory`.
+   - Schema migrations handled via `HashDbMigrations.cs`, plus `/hashdb/backfill/from-history` endpoint with pagination, progress tracking, reset, and schema/version/export helpers.
+2. **UI and network health**
+   - Sticky, fixed status bar below the nav and an opaque, colorful footer (including “built on the most excellent slskd” text) on every page (login included), plus the tooltip/button convention documented in the memory bank.
+   - Network dashboard gains a backfill-from-history button with progress display and reset, and release notes now remind us to document every tagged build.
+3. **Docs + memories**
+   - Added `docs/HASHDB_SCHEMA.md`, reinforced the network health/UI tooltip guidance in `ADR-0002`, recorded the pre-compile gotcha in `ADR-0001`, and created a persistent memory to require release notes with each tagged build.
+
+### Tests
+
+- `npm run build` (frontend)
+- Manual `dotnet run` restart so the rebuilt assets (copied into both `src/slskd/wwwroot` and `bin/Debug/net8.0/wwwroot`) are served by the development server.
+
+### Notes
+
+- Tag `dev-2025-12-09` now exists on GitHub and should display this updated `docs/RELEASE_DESCRIPTION.md` when the release is published. Run the CI release workflow to attach `/tmp/release-notes.md` if you need the automated format.
+

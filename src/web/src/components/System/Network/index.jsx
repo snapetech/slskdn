@@ -10,6 +10,7 @@ import {
   Icon,
   Label,
   List,
+  Popup,
   Progress,
   Segment,
   Statistic,
@@ -68,6 +69,8 @@ const Network = () => {
   const [meshPeers, setMeshPeers] = useState([]);
   const [discoveredPeers, setDiscoveredPeers] = useState([]);
   const [syncing, setSyncing] = useState({});
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -103,6 +106,38 @@ const Network = () => {
       toast.error(`Failed to sync with ${username}`);
     } finally {
       setSyncing((previous) => ({ ...previous, [username]: false }));
+    }
+  };
+
+  const handleBackfillFromHistory = async (reset = false) => {
+    setBackfilling(true);
+    try {
+      const result = await slskdnAPI.backfillFromSearchHistory({
+        batchSize: 50,
+        reset,
+      });
+
+      if (result.error) {
+        toast.error(`Backfill failed: ${result.error}`);
+        setBackfillProgress(null);
+      } else {
+        setBackfillProgress(result);
+
+        if (result.complete) {
+          toast.success(result.message || 'Backfill complete!');
+        } else {
+          toast.info(
+            result.message || 'Batch processed - click again to continue',
+          );
+        }
+
+        fetchData(); // Refresh stats
+      }
+    } catch {
+      toast.error('Failed to trigger backfill from search history');
+      setBackfillProgress(null);
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -347,6 +382,63 @@ const Network = () => {
               Content-addressed FLAC fingerprints
             </Header.Subheader>
           </Header.Content>
+          <span style={{ float: 'right', marginTop: '-0.5em' }}>
+            {backfillProgress && !backfillProgress.complete && (
+              <Label
+                size="tiny"
+                style={{ marginRight: '0.5em' }}
+              >
+                {backfillProgress.remainingSearches} searches left
+              </Label>
+            )}
+            <Popup
+              content={
+                backfillProgress && !backfillProgress.complete
+                  ? `Continue processing search history. ${backfillProgress.remainingSearches} of ${backfillProgress.totalSearches} searches remaining.`
+                  : 'Scan your search history to discover FLAC files from past searches. This populates the inventory with files that can be probed for content hashes, enabling multi-source downloads for those files. Processes in batches - click multiple times for large histories.'
+              }
+              position="top right"
+              trigger={
+                <ShrinkableButton
+                  compact
+                  disabled={backfilling}
+                  icon={
+                    backfillProgress && !backfillProgress.complete
+                      ? 'play'
+                      : 'history'
+                  }
+                  loading={backfilling}
+                  mediaQuery="(max-width: 500px)"
+                  onClick={() => handleBackfillFromHistory(false)}
+                  primary
+                  size="mini"
+                >
+                  {backfillProgress && !backfillProgress.complete
+                    ? 'Continue'
+                    : 'Backfill from History'}
+                </ShrinkableButton>
+              }
+            />
+            {backfillProgress && (
+              <Popup
+                content="Reset progress and start backfill from the beginning"
+                position="top right"
+                trigger={
+                  <ShrinkableButton
+                    compact
+                    disabled={backfilling}
+                    icon="redo"
+                    mediaQuery="(max-width: 500px)"
+                    onClick={() => handleBackfillFromHistory(true)}
+                    size="mini"
+                    style={{ marginLeft: '0.3em' }}
+                  >
+                    Reset
+                  </ShrinkableButton>
+                }
+              />
+            )}
+          </span>
         </Header>
 
         <Statistic.Group

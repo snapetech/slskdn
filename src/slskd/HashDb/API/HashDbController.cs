@@ -17,13 +17,16 @@
 
 namespace slskd.HashDb.API
 {
+    using System;
     using System.Linq;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.EntityFrameworkCore;
     using Serilog;
     using slskd.HashDb.Models;
+    using slskd.Search;
 
     /// <summary>
     ///     Hash Database API controller.
@@ -36,12 +39,14 @@ namespace slskd.HashDb.API
         /// <summary>
         ///     Initializes a new instance of the <see cref="HashDbController"/> class.
         /// </summary>
-        public HashDbController(IHashDbService hashDb)
+        public HashDbController(IHashDbService hashDb, IDbContextFactory<SearchDbContext> searchContextFactory)
         {
             HashDb = hashDb;
+            SearchContextFactory = searchContextFactory;
         }
 
         private IHashDbService HashDb { get; }
+        private IDbContextFactory<SearchDbContext> SearchContextFactory { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<HashDbController>();
 
         /// <summary>
@@ -53,6 +58,27 @@ namespace slskd.HashDb.API
         {
             var stats = HashDb.GetStats();
             return Ok(stats);
+        }
+
+        /// <summary>
+        ///     Gets database schema version and migration status.
+        /// </summary>
+        [HttpGet("schema")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public IActionResult GetSchemaInfo()
+        {
+            var currentVersion = HashDb.GetSchemaVersion();
+            var targetVersion = Migrations.HashDbMigrations.CurrentVersion;
+
+            return Ok(new
+            {
+                currentVersion,
+                targetVersion,
+                isUpToDate = currentVersion >= targetVersion,
+                message = currentVersion >= targetVersion
+                    ? "Schema is up to date"
+                    : $"Schema needs migration from v{currentVersion} to v{targetVersion}",
+            });
         }
 
         /// <summary>
@@ -236,6 +262,98 @@ namespace slskd.HashDb.API
 
             var key = HashDbEntry.GenerateFlacKey(request.Filename, request.Size);
             return Ok(new { flacKey = key, stored = true });
+        }
+
+        /// <summary>
+        ///     Backfills FLAC inventory from existing search history.
+        ///     Processes searches in batches, tracking progress so subsequent calls continue where left off.
+        /// </summary>
+        /// <param name="batchSize">Number of searches to process per call (default 50, max 500).</param>
+        /// <param name="reset">If true, resets progress and starts from the beginning.</param>
+        [HttpPost("backfill/from-history")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> BackfillFromHistory([FromQuery] int batchSize = 50, [FromQuery] bool reset = false)
+        {
+            // Clamp batch size to reasonable values
+            batchSize = Math.Clamp(batchSize, 10, 500);
+
+            // Get or reset the last processed search timestamp
+            var lastProcessedAt = reset ? (DateTimeOffset?)null : await HashDb.GetBackfillProgressAsync();
+
+            using var context = SearchContextFactory.CreateDbContext();
+
+            // Count total searches and remaining
+            var totalSearches = await context.Searches.CountAsync();
+            var remainingSearches = lastProcessedAt.HasValue
+                ? await context.Searches.CountAsync(s => s.StartedAt < lastProcessedAt.Value)
+                : totalSearches;
+
+            if (remainingSearches == 0 && !reset)
+            {
+                return Ok(new
+                {
+                    searchesProcessed = 0,
+                    flacsDiscovered = 0,
+                    totalSearches,
+                    remainingSearches = 0,
+                    complete = true,
+                    message = "Backfill complete - all searches have been processed. Use reset=true to start over.",
+                });
+            }
+
+            Log.Information("[HashDb] Starting backfill batch (size: {BatchSize}, from: {From})", batchSize, lastProcessedAt?.ToString() ?? "beginning");
+
+            // Get next batch of searches, oldest first (so we process in chronological order)
+            var query = context.Searches.AsNoTracking();
+
+            if (lastProcessedAt.HasValue)
+            {
+                query = query.Where(s => s.StartedAt < lastProcessedAt.Value);
+            }
+
+            var searches = await query
+                .OrderByDescending(s => s.StartedAt) // Most recent unprocessed first
+                .Take(batchSize)
+                .ToListAsync();
+
+            var totalFlacs = 0;
+            var searchesProcessed = 0;
+            DateTimeOffset? oldestProcessed = null;
+
+            foreach (var search in searches)
+            {
+                if (search.Responses != null && search.Responses.Any())
+                {
+                    var flacs = await HashDb.BackfillFromSearchResponsesAsync(search.Responses);
+                    totalFlacs += flacs;
+                }
+
+                searchesProcessed++;
+                oldestProcessed = search.StartedAt;
+            }
+
+            // Save progress (the oldest timestamp we processed, so next batch gets older ones)
+            if (oldestProcessed.HasValue)
+            {
+                await HashDb.SetBackfillProgressAsync(oldestProcessed.Value);
+            }
+
+            var newRemaining = remainingSearches - searchesProcessed;
+            var isComplete = newRemaining <= 0;
+
+            Log.Information("[HashDb] Backfill batch complete: {Searches} searches, {Flacs} FLACs, {Remaining} remaining", searchesProcessed, totalFlacs, newRemaining);
+
+            return Ok(new
+            {
+                searchesProcessed,
+                flacsDiscovered = totalFlacs,
+                totalSearches,
+                remainingSearches = Math.Max(0, newRemaining),
+                complete = isComplete,
+                message = isComplete
+                    ? $"Backfill complete! Processed {searchesProcessed} searches, discovered {totalFlacs} FLACs."
+                    : $"Processed {searchesProcessed} searches, discovered {totalFlacs} FLACs. {newRemaining} searches remaining - click again to continue.",
+            });
         }
     }
 

@@ -123,19 +123,25 @@ body {
 .pushable > .pusher.app-content {
     min-height: calc(100% - 71px);
     background: var(--background-color);
+    padding-top: 40px !important; /* Space for fixed status bar */
 }
 
-/* slskdn Status Bar - Top bar */
+/* slskdn Status Bar - Fixed at top below nav bar */
 .slskdn-status-bar {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    background: linear-gradient(180deg, rgba(13,17,22,0.92) 0%, rgba(13,17,22,0.98) 100%);
-    border-bottom: 1px solid rgba(88,166,255,0.1);
+    background: linear-gradient(180deg, rgba(13,17,22,0.98) 0%, rgba(13,17,22,0.95) 100%);
+    border-bottom: 1px solid rgba(88,166,255,0.15);
     padding: 6px 24px;
     font-size: 16px;
     color: #6e7681;
     gap: 24px;
+    position: fixed !important;
+    top: 71px !important; /* Below the nav bar (nav is ~71px) */
+    left: 0;
+    right: 0;
+    z-index: 999; /* Above content but below modals */
 }
 
 .slskdn-status-items {
@@ -287,6 +293,7 @@ body {
     overflow: overlay !important;
     position: sticky !important;
     top: 0 !important;
+    z-index: 1000 !important; /* Above status bar */
 }
 
 .result-card {

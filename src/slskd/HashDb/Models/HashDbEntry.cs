@@ -68,6 +68,21 @@ namespace slskd.HashDb.Models
         public int UseCount { get; set; } = 1;
 
         /// <summary>
+        ///     Gets or sets the SHA256 hash of the entire file (for complete post-download verification).
+        /// </summary>
+        public string FullFileHash { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the audio fingerprint (AcoustID/Chromaprint) for future music identification.
+        /// </summary>
+        public string AudioFingerprint { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the MusicBrainz recording ID for future music identification.
+        /// </summary>
+        public string MusicBrainzId { get; set; }
+
+        /// <summary>
         ///     Gets the first seen time as DateTime.
         /// </summary>
         public DateTime FirstSeenAtUtc => DateTimeOffset.FromUnixTimeSeconds(FirstSeenAt).UtcDateTime;

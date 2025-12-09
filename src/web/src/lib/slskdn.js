@@ -67,6 +67,28 @@ export const getBackfillCandidates = async (limit = 50) => {
   return safeGet(`/backfill/candidates?limit=${limit}`, { candidates: [] });
 };
 
+export const backfillFromSearchHistory = async (options = {}) => {
+  try {
+    const searchParameters = new URLSearchParams();
+
+    if (options.batchSize) {
+      searchParameters.append('batchSize', options.batchSize);
+    }
+
+    if (options.reset) {
+      searchParameters.append('reset', 'true');
+    }
+
+    const query = searchParameters.toString()
+      ? `?${searchParameters.toString()}`
+      : '';
+
+    return (await api.post(`/hashdb/backfill/from-history${query}`)).data;
+  } catch (error) {
+    return { error: error?.message || 'Backfill failed', success: false };
+  }
+};
+
 // MultiSource API
 export const getActiveSwarmJobs = async () => {
   return safeGet('/multisource/jobs', []);

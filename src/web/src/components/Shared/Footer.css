@@ -3,10 +3,12 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 100%);
-    padding: 8px 16px;
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+    border-top: 1px solid rgba(88, 166, 255, 0.2);
+    padding: 10px 16px;
     z-index: 9999;
     pointer-events: none;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .slskdn-footer-content {
@@ -25,14 +27,26 @@
 }
 
 .slskdn-footer-copyright a {
-    color: rgba(255, 255, 255, 0.8);
+    color: #58a6ff;
     text-decoration: none;
     font-weight: 600;
+    transition: all 0.2s ease;
 }
 
 .slskdn-footer-copyright a:hover {
-    color: #58a6ff;
+    color: #79c0ff;
     text-decoration: underline;
+    text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+}
+
+/* Special styling for slskd parent project link */
+.slskdn-footer-copyright a[title="slskd - the original project"] {
+    color: #f0883e;
+}
+
+.slskdn-footer-copyright a[title="slskd - the original project"]:hover {
+    color: #ffa657;
+    text-shadow: 0 0 8px rgba(240, 136, 62, 0.5);
 }
 
 .slskdn-footer-divider {
@@ -81,7 +95,9 @@
 
 /* Light theme adjustments */
 html:not(.dark) .slskdn-footer {
-    background: linear-gradient(180deg, transparent 0%, rgba(240, 240, 240, 0.95) 100%);
+    background: linear-gradient(135deg, #f6f8fa 0%, #eaeef2 50%, #f6f8fa 100%);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
 }
 
 html:not(.dark) .slskdn-footer-content {

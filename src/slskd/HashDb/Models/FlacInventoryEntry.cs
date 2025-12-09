@@ -104,9 +104,14 @@ namespace slskd.HashDb.Models
         public string HashSourceStr { get; set; }
 
         /// <summary>
-        ///     Gets or sets the FLAC audio MD5 (from STREAMINFO, for reference only).
+        ///     Gets or sets the FLAC audio MD5 (from STREAMINFO - MD5 of decoded PCM audio).
         /// </summary>
         public string FlacAudioMd5 { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the SHA256 hash of the entire file (populated after download).
+        /// </summary>
+        public string FullFileHash { get; set; }
 
         /// <summary>
         ///     Gets or sets the audio sample rate.
@@ -127,6 +132,41 @@ namespace slskd.HashDb.Models
         ///     Gets or sets the total duration in samples.
         /// </summary>
         public long? DurationSamples { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the minimum block size from STREAMINFO.
+        /// </summary>
+        public int? MinBlockSize { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the maximum block size from STREAMINFO.
+        /// </summary>
+        public int? MaxBlockSize { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the FLAC encoder info string (if available from VORBIS_COMMENT).
+        /// </summary>
+        public string EncoderInfo { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the album hash (for grouping files from the same album).
+        /// </summary>
+        public string AlbumHash { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the number of times probing this file has failed.
+        /// </summary>
+        public int ProbeFailCount { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the reason for the last probe failure.
+        /// </summary>
+        public string ProbeFailReason { get; set; }
+
+        /// <summary>
+        ///     Gets or sets when we last attempted to probe this file (Unix timestamp).
+        /// </summary>
+        public long? LastProbeAt { get; set; }
 
         /// <summary>
         ///     Gets the hash status as enum.
