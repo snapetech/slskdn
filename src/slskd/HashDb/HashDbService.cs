@@ -1894,6 +1894,33 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<IReadOnlyList<LabelPresence>> GetLabelPresenceAsync(CancellationToken cancellationToken = default)
+        {
+            var results = new List<LabelPresence>();
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT metadata_label, COUNT(*) AS cnt
+                FROM AlbumTargets
+                WHERE metadata_label IS NOT NULL AND metadata_label <> ''
+                GROUP BY metadata_label
+                ORDER BY cnt DESC, metadata_label";
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                results.Add(new LabelPresence
+                {
+                    Label = reader.GetString(0),
+                    ReleaseCount = reader.GetInt32(1),
+                });
+            }
+
+            return results;
+        }
+
+        /// <inheritdoc/>
         public async Task<ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();

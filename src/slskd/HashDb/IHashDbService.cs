@@ -216,6 +216,13 @@ namespace slskd.HashDb
 
         Task SetDiscographyReleaseJobStatusAsync(string jobId, string releaseId, Jobs.JobStatus status, CancellationToken cancellationToken = default);
 
+        // ========== Label Presence ==========
+
+        /// <summary>
+        ///     Aggregates local label presence counts from AlbumTargets.
+        /// </summary>
+        Task<IReadOnlyList<slskd.Integrations.MusicBrainz.Models.LabelPresence>> GetLabelPresenceAsync(CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>
