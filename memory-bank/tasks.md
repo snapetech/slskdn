@@ -971,69 +971,69 @@
 
 #### Phase 6C: Scenes / Micro-Networks
 
-- [ ] **T-813**: Implement scene management service
-  - Status: Not started
+- [x] **T-813**: Implement scene management service
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Join/leave scenes, scene metadata, DHT announcements
 
-- [ ] **T-814**: Add scene DHT announcements
-  - Status: Not started
+- [x] **T-814**: Add scene DHT announcements
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Publish scene membership to DHT
 
-- [ ] **T-815**: Build scene membership tracking
-  - Status: Not started
+- [x] **T-815**: Build scene membership tracking
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Track which scenes peer participates in, update on join/leave
 
-- [ ] **T-816**: Implement overlay pubsub for scenes
-  - Status: Not started
+- [x] **T-816**: Implement overlay pubsub for scenes
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Real-time scene gossip and chat over overlay connections
 
-- [ ] **T-817**: Add scene-scoped job creation
-  - Status: Not started
+- [x] **T-817**: Add scene-scoped job creation
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Label crate and discovery jobs scoped to specific scenes
 
-- [ ] **T-818**: Build scene UI
-  - Status: Not started
+- [x] **T-818**: Build scene UI
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: React components for scene list, join, leave, metadata display
 
-- [ ] **T-819**: Add scene chat (optional)
-  - Status: Not started
+- [x] **T-819**: Add scene chat (optional)
+  - Status: Done
   - Priority: P3
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Overlay pubsub messages for scene-based chat, signed and rate-limited
 
-- [ ] **T-820**: Implement scene moderation
-  - Status: Not started
+- [x] **T-820**: Implement scene moderation
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Local mute/block for scene participants, no global bans
 
 #### Phase 6D: Disaster Mode & Failover
 
-- [ ] **T-821**: Implement Soulseek health monitor
-  - Status: Not started
+- [x] **T-821**: Implement Soulseek health monitor
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Track server health (healthy/degraded/unavailable), detect bans and outages
 
-- [ ] **T-822**: Build disaster mode coordinator
-  - Status: Not started
+- [x] **T-822**: Build disaster mode coordinator
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Activate/deactivate disaster mode, switch resolvers to mesh-only
 
-- [ ] **T-823**: Implement mesh-only search
+- [x] **T-823**: Implement mesh-only search
   - Status: Not started
   - Priority: P1
   - Branch: experimental/virtual-soulfind

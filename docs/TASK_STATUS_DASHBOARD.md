@@ -14,13 +14,13 @@ Phase 2:  ████████████████████ 100% (22/
 Phase 3:  ████████████████████ 100% (11/11 tasks complete)
 Phase 4:  ████████████████████ 100% (12/12 tasks complete)
 Phase 5:  ████████████████████ 100% (13/13 tasks complete)
-Phase 6:  █████░░░░░░░░░░░░░░░  25% (13/52 tasks complete)
+Phase 6:  ████████░░░░░░░░░░░░  40% (21/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete) [MeshCore/MediaCore]
 Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/32 tasks complete) [PodCore + Soulseek Bridge]
 Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% ( 0/2 tasks complete) [Domain Apps]
 
-Overall: █████████░░░░░░░░░░░  39% (85/217 tasks complete)
+Overall: ██████████░░░░░░░░░░  43% (93/217 tasks complete)
 ```
 
 ---
@@ -170,7 +170,7 @@ Overall: █████████░░░░░░░░░░░  39% (85/2
 
 ## 🔄 Phase 6: Virtual Soulfind Mesh & Disaster Mode (IN PROGRESS)
 
-**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 13/52 (25%)
+**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 21/52 (40%)
 
 ### Phase 6A: Capture & Normalization Pipeline (5/5) ✅
 - ✅ T-800: Implement Soulseek traffic observer (Completed: 2025-12-10)
@@ -188,6 +188,16 @@ Overall: █████████░░░░░░░░░░░  39% (85/2
 - ✅ T-810: Implement shard merging logic (Completed: 2025-12-10)
 - ✅ T-811: Add TTL and eviction policy (Completed: 2025-12-10)
 - ✅ T-812: Implement rate limiting for DHT writes (Completed: 2025-12-10)
+
+### Phase 6C: Scenes / Micro-Networks (8/8) ✅
+- ✅ T-813: Implement scene management service (Completed: 2025-12-10)
+- ✅ T-814: Add scene DHT announcements (Completed: 2025-12-10)
+- ✅ T-815: Implement scene membership tracking (Completed: 2025-12-10)
+- ✅ T-816: Build overlay pubsub for scene gossip (Completed: 2025-12-10)
+- ✅ T-817: Add scene-scoped job creation (Completed: 2025-12-10)
+- ✅ T-818: Create scene UI stub (Completed: 2025-12-10)
+- ✅ T-819: Implement scene chat (Completed: 2025-12-10)
+- ✅ T-820: Add scene moderation (Completed: 2025-12-10)
 
 ### Phase 6A: Capture & Normalization Pipeline (0/5) 📋
 - ⏳ T-800: Implement Soulseek traffic observer

@@ -748,6 +748,13 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardMerger, VirtualSoulfind.ShadowIndex.ShardMerger>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardCache, VirtualSoulfind.ShadowIndex.ShardCache>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtRateLimiter, VirtualSoulfind.ShadowIndex.DhtRateLimiter>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneService, VirtualSoulfind.Scenes.SceneService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneAnnouncementService, VirtualSoulfind.Scenes.SceneAnnouncementService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneMembershipTracker, VirtualSoulfind.Scenes.SceneMembershipTracker>();
+            services.AddSingleton<VirtualSoulfind.Scenes.IScenePubSubService, VirtualSoulfind.Scenes.ScenePubSubService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneJobService, VirtualSoulfind.Scenes.SceneJobService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneChatService, VirtualSoulfind.Scenes.SceneChatService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneModerationService, VirtualSoulfind.Scenes.SceneModerationService>();
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();

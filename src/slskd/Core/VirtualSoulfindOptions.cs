@@ -21,6 +21,11 @@ public class VirtualSoulfindOptions
     /// Shadow index configuration.
     /// </summary>
     public ShadowIndexOptions? ShadowIndex { get; set; }
+    
+    /// <summary>
+    /// Scenes configuration.
+    /// </summary>
+    public ScenesOptions? Scenes { get; set; }
 }
 
 /// <summary>
@@ -71,4 +76,30 @@ public class PrivacyOptions
     /// Persist raw observations to disk (for debugging).
     /// </summary>
     public bool PersistRawObservations { get; set; } = false;
+}
+
+/// <summary>
+/// Scenes configuration.
+/// </summary>
+public class ScenesOptions
+{
+    /// <summary>
+    /// Enable scenes (micro-networks).
+    /// </summary>
+    public bool Enabled { get; set; } = false;
+    
+    /// <summary>
+    /// Maximum number of scenes to join.
+    /// </summary>
+    public int MaxJoinedScenes { get; set; } = 20;
+    
+    /// <summary>
+    /// Enable scene chat (opt-in).
+    /// </summary>
+    public bool EnableChat { get; set; } = false;
+    
+    /// <summary>
+    /// Scene announcement refresh interval (minutes).
+    /// </summary>
+    public int AnnouncementRefreshMinutes { get; set; } = 15;
 }
