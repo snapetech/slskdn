@@ -864,6 +864,242 @@
 
 ---
 
+### Phase 8: Code Quality & Refactoring
+
+> **Branch**: `experimental/brainz`  
+> **Docs**: `docs/phase8-refactoring-design.md`  
+> **Timeline**: Phase 8 (8-12 weeks post-implementation)
+
+#### Stage 1: Module Boundaries (Weeks 1-2)
+
+- [ ] **T-1000**: Create namespace structure
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Create Slskdn.Swarm, Slskdn.Mesh, Slskdn.Security, Slskdn.Brainz, Slskdn.Integrations namespaces/projects
+
+- [ ] **T-1001**: Define core interfaces
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: ISwarmDownloadService, IMeshDirectory, ISecurityPolicyEngine, IBrainzCatalogService, IMetadataJobRunner
+
+- [ ] **T-1002**: Move types into namespaces
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Reorganize existing code into new namespace structure, ensure no circular dependencies
+
+#### Stage 2: Swarm Refactor (Weeks 3-4)
+
+- [ ] **T-1010**: Implement SwarmDownloadOrchestrator
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: BackgroundService with Channel-based job queue, replace scattered Task.Run
+
+- [ ] **T-1011**: Create SwarmJob model
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: SwarmJob, SwarmFile, SwarmChunk, SwarmSource with proper typing
+
+- [ ] **T-1012**: Implement IVerificationEngine
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Centralize chunk verification (hash, consensus, reputation) with caching
+
+- [ ] **T-1013**: Replace ad-hoc Task.Run
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Route all swarm operations through orchestrator
+
+- [ ] **T-1014**: Centralize chunk verification
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Single entrypoint for verification, remove inline checks
+
+#### Stage 3: Mesh Refactor (Weeks 5-6)
+
+- [ ] **T-1020**: Implement IMeshDirectory abstraction
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Clean directory service API for discovery, publishing, events
+
+- [ ] **T-1021**: Create MeshTransportService
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Internal service for NAT, UPnP, TLS, reconnect logic
+
+- [ ] **T-1022**: Hide DHT/overlay behind IMeshDirectory
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Remove direct DHT/overlay access from swarm/brainz code
+
+- [ ] **T-1023**: Event-based mesh notifications
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: IAsyncEnumerable<MeshEvent> for PeerJoined, PeerLeft, AvailabilityAnnounced
+
+#### Stage 4: Brainz Pipeline (Weeks 7-8)
+
+- [ ] **T-1030**: Implement IMetadataJob abstraction
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: IMetadataJob interface with typed jobs (AlbumBackfillJob, DiscographyJob, RepairMissionJob)
+
+- [ ] **T-1031**: Create MetadataJobRunner
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: BackgroundService with job queue and status tracking
+
+- [ ] **T-1032**: Implement codec analyzers
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: IAudioAnalyzer with FlacAnalyzer, Mp3Analyzer, OpusAnalyzer, AacAnalyzer
+
+- [ ] **T-1033**: Create unified BrainzClient
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Single client for MB/AcoustID/Soulbeet with caching, rate limiting, backoff
+
+- [ ] **T-1034**: Convert to job enqueueing
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Replace fire-and-forget async calls with job enqueueing
+
+#### Stage 5: Security Engine (Week 9)
+
+- [ ] **T-1040**: Implement ISecurityPolicyEngine
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Policy engine abstraction with SecurityContext, SecurityDecision
+
+- [ ] **T-1041**: Create CompositeSecurityPolicy
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Compose multiple policies with short-circuit evaluation
+
+- [ ] **T-1042**: Implement individual policies
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: NetworkGuardPolicy, ReputationPolicy, ConsensusPolicy, ContentSafetyPolicy
+
+- [ ] **T-1043**: Replace inline security checks
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Remove scattered security logic from controllers, use policy engine
+
+#### Stage 6: Configuration (Week 10)
+
+- [ ] **T-1050**: Create strongly-typed options
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: SwarmOptions, MeshOptions, SecurityOptions, BrainzOptions
+
+- [ ] **T-1051**: Wire options via IOptions<T>
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: DI registration for all options classes
+
+- [ ] **T-1052**: Remove direct IConfiguration access
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Replace magic strings with typed options everywhere
+
+#### Stage 7: Testability (Week 11)
+
+- [ ] **T-1060**: Eliminate static singletons
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Remove static state, make everything injectable
+
+- [ ] **T-1061**: Add interfaces for subsystems
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Ensure all major services have interfaces for mocking
+
+- [ ] **T-1062**: Constructor injection cleanup
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: No `new HttpClient()`, no object creation inside methods
+
+#### Stage 8: Test Infrastructure (Week 12)
+
+- [ ] **T-1070**: Implement Soulfind test harness
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: SoulfindRunner for integration tests (from Phase 7 design)
+
+- [ ] **T-1071**: Implement MeshSimulator
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: In-process mesh simulation for testing
+
+- [ ] **T-1072**: Write integration-soulseek tests
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Multi-client tests with Alice/Bob/Carol topology
+
+- [ ] **T-1073**: Write integration-mesh tests
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Pure mesh simulation tests (no Soulseek)
+
+#### Stage 9: Cleanup (Ongoing)
+
+- [ ] **T-1080**: Remove dead code
+  - Status: Not started
+  - Priority: P2
+  - Branch: experimental/brainz
+  - Notes: Kill unused enums, flags, half-implemented concepts, proto-classes
+
+- [ ] **T-1081**: Normalize naming
+  - Status: Not started
+  - Priority: P2
+  - Branch: experimental/brainz
+  - Notes: Consistent vocabulary: Swarm/Mesh/Brainz/Security terms
+
+- [ ] **T-1082**: Move narrative comments to docs
+  - Status: Not started
+  - Priority: P2
+  - Branch: experimental/brainz
+  - Notes: Keep code comments concise, details in docs/
+
+- [ ] **T-1083**: Collapse forwarding classes
+  - Status: Not started
+  - Priority: P2
+  - Branch: experimental/brainz
+  - Notes: Remove unnecessary abstraction layers
+
+---
+
 ### Phase 7: Testing Strategy with Soulfind & Mesh Simulator
 
 > **Branch**: `experimental/brainz` (tests live alongside features)  

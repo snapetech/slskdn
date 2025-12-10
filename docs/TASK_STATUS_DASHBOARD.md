@@ -2,7 +2,7 @@
 
 **Last Updated**: December 10, 2025  
 **Branch**: experimental/brainz  
-**Total Tasks**: 127
+**Total Tasks**: 159
 
 ---
 
@@ -10,14 +10,15 @@
 
 ```
 Phase 1:  ████████████████████ 100% (14/14 tasks complete)
-Phase 2:  ████░░░░░░░░░░░░░░░░  18% ( 4/22 tasks complete)
+Phase 2:  █████░░░░░░░░░░░░░░░  23% ( 5/22 tasks complete)
 Phase 3:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/11 tasks complete)
 Phase 4:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/12 tasks complete)
 Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
 Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
+Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/29 tasks complete)
 
-Overall: ████░░░░░░░░░░░░░░░░  14% (18/127 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  12% (19/159 tasks complete)
 ```
 
 ---
@@ -57,10 +58,10 @@ Overall: ████░░░░░░░░░░░░░░░░  14% (18/1
 - ✅ T-401: Build canonical stats aggregation per recording/release (Completed: 2025-12-10)
 - ✅ T-402: Integrate canonical-aware download selection (Completed: 2025-12-10)
 
-### Phase 2B: Collection Doctor / Library Health (1/3) 🔄
+### Phase 2B: Collection Doctor / Library Health (2/3) ✅
 - ✅ T-403: Implement library scan service (Completed: 2025-12-10)
-- ⏳ T-404: Build library health UI/API [NEXT]
-- ⏳ T-405: Add "Fix via multi-swarm" actions
+- ✅ T-404: Build library health UI/API (Completed: 2025-12-10)
+- ⏳ T-405: Add "Fix via multi-swarm" actions [NEXT]
 
 ### Phase 2-Extended: Advanced AudioVariant Fingerprinting (0/11) 📋
 - ⏳ T-420: Extend AudioVariant model with codec-specific fields
@@ -267,14 +268,14 @@ Overall: ████░░░░░░░░░░░░░░░░  14% (18/1
 
 ## 🎯 Current Sprint (Next 5 Tasks)
 
-1. **T-404** (P1): Build library health UI/API
+1. **T-405** (P1): Add "Fix via multi-swarm" actions [NEXT]
    - Status: Not started
-   - Blocker: None
-   - Estimated: 1-2 days
+   - Blocker: T-404 (complete)
+   - Estimated: 2-3 days
 
-2. **T-405** (P1): Add "Fix via multi-swarm" actions
+2. **T-406** (P1): Implement per-peer metrics collection
    - Status: Not started
-   - Blocker: T-404
+   - Blocker: T-405
    - Estimated: 1-2 days
 
 3. **T-420** (P1): Extend AudioVariant model with codec-specific fields
@@ -300,8 +301,8 @@ Overall: ████░░░░░░░░░░░░░░░░  14% (18/1
 - ✅ 4/4 complete (100%)
 
 ### P1 (High Priority)
-- ✅ 14/81 complete (17%)
-- 🔄 67 in progress or ready
+- ✅ 15/109 complete (14%)
+- 🔄 94 in progress or ready
 
 ### P2 (Medium Priority)
 - ✅ 0/30 complete (0%)
@@ -322,7 +323,7 @@ Overall: ████░░░░░░░░░░░░░░░░  14% (18/1
 
 ### 🔄 Milestone 2: Quality-Aware Downloads (IN PROGRESS)
 - Phase 2A-2B (T-400 to T-405)
-- Status: 🔄 **18% Complete** (4/22 tasks)
+- Status: 🔄 **23% Complete** (5/22 tasks)
 - Target: End of Week 2
 
 ### 📋 Milestone 3: Production-Grade Audio Analysis
@@ -350,31 +351,37 @@ Overall: ████░░░░░░░░░░░░░░░░  14% (18/1
 - Status: 📋 **Ready**
 - Target: End of Week 50
 
+### 📋 Milestone 8: Code Quality & Refactoring
+- Phase 8 (T-1000 to T-1083)
+- Status: 📋 **Ready**
+- Target: Post-implementation (8-12 weeks)
+
 ---
 
 ## 📊 Task Distribution by Phase
 
 ```
 Phase 1:  ■■■■■■■■■■■■■■■■■■■■ 14 tasks (✅ 100%)
-Phase 2:  ■■■■■■■■■■■■■■■■■■■■■■ 22 tasks (🔄  18%)
+Phase 2:  ■■■■■■■■■■■■■■■■■■■■■■ 22 tasks (🔄  23%)
 Phase 3:  ■■■■■■■■■■■ 11 tasks (📋   0%)
 Phase 4:  ■■■■■■■■■■■■ 12 tasks (📋   0%)
 Phase 5:  ■■■■■■■■■■■■■ 13 tasks (📋   0%)
 Phase 6:  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ 52 tasks (📋   0%)
 Phase 7:  ■■■■■■■■■■■■■■■■ 16 tasks (📋   0%)
+Phase 8:  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ 29 tasks (📋   0%)
 ```
 
 ---
 
 ## 🏆 Completion Metrics
 
-- **Total Tasks**: 127
-- **Completed**: 18 (14%)
+- **Total Tasks**: 159
+- **Completed**: 19 (12%)
 - **In Progress**: 0 (0%)
-- **Ready**: 109 (86%)
+- **Ready**: 140 (88%)
 - **Blocked**: 0 (0%)
 
-**Estimated Remaining Time**: 48-64 weeks
+**Estimated Remaining Time**: 56-76 weeks
 
 ---
 
