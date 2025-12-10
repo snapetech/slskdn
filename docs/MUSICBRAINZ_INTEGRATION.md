@@ -74,7 +74,7 @@ The baseline features any sane product manager would spec. These work entirely w
 
 #### 1.2 Acoustic Fingerprinting (Chromaprint + AcoustID)
 
-**Technology**: [Chromaprint](https://acoustid.org/chromaprint) - open-source audio fingerprinting
+**Technology**: [Chromaprint](https://acoustid.org/chromaprint) - open-source audio fingerprinting (requires the native `chromaprint` library to be installed and accessible to slskdn; enable via `Integration.Chromaprint.Enabled`, and learn MB IDs via `Integration.AcoustId.ClientId`).
 
 **Local Capabilities**:
 1. **Fingerprint extraction**:
@@ -675,11 +675,15 @@ public class FingerprintBatchMessage
 - [ ] Add fingerprint column to HashDb
 - [ ] Build auto-tagging pipeline
 
+> AcoustID (`Integration.AcoustId.Enabled` + `Integration.AcoustId.ClientId`) is required to turn fingerprints into MusicBrainz Recording IDs stored in `HashDb.musicbrainz_id`.
+
 **Week 5-6**: ID-Aware Multi-Swarm
 - [ ] Extend `MultiSourceDownloadJob` with MBID fields
 - [ ] Implement semantic swarm grouping logic
 - [ ] Add fingerprint verification to download pipeline
 - [ ] Build album completion UI
+
+> The multi-source download job now tracks the target MusicBrainz recording, fingerprint, and per-source MBIDs so the swarm can recognize semantically equivalent chunks even when filenames differ.
 - [ ] Unit tests + integration tests
 
 ### Phase 2: Mesh Integration (Estimate: 6-8 weeks)
