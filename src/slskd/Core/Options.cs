@@ -193,6 +193,12 @@ namespace slskd
         public FlagsOptions Flags { get; init; } = new FlagsOptions();
 
         /// <summary>
+        ///     Warm cache configuration for popular MBIDs (overlay-only prefetch/serve).
+        /// </summary>
+        [Validate]
+        public WarmCacheOptions WarmCache { get; init; } = new WarmCacheOptions();
+
+        /// <summary>
         ///     Gets the path where application data is saved.
         /// </summary>
         [Argument('a', "app-dir")]

@@ -12,13 +12,13 @@
 Phase 1:  ████████████████████ 100% (14/14 tasks complete)
 Phase 2:  ████████████████████ 100% (22/22 tasks complete)
 Phase 3:  ████████████████████ 100% (11/11 tasks complete)
-Phase 4:  ███░░░░░░░░░░░░░░░░   25% ( 3/12 tasks complete)
+Phase 4:  ███████░░░░░░░░░░░░   58% ( 7/12 tasks complete)
 Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
 Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/30 tasks complete)
 
-Overall: ██████░░░░░░░░░░░░░░  28% (48/170 tasks complete)
+Overall: ███████░░░░░░░░░░░░░  29% (49/170 tasks complete)
 ```
 
 ---
@@ -115,7 +115,7 @@ Overall: ██████░░░░░░░░░░░░░░  28% (48/1
 
 ## 📋 Phase 4: Job Manifests, Session Traces & Advanced Features
 
-**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 3/12 (25%)
+**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 7/12 (58%)
 
 ### Phase 4A: YAML Job Manifests (3/3) ✅
 - ✅ T-600: Define YAML job manifest schema
@@ -127,8 +127,8 @@ Overall: ██████░░░░░░░░░░░░░░  28% (48/1
 - ✅ T-604: Implement event persistence and rotation
 - ✅ T-605: Build session trace summaries
 
-### Phase 4C: Warm Cache Nodes (Optional) (0/3) 📋
-- ⏳ T-606: Implement warm cache configuration
+### Phase 4C: Warm Cache Nodes (Optional) (1/3) 🔄
+- ✅ T-606: Implement warm cache configuration
 - ⏳ T-607: Build popularity detection for caching
 - ⏳ T-608: Add cache fetch, serve, evict logic
 

@@ -417,11 +417,11 @@
 
 #### Phase 4C: Warm Cache Nodes (Optional)
 
-- [ ] **T-606**: Implement warm cache configuration
-  - Status: Not started
+- [x] **T-606**: Implement warm cache configuration
+  - Status: Done
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: Add config: warm_cache.enabled, warm_cache.max_storage_gb, warm_cache.min_popularity_threshold. Track which MBIDs are cached and space usage.
+  - Notes: WarmCache options added with enabled/max_storage_gb/min_popularity_threshold validation; ready for caching logic wiring.
 
 - [ ] **T-607**: Build popularity detection for caching
   - Status: Not started
