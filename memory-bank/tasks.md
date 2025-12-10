@@ -212,8 +212,9 @@
   - Branch: experimental/brainz
   - Notes: Query variants by MB Recording ID + audio_sketch_hash, deduplicate across codec boundaries. Debug API endpoint.
 
-- [ ] **T-427**: Implement analyzer version migration
-  - Status: Not started
+- [x] **T-427**: Implement analyzer version migration
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Background job to detect stale analyzer_version, recompute quality scores from raw features. CLI command.

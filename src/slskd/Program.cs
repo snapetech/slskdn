@@ -716,6 +716,7 @@ namespace slskd
                 sp.GetRequiredService<IOptionsMonitor<Options>>()));
             services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
             services.AddSingleton<IDedupeService, DedupeService>();
+            services.AddSingleton<IAnalyzerMigrationService, AnalyzerMigrationService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 
