@@ -2,6 +2,7 @@ namespace slskd.Core;
 
 using slskd.VirtualSoulfind.ShadowIndex;
 using slskd.VirtualSoulfind.DisasterMode;
+using slskd.VirtualSoulfind.Bridge;
 
 /// <summary>
 /// Virtual Soulfind configuration options.
@@ -32,6 +33,11 @@ public class VirtualSoulfindOptions
     /// Disaster mode configuration.
     /// </summary>
     public DisasterModeOptions? DisasterMode { get; set; }
+    
+    /// <summary>
+    /// Legacy client bridge configuration.
+    /// </summary>
+    public BridgeOptions? Bridge { get; set; }
 }
 
 /// <summary>
