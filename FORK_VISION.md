@@ -302,13 +302,13 @@ The `experimental/brainz` branch explores a significantly expanded architecture:
 ```csharp
 class ContentId
 {
-    ContentDomain Domain;     // Audio, Movie, TV
-    string MetadataSource;    // "mb", "tmdb", "tvdb"
-    string ExternalId;        // "artist:12345", "movie:67890"
+    ContentDomain Domain;     // Audio, (future: other media types)
+    string MetadataSource;    // "mb", etc.
+    string ExternalId;        // "artist:12345", "album:67890"
 }
 ```
-- Unified identifiers across MusicBrainz, TMDB, TVDb
-- Domain-specific cores: AudioCore, MovieCore, TvCore
+- Unified identifiers across MusicBrainz and other metadata sources
+- Domain-specific cores: AudioCore (others possible in future)
 - Pluggable metadata via facade pattern
 
 **MediaVariant Model**:
@@ -319,7 +319,7 @@ class ContentId
 
 **Metadata Facade**:
 - Abstract interface: `IMetadataProvider`
-- Implementations: MusicBrainz, TMDB, TVDb, local cache
+- Implementations: MusicBrainz, local cache, extensible to other sources
 - No tight coupling to specific APIs
 - Graceful degradation when services unavailable
 
@@ -369,7 +369,7 @@ class PodMember
    - No central message server
 
 3. **Content-Linked Pods**
-   - Associate pod with ContentId (artist, album, show)
+   - Associate pod with ContentId (artist, album, etc.)
    - "Fans of Daft Punk" → `ContentId(AudioArtist, "mb:artist:...")`
    - UI shows "Your collection vs pod's canonical discography"
 
@@ -434,22 +434,11 @@ What Pods **ARE NOT**:
 - Pod integration: "Join the Daft Punk fan pod"
 - Variant comparison: "Your FLAC vs pod's canonical FLAC"
 
-**Moviebeet (Movies)**:
-- Collection management, watchlist
-- Edition tracking (theatrical, director's cut, extended)
-- Quality scoring: resolution, bitrate, codec
-- Pod integration: "Join the Criterion Collection pod"
-
-**Tvbeet (TV)**:
-- Series tracking, episode completion
-- Rewatch clubs as pods
-- Season/episode variant tracking
-- "Your collection vs pod's preferred cuts"
-
-**Unified UI**:
-- Tabbed interface: Soulbeet | Moviebeet | Tvbeet
+**Future Domain Expansion**:
+- Architecture designed to support other media domains
 - Shared infrastructure: SwarmCore, MeshCore, MediaCore
-- Consistent UX across domains
+- Extensible ContentID system
+- Same quality/canonicality principles apply across domains
 
 ---
 
@@ -464,9 +453,9 @@ What Pods **ARE NOT**:
 
 **Dependencies Before Advanced Features:**
 - Stable overlay DHT and signed message routing (MeshCore foundation)
-- ContentID system operational across domains (MediaCore)
+- ContentID system operational for music domain (MediaCore)
 - Trust/reputation primitives mature (SecurityCore)
-- Basic domain app UIs (Soulbeet artist/album views)
+- Basic Soulbeet UI with artist/album views
 
 **Timeline:**
 - Phases 1-4: ✅ Complete (experimental/brainz)

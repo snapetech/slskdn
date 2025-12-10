@@ -2,7 +2,7 @@
 
 **Last Updated**: December 10, 2025  
 **Branch**: experimental/brainz  
-**Total Tasks**: 222 (170 original + 52 new research tasks)
+**Total Tasks**: 217 (170 original + 47 new research tasks)
 
 ---
 
@@ -16,11 +16,11 @@ Phase 4:  ████████████████████ 100% (12/
 Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
 Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
-Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete) [NEW - MeshCore/MediaCore]
-Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/32 tasks complete) [NEW - PodCore + Soulseek Bridge]
-Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% ( 0/4 tasks complete) [NEW - Domain Apps]
+Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete) [MeshCore/MediaCore]
+Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/32 tasks complete) [PodCore + Soulseek Bridge]
+Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% ( 0/2 tasks complete) [Domain Apps]
 
-Overall: ██████░░░░░░░░░░░░░░  27% (59/222 tasks complete)
+Overall: ██████░░░░░░░░░░░░░░  27% (59/217 tasks complete)
 ```
 
 ---

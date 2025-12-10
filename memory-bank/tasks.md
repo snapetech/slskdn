@@ -534,7 +534,7 @@
   - Status: Not started
   - Priority: P4 (research)
   - Branch: TBD
-  - Notes: ContentDomain enum (Audio/Movie/TV), MetadataSource, ExternalId, ContentId class.
+  - Notes: ContentDomain enum (Audio, extensible), MetadataSource, ExternalId, ContentId class.
 
 - [ ] **T-911**: Implement MediaVariant model and storage
   - Status: Not started
@@ -546,25 +546,13 @@
   - Status: Not started
   - Priority: P4 (research)
   - Branch: TBD
-  - Notes: IMetadataProvider interface, implementations for MusicBrainz/TMDB/TVDb/local cache.
+  - Notes: IMetadataProvider interface, implementations for MusicBrainz and extensible to other sources.
 
 - [ ] **T-913**: Implement AudioCore domain module
   - Status: Not started
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Artist/album/track models, discography logic, MB integration via facade.
-
-- [ ] **T-914**: Implement MovieCore domain module (optional)
-  - Status: Not started
-  - Priority: P4 (research)
-  - Branch: TBD
-  - Notes: Movie/collection models, edition tracking, TMDB integration.
-
-- [ ] **T-915**: Implement TvCore domain module (optional)
-  - Status: Not started
-  - Priority: P4 (research)
-  - Branch: TBD
-  - Notes: Series/season/episode models, TVDb integration.
 
 ---
 
@@ -792,20 +780,10 @@
   - Priority: P5 (long-term)
   - Notes: Artist discographies, album completion, pod integration, quality recommendations.
 
-- [ ] **T-1101**: Design Moviebeet (movies) app architecture (optional)
+- [ ] **T-1101**: Research extensibility for other media domains
   - Status: Not started
   - Priority: P5 (long-term)
-  - Notes: Collection management, edition tracking, pod integration.
-
-- [ ] **T-1102**: Design Tvbeet (TV) app architecture (optional)
-  - Status: Not started
-  - Priority: P5 (long-term)
-  - Notes: Series tracking, episode completion, rewatch clubs.
-
-- [ ] **T-1103**: Design unified app UI (tabbed interface)
-  - Status: Not started
-  - Priority: P5 (long-term)
-  - Notes: Soulbeet | Moviebeet | Tvbeet tabs, shared infrastructure.
+  - Notes: Architecture patterns for extending ContentID/MediaCore to other media types.
 
 ---
 
