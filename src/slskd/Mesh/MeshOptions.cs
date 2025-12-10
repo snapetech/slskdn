@@ -34,4 +34,18 @@ public class MeshOptions
     /// Endpoints we advertise (e.g., udp://host:port, quic://host:port).
     /// </summary>
     public List<string> SelfEndpoints { get; set; } = new();
+
+    /// <summary>
+    /// Enable STUN-based NAT detection.
+    /// </summary>
+    public bool EnableStun { get; set; } = true;
+
+    /// <summary>
+    /// STUN servers (host:port).
+    /// </summary>
+    public List<string> StunServers { get; set; } = new()
+    {
+        "stun.l.google.com:19302",
+        "stun1.l.google.com:19302"
+    };
 }

@@ -797,7 +797,7 @@ namespace slskd
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
 
             // MeshCore (Phase 8 implementation)
-            services.AddSingleton<Mesh.INatDetector, Mesh.NatDetector>();
+            services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
             services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
             services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
             services.AddSingleton<Mesh.Dht.IMeshDirectory, Mesh.Dht.ContentDirectory>();
