@@ -795,86 +795,86 @@
 
 #### Phase 5A: slskd Compatibility Layer
 
-- [ ] **T-700**: Implement GET /api/info compatibility endpoint
-  - Status: Not started
+- [x] **T-700**: Implement GET /api/info compatibility endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Return basic info/health in slskd format with impl=slskdn marker.
 
-- [ ] **T-701**: Implement POST /api/search compatibility endpoint
-  - Status: Not started
+- [x] **T-701**: Implement POST /api/search compatibility endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Accept slskd search format, perform Soulseek search, optionally enrich with MBID/fingerprint data, return results in slskd format.
 
-- [ ] **T-702**: Implement POST /api/downloads compatibility endpoint
-  - Status: Not started
+- [x] **T-702**: Implement POST /api/downloads compatibility endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Accept slskd download format, map to internal transfers/jobs, return download IDs in slskd format.
 
-- [ ] **T-703**: Implement GET /api/downloads compatibility endpoint
-  - Status: Not started
+- [x] **T-703**: Implement GET /api/downloads compatibility endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: List active/known downloads in slskd format. Map internal job/transfer states to slskd status fields.
 
 #### Phase 5B: slskdn-Native Job APIs
 
-- [ ] **T-704**: Implement GET /api/slskdn/capabilities endpoint
-  - Status: Not started
+- [x] **T-704**: Implement GET /api/slskdn/capabilities endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Return impl=slskdn, version, and feature list for client detection.
 
-- [ ] **T-705**: Implement POST /api/jobs/mb-release endpoint
-  - Status: Not started
+- [x] **T-705**: Implement POST /api/jobs/mb-release endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Accept MB Release ID, target_dir, tracks, constraints. Fetch MB tracklist, plan per-track multi-swarm downloads, write to target_dir.
 
-- [ ] **T-706**: Implement POST /api/jobs/discography endpoint
-  - Status: Not started
+- [x] **T-706**: Implement POST /api/jobs/discography endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Accept MB Artist ID + profile. Resolve discography, spawn mb_release sub-jobs, aggregate progress.
 
-- [ ] **T-707**: Implement POST /api/jobs/label-crate endpoint
-  - Status: Not started
+- [x] **T-707**: Implement POST /api/jobs/label-crate endpoint
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Accept label name/MB Label ID + limit. Compute popular releases, spawn mb_release sub-jobs.
 
-- [ ] **T-708**: Implement GET /api/jobs and GET /api/jobs/{id} endpoints
-  - Status: Not started
+- [x] **T-708**: Implement GET /api/jobs and GET /api/jobs/{id} endpoints
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: List/inspect jobs with common representation: id, type, status, spec, progress, created_at, updated_at, error.
 
 #### Phase 5C: Optional Advanced APIs
 
-- [ ] **T-709**: Implement POST /api/slskdn/warm-cache/hints endpoint
-  - Status: Not started
+- [x] **T-709**: Implement POST /api/slskdn/warm-cache/hints endpoint
+  - Status: Done
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Accept MB Release/Artist/Label IDs as popularity hints for warm cache module.
 
-- [ ] **T-710**: Implement GET /api/slskdn/library/health endpoint
-  - Status: Not started
+- [x] **T-710**: Implement GET /api/slskdn/library/health endpoint
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Return path-scoped library health summary with suspected transcodes, non-canonical variants, incomplete releases, and detailed issue list.
 
 #### Phase 5D: Soulbeet Client Integration
 
-- [ ] **T-711**: Document Soulbeet client modifications for slskdn detection
-  - Status: Not started
+- [x] **T-711**: Document Soulbeet client modifications for slskdn detection
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Document how Soulbeet should call /api/slskdn/capabilities to detect slskdn and enable advanced mode.
 
-- [ ] **T-712**: Create Soulbeet integration test suite
-  - Status: Not started
+- [x] **T-712**: Create Soulbeet integration test suite
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Test compat mode (Soulbeet unchanged) and advanced mode (MBID job APIs).
