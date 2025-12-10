@@ -715,6 +715,7 @@ namespace slskd
                 sp.GetRequiredService<IMusicBrainzClient>(),
                 sp.GetRequiredService<IOptionsMonitor<Options>>()));
             services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
+            services.AddSingleton<IDedupeService, DedupeService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 

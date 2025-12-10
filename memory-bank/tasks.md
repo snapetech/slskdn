@@ -205,8 +205,9 @@
   - Branch: experimental/brainz
   - Notes: Decode short PCM windows from arbitrary audio files, downsample to mono 4 kHz, hash with xxHash64.
 
-- [ ] **T-426**: Implement cross-codec deduplication logic
-  - Status: Not started
+- [x] **T-426**: Implement cross-codec deduplication logic
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Query variants by MB Recording ID + audio_sketch_hash, deduplicate across codec boundaries. Debug API endpoint.
