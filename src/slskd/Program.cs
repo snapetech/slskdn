@@ -56,6 +56,7 @@ namespace slskd
     using Serilog.Sinks.SystemConsole.Themes;
     using slskd.Authentication;
     using slskd.Audio;
+    using slskd.LibraryHealth;
     using slskd.Configuration;
     using slskd.Core.API;
     using slskd.Cryptography;
@@ -714,6 +715,7 @@ namespace slskd
                 sp.GetRequiredService<IMusicBrainzClient>(),
                 sp.GetRequiredService<IOptionsMonitor<Options>>()));
             services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
+            services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();

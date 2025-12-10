@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -411,6 +411,59 @@ public static class HashDbMigrations
                         CREATE INDEX IF NOT EXISTS idx_canonical_recording ON CanonicalStats(musicbrainz_recording_id);
                         CREATE INDEX IF NOT EXISTS idx_canonical_profile ON CanonicalStats(codec_profile_key);
                         CREATE INDEX IF NOT EXISTS idx_canonical_score ON CanonicalStats(canonicality_score DESC);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 6,
+                Name = "Library Health tables",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS LibraryHealthIssues (
+                            issue_id TEXT PRIMARY KEY,
+                            type TEXT NOT NULL,
+                            severity TEXT NOT NULL,
+                            file_path TEXT,
+                            mb_recording_id TEXT,
+                            mb_release_id TEXT,
+                            artist TEXT,
+                            album TEXT,
+                            title TEXT,
+                            reason TEXT,
+                            metadata TEXT,
+                            can_auto_fix BOOLEAN DEFAULT FALSE,
+                            suggested_action TEXT,
+                            remediation_job_id TEXT,
+                            status TEXT DEFAULT 'detected',
+                            detected_at INTEGER NOT NULL,
+                            resolved_at INTEGER,
+                            resolved_by TEXT
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_issues_status ON LibraryHealthIssues(status);
+                        CREATE INDEX IF NOT EXISTS idx_issues_type ON LibraryHealthIssues(type);
+                        CREATE INDEX IF NOT EXISTS idx_issues_severity ON LibraryHealthIssues(severity);
+                        CREATE INDEX IF NOT EXISTS idx_issues_release ON LibraryHealthIssues(mb_release_id);
+                        CREATE INDEX IF NOT EXISTS idx_issues_file ON LibraryHealthIssues(file_path);
+
+                        CREATE TABLE IF NOT EXISTS LibraryHealthScans (
+                            scan_id TEXT PRIMARY KEY,
+                            library_path TEXT NOT NULL,
+                            started_at INTEGER NOT NULL,
+                            completed_at INTEGER,
+                            status TEXT DEFAULT 'running',
+                            files_scanned INTEGER DEFAULT 0,
+                            issues_detected INTEGER DEFAULT 0,
+                            error_message TEXT
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_scans_path ON LibraryHealthScans(library_path);
+                        CREATE INDEX IF NOT EXISTS idx_scans_completed ON LibraryHealthScans(completed_at DESC);
                     ";
                     cmd.ExecuteNonQuery();
                 },

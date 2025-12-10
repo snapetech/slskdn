@@ -1040,6 +1040,210 @@ namespace slskd.HashDb
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        // ========== Library Health ==========
+
+        /// <inheritdoc/>
+        public async Task UpsertLibraryHealthScanAsync(LibraryHealth.LibraryHealthScan scan, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO LibraryHealthScans (
+                    scan_id,
+                    library_path,
+                    started_at,
+                    completed_at,
+                    status,
+                    files_scanned,
+                    issues_detected,
+                    error_message)
+                VALUES (
+                    @scan_id,
+                    @library_path,
+                    @started_at,
+                    @completed_at,
+                    @status,
+                    @files_scanned,
+                    @issues_detected,
+                    @error_message)
+                ON CONFLICT(scan_id) DO UPDATE SET
+                    completed_at = excluded.completed_at,
+                    status = excluded.status,
+                    files_scanned = excluded.files_scanned,
+                    issues_detected = excluded.issues_detected,
+                    error_message = excluded.error_message";
+
+            cmd.Parameters.AddWithValue("@scan_id", scan.ScanId);
+            cmd.Parameters.AddWithValue("@library_path", scan.LibraryPath);
+            cmd.Parameters.AddWithValue("@started_at", scan.StartedAt.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@completed_at", scan.CompletedAt?.ToUnixTimeSeconds() ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@status", scan.Status.ToString().ToLowerInvariant());
+            cmd.Parameters.AddWithValue("@files_scanned", scan.FilesScanned);
+            cmd.Parameters.AddWithValue("@issues_detected", scan.IssuesDetected);
+            cmd.Parameters.AddWithValue("@error_message", (object?)scan.ErrorMessage ?? DBNull.Value);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<LibraryHealth.LibraryHealthScan?> GetLibraryHealthScanAsync(string scanId, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM LibraryHealthScans WHERE scan_id = @id";
+            cmd.Parameters.AddWithValue("@id", scanId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return ReadScan(reader);
+            }
+
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<LibraryHealth.LibraryIssue>> GetLibraryIssuesAsync(LibraryHealth.LibraryHealthIssueFilter filter, CancellationToken cancellationToken = default)
+        {
+            var issues = new List<LibraryHealth.LibraryIssue>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            var sql = @"SELECT * FROM LibraryHealthIssues WHERE 1=1";
+            if (!string.IsNullOrWhiteSpace(filter.LibraryPath))
+            {
+                sql += " AND file_path LIKE @path";
+                cmd.Parameters.AddWithValue("@path", $"{filter.LibraryPath}%");
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.MusicBrainzReleaseId))
+            {
+                sql += " AND mb_release_id = @rid";
+                cmd.Parameters.AddWithValue("@rid", filter.MusicBrainzReleaseId);
+            }
+
+            if (filter.Types != null && filter.Types.Count > 0)
+            {
+                sql += $" AND type IN ({string.Join(",", filter.Types.Select((_, i) => $"@t{i}"))})";
+                for (int i = 0; i < filter.Types.Count; i++)
+                {
+                    cmd.Parameters.AddWithValue($"@t{i}", filter.Types[i].ToString());
+                }
+            }
+
+            if (filter.Severities != null && filter.Severities.Count > 0)
+            {
+                sql += $" AND severity IN ({string.Join(",", filter.Severities.Select((_, i) => $"@s{i}"))})";
+                for (int i = 0; i < filter.Severities.Count; i++)
+                {
+                    cmd.Parameters.AddWithValue($"@s{i}", filter.Severities[i].ToString());
+                }
+            }
+
+            if (filter.Statuses != null && filter.Statuses.Count > 0)
+            {
+                sql += $" AND status IN ({string.Join(",", filter.Statuses.Select((_, i) => $"@st{i}"))})";
+                for (int i = 0; i < filter.Statuses.Count; i++)
+                {
+                    cmd.Parameters.AddWithValue($"@st{i}", filter.Statuses[i].ToString().ToLowerInvariant());
+                }
+            }
+
+            sql += " ORDER BY detected_at DESC LIMIT @limit OFFSET @offset";
+            cmd.Parameters.AddWithValue("@limit", filter.Limit);
+            cmd.Parameters.AddWithValue("@offset", filter.Offset);
+            cmd.CommandText = sql;
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                issues.Add(ReadIssue(reader));
+            }
+
+            return issues;
+        }
+
+        /// <inheritdoc/>
+        public async Task UpdateLibraryIssueStatusAsync(string issueId, LibraryHealth.LibraryIssueStatus status, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE LibraryHealthIssues
+                SET status = @status,
+                    resolved_at = CASE WHEN @status IN ('resolved','ignored') THEN strftime('%s','now') ELSE resolved_at END
+                WHERE issue_id = @id";
+            cmd.Parameters.AddWithValue("@status", status.ToString().ToLowerInvariant());
+            cmd.Parameters.AddWithValue("@id", issueId);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task InsertLibraryIssueAsync(LibraryHealth.LibraryIssue issue, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO LibraryHealthIssues (
+                    issue_id,
+                    type,
+                    severity,
+                    file_path,
+                    mb_recording_id,
+                    mb_release_id,
+                    artist,
+                    album,
+                    title,
+                    reason,
+                    metadata,
+                    can_auto_fix,
+                    suggested_action,
+                    remediation_job_id,
+                    status,
+                    detected_at,
+                    resolved_at,
+                    resolved_by)
+                VALUES (
+                    @issue_id,
+                    @type,
+                    @severity,
+                    @file_path,
+                    @mb_recording_id,
+                    @mb_release_id,
+                    @artist,
+                    @album,
+                    @title,
+                    @reason,
+                    @metadata,
+                    @can_auto_fix,
+                    @suggested_action,
+                    @remediation_job_id,
+                    @status,
+                    @detected_at,
+                    @resolved_at,
+                    @resolved_by)";
+
+            cmd.Parameters.AddWithValue("@issue_id", issue.IssueId);
+            cmd.Parameters.AddWithValue("@type", issue.Type.ToString());
+            cmd.Parameters.AddWithValue("@severity", issue.Severity.ToString());
+            cmd.Parameters.AddWithValue("@file_path", (object?)issue.FilePath ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@mb_recording_id", (object?)issue.MusicBrainzRecordingId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@mb_release_id", (object?)issue.MusicBrainzReleaseId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@artist", (object?)issue.Artist ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@album", (object?)issue.Album ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@title", (object?)issue.Title ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@reason", (object?)issue.Reason ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@metadata", JsonSerializer.Serialize(issue.Metadata ?? new Dictionary<string, object>()));
+            cmd.Parameters.AddWithValue("@can_auto_fix", issue.CanAutoFix);
+            cmd.Parameters.AddWithValue("@suggested_action", (object?)issue.SuggestedAction ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@remediation_job_id", (object?)issue.RemediationJobId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@status", issue.Status.ToString().ToLowerInvariant());
+            cmd.Parameters.AddWithValue("@detected_at", issue.DetectedAt.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@resolved_at", issue.ResolvedAt?.ToUnixTimeSeconds() ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@resolved_by", (object?)issue.ResolvedBy ?? DBNull.Value);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         private async Task TryResolveAcoustIdAsync(string filePath, string flacKey, string fingerprint, CancellationToken cancellationToken = default)
         {
             if (acoustIdClient == null || optionsMonitor == null || musicBrainzClient == null)
@@ -1825,6 +2029,49 @@ namespace slskd.HashDb
             stats.SampleRateDistribution = JsonSerializer.Deserialize<Dictionary<int, int>>(srJson) ?? new Dictionary<int, int>();
 
             return stats;
+        }
+
+        private static LibraryHealth.LibraryHealthScan ReadScan(SqliteDataReader reader)
+        {
+            return new LibraryHealth.LibraryHealthScan
+            {
+                ScanId = reader.GetString(reader.GetOrdinal("scan_id")),
+                LibraryPath = reader.GetString(reader.GetOrdinal("library_path")),
+                StartedAt = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("started_at"))),
+                CompletedAt = reader.IsDBNull(reader.GetOrdinal("completed_at")) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("completed_at"))),
+                Status = Enum.TryParse<LibraryHealth.ScanStatus>(reader.GetString(reader.GetOrdinal("status")), true, out var st) ? st : LibraryHealth.ScanStatus.Running,
+                FilesScanned = reader.IsDBNull(reader.GetOrdinal("files_scanned")) ? 0 : reader.GetInt32(reader.GetOrdinal("files_scanned")),
+                IssuesDetected = reader.IsDBNull(reader.GetOrdinal("issues_detected")) ? 0 : reader.GetInt32(reader.GetOrdinal("issues_detected")),
+                ErrorMessage = reader.IsDBNull(reader.GetOrdinal("error_message")) ? null : reader.GetString(reader.GetOrdinal("error_message")),
+            };
+        }
+
+        private static LibraryHealth.LibraryIssue ReadIssue(SqliteDataReader reader)
+        {
+            var issue = new LibraryHealth.LibraryIssue
+            {
+                IssueId = reader.GetString(reader.GetOrdinal("issue_id")),
+                Type = Enum.TryParse<LibraryHealth.LibraryIssueType>(reader.GetString(reader.GetOrdinal("type")), true, out var t) ? t : LibraryHealth.LibraryIssueType.MissingMetadata,
+                Severity = Enum.TryParse<LibraryHealth.LibraryIssueSeverity>(reader.GetString(reader.GetOrdinal("severity")), true, out var sev) ? sev : LibraryHealth.LibraryIssueSeverity.Low,
+                FilePath = reader.IsDBNull(reader.GetOrdinal("file_path")) ? null : reader.GetString(reader.GetOrdinal("file_path")),
+                MusicBrainzRecordingId = reader.IsDBNull(reader.GetOrdinal("mb_recording_id")) ? null : reader.GetString(reader.GetOrdinal("mb_recording_id")),
+                MusicBrainzReleaseId = reader.IsDBNull(reader.GetOrdinal("mb_release_id")) ? null : reader.GetString(reader.GetOrdinal("mb_release_id")),
+                Artist = reader.IsDBNull(reader.GetOrdinal("artist")) ? null : reader.GetString(reader.GetOrdinal("artist")),
+                Album = reader.IsDBNull(reader.GetOrdinal("album")) ? null : reader.GetString(reader.GetOrdinal("album")),
+                Title = reader.IsDBNull(reader.GetOrdinal("title")) ? null : reader.GetString(reader.GetOrdinal("title")),
+                Reason = reader.IsDBNull(reader.GetOrdinal("reason")) ? null : reader.GetString(reader.GetOrdinal("reason")),
+                CanAutoFix = !reader.IsDBNull(reader.GetOrdinal("can_auto_fix")) && reader.GetBoolean(reader.GetOrdinal("can_auto_fix")),
+                SuggestedAction = reader.IsDBNull(reader.GetOrdinal("suggested_action")) ? null : reader.GetString(reader.GetOrdinal("suggested_action")),
+                RemediationJobId = reader.IsDBNull(reader.GetOrdinal("remediation_job_id")) ? null : reader.GetString(reader.GetOrdinal("remediation_job_id")),
+                Status = Enum.TryParse<LibraryHealth.LibraryIssueStatus>(reader.GetString(reader.GetOrdinal("status")), true, out var st) ? st : LibraryHealth.LibraryIssueStatus.Detected,
+                DetectedAt = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("detected_at"))),
+                ResolvedAt = reader.IsDBNull(reader.GetOrdinal("resolved_at")) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("resolved_at"))),
+                ResolvedBy = reader.IsDBNull(reader.GetOrdinal("resolved_by")) ? null : reader.GetString(reader.GetOrdinal("resolved_by")),
+            };
+
+            var metaJson = reader.IsDBNull(reader.GetOrdinal("metadata")) ? "{}" : reader.GetString(reader.GetOrdinal("metadata"));
+            issue.Metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(metaJson) ?? new Dictionary<string, object>();
+            return issue;
         }
     }
 }

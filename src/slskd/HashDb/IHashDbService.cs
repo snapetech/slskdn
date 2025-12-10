@@ -270,6 +270,13 @@ namespace slskd.HashDb
         ///     Updates a hash entry with an AcoustID-resolution MusicBrainz recording ID.
         /// </summary>
         Task UpdateHashRecordingIdAsync(string flacKey, string musicBrainzId, CancellationToken cancellationToken = default);
+
+        // ========== Library Health ==========
+        Task UpsertLibraryHealthScanAsync(LibraryHealth.LibraryHealthScan scan, CancellationToken cancellationToken = default);
+        Task<LibraryHealth.LibraryHealthScan?> GetLibraryHealthScanAsync(string scanId, CancellationToken cancellationToken = default);
+        Task<List<LibraryHealth.LibraryIssue>> GetLibraryIssuesAsync(LibraryHealth.LibraryHealthIssueFilter filter, CancellationToken cancellationToken = default);
+        Task UpdateLibraryIssueStatusAsync(string issueId, LibraryHealth.LibraryIssueStatus status, CancellationToken cancellationToken = default);
+        Task InsertLibraryIssueAsync(LibraryHealth.LibraryIssue issue, CancellationToken cancellationToken = default);
     }
 
     /// <summary>

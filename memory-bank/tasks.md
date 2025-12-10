@@ -137,8 +137,9 @@
 
 #### Phase 2B: Collection Doctor / Library Health
 
-- [ ] **T-403**: Implement library scan service
-  - Status: Not started
+- [x] **T-403**: Implement library scan service
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/multi-swarm
   - Notes: Background/on-demand job to walk library paths, resolve MB IDs via fingerprints, compare to canonical stats. Emit issues: suspected transcodes, non-canonical variants, track not in tagged release, missing tracks.
