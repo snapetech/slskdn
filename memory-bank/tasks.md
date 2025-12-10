@@ -254,11 +254,12 @@
 
 #### Phase 2D: Rescue Mode for Underperforming Soulseek Transfers
 
-- [ ] **T-409**: Implement transfer underperformance detection
-  - Status: Not started
+- [x] **T-409**: Implement transfer underperformance detection
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Track time in queue and sustained throughput for each Soulseek transfer. Mark as underperforming when queued > threshold or active but below min_speed for configured duration.
+  - Completed: 2025-12-10
+  - Notes: Instrumented DownloadService with PeerMetricsService; tracks throughput samples in progressUpdated callback (delta bytes / delta time); records ChunkCompletionResult.Success on completion, TimedOut on TimeoutException, Failed on other exceptions; optional injection (nullable) for backward compat
 
 - [ ] **T-410**: Build overlay rescue logic
   - Status: Not started
