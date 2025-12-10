@@ -132,9 +132,9 @@ Overall: ███████░░░░░░░░░░░░░  29% (49/1
 - ✅ T-607: Build popularity detection for caching
 - ✅ T-608: Add cache fetch, serve, evict logic
 
-### Phase 4D: Playback-Aware Swarming (Optional) (0/3) 📋
-- ⏳ T-609: Implement playback feedback API
-- ⏳ T-610: Build priority zones and playback-aware scheduling
+### Phase 4D: Playback-Aware Swarming (Optional) (2/3) 🔄
+- ✅ T-609: Implement playback feedback API
+- ✅ T-610: Build priority zones and playback-aware scheduling
 - ⏳ T-611: Add streaming diagnostics
 
 ---

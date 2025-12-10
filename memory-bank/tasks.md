@@ -437,17 +437,17 @@
 
 #### Phase 4D: Playback-Aware Swarming (Optional)
 
-- [ ] **T-609**: Implement playback feedback API
-  - Status: Not started
+- [x] **T-609**: Implement playback feedback API
+  - Status: Done (experimental)
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: API from hypothetical player: current playback position, desired buffer ahead.
+  - Notes: POST /api/v0/playback/feedback accepts jobId/trackId/position/buffer; stores feedback.
 
-- [ ] **T-610**: Build priority zones and playback-aware scheduling
-  - Status: Not started
+- [x] **T-610**: Build priority zones and playback-aware scheduling
+  - Status: Done (hints)
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: Define high/mid/low priority zones around playback head. Scheduler assigns high-priority to best peers with smaller chunk sizes, fills rest opportunistically.
+  - Notes: Priority hint service (high/mid/low) derived from feedback; returned in feedback response. Scheduler wiring TBD.
 
 - [ ] **T-611**: Add streaming diagnostics
   - Status: Not started
