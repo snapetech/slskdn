@@ -23,6 +23,28 @@ This branch has accumulated:
 
 Without hard boundaries, this will become unmaintainable. Phase 8 establishes **explicit module boundaries** and **clean interfaces**.
 
+### Guiding Principle: No Feature Loss, Focus on Speed + Security
+
+**Overarching constraints for all refactors:**
+
+1. **Do not remove features we've already committed to conceptually**:
+   - DHT as a first-class data path (not just lookup sidecar)
+   - NAT experimentation and multi-path strategies
+   - Multi-swarm overlay
+   - MBID/Brainz-based jobs, discography, repair, canonical selection
+
+2. When forced to choose between:
+   - (A) cleaner/"nicer" abstractions and
+   - (B) retaining high flexibility for DHT/NAT/mesh experiments,
+   
+   Default to **(B)**, as long as we can still test and reason about it.
+
+3. Refactors must be justified by:
+   - **Performance wins** (throughput, latency, better resource usage), or
+   - **Security/robustness wins** (less attack surface, clearer policy, better disaster behaviour),
+   
+   Not *only* by aesthetics.
+
 ---
 
 ## 1. Hard Boundaries: Split into Explicit Modules
@@ -43,11 +65,12 @@ Slskdn.Swarm/          # Multi-source download engine
   └── Jobs/            # Swarm job orchestration
 
 Slskdn.Mesh/           # DHT + overlay
-  ├── DHT/             # DHT bootstrap / nodes
-  ├── Overlay/         # Mesh overlay connections
+  ├── DHT/             # DHT bootstrap / nodes (first-class data path)
+  ├── Overlay/         # Mesh overlay connections (second rail)
   ├── Gossip/          # Hash / availability gossip
-  ├── Transport/       # NAT, UPnP, TLS
-  └── Directory/       # IMeshDirectory abstraction
+  ├── Transport/       # NAT, UPnP, TLS, multi-path strategies
+  ├── Directory/       # IMeshDirectory (high-level API)
+  └── Advanced/        # IMeshAdvanced (power features, experiments)
 
 Slskdn.Security/       # Security hardening
   ├── Policies/        # Policy engine + individual policies
@@ -83,12 +106,26 @@ public interface IVerificationEngine
     Task<VerificationResult> VerifyChunkAsync(SwarmChunk chunk, PeerId peer, CancellationToken ct);
 }
 
-// Mesh
+// Mesh (Dual API: High-Level + Advanced)
 public interface IMeshDirectory
 {
     Task<IEnumerable<MeshPeerInfo>> FindPeersByKeyAsync(string key, int maxResults, CancellationToken ct);
     Task PublishAvailabilityAsync(string key, MeshPeerInfo self, CancellationToken ct);
     IAsyncEnumerable<MeshEvent> SubscribeAsync(CancellationToken ct);
+}
+
+public interface IMeshAdvanced
+{
+    // Raw DHT access for power features
+    Task DhtPutAsync(string key, ReadOnlyMemory<byte> value, CancellationToken ct);
+    Task<IReadOnlyList<ReadOnlyMemory<byte>>> DhtGetAsync(string key, CancellationToken ct);
+    
+    // NAT / transport controls
+    Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct);
+    Task ForceRebindAsync(NatStrategy strategy, CancellationToken ct);
+    
+    // Low-level events for debugging, simulation, lab features
+    IAsyncEnumerable<LowLevelMeshEvent> SubscribeLowLevelAsync(CancellationToken ct);
 }
 
 // Security
@@ -110,6 +147,12 @@ public interface IMetadataJobRunner
     Task<JobStatus> GetStatusAsync(string jobId, CancellationToken ct);
 }
 ```
+
+### API Usage Guidelines
+
+- **High-level code** (controllers, simple jobs): Use `IMeshDirectory`
+- **Experimental features** (DHT-heavy flows, NAT experiments, mesh simulations): Use `IMeshAdvanced`
+- **Swarm orchestrator**: Uses `IMeshDirectory`, but can leverage `IMeshAdvanced` for advanced strategies
 
 ### Direction Enforcement
 
@@ -251,11 +294,31 @@ public class VerificationEngine : IVerificationEngine
 
 ## 3. Mesh & DHT: Clean Directory Service
 
-### 3.1. Narrow IMeshDirectory
+### Design Philosophy: DHT is First-Class, Not a Sidecar
 
-**Current Problem**: Mesh does too much - DHT, TLS, sync, greetings, NAT.
+**Key Principle**: DHT is first-class, TCP/overlay is a second rail.
 
-**Solution**: Treat mesh as directory + message bus:
+- **DHT is encouraged** for:
+  - Discovery
+  - Small/medium control-plane payloads (hashes, availability shards, swarm descriptors, repair mission descriptors)
+
+- **Overlay/TCP** is:
+  - A fallback or second rail for:
+    - Streaming
+    - Larger payloads
+    - Cases where DHT isn't appropriate or fails
+
+**We prefer to send as much as sensibly possible over DHT**, as long as it's not abusive (e.g., not huge blobs).
+
+### 3.1. Dual API: IMeshDirectory + IMeshAdvanced
+
+**Current Problem**: Single abstraction would hide DHT power and limit experimentation.
+
+**Solution**: Two complementary interfaces.
+
+#### 3.1.1. High-Level API: IMeshDirectory
+
+For normal application code (swarm, brainz, jobs):
 
 ```csharp
 public interface IMeshDirectory
@@ -306,9 +369,116 @@ public class AvailabilityAnnouncedEvent : MeshEvent
 }
 ```
 
-### 3.2. Isolate Transport Ugliness
+**Used by**:
+- Swarm orchestrator (find peers for MBIDs/hashes)
+- Brainz/metadata jobs (discography, repair missions)
+- Scenes/micro-networks logic
 
-**Solution**: `MeshTransportService` handles UPnP, NAT-PMP, TLS, reconnects:
+**Internally**: Can use DHT and overlay in whatever combination we choose.
+
+#### 3.1.2. Advanced API: IMeshAdvanced
+
+For power features and experiments:
+
+```csharp
+public interface IMeshAdvanced
+{
+    // ===== Raw DHT Access =====
+    // For DHT-heavy flows that need direct control
+    Task DhtPutAsync(string key, ReadOnlyMemory<byte> value, CancellationToken ct);
+    Task<IReadOnlyList<ReadOnlyMemory<byte>>> DhtGetAsync(string key, CancellationToken ct);
+    
+    // Bulk operations for efficiency
+    Task DhtPutBatchAsync(IEnumerable<(string key, ReadOnlyMemory<byte> value)> items, CancellationToken ct);
+    
+    // ===== NAT / Transport Controls =====
+    Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct);
+    Task ForceRebindAsync(NatStrategy strategy, CancellationToken ct);
+    Task<NatTraversalResult> TestNatTraversalAsync(IPEndPoint target, CancellationToken ct);
+    
+    // ===== Low-Level Mesh Events =====
+    // For debugging, simulation, lab features
+    IAsyncEnumerable<LowLevelMeshEvent> SubscribeLowLevelAsync(CancellationToken ct);
+}
+
+public class MeshTransportStats
+{
+    public int ActiveDhtNodes { get; set; }
+    public int ActiveOverlayConnections { get; set; }
+    public NatType DetectedNatType { get; set; }
+    public TimeSpan AvgDhtLatency { get; set; }
+    public TimeSpan AvgOverlayLatency { get; set; }
+    public long BytesSentDht { get; set; }
+    public long BytesSentOverlay { get; set; }
+}
+
+public abstract class LowLevelMeshEvent : MeshEvent
+{
+}
+
+public class DhtNodeAddedEvent : LowLevelMeshEvent
+{
+    public IPEndPoint Node { get; set; }
+}
+
+public class NatRebindEvent : LowLevelMeshEvent
+{
+    public NatStrategy Strategy { get; set; }
+    public bool Success { get; set; }
+}
+```
+
+**Used by**:
+- "Mesh lab" / experimental modules
+- Network simulation jobs
+- DHT-heavy or NAT-specific features that need low-level access
+
+**Important**: Refactor MUST preserve ability to:
+- Experiment with different NAT strategies
+- Push more data over DHT where it makes sense
+- Mirror certain control flows over both DHT and overlay
+
+### 3.2. Configurable Transport Preference
+
+Add mesh options for transport strategy:
+
+```csharp
+public class MeshOptions
+{
+    public List<string> BootstrapNodes { get; set; } = new();
+    public int DhtPort { get; set; } = 6881;
+    public int OverlayPort { get; set; } = 6882;
+    public bool EnableNatTraversal { get; set; } = true;
+    
+    // Transport preference: how to use DHT vs overlay
+    public MeshTransportPreference TransportPreference { get; set; } = MeshTransportPreference.DhtFirst;
+}
+
+public enum MeshTransportPreference
+{
+    DhtFirst,      // Try DHT, use overlay as fallback (default for experimental/brainz)
+    Mirrored,      // Send key control-plane messages via both DHT and overlay
+    OverlayFirst,  // Conservative mode: prefer overlay, use DHT for discovery only
+}
+```
+
+**Configuration**:
+
+```yaml
+mesh:
+  transportPreference: dht-first  # or mirrored, overlay-first
+  dhtPort: 6881
+  overlayPort: 6882
+  enableNatTraversal: true
+  bootstrapNodes:
+    - dht.slskdn.org:6881
+```
+
+**Default for experimental/brainz**: `dht-first` or `mirrored` (encourage DHT usage, don't hide it).
+
+### 3.3. Internal Transport Service
+
+Transport ugliness (UPnP, NAT-PMP, TLS, reconnects) lives in internal service:
 
 ```csharp
 internal class MeshTransportService
@@ -316,27 +486,50 @@ internal class MeshTransportService
     private readonly INatDiscoveryService _nat;
     private readonly ITlsProvisioningService _tls;
     private readonly IDhtBootstrapService _dht;
+    private readonly MeshOptions _options;
     
     internal async Task<IMeshConnection> EstablishConnectionAsync(
         IPEndPoint remote, 
+        MeshTransportPreference preference,
         CancellationToken ct)
     {
-        // Handle NAT traversal, TLS handshake, etc.
+        switch (preference)
+        {
+            case MeshTransportPreference.DhtFirst:
+                // Try DHT, fallback to overlay
+                break;
+            case MeshTransportPreference.Mirrored:
+                // Establish both paths
+                break;
+            case MeshTransportPreference.OverlayFirst:
+                // Try overlay, use DHT for discovery only
+                break;
+        }
     }
 }
 ```
 
-**Exposed only through**: `IMeshDirectory` and `IMeshTransportMetrics` (for UI).
+**Exposed only through**: `IMeshDirectory` and `IMeshAdvanced`.
 
 ---
 
-## 4. Brainz: Turn into Pipeline
+## 4. Brainz: Turn into Pipeline (Power Feature)
+
+### Design Philosophy: Jobs as First-Class Citizens
+
+Jobs are not just cleanup—they **enable new functionality**:
+- Discography jobs
+- Repair missions
+- Network stress-test jobs
+- Long-running MB/AcoustID lookups
+
+We accept asynchronous, eventually-consistent behaviour for heavy operations.
 
 ### 4.1. Job Pipeline
 
 **Current Problem**: Fire-and-forget async calls for MB/Brainz scattered everywhere.
 
-**Solution**: Formal job abstraction:
+**Solution**: Formal job abstraction + centralized runner.
 
 ```csharp
 public interface IMetadataJob
@@ -354,6 +547,7 @@ public class AlbumBackfillJob : IMetadataJob
     
     private readonly IBrainzCatalogService _catalog;
     private readonly ISwarmDownloadService _swarm;
+    private readonly IMeshDirectory _mesh;
     
     public async Task RunAsync(CancellationToken ct)
     {
@@ -361,8 +555,37 @@ public class AlbumBackfillJob : IMetadataJob
         
         foreach (var track in release.Tracks)
         {
-            // Discover sources, start swarm download
+            // Discover sources via mesh
+            var peers = await _mesh.FindPeersByKeyAsync($"mbid:{track.RecordingId}", 10, ct);
+            
+            // Start swarm download
+            await _swarm.StartDownloadAsync(new SwarmRequest
+            {
+                Sources = peers,
+                TargetQuality = QualityPreference.Canonical
+            }, ct);
         }
+    }
+}
+
+public class NetworkStressTestJob : IMetadataJob
+{
+    public string JobId { get; set; }
+    public string Type => "network_stress_test";
+    
+    private readonly IMeshAdvanced _meshAdvanced;
+    
+    public async Task RunAsync(CancellationToken ct)
+    {
+        // Use IMeshAdvanced for low-level mesh simulation
+        var stats = await _meshAdvanced.GetTransportStatsAsync(ct);
+        
+        // Force NAT rebind to test resilience
+        await _meshAdvanced.ForceRebindAsync(NatStrategy.PortPreservation, ct);
+        
+        // Stress DHT with batch operations
+        var testData = GenerateTestPayloads();
+        await _meshAdvanced.DhtPutBatchAsync(testData, ct);
     }
 }
 
@@ -417,6 +640,8 @@ public class FlacAnalyzer : IAudioAnalyzer
 
 ### 4.3. Unified External API Client
 
+**Current Problem**: Direct `HttpClient` calls to MB/AcoustID/Soulbeet, no rate limiting or caching.
+
 **Solution**: Single `BrainzClient` for all external metadata:
 
 ```csharp
@@ -458,13 +683,20 @@ public class BrainzClient
 
 ---
 
-## 5. Security: Policy Engine
+## 5. Security: Policy Engine (With Network Cleverness Preserved)
+
+### Design Philosophy: Real Security Gains, Not Just Tidiness
+
+Policy engine must improve:
+- **Auditability**: Clear record of security decisions
+- **Extensibility**: Easy to add new defenses
+- **Simulatability**: Run security scenarios in tests
 
 ### 5.1. Unified Security Abstraction
 
 **Current Problem**: Security checks (NetworkGuard, ViolationTracker, PathGuard, ContentSafety, etc.) interleaved in controllers.
 
-**Solution**: Policy engine:
+**Solution**: Policy engine that allows network-level cleverness:
 
 ```csharp
 public interface ISecurityPolicyEngine
@@ -532,11 +764,31 @@ public class NetworkGuardPolicy : ISecurityPolicy { }
 public class ReputationPolicy : ISecurityPolicy { }
 public class ConsensusPolicy : ISecurityPolicy { }
 public class ContentSafetyPolicy : ISecurityPolicy { }
+public class HoneypotPolicy : ISecurityPolicy 
+{
+    // Can use IMeshAdvanced to deploy trap data, monitor DHT access patterns
+}
+public class NatAbuseDetectionPolicy : ISecurityPolicy
+{
+    // Can examine transport stats to detect NAT manipulation attacks
+}
 ```
+
+**Key Requirement**: Policy engine must allow:
+- Network-level cleverness (honeypot peers, trap data)
+- Policy decisions that take DHT/NAT behaviour into account
+- Integration with mesh transport stats
 
 ---
 
-## 6. Configuration: Strongly Typed Options
+## 6. Configuration: Strongly Typed Options (Not Feature-Limiting)
+
+### Design Philosophy: Tune Behaviour, Don't Disable Capabilities
+
+Typed config should:
+- **Enable** tuning and profiling
+- **Not disable** capabilities we've committed to (DHT-heavy flows, NAT experiments, etc.)
+- **Allow** selection of profiles (experimental, conservative, etc.)
 
 ### 6.1. Module-Specific Options
 
@@ -557,6 +809,21 @@ public class MeshOptions
     public int DhtPort { get; set; } = 6881;
     public int OverlayPort { get; set; } = 6882;
     public bool EnableNatTraversal { get; set; } = true;
+    
+    // Transport preference (encourage DHT usage)
+    public MeshTransportPreference TransportPreference { get; set; } = MeshTransportPreference.DhtFirst;
+    
+    // Advanced options (for experiments)
+    public int DhtBatchSize { get; set; } = 100;
+    public TimeSpan DhtTimeout { get; set; } = TimeSpan.FromSeconds(5);
+    public bool EnableNatExperiments { get; set; } = true;
+}
+
+public enum MeshTransportPreference
+{
+    DhtFirst,      // Default for experimental/brainz
+    Mirrored,
+    OverlayFirst,
 }
 
 public class SecurityOptions
@@ -587,7 +854,15 @@ services.Configure<BrainzOptions>(configuration.GetSection("Brainz"));
 
 ---
 
-## 7. Testability & Simulation
+## 7. Testability & Simulation: DHT-Heavy + Disaster Scenarios
+
+### Design Philosophy: Test Real Capabilities
+
+Tests must cover:
+- **DHT-first discovery**: Not just overlay fallback
+- **DHT-carried control-plane**: Availability shards, missions
+- **Disaster mode**: Operations via DHT + overlay only (no Soulseek)
+- **NAT edge cases**: Using `IMeshAdvanced` to force scenarios
 
 ### 7.1. Make Services Testable
 
@@ -659,21 +934,71 @@ public class SwarmDownloadIntegrationTests
 public class MeshDiscoveryTests
 {
     [Fact]
-    public async Task Should_Discover_Peers_Via_DHT()
+    public async Task Should_Discover_Peers_Via_DHT_First()
     {
-        var sim = new MeshSimulator();
+        var sim = new MeshSimulator(new MeshSimulatorOptions
+        {
+            TransportPreference = MeshTransportPreference.DhtFirst
+        });
+        
         var alice = sim.CreateNode("alice", inventory: aliceLibrary);
         var bob = sim.CreateNode("bob", inventory: bobLibrary);
         var carol = sim.CreateNode("carol", inventory: new());
         
         sim.ConnectNodes(alice, bob, carol);
         
+        // Test DHT-first discovery
         var peers = await carol.Mesh.FindPeersByKeyAsync("mbid:abc-123", maxResults: 10, CancellationToken.None);
         
         Assert.Contains(peers, p => p.Id == alice.Id);
+        
+        // Verify DHT was used, not overlay
+        var stats = await carol.MeshAdvanced.GetTransportStatsAsync(CancellationToken.None);
+        Assert.True(stats.BytesSentDht > 0);
+    }
+    
+    [Fact]
+    public async Task Should_Continue_Operations_In_Disaster_Mode()
+    {
+        var sim = new MeshSimulator();
+        
+        var alice = sim.CreateNode("alice", inventory: aliceLibrary);
+        var bob = sim.CreateNode("bob", inventory: bobLibrary);
+        
+        // Simulate official server down
+        sim.DisableExternalConnections();
+        
+        // Should still discover via DHT + overlay
+        var peers = await bob.Mesh.FindPeersByKeyAsync("mbid:xyz-789", maxResults: 10, CancellationToken.None);
+        
+        Assert.Contains(peers, p => p.Id == alice.Id);
+    }
+    
+    [Fact]
+    public async Task Should_Handle_NAT_Edge_Cases()
+    {
+        var sim = new MeshSimulator();
+        
+        var alice = sim.CreateNode("alice", natType: NatType.Symmetric);
+        var bob = sim.CreateNode("bob", natType: NatType.PortRestrictedCone);
+        
+        // Force NAT rebind using IMeshAdvanced
+        await alice.MeshAdvanced.ForceRebindAsync(NatStrategy.PortPreservation, CancellationToken.None);
+        
+        // Verify connection still works
+        var peers = await alice.Mesh.FindPeersByKeyAsync("test-key", maxResults: 10, CancellationToken.None);
+        Assert.Contains(peers, p => p.Id == bob.Id);
     }
 }
 ```
+
+**Key Requirements**:
+- Mesh-only tests must cover DHT-first discovery
+- Tests must verify DHT-carried control-plane payloads
+- Disaster-mode tests ensure operations continue without Soulseek
+- Simulations can use `IMeshAdvanced` to inspect/force low-level behaviour
+
+**We accept**: Extra CI complexity for robustness and confidence that DHT/NAT cleverness doesn't silently regress.
 
 ---
 
@@ -736,60 +1061,74 @@ services.AddSingleton<ISwarmService, SwarmService>();
 
 ---
 
-## 9. Implementation Order (Concrete Staging)
+## 9. Implementation Order (Updated for Power-First Approach)
 
-### Stage 1: Module Boundaries (Weeks 1-2)
+### Execution Strategy
+
+Refactors prioritized by **feature enablement** and **performance/security wins**, not just cleanup.
+
+### Stage 1: Define Mesh APIs with Power Preserved (Weeks 1-2)
 - T-1000: Create namespace structure (Swarm, Mesh, Security, Brainz, Integrations)
-- T-1001: Define core interfaces (ISwarmDownloadService, IMeshDirectory, etc.)
-- T-1002: Move types into namespaces
+- T-1001: Define `IMeshDirectory` + `IMeshAdvanced` interfaces
+- T-1002: Add `MeshOptions.TransportPreference` (DHT-first/mirrored/overlay-first)
+- T-1003: Implement `MeshTransportService` with configurable preference
+- **Deliverable**: Dual API preserving DHT-first capabilities
 
-### Stage 2: Swarm Refactor (Weeks 3-4)
-- T-1010: Implement SwarmDownloadOrchestrator as BackgroundService
-- T-1011: Create SwarmJob/SwarmFile/SwarmChunk model
-- T-1012: Implement IVerificationEngine
+### Stage 2: Introduce Job Pipeline (Weeks 3-4)
+- T-1030: Implement `IMetadataJob` abstraction
+- T-1031: Create `MetadataJobRunner` as BackgroundService
+- T-1034: Convert existing metadata tasks to jobs
+- T-1035: Add network simulation job support
+- **Deliverable**: Working job pipeline enabling discography, repair, sim jobs
+- **Why first**: Starts delivering feature value immediately
+
+### Stage 3: Implement Swarm Orchestrator (Weeks 5-6)
+- T-1010: Implement `SwarmDownloadOrchestrator` as BackgroundService
+- T-1011: Create `SwarmJob`/`SwarmFile`/`SwarmChunk` model
+- T-1012: Implement `IVerificationEngine`
 - T-1013: Replace ad-hoc Task.Run with orchestrator
-- T-1014: Centralize chunk verification
+- T-1014: Integrate with `IMeshDirectory` and `IMeshAdvanced`
+- **Deliverable**: Centralized multi-swarm scheduling with mesh integration
+- **Expected win**: Better throughput, more robust multi-swarm behaviour
 
-### Stage 3: Mesh Refactor (Weeks 5-6)
-- T-1020: Implement IMeshDirectory abstraction
-- T-1021: Create MeshTransportService (NAT, TLS, reconnect)
-- T-1022: Hide DHT/overlay behind IMeshDirectory
-- T-1023: Event-based mesh notifications
-
-### Stage 4: Brainz Pipeline (Weeks 7-8)
-- T-1030: Implement IMetadataJob abstraction
-- T-1031: Create MetadataJobRunner as BackgroundService
-- T-1032: Implement codec analyzers (FLAC, MP3, Opus, AAC)
-- T-1033: Create unified BrainzClient with caching/rate-limiting
-- T-1034: Convert fire-and-forget calls to job enqueueing
-
-### Stage 5: Security Engine (Week 9)
-- T-1040: Implement ISecurityPolicyEngine
-- T-1041: Create CompositeSecurityPolicy
-- T-1042: Implement individual policies (NetworkGuard, Reputation, Consensus, ContentSafety)
+### Stage 4: Security Policy Engine (Week 7)
+- T-1040: Implement `ISecurityPolicyEngine`
+- T-1041: Create `CompositeSecurityPolicy`
+- T-1042: Implement individual policies (NetworkGuard, Reputation, Consensus, ContentSafety, Honeypot, NatAbuseDetection)
 - T-1043: Replace inline security checks with policy engine
+- **Deliverable**: Unified security with auditability and simulatability
+- **Expected win**: Clearer policy, easier to add new defenses
 
-### Stage 6: Configuration (Week 10)
-- T-1050: Create strongly-typed options classes
+### Stage 5: Typed Configuration (Week 8)
+- T-1050: Create strongly-typed options (SwarmOptions, MeshOptions, SecurityOptions, BrainzOptions)
 - T-1051: Wire options via IOptions<T>
 - T-1052: Remove direct IConfiguration access
+- **Deliverable**: Type-safe config tuning
 
-### Stage 7: Testability (Week 11)
+### Stage 6: Codec Analyzers (Week 9)
+- T-1032: Implement codec analyzers (FlacAnalyzer, Mp3Analyzer, OpusAnalyzer, AacAnalyzer)
+- T-1033: Create unified BrainzClient with caching/rate-limiting
+- **Deliverable**: AudioVariant analysis from Phase 2-Extended
+
+### Stage 7: Testability Cleanup (Week 10)
 - T-1060: Eliminate static singletons
 - T-1061: Add interfaces for all major subsystems
 - T-1062: Constructor injection cleanup
+- **Deliverable**: Fully mockable services
 
-### Stage 8: Test Infrastructure (Week 12)
-- T-1070: Implement Soulfind test harness
-- T-1071: Implement MeshSimulator
-- T-1072: Write integration-soulseek test suite
-- T-1073: Write integration-mesh test suite
+### Stage 8: Test Infrastructure (Week 11)
+- T-1070: Implement Soulfind test harness (from Phase 7)
+- T-1071: Implement MeshSimulator with DHT-first + disaster mode support
+- T-1072: Write integration-soulseek tests
+- T-1073: Write integration-mesh tests (DHT-heavy + NAT edge cases)
+- **Deliverable**: Comprehensive test coverage including experimental features
 
-### Stage 9: Cleanup (Ongoing)
-- T-1080: Remove dead code and unused concepts
-- T-1081: Normalize naming across codebase
+### Stage 9: Final Cleanup (Week 12)
+- T-1080: Remove dead code
+- T-1081: Normalize naming
 - T-1082: Move narrative comments to docs
 - T-1083: Collapse forwarding classes
+- **Deliverable**: Production-ready architecture
 
 ---
 

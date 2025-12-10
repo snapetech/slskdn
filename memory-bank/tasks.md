@@ -870,27 +870,59 @@
 > **Docs**: `docs/phase8-refactoring-design.md`  
 > **Timeline**: Phase 8 (8-12 weeks post-implementation)
 
-#### Stage 1: Module Boundaries (Weeks 1-2)
+#### Stage 1: Mesh APIs with Power Preserved (Weeks 1-2)
 
 - [ ] **T-1000**: Create namespace structure
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Create Slskdn.Swarm, Slskdn.Mesh, Slskdn.Security, Slskdn.Brainz, Slskdn.Integrations namespaces/projects
+  - Notes: Create Slskdn.Swarm, Slskdn.Mesh (with DHT/, Overlay/, Advanced/), Slskdn.Security, Slskdn.Brainz, Slskdn.Integrations
 
-- [ ] **T-1001**: Define core interfaces
+- [ ] **T-1001**: Define IMeshDirectory + IMeshAdvanced
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: ISwarmDownloadService, IMeshDirectory, ISecurityPolicyEngine, IBrainzCatalogService, IMetadataJobRunner
+  - Notes: Dual API - IMeshDirectory for normal use, IMeshAdvanced for power features/experiments
 
-- [ ] **T-1002**: Move types into namespaces
+- [ ] **T-1002**: Add MeshOptions.TransportPreference
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Reorganize existing code into new namespace structure, ensure no circular dependencies
+  - Notes: DhtFirst (default), Mirrored, OverlayFirst - encourage DHT usage
 
-#### Stage 2: Swarm Refactor (Weeks 3-4)
+- [ ] **T-1003**: Implement MeshTransportService with configurable preference
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Handle DHT-first, mirrored, overlay-first strategies; NAT, UPnP, TLS
+
+#### Stage 2: Job Pipeline (Weeks 3-4)
+
+- [ ] **T-1030**: Implement IMetadataJob abstraction
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: IMetadataJob interface with AlbumBackfillJob, DiscographyJob, RepairMissionJob, NetworkStressTestJob
+
+- [ ] **T-1031**: Create MetadataJobRunner
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: BackgroundService with Channel-based job queue and status tracking
+
+- [ ] **T-1034**: Convert metadata tasks to jobs
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Replace fire-and-forget async calls with job enqueueing
+
+- [ ] **T-1035**: Add network simulation job support
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Jobs for mesh stress tests, NAT experiments, disaster mode simulations
+
+#### Stage 3: Swarm Orchestrator (Weeks 5-6)
 
 - [ ] **T-1010**: Implement SwarmDownloadOrchestrator
   - Status: Not started
@@ -916,71 +948,13 @@
   - Branch: experimental/brainz
   - Notes: Route all swarm operations through orchestrator
 
-- [ ] **T-1014**: Centralize chunk verification
+- [ ] **T-1014**: Integrate with IMeshDirectory and IMeshAdvanced
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Single entrypoint for verification, remove inline checks
+  - Notes: Use IMeshDirectory for normal discovery, IMeshAdvanced for advanced strategies
 
-#### Stage 3: Mesh Refactor (Weeks 5-6)
-
-- [ ] **T-1020**: Implement IMeshDirectory abstraction
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Clean directory service API for discovery, publishing, events
-
-- [ ] **T-1021**: Create MeshTransportService
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Internal service for NAT, UPnP, TLS, reconnect logic
-
-- [ ] **T-1022**: Hide DHT/overlay behind IMeshDirectory
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Remove direct DHT/overlay access from swarm/brainz code
-
-- [ ] **T-1023**: Event-based mesh notifications
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: IAsyncEnumerable<MeshEvent> for PeerJoined, PeerLeft, AvailabilityAnnounced
-
-#### Stage 4: Brainz Pipeline (Weeks 7-8)
-
-- [ ] **T-1030**: Implement IMetadataJob abstraction
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: IMetadataJob interface with typed jobs (AlbumBackfillJob, DiscographyJob, RepairMissionJob)
-
-- [ ] **T-1031**: Create MetadataJobRunner
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: BackgroundService with job queue and status tracking
-
-- [ ] **T-1032**: Implement codec analyzers
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: IAudioAnalyzer with FlacAnalyzer, Mp3Analyzer, OpusAnalyzer, AacAnalyzer
-
-- [ ] **T-1033**: Create unified BrainzClient
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Single client for MB/AcoustID/Soulbeet with caching, rate limiting, backoff
-
-- [ ] **T-1034**: Convert to job enqueueing
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Replace fire-and-forget async calls with job enqueueing
-
-#### Stage 5: Security Engine (Week 9)
+#### Stage 4: Security Policy Engine (Week 7)
 
 - [ ] **T-1040**: Implement ISecurityPolicyEngine
   - Status: Not started
@@ -998,7 +972,7 @@
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: NetworkGuardPolicy, ReputationPolicy, ConsensusPolicy, ContentSafetyPolicy
+  - Notes: NetworkGuardPolicy, ReputationPolicy, ConsensusPolicy, ContentSafetyPolicy, HoneypotPolicy, NatAbuseDetectionPolicy
 
 - [ ] **T-1043**: Replace inline security checks
   - Status: Not started
@@ -1006,7 +980,7 @@
   - Branch: experimental/brainz
   - Notes: Remove scattered security logic from controllers, use policy engine
 
-#### Stage 6: Configuration (Week 10)
+#### Stage 5: Typed Configuration (Week 8)
 
 - [ ] **T-1050**: Create strongly-typed options
   - Status: Not started
@@ -1026,7 +1000,21 @@
   - Branch: experimental/brainz
   - Notes: Replace magic strings with typed options everywhere
 
-#### Stage 7: Testability (Week 11)
+#### Stage 6: Codec Analyzers (Week 9)
+
+- [ ] **T-1032**: Implement codec analyzers
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: IAudioAnalyzer with FlacAnalyzer, Mp3Analyzer, OpusAnalyzer, AacAnalyzer (from Phase 2-Extended)
+
+- [ ] **T-1033**: Create unified BrainzClient
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Single client for MB/AcoustID/Soulbeet with caching, rate limiting, backoff
+
+#### Stage 7: Testability (Week 10)
 
 - [ ] **T-1060**: Eliminate static singletons
   - Status: Not started
@@ -1046,7 +1034,7 @@
   - Branch: experimental/brainz
   - Notes: No `new HttpClient()`, no object creation inside methods
 
-#### Stage 8: Test Infrastructure (Week 12)
+#### Stage 8: Test Infrastructure (Week 11)
 
 - [ ] **T-1070**: Implement Soulfind test harness
   - Status: Not started
@@ -1054,11 +1042,11 @@
   - Branch: experimental/brainz
   - Notes: SoulfindRunner for integration tests (from Phase 7 design)
 
-- [ ] **T-1071**: Implement MeshSimulator
+- [ ] **T-1071**: Implement MeshSimulator with DHT-first + disaster mode
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: In-process mesh simulation for testing
+  - Notes: In-process mesh simulation with DHT-first discovery, disaster mode, NAT edge case support
 
 - [ ] **T-1072**: Write integration-soulseek tests
   - Status: Not started
@@ -1070,9 +1058,9 @@
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Pure mesh simulation tests (no Soulseek)
+  - Notes: DHT-heavy tests, NAT edge cases, disaster mode continuation
 
-#### Stage 9: Cleanup (Ongoing)
+#### Stage 9: Cleanup (Week 12)
 
 - [ ] **T-1080**: Remove dead code
   - Status: Not started
