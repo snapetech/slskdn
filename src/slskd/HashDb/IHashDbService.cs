@@ -162,6 +162,36 @@ namespace slskd.HashDb
         /// </summary>
         Task UpdateVariantMetadataAsync(string flacKey, AudioVariant variant, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        ///     Get all variants for a recording.
+        /// </summary>
+        Task<List<AudioVariant>> GetVariantsByRecordingAsync(string recordingId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get variants for a recording and codec profile key.
+        /// </summary>
+        Task<List<AudioVariant>> GetVariantsByRecordingAndProfileAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Upsert canonical stats entry.
+        /// </summary>
+        Task UpsertCanonicalStatsAsync(CanonicalStats stats, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get canonical stats for recording/profile.
+        /// </summary>
+        Task<CanonicalStats?> GetCanonicalStatsAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get recording IDs that have variants.
+        /// </summary>
+        Task<List<string>> GetRecordingIdsWithVariantsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get codec profile keys present for a recording.
+        /// </summary>
+        Task<List<string>> GetCodecProfilesForRecordingAsync(string recordingId, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

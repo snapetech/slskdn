@@ -121,8 +121,9 @@
   - Branch: experimental/multi-swarm
   - Notes: Define AudioVariant model with codec/container, sample rate, bit depth, channels, duration, bitrate, file size, hash. Implement quality_score (0..1) and transcode_suspect heuristics.
 
-- [ ] **T-401**: Build canonical stats aggregation per recording/release
-  - Status: Not started
+- [x] **T-401**: Build canonical stats aggregation per recording/release
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/multi-swarm
   - Notes: Aggregate per (MB Recording ID, codec profile): count, avg quality_score, % transcode_suspect, codec/bitrate distributions. Provide GetCanonicalVariantCandidates() function.

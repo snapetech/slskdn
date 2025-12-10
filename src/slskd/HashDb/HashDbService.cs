@@ -41,6 +41,7 @@ namespace slskd.HashDb
     using slskdOptions = slskd.Options;
     using slskd.Mesh;
     using TagLib;
+    using System.Text.Json;
 
     /// <summary>
     ///     SQLite-based hash database service.
@@ -352,6 +353,18 @@ namespace slskd.HashDb
             variant.TranscodeReason = reason;
 
             return variant;
+        }
+
+        private static bool CodecProfileFromCodec(string codec)
+        {
+            return codec switch
+            {
+                "FLAC" => true,
+                "ALAC" => true,
+                "WAV" => true,
+                "AIFF" => true,
+                _ => false,
+            };
         }
 
         private static (string Codec, string Container) MapCodecAndContainer(string filePath, TagLib.Properties props)
@@ -1145,6 +1158,188 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<List<AudioVariant>> GetVariantsByRecordingAsync(string recordingId, CancellationToken cancellationToken = default)
+        {
+            var list = new List<AudioVariant>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM HashDb WHERE musicbrainz_id = @recordingId";
+            cmd.Parameters.AddWithValue("@recordingId", recordingId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var entry = ReadHashEntry(reader);
+                var variant = MapEntryToVariant(entry);
+                if (variant != null)
+                {
+                    list.Add(variant);
+                }
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<AudioVariant>> GetVariantsByRecordingAndProfileAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default)
+        {
+            var list = new List<AudioVariant>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM HashDb WHERE musicbrainz_id = @recordingId";
+            cmd.Parameters.AddWithValue("@recordingId", recordingId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var entry = ReadHashEntry(reader);
+                var variant = MapEntryToVariant(entry);
+                if (variant != null && CodecProfile.FromVariant(variant).ToKey() == codecProfileKey)
+                {
+                    list.Add(variant);
+                }
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
+        public async Task UpsertCanonicalStatsAsync(CanonicalStats stats, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO CanonicalStats (
+                    id,
+                    musicbrainz_recording_id,
+                    codec_profile_key,
+                    variant_count,
+                    total_seen_count,
+                    avg_quality_score,
+                    max_quality_score,
+                    percent_transcode_suspect,
+                    codec_distribution,
+                    bitrate_distribution,
+                    sample_rate_distribution,
+                    best_variant_id,
+                    canonicality_score,
+                    last_updated)
+                VALUES (
+                    @id,
+                    @recording_id,
+                    @codec_profile_key,
+                    @variant_count,
+                    @total_seen_count,
+                    @avg_quality_score,
+                    @max_quality_score,
+                    @percent_transcode_suspect,
+                    @codec_distribution,
+                    @bitrate_distribution,
+                    @sample_rate_distribution,
+                    @best_variant_id,
+                    @canonicality_score,
+                    @last_updated)
+                ON CONFLICT(id) DO UPDATE SET
+                    variant_count = excluded.variant_count,
+                    total_seen_count = excluded.total_seen_count,
+                    avg_quality_score = excluded.avg_quality_score,
+                    max_quality_score = excluded.max_quality_score,
+                    percent_transcode_suspect = excluded.percent_transcode_suspect,
+                    codec_distribution = excluded.codec_distribution,
+                    bitrate_distribution = excluded.bitrate_distribution,
+                    sample_rate_distribution = excluded.sample_rate_distribution,
+                    best_variant_id = excluded.best_variant_id,
+                    canonicality_score = excluded.canonicality_score,
+                    last_updated = excluded.last_updated";
+
+            cmd.Parameters.AddWithValue("@id", stats.Id);
+            cmd.Parameters.AddWithValue("@recording_id", stats.MusicBrainzRecordingId);
+            cmd.Parameters.AddWithValue("@codec_profile_key", stats.CodecProfileKey);
+            cmd.Parameters.AddWithValue("@variant_count", stats.VariantCount);
+            cmd.Parameters.AddWithValue("@total_seen_count", stats.TotalSeenCount);
+            cmd.Parameters.AddWithValue("@avg_quality_score", stats.AvgQualityScore);
+            cmd.Parameters.AddWithValue("@max_quality_score", stats.MaxQualityScore);
+            cmd.Parameters.AddWithValue("@percent_transcode_suspect", stats.PercentTranscodeSuspect);
+            cmd.Parameters.AddWithValue("@codec_distribution", JsonSerializer.Serialize(stats.CodecDistribution));
+            cmd.Parameters.AddWithValue("@bitrate_distribution", JsonSerializer.Serialize(stats.BitrateDistribution));
+            cmd.Parameters.AddWithValue("@sample_rate_distribution", JsonSerializer.Serialize(stats.SampleRateDistribution));
+            cmd.Parameters.AddWithValue("@best_variant_id", (object?)stats.BestVariantId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@canonicality_score", stats.CanonicalityScore);
+            cmd.Parameters.AddWithValue("@last_updated", stats.LastUpdated.ToUnixTimeSeconds());
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<CanonicalStats?> GetCanonicalStatsAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM CanonicalStats WHERE musicbrainz_recording_id = @rec AND codec_profile_key = @key";
+            cmd.Parameters.AddWithValue("@rec", recordingId);
+            cmd.Parameters.AddWithValue("@key", codecProfileKey);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return ReadCanonicalStats(reader);
+            }
+
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<string>> GetRecordingIdsWithVariantsAsync(CancellationToken cancellationToken = default)
+        {
+            var list = new List<string>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT musicbrainz_id FROM HashDb WHERE musicbrainz_id IS NOT NULL";
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                list.Add(reader.GetString(0));
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<string>> GetCodecProfilesForRecordingAsync(string recordingId, CancellationToken cancellationToken = default)
+        {
+            var list = new List<string>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT codec, sample_rate_hz, bit_depth, channels FROM HashDb WHERE musicbrainz_id = @rec";
+            cmd.Parameters.AddWithValue("@rec", recordingId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var codec = reader.IsDBNull(0) ? "Unknown" : reader.GetString(0);
+                var sampleRate = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                var bitDepth = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2);
+                var channels = reader.IsDBNull(3) ? 2 : reader.GetInt32(3);
+
+                var profile = new CodecProfile
+                {
+                    Codec = codec,
+                    IsLossless = CodecProfileFromCodec(codec),
+                    SampleRateHz = sampleRate,
+                    BitDepth = bitDepth,
+                    Channels = channels,
+                }.ToKey();
+
+                if (!list.Contains(profile))
+                {
+                    list.Add(profile);
+                }
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
         public async Task IncrementHashUseCountAsync(string flacKey, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();
@@ -1567,6 +1762,69 @@ namespace slskd.HashDb
             TryReadOptionalString(reader, "musicbrainz_id", v => entry.MusicBrainzId = v);
 
             return entry;
+        }
+
+        private static AudioVariant MapEntryToVariant(HashDbEntry entry)
+        {
+            if (entry == null)
+            {
+                return null;
+            }
+
+            return new AudioVariant
+            {
+                VariantId = entry.VariantId ?? entry.FlacKey,
+                MusicBrainzRecordingId = entry.MusicBrainzId,
+                FlacKey = entry.FlacKey,
+                Codec = entry.Codec,
+                Container = entry.Container,
+                SampleRateHz = entry.SampleRateHz ?? 0,
+                BitDepth = entry.BitDepth,
+                Channels = entry.Channels ?? 2,
+                DurationMs = entry.DurationMs ?? 0,
+                BitrateKbps = entry.BitrateKbps ?? 0,
+                FileSizeBytes = entry.Size,
+                FileSha256 = entry.FileSha256,
+                AudioFingerprint = entry.AudioFingerprint,
+                QualityScore = entry.QualityScore ?? 0.0,
+                TranscodeSuspect = entry.TranscodeSuspect ?? false,
+                TranscodeReason = entry.TranscodeReason,
+                DynamicRangeDR = entry.DynamicRangeDr,
+                LoudnessLUFS = entry.LoudnessLufs,
+                HasClipping = entry.HasClipping,
+                EncoderSignature = entry.EncoderSignature,
+                FirstSeenAt = DateTimeOffset.FromUnixTimeSeconds(entry.FirstSeenAt),
+                LastSeenAt = DateTimeOffset.FromUnixTimeSeconds(entry.LastUpdatedAt),
+                SeenCount = entry.SeenCount ?? 1,
+            };
+        }
+
+        private static CanonicalStats ReadCanonicalStats(SqliteDataReader reader)
+        {
+            var stats = new CanonicalStats
+            {
+                Id = reader.GetString(reader.GetOrdinal("id")),
+                MusicBrainzRecordingId = reader.GetString(reader.GetOrdinal("musicbrainz_recording_id")),
+                CodecProfileKey = reader.GetString(reader.GetOrdinal("codec_profile_key")),
+                VariantCount = reader.GetInt32(reader.GetOrdinal("variant_count")),
+                TotalSeenCount = reader.GetInt32(reader.GetOrdinal("total_seen_count")),
+                AvgQualityScore = reader.GetDouble(reader.GetOrdinal("avg_quality_score")),
+                MaxQualityScore = reader.GetDouble(reader.GetOrdinal("max_quality_score")),
+                PercentTranscodeSuspect = reader.GetDouble(reader.GetOrdinal("percent_transcode_suspect")),
+                BestVariantId = reader.IsDBNull(reader.GetOrdinal("best_variant_id")) ? null : reader.GetString(reader.GetOrdinal("best_variant_id")),
+                CanonicalityScore = reader.GetDouble(reader.GetOrdinal("canonicality_score")),
+                LastUpdated = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("last_updated"))),
+            };
+
+            var codecJson = reader.IsDBNull(reader.GetOrdinal("codec_distribution")) ? "{}" : reader.GetString(reader.GetOrdinal("codec_distribution"));
+            var bitrateJson = reader.IsDBNull(reader.GetOrdinal("bitrate_distribution")) ? "{}" : reader.GetString(reader.GetOrdinal("bitrate_distribution"));
+            var srJson = reader.IsDBNull(reader.GetOrdinal("sample_rate_distribution")) ? "{}" : reader.GetString(reader.GetOrdinal("sample_rate_distribution"));
+
+            stats.CodecDistribution = JsonSerializer.Deserialize<Dictionary<string, int>>(codecJson) ?? new Dictionary<string, int>();
+            stats.BitrateDistribution = JsonSerializer.Deserialize<Dictionary<int, int>>(bitrateJson) ?? new Dictionary<int, int>();
+            stats.SampleRateDistribution = JsonSerializer.Deserialize<Dictionary<int, int>>(srJson) ?? new Dictionary<int, int>();
+
+            return stats;
         }
     }
 }

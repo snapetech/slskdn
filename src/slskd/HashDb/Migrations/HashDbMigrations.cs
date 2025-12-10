@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -380,6 +380,39 @@ public static class HashDbMigrations
                         CREATE INDEX IF NOT EXISTS idx_hashdb_recording_codec ON HashDb(musicbrainz_id, codec, sample_rate_hz);
                     ";
                     indexCmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 5,
+                Name = "Canonical stats table",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS CanonicalStats (
+                            id TEXT PRIMARY KEY,
+                            musicbrainz_recording_id TEXT NOT NULL,
+                            codec_profile_key TEXT NOT NULL,
+                            variant_count INTEGER DEFAULT 0,
+                            total_seen_count INTEGER DEFAULT 0,
+                            avg_quality_score REAL DEFAULT 0.0,
+                            max_quality_score REAL DEFAULT 0.0,
+                            percent_transcode_suspect REAL DEFAULT 0.0,
+                            codec_distribution TEXT,
+                            bitrate_distribution TEXT,
+                            sample_rate_distribution TEXT,
+                            best_variant_id TEXT,
+                            canonicality_score REAL DEFAULT 0.0,
+                            last_updated INTEGER NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_canonical_recording ON CanonicalStats(musicbrainz_recording_id);
+                        CREATE INDEX IF NOT EXISTS idx_canonical_profile ON CanonicalStats(codec_profile_key);
+                        CREATE INDEX IF NOT EXISTS idx_canonical_score ON CanonicalStats(canonicality_score DESC);
+                    ";
+                    cmd.ExecuteNonQuery();
                 },
             },
         };
