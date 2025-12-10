@@ -12,7 +12,7 @@
 Phase 1:  ████████████████████ 100% (14/14 tasks complete)
 Phase 2:  ████████████████████ 100% (22/22 tasks complete)
 Phase 3:  ████████████████████ 100% (11/11 tasks complete)
-Phase 4:  █░░░░░░░░░░░░░░░░░░░   8% ( 1/12 tasks complete)
+Phase 4:  ███░░░░░░░░░░░░░░░░   25% ( 3/12 tasks complete)
 Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
 Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
@@ -115,12 +115,12 @@ Overall: ██████░░░░░░░░░░░░░░  28% (48/1
 
 ## 📋 Phase 4: Job Manifests, Session Traces & Advanced Features
 
-**Branch**: `experimental/brainz` | **Status**: 📋 Ready | **Progress**: 0/12 (0%)
+**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 3/12 (25%)
 
-### Phase 4A: YAML Job Manifests (1/3) 🔄
+### Phase 4A: YAML Job Manifests (3/3) ✅
 - ✅ T-600: Define YAML job manifest schema
-- ⏳ T-601: Implement job manifest export
-- ⏳ T-602: Build job manifest import
+- ✅ T-601: Implement job manifest export
+- ✅ T-602: Build job manifest import
 
 ### Phase 4B: Session Traces / Swarm Debugging (0/3) 📋
 - ⏳ T-603: Define swarm event model

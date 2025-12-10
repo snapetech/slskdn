@@ -372,28 +372,28 @@
 
 ### Phase 4: Job Manifests, Session Traces & Advanced Features
 
-> **Branch**: `experimental/multi-swarm`  
+> **Branch**: `experimental/brainz`  
 > **Timeline**: Phase 4 (6-8 weeks)
 
 #### Phase 4A: YAML Job Manifests
 
-- [ ] **T-600**: Define YAML job manifest schema
-  - Status: Not started
+- [x] **T-600**: Define YAML job manifest schema
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Define YAML schema for mb_release, discography, label_crate jobs. Include job ID, type, MB IDs, target_dir, constraints, created_at, manifest_version.
+  - Notes: Schema + C# models/validator for mb_release, discography, label_crate, multi-source manifests.
 
-- [ ] **T-601**: Implement job manifest export
-  - Status: Not started
+- [x] **T-601**: Implement job manifest export
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: On job creation write manifest to jobs/active/. On completion move to jobs/completed/ or update in place.
+  - Notes: Manifest service writes YAML to jobs/active or jobs/completed with validation.
 
-- [ ] **T-602**: Build job manifest import
-  - Status: Not started
+- [x] **T-602**: Build job manifest import
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: CLI/API to import manifest: validate schema/version, create job from manifest. Handle collisions and invalid manifests.
+  - Notes: Manifest service imports/validates YAML manifests via validator.
 
 #### Phase 4B: Session Traces / Swarm Debugging
 
