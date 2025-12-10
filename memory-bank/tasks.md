@@ -233,8 +233,9 @@
   - Branch: experimental/brainz
   - Notes: Detect codec mismatches, flag transcodes using new analyzer results, suggest codec-specific canonical replacements.
 
-- [ ] **T-430**: Unit tests for codec analyzers
-  - Status: Not started
+- [x] **T-430**: Unit tests for codec analyzers
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Test fixtures for FLAC/MP3/Opus/AAC, quality score computation, transcode detection, stream hash stability, cross-codec deduplication.

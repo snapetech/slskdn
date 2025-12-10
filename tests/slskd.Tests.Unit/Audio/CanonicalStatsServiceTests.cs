@@ -16,9 +16,9 @@ namespace slskd.Tests.Unit.Audio
             // Arrange
             var variants = new List<AudioVariant>
             {
-                new() { VariantId = "v1", MusicBrainzRecordingId = "rec1", Codec = "FLAC", SampleRateHz = 44100, BitDepth = 16, Channels = 2, BitrateKbps = 900, QualityScore = 0.95, SeenCount = 5, TranscodeSuspect = false },
-                new() { VariantId = "v2", MusicBrainzRecordingId = "rec1", Codec = "FLAC", SampleRateHz = 44100, BitDepth = 16, Channels = 2, BitrateKbps = 800, QualityScore = 0.90, SeenCount = 20, TranscodeSuspect = false },
-                new() { VariantId = "v3", MusicBrainzRecordingId = "rec1", Codec = "MP3", SampleRateHz = 44100, BitDepth = null, Channels = 2, BitrateKbps = 320, QualityScore = 0.75, SeenCount = 30, TranscodeSuspect = false },
+                new() { VariantId = "v1", MusicBrainzRecordingId = "rec1", Codec = "FLAC", SampleRateHz = 44100, BitDepth = 16, Channels = 2, BitrateKbps = 900, QualityScore = 0.95, SeenCount = 5, TranscodeSuspect = false, FlacPcmMd5 = "md5a", DurationMs = 180000 },
+                new() { VariantId = "v2", MusicBrainzRecordingId = "rec1", Codec = "FLAC", SampleRateHz = 44100, BitDepth = 16, Channels = 2, BitrateKbps = 800, QualityScore = 0.90, SeenCount = 20, TranscodeSuspect = false, FlacPcmMd5 = "md5b", DurationMs = 180500 },
+                new() { VariantId = "v3", MusicBrainzRecordingId = "rec1", Codec = "MP3", SampleRateHz = 44100, BitDepth = null, Channels = 2, BitrateKbps = 320, QualityScore = 0.75, SeenCount = 30, TranscodeSuspect = false, Mp3StreamHash = "mp3hash", DurationMs = 181000 },
             };
 
             var mockDb = new Mock<IHashDbService>();
@@ -47,7 +47,7 @@ namespace slskd.Tests.Unit.Audio
 
             // Assert
             Assert.Equal(3, candidates.Count);
-            Assert.Equal("v3", candidates[0].VariantId); // Best canonicality (prevalence) wins
+            Assert.Equal("v1", candidates[0].VariantId); // Lossless preferred, then quality
         }
     }
 }
