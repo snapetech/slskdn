@@ -1259,14 +1259,14 @@
   - Branch: experimental/brainz
   - Notes: BackgroundService with Channel-based job queue and status tracking
 
-- [ ] **T-1034**: Convert metadata tasks to jobs
-  - Status: Not started
+- [x] **T-1034**: Convert metadata tasks to jobs
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Replace fire-and-forget async calls with job enqueueing
 
-- [ ] **T-1035**: Add network simulation job support
-  - Status: Not started
+- [x] **T-1035**: Add network simulation job support
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Jobs for mesh stress tests, NAT experiments, disaster mode simulations
@@ -1351,14 +1351,14 @@
 
 #### Stage 6: Codec Analyzers (Week 9)
 
-- [ ] **T-1032**: Implement codec analyzers
-  - Status: Not started
+- [x] **T-1032**: Implement codec analyzers
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: IAudioAnalyzer with FlacAnalyzer, Mp3Analyzer, OpusAnalyzer, AacAnalyzer (from Phase 2-Extended)
 
-- [ ] **T-1033**: Create unified BrainzClient
-  - Status: Not started
+- [x] **T-1033**: Create unified BrainzClient
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Single client for MB/AcoustID/Soulbeet with caching, rate limiting, backoff
