@@ -1331,20 +1331,20 @@
 
 #### Stage 5: Typed Configuration (Week 8)
 
-- [ ] **T-1050**: Create strongly-typed options
-  - Status: Not started
+- [x] **T-1050**: Create strongly-typed options
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: SwarmOptions, MeshOptions, SecurityOptions, BrainzOptions
 
-- [ ] **T-1051**: Wire options via IOptions<T>
-  - Status: Not started
+- [x] **T-1051**: Wire options via IOptions<T>
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: DI registration for all options classes
 
-- [ ] **T-1052**: Remove direct IConfiguration access
-  - Status: Not started
+- [x] **T-1052**: Remove direct IConfiguration access
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Replace magic strings with typed options everywhere
@@ -1365,72 +1365,72 @@
 
 #### Stage 7: Testability (Week 10)
 
-- [ ] **T-1060**: Eliminate static singletons
-  - Status: Not started
+- [x] **T-1060**: Eliminate static singletons
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Remove static state, make everything injectable
 
-- [ ] **T-1061**: Add interfaces for subsystems
-  - Status: Not started
+- [x] **T-1061**: Add interfaces for subsystems
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Ensure all major services have interfaces for mocking
 
-- [ ] **T-1062**: Constructor injection cleanup
-  - Status: Not started
+- [x] **T-1062**: Constructor injection cleanup
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: No `new HttpClient()`, no object creation inside methods
 
 #### Stage 8: Test Infrastructure (Week 11)
 
-- [ ] **T-1070**: Implement Soulfind test harness
-  - Status: Not started
+- [x] **T-1070**: Implement Soulfind test harness
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: SoulfindRunner for integration tests (from Phase 7 design)
 
-- [ ] **T-1071**: Implement MeshSimulator with DHT-first + disaster mode
-  - Status: Not started
+- [x] **T-1071**: Implement MeshSimulator with DHT-first + disaster mode
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: In-process mesh simulation with DHT-first discovery, disaster mode, NAT edge case support
 
-- [ ] **T-1072**: Write integration-soulseek tests
-  - Status: Not started
+- [x] **T-1072**: Write integration-soulseek tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Multi-client tests with Alice/Bob/Carol topology
 
-- [ ] **T-1073**: Write integration-mesh tests
-  - Status: Not started
+- [x] **T-1073**: Write integration-mesh tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: DHT-heavy tests, NAT edge cases, disaster mode continuation
 
 #### Stage 9: Cleanup (Week 12)
 
-- [ ] **T-1080**: Remove dead code
-  - Status: Not started
+- [x] **T-1080**: Remove dead code
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Kill unused enums, flags, half-implemented concepts, proto-classes
 
-- [ ] **T-1081**: Normalize naming
-  - Status: Not started
+- [x] **T-1081**: Normalize naming
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Consistent vocabulary: Swarm/Mesh/Brainz/Security terms
 
-- [ ] **T-1082**: Move narrative comments to docs
-  - Status: Not started
+- [x] **T-1082**: Move narrative comments to docs
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Keep code comments concise, details in docs/
 
-- [ ] **T-1083**: Collapse forwarding classes
-  - Status: Not started
+- [x] **T-1083**: Collapse forwarding classes
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Remove unnecessary abstraction layers

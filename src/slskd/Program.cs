@@ -789,6 +789,13 @@ namespace slskd
             services.AddSingleton<PodCore.IPodMessaging, PodCore.PodMessaging>();
             services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
 
+            // Typed options (Phase 11)
+            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection(\"Swarm\"));
+            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection(\"Security\"));
+            services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection(\"Brainz\"));
+            services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection(\"Mesh\")); // transport prefs
+            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection(\"MediaCore\"));
+
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 
