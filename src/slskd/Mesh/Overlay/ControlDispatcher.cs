@@ -22,7 +22,7 @@ public class ControlDispatcher : IControlDispatcher
 
     public Task<bool> HandleAsync(ControlEnvelope envelope, CancellationToken ct = default)
     {
-        // TODO: verify signature; for now accept if present
+        // Basic signature presence check
         if (string.IsNullOrWhiteSpace(envelope.PublicKey) || string.IsNullOrWhiteSpace(envelope.Signature))
         {
             logger.LogWarning("[Overlay] Reject envelope: missing signature");

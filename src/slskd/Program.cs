@@ -795,6 +795,7 @@ namespace slskd
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
+            services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
 
             // MeshCore (Phase 8 implementation)
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
@@ -807,6 +808,8 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
             services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
+            services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
+            services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.UdpOverlayClient>();
 
             // MediaCore publisher
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.InMemoryContentDescriptorSource>();
