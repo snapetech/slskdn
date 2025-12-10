@@ -14,13 +14,13 @@ Phase 2:  ████████████████████ 100% (22/
 Phase 3:  ████████████████████ 100% (11/11 tasks complete)
 Phase 4:  ████████████████████ 100% (12/12 tasks complete)
 Phase 5:  ████████████████████ 100% (13/13 tasks complete)
-Phase 6:  ██░░░░░░░░░░░░░░░░░░  10% ( 5/52 tasks complete)
+Phase 6:  █████░░░░░░░░░░░░░░░  25% (13/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete) [MeshCore/MediaCore]
 Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/32 tasks complete) [PodCore + Soulseek Bridge]
 Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% ( 0/2 tasks complete) [Domain Apps]
 
-Overall: ████████░░░░░░░░░░░░  35% (77/217 tasks complete)
+Overall: █████████░░░░░░░░░░░  39% (85/217 tasks complete)
 ```
 
 ---
@@ -170,7 +170,7 @@ Overall: ████████░░░░░░░░░░░░  35% (77/2
 
 ## 🔄 Phase 6: Virtual Soulfind Mesh & Disaster Mode (IN PROGRESS)
 
-**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 5/52 (10%)
+**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 13/52 (25%)
 
 ### Phase 6A: Capture & Normalization Pipeline (5/5) ✅
 - ✅ T-800: Implement Soulseek traffic observer (Completed: 2025-12-10)
@@ -178,6 +178,16 @@ Overall: ████████░░░░░░░░░░░░  35% (77/2
 - ✅ T-802: Implement username pseudonymization (Completed: 2025-12-10)
 - ✅ T-803: Create observation database schema (Completed: 2025-12-10)
 - ✅ T-804: Add privacy controls and data retention (Completed: 2025-12-10)
+
+### Phase 6B: Shadow Index Over DHT (8/8) ✅
+- ✅ T-805: Implement DHT key derivation (Completed: 2025-12-10)
+- ✅ T-806: Define shadow index shard format (Completed: 2025-12-10)
+- ✅ T-807: Build shadow index aggregation logic (Completed: 2025-12-10)
+- ✅ T-808: Implement shard publisher (Completed: 2025-12-10)
+- ✅ T-809: Create DHT query interface (Completed: 2025-12-10)
+- ✅ T-810: Implement shard merging logic (Completed: 2025-12-10)
+- ✅ T-811: Add TTL and eviction policy (Completed: 2025-12-10)
+- ✅ T-812: Implement rate limiting for DHT writes (Completed: 2025-12-10)
 
 ### Phase 6A: Capture & Normalization Pipeline (0/5) 📋
 - ⏳ T-800: Implement Soulseek traffic observer

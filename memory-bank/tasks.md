@@ -921,52 +921,52 @@
 
 #### Phase 6B: Shadow Index Over DHT
 
-- [ ] **T-805**: Implement DHT key derivation
-  - Status: Not started
+- [x] **T-805**: Implement DHT key derivation
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Map MBIDs and scenes to DHT keys with namespace prefixes
 
-- [ ] **T-806**: Define shadow index shard format
-  - Status: Not started
+- [x] **T-806**: Define shadow index shard format
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Compact MessagePack/Protobuf format for DHT values (peer hints, canonical variants)
 
-- [ ] **T-807**: Build shadow index builder service
-  - Status: Not started
+- [x] **T-807**: Build shadow index builder service
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Aggregate observations into shards per MBID
 
-- [ ] **T-808**: Implement shard publisher
-  - Status: Not started
+- [x] **T-808**: Implement shard publisher
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Periodic background task to publish shards to DHT
 
-- [ ] **T-809**: Implement DHT query interface
-  - Status: Not started
+- [x] **T-809**: Implement DHT query interface
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Query DHT for MBID → peer hints, decode shards
 
-- [ ] **T-810**: Add shard merging logic
-  - Status: Not started
+- [x] **T-810**: Add shard merging logic
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Combine shards from multiple DHT peers for comprehensive view
 
-- [ ] **T-811**: Implement TTL and eviction policy
-  - Status: Not started
+- [x] **T-811**: Implement TTL and eviction policy
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Auto-expire old shards, republish active content
 
-- [ ] **T-812**: Add DHT write rate limiting
-  - Status: Not started
+- [x] **T-812**: Add DHT write rate limiting
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Prevent DHT spam, respect etiquette, max shards per interval
 
 #### Phase 6C: Scenes / Micro-Networks

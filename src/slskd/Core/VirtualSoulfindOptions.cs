@@ -1,5 +1,7 @@
 namespace slskd.Core;
 
+using slskd.VirtualSoulfind.ShadowIndex;
+
 /// <summary>
 /// Virtual Soulfind configuration options.
 /// </summary>
@@ -14,6 +16,11 @@ public class VirtualSoulfindOptions
     /// Privacy configuration.
     /// </summary>
     public PrivacyOptions? Privacy { get; set; }
+    
+    /// <summary>
+    /// Shadow index configuration.
+    /// </summary>
+    public ShadowIndexOptions? ShadowIndex { get; set; }
 }
 
 /// <summary>

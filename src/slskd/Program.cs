@@ -741,7 +741,13 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Capture.INormalizationPipeline, VirtualSoulfind.Capture.NormalizationPipeline>();
             services.AddSingleton<VirtualSoulfind.Capture.IUsernamePseudonymizer, VirtualSoulfind.Capture.UsernamePseudonymizer>();
             services.AddSingleton<VirtualSoulfind.Capture.IObservationStore, VirtualSoulfind.Capture.InMemoryObservationStore>();
-            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilderStub>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilder>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, VirtualSoulfind.ShadowIndex.DhtClientStub>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardPublisher, VirtualSoulfind.ShadowIndex.ShardPublisher>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexQuery, VirtualSoulfind.ShadowIndex.ShadowIndexQuery>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardMerger, VirtualSoulfind.ShadowIndex.ShardMerger>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardCache, VirtualSoulfind.ShadowIndex.ShardCache>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtRateLimiter, VirtualSoulfind.ShadowIndex.DhtRateLimiter>();
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
