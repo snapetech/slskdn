@@ -237,6 +237,18 @@ namespace slskd.HashDb
 
         Task<IReadOnlyList<string>> GetReleaseIdsByLabelAsync(string labelNameOrId, int limit, CancellationToken cancellationToken = default);
 
+        // ========== Traffic Accounting ==========
+
+        /// <summary>
+        ///     Gets aggregate traffic counters for overlay and Soulseek.
+        /// </summary>
+        Task<Models.TrafficTotals> GetTrafficTotalsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Adds to traffic counters (can pass zero for unused directions).
+        /// </summary>
+        Task AddTrafficAsync(long overlayUpload, long overlayDownload, long soulseekUpload, long soulseekDownload, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

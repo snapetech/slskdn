@@ -655,6 +655,27 @@ public static class HashDbMigrations
                     cmd.ExecuteNonQuery();
                 },
             },
+
+            new Migration
+            {
+                Version = 12,
+                Name = "Traffic accounting",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS TrafficStats (
+                            key TEXT PRIMARY KEY,
+                            overlay_upload_bytes INTEGER DEFAULT 0,
+                            overlay_download_bytes INTEGER DEFAULT 0,
+                            soulseek_upload_bytes INTEGER DEFAULT 0,
+                            soulseek_download_bytes INTEGER DEFAULT 0,
+                            updated_at INTEGER NOT NULL
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

@@ -1949,6 +1949,56 @@ namespace slskd.HashDb
             return results;
         }
 
+        // ========== Traffic Accounting ==========
+
+        /// <inheritdoc/>
+        public async Task<Models.TrafficTotals> GetTrafficTotalsAsync(CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT overlay_upload_bytes, overlay_download_bytes, soulseek_upload_bytes, soulseek_download_bytes FROM TrafficStats WHERE key = 'global'";
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return new Models.TrafficTotals
+                {
+                    OverlayUploadBytes = reader.GetInt64(0),
+                    OverlayDownloadBytes = reader.GetInt64(1),
+                    SoulseekUploadBytes = reader.GetInt64(2),
+                    SoulseekDownloadBytes = reader.GetInt64(3),
+                };
+            }
+
+            return new Models.TrafficTotals();
+        }
+
+        /// <inheritdoc/>
+        public async Task AddTrafficAsync(long overlayUpload, long overlayDownload, long soulseekUpload, long soulseekDownload, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO TrafficStats (key, overlay_upload_bytes, overlay_download_bytes, soulseek_upload_bytes, soulseek_download_bytes, updated_at)
+                VALUES ('global', @ou, @od, @su, @sd, @updated)
+                ON CONFLICT(key) DO UPDATE SET
+                    overlay_upload_bytes = TrafficStats.overlay_upload_bytes + @ou,
+                    overlay_download_bytes = TrafficStats.overlay_download_bytes + @od,
+                    soulseek_upload_bytes = TrafficStats.soulseek_upload_bytes + @su,
+                    soulseek_download_bytes = TrafficStats.soulseek_download_bytes + @sd,
+                    updated_at = @updated;
+            ";
+
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            cmd.Parameters.AddWithValue("@ou", overlayUpload);
+            cmd.Parameters.AddWithValue("@od", overlayDownload);
+            cmd.Parameters.AddWithValue("@su", soulseekUpload);
+            cmd.Parameters.AddWithValue("@sd", soulseekDownload);
+            cmd.Parameters.AddWithValue("@updated", now);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         // ========== Label Crate Jobs ==========
 
         /// <inheritdoc/>
