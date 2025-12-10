@@ -74,3 +74,4 @@ namespace slskd.LibraryHealth.Remediation
         ReplaceWithCanonical,
     }
 }
+

@@ -13,3 +13,4 @@ namespace slskd.HashDb.Models
         public long LastAccessed { get; set; } // unix seconds
     }
 }
+

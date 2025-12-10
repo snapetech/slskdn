@@ -148,3 +148,4 @@ namespace slskd.Audio.Analyzers
         public string AnalyzerVersion { get; set; }
     }
 }
+

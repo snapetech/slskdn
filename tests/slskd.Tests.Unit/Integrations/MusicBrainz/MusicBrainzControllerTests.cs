@@ -101,3 +101,4 @@ public class MusicBrainzControllerTests
         Assert.Equal("flackey", match.FlacKey);
     }
 }
+

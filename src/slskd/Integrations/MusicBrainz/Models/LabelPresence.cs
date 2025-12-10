@@ -12,3 +12,4 @@ namespace slskd.Integrations.MusicBrainz.Models
         public int ReleaseCount { get; init; }
     }
 }
+

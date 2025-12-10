@@ -16,3 +16,4 @@ namespace slskd.Transfers.MultiSource.Playback
         public long BufferAheadMs { get; set; }
     }
 }
+

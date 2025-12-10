@@ -73,3 +73,4 @@ namespace slskd.Transfers.MultiSource.Metrics
         Task<List<PeerPerformanceMetrics>> GetRankedPeersAsync(int limit = 100, CancellationToken cancellationToken = default);
     }
 }
+

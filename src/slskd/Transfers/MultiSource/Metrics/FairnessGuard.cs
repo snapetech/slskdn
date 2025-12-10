@@ -114,3 +114,4 @@ namespace slskd.Transfers.MultiSource.Metrics
         public double MaxOverlayToSoulseekUploadRatio { get; init; } = 3.0;
     }
 }
+

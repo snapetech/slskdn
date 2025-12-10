@@ -22,3 +22,4 @@ export const getAllNotes = () => {
   return api.get('/users/notes');
 };
 
+

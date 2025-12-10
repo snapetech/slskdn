@@ -13,3 +13,4 @@ namespace slskd.Audio
         Task RecomputeAllStatsAsync(CancellationToken ct = default);
     }
 }
+

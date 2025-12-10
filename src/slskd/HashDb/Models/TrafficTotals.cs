@@ -14,3 +14,4 @@ namespace slskd.HashDb.Models
         public long SoulseekDownloadBytes { get; set; }
     }
 }
+

@@ -175,3 +175,4 @@ namespace slskd.Transfers.Rescue
         public int DailyRescueQuota { get; set; } = -1;
     }
 }
+

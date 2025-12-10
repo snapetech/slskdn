@@ -117,3 +117,4 @@ namespace slskd.Jobs.Manifests
         public DownloadConstraints Constraints { get; set; } = new();
     }
 }
+

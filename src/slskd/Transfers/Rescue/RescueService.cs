@@ -455,3 +455,4 @@ namespace slskd.Transfers.Rescue
         PeerDisconnected,
     }
 }
+

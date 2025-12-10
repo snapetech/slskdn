@@ -19,3 +19,4 @@ namespace slskd.LibraryHealth
         Task<LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default);
     }
 }
+

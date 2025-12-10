@@ -175,3 +175,4 @@ namespace slskd.Audio
         public List<DedupeVariant> Variants { get; set; }
     }
 }
+

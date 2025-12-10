@@ -10,3 +10,4 @@ namespace slskd.Integrations.AutoTagging
     public sealed record AutoTagResult(string FilePath, string Title, string Artist, bool Updated);
 }
 
+

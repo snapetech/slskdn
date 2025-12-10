@@ -8,3 +8,4 @@ export const fetchAlbumCompletion = () => {
   return api.get('/musicbrainz/albums/completion');
 };
 
+

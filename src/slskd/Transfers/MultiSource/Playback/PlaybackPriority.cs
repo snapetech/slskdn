@@ -7,3 +7,4 @@ namespace slskd.Transfers.MultiSource.Playback
         Low,
     }
 }
+

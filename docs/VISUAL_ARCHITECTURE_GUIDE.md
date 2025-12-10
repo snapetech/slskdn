@@ -615,3 +615,4 @@ The result: A network that's **smarter, faster, fairer, and unstoppable**.
 **Want to understand phases?** → Read `COMPLETE_PLANNING_INDEX.md`
 
 **Just want to understand the vision?** → You just did! 🎉
+

@@ -43,3 +43,4 @@ namespace slskd.Transfers.MultiSource.Tracing
         public long BytesServed { get; set; }
     }
 }
+

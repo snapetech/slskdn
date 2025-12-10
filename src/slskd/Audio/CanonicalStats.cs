@@ -33,3 +33,4 @@ namespace slskd.Audio
         public DateTimeOffset LastUpdated { get; set; }
     }
 }
+

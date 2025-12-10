@@ -41,3 +41,4 @@ namespace slskd.Transfers.MultiSource.Metrics
             hashDb.GetTrafficTotalsAsync(ct);
     }
 }
+
