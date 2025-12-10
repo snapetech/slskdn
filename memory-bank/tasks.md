@@ -1042,75 +1042,75 @@
 - [ ] **T-824**: Implement mesh-only transfers
   - Status: Not started
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Overlay multi-swarm only, no legacy Soulseek connections
 
-- [ ] **T-825**: Add scene-based peer discovery
-  - Status: Not started
+- [x] **T-825**: Add scene-based peer discovery
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Fallback to scene queries when DHT MBID lookups sparse
 
-- [ ] **T-826**: Build disaster mode UI indicator
-  - Status: Not started
+- [x] **T-826**: Build disaster mode UI indicator
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Clear visual indicator when mesh-only active
 
-- [ ] **T-827**: Add disaster mode configuration
-  - Status: Not started
+- [x] **T-827**: Add disaster mode configuration
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Auto vs forced modes, thresholds, behavior toggles
 
-- [ ] **T-828**: Implement graceful degradation
-  - Status: Not started
+- [x] **T-828**: Implement graceful degradation
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Handle partial server availability, hybrid operation
 
-- [ ] **T-829**: Add disaster mode telemetry
-  - Status: Not started
+- [x] **T-829**: Add disaster mode telemetry
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Track disaster events, recovery times, mesh performance
 
-- [ ] **T-830**: Build recovery logic
-  - Status: Not started
+- [x] **T-830**: Build recovery logic
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Re-enable Soulseek when server returns, smooth transition
 
 #### Phase 6E: Integration & Polish
 
-- [ ] **T-831**: Integrate shadow index with job resolvers
-  - Status: Not started
+- [x] **T-831**: Integrate shadow index with job resolvers
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Use shadow index hints in MB Release, discography, label crate jobs
 
-- [ ] **T-832**: Integrate scenes with label crate jobs
-  - Status: Not started
+- [x] **T-832**: Integrate scenes with label crate jobs
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Scene-scoped crates, prioritize scene peers
 
-- [ ] **T-833**: Integrate disaster mode with rescue mode
-  - Status: Not started
+- [x] **T-833**: Integrate disaster mode with rescue mode
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: In disaster mode, all transfers are "rescue" (mesh-only)
 
-- [ ] **T-834**: Perform privacy audit
-  - Status: Not started
+- [x] **T-834**: Perform privacy audit
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Ensure username anonymization, no path leaks, DHT privacy
 
-- [ ] **T-835**: Optimize DHT query performance
-  - Status: Not started
+- [x] **T-835**: Optimize DHT query performance
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Cache DHT lookups, batch queries, prefetch hot MBIDs
 
 - [ ] **T-836**: Build mesh configuration UI

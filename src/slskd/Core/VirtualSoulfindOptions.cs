@@ -1,6 +1,7 @@
 namespace slskd.Core;
 
 using slskd.VirtualSoulfind.ShadowIndex;
+using slskd.VirtualSoulfind.DisasterMode;
 
 /// <summary>
 /// Virtual Soulfind configuration options.
@@ -26,6 +27,11 @@ public class VirtualSoulfindOptions
     /// Scenes configuration.
     /// </summary>
     public ScenesOptions? Scenes { get; set; }
+    
+    /// <summary>
+    /// Disaster mode configuration.
+    /// </summary>
+    public DisasterModeOptions? DisasterMode { get; set; }
 }
 
 /// <summary>

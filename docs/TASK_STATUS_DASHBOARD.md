@@ -14,13 +14,13 @@ Phase 2:  ████████████████████ 100% (22/
 Phase 3:  ████████████████████ 100% (11/11 tasks complete)
 Phase 4:  ████████████████████ 100% (12/12 tasks complete)
 Phase 5:  ████████████████████ 100% (13/13 tasks complete)
-Phase 6:  ████████░░░░░░░░░░░░  40% (21/52 tasks complete)
+Phase 6:  ████████████░░░░░░░░  60% (31/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete) [MeshCore/MediaCore]
 Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/32 tasks complete) [PodCore + Soulseek Bridge]
 Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% ( 0/2 tasks complete) [Domain Apps]
 
-Overall: ██████████░░░░░░░░░░  43% (93/217 tasks complete)
+Overall: ███████████░░░░░░░░░  48% (103/217 tasks complete)
 ```
 
 ---
@@ -170,7 +170,7 @@ Overall: ██████████░░░░░░░░░░  43% (93/2
 
 ## 🔄 Phase 6: Virtual Soulfind Mesh & Disaster Mode (IN PROGRESS)
 
-**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 21/52 (40%)
+**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 31/52 (60%)
 
 ### Phase 6A: Capture & Normalization Pipeline (5/5) ✅
 - ✅ T-800: Implement Soulseek traffic observer (Completed: 2025-12-10)
@@ -198,6 +198,18 @@ Overall: ██████████░░░░░░░░░░  43% (93/2
 - ✅ T-818: Create scene UI stub (Completed: 2025-12-10)
 - ✅ T-819: Implement scene chat (Completed: 2025-12-10)
 - ✅ T-820: Add scene moderation (Completed: 2025-12-10)
+
+### Phase 6D: Disaster Mode & Failover (10/10) ✅
+- ✅ T-821: Implement Soulseek health monitor (Completed: 2025-12-10)
+- ✅ T-822: Build disaster mode coordinator (Completed: 2025-12-10)
+- ✅ T-823: Implement mesh-only search (Completed: 2025-12-10)
+- ✅ T-824: Build mesh-only transfers (Completed: 2025-12-10)
+- ✅ T-825: Add scene-based peer discovery (Completed: 2025-12-10)
+- ✅ T-826: Build disaster mode UI indicator (Completed: 2025-12-10)
+- ✅ T-827: Add disaster mode configuration (Completed: 2025-12-10)
+- ✅ T-828: Implement graceful degradation (Completed: 2025-12-10)
+- ✅ T-829: Build disaster mode telemetry (Completed: 2025-12-10)
+- ✅ T-830: Implement recovery logic (Completed: 2025-12-10)
 
 ### Phase 6A: Capture & Normalization Pipeline (0/5) 📋
 - ⏳ T-800: Implement Soulseek traffic observer
