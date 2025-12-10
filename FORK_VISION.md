@@ -182,6 +182,93 @@ We welcome contributions! Priority areas:
 
 *slskdn - Because "just write a script" isn't always the answer.*
 
+---
 
+## 🚀 Phase 9+: Long-Term Vision (Experimental)
 
+### Multi-Source & Mesh Architecture (experimental/brainz)
 
+The `experimental/brainz` branch explores a significantly expanded architecture:
+
+| Feature Area | Status | Description |
+|--------------|--------|-------------|
+| **MusicBrainz Integration** | ✅ Phase 1 Complete | Full MB API integration, album targets, Chromaprint fingerprinting, AcoustID lookups, auto-tagging pipeline |
+| **Canonical Edition Scoring** | ✅ Phase 2 Complete | Quality scoring (DR, transcode detection, codec-specific analysis), library health scanning, canonical variant selection |
+| **Multi-Source Chunked Downloads** | ✅ Phase 2 Complete | Parallel chunk-based downloads from multiple Soulseek peers + overlay mesh, RTT/throughput-aware scheduling, rescue mode for slow transfers |
+| **Peer Reputation System** | ✅ Phase 3 Complete | Local-only peer metrics (RTT, throughput, chunk success/failure), decay-based reputation scoring, reputation-gated scheduling |
+| **Traffic Accounting & Fairness** | ✅ Phase 3 Complete | Global traffic counters (overlay vs Soulseek upload/download), fairness governor with configurable ratio thresholds |
+| **Discovery & Jobs** | ✅ Phase 3 Complete | Discography profiles, artist release graph queries, label crate jobs, sub-job tracking |
+| **Job Manifests** | ✅ Phase 4 Complete | YAML export/import for job definitions (mb_release, discography, label_crate), version-controlled job schemas |
+| **Session Traces** | ✅ Phase 4 Complete | Structured swarm event logging (chunk-level, per-peer, per-backend), file-based persistence with rotation, trace summarization API |
+| **Warm Cache Nodes** | ✅ Phase 4 Complete | Popularity-based caching, LRU eviction, configurable storage limits, pinned content support |
+| **Playback-Aware Swarming** | ✅ Phase 4 Complete | Real-time playback feedback API, priority zone derivation (high/mid/low), streaming diagnostics endpoint |
+| **Soulbeet API Bridge** | 📋 Phase 5 Planned | Compatibility layer for external music apps, native job APIs, advanced query endpoints |
+| **Virtual Soulfind Bridge** | 📋 Phase 6 Planned | Protocol-level compatibility with legacy Soulseek clients, virtual directory generation, transparent multi-source routing |
+
+### Future: Decentralized Mesh & Community Features
+
+**Experimental directions beyond Phase 6:**
+
+#### Mesh Transport Layer
+- **Overlay DHT**: Decentralized peer discovery and metadata distribution
+- **Multi-Backend Transfers**: Native mesh protocol, HTTP/WebDAV/object storage, private BitTorrent fallback (only between known peers, no public DHT/trackers), optional LAN/IPFS/WebTorrent
+- **Relay-Only Partial View**: No global indexer or catalogue, preserve privacy and decentralization
+- **Signed Identity**: Cryptographic peer identities for trust, reputation, and moderation
+
+#### MediaCore & ContentID System
+- **ContentID Abstraction**: Unified identifiers for audio/movies/TV across metadata sources (MusicBrainz, TMDB, TVDb, etc.)
+- **MediaVariant Model**: Track different editions/masterings/cuts/encodings of the same canonical content
+- **Cross-Codec Canonicality**: Smart deduplication and quality scoring across formats
+- **Metadata Facade**: Pluggable metadata sources without tight coupling
+
+#### PodCore: Taste-Based Communities
+- **Pod Concept**: Small, topic- or trust-based groups (e.g. "Fans of Daft Punk", "Trusted Friends", "JP City Pop Collectors")
+- **Membership & Roles**: Owner/Moderator/Member roles, signed membership records, invitation flows
+- **Pod Chat**: Decentralized message routing via mesh overlay, local-only storage, optional backfill
+- **Content-Linked Pods**: Associate pods with specific artists/albums/shows via ContentID
+- **Pod Variant Opinions**: Share quality preferences (signed hashes + scores), feed into canonicality engine
+- **Collection vs Pod Views**: "You have 8/10 canonical albums the pod likes", "Pod's favorite masterings"
+- **Safety Constraints**: 
+  - Pods are about **taste, recommendations, and social context**
+  - **NOT** torrent indexes or magnet link feeds
+  - UI shaped around discussion, not direct file sharing
+  - No auto-linkifying of magnets/URLs
+  - Pod membership doesn't trigger implicit swarm participation
+
+#### SecurityCore & Moderation
+- **Pod-Level Trust**: Extend reputation system with pod-specific trust scores
+- **Abuse Controls**: Owner/moderator kick/ban capabilities, signed membership updates
+- **Global Reputation Feed**: Pods inform global trust scoring (consistent abuse across pods → lower global trust)
+- **Privacy-First**: Pod data scoped to members only, no global indexing, configurable retention
+
+#### Domain-Specific Apps (Long-Term)
+- **Soulbeet** (Music): Artist discographies, album completion, quality recommendations, pod integration
+- **Moviebeet** (Movies): Collection management, edition tracking (director's cuts, etc.)
+- **Tvbeet** (TV): Series tracking, episode completion, rewatch clubs
+- **Unified UI**: Tabbed interface across domains, shared swarm/mesh/metadata infrastructure
+
+---
+
+### Implementation Principles
+
+**What Guides This Vision:**
+1. **Privacy-First**: No central servers, no global catalogues, relay-only mesh
+2. **Protocol-Agnostic**: Multi-backend transfers, graceful fallbacks, no single point of failure
+3. **Legal Safety**: Private BT only between known peers, pods are taste/social layers not indexes
+4. **Testable**: Simulation-friendly architecture, unit tests at every layer
+5. **Incremental**: Each phase builds on previous work, can be tested/deployed independently
+
+**Dependencies Before Advanced Features:**
+- Stable overlay DHT and signed message routing (MeshCore foundation)
+- ContentID system operational across domains (MediaCore)
+- Trust/reputation primitives mature (SecurityCore)
+- Basic domain app UIs (Soulbeet artist/album views)
+
+**Timeline:**
+- Phases 1-4: ✅ Complete (experimental/brainz, Dec 2025)
+- Phase 5-6: 📋 Next up (Soulbeet integration, virtual Soulfind bridge)
+- Phase 7+: 🔬 Research (Mesh/MediaCore/PodCore, 2026+)
+
+---
+
+*slskdn: From batteries-included client to decentralized media mesh.*
