@@ -784,6 +784,11 @@ namespace slskd
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
 
+            // PodCore (Phase 10 scaffolding)
+            services.AddSingleton<PodCore.IPodService, PodCore.PodService>();
+            services.AddSingleton<PodCore.IPodMessaging, PodCore.PodMessaging>();
+            services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
+
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 

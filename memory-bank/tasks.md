@@ -565,204 +565,204 @@
 
 #### Phase 9A: Pod Metadata & Membership
 
-- [ ] **T-1000**: Define pod data models (Pod, PodMember, PodRole)
-  - Status: Not started
+- [x] **T-1000**: Define pod data models (Pod, PodMember, PodRole)
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: PodId, DisplayName, Visibility, FocusType, ContentId linkage, Tags.
 
-- [ ] **T-1001**: Implement pod creation and metadata publishing
-  - Status: Not started
+- [x] **T-1001**: Implement pod creation and metadata publishing
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Create pod, sign metadata, publish to DHT (pod:<PodId>:meta).
 
-- [ ] **T-1002**: Build signed membership record system
-  - Status: Not started
+- [x] **T-1002**: Build signed membership record system
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: PodMembershipRecord with role/ban status/signature, publish to DHT.
 
-- [ ] **T-1003**: Implement pod join/leave flows
-  - Status: Not started
+- [x] **T-1003**: Implement pod join/leave flows
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Invite flows for private pods, direct join for unlisted/listed, membership record updates.
 
-- [ ] **T-1004**: Add pod discovery for listed pods
-  - Status: Not started
+- [x] **T-1004**: Add pod discovery for listed pods
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: DHT keys for discovery (pod:discover:name:<name>, pod:discover:tag:<tag>).
 
 #### Phase 9B: Pod Chat & Messaging
 
-- [ ] **T-1005**: Define pod message data model
-  - Status: Not started
+- [x] **T-1005**: Define pod message data model
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: PodMessage (ChannelId, MessageId, SenderPeerId, Body, Signature, Kind).
 
-- [ ] **T-1006**: Implement decentralized message routing
-  - Status: Not started
+- [x] **T-1006**: Implement decentralized message routing
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Route messages via overlay to pod peers, multi-cast with deduplication.
 
-- [ ] **T-1007**: Build local message storage and backfill
-  - Status: Not started
+- [x] **T-1007**: Build local message storage and backfill
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Local SQLite storage, optional peer-to-peer backfill, configurable retention.
 
-- [ ] **T-1008**: Add pod channels (general, custom)
-  - Status: Not started
+- [x] **T-1008**: Add pod channels (general, custom)
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: PodChannelId model, DHT keys for channel descriptors.
 
-- [ ] **T-1009**: Implement message validation and signature checks
-  - Status: Not started
+- [x] **T-1009**: Implement message validation and signature checks
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Validate sender membership, check signatures, enforce ban list.
 
 #### Phase 9C: Content-Linked Pods & Variant Opinions
 
-- [ ] **T-1010**: Implement content-linked pod creation
-  - Status: Not started
+- [x] **T-1010**: Implement content-linked pod creation
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: FocusType=ContentId, associate pod with artist/album/show.
 
-- [ ] **T-1011**: Build "collection vs pod" view
-  - Status: Not started
+- [x] **T-1011**: Build "collection vs pod" view
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Compare user's collection to pod's canonical discography, show gaps.
 
-- [ ] **T-1012**: Define PodVariantOpinion data model
-  - Status: Not started
+- [x] **T-1012**: Define PodVariantOpinion data model
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: PodId, ContentId, VariantHash, Score, Note, SenderPeerId, Signature.
 
-- [ ] **T-1013**: Implement variant opinion publishing and retrieval
-  - Status: Not started
+- [x] **T-1013**: Implement variant opinion publishing and retrieval
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Publish opinions to DHT (pod:<PodId>:opinions:<ContentId>), query for aggregation.
 
-- [ ] **T-1014**: Integrate pod opinions into canonicality engine
-  - Status: Not started
+- [x] **T-1014**: Integrate pod opinions into canonicality engine
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Weight opinions by PodAffinity and trust, feed into QualityScorer/CanonicalStatsService.
 
 #### Phase 9D: Pod Moderation & Security Integration
 
-- [ ] **T-1015**: Implement owner/moderator kick/ban actions
-  - Status: Not started
+- [x] **T-1015**: Implement owner/moderator kick/ban actions
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Update membership record with IsBanned=true, sign and publish to DHT.
 
-- [ ] **T-1016**: Build PodAffinity scoring (engagement, trust)
-  - Status: Not started
+- [x] **T-1016**: Build PodAffinity scoring (engagement, trust)
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Track activity frequency, calculate engagement score, derive pod-specific trust.
 
-- [ ] **T-1017**: Integrate pod trust with SecurityCore
-  - Status: Not started
+- [x] **T-1017**: Integrate pod trust with SecurityCore
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Extend SecurityContext with PodId/PodRole/PodTrustScore, adjust policies per pod.
 
-- [ ] **T-1018**: Add global reputation feed from pod abuse
-  - Status: Not started
+- [x] **T-1018**: Add global reputation feed from pod abuse
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Consistent abuse across pods → lower global trust, inform PeerMetricsService.
 
 #### Phase 9E: Pod UI & Safety Guardrails
 
-- [ ] **T-1019**: Design pod UI mockups (list, detail, chat, collection views)
-  - Status: Not started
+- [x] **T-1019**: Design pod UI mockups (list, detail, chat, collection views)
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Wireframes for pod browser, join/leave, chat interface, "collection vs pod" dashboard.
 
-- [ ] **T-1020**: Implement pod list and detail views
-  - Status: Not started
+- [x] **T-1020**: Implement pod list and detail views
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Browse joined pods, view metadata/members/tags, join/leave buttons.
 
-- [ ] **T-1021**: Build pod chat UI with safety guardrails
-  - Status: Not started
+- [x] **T-1021**: Build pod chat UI with safety guardrails
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Message list, send box, NO auto-linkifying magnets/URLs, no "paste magnet" shortcut.
 
-- [ ] **T-1022**: Add "collection vs pod" dashboard integration
-  - Status: Not started
+- [x] **T-1022**: Add "collection vs pod" dashboard integration
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Show gaps, pod's favorite masterings, quality recommendations, NO direct download links.
 
-- [ ] **T-1023**: Implement pod-scoped variant opinion UI
-  - Status: Not started
+- [x] **T-1023**: Implement pod-scoped variant opinion UI
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: View pod opinions per release, submit your own opinion (hash + score + note).
 
 #### Phase 9F: Soulseek Chat Bridge (Adoption Strategy)
 
-- [ ] **T-1024**: Design external binding data model
-  - Status: Not started
+- [x] **T-1024**: Design external binding data model
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: PodExternalBinding (Kind, Mode, Identifier), PodChannelKind (Native vs Bound).
 
-- [ ] **T-1025**: Implement ISoulseekChatBridge interface
-  - Status: Not started
+- [x] **T-1025**: Implement ISoulseekChatBridge interface
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Join/leave rooms, subscribe to room events, send messages, PM support.
 
-- [ ] **T-1026**: Add ExternalBinding to PodMetadata
-  - Status: Not started
+- [x] **T-1026**: Add ExternalBinding to PodMetadata
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Extend Pod data model with optional Soulseek room binding.
 
-- [ ] **T-1027**: Implement bound channel creation and mirroring
-  - Status: Not started
+- [x] **T-1027**: Implement bound channel creation and mirroring
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Create "soulseek-room" bound channel, mirror messages from Soulseek → Pod (ReadOnly mode).
 
-- [ ] **T-1028**: Add two-way mirroring (Mirror mode)
-  - Status: Not started
+- [x] **T-1028**: Add two-way mirroring (Mirror mode)
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Send pod messages to Soulseek room, with clear UI indicators and safety guardrails.
 
-- [ ] **T-1029**: Build pod-from-room creation flow
-  - Status: Not started
+- [x] **T-1029**: Build pod-from-room creation flow
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: UI to create pod from existing Soulseek room, pre-fill metadata, default to ReadOnly.
 
-- [ ] **T-1030**: Add Soulseek identity mapping
-  - Status: Not started
+- [x] **T-1030**: Add Soulseek identity mapping
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Synthetic PeerIds for Soulseek usernames (soulseek:username), optional verification/linking.
 
-- [ ] **T-1031**: Implement bound channel UI with safety indicators
-  - Status: Not started
+- [x] **T-1031**: Implement bound channel UI with safety indicators
+  - Status: Done
   - Priority: P4 (research)
   - Branch: TBD
   - Notes: Visual distinction (badges, colors), clear send-to indicators, disable input for ReadOnly.
@@ -775,13 +775,13 @@
 > **Dependencies**: Phases 8-9 (MeshCore, MediaCore, PodCore)  
 > **Timeline**: Long-term research
 
-- [ ] **T-1100**: Design Soulbeet (music) app architecture
-  - Status: Not started
+- [x] **T-1100**: Design Soulbeet (music) app architecture
+  - Status: Done
   - Priority: P5 (long-term)
   - Notes: Artist discographies, album completion, pod integration, quality recommendations.
 
-- [ ] **T-1101**: Research extensibility for other media domains
-  - Status: Not started
+- [x] **T-1101**: Research extensibility for other media domains
+  - Status: Done
   - Priority: P5 (long-term)
   - Notes: Architecture patterns for extending ContentID/MediaCore to other media types.
 
@@ -1221,40 +1221,40 @@
 
 #### Stage 1: Mesh APIs with Power Preserved (Weeks 1-2)
 
-- [ ] **T-1000**: Create namespace structure
-  - Status: Not started
+- [x] **T-1000**: Create namespace structure
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Create Slskdn.Swarm, Slskdn.Mesh (with DHT/, Overlay/, Advanced/), Slskdn.Security, Slskdn.Brainz, Slskdn.Integrations
 
-- [ ] **T-1001**: Define IMeshDirectory + IMeshAdvanced
-  - Status: Not started
+- [x] **T-1001**: Define IMeshDirectory + IMeshAdvanced
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Dual API - IMeshDirectory for normal use, IMeshAdvanced for power features/experiments
 
-- [ ] **T-1002**: Add MeshOptions.TransportPreference
-  - Status: Not started
+- [x] **T-1002**: Add MeshOptions.TransportPreference
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: DhtFirst (default), Mirrored, OverlayFirst - encourage DHT usage
 
-- [ ] **T-1003**: Implement MeshTransportService with configurable preference
-  - Status: Not started
+- [x] **T-1003**: Implement MeshTransportService with configurable preference
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Handle DHT-first, mirrored, overlay-first strategies; NAT, UPnP, TLS
 
 #### Stage 2: Job Pipeline (Weeks 3-4)
 
-- [ ] **T-1030**: Implement IMetadataJob abstraction
-  - Status: Not started
+- [x] **T-1030**: Implement IMetadataJob abstraction
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: IMetadataJob interface with AlbumBackfillJob, DiscographyJob, RepairMissionJob, NetworkStressTestJob
 
-- [ ] **T-1031**: Create MetadataJobRunner
-  - Status: Not started
+- [x] **T-1031**: Create MetadataJobRunner
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: BackgroundService with Channel-based job queue and status tracking
@@ -1273,32 +1273,32 @@
 
 #### Stage 3: Swarm Orchestrator (Weeks 5-6)
 
-- [ ] **T-1010**: Implement SwarmDownloadOrchestrator
-  - Status: Not started
+- [x] **T-1010**: Implement SwarmDownloadOrchestrator
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: BackgroundService with Channel-based job queue, replace scattered Task.Run
 
-- [ ] **T-1011**: Create SwarmJob model
-  - Status: Not started
+- [x] **T-1011**: Create SwarmJob model
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: SwarmJob, SwarmFile, SwarmChunk, SwarmSource with proper typing
 
-- [ ] **T-1012**: Implement IVerificationEngine
-  - Status: Not started
+- [x] **T-1012**: Implement IVerificationEngine
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Centralize chunk verification (hash, consensus, reputation) with caching
 
-- [ ] **T-1013**: Replace ad-hoc Task.Run
-  - Status: Not started
+- [x] **T-1013**: Replace ad-hoc Task.Run
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Route all swarm operations through orchestrator
 
-- [ ] **T-1014**: Integrate with IMeshDirectory and IMeshAdvanced
-  - Status: Not started
+- [x] **T-1014**: Integrate with IMeshDirectory and IMeshAdvanced
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Use IMeshDirectory for normal discovery, IMeshAdvanced for advanced strategies
