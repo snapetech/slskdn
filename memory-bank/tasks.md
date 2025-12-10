@@ -163,8 +163,9 @@
 > **Docs**: `docs/phase2-advanced-fingerprinting-design.md`  
 > **Tasks**: T-420 through T-430
 
-- [ ] **T-420**: Extend AudioVariant model with codec-specific fields
-  - Status: Not started
+- [x] **T-420**: Extend AudioVariant model with codec-specific fields
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Add FLAC streaminfo hash, MP3 stream hash, Opus/AAC hashes, spectral features, encoder metadata. HashDb migration version 7.

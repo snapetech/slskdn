@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -466,6 +466,70 @@ public static class HashDbMigrations
                         CREATE INDEX IF NOT EXISTS idx_scans_completed ON LibraryHealthScans(completed_at DESC);
                     ";
                     cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 7,
+                Name = "Codec-specific fingerprints and analyzer version",
+                Apply = conn =>
+                {
+                    var alterStatements = new[]
+                    {
+                        "ALTER TABLE HashDb ADD COLUMN flac_streaminfo_hash42 TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN flac_pcm_md5 TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN flac_min_block_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_max_block_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_min_frame_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_max_frame_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_total_samples INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_stream_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_encoder TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_encoder_preset TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_frames_analyzed INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN effective_bandwidth_hz REAL",
+                        "ALTER TABLE HashDb ADD COLUMN nominal_lowpass_hz REAL",
+                        "ALTER TABLE HashDb ADD COLUMN spectral_flatness_score REAL",
+                        "ALTER TABLE HashDb ADD COLUMN hf_energy_ratio REAL",
+                        "ALTER TABLE HashDb ADD COLUMN opus_stream_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN opus_nominal_bitrate_kbps INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN opus_application TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN opus_bandwidth_mode TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN aac_stream_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN aac_profile TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN aac_sbr_present BOOLEAN",
+                        "ALTER TABLE HashDb ADD COLUMN aac_ps_present BOOLEAN",
+                        "ALTER TABLE HashDb ADD COLUMN aac_nominal_bitrate_kbps INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN audio_sketch_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN analyzer_version TEXT",
+                    };
+
+                    foreach (var alter in alterStatements)
+                    {
+                        try
+                        {
+                            using var alterCmd = conn.CreateCommand();
+                            alterCmd.CommandText = alter;
+                            alterCmd.ExecuteNonQuery();
+                        }
+                        catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+                        {
+                            // Column already exists - skip
+                        }
+                    }
+
+                    using var indexCmd = conn.CreateCommand();
+                    indexCmd.CommandText = @"
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_flac_streaminfo ON HashDb(flac_streaminfo_hash42);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_flac_pcm ON HashDb(flac_pcm_md5);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_mp3_stream ON HashDb(mp3_stream_hash);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_encoder ON HashDb(mp3_encoder);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_opus_stream ON HashDb(opus_stream_hash);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_aac_stream ON HashDb(aac_stream_hash);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_aac_profile ON HashDb(aac_profile);
+                    ";
+                    indexCmd.ExecuteNonQuery();
                 },
             },
         };

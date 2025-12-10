@@ -100,6 +100,42 @@ namespace slskd.HashDb.Models
         public string EncoderSignature { get; set; }
         public int? SeenCount { get; set; }
         public string FileSha256 { get; set; }
+        public string AudioSketchHash { get; set; }
+        public string AnalyzerVersion { get; set; }
+
+        // FLAC-specific
+        public string FlacStreamInfoHash42 { get; set; }
+        public string FlacPcmMd5 { get; set; }
+        public int? FlacMinBlockSize { get; set; }
+        public int? FlacMaxBlockSize { get; set; }
+        public int? FlacMinFrameSize { get; set; }
+        public int? FlacMaxFrameSize { get; set; }
+        public long? FlacTotalSamples { get; set; }
+
+        // MP3-specific
+        public string Mp3StreamHash { get; set; }
+        public string Mp3Encoder { get; set; }
+        public string Mp3EncoderPreset { get; set; }
+        public int? Mp3FramesAnalyzed { get; set; }
+
+        // Shared lossy spectral features
+        public double? EffectiveBandwidthHz { get; set; }
+        public double? NominalLowpassHz { get; set; }
+        public double? SpectralFlatnessScore { get; set; }
+        public double? HfEnergyRatio { get; set; }
+
+        // Opus-specific
+        public string OpusStreamHash { get; set; }
+        public int? OpusNominalBitrateKbps { get; set; }
+        public string OpusApplication { get; set; }
+        public string OpusBandwidthMode { get; set; }
+
+        // AAC-specific
+        public string AacStreamHash { get; set; }
+        public string AacProfile { get; set; }
+        public bool? AacSbrPresent { get; set; }
+        public bool? AacPsPresent { get; set; }
+        public int? AacNominalBitrateKbps { get; set; }
 
         /// <summary>
         ///     Gets the first seen time as DateTime.

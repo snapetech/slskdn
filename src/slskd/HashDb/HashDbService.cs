@@ -1325,6 +1325,31 @@ namespace slskd.HashDb
                     channels = @channels,
                     duration_ms = @duration_ms,
                     bitrate_kbps = @bitrate_kbps,
+                    flac_streaminfo_hash42 = @flac_streaminfo_hash42,
+                    flac_pcm_md5 = @flac_pcm_md5,
+                    flac_min_block_size = @flac_min_block_size,
+                    flac_max_block_size = @flac_max_block_size,
+                    flac_min_frame_size = @flac_min_frame_size,
+                    flac_max_frame_size = @flac_max_frame_size,
+                    flac_total_samples = @flac_total_samples,
+                    mp3_stream_hash = @mp3_stream_hash,
+                    mp3_encoder = @mp3_encoder,
+                    mp3_encoder_preset = @mp3_encoder_preset,
+                    mp3_frames_analyzed = @mp3_frames_analyzed,
+                    effective_bandwidth_hz = @effective_bandwidth_hz,
+                    nominal_lowpass_hz = @nominal_lowpass_hz,
+                    spectral_flatness_score = @spectral_flatness_score,
+                    hf_energy_ratio = @hf_energy_ratio,
+                    opus_stream_hash = @opus_stream_hash,
+                    opus_nominal_bitrate_kbps = @opus_nominal_bitrate_kbps,
+                    opus_application = @opus_application,
+                    opus_bandwidth_mode = @opus_bandwidth_mode,
+                    aac_stream_hash = @aac_stream_hash,
+                    aac_profile = @aac_profile,
+                    aac_sbr_present = @aac_sbr_present,
+                    aac_ps_present = @aac_ps_present,
+                    aac_nominal_bitrate_kbps = @aac_nominal_bitrate_kbps,
+                    audio_sketch_hash = @audio_sketch_hash,
                     quality_score = @quality_score,
                     transcode_suspect = @transcode_suspect,
                     transcode_reason = @transcode_reason,
@@ -1332,6 +1357,7 @@ namespace slskd.HashDb
                     loudness_lufs = @loudness_lufs,
                     has_clipping = @has_clipping,
                     encoder_signature = @encoder_signature,
+                    analyzer_version = @analyzer_version,
                     seen_count = COALESCE(seen_count, 1),
                     file_sha256 = @file_sha256,
                     musicbrainz_id = COALESCE(musicbrainz_id, @recording_id),
@@ -1346,6 +1372,31 @@ namespace slskd.HashDb
             cmd.Parameters.AddWithValue("@channels", variant.Channels);
             cmd.Parameters.AddWithValue("@duration_ms", variant.DurationMs);
             cmd.Parameters.AddWithValue("@bitrate_kbps", variant.BitrateKbps);
+            cmd.Parameters.AddWithValue("@flac_streaminfo_hash42", (object?)variant.FlacStreamInfoHash42 ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@flac_pcm_md5", (object?)variant.FlacPcmMd5 ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@flac_min_block_size", (object?)variant.FlacMinBlockSize ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@flac_max_block_size", (object?)variant.FlacMaxBlockSize ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@flac_min_frame_size", (object?)variant.FlacMinFrameSize ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@flac_max_frame_size", (object?)variant.FlacMaxFrameSize ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@flac_total_samples", (object?)variant.FlacTotalSamples ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@mp3_stream_hash", (object?)variant.Mp3StreamHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@mp3_encoder", (object?)variant.Mp3Encoder ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@mp3_encoder_preset", (object?)variant.Mp3EncoderPreset ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@mp3_frames_analyzed", (object?)variant.Mp3FramesAnalyzed ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@effective_bandwidth_hz", (object?)variant.EffectiveBandwidthHz ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@nominal_lowpass_hz", (object?)variant.NominalLowpassHz ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@spectral_flatness_score", (object?)variant.SpectralFlatnessScore ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@hf_energy_ratio", (object?)variant.HfEnergyRatio ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@opus_stream_hash", (object?)variant.OpusStreamHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@opus_nominal_bitrate_kbps", (object?)variant.OpusNominalBitrateKbps ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@opus_application", (object?)variant.OpusApplication ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@opus_bandwidth_mode", (object?)variant.OpusBandwidthMode ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aac_stream_hash", (object?)variant.AacStreamHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aac_profile", (object?)variant.AacProfile ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aac_sbr_present", (object?)variant.AacSbrPresent ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aac_ps_present", (object?)variant.AacPsPresent ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aac_nominal_bitrate_kbps", (object?)variant.AacNominalBitrateKbps ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@audio_sketch_hash", (object?)variant.AudioSketchHash ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@quality_score", variant.QualityScore);
             cmd.Parameters.AddWithValue("@transcode_suspect", variant.TranscodeSuspect);
             cmd.Parameters.AddWithValue("@transcode_reason", (object?)variant.TranscodeReason ?? DBNull.Value);
@@ -1353,6 +1404,7 @@ namespace slskd.HashDb
             cmd.Parameters.AddWithValue("@loudness_lufs", (object?)variant.LoudnessLUFS ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@has_clipping", (object?)variant.HasClipping ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@encoder_signature", (object?)variant.EncoderSignature ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@analyzer_version", (object?)variant.AnalyzerVersion ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@file_sha256", (object?)variant.FileSha256 ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@recording_id", (object?)variant.MusicBrainzRecordingId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
@@ -1964,6 +2016,43 @@ namespace slskd.HashDb
             TryReadOptionalInt(reader, "seen_count", v => entry.SeenCount = v);
             TryReadOptionalString(reader, "file_sha256", v => entry.FileSha256 = v);
             TryReadOptionalString(reader, "musicbrainz_id", v => entry.MusicBrainzId = v);
+            TryReadOptionalString(reader, "audio_fingerprint", v => entry.AudioFingerprint = v);
+            TryReadOptionalString(reader, "audio_sketch_hash", v => entry.AudioSketchHash = v);
+            TryReadOptionalString(reader, "analyzer_version", v => entry.AnalyzerVersion = v);
+
+            // FLAC-specific
+            TryReadOptionalString(reader, "flac_streaminfo_hash42", v => entry.FlacStreamInfoHash42 = v);
+            TryReadOptionalString(reader, "flac_pcm_md5", v => entry.FlacPcmMd5 = v);
+            TryReadOptionalInt(reader, "flac_min_block_size", v => entry.FlacMinBlockSize = v);
+            TryReadOptionalInt(reader, "flac_max_block_size", v => entry.FlacMaxBlockSize = v);
+            TryReadOptionalInt(reader, "flac_min_frame_size", v => entry.FlacMinFrameSize = v);
+            TryReadOptionalInt(reader, "flac_max_frame_size", v => entry.FlacMaxFrameSize = v);
+            TryReadOptionalLong(reader, "flac_total_samples", v => entry.FlacTotalSamples = v);
+
+            // MP3-specific
+            TryReadOptionalString(reader, "mp3_stream_hash", v => entry.Mp3StreamHash = v);
+            TryReadOptionalString(reader, "mp3_encoder", v => entry.Mp3Encoder = v);
+            TryReadOptionalString(reader, "mp3_encoder_preset", v => entry.Mp3EncoderPreset = v);
+            TryReadOptionalInt(reader, "mp3_frames_analyzed", v => entry.Mp3FramesAnalyzed = v);
+
+            // Shared lossy spectral metrics
+            TryReadOptionalDouble(reader, "effective_bandwidth_hz", v => entry.EffectiveBandwidthHz = v);
+            TryReadOptionalDouble(reader, "nominal_lowpass_hz", v => entry.NominalLowpassHz = v);
+            TryReadOptionalDouble(reader, "spectral_flatness_score", v => entry.SpectralFlatnessScore = v);
+            TryReadOptionalDouble(reader, "hf_energy_ratio", v => entry.HfEnergyRatio = v);
+
+            // Opus-specific
+            TryReadOptionalString(reader, "opus_stream_hash", v => entry.OpusStreamHash = v);
+            TryReadOptionalInt(reader, "opus_nominal_bitrate_kbps", v => entry.OpusNominalBitrateKbps = v);
+            TryReadOptionalString(reader, "opus_application", v => entry.OpusApplication = v);
+            TryReadOptionalString(reader, "opus_bandwidth_mode", v => entry.OpusBandwidthMode = v);
+
+            // AAC-specific
+            TryReadOptionalString(reader, "aac_stream_hash", v => entry.AacStreamHash = v);
+            TryReadOptionalString(reader, "aac_profile", v => entry.AacProfile = v);
+            TryReadOptionalBool(reader, "aac_sbr_present", v => entry.AacSbrPresent = v);
+            TryReadOptionalBool(reader, "aac_ps_present", v => entry.AacPsPresent = v);
+            TryReadOptionalInt(reader, "aac_nominal_bitrate_kbps", v => entry.AacNominalBitrateKbps = v);
 
             return entry;
         }
@@ -1990,6 +2079,8 @@ namespace slskd.HashDb
                 FileSizeBytes = entry.Size,
                 FileSha256 = entry.FileSha256,
                 AudioFingerprint = entry.AudioFingerprint,
+                AudioSketchHash = entry.AudioSketchHash,
+                AnalyzerVersion = entry.AnalyzerVersion,
                 QualityScore = entry.QualityScore ?? 0.0,
                 TranscodeSuspect = entry.TranscodeSuspect ?? false,
                 TranscodeReason = entry.TranscodeReason,
@@ -2000,6 +2091,30 @@ namespace slskd.HashDb
                 FirstSeenAt = DateTimeOffset.FromUnixTimeSeconds(entry.FirstSeenAt),
                 LastSeenAt = DateTimeOffset.FromUnixTimeSeconds(entry.LastUpdatedAt),
                 SeenCount = entry.SeenCount ?? 1,
+                FlacStreamInfoHash42 = entry.FlacStreamInfoHash42,
+                FlacPcmMd5 = entry.FlacPcmMd5,
+                FlacMinBlockSize = entry.FlacMinBlockSize,
+                FlacMaxBlockSize = entry.FlacMaxBlockSize,
+                FlacMinFrameSize = entry.FlacMinFrameSize,
+                FlacMaxFrameSize = entry.FlacMaxFrameSize,
+                FlacTotalSamples = entry.FlacTotalSamples,
+                Mp3StreamHash = entry.Mp3StreamHash,
+                Mp3Encoder = entry.Mp3Encoder,
+                Mp3EncoderPreset = entry.Mp3EncoderPreset,
+                Mp3FramesAnalyzed = entry.Mp3FramesAnalyzed,
+                EffectiveBandwidthHz = entry.EffectiveBandwidthHz,
+                NominalLowpassHz = entry.NominalLowpassHz,
+                SpectralFlatnessScore = entry.SpectralFlatnessScore,
+                HfEnergyRatio = entry.HfEnergyRatio,
+                OpusStreamHash = entry.OpusStreamHash,
+                OpusNominalBitrateKbps = entry.OpusNominalBitrateKbps,
+                OpusApplication = entry.OpusApplication,
+                OpusBandwidthMode = entry.OpusBandwidthMode,
+                AacStreamHash = entry.AacStreamHash,
+                AacProfile = entry.AacProfile,
+                AacSbrPresent = entry.AacSbrPresent,
+                AacPsPresent = entry.AacPsPresent,
+                AacNominalBitrateKbps = entry.AacNominalBitrateKbps,
             };
         }
 
