@@ -249,6 +249,18 @@ namespace slskd.HashDb
         /// </summary>
         Task AddTrafficAsync(long overlayUpload, long overlayDownload, long soulseekUpload, long soulseekDownload, CancellationToken cancellationToken = default);
 
+        // ========== Warm Cache Popularity ==========
+
+        /// <summary>
+        ///     Increment popularity for a content id (e.g., MB release or recording).
+        /// </summary>
+        Task IncrementPopularityAsync(string contentId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get top popular content IDs above threshold.
+        /// </summary>
+        Task<IReadOnlyList<(string ContentId, long Hits)>> GetTopPopularAsync(int limit, long minHits = 1, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

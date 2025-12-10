@@ -423,11 +423,11 @@
   - Branch: experimental/brainz
   - Notes: WarmCache options added with enabled/max_storage_gb/min_popularity_threshold validation; ready for caching logic wiring.
 
-- [ ] **T-607**: Build popularity detection for caching
-  - Status: Not started
+- [x] **T-607**: Build popularity detection for caching
+  - Status: Done
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: Compute MBID popularity from local jobs and mesh adverts. Use to decide what to prefetch.
+  - Notes: Warm cache popularity store + service; counts per contentId with top-popular query hook.
 
 - [ ] **T-608**: Add cache fetch, serve, evict logic
   - Status: Not started

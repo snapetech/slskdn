@@ -1999,6 +1999,64 @@ namespace slskd.HashDb
             await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        // ========== Warm Cache Popularity ==========
+
+        /// <inheritdoc/>
+        public async Task IncrementPopularityAsync(string contentId, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+            {
+                return;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO WarmCachePopularity (content_id, hits, last_updated)
+                VALUES (@cid, 1, @now)
+                ON CONFLICT(content_id) DO UPDATE SET
+                    hits = WarmCachePopularity.hits + 1,
+                    last_updated = @now;
+            ";
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            cmd.Parameters.AddWithValue("@cid", contentId);
+            cmd.Parameters.AddWithValue("@now", now);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<(string ContentId, long Hits)>> GetTopPopularAsync(int limit, long minHits = 1, CancellationToken cancellationToken = default)
+        {
+            var results = new List<(string, long)>();
+            if (limit <= 0)
+            {
+                return results;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT content_id, hits
+                FROM WarmCachePopularity
+                WHERE hits >= @minHits
+                ORDER BY hits DESC, last_updated DESC
+                LIMIT @limit;
+            ";
+            cmd.Parameters.AddWithValue("@minHits", minHits);
+            cmd.Parameters.AddWithValue("@limit", limit);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var cid = reader.GetString(0);
+                var hits = reader.GetInt64(1);
+                results.Add((cid, hits));
+            }
+
+            return results;
+        }
+
         // ========== Label Crate Jobs ==========
 
         /// <inheritdoc/>
