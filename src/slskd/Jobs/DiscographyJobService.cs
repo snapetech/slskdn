@@ -13,6 +13,8 @@ namespace slskd.Jobs
         Task<string> CreateJobAsync(DiscographyJobRequest request, CancellationToken ct = default);
 
         Task<DiscographyJob?> GetJobAsync(string jobId, CancellationToken ct = default);
+
+        Task SetReleaseStatusAsync(string jobId, string releaseId, JobStatus status, CancellationToken ct = default);
     }
 
     public class DiscographyJobService : IDiscographyJobService
@@ -58,6 +60,12 @@ namespace slskd.Jobs
                 CreatedAt = DateTimeOffset.UtcNow,
             };
 
+            // Seed release sub-jobs as pending
+            var releaseJobs = releaseIds
+                .Select(id => new DiscographyReleaseJobStatus { ReleaseId = id, Status = JobStatus.Pending })
+                .ToList();
+
+            await hashDb.UpsertDiscographyReleaseJobsAsync(job.JobId, releaseJobs, ct).ConfigureAwait(false);
             await hashDb.UpsertDiscographyJobAsync(job, ct).ConfigureAwait(false);
 
             log.LogInformation("[DiscographyJob] Planned job {JobId} for artist {Artist} with {Count} releases (profile {Profile})",
@@ -66,9 +74,54 @@ namespace slskd.Jobs
             return job.JobId;
         }
 
-        public Task<DiscographyJob?> GetJobAsync(string jobId, CancellationToken ct = default)
+        public async Task<DiscographyJob?> GetJobAsync(string jobId, CancellationToken ct = default)
         {
-            return hashDb.GetDiscographyJobAsync(jobId, ct);
+            var job = await hashDb.GetDiscographyJobAsync(jobId, ct).ConfigureAwait(false);
+            if (job == null)
+            {
+                return null;
+            }
+
+            var releaseStatuses = await hashDb.GetDiscographyReleaseJobsAsync(jobId, ct).ConfigureAwait(false);
+            if (releaseStatuses.Count == 0 && job.ReleaseIds?.Count > 0)
+            {
+                // No sub-jobs persisted yet, seed them
+                var seeds = job.ReleaseIds.Select(id => new DiscographyReleaseJobStatus { ReleaseId = id, Status = JobStatus.Pending });
+                await hashDb.UpsertDiscographyReleaseJobsAsync(job.JobId, seeds, ct).ConfigureAwait(false);
+                releaseStatuses = seeds.ToList();
+            }
+
+            job.TotalReleases = releaseStatuses.Count;
+            job.CompletedReleases = releaseStatuses.Count(r => r.Status == JobStatus.Completed);
+            job.FailedReleases = releaseStatuses.Count(r => r.Status == JobStatus.Failed);
+
+            var anyRunning = releaseStatuses.Any(r => r.Status == JobStatus.Running);
+            var anyPending = releaseStatuses.Any(r => r.Status == JobStatus.Pending);
+
+            job.Status = job.TotalReleases == 0
+                ? JobStatus.Pending
+                : job.CompletedReleases == job.TotalReleases
+                    ? JobStatus.Completed
+                    : job.FailedReleases > 0 && !anyRunning && !anyPending
+                        ? JobStatus.Failed
+                        : JobStatus.Running;
+
+            await hashDb.UpsertDiscographyJobAsync(job, ct).ConfigureAwait(false);
+
+            return job;
+        }
+
+        public async Task SetReleaseStatusAsync(string jobId, string releaseId, JobStatus status, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(jobId) || string.IsNullOrWhiteSpace(releaseId))
+            {
+                return;
+            }
+
+            await hashDb.SetDiscographyReleaseJobStatusAsync(jobId, releaseId, status, ct).ConfigureAwait(false);
+
+            // Recalculate aggregate status
+            await GetJobAsync(jobId, ct).ConfigureAwait(false);
         }
     }
 

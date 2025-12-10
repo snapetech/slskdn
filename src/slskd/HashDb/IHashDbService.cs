@@ -210,6 +210,12 @@ namespace slskd.HashDb
 
         Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default);
 
+        Task<List<Jobs.DiscographyReleaseJobStatus>> GetDiscographyReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertDiscographyReleaseJobsAsync(string jobId, IEnumerable<Jobs.DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default);
+
+        Task SetDiscographyReleaseJobStatusAsync(string jobId, string releaseId, Jobs.JobStatus status, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

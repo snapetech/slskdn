@@ -39,6 +39,7 @@ namespace slskd.HashDb
     using slskd.Integrations.Chromaprint;
     using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.MusicBrainz.Models;
+    using slskd.Jobs;
     using slskdOptions = slskd.Options;
     using slskd.Mesh;
     using TagLib;
@@ -1812,6 +1813,84 @@ namespace slskd.HashDb
             cmd.Parameters.AddWithValue("@json_data", json);
 
             await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<DiscographyReleaseJobStatus>> GetDiscographyReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default)
+        {
+            var list = new List<DiscographyReleaseJobStatus>();
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT release_id, status
+                FROM DiscographyReleaseJobs
+                WHERE discography_job_id = @job_id";
+            cmd.Parameters.AddWithValue("@job_id", jobId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var releaseId = reader.GetString(0);
+                var statusText = reader.GetString(1);
+                var status = Enum.TryParse<JobStatus>(statusText, ignoreCase: true, out var s) ? s : JobStatus.Pending;
+                list.Add(new DiscographyReleaseJobStatus
+                {
+                    ReleaseId = releaseId,
+                    Status = status,
+                });
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
+        public async Task UpsertDiscographyReleaseJobsAsync(string jobId, IEnumerable<DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(jobId) || releases == null)
+            {
+                return;
+            }
+
+            using var conn = GetConnection();
+            using var tx = conn.BeginTransaction();
+
+            foreach (var release in releases)
+            {
+                if (release == null || string.IsNullOrWhiteSpace(release.ReleaseId))
+                {
+                    continue;
+                }
+
+                using var cmd = conn.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = @"
+                    INSERT INTO DiscographyReleaseJobs (discography_job_id, release_id, status)
+                    VALUES (@job_id, @release_id, @status)
+                    ON CONFLICT(discography_job_id, release_id) DO UPDATE SET
+                        status = excluded.status";
+
+                cmd.Parameters.AddWithValue("@job_id", jobId);
+                cmd.Parameters.AddWithValue("@release_id", release.ReleaseId);
+                cmd.Parameters.AddWithValue("@status", release.Status.ToString().ToLowerInvariant());
+
+                await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            tx.Commit();
+        }
+
+        /// <inheritdoc/>
+        public Task SetDiscographyReleaseJobStatusAsync(string jobId, string releaseId, JobStatus status, CancellationToken cancellationToken = default)
+        {
+            return UpsertDiscographyReleaseJobsAsync(jobId, new[]
+            {
+                new DiscographyReleaseJobStatus
+                {
+                    ReleaseId = releaseId,
+                    Status = status,
+                },
+            }, cancellationToken);
         }
 
         /// <inheritdoc/>

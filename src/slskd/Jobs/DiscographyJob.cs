@@ -38,4 +38,11 @@ namespace slskd.Jobs
 
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     }
+
+    public class DiscographyReleaseJobStatus
+    {
+        public string ReleaseId { get; set; }
+
+        public JobStatus Status { get; set; } = JobStatus.Pending;
+    }
 }
