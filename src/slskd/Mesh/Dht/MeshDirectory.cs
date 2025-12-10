@@ -43,8 +43,22 @@ public class MeshDirectory : IMeshDirectory
 
     public async Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
-        // For now, no index from content→peers. This could query shadow index later.
-        return Array.Empty<MeshPeerDescriptor>();
+        var key = $"mesh:content-peers:{contentId}";
+        var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
+        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeerDescriptor>();
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var fresh = hints.Peers
+            .Where(p => now - p.TimestampUnixMs < 3600_000) // 1h freshness
+            .Select(p => new MeshPeerDescriptor
+            {
+                PeerId = p.PeerId,
+                Endpoints = p.Endpoints,
+                TimestampUnixMs = p.TimestampUnixMs
+            })
+            .ToList();
+
+        return fresh;
     }
 
     public async Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)

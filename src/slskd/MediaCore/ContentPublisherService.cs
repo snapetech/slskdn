@@ -76,10 +76,14 @@ public class ContentPublisherService : BackgroundService
 
     private async Task PublishOnce(CancellationToken ct)
     {
+        int count = 0;
         await foreach (var descriptor in source.GetDescriptorsAsync(ct))
         {
-            await publisher.PublishAsync(descriptor, ct);
+            if (await publisher.PublishAsync(descriptor, ct))
+            {
+                count++;
+            }
         }
-        logger.LogDebug("[MediaCore] Published descriptors batch");
+        logger.LogInformation("[MediaCore] Published descriptors batch count={Count}", count);
     }
 }
