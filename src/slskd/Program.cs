@@ -803,6 +803,10 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IMeshDirectory, Mesh.Dht.ContentDirectory>();
             services.AddSingleton<Mesh.IMeshAdvanced, Mesh.MeshAdvanced>();
             services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
+            services.AddSingleton<Mesh.Dht.IContentPeerPublisher, Mesh.Dht.ContentPeerPublisher>();
+            services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
+            services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
+            services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
 
             // MediaCore publisher
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.InMemoryContentDescriptorSource>();
