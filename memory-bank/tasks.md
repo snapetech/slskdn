@@ -170,8 +170,9 @@
   - Branch: experimental/brainz
   - Notes: Add FLAC streaminfo hash, MP3 stream hash, Opus/AAC hashes, spectral features, encoder metadata. HashDb migration version 7.
 
-- [ ] **T-421**: Implement FLAC analyzer
-  - Status: Not started
+- [x] **T-421**: Implement FLAC analyzer
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: STREAMINFO parser (42-byte hash, PCM MD5), quality scoring, transcode detection via spectral analysis.

@@ -30,6 +30,7 @@ namespace slskd.HashDb
     using Serilog;
     using slskd;
     using slskd.Audio;
+    using slskd.Audio.Analyzers;
     using slskd.Capabilities;
     using slskd.Events;
     using slskd.HashDb.Models;
@@ -63,6 +64,7 @@ namespace slskd.HashDb
         private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
         private readonly QualityScorer qualityScorer = new();
         private readonly TranscodeDetector transcodeDetector = new();
+        private readonly FlacAnalyzer flacAnalyzer = new();
         private long currentSeqId;
 
         /// <summary>
@@ -347,10 +349,57 @@ namespace slskd.HashDb
                 EncoderSignature = props.Codecs.FirstOrDefault()?.Description,
             };
 
-            variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
-            var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
-            variant.TranscodeSuspect = suspect;
-            variant.TranscodeReason = reason;
+            if (string.Equals(variant.Codec, "FLAC", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var flacResult = flacAnalyzer.Analyze(filePath, variant);
+
+                    // Update core fields from STREAMINFO (more authoritative than tags)
+                    if (flacResult.SampleRateHz.HasValue)
+                    {
+                        variant.SampleRateHz = flacResult.SampleRateHz.Value;
+                    }
+
+                    if (flacResult.BitDepth.HasValue)
+                    {
+                        variant.BitDepth = flacResult.BitDepth;
+                    }
+
+                    if (flacResult.Channels.HasValue)
+                    {
+                        variant.Channels = flacResult.Channels.Value;
+                    }
+
+                    variant.FlacStreamInfoHash42 = flacResult.FlacStreamInfoHash42;
+                    variant.FlacPcmMd5 = flacResult.FlacPcmMd5;
+                    variant.FlacMinBlockSize = flacResult.FlacMinBlockSize;
+                    variant.FlacMaxBlockSize = flacResult.FlacMaxBlockSize;
+                    variant.FlacMinFrameSize = flacResult.FlacMinFrameSize;
+                    variant.FlacMaxFrameSize = flacResult.FlacMaxFrameSize;
+                    variant.FlacTotalSamples = flacResult.FlacTotalSamples;
+                    variant.AnalyzerVersion = flacResult.AnalyzerVersion;
+
+                    variant.QualityScore = flacResult.QualityScore;
+                    variant.TranscodeSuspect = flacResult.TranscodeSuspect;
+                    variant.TranscodeReason = flacResult.TranscodeReason;
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[HashDb] FLAC analysis failed for {File}", filePath);
+                    variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
+                    var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
+                    variant.TranscodeSuspect = suspect;
+                    variant.TranscodeReason = reason;
+                }
+            }
+            else
+            {
+                variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
+                var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
+                variant.TranscodeSuspect = suspect;
+                variant.TranscodeReason = reason;
+            }
 
             return variant;
         }
