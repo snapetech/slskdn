@@ -621,6 +621,40 @@ public static class HashDbMigrations
                     cmd.ExecuteNonQuery();
                 },
             },
+
+            new Migration
+            {
+                Version = 11,
+                Name = "Peer metrics storage",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS PeerMetrics (
+                            peer_id TEXT PRIMARY KEY,
+                            source TEXT NOT NULL,
+                            rtt_avg_ms REAL,
+                            rtt_stddev_ms REAL,
+                            last_rtt_sample INTEGER,
+                            throughput_avg_bps REAL,
+                            throughput_stddev_bps REAL,
+                            total_bytes INTEGER,
+                            last_throughput_sample INTEGER,
+                            chunks_requested INTEGER,
+                            chunks_completed INTEGER,
+                            chunks_failed INTEGER,
+                            chunks_timedout INTEGER,
+                            chunks_corrupted INTEGER,
+                            sample_count INTEGER,
+                            first_seen INTEGER,
+                            last_updated INTEGER,
+                            reputation_score REAL,
+                            reputation_updated_at INTEGER
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

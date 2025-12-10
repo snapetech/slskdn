@@ -2760,8 +2760,162 @@ namespace slskd.HashDb
 
         public Task<List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>> GetAllPeerMetricsAsync(CancellationToken cancellationToken = default)
         {
-            // TODO (T-406): Implement database query for all peer metrics
-            return Task.FromResult(new List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>());
+            var list = new List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM PeerMetrics";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(ReadPeerMetrics(reader));
+            }
+
+            return Task.FromResult(list);
+        }
+
+        /// <inheritdoc/>
+        public Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM PeerMetrics WHERE peer_id = @peer_id";
+            cmd.Parameters.AddWithValue("@peer_id", peerId);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return Task.FromResult(ReadPeerMetrics(reader));
+            }
+
+            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>(null);
+        }
+
+        /// <inheritdoc/>
+        public Task UpsertPeerMetricsAsync(Transfers.MultiSource.Metrics.PeerPerformanceMetrics metrics, CancellationToken cancellationToken = default)
+        {
+            if (metrics == null || string.IsNullOrWhiteSpace(metrics.PeerId))
+            {
+                return Task.CompletedTask;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO PeerMetrics (
+                    peer_id,
+                    source,
+                    rtt_avg_ms,
+                    rtt_stddev_ms,
+                    last_rtt_sample,
+                    throughput_avg_bps,
+                    throughput_stddev_bps,
+                    total_bytes,
+                    last_throughput_sample,
+                    chunks_requested,
+                    chunks_completed,
+                    chunks_failed,
+                    chunks_timedout,
+                    chunks_corrupted,
+                    sample_count,
+                    first_seen,
+                    last_updated,
+                    reputation_score,
+                    reputation_updated_at
+                ) VALUES (
+                    @peer_id,
+                    @source,
+                    @rtt_avg_ms,
+                    @rtt_stddev_ms,
+                    @last_rtt_sample,
+                    @throughput_avg_bps,
+                    @throughput_stddev_bps,
+                    @total_bytes,
+                    @last_throughput_sample,
+                    @chunks_requested,
+                    @chunks_completed,
+                    @chunks_failed,
+                    @chunks_timedout,
+                    @chunks_corrupted,
+                    @sample_count,
+                    @first_seen,
+                    @last_updated,
+                    @reputation_score,
+                    @reputation_updated_at
+                )
+                ON CONFLICT(peer_id) DO UPDATE SET
+                    source = excluded.source,
+                    rtt_avg_ms = excluded.rtt_avg_ms,
+                    rtt_stddev_ms = excluded.rtt_stddev_ms,
+                    last_rtt_sample = excluded.last_rtt_sample,
+                    throughput_avg_bps = excluded.throughput_avg_bps,
+                    throughput_stddev_bps = excluded.throughput_stddev_bps,
+                    total_bytes = excluded.total_bytes,
+                    last_throughput_sample = excluded.last_throughput_sample,
+                    chunks_requested = excluded.chunks_requested,
+                    chunks_completed = excluded.chunks_completed,
+                    chunks_failed = excluded.chunks_failed,
+                    chunks_timedout = excluded.chunks_timedout,
+                    chunks_corrupted = excluded.chunks_corrupted,
+                    sample_count = excluded.sample_count,
+                    first_seen = excluded.first_seen,
+                    last_updated = excluded.last_updated,
+                    reputation_score = excluded.reputation_score,
+                    reputation_updated_at = excluded.reputation_updated_at;
+            ";
+
+            cmd.Parameters.AddWithValue("@peer_id", metrics.PeerId);
+            cmd.Parameters.AddWithValue("@source", metrics.Source.ToString());
+            cmd.Parameters.AddWithValue("@rtt_avg_ms", metrics.RttAvgMs);
+            cmd.Parameters.AddWithValue("@rtt_stddev_ms", metrics.RttStdDevMs);
+            cmd.Parameters.AddWithValue("@last_rtt_sample", (object?)metrics.LastRttSample?.ToUnixTimeSeconds() ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@throughput_avg_bps", metrics.ThroughputAvgBytesPerSec);
+            cmd.Parameters.AddWithValue("@throughput_stddev_bps", metrics.ThroughputStdDevBytesPerSec);
+            cmd.Parameters.AddWithValue("@total_bytes", metrics.TotalBytesTransferred);
+            cmd.Parameters.AddWithValue("@last_throughput_sample", (object?)metrics.LastThroughputSample?.ToUnixTimeSeconds() ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@chunks_requested", metrics.ChunksRequested);
+            cmd.Parameters.AddWithValue("@chunks_completed", metrics.ChunksCompleted);
+            cmd.Parameters.AddWithValue("@chunks_failed", metrics.ChunksFailed);
+            cmd.Parameters.AddWithValue("@chunks_timedout", metrics.ChunksTimedOut);
+            cmd.Parameters.AddWithValue("@chunks_corrupted", metrics.ChunksCorrupted);
+            cmd.Parameters.AddWithValue("@sample_count", metrics.SampleCount);
+            cmd.Parameters.AddWithValue("@first_seen", metrics.FirstSeen.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@last_updated", metrics.LastUpdated.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@reputation_score", metrics.ReputationScore);
+            cmd.Parameters.AddWithValue("@reputation_updated_at", (object?)metrics.ReputationUpdatedAt?.ToUnixTimeSeconds() ?? DBNull.Value);
+
+            cmd.ExecuteNonQuery();
+            return Task.CompletedTask;
+        }
+
+        private Transfers.MultiSource.Metrics.PeerPerformanceMetrics ReadPeerMetrics(SqliteDataReader reader)
+        {
+            var metrics = new Transfers.MultiSource.Metrics.PeerPerformanceMetrics
+            {
+                PeerId = reader.GetString(reader.GetOrdinal("peer_id")),
+                Source = Enum.TryParse<Transfers.MultiSource.Metrics.PeerSource>(reader.GetString(reader.GetOrdinal("source")), true, out var src) ? src : Transfers.MultiSource.Metrics.PeerSource.Soulseek,
+                RttAvgMs = reader.IsDBNull(reader.GetOrdinal("rtt_avg_ms")) ? 0 : reader.GetDouble(reader.GetOrdinal("rtt_avg_ms")),
+                RttStdDevMs = reader.IsDBNull(reader.GetOrdinal("rtt_stddev_ms")) ? 0 : reader.GetDouble(reader.GetOrdinal("rtt_stddev_ms")),
+                LastRttSample = reader.IsDBNull(reader.GetOrdinal("last_rtt_sample")) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("last_rtt_sample"))),
+                ThroughputAvgBytesPerSec = reader.IsDBNull(reader.GetOrdinal("throughput_avg_bps")) ? 0 : reader.GetDouble(reader.GetOrdinal("throughput_avg_bps")),
+                ThroughputStdDevBytesPerSec = reader.IsDBNull(reader.GetOrdinal("throughput_stddev_bps")) ? 0 : reader.GetDouble(reader.GetOrdinal("throughput_stddev_bps")),
+                TotalBytesTransferred = reader.IsDBNull(reader.GetOrdinal("total_bytes")) ? 0 : reader.GetInt64(reader.GetOrdinal("total_bytes")),
+                LastThroughputSample = reader.IsDBNull(reader.GetOrdinal("last_throughput_sample")) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("last_throughput_sample"))),
+                ChunksRequested = reader.IsDBNull(reader.GetOrdinal("chunks_requested")) ? 0 : reader.GetInt32(reader.GetOrdinal("chunks_requested")),
+                ChunksCompleted = reader.IsDBNull(reader.GetOrdinal("chunks_completed")) ? 0 : reader.GetInt32(reader.GetOrdinal("chunks_completed")),
+                ChunksFailed = reader.IsDBNull(reader.GetOrdinal("chunks_failed")) ? 0 : reader.GetInt32(reader.GetOrdinal("chunks_failed")),
+                ChunksTimedOut = reader.IsDBNull(reader.GetOrdinal("chunks_timedout")) ? 0 : reader.GetInt32(reader.GetOrdinal("chunks_timedout")),
+                ChunksCorrupted = reader.IsDBNull(reader.GetOrdinal("chunks_corrupted")) ? 0 : reader.GetInt32(reader.GetOrdinal("chunks_corrupted")),
+                SampleCount = reader.IsDBNull(reader.GetOrdinal("sample_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("sample_count")),
+                FirstSeen = reader.IsDBNull(reader.GetOrdinal("first_seen")) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("first_seen"))),
+                LastUpdated = reader.IsDBNull(reader.GetOrdinal("last_updated")) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("last_updated"))),
+                ReputationScore = reader.IsDBNull(reader.GetOrdinal("reputation_score")) ? 0.5 : reader.GetDouble(reader.GetOrdinal("reputation_score")),
+                ReputationUpdatedAt = reader.IsDBNull(reader.GetOrdinal("reputation_updated_at")) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("reputation_updated_at"))),
+                RecentRttSamples = new Queue<Transfers.MultiSource.Metrics.RttSample>(),
+                RecentThroughputSamples = new Queue<Transfers.MultiSource.Metrics.ThroughputSample>(),
+            };
+
+            return metrics;
         }
     }
 }

@@ -38,6 +38,11 @@ namespace slskd.Transfers.MultiSource.Metrics
         // Configuration
         private const int MaxRecentSamples = 30;  // Sliding window size
         private const double EmaAlpha = 0.3;  // Exponential moving average weight (0-1, higher = more weight to recent samples)
+        private const double ReputationHalfLifeHours = 24.0; // decay toward neutral (0.5) every 24h
+        private const double ReputationWeightSuccess = 0.05;
+        private const double ReputationWeightFailed = 0.15;
+        private const double ReputationWeightTimedOut = 0.10;
+        private const double ReputationWeightCorrupted = 0.20;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="PeerMetricsService"/> class.
@@ -160,15 +165,19 @@ namespace slskd.Transfers.MultiSource.Metrics
                 {
                     case ChunkCompletionResult.Success:
                         metrics.ChunksCompleted++;
+                        UpdateReputation(metrics, result);
                         break;
                     case ChunkCompletionResult.Failed:
                         metrics.ChunksFailed++;
+                        UpdateReputation(metrics, result);
                         break;
                     case ChunkCompletionResult.TimedOut:
                         metrics.ChunksTimedOut++;
+                        UpdateReputation(metrics, result);
                         break;
                     case ChunkCompletionResult.Corrupted:
                         metrics.ChunksCorrupted++;
+                        UpdateReputation(metrics, result);
                         break;
                 }
 
@@ -222,6 +231,8 @@ namespace slskd.Transfers.MultiSource.Metrics
                 Source = source,
                 FirstSeen = DateTimeOffset.UtcNow,
                 LastUpdated = DateTimeOffset.UtcNow,
+                ReputationScore = 0.5,
+                ReputationUpdatedAt = DateTimeOffset.UtcNow,
             };
 
             metricsCache[peerId] = metrics;
@@ -238,6 +249,43 @@ namespace slskd.Transfers.MultiSource.Metrics
             {
                 log.LogWarning(ex, "[PeerMetrics] Failed to persist metrics for peer {PeerId}", metrics.PeerId);
             }
+        }
+
+        private void UpdateReputation(PeerPerformanceMetrics metrics, ChunkCompletionResult result)
+        {
+            var now = DateTimeOffset.UtcNow;
+
+            // Decay toward neutral (0.5) over time
+            var last = metrics.ReputationUpdatedAt ?? now;
+            var hours = Math.Max(0, (now - last).TotalHours);
+            if (hours > 0)
+            {
+                var decay = Math.Exp(-hours / ReputationHalfLifeHours);
+                metrics.ReputationScore = 0.5 + (metrics.ReputationScore - 0.5) * decay;
+            }
+
+            double score = metrics.ReputationScore;
+            switch (result)
+            {
+                case ChunkCompletionResult.Success:
+                    score += (1 - score) * ReputationWeightSuccess;
+                    break;
+                case ChunkCompletionResult.Failed:
+                    score -= score * ReputationWeightFailed;
+                    break;
+                case ChunkCompletionResult.TimedOut:
+                    score -= score * ReputationWeightTimedOut;
+                    break;
+                case ChunkCompletionResult.Corrupted:
+                    score -= score * ReputationWeightCorrupted;
+                    break;
+            }
+
+            // Clamp
+            score = Math.Max(0.0, Math.Min(1.0, score));
+
+            metrics.ReputationScore = score;
+            metrics.ReputationUpdatedAt = now;
         }
     }
 }

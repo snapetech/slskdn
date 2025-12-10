@@ -147,6 +147,16 @@ namespace slskd.Transfers.MultiSource.Metrics
         ///     Gets or sets the total number of samples recorded.
         /// </summary>
         public int SampleCount { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the local reputation score (0..1, decaying toward 0.5).
+        /// </summary>
+        public double ReputationScore { get; set; } = 0.5;
+
+        /// <summary>
+        ///     Gets or sets when the reputation score was last updated (UTC).
+        /// </summary>
+        public DateTimeOffset? ReputationUpdatedAt { get; set; }
     }
 
     /// <summary>
