@@ -135,13 +135,66 @@ namespace slskd.Transfers.Rescue
                 Reason = reason,
             };
 
-            // Step 5: Start overlay chunk transfers (placeholder for now)
-            // TODO: Create actual multi-source job with IMultiSourceDownloadService
-            // For now, just log the rescue activation
-            log.Information("[RESCUE] Rescue mode activated: job {JobId}, {PeerCount} overlay peers, {RangeCount} missing ranges",
-                rescueJob.RescueJobId, overlayPeers.Count, missingRanges.Count);
+            // Step 5: Start overlay chunk transfers with IMultiSourceDownloadService
+            if (multiSource != null && overlayPeers.Count > 0)
+            {
+                try
+                {
+                    var multiSourceRequest = new MultiSourceDownloadRequest
+                    {
+                        Filename = filename,
+                        FileSize = totalBytes,
+                        Sources = overlayPeers.Select(p => new VerifiedSource
+                        {
+                            Username = p.PeerId,
+                            FullPath = filename,  // Use filename as path for overlay peers
+                            MusicBrainzRecordingId = recordingId,
+                            Method = VerificationMethod.None,  // Overlay peers are trusted
+                        }).ToList(),
+                        TargetMusicBrainzRecordingId = recordingId,
+                        // TODO: Get proper output path from transfer service
+                        OutputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"rescue_{transferId}.tmp"),
+                    };
 
-            log.Warning("[RESCUE] NOTE: Full multi-source integration pending - this is a placeholder activation");
+                    log.Information("[RESCUE] Creating multi-source download job for {RangeCount} missing ranges totaling {Bytes} bytes",
+                        missingRanges.Count, missingRanges.Sum(r => r.Length));
+
+                    // Start the download asynchronously (fire and forget for now)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var result = await multiSource.DownloadAsync(multiSourceRequest, ct);
+                            if (result.Success)
+                            {
+                                log.Information("[RESCUE] Multi-source download completed successfully: {File}, {Bytes} bytes in {TimeMs}ms",
+                                    result.Filename, result.BytesDownloaded, result.TotalTimeMs);
+                                rescueJob.MultiSourceJobId = result.Id.ToString();
+                            }
+                            else
+                            {
+                                log.Warning("[RESCUE] Multi-source download failed: {File}, error: {Error}",
+                                    result.Filename, result.Error);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            log.Error(ex, "[RESCUE] Multi-source download threw exception: {Message}", ex.Message);
+                        }
+                    }, ct);
+
+                    log.Information("[RESCUE] Rescue mode activated: job {JobId}, {PeerCount} overlay peers, multi-source download started",
+                        rescueJob.RescueJobId, overlayPeers.Count);
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex, "[RESCUE] Failed to create multi-source download: {Message}", ex.Message);
+                }
+            }
+            else
+            {
+                log.Warning("[RESCUE] Multi-source download service not available or no overlay peers - rescue activation is placeholder only");
+            }
 
             return rescueJob;
         }
