@@ -796,6 +796,12 @@ namespace slskd
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection(\"Mesh\")); // transport prefs
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection(\"MediaCore\"));
 
+            // MeshCore (Phase 8 implementation)
+            services.AddSingleton<Mesh.INatDetector, Mesh.NatDetector>();
+            services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
+            services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
+            services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
+
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 

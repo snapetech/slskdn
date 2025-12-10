@@ -19,4 +19,19 @@ public class MeshOptions
     public bool EnableOverlay { get; set; } = true;
     public bool EnableDht { get; set; } = true;
     public bool EnableMirrored { get; set; } = false;
+
+    /// <summary>
+    /// Bootstrap nodes for DHT join (host:port).
+    /// </summary>
+    public List<string> BootstrapNodes { get; set; } = new();
+
+    /// <summary>
+    /// Our peer identifier (pseudonymous).
+    /// </summary>
+    public string SelfPeerId { get; set; } = "peer:mesh:self";
+
+    /// <summary>
+    /// Endpoints we advertise (e.g., udp://host:port, quic://host:port).
+    /// </summary>
+    public List<string> SelfEndpoints { get; set; } = new();
 }
