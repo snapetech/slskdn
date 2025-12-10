@@ -725,6 +725,8 @@ namespace slskd
             services.AddSingleton<Transfers.MultiSource.Metrics.IFairnessGuard>(sp =>
                 new Transfers.MultiSource.Metrics.FairnessGuard(
                     sp.GetRequiredService<Transfers.MultiSource.Metrics.ITrafficAccountingService>()));
+            services.AddSingleton<Jobs.Manifests.IJobManifestValidator, Jobs.Manifests.JobManifestValidator>();
+            services.AddSingleton<Jobs.Manifests.IJobManifestService, Jobs.Manifests.JobManifestService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 
