@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -550,6 +550,40 @@ public static class HashDbMigrations
                         );
 
                         CREATE INDEX IF NOT EXISTS idx_artist_release_graph_expiry ON ArtistReleaseGraphs(expires_at);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 9,
+                Name = "Discography job cache",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS DiscographyJobs (
+                            job_id TEXT PRIMARY KEY,
+                            artist_id TEXT NOT NULL,
+                            artist_name TEXT NOT NULL,
+                            profile TEXT NOT NULL,
+                            target_directory TEXT NOT NULL,
+                            total_releases INTEGER DEFAULT 0,
+                            completed_releases INTEGER DEFAULT 0,
+                            failed_releases INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'pending',
+                            created_at INTEGER NOT NULL,
+                            json_data TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS DiscographyReleaseJobs (
+                            discography_job_id TEXT NOT NULL,
+                            release_id TEXT NOT NULL,
+                            status TEXT DEFAULT 'pending',
+                            PRIMARY KEY (discography_job_id, release_id),
+                            FOREIGN KEY (discography_job_id) REFERENCES DiscographyJobs(job_id)
+                        );
                     ";
                     cmd.ExecuteNonQuery();
                 },

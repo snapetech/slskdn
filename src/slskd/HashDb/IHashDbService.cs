@@ -204,6 +204,12 @@ namespace slskd.HashDb
         /// </summary>
         Task UpsertArtistReleaseGraphAsync(Integrations.MusicBrainz.Models.ArtistReleaseGraph graph, CancellationToken cancellationToken = default);
 
+        // ========== Discography Jobs ==========
+
+        Task<Jobs.DiscographyJob?> GetDiscographyJobAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

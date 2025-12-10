@@ -1749,6 +1749,72 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<Jobs.DiscographyJob?> GetDiscographyJobAsync(string jobId, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT json_data FROM DiscographyJobs WHERE job_id = @job_id";
+            cmd.Parameters.AddWithValue("@job_id", jobId);
+
+            var json = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<Jobs.DiscographyJob>(json);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Failed to deserialize discography job {JobId}", jobId);
+                return null;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default)
+        {
+            if (job == null || string.IsNullOrWhiteSpace(job.JobId))
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(job);
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO DiscographyJobs (job_id, artist_id, artist_name, profile, target_directory, total_releases, completed_releases, failed_releases, status, created_at, json_data)
+                VALUES (@job_id, @artist_id, @artist_name, @profile, @target_directory, @total_releases, @completed_releases, @failed_releases, @status, @created_at, @json_data)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    artist_id = excluded.artist_id,
+                    artist_name = excluded.artist_name,
+                    profile = excluded.profile,
+                    target_directory = excluded.target_directory,
+                    total_releases = excluded.total_releases,
+                    completed_releases = excluded.completed_releases,
+                    failed_releases = excluded.failed_releases,
+                    status = excluded.status,
+                    json_data = excluded.json_data";
+
+            cmd.Parameters.AddWithValue("@job_id", job.JobId);
+            cmd.Parameters.AddWithValue("@artist_id", job.ArtistId ?? string.Empty);
+            cmd.Parameters.AddWithValue("@artist_name", job.ArtistName ?? string.Empty);
+            cmd.Parameters.AddWithValue("@profile", job.Profile.ToString());
+            cmd.Parameters.AddWithValue("@target_directory", job.TargetDirectory ?? string.Empty);
+            cmd.Parameters.AddWithValue("@total_releases", job.TotalReleases);
+            cmd.Parameters.AddWithValue("@completed_releases", job.CompletedReleases);
+            cmd.Parameters.AddWithValue("@failed_releases", job.FailedReleases);
+            cmd.Parameters.AddWithValue("@status", job.Status.ToString());
+            cmd.Parameters.AddWithValue("@created_at", job.CreatedAt.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@json_data", json);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
         public async Task<ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();
