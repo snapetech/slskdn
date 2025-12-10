@@ -67,6 +67,7 @@ namespace slskd.HashDb
         private readonly FlacAnalyzer flacAnalyzer = new();
         private readonly Mp3Analyzer mp3Analyzer = new();
         private readonly OpusAnalyzer opusAnalyzer = new();
+        private readonly AacAnalyzer aacAnalyzer = new();
         private long currentSeqId;
 
         /// <summary>
@@ -445,6 +446,34 @@ namespace slskd.HashDb
                 catch (Exception ex)
                 {
                     log.Warning(ex, "[HashDb] Opus analysis failed for {File}", filePath);
+                    variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
+                    var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
+                    variant.TranscodeSuspect = suspect;
+                    variant.TranscodeReason = reason;
+                }
+            }
+            else if (string.Equals(variant.Codec, "AAC", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var aacResult = aacAnalyzer.Analyze(filePath, variant);
+
+                    variant.AacStreamHash = aacResult.AacStreamHash;
+                    variant.AacProfile = aacResult.AacProfile;
+                    variant.AacSbrPresent = aacResult.AacSbrPresent;
+                    variant.AacPsPresent = aacResult.AacPsPresent;
+                    variant.AacNominalBitrateKbps = aacResult.AacNominalBitrateKbps;
+                    variant.EffectiveBandwidthHz = aacResult.EffectiveBandwidthHz;
+                    variant.HfEnergyRatio = aacResult.HfEnergyRatio;
+                    variant.AnalyzerVersion = aacResult.AnalyzerVersion;
+
+                    variant.QualityScore = aacResult.QualityScore;
+                    variant.TranscodeSuspect = aacResult.TranscodeSuspect;
+                    variant.TranscodeReason = aacResult.TranscodeReason;
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[HashDb] AAC analysis failed for {File}", filePath);
                     variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
                     var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
                     variant.TranscodeSuspect = suspect;

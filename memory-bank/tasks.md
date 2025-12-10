@@ -191,8 +191,9 @@
   - Branch: experimental/brainz
   - Notes: Ogg Opus stream hash, bitrate/bandwidth mode extraction, quality scoring tuned for Opus.
 
-- [ ] **T-424**: Implement AAC analyzer
-  - Status: Not started
+- [x] **T-424**: Implement AAC analyzer
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: AAC stream hash (MP4/ADTS), profile detection (LC/HE/HEv2), SBR/PS flags, transcode detection.
