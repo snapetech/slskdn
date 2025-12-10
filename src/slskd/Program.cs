@@ -814,6 +814,9 @@ namespace slskd
             services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
             services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();
             services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
+            services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(Configuration.GetSection("OverlayData"));
+            services.AddHostedService<Mesh.Overlay.QuicDataServer>();
+            services.AddSingleton<Mesh.Overlay.IOverlayDataPlane, Mesh.Overlay.QuicDataClient>();
 
             // MediaCore publisher
             services.AddHostedService<MediaCore.ContentPublisherService>();
