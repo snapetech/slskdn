@@ -35,6 +35,7 @@ using slskdOptions = slskd.Options;
     using slskd.Integrations.AcoustId;
     using slskd.Integrations.AutoTagging;
     using slskd.Integrations.Chromaprint;
+    using slskd.Audio;
     using slskd.Mesh;
 using IODirectory = System.IO.Directory;
 using IOPath = System.IO.Path;
@@ -53,11 +54,15 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     /// </summary>
     public const int DefaultChunkSize = 512 * 1024;  // 512KB - balance between overhead amortization and failure recovery
 
+        private const double DefaultMinQualityImprovement = 0.1;
+        private const double DefaultLocalQualityThreshold = 0.85;
+
     private readonly ILogger<MultiSourceDownloadService> _logger;
     private readonly ISoulseekClient _client;
     private readonly IContentVerificationService _contentVerification;
     private readonly IHashDbService? _hashDb;
     private readonly IMeshSyncService? _meshSync;
+    private readonly ICanonicalStatsService? canonicalStatsService;
     private readonly IFingerprintExtractionService fingerprintExtractionService;
     private readonly IAcoustIdClient acoustIdClient;
     private readonly IAutoTaggingService autoTaggingService;
@@ -80,7 +85,8 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             IFingerprintExtractionService fingerprintExtractionService = null,
             IAcoustIdClient acoustIdClient = null,
             IAutoTaggingService autoTaggingService = null,
-            IOptionsMonitor<slskdOptions> optionsMonitor = null)
+            IOptionsMonitor<slskdOptions> optionsMonitor = null,
+            ICanonicalStatsService canonicalStatsService = null)
     {
         _logger = logger;
         _client = soulseekClient;
@@ -91,10 +97,75 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             this.acoustIdClient = acoustIdClient;
             this.autoTaggingService = autoTaggingService;
             this.optionsMonitor = optionsMonitor;
+            this.canonicalStatsService = canonicalStatsService;
     }
 
     /// <inheritdoc/>
     public ConcurrentDictionary<Guid, MultiSourceDownloadStatus> ActiveDownloads { get; } = new();
+
+    /// <inheritdoc/>
+    public async Task<List<VerifiedSource>> SelectCanonicalSourcesAsync(
+        ContentVerificationResult verificationResult,
+        CancellationToken cancellationToken = default)
+    {
+        var semanticSources = verificationResult.BestSemanticSources.ToList();
+        var bestSources = verificationResult.BestSources.ToList();
+
+        var recordingId = verificationResult.BestSemanticRecordingId;
+
+        if (canonicalStatsService == null || string.IsNullOrWhiteSpace(recordingId))
+        {
+            return semanticSources.Count >= 2 ? semanticSources : bestSources;
+        }
+
+        var candidates = await canonicalStatsService.GetCanonicalVariantCandidatesAsync(recordingId, cancellationToken).ConfigureAwait(false);
+        if (candidates == null || candidates.Count == 0)
+        {
+            return semanticSources.Count >= 2 ? semanticSources : bestSources;
+        }
+
+        // Prefer sources that match the canonical recording
+        var canonicalSources = semanticSources
+            .Where(s => string.Equals(s.MusicBrainzRecordingId, recordingId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (canonicalSources.Count >= 2)
+        {
+            return canonicalSources;
+        }
+
+        return semanticSources.Count >= 2 ? semanticSources : bestSources;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ShouldSkipDownloadAsync(
+        string recordingId,
+        AudioVariant proposedVariant,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(recordingId) || _hashDb == null)
+        {
+            return false;
+        }
+
+        var locals = await _hashDb.GetVariantsByRecordingAsync(recordingId, cancellationToken).ConfigureAwait(false);
+        if (locals == null || locals.Count == 0)
+        {
+            return false;
+        }
+
+        var bestLocal = locals.OrderByDescending(v => v.QualityScore).First();
+        var proposedScore = proposedVariant?.QualityScore ?? bestLocal.QualityScore;
+
+        if (bestLocal.QualityScore >= DefaultLocalQualityThreshold &&
+            (proposedScore - bestLocal.QualityScore) <= DefaultMinQualityImprovement)
+        {
+            _logger.LogInformation("[CANONICAL] Skipping download; local quality {Local:F2} vs proposed {Proposed:F2}", bestLocal.QualityScore, proposedScore);
+            return true;
+        }
+
+        return false;
+    }
 
     /// <inheritdoc/>
     public async Task<ContentVerificationResult> FindVerifiedSourcesAsync(

@@ -387,8 +387,7 @@ namespace slskd.Transfers.MultiSource.API
                 request.Size,
                 cancellationToken: HttpContext.RequestAborted);
 
-            var semanticSources = verificationResult.BestSemanticSources.ToList();
-            var chosenSources = semanticSources.Count >= 2 ? semanticSources : verificationResult.BestSources.ToList();
+            var chosenSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
             var targetFingerprint = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
             var targetSemanticKey = verificationResult.BestSemanticKey;
 
@@ -546,17 +545,8 @@ namespace slskd.Transfers.MultiSource.API
                     });
                 }
 
-                var semanticSources = verificationResult.BestSemanticSources.ToList();
-                if (semanticSources.Count >= 2)
-                {
-                    verifiedSources = semanticSources;
-                    expectedHash = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
-                }
-                else
-                {
-                    verifiedSources = verificationResult.BestSources.ToList();
-                    expectedHash = verificationResult.BestHash;
-                }
+                verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
+                expectedHash = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
 
                 Log.Information("[SWARM] Verified {Count} sources with matching hash {Hash}",
                     verifiedSources.Count, expectedHash?.Substring(0, 16) + "...");

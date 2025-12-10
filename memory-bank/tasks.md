@@ -128,8 +128,9 @@
   - Branch: experimental/multi-swarm
   - Notes: Aggregate per (MB Recording ID, codec profile): count, avg quality_score, % transcode_suspect, codec/bitrate distributions. Provide GetCanonicalVariantCandidates() function.
 
-- [ ] **T-402**: Integrate canonical-aware download selection
-  - Status: Not started
+- [x] **T-402**: Integrate canonical-aware download selection
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/multi-swarm
   - Notes: Prefer canonical variants by default in multi-source swarms. Only download new variant if it scores higher than existing local variant.

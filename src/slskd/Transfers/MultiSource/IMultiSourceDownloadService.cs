@@ -42,6 +42,21 @@ namespace slskd.Transfers.MultiSource
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        ///     Selects sources preferring canonical variants when available.
+        /// </summary>
+        Task<List<VerifiedSource>> SelectCanonicalSourcesAsync(
+            ContentVerificationResult verificationResult,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Determines whether to skip download if local variant quality is sufficient.
+        /// </summary>
+        Task<bool> ShouldSkipDownloadAsync(
+            string recordingId,
+            Audio.AudioVariant proposedVariant,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         ///     Downloads a file from multiple verified sources in parallel.
         /// </summary>
         /// <param name="request">The multi-source download request.</param>
