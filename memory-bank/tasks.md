@@ -1114,75 +1114,75 @@
   - Notes: Cache DHT lookups, batch queries, prefetch hot MBIDs
 
 - [ ] **T-836**: Build mesh configuration UI
-  - Status: Not started
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: React settings panel for mesh, shadow index, scenes, disaster mode
 
-- [ ] **T-837**: Add telemetry dashboard
-  - Status: Not started
+- [x] **T-837**: Add telemetry dashboard
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Shadow index stats, disaster events, scene activity
 
-- [ ] **T-838**: Write user documentation
-  - Status: Not started
+- [x] **T-838**: Write user documentation
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: User guide for disaster mode, scenes, privacy settings
 
-- [ ] **T-839**: Create integration test suite
-  - Status: Not started
+- [x] **T-839**: Create integration test suite
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Full disaster mode simulation, scene coordination, shadow index accuracy
 
-- [ ] **T-840**: Perform load testing
-  - Status: Not started
+- [x] **T-840**: Perform load testing
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: DHT scalability, shard size limits, overlay throughput at scale
 
 #### Phase 6X: Legacy Client Compatibility Bridge (Optional)
 
-- [ ] **T-850**: Implement bridge service lifecycle
-  - Status: Not started
+- [x] **T-850**: Implement bridge service lifecycle
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Start/stop local Soulfind instance, health checks
 
-- [ ] **T-851**: Create Soulfind proxy mode (fork/patch)
-  - Status: Not started
+- [x] **T-851**: Create Soulfind proxy mode (fork/patch)
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Extend Soulfind with PROXY_MODE env var, forward operations to slskdn
 
-- [ ] **T-852**: Build bridge API endpoints
-  - Status: Not started
+- [x] **T-852**: Build bridge API endpoints
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: /api/bridge/search, /api/bridge/download, /api/bridge/rooms
 
-- [ ] **T-853**: Implement MBID resolution from legacy queries
-  - Status: Not started
+- [x] **T-853**: Implement MBID resolution from legacy queries
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Parse "artist album" queries, resolve to MBIDs, query shadow index
 
-- [ ] **T-854**: Add filename synthesis from variants
-  - Status: Not started
+- [x] **T-854**: Add filename synthesis from variants
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Generate friendly filenames for mesh variants shown to legacy clients
 
-- [ ] **T-855**: Implement peer ID anonymization
-  - Status: Not started
+- [x] **T-855**: Implement peer ID anonymization
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Map overlay peer IDs to "mesh-peer-abc123" usernames for legacy display
 
-- [ ] **T-856**: Add room → scene mapping
-  - Status: Not started
+- [x] **T-856**: Add room → scene mapping
+  - Status: Done
   - Priority: P2
   - Branch: experimental/virtual-soulfind
   - Notes: Map legacy room names to scene DHT keys, proxy chat to overlay pubsub
