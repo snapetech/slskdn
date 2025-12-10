@@ -132,3 +132,49 @@
   justify-content: flex-end;
   margin-bottom: 10px;
 }
+
+.musicbrainz-lookup-segment {
+  margin-top: 10px;
+}
+
+.album-completion-segment {
+  margin-top: 10px;
+}
+
+.album-completion-list {
+  margin-top: 0.5rem;
+}
+
+.album-summary-segment {
+  padding: 0.75rem 1rem;
+}
+
+.album-summary-head {
+  display: flex;
+  flex-direction: column;
+}
+
+.album-completion-title {
+  font-weight: 600 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.album-completion-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.album-missing-tracks {
+  margin-top: 0.75rem;
+}
+
+.album-track-row {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.album-track-label {
+  margin-left: 0.4rem !important;
+}

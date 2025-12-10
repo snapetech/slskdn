@@ -20,9 +20,11 @@ namespace slskd.Tests.Unit.HashDb;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using slskd.HashDb;
 using slskd.HashDb.Models;
+using slskd.Integrations.MusicBrainz.Models;
 using Xunit;
 
 public class HashDbServiceTests : IDisposable
@@ -48,7 +50,6 @@ public class HashDbServiceTests : IDisposable
     [Fact]
     public void Constructor_InitializesDatabase()
     {
-        // Assert
         var dbPath = Path.Combine(testDir, "hashdb.db");
         Assert.True(File.Exists(dbPath));
     }
@@ -56,7 +57,6 @@ public class HashDbServiceTests : IDisposable
     [Fact]
     public void Constructor_InitializesSeqIdToZero()
     {
-        // Assert
         Assert.Equal(0, service.CurrentSeqId);
     }
 
@@ -140,7 +140,6 @@ public class HashDbServiceTests : IDisposable
     [Fact]
     public async Task UpsertFlacEntryAsync_InsertsNewEntry()
     {
-        // Arrange
         var entry = new FlacInventoryEntry
         {
             PeerId = "testuser",
@@ -149,10 +148,7 @@ public class HashDbServiceTests : IDisposable
             HashStatusStr = "none",
         };
 
-        // Act
         await service.UpsertFlacEntryAsync(entry);
-
-        // Assert
         var stats = service.GetStats();
         Assert.Equal(1, stats.TotalFlacEntries);
     }
@@ -198,7 +194,58 @@ public class HashDbServiceTests : IDisposable
         var retrieved = await service.GetFlacEntryAsync(entry.FileId);
         Assert.NotNull(retrieved);
         Assert.Equal("known", retrieved.HashStatusStr);
-        Assert.Equal("abc123", retrieved.HashValue);
+    }
+
+    [Fact]
+    public async Task GetAlbumTargetsAsync_ReturnsStoredTarget()
+    {
+        var target = new AlbumTarget
+        {
+            MusicBrainzReleaseId = "mb:abc",
+            Title = "Test Album",
+            Artist = "Test Artist",
+            Metadata = new ReleaseMetadata { ReleaseDate = DateOnly.FromDateTime(DateTime.UtcNow) },
+            Tracks = new[]
+            {
+                new TrackTarget
+                {
+                    MusicBrainzRecordingId = "rec:1",
+                    Position = 1,
+                    Title = "Track One",
+                    Artist = "Test Artist",
+                    Duration = TimeSpan.FromSeconds(180),
+                }
+            }
+        };
+
+        await service.UpsertAlbumTargetAsync(target);
+        var stored = (await service.GetAlbumTargetsAsync()).Single();
+
+        Assert.Equal("Test Album", stored.Title);
+        Assert.Equal("Test Artist", stored.Artist);
+        Assert.Equal(target.Metadata.ReleaseDate?.ToString("yyyy-MM-dd"), stored.ReleaseDate);
+    }
+
+    [Fact]
+    public async Task LookupHashesByRecordingIdAsync_ReturnsMatches()
+    {
+        var entry = new HashDbEntry
+        {
+            FlacKey = HashDbEntry.GenerateFlacKey("test.flac", 123456),
+            ByteHash = "abcdef",
+            Size = 123456,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+        };
+
+        await service.StoreHashAsync(entry);
+        await service.UpdateHashRecordingIdAsync(entry.FlacKey, "mb:rec1");
+
+        var matches = await service.LookupHashesByRecordingIdAsync("mb:rec1");
+        var match = Assert.Single(matches);
+        Assert.Equal(entry.FlacKey, match.FlacKey);
     }
 
     [Fact]

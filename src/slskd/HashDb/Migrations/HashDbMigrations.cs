@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 4;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -296,8 +296,92 @@ public static class HashDbMigrations
                 },
             },
 
-            // Future migrations go here...
-            // new Migration { Version = 3, Name = "...", Apply = conn => { ... } },
+            new Migration
+            {
+                Version = 3,
+                Name = "MusicBrainz Album Targets",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS AlbumTargets (
+                            release_id TEXT PRIMARY KEY,
+                            discogs_release_id TEXT,
+                            title TEXT NOT NULL,
+                            artist TEXT NOT NULL,
+                            metadata_release_date TEXT,
+                            metadata_country TEXT,
+                            metadata_label TEXT,
+                            metadata_status TEXT,
+                            created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+                        );
+
+                        CREATE TABLE IF NOT EXISTS AlbumTargetTracks (
+                            release_id TEXT NOT NULL,
+                            track_position INTEGER NOT NULL,
+                            recording_id TEXT,
+                            title TEXT NOT NULL,
+                            artist TEXT NOT NULL,
+                            duration_ms INTEGER,
+                            isrc TEXT,
+                            PRIMARY KEY (release_id, track_position)
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_album_tracks_recording ON AlbumTargetTracks(recording_id);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 4,
+                Name = "Canonical scoring variant metadata",
+                Apply = conn =>
+                {
+                    var alterStatements = new[]
+                    {
+                        "ALTER TABLE HashDb ADD COLUMN variant_id TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN codec TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN container TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN sample_rate_hz INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN bit_depth INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN channels INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN duration_ms INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN bitrate_kbps INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN quality_score REAL DEFAULT 0.0",
+                        "ALTER TABLE HashDb ADD COLUMN transcode_suspect BOOLEAN DEFAULT FALSE",
+                        "ALTER TABLE HashDb ADD COLUMN transcode_reason TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN dynamic_range_dr REAL",
+                        "ALTER TABLE HashDb ADD COLUMN loudness_lufs REAL",
+                        "ALTER TABLE HashDb ADD COLUMN has_clipping BOOLEAN",
+                        "ALTER TABLE HashDb ADD COLUMN encoder_signature TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN seen_count INTEGER DEFAULT 1",
+                        "ALTER TABLE HashDb ADD COLUMN file_sha256 TEXT"
+                    };
+
+                    foreach (var alter in alterStatements)
+                    {
+                        try
+                        {
+                            using var alterCmd = conn.CreateCommand();
+                            alterCmd.CommandText = alter;
+                            alterCmd.ExecuteNonQuery();
+                        }
+                        catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+                        {
+                            // Column already exists - skip
+                        }
+                    }
+
+                    using var indexCmd = conn.CreateCommand();
+                    indexCmd.CommandText = @"
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_variant ON HashDb(variant_id);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_recording_codec ON HashDb(musicbrainz_id, codec, sample_rate_hz);
+                    ";
+                    indexCmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

@@ -21,8 +21,10 @@ namespace slskd.HashDb
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using slskd.Audio;
     using slskd.Capabilities;
     using slskd.HashDb.Models;
+    using slskd.Integrations.MusicBrainz.Models;
 
     /// <summary>
     ///     Service for managing the local hash database.
@@ -43,6 +45,31 @@ namespace slskd.HashDb
         ///     Gets the current schema version of the database.
         /// </summary>
         int GetSchemaVersion();
+
+        /// <summary>
+        ///     Stores or updates an album target in the database.
+        /// </summary>
+        Task UpsertAlbumTargetAsync(AlbumTarget target, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets an album target by release id.
+        /// </summary>
+        Task<AlbumTargetEntry?> GetAlbumTargetAsync(string releaseId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets the stored track list for a release.
+        /// </summary>
+        Task<IEnumerable<AlbumTargetTrackEntry>> GetAlbumTracksAsync(string releaseId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets the stored album targets.
+        /// </summary>
+        Task<IEnumerable<AlbumTargetEntry>> GetAlbumTargetsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Looks up hash entries by MusicBrainz recording identifier.
+        /// </summary>
+        Task<IEnumerable<HashDbEntry>> LookupHashesByRecordingIdAsync(string recordingId, CancellationToken cancellationToken = default);
 
         // ========== Peer Management ==========
 
@@ -125,6 +152,16 @@ namespace slskd.HashDb
         /// </summary>
         Task IncrementHashUseCountAsync(string flacKey, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        ///     Updates the stored fingerprint for a hash entry.
+        /// </summary>
+        Task UpdateHashFingerprintAsync(string flacKey, string fingerprint, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Updates variant metadata (quality scoring, codec profile, etc.).
+        /// </summary>
+        Task UpdateVariantMetadataAsync(string flacKey, AudioVariant variant, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>
@@ -198,6 +235,11 @@ namespace slskd.HashDb
         /// <param name="oldestProcessed">Timestamp of the oldest search processed in this batch.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         Task SetBackfillProgressAsync(DateTimeOffset oldestProcessed, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Updates a hash entry with an AcoustID-resolution MusicBrainz recording ID.
+        /// </summary>
+        Task UpdateHashRecordingIdAsync(string flacKey, string musicBrainzId, CancellationToken cancellationToken = default);
     }
 
     /// <summary>

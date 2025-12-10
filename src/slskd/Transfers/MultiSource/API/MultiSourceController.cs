@@ -387,9 +387,14 @@ namespace slskd.Transfers.MultiSource.API
                 request.Size,
                 cancellationToken: HttpContext.RequestAborted);
 
-            if (verificationResult.BestSources.Count < 2)
+            var semanticSources = verificationResult.BestSemanticSources.ToList();
+            var chosenSources = semanticSources.Count >= 2 ? semanticSources : verificationResult.BestSources.ToList();
+            var targetFingerprint = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
+            var targetSemanticKey = verificationResult.BestSemanticKey;
+
+            if (chosenSources.Count < 2)
             {
-                return BadRequest($"Not enough verified sources ({verificationResult.BestSources.Count}). Verification may have failed.");
+                return BadRequest($"Not enough verified sources ({chosenSources.Count}). Verification may have failed.");
             }
 
             // Download
@@ -402,7 +407,10 @@ namespace slskd.Transfers.MultiSource.API
                     FileSize = request.Size,
                     ExpectedHash = verificationResult.BestHash,
                     OutputPath = outputPath,
-                    Sources = verificationResult.BestSources,
+                    Sources = chosenSources,
+                    TargetMusicBrainzRecordingId = verificationResult.BestSemanticRecordingId,
+                    TargetFingerprint = targetFingerprint,
+                    TargetSemanticKey = targetSemanticKey,
                 },
                 HttpContext.RequestAborted);
 
@@ -501,6 +509,7 @@ namespace slskd.Transfers.MultiSource.API
 
             List<VerifiedSource> verifiedSources;
             string expectedHash = null;
+            ContentVerificationResult verificationResult = null;
 
             if (request.SkipVerification)
             {
@@ -517,7 +526,7 @@ namespace slskd.Transfers.MultiSource.API
                 // VERIFY sources by FLAC MD5 - critical for multi-source integrity!
                 Log.Information("[SWARM] Verifying {Count} sources by FLAC hash...", allSources.Count);
 
-                var verificationResult = await ContentVerification.VerifySourcesAsync(
+                verificationResult = await ContentVerification.VerifySourcesAsync(
                     new ContentVerificationRequest
                     {
                         Filename = allSources.First().FullPath,
@@ -537,8 +546,17 @@ namespace slskd.Transfers.MultiSource.API
                     });
                 }
 
-                verifiedSources = verificationResult.BestSources;
-                expectedHash = verificationResult.BestHash;
+                var semanticSources = verificationResult.BestSemanticSources.ToList();
+                if (semanticSources.Count >= 2)
+                {
+                    verifiedSources = semanticSources;
+                    expectedHash = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
+                }
+                else
+                {
+                    verifiedSources = verificationResult.BestSources.ToList();
+                    expectedHash = verificationResult.BestHash;
+                }
 
                 Log.Information("[SWARM] Verified {Count} sources with matching hash {Hash}",
                     verifiedSources.Count, expectedHash?.Substring(0, 16) + "...");
@@ -559,6 +577,9 @@ namespace slskd.Transfers.MultiSource.API
                     OutputPath = outputPath,
                     Sources = verifiedSources,
                     ChunkSize = request.ChunkSize,
+                    TargetMusicBrainzRecordingId = verificationResult?.BestSemanticRecordingId,
+                    TargetFingerprint = verificationResult?.BestSemanticFingerprint ?? expectedHash,
+                    TargetSemanticKey = verificationResult?.BestSemanticKey,
                 },
                 HttpContext.RequestAborted);
 

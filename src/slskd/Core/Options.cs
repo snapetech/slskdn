@@ -2276,6 +2276,24 @@ namespace slskd
             public PushoverOptions Pushover { get; init; } = new PushoverOptions();
 
             /// <summary>
+            ///     Gets Chromaprint integration options.
+            /// </summary>
+            [Validate]
+            public ChromaprintOptions Chromaprint { get; init; } = new ChromaprintOptions();
+
+            /// <summary>
+            ///     Gets AcoustID integration options.
+            /// </summary>
+            [Validate]
+            public AcoustIdOptions AcoustId { get; init; } = new AcoustIdOptions();
+
+            /// <summary>
+            ///     Gets MusicBrainz integration options.
+            /// </summary>
+            [Validate]
+            public MusicBrainzOptions MusicBrainz { get; init; } = new MusicBrainzOptions();
+
+            /// <summary>
             ///     Webhook configuration.
             /// </summary>
             public class WebhookOptions
@@ -2781,6 +2799,154 @@ namespace slskd
                     return results;
                 }
             }
+
+            /// <summary>
+            ///     MusicBrainz integration options.
+            /// </summary>
+            public class MusicBrainzOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets the base URL for MusicBrainz queries.
+                /// </summary>
+                [NotNullOrWhiteSpace]
+                public string BaseUrl { get; init; } = "https://musicbrainz.org/ws/2";
+
+                /// <summary>
+                ///     Gets the User-Agent that will be sent to MusicBrainz.
+                /// </summary>
+                [NotNullOrWhiteSpace]
+                public string UserAgent { get; init; } = $"{Program.AppName}/{Program.SemanticVersion} (https://github.com/snapetech/slskdn)";
+
+                /// <summary>
+                ///     Gets the timeout for individual HTTP requests, in seconds.
+                /// </summary>
+                public double TimeoutSeconds { get; init; } = 20;
+
+                /// <summary>
+                ///     Gets the number of retry attempts for MusicBrainz requests.
+                /// </summary>
+                [Range(1, int.MaxValue)]
+                public int RetryAttempts { get; init; } = 2;
+
+                /// <summary>
+                ///     Gets the timeout as a <see cref="TimeSpan"/>.
+                /// </summary>
+                public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutSeconds);
+
+                /// <inheritdoc />
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (!Uri.TryCreate(BaseUrl, UriKind.Absolute, out _))
+                    {
+                        yield return new ValidationResult($"The {nameof(BaseUrl)} field must be an absolute URL.", new[] { nameof(BaseUrl) });
+                    }
+
+                    if (string.IsNullOrWhiteSpace(UserAgent))
+                    {
+                        yield return new ValidationResult($"The {nameof(UserAgent)} field must not be empty.", new[] { nameof(UserAgent) });
+                    }
+
+                    if (TimeoutSeconds <= 0)
+                    {
+                        yield return new ValidationResult($"The {nameof(TimeoutSeconds)} field must be a positive number.", new[] { nameof(TimeoutSeconds) });
+                    }
+
+                    if (RetryAttempts <= 0)
+                    {
+                        yield return new ValidationResult($"The {nameof(RetryAttempts)} field must be greater than zero.", new[] { nameof(RetryAttempts) });
+                    }
+                }
+            }
+
+            /// <summary>
+            ///     Chromaprint integration options.
+            /// </summary>
+            public class ChromaprintOptions : IValidatableObject
+            {
+                public bool Enabled { get; init; } = false;
+
+                public ChromaprintAlgorithm Algorithm { get; init; } = ChromaprintAlgorithm.Default;
+
+                [NotNullOrWhiteSpace]
+                public string FfmpegPath { get; init; } = "ffmpeg";
+
+                public int SampleRate { get; init; } = 44100;
+
+                public int Channels { get; init; } = 2;
+
+                public int DurationSeconds { get; init; } = 120;
+
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (Enabled && (int)Algorithm <= 0)
+                    {
+                        yield return new ValidationResult("Chromaprint algorithm must be a positive value", new[] { nameof(Algorithm) });
+                    }
+
+                    if (Enabled && SampleRate <= 0)
+                    {
+                        yield return new ValidationResult("Sample rate must be positive", new[] { nameof(SampleRate) });
+                    }
+
+                    if (Enabled && Channels <= 0)
+                    {
+                        yield return new ValidationResult("Channels must be positive", new[] { nameof(Channels) });
+                    }
+
+                    if (Enabled && DurationSeconds <= 0)
+                    {
+                        yield return new ValidationResult("Duration must be positive seconds", new[] { nameof(DurationSeconds) });
+                    }
+                }
+            }
+
+            /// <summary>
+            ///     AcoustID integration options.
+            /// </summary>
+            public class AcoustIdOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether AcoustID lookup is enabled.
+                /// </summary>
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the AcoustID API key (client identifier).
+                /// </summary>
+                [NotNullOrWhiteSpace]
+                public string ClientId { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the AcoustID base URL.
+                /// </summary>
+                [NotNullOrWhiteSpace]
+                public string BaseUrl { get; init; } = "https://api.acoustid.org/v2";
+
+                /// <inheritdoc />
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (Enabled && string.IsNullOrWhiteSpace(ClientId))
+                    {
+                        yield return new ValidationResult("AcoustID client id must be supplied when enabled", new[] { nameof(ClientId) });
+                    }
+
+                    if (Enabled && !Uri.IsWellFormedUriString(BaseUrl, UriKind.Absolute))
+                    {
+                        yield return new ValidationResult("AcoustID BaseUrl must be an absolute URL", new[] { nameof(BaseUrl) });
+                    }
+                }
+            }
         }
     }
+}
+
+/// <summary>
+///     Chromaprint algorithm versions.
+/// </summary>
+public enum ChromaprintAlgorithm
+{
+    /// <summary>
+    ///     Default fingerprint algorithm (1).
+    /// </summary>
+    Default = 1,
 }

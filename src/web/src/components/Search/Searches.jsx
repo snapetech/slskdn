@@ -6,6 +6,8 @@ import LoaderSegment from '../Shared/LoaderSegment';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
+import MusicBrainzLookup from './MusicBrainzLookup';
+import AlbumCompletionPanel from './AlbumCompletionPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import { useHistory, useParams, useRouteMatch } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -272,6 +274,8 @@ const Searches = ({ server } = {}) => {
           size="big"
         />
       </Segment>
+      <MusicBrainzLookup disabled={!server?.isConnected} />
+      <AlbumCompletionPanel disabled={!server?.isConnected} />
       {Object.keys(searches).length === 0 ? (
         <PlaceholderSegment
           caption="No searches to display"

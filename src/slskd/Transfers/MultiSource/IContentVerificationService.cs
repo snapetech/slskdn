@@ -18,6 +18,7 @@
 namespace slskd.Transfers.MultiSource
 {
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -145,6 +146,31 @@ namespace slskd.Transfers.MultiSource
         ///     Gets the sources with the best (most common) hash.
         /// </summary>
         public List<VerifiedSource> BestSources => BestHash != null && SourcesByHash.TryGetValue(BestHash, out var sources) ? sources : new List<VerifiedSource>();
+
+        /// <summary>
+        ///     Semantic grouping keyed by MusicBrainz recording + codec.
+        /// </summary>
+        public Dictionary<string, List<VerifiedSource>> SourcesBySemanticKey { get; set; } = new();
+
+        /// <summary>
+        ///     Gets the best semantic group (prefers groups containing a MusicBrainz recording ID).
+        /// </summary>
+        public IReadOnlyList<VerifiedSource> BestSemanticSources => BestSemanticKey != null && SourcesBySemanticKey.TryGetValue(BestSemanticKey, out var best) ? best : new List<VerifiedSource>();
+
+        /// <summary>
+        ///     Gets the selected semantic key (MBID+codec) for grouping chunks.
+        /// </summary>
+        public string BestSemanticKey { get; set; }
+
+        /// <summary>
+        ///     Gets the MusicBrainz recording ID associated with the best semantic group.
+        /// </summary>
+        public string BestSemanticRecordingId => BestSemanticSources.FirstOrDefault()?.MusicBrainzRecordingId;
+
+        /// <summary>
+        ///     Gets the fingerprint tied to the best semantic group.
+        /// </summary>
+        public string BestSemanticFingerprint => BestSemanticSources.FirstOrDefault()?.AudioFingerprint;
     }
 
     /// <summary>
@@ -176,6 +202,21 @@ namespace slskd.Transfers.MultiSource
         ///     Gets or sets the time taken to verify in milliseconds.
         /// </summary>
         public long VerificationTimeMs { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the MusicBrainz recording ID resolved via AcoustID.
+        /// </summary>
+        public string MusicBrainzRecordingId { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the fingerprint stored in the local hash database.
+        /// </summary>
+        public string AudioFingerprint { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the expected codec profile or identifier (dummy placeholder for future use).
+        /// </summary>
+        public string CodecProfile { get; set; }
     }
 
     /// <summary>

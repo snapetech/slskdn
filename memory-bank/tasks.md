@@ -114,8 +114,9 @@
 
 #### Phase 2A: Canonical Edition Scoring
 
-- [ ] **T-400**: Implement local quality scoring for AudioVariant
-  - Status: Not started
+- [x] **T-400**: Implement local quality scoring for AudioVariant
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/multi-swarm
   - Notes: Define AudioVariant model with codec/container, sample rate, bit depth, channels, duration, bitrate, file size, hash. Implement quality_score (0..1) and transcode_suspect heuristics.

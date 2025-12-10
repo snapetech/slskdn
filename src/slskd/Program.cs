@@ -16,6 +16,7 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace slskd
 {
@@ -59,7 +60,11 @@ namespace slskd
     using slskd.Cryptography;
     using slskd.Events;
     using slskd.Files;
+    using slskd.Integrations.AcoustId;
+    using slskd.Integrations.AutoTagging;
+    using slskd.Integrations.Chromaprint;
     using slskd.Integrations.FTP;
+    using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
     using slskd.Integrations.Webhooks;
@@ -698,7 +703,15 @@ namespace slskd
             // HashDb - content-addressed storage for file verification
             // Subscribes to download events to automatically hash completed downloads
             // Uses IServiceProvider for lazy resolution of IMeshSyncService (avoids circular dependency)
-            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(Program.AppDirectory, sp.GetRequiredService<EventBus>(), sp));
+            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(
+                Program.AppDirectory,
+                sp.GetRequiredService<EventBus>(),
+                sp,
+                sp.GetRequiredService<IFingerprintExtractionService>(),
+                sp.GetRequiredService<IAcoustIdClient>(),
+                sp.GetRequiredService<IAutoTaggingService>(),
+                sp.GetRequiredService<IMusicBrainzClient>(),
+                sp.GetRequiredService<IOptionsMonitor<Options>>()));
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
@@ -760,6 +773,11 @@ namespace slskd
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
             services.AddSingleton<IFTPService, FTPService>();
 
+            services.AddSingleton<IChromaprintService, ChromaprintService>();
+            services.AddSingleton<IFingerprintExtractionService, FingerprintExtractionService>();
+            services.AddSingleton<IAcoustIdClient, AcoustIdClient>();
+            services.AddSingleton<IAutoTaggingService, AutoTaggingService>();
+            services.AddSingleton<IMusicBrainzClient, MusicBrainzClient>();
             services.AddSingleton<IPushbulletService, PushbulletService>();
             services.AddSingleton<Integrations.Notifications.INotificationService, Integrations.Notifications.NotificationService>();
 

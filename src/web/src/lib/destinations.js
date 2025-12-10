@@ -12,3 +12,4 @@ export const validate = async (path) => {
   return (await api.post('/destinations/validate', { path })).data;
 };
 
+

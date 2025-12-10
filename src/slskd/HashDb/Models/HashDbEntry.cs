@@ -82,6 +82,25 @@ namespace slskd.HashDb.Models
         /// </summary>
         public string MusicBrainzId { get; set; }
 
+        // Variant metadata (canonical scoring)
+        public string VariantId { get; set; }
+        public string Codec { get; set; }
+        public string Container { get; set; }
+        public int? SampleRateHz { get; set; }
+        public int? BitDepth { get; set; }
+        public int? Channels { get; set; }
+        public int? DurationMs { get; set; }
+        public int? BitrateKbps { get; set; }
+        public double? QualityScore { get; set; }
+        public bool? TranscodeSuspect { get; set; }
+        public string TranscodeReason { get; set; }
+        public double? DynamicRangeDr { get; set; }
+        public double? LoudnessLufs { get; set; }
+        public bool? HasClipping { get; set; }
+        public string EncoderSignature { get; set; }
+        public int? SeenCount { get; set; }
+        public string FileSha256 { get; set; }
+
         /// <summary>
         ///     Gets the first seen time as DateTime.
         /// </summary>

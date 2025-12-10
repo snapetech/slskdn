@@ -22,14 +22,20 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+    using System.Security.Cryptography;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Soulseek;
-using slskd.HashDb;
-using slskd.HashDb.Models;
-using slskd.Mesh;
+using slskd;
+using slskdOptions = slskd.Options;
+    using slskd.HashDb;
+    using slskd.HashDb.Models;
+    using slskd.Integrations.AcoustId;
+    using slskd.Integrations.AutoTagging;
+    using slskd.Integrations.Chromaprint;
+    using slskd.Mesh;
 using IODirectory = System.IO.Directory;
 using IOPath = System.IO.Path;
 using FileStream = System.IO.FileStream;
@@ -52,6 +58,10 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     private readonly IContentVerificationService _contentVerification;
     private readonly IHashDbService? _hashDb;
     private readonly IMeshSyncService? _meshSync;
+    private readonly IFingerprintExtractionService fingerprintExtractionService;
+    private readonly IAcoustIdClient acoustIdClient;
+    private readonly IAutoTaggingService autoTaggingService;
+    private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MultiSourceDownloadService"/> class.
@@ -61,18 +71,26 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     /// <param name="contentVerificationService">The content verification service.</param>
     /// <param name="hashDb">The hash database service (optional).</param>
     /// <param name="meshSync">The mesh sync service (optional).</param>
-    public MultiSourceDownloadService(
-        ILogger<MultiSourceDownloadService> logger,
-        ISoulseekClient soulseekClient,
-        IContentVerificationService contentVerificationService,
-        IHashDbService? hashDb = null,
-        IMeshSyncService? meshSync = null)
+        public MultiSourceDownloadService(
+            ILogger<MultiSourceDownloadService> logger,
+            ISoulseekClient soulseekClient,
+            IContentVerificationService contentVerificationService,
+            IHashDbService? hashDb = null,
+            IMeshSyncService? meshSync = null,
+            IFingerprintExtractionService fingerprintExtractionService = null,
+            IAcoustIdClient acoustIdClient = null,
+            IAutoTaggingService autoTaggingService = null,
+            IOptionsMonitor<slskdOptions> optionsMonitor = null)
     {
         _logger = logger;
         _client = soulseekClient;
         _contentVerification = contentVerificationService;
         _hashDb = hashDb;
         _meshSync = meshSync;
+            this.fingerprintExtractionService = fingerprintExtractionService;
+            this.acoustIdClient = acoustIdClient;
+            this.autoTaggingService = autoTaggingService;
+            this.optionsMonitor = optionsMonitor;
     }
 
     /// <inheritdoc/>
@@ -178,6 +196,9 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 FileSize = request.FileSize,
                 State = MultiSourceDownloadState.Downloading,
             };
+            status.TargetMusicBrainzRecordingId = request.TargetMusicBrainzRecordingId;
+            status.TargetFingerprint = request.TargetFingerprint;
+            status.TargetSemanticKey = request.TargetSemanticKey;
             ActiveDownloads[request.Id] = status;
 
             try
@@ -410,6 +431,21 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                     return result;
                 }
 
+                var verification = await VerifyFinalFileAsync(
+                    request.OutputPath,
+                    request.TargetFingerprint,
+                    request.TargetSemanticKey,
+                    request.TargetMusicBrainzRecordingId,
+                    request.FileSize,
+                    status,
+                    cancellationToken);
+                result.Fingerprint = verification.Fingerprint;
+                result.FingerprintVerified = verification.Verified;
+                result.ResolvedRecordingId = verification.ResolvedRecordingId;
+                status.Fingerprint = verification.Fingerprint;
+                status.FingerprintVerified = verification.Verified;
+                status.ResolvedRecordingId = verification.ResolvedRecordingId;
+
                 // Cleanup temp files
                 try
                 {
@@ -552,6 +588,9 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             workerTempPath,  // Write to worker-specific temp file
                             status,
                             chunkCts.Token);
+
+                        result.MusicBrainzRecordingId = source.MusicBrainzRecordingId ?? status.TargetMusicBrainzRecordingId;
+                        result.Fingerprint = source.AudioFingerprint ?? status.TargetFingerprint;
 
                         if (result.Success)
                         {
@@ -992,5 +1031,73 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             var hashBytes = await sha256.ComputeHashAsync(stream, cancellationToken);
             return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
         }
+
+        private async Task<FingerprintVerificationResult> VerifyFinalFileAsync(
+            string filePath,
+            string targetFingerprint,
+            string targetSemanticKey,
+            string targetRecordingId,
+            long fileSize,
+            MultiSourceDownloadStatus status,
+            CancellationToken cancellationToken)
+        {
+            if (fingerprintExtractionService == null)
+            {
+                return new FingerprintVerificationResult(null, false, null);
+            }
+
+            try
+            {
+                var fingerprint = await fingerprintExtractionService.ExtractFingerprintAsync(filePath, cancellationToken).ConfigureAwait(false);
+
+                if (!string.IsNullOrWhiteSpace(fingerprint) && _hashDb != null)
+                {
+                    await _hashDb.UpdateHashFingerprintAsync(HashDbEntry.GenerateFlacKey(status.Filename ?? filePath, fileSize), fingerprint, cancellationToken).ConfigureAwait(false);
+                }
+
+                var resolvedRecordingId = (string)null;
+                var verified = false;
+
+                if (!string.IsNullOrWhiteSpace(fingerprint))
+                {
+                    if (!string.IsNullOrWhiteSpace(targetFingerprint) && fingerprint.Equals(targetFingerprint, StringComparison.OrdinalIgnoreCase))
+                    {
+                        verified = true;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(targetSemanticKey) && !string.IsNullOrWhiteSpace(status.TargetSemanticKey) && targetSemanticKey.Equals(status.TargetSemanticKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        verified = true;
+                    }
+                }
+
+                if (acoustIdClient != null && optionsMonitor != null && !string.IsNullOrWhiteSpace(fingerprint))
+                {
+                    var chromaOptions = optionsMonitor.CurrentValue.Integration.Chromaprint;
+                    var result = await acoustIdClient.LookupAsync(fingerprint, chromaOptions.SampleRate, chromaOptions.DurationSeconds, cancellationToken).ConfigureAwait(false);
+                    resolvedRecordingId = result?.Recordings?.FirstOrDefault()?.Id;
+
+                    if (!verified && !string.IsNullOrWhiteSpace(resolvedRecordingId))
+                    {
+                        if (!string.IsNullOrWhiteSpace(targetRecordingId) && targetRecordingId.Equals(resolvedRecordingId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            verified = true;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(targetSemanticKey) && !string.IsNullOrWhiteSpace(status.TargetSemanticKey) && targetSemanticKey.Equals(status.TargetSemanticKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            verified = true;
+                        }
+                    }
+                }
+
+                return new FingerprintVerificationResult(fingerprint, verified, resolvedRecordingId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[AUTO-TAGGING] Final fingerprint verification failed for {File}", filePath);
+                return new FingerprintVerificationResult(null, false, null);
+            }
+        }
+
+        private sealed record FingerprintVerificationResult(string Fingerprint, bool Verified, string ResolvedRecordingId);
     }
 
