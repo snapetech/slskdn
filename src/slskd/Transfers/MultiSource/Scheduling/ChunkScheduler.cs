@@ -34,6 +34,7 @@ namespace slskd.Transfers.MultiSource.Scheduling
         private readonly PeerCostFunction costFunction;
         private readonly ILogger log = Log.ForContext<ChunkScheduler>();
         private readonly bool enableCostBasedScheduling;
+        private const double ReputationCutoff = 0.2; // Peers below this reputation are temporarily skipped
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ChunkScheduler"/> class.
@@ -95,11 +96,21 @@ namespace slskd.Transfers.MultiSource.Scheduling
             foreach (var peerId in availablePeers)
             {
                 var metrics = await metricsService.GetMetricsAsync(peerId, PeerSource.Soulseek, ct);
-                peerMetrics.Add(metrics);
+                if (metrics != null)
+                {
+                    peerMetrics.Add(metrics);
+                }
             }
 
-            // Rank peers by cost
-            var rankedPeers = costFunction.RankPeers(peerMetrics);
+            // Apply local reputation gating; if all filtered, fall back to full list
+            var filtered = peerMetrics.Where(m => m.ReputationScore >= ReputationCutoff).ToList();
+            var rankedPeers = costFunction.RankPeers(filtered.Count > 0 ? filtered : peerMetrics);
+
+            if (filtered.Count < peerMetrics.Count)
+            {
+                log.Debug("[ChunkScheduler] Filtered {Filtered} low-reputation peers (cutoff {Cutoff:F2})",
+                    peerMetrics.Count - filtered.Count, ReputationCutoff);
+            }
 
             if (rankedPeers.Count == 0)
             {
@@ -180,10 +191,20 @@ namespace slskd.Transfers.MultiSource.Scheduling
             foreach (var peerId in availablePeers)
             {
                 var metrics = await metricsService.GetMetricsAsync(peerId, PeerSource.Soulseek, ct);
-                peerMetrics.Add(metrics);
+                if (metrics != null)
+                {
+                    peerMetrics.Add(metrics);
+                }
             }
 
-            var rankedPeers = costFunction.RankPeers(peerMetrics);
+            var filtered = peerMetrics.Where(m => m.ReputationScore >= ReputationCutoff).ToList();
+            var rankedPeers = costFunction.RankPeers(filtered.Count > 0 ? filtered : peerMetrics);
+
+            if (filtered.Count < peerMetrics.Count)
+            {
+                log.Debug("[ChunkScheduler] Filtered {Filtered} low-reputation peers (cutoff {Cutoff:F2})",
+                    peerMetrics.Count - filtered.Count, ReputationCutoff);
+            }
 
             if (rankedPeers.Count == 0)
             {
