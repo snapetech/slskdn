@@ -11,6 +11,7 @@ public interface IMeshDhtClient
 {
     Task PutAsync(string key, object value, int ttlSeconds, CancellationToken ct = default);
     Task<byte[]?> GetRawAsync(string key, CancellationToken ct = default);
+    Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
 }
 
 public class MeshDhtClient : IMeshDhtClient
@@ -34,4 +35,19 @@ public class MeshDhtClient : IMeshDhtClient
 
     public Task<byte[]?> GetRawAsync(string key, CancellationToken ct = default) =>
         inner.GetAsync(key, ct);
+
+    public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
+    {
+        var raw = await inner.GetAsync(key, ct);
+        if (raw == null) return default;
+        try
+        {
+            return MessagePackSerializer.Deserialize<T>(raw);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[MeshDHT] Failed to decode payload for {Key}", key);
+            return default;
+        }
+    }
 }

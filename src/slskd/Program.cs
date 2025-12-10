@@ -790,17 +790,23 @@ namespace slskd
             services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
 
             // Typed options (Phase 11)
-            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection(\"Swarm\"));
-            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection(\"Security\"));
-            services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection(\"Brainz\"));
-            services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection(\"Mesh\")); // transport prefs
-            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection(\"MediaCore\"));
+            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
+            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
+            services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
+            services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
+            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
 
             // MeshCore (Phase 8 implementation)
             services.AddSingleton<Mesh.INatDetector, Mesh.NatDetector>();
             services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
             services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
+            services.AddSingleton<Mesh.Dht.IMeshDirectory, Mesh.Dht.ContentDirectory>();
+            services.AddSingleton<Mesh.IMeshAdvanced, Mesh.MeshAdvanced>();
             services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
+
+            // MediaCore publisher
+            services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.InMemoryContentDescriptorSource>();
+            services.AddHostedService<MediaCore.ContentPublisherService>();
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
