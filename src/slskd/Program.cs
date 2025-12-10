@@ -749,6 +749,15 @@ namespace slskd
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
             services.AddSingleton<Transfers.MultiSource.IContentVerificationService, Transfers.MultiSource.ContentVerificationService>();
             services.AddSingleton<Transfers.MultiSource.Metrics.IPeerMetricsService, Transfers.MultiSource.Metrics.PeerMetricsService>();
+            services.AddSingleton<Transfers.MultiSource.Scheduling.IChunkScheduler>(sp =>
+            {
+                // TODO: Get enableCostBasedScheduling from configuration (Options.Transfers.CostBasedScheduling)
+                // For now, default to enabled
+                bool enableCostBasedScheduling = true;
+                return new Transfers.MultiSource.Scheduling.ChunkScheduler(
+                    sp.GetRequiredService<Transfers.MultiSource.Metrics.IPeerMetricsService>(),
+                    enableCostBasedScheduling: enableCostBasedScheduling);
+            });
 
             // Wishlist services
             var wishlistDbPath = Path.Combine(Program.AppDirectory, "wishlist.db");

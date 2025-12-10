@@ -245,11 +245,12 @@
   - Completed: 2025-12-10
   - Notes: PeerCostFunction with 5 components (inverse throughput, error rate penalty, timeout rate penalty, RTT penalty, variance penalty); configurable weights (α,β,γ,δ); RankPeers method; integrated into PeerMetricsService
 
-- [ ] **T-408**: Integrate cost-based scheduling into swarm manager
-  - Status: Not started
+- [x] **T-408**: Integrate cost-based scheduling into swarm manager
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Use cost ranking to assign high-priority chunks to low-cost peers. Gradually shift away from peers whose metrics degrade. Add config to enable/disable cost-based scheduling.
+  - Completed: 2025-12-10
+  - Notes: ChunkScheduler with IChunkScheduler interface; AssignChunkAsync (single), AssignMultipleChunksAsync (batch with priority); HandlePeerDegradationAsync for adaptive shifting; ChunkRequest, ChunkAssignment, DegradationReason models; registered as singleton in DI; enableCostBasedScheduling flag (default: true)
 
 #### Phase 2D: Rescue Mode for Underperforming Soulseek Transfers
 
