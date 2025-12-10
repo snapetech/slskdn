@@ -234,6 +234,48 @@ namespace slskd.LibraryHealth.API
         }
 
         /// <summary>
+        /// Get issues grouped by codec (using issue metadata when available).
+        /// </summary>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>Issues grouped by codec.</returns>
+        [HttpGet("issues/by-codec")]
+        [Authorize]
+        public async Task<ActionResult<object>> GetIssuesByCodec(CancellationToken ct = default)
+        {
+            var filter = new LibraryHealthIssueFilter();
+            var issues = await libraryHealth.GetIssuesAsync(filter, ct);
+
+            var grouped = issues
+                .Select(i =>
+                {
+                    i.Metadata.TryGetValue("codec", out var codecObj);
+                    var codec = (codecObj as string)?.ToUpperInvariant() ?? "UNKNOWN";
+                    var transcode = i.Type == LibraryIssueType.SuspectedTranscode;
+                    if (!transcode && i.Metadata.TryGetValue("transcode_suspect", out var suspectObj) && suspectObj is bool b)
+                    {
+                        transcode = b;
+                    }
+
+                    return (codec, transcode);
+                })
+                .GroupBy(x => x.codec)
+                .Select(g => new IssueCodecGroup
+                {
+                    Codec = g.Key,
+                    Count = g.Count(),
+                    TranscodeSuspect = g.Count(x => x.transcode),
+                })
+                .OrderByDescending(g => g.Count)
+                .ToList();
+
+            return Ok(new
+            {
+                Groups = grouped,
+                TotalIssues = issues.Count,
+            });
+        }
+
+        /// <summary>
         /// Update the status of a library health issue.
         /// </summary>
         /// <param name="issueId">Issue identifier.</param>

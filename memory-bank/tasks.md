@@ -226,8 +226,9 @@
   - Branch: experimental/brainz
   - Notes: Use codec-specific stream hashes for deduplication, prefer lossless over lossy explicitly, use audio_sketch_hash.
 
-- [ ] **T-429**: Add codec-specific stats to Library Health
-  - Status: Not started
+- [x] **T-429**: Add codec-specific stats to Library Health
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Detect codec mismatches, flag transcodes using new analyzer results, suggest codec-specific canonical replacements.

@@ -92,6 +92,15 @@ namespace slskd.LibraryHealth
         public int IssuesResolved { get; set; }
     }
 
+    public class IssueCodecGroup
+    {
+        public string Codec { get; set; }
+
+        public int Count { get; set; }
+
+        public int TranscodeSuspect { get; set; }
+    }
+
     public class LibraryHealthScanRequest
     {
         public string LibraryPath { get; set; }
