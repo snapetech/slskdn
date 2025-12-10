@@ -730,6 +730,9 @@ namespace slskd
             services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmEventStore, Transfers.MultiSource.Tracing.SwarmEventStore>();
             services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmTraceSummarizer, Transfers.MultiSource.Tracing.SwarmTraceSummarizer>();
             services.AddSingleton<Transfers.MultiSource.Caching.IWarmCachePopularityService, Transfers.MultiSource.Caching.WarmCachePopularityService>();
+            services.AddSingleton<Transfers.MultiSource.Caching.IWarmCacheService, Transfers.MultiSource.Caching.WarmCacheService>();
+            services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackPriorityService, Transfers.MultiSource.Playback.PlaybackPriorityService>();
+            services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackFeedbackService, Transfers.MultiSource.Playback.PlaybackFeedbackService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 
