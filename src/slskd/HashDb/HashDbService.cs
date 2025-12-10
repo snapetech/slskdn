@@ -2057,6 +2057,118 @@ namespace slskd.HashDb
             return results;
         }
 
+        // ========== Warm Cache Entries ==========
+
+        /// <inheritdoc/>
+        public async Task UpsertWarmCacheEntryAsync(Models.WarmCacheEntry entry, CancellationToken cancellationToken = default)
+        {
+            if (entry == null || string.IsNullOrWhiteSpace(entry.ContentId))
+            {
+                return;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO WarmCacheEntries (content_id, path, size_bytes, pinned, last_accessed)
+                VALUES (@cid, @path, @size, @pinned, @accessed)
+                ON CONFLICT(content_id) DO UPDATE SET
+                    path = excluded.path,
+                    size_bytes = excluded.size_bytes,
+                    pinned = excluded.pinned,
+                    last_accessed = excluded.last_accessed;
+            ";
+            cmd.Parameters.AddWithValue("@cid", entry.ContentId);
+            cmd.Parameters.AddWithValue("@path", entry.Path ?? string.Empty);
+            cmd.Parameters.AddWithValue("@size", entry.SizeBytes);
+            cmd.Parameters.AddWithValue("@pinned", entry.Pinned ? 1 : 0);
+            cmd.Parameters.AddWithValue("@accessed", entry.LastAccessed > 0 ? entry.LastAccessed : DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task DeleteWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+            {
+                return;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM WarmCacheEntries WHERE content_id = @cid";
+            cmd.Parameters.AddWithValue("@cid", contentId);
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<Models.WarmCacheEntry?> GetWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+            {
+                return null;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT content_id, path, size_bytes, pinned, last_accessed FROM WarmCacheEntries WHERE content_id = @cid";
+            cmd.Parameters.AddWithValue("@cid", contentId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return ReadWarmCacheEntry(reader);
+            }
+
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<Models.WarmCacheEntry>> ListWarmCacheEntriesAsync(CancellationToken cancellationToken = default)
+        {
+            var list = new List<Models.WarmCacheEntry>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT content_id, path, size_bytes, pinned, last_accessed FROM WarmCacheEntries ORDER BY last_accessed DESC";
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                list.Add(ReadWarmCacheEntry(reader));
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
+        public async Task<long> GetWarmCacheTotalSizeAsync(CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT SUM(size_bytes) FROM WarmCacheEntries";
+
+            var result = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            if (result == null || result is DBNull)
+            {
+                return 0;
+            }
+
+            return Convert.ToInt64(result);
+        }
+
+        private static Models.WarmCacheEntry ReadWarmCacheEntry(SqliteDataReader reader)
+        {
+            return new Models.WarmCacheEntry
+            {
+                ContentId = reader.GetString(0),
+                Path = reader.GetString(1),
+                SizeBytes = reader.GetInt64(2),
+                Pinned = !reader.IsDBNull(3) && reader.GetInt32(3) == 1,
+                LastAccessed = reader.GetInt64(4),
+            };
+        }
+
         // ========== Label Crate Jobs ==========
 
         /// <inheritdoc/>

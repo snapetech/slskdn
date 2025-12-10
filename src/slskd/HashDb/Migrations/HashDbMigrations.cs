@@ -697,6 +697,28 @@ public static class HashDbMigrations
                     cmd.ExecuteNonQuery();
                 },
             },
+
+            new Migration
+            {
+                Version = 14,
+                Name = "Warm cache entries",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS WarmCacheEntries (
+                            content_id TEXT PRIMARY KEY,
+                            path TEXT NOT NULL,
+                            size_bytes INTEGER NOT NULL,
+                            pinned INTEGER DEFAULT 0,
+                            last_accessed INTEGER NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_warmcache_last_accessed ON WarmCacheEntries(last_accessed);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

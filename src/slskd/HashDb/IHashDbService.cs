@@ -261,6 +261,18 @@ namespace slskd.HashDb
         /// </summary>
         Task<IReadOnlyList<(string ContentId, long Hits)>> GetTopPopularAsync(int limit, long minHits = 1, CancellationToken cancellationToken = default);
 
+        // ========== Warm Cache Entries ==========
+
+        Task UpsertWarmCacheEntryAsync(Models.WarmCacheEntry entry, CancellationToken cancellationToken = default);
+
+        Task DeleteWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default);
+
+        Task<Models.WarmCacheEntry?> GetWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<Models.WarmCacheEntry>> ListWarmCacheEntriesAsync(CancellationToken cancellationToken = default);
+
+        Task<long> GetWarmCacheTotalSizeAsync(CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>
