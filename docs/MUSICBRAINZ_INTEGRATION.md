@@ -800,6 +800,395 @@ public class FingerprintBatchMessage
 
 ---
 
+## Future Enhancements (Beyond Phase 3)
+
+The following features are speculative but implementable extensions to the core MBID/fingerprint architecture. They maintain Soulseek as the canonical data source while adding next-generation client intelligence.
+
+### Library Health & Quality Management
+
+#### 1. Canonical Edition Scoring
+
+**Concept**: Per `(MB Recording ID, codec profile)`, aggregate quality metrics from mesh observations to compute a **canonicality score** for each variant.
+
+**Scoring Factors**:
+- **Positive**: Widely observed across peers, matches original release metadata, good dynamic range (DR), no clipping.
+- **Negative**: Suspected transcodes (e.g., FLAC with low DR), unusual sample rates, heavy clipping, mismatched duration.
+
+**Implementation**:
+- Extend `FingerprintObservations` table with `canonicality_score REAL`.
+- Compute score from mesh sync data (seen_count, avg_dr, clipping_rate, encoder_signature).
+- Update score as new observations arrive via epidemic sync.
+
+**Use Cases**:
+- **Swarm Preference**: Prefer canonical variants when selecting sources for multi-swarm downloads.
+- **UI Display**: 
+  ```
+  Track 3: Blue in Green
+  ✓ Canonical master (score 0.93, 87 peers)
+  ⚠ Variant A (score 0.41, 12 peers, likely transcode)
+  ```
+
+#### 2. "Collection Doctor" - Library Health Scanner
+
+**Concept**: Background job that walks the user's local library, fingerprints each file, matches to MBIDs, and flags quality/metadata issues.
+
+**Detection Rules**:
+- **Suspected Transcodes**: File claims FLAC but fingerprint matches low DR variant in mesh consensus.
+- **Wrong Tags**: File's embedded tags (album/artist) don't match the MBID's canonical release metadata.
+- **Missing Tracks**: Detected MBIDs belong to a MB Release with more tracks than present locally.
+- **Duplicate Variants**: Multiple files with same MBID but different quality scores.
+
+**UI**: Library Health Dashboard
+```
+Library Health Report (Last Scan: 2 hours ago)
+
+⚠ 143 suspected transcodes detected
+⚠ 27 albums missing tracks relative to MusicBrainz release
+✓ 89% of library matches canonical editions
+✓ 1,234 tracks fingerprinted and verified
+
+Actions:
+[Fix Transcodes via Multi-Swarm] [Complete Missing Albums] [Re-Tag Mismatches]
+```
+
+**Implementation**:
+- New `LibraryHealthService` background service.
+- Scan triggers via manual button or scheduled job (weekly).
+- Results stored in `LibraryHealthIssues` table.
+- One-click remediation: creates multi-swarm jobs to replace flagged files.
+
+---
+
+### Swarm Intelligence & Scheduling
+
+#### 3. RTT + Throughput-Aware Swarm Scheduler
+
+**Concept**: Dynamic per-peer cost modeling to optimize chunk assignment in multi-source swarms.
+
+**Peer Stats Tracked**:
+- RTT (round-trip time)
+- Throughput (bytes/sec over last N chunks)
+- Error rate (chunk validation failures)
+- Timeout rate
+
+**Cost Model**:
+```
+cost(peer) = (1 / throughput) + (penalty_error_rate × error_rate) + (penalty_timeout × timeout_rate)
+```
+
+**Scheduling Strategy**:
+- **High-priority chunks** (near playback head, end of job): assign to low-cost peers.
+- **Low-priority chunks**: assign to slow-but-reliable peers.
+- **Rebalance dynamically**: if peer performance degrades mid-job, reassign remaining chunks.
+
+**Result**: CDN-style scheduling using Soulseek + overlay peers as backend.
+
+**Implementation**:
+- Extend `SourcePeer` model with `avg_rtt`, `avg_throughput`, `error_rate`, `timeout_rate`.
+- Update `MultiSourceDownloadScheduler` to compute cost per peer before chunk assignment.
+- Periodically recompute costs (every 5-10 chunks).
+
+#### 4. "Rescue Mode" for Stalled Soulseek Transfers
+
+**Concept**: When a Soulseek transfer is stuck in queue or crawling (<10 KB/s), use mesh to complete the file while keeping the original transfer alive.
+
+**Detection Triggers**:
+- Transfer queued for >30 minutes with no progress.
+- Transfer active but throughput <10 KB/s for >5 minutes.
+- Transfer stalled (no bytes received for >2 minutes).
+
+**Rescue Flow**:
+1. Mark transfer as "critical but underperforming".
+2. Query mesh via DHT: "Who has MB Recording X with fingerprint Y?"
+3. If mesh peers found:
+   - Start overlay swarm for missing byte ranges.
+   - Keep Soulseek transfer alive (deprioritized).
+4. If Soulseek transfer recovers: rebalance swarm to prefer it again.
+5. If Soulseek transfer dies: rely entirely on mesh.
+
+**UI Indicator**:
+```
+Track 5: Downloading (Rescue Mode Active)
+├─ Soulseek peer A: Stalled (2 KB/s, 12% complete)
+├─ Mesh peer B: 45% (overlay)
+└─ Mesh peer C: 23% (overlay)
+```
+
+**Implementation**:
+- Extend `DownloadTracker` with stall detection logic.
+- Raise `TransferStalledEvent` when triggers fire.
+- `RescueService` subscribes to event, queries DHT for MBID-based peers.
+- Integrates with existing `MultiSourceDownloadJob` to add mesh sources mid-transfer.
+
+---
+
+### Discovery & Crate-Digging
+
+#### 5. Release-Graph Guided Discovery
+
+**Concept**: Use MusicBrainz's relationship graph to suggest related albums/artists for bulk downloading.
+
+**Graph Queries**:
+- **Same Artist**: Other studio albums, EPs, live recordings.
+- **Related Artists**: Shared personnel (producer, engineer, session musicians), same label, similar genre tags.
+- **Release Relationships**: Remasters, deluxe editions, different regions.
+
+**UI Workflows**:
+- **"Complete Artist Discography"**: User selects artist → slskdn queries MB for all studio albums → creates multi-album job.
+- **"Related Albums"**: User viewing album X → sidebar shows "Also by this producer", "Same label", "Featured artist Y" → one-click to add to queue.
+
+**Implementation**:
+- `MusicBrainzGraphService` to query MB API for relationships.
+- Cache results locally to respect rate limits.
+- New UI component: "Discovery Sidebar" in album detail view.
+- Generates `DiscographyDownloadJob` which spawns multiple `AlbumDownloadJob` instances.
+
+#### 6. "Label Crate" Mode
+
+**Concept**: Discover and download curated chunks of a label's catalog based on mesh popularity.
+
+**Discovery Logic**:
+- Query mesh: "Which MBIDs on label X are most commonly present in peer fingerprint adverts?"
+- Rank by:
+  - Peer count (how many slskdn nodes have it).
+  - Average canonicality score.
+- Filter by user preferences (e.g., only studio albums, only FLAC).
+
+**UI Workflow**:
+```
+Label: 4AD Records
+
+Popular Albums (in your mesh neighbourhood):
+✓ Loveless - My Bloody Valentine (87 peers, score 0.95)
+✓ Surfer Rosa - Pixies (64 peers, score 0.91)
+✓ Treasure - Cocteau Twins (52 peers, score 0.88)
+
+[Download Top 10] [Download All]
+```
+
+**Implementation**:
+- Extend mesh sync to include label metadata in fingerprint adverts.
+- New `LabelCatalogService` to aggregate mesh data by label.
+- New UI: "Label Browser" with search and popularity sorting.
+
+---
+
+### Privacy, Fairness & Reputation
+
+#### 7. Lightweight Local-Only Peer Reputation
+
+**Concept**: Track per-peer behavior locally (never shared) to avoid bad actors without centralized reputation.
+
+**Tracked Metrics**:
+- Timeout rate (% of chunk requests that timed out).
+- Corruption rate (% of chunks that failed hash validation).
+- Speed consistency (variance in throughput over time).
+- Truthfulness (do advertised MBIDs actually match delivered content?).
+
+**Reputation Score** (local only):
+```
+reputation(peer) = 1.0 - (0.3 × timeout_rate + 0.5 × corruption_rate + 0.2 × speed_variance)
+```
+
+**Scheduler Integration**:
+- Prefer high-reputation peers for critical chunks.
+- Deprioritize low-reputation peers (only use if no alternatives).
+- Never globally share reputation scores (privacy-preserving).
+
+**Implementation**:
+- Extend `Peers` table with `local_reputation REAL`, `timeout_count`, `corruption_count`, `total_chunks`.
+- Update reputation after each chunk validation.
+- `MultiSourceDownloadScheduler` uses reputation as a cost factor.
+
+#### 8. Mesh-Level "Fairness Governor"
+
+**Concept**: Hard caps to prevent slskdn from becoming a selfish leech, ensuring it strengthens Soulseek's ecosystem.
+
+**Enforced Quotas**:
+- `max_overlay_upload_ratio`: Max overlay upload relative to Soulseek upload (e.g., 2:1).
+- `min_soulseek_contribution`: Must upload at least X KB via Soulseek for every Y KB downloaded via overlay.
+- `overlay_bandwidth_cap`: Max overlay bandwidth per day (e.g., 50 GB/day).
+
+**Dashboard UI**:
+```
+Contribution Report (Last 7 Days)
+
+Uploaded:
+├─ Soulseek: 42.3 GB
+└─ Overlay Mesh: 68.7 GB
+Total: 111.0 GB
+
+Downloaded:
+├─ Soulseek: 18.5 GB
+└─ Overlay Mesh: 12.1 GB
+Total: 30.6 GB
+
+Ratio: 3.6:1 (you've contributed 3.6× more than you downloaded)
+Status: ✓ Healthy contributor
+```
+
+**Enforcement**:
+- If quotas exceeded: temporarily throttle overlay downloads, prioritize Soulseek uploads.
+- Optional "Generous Mode": user opts in to higher contribution ratios.
+
+**Implementation**:
+- New `ContributionTrackingService` to monitor upload/download stats.
+- Persist stats in `HashDbState` table.
+- `FairnessGovernor` service enforces caps by throttling overlay connections.
+
+---
+
+### Operational & UX Enhancements
+
+#### 9. Download Job Manifests (.yaml recipes)
+
+**Concept**: Serialize every multi-swarm job as a portable YAML manifest for export/import/resume.
+
+**Manifest Format**:
+```yaml
+job_id: 0f4de638-56f3-4a0f-b8fa-64f85c6b6a8f
+type: mb_release
+mb_release_id: c0d0c0a4-4a26-4d74-9c02-67c9321b3b22
+title: Loveless
+artist: My Bloody Valentine
+tracks:
+  - position: 1
+    mb_recording_id: abc-123-def
+    title: Only Shallow
+    duration_ms: 282000
+  - position: 2
+    mb_recording_id: def-456-ghi
+    title: Loomer
+    duration_ms: 178000
+constraints:
+  preferred_codecs: [FLAC]
+  max_lossy_tracks_per_album: 0
+  prefer_canonical_variants: true
+  use_overlay: true
+  overlay_bandwidth_kbps: 3000
+status:
+  started_at: 2025-12-09T15:30:00Z
+  completed_tracks: [1]
+  in_progress_tracks: [2]
+  pending_tracks: [3, 4, 5, 6, 7, 8, 9, 10, 11]
+```
+
+**Use Cases**:
+- **Export/Import**: Share job recipes between machines or users.
+- **Provenance**: Commit manifests to Git alongside library for auditable download history.
+- **Resume**: If database corrupted, reimport manifests to resume jobs.
+- **Batch Processing**: Generate manifests programmatically (e.g., from MB collection API).
+
+**Implementation**:
+- `JobManifestService` to serialize/deserialize jobs.
+- New API endpoints: `POST /api/v0/jobs/import`, `GET /api/v0/jobs/{id}/export`.
+- UI: "Export Job" and "Import Jobs" buttons in downloads page.
+
+#### 10. "Session Trace" for Debugging Swarm Behavior
+
+**Concept**: Structured per-job trace logging for dev/power-user debugging and transparency.
+
+**Trace Data**:
+- Which peers contributed which byte ranges.
+- Chunk assignment history (peer X assigned chunk Y at time Z).
+- Peer performance over time (RTT, throughput, errors).
+- Scheduler decisions (why peer A chosen over peer B).
+- Rescue mode triggers and mesh failover events.
+
+**Compact UI View**:
+```
+Job: Loveless - Track 7 (All Blues)
+
+Sources:
+├─ Soulseek peer "user123": 60% (chunks 0-23, 40-59)
+│  └─ Avg speed: 450 KB/s, RTT: 120ms, 0 errors
+├─ Overlay peer "abc-def-ghi": 30% (chunks 24-39)
+│  └─ Avg speed: 1.2 MB/s, RTT: 45ms, 0 errors
+└─ Overlay peer "ghi-jkl-mno": 10% (chunks 60-69, rescue mode)
+   └─ Avg speed: 180 KB/s, RTT: 200ms, 2 retries
+
+Timeline:
+00:00 - Started, 3 sources discovered
+00:12 - Soulseek peer stalled, rescue mode triggered
+00:18 - Overlay peer C added, chunks 60-69 reassigned
+00:24 - Complete
+```
+
+**Export Format**: JSON for programmatic analysis.
+
+**Implementation**:
+- `DownloadTraceService` to log events per job.
+- Store traces in `JobTraces` table (or export to JSON file).
+- New UI component: "Job Trace Viewer" (collapsible detail panel).
+
+---
+
+### "Definitely Cool, Maybe Later" Tier
+
+#### 11. "Warm Cache" Overlay Nodes
+
+**Concept**: Opt-in mode where nodes with high disk/bandwidth prefetch and cache popular MBIDs seen in mesh jobs.
+
+**Cache Node Behavior**:
+1. Monitor mesh `AlbumCompletionJob` messages for popular MBIDs.
+2. When MBID seen by N peers (e.g., N > 10):
+   - Fetch from Soulseek (once).
+   - Verify via fingerprints.
+   - Announce to DHT with `cache: true` capability.
+3. Serve chunks to other slskdn users via TLS overlay (fast, no Soulseek slots).
+
+**Cache Management**:
+- **Eviction**: LRU policy, configurable quota (e.g., 50 GB).
+- **Invalidation**: If fingerprint mismatch detected, purge and re-fetch.
+- **TTL**: 90 days for unpopular, infinite for manually pinned.
+
+**Fan-Out Amplification**:
+```
+Scenario: 100 users want "Kind of Blue" (MB:abc-123)
+
+Without cache:
+- Original Soulseek uploader: 100 uploads × 500MB = 50GB
+- Slow (slots, queues, single uploader)
+
+With 3 cache nodes:
+- Caches fetch once from Soulseek: 3 × 500MB = 1.5GB
+- Caches serve 100 users via overlay: Fast TLS, no slots
+- Original uploader: Only 1.5GB total
+- Users: 10-50× faster downloads
+```
+
+**Fairness**: Cache nodes still respect contribution quotas (counted as overlay uploads).
+
+**Implementation**:
+- New `CacheService` to manage cached MBIDs.
+- Extend DHT announce to include `cache: true` flag.
+- UI: "Cache Node Mode" settings panel with quota config.
+
+#### 12. Playback-Aware Swarming (for Local Streaming)
+
+**Concept**: If slskdn ever adds a local music player, optimize swarming for streaming playback.
+
+**Streaming Strategy**:
+- User hits Play on a track.
+- Client needs sliding window of chunks around playback head (e.g., next 30 seconds).
+- Swarm scheduler:
+  - **Aggressively fetch**: Chunks in playback window from lowest-latency peers.
+  - **Opportunistically fetch**: Rest of file in background from any available peers.
+
+**Buffering Logic**:
+- Start playback once first 5-10 seconds buffered.
+- Maintain 30-second lead buffer.
+- If buffer drops below 10 seconds: raise priority of next chunks.
+
+**Result**: "Progressive streaming from Soulseek + mesh" with playback guarantees.
+
+**Implementation**:
+- Extend `MultiSourceDownloadJob` with `playback_mode: true` flag.
+- New `PlaybackScheduler` to prioritize chunks by playback position.
+- Integrate with hypothetical media player component.
+
+---
+
 ## References
 
 - [MusicBrainz API Documentation](https://musicbrainz.org/doc/MusicBrainz_API)
