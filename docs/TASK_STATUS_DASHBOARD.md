@@ -10,7 +10,7 @@
 
 ```
 Phase 1:  ████████████████████ 100% (14/14 tasks complete)
-Phase 2:  ███████████░░░░░░░░░  50% (11/22 tasks complete)
+Phase 2:  ████████████████████ 100% (22/22 tasks complete)
 Phase 3:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/11 tasks complete)
 Phase 4:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/12 tasks complete)
 Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
@@ -18,7 +18,7 @@ Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/30 tasks complete)
 
-Overall: ████░░░░░░░░░░░░░░░░  16% (25/160 tasks complete)
+Overall: █████░░░░░░░░░░░░░░░  22% (36/160 tasks complete)
 ```
 
 ---
@@ -63,18 +63,18 @@ Overall: ████░░░░░░░░░░░░░░░░  16% (25/1
 - ✅ T-404: Build library health UI/API (Completed: 2025-12-10)
 - ✅ T-405: Add "Fix via multi-swarm" actions (Completed: 2025-12-10)
 
-### Phase 2-Extended: Advanced AudioVariant Fingerprinting (0/11) 📋
-- ⏳ T-420: Extend AudioVariant model with codec-specific fields [NEXT]
-- ⏳ T-421: Implement FLAC analyzer
-- ⏳ T-422: Implement MP3 analyzer
-- ⏳ T-423: Implement Opus analyzer
-- ⏳ T-424: Implement AAC analyzer
-- ⏳ T-425: Implement audio_sketch_hash (PCM-window hash)
-- ⏳ T-426: Implement cross-codec deduplication logic
-- ⏳ T-427: Implement analyzer version migration
-- ⏳ T-428: Update CanonicalStatsService with codec-specific logic
-- ⏳ T-429: Add codec-specific stats to Library Health
-- ⏳ T-430: Unit tests for codec analyzers
+### Phase 2-Extended: Advanced AudioVariant Fingerprinting (11/11) ✅
+- ✅ T-420: Extend AudioVariant model with codec-specific fields (Completed: 2025-12-10)
+- ✅ T-421: Implement FLAC analyzer (Completed: 2025-12-10)
+- ✅ T-422: Implement MP3 analyzer (Completed: 2025-12-10)
+- ✅ T-423: Implement Opus analyzer (Completed: 2025-12-10)
+- ✅ T-424: Implement AAC analyzer (Completed: 2025-12-10)
+- ✅ T-425: Implement audio_sketch_hash (PCM-window hash) (Completed: 2025-12-10)
+- ✅ T-426: Implement cross-codec deduplication logic (Completed: 2025-12-10)
+- ✅ T-427: Implement analyzer version migration (Completed: 2025-12-10)
+- ✅ T-428: Update CanonicalStatsService with codec-specific logic (Completed: 2025-12-10)
+- ✅ T-429: Add codec-specific stats to Library Health (Completed: 2025-12-10)
+- ✅ T-430: Unit tests for codec analyzers (Completed: 2025-12-10)
 
 ### Phase 2C: RTT + Throughput-Aware Swarm Scheduler (3/3) ✅
 - ✅ T-406: Implement per-peer metrics collection (Completed: 2025-12-10)
