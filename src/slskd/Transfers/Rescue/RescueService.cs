@@ -64,6 +64,7 @@ namespace slskd.Transfers.Rescue
         private readonly IAcoustIdClient acoustId;
         private readonly IMeshSyncService meshSync;
         private readonly IMultiSourceDownloadService multiSource;
+        private readonly IRescueGuardrailService guardrails;
         private readonly ILogger log = Log.ForContext<RescueService>();
 
         /// <summary>
@@ -74,13 +75,15 @@ namespace slskd.Transfers.Rescue
             IFingerprintExtractionService fingerprinting = null,
             IAcoustIdClient acoustId = null,
             IMeshSyncService meshSync = null,
-            IMultiSourceDownloadService multiSource = null)
+            IMultiSourceDownloadService multiSource = null,
+            IRescueGuardrailService guardrails = null)
         {
             this.hashDb = hashDb;
             this.fingerprinting = fingerprinting;
             this.acoustId = acoustId;
             this.meshSync = meshSync;
             this.multiSource = multiSource;
+            this.guardrails = guardrails ?? new RescueGuardrailService();  // Default if not provided
         }
 
         /// <inheritdoc/>
@@ -94,6 +97,14 @@ namespace slskd.Transfers.Rescue
             CancellationToken ct = default)
         {
             log.Information("[RESCUE] Activating rescue mode for {File} (reason: {Reason})", filename, reason);
+
+            // Step 0: Check guardrails
+            var (allowed, guardReason) = await guardrails.CheckRescueAllowedAsync(transferId, filename, ct);
+            if (!allowed)
+            {
+                log.Warning("[RESCUE] Rescue mode not allowed: {Reason}", guardReason);
+                return null;
+            }
 
             // Step 1: Resolve MusicBrainz Recording ID
             string recordingId = await ResolveRecordingIdAsync(filename, bytesTransferred, ct);
@@ -116,6 +127,20 @@ namespace slskd.Transfers.Rescue
             }
 
             log.Information("[RESCUE] Found {Count} overlay peers with recording {RecordingId}", overlayPeers.Count, recordingId);
+
+            // Step 2.5: Check guardrails for multi-source job
+            // For now, assume original Soulseek transfer counts as 1 Soulseek peer
+            int soulseekPeerCount = 1;  // The underperforming transfer
+            var (jobAllowed, jobReason) = await guardrails.CheckMultiSourceJobAllowedAsync(
+                overlayPeers.Count,
+                soulseekPeerCount,
+                ct);
+
+            if (!jobAllowed)
+            {
+                log.Warning("[RESCUE] Multi-source job not allowed: {Reason}", jobReason);
+                return null;
+            }
 
             // Step 3: Determine missing byte ranges
             var missingRanges = ComputeMissingRanges(totalBytes, bytesTransferred);

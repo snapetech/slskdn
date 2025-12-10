@@ -268,11 +268,12 @@
   - Completed: 2025-12-10
   - Notes: RescueService with IRescueService interface; ActivateRescueModeAsync (resolve MBID, discover overlay peers, compute missing ranges, create rescue job); RescueJob, ByteRange, OverlayPeerInfo, UnderperformanceReason models; ResolveRecordingIdAsync (3 strategies: HashDb, fingerprinting, filename parsing); DiscoverOverlayPeersAsync placeholder; ComputeMissingRanges (simple end-missing logic); PLACEHOLDER implementation - full integration pending (see backfill TODOs)
 
-- [ ] **T-411**: Add Soulseek-primary guardrails
-  - Status: Not started
+- [x] **T-411**: Add Soulseek-primary guardrails
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Enforce at least one Soulseek origin per job (by default). Set maximum overlay/Soulseek byte ratios per job. Reject or warn on overlay-only scenarios unless explicitly configured.
+  - Completed: 2025-12-10
+  - Notes: RescueGuardrailService with IRescueGuardrailService interface; CheckRescueAllowedAsync (global enable check, Soulseek origin requirement); CheckMultiSourceJobAllowedAsync (overlay-only prohibition, overlay/Soulseek ratio limit, min Soulseek peer count); RescueGuardrailConfig with defaults (RequireSoulseekOrigin=true, AllowOverlayOnly=false, MaxOverlayRatio=0.5, MinSoulseekPeers=1); Integrated into RescueService activation flow; Ensures Soulseek remains primary network
 
 ---
 
