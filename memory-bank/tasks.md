@@ -729,6 +729,56 @@
   - Branch: TBD
   - Notes: View pod opinions per release, submit your own opinion (hash + score + note).
 
+#### Phase 9F: Soulseek Chat Bridge (Adoption Strategy)
+
+- [ ] **T-1024**: Design external binding data model
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: PodExternalBinding (Kind, Mode, Identifier), PodChannelKind (Native vs Bound).
+
+- [ ] **T-1025**: Implement ISoulseekChatBridge interface
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Join/leave rooms, subscribe to room events, send messages, PM support.
+
+- [ ] **T-1026**: Add ExternalBinding to PodMetadata
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Extend Pod data model with optional Soulseek room binding.
+
+- [ ] **T-1027**: Implement bound channel creation and mirroring
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Create "soulseek-room" bound channel, mirror messages from Soulseek → Pod (ReadOnly mode).
+
+- [ ] **T-1028**: Add two-way mirroring (Mirror mode)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Send pod messages to Soulseek room, with clear UI indicators and safety guardrails.
+
+- [ ] **T-1029**: Build pod-from-room creation flow
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: UI to create pod from existing Soulseek room, pre-fill metadata, default to ReadOnly.
+
+- [ ] **T-1030**: Add Soulseek identity mapping
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Synthetic PeerIds for Soulseek usernames (soulseek:username), optional verification/linking.
+
+- [ ] **T-1031**: Implement bound channel UI with safety indicators
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Visual distinction (badges, colors), clear send-to indicators, disable input for ReadOnly.
+
 ---
 
 ### Phase 10+: Domain-Specific Apps (Long-Term Research)

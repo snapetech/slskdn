@@ -327,6 +327,12 @@ class ContentId
 
 **Vision**: Small, decentralized groups for sharing taste and recommendations **without** becoming torrent indexes.
 
+**Adoption Strategy**: Pods can optionally **bridge to existing Soulseek chat rooms**, allowing users to:
+- Participate in Soulseek rooms from within the mesh UI
+- Layer pod features (collection stats, variant opinions, recommendations) on top of existing communities
+- Gradually migrate users from Soulseek-only to mesh-native pods
+- Bridge modes: ReadOnly (safe, one-way mirroring) or Mirror (two-way messaging)
+
 **Pod Data Model**:
 ```csharp
 class Pod
