@@ -457,6 +457,308 @@
 
 ---
 
+### Phase 8: MeshCore & MediaCore Foundation (Research)
+
+> **Branch**: TBD (research phase)  
+> **Docs**: `FORK_VISION.md` (Phase 8)  
+> **Dependencies**: Phases 1-7  
+> **Timeline**: Research phase
+
+#### Phase 8A: Overlay DHT Foundation
+
+- [ ] **T-900**: Design DHT architecture and key patterns
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Kademlia-style DHT, define key patterns for pod metadata/membership/shadow index/scenes.
+
+- [ ] **T-901**: Implement Ed25519 signed identity system
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Keypair generation, PeerId from public key fingerprint, signature/verification for DHT entries.
+
+- [ ] **T-902**: Build DHT node and routing table
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: K-bucket routing, node distance, FIND_NODE/STORE/FIND_VALUE RPCs.
+
+- [ ] **T-903**: Implement DHT storage with TTL and signatures
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Key-value storage, TTL-based expiry, signature validation on store.
+
+- [ ] **T-904**: Add DHT bootstrap and discovery
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Bootstrap nodes, peer discovery, NAT traversal considerations.
+
+#### Phase 8B: Multi-Backend Transfer Architecture
+
+- [ ] **T-905**: Define transfer backend abstraction interface
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: ITransferBackend with Init/Download/Upload/GetPeers methods.
+
+- [ ] **T-906**: Implement native mesh protocol backend
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Direct peer-to-peer over overlay network.
+
+- [ ] **T-907**: Implement HTTP/WebDAV/S3 backend
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Cloud storage integration for hybrid scenarios.
+
+- [ ] **T-908**: Implement private BitTorrent backend
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: BT fallback only between known mesh peers, no public DHT/trackers.
+
+- [ ] **T-909**: Build backend selection and failover logic
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Try native → HTTP → private BT, adaptive selection based on availability.
+
+#### Phase 8C: ContentID & MediaCore
+
+- [ ] **T-910**: Design ContentID abstraction and domain model
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: ContentDomain enum (Audio/Movie/TV), MetadataSource, ExternalId, ContentId class.
+
+- [ ] **T-911**: Implement MediaVariant model and storage
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Track editions/masterings/cuts, link variants to ContentId, extend HashDb schema.
+
+- [ ] **T-912**: Build metadata facade abstraction
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: IMetadataProvider interface, implementations for MusicBrainz/TMDB/TVDb/local cache.
+
+- [ ] **T-913**: Implement AudioCore domain module
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Artist/album/track models, discography logic, MB integration via facade.
+
+- [ ] **T-914**: Implement MovieCore domain module (optional)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Movie/collection models, edition tracking, TMDB integration.
+
+- [ ] **T-915**: Implement TvCore domain module (optional)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Series/season/episode models, TVDb integration.
+
+---
+
+### Phase 9: PodCore - Taste-Based Communities (Research)
+
+> **Branch**: TBD (research phase)  
+> **Docs**: `FORK_VISION.md` (Phase 8 - PodCore)  
+> **Dependencies**: Phase 8A (DHT), Phase 8C (ContentID)  
+> **Timeline**: Research phase
+
+#### Phase 9A: Pod Metadata & Membership
+
+- [ ] **T-1000**: Define pod data models (Pod, PodMember, PodRole)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: PodId, DisplayName, Visibility, FocusType, ContentId linkage, Tags.
+
+- [ ] **T-1001**: Implement pod creation and metadata publishing
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Create pod, sign metadata, publish to DHT (pod:<PodId>:meta).
+
+- [ ] **T-1002**: Build signed membership record system
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: PodMembershipRecord with role/ban status/signature, publish to DHT.
+
+- [ ] **T-1003**: Implement pod join/leave flows
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Invite flows for private pods, direct join for unlisted/listed, membership record updates.
+
+- [ ] **T-1004**: Add pod discovery for listed pods
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: DHT keys for discovery (pod:discover:name:<name>, pod:discover:tag:<tag>).
+
+#### Phase 9B: Pod Chat & Messaging
+
+- [ ] **T-1005**: Define pod message data model
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: PodMessage (ChannelId, MessageId, SenderPeerId, Body, Signature, Kind).
+
+- [ ] **T-1006**: Implement decentralized message routing
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Route messages via overlay to pod peers, multi-cast with deduplication.
+
+- [ ] **T-1007**: Build local message storage and backfill
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Local SQLite storage, optional peer-to-peer backfill, configurable retention.
+
+- [ ] **T-1008**: Add pod channels (general, custom)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: PodChannelId model, DHT keys for channel descriptors.
+
+- [ ] **T-1009**: Implement message validation and signature checks
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Validate sender membership, check signatures, enforce ban list.
+
+#### Phase 9C: Content-Linked Pods & Variant Opinions
+
+- [ ] **T-1010**: Implement content-linked pod creation
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: FocusType=ContentId, associate pod with artist/album/show.
+
+- [ ] **T-1011**: Build "collection vs pod" view
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Compare user's collection to pod's canonical discography, show gaps.
+
+- [ ] **T-1012**: Define PodVariantOpinion data model
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: PodId, ContentId, VariantHash, Score, Note, SenderPeerId, Signature.
+
+- [ ] **T-1013**: Implement variant opinion publishing and retrieval
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Publish opinions to DHT (pod:<PodId>:opinions:<ContentId>), query for aggregation.
+
+- [ ] **T-1014**: Integrate pod opinions into canonicality engine
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Weight opinions by PodAffinity and trust, feed into QualityScorer/CanonicalStatsService.
+
+#### Phase 9D: Pod Moderation & Security Integration
+
+- [ ] **T-1015**: Implement owner/moderator kick/ban actions
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Update membership record with IsBanned=true, sign and publish to DHT.
+
+- [ ] **T-1016**: Build PodAffinity scoring (engagement, trust)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Track activity frequency, calculate engagement score, derive pod-specific trust.
+
+- [ ] **T-1017**: Integrate pod trust with SecurityCore
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Extend SecurityContext with PodId/PodRole/PodTrustScore, adjust policies per pod.
+
+- [ ] **T-1018**: Add global reputation feed from pod abuse
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Consistent abuse across pods → lower global trust, inform PeerMetricsService.
+
+#### Phase 9E: Pod UI & Safety Guardrails
+
+- [ ] **T-1019**: Design pod UI mockups (list, detail, chat, collection views)
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Wireframes for pod browser, join/leave, chat interface, "collection vs pod" dashboard.
+
+- [ ] **T-1020**: Implement pod list and detail views
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Browse joined pods, view metadata/members/tags, join/leave buttons.
+
+- [ ] **T-1021**: Build pod chat UI with safety guardrails
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Message list, send box, NO auto-linkifying magnets/URLs, no "paste magnet" shortcut.
+
+- [ ] **T-1022**: Add "collection vs pod" dashboard integration
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: Show gaps, pod's favorite masterings, quality recommendations, NO direct download links.
+
+- [ ] **T-1023**: Implement pod-scoped variant opinion UI
+  - Status: Not started
+  - Priority: P4 (research)
+  - Branch: TBD
+  - Notes: View pod opinions per release, submit your own opinion (hash + score + note).
+
+---
+
+### Phase 10+: Domain-Specific Apps (Long-Term Research)
+
+> **Branch**: TBD (research phase)  
+> **Dependencies**: Phases 8-9 (MeshCore, MediaCore, PodCore)  
+> **Timeline**: Long-term research
+
+- [ ] **T-1100**: Design Soulbeet (music) app architecture
+  - Status: Not started
+  - Priority: P5 (long-term)
+  - Notes: Artist discographies, album completion, pod integration, quality recommendations.
+
+- [ ] **T-1101**: Design Moviebeet (movies) app architecture (optional)
+  - Status: Not started
+  - Priority: P5 (long-term)
+  - Notes: Collection management, edition tracking, pod integration.
+
+- [ ] **T-1102**: Design Tvbeet (TV) app architecture (optional)
+  - Status: Not started
+  - Priority: P5 (long-term)
+  - Notes: Series tracking, episode completion, rewatch clubs.
+
+- [ ] **T-1103**: Design unified app UI (tabbed interface)
+  - Status: Not started
+  - Priority: P5 (long-term)
+  - Notes: Soulbeet | Moviebeet | Tvbeet tabs, shared infrastructure.
+
+---
+
 ### Phase 5: Soulbeet Integration
 
 > **Branch**: `experimental/multi-swarm`  

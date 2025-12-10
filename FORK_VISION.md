@@ -205,47 +205,245 @@ The `experimental/brainz` branch explores a significantly expanded architecture:
 | **Soulbeet API Bridge** | 📋 Phase 5 Planned | Compatibility layer for external music apps, native job APIs, advanced query endpoints |
 | **Virtual Soulfind Bridge** | 📋 Phase 6 Planned | Protocol-level compatibility with legacy Soulseek clients, virtual directory generation, transparent multi-source routing |
 
-### Future: Decentralized Mesh & Community Features
+### Phase 7: Virtual Soulfind Mesh (Research)
 
-**Experimental directions beyond Phase 6:**
+**Vision**: Transform slskdn into a **truly decentralized music network** that:
+- Enhances Soulseek when the server is available (hybrid mode)
+- Replaces Soulseek when the server is unavailable (disaster mode)
+- Never requires central servers or privileged nodes
 
-#### Mesh Transport Layer
-- **Overlay DHT**: Decentralized peer discovery and metadata distribution
-- **Multi-Backend Transfers**: Native mesh protocol, HTTP/WebDAV/object storage, private BitTorrent fallback (only between known peers, no public DHT/trackers), optional LAN/IPFS/WebTorrent
-- **Relay-Only Partial View**: No global indexer or catalogue, preserve privacy and decentralization
-- **Signed Identity**: Cryptographic peer identities for trust, reputation, and moderation
+#### Key Concepts
 
-#### MediaCore & ContentID System
-- **ContentID Abstraction**: Unified identifiers for audio/movies/TV across metadata sources (MusicBrainz, TMDB, TVDb, etc.)
-- **MediaVariant Model**: Track different editions/masterings/cuts/encodings of the same canonical content
-- **Cross-Codec Canonicality**: Smart deduplication and quality scoring across formats
-- **Metadata Facade**: Pluggable metadata sources without tight coupling
+**Shadow Index**: Decentralized MBID→peers mapping via DHT
+- Passive observation of Soulseek traffic builds knowledge graph
+- Peers share what they've seen: "User X has Album Y"
+- DHT stores mappings: `mbid:album:ABC → [peer1, peer2, peer3]`
+- When Soulseek dies, mesh already knows who has what
+
+**Scenes**: Decentralized rooms/communities via DHT topics
+- DHT topics like `scene:electronic:house` for discovery
+- Subscribe to topics to see what peers are sharing
+- No central room servers required
+
+**Disaster Resilience**: Mesh-only operation when Soulseek down
+- Transfers continue via overlay, guided by shadow index
+- Think: BitTorrent DHT + MBID awareness + multi-swarm
+
+#### Architecture Components
+
+1. **Capture & Normalization Pipeline**
+   - Observe Soulseek search results and transfers
+   - Extract metadata from filenames
+   - Normalize to MBID via fingerprinting + MB lookups
+   - Build local knowledge: `(username, filepath) → MBID`
+
+2. **Shadow Index DHT**
+   - Publish observations to DHT: `mbid:release:X → username`
+   - TTL-based expiry (30 days default)
+   - Aggregate: multiple peers contribute to index
+   - Query: "Who has mbid:release:Y?" → list of usernames
+
+3. **Virtual Directory Generator**
+   - Legacy Soulseek clients browse slskdn as if it's a normal user
+   - slskdn generates virtual file listings from shadow index
+   - Example: `/Daft Punk/Random Access Memories [FLAC]/01-track.flac`
+   - Filenames are **virtual** but download triggers multi-swarm
+
+4. **Transparent Multi-Source Routing**
+   - Legacy client requests file from virtual path
+   - slskdn translates to MBID, queries shadow index for sources
+   - Initiates multi-source chunked download from real sources
+   - Streams result to legacy client as if single-source
+
+#### Safety & Legal Constraints
+
+**What Shadow Index Is NOT**:
+- NOT a public torrent tracker (no magnet links)
+- NOT a global catalogue (partial view, TTL expiry)
+- NOT a copyright index (MBID mappings, not files)
+
+**Positioning**:
+- Shadow index is **peer reputation data** ("I've seen User X share Album Y")
+- Used for **disaster recovery** when Soulseek server fails
+- Enables **multi-source optimization** within private peer groups
+
+---
+
+### Phase 8: Decentralized Foundation (Research)
+
+**Experimental directions for long-term decentralization:**
+
+#### MeshCore: Transport & Identity Layer
+
+**Overlay DHT**:
+- Kademlia-style DHT for decentralized key-value storage
+- Keys: pod metadata, membership, shadow index, scene topics
+- Values: signed, TTL-based, small payloads only
+- Relay-only partial view: no peer is "special"
+
+**Multi-Backend Transfers**:
+- **Native mesh protocol**: Direct peer-to-peer over overlay
+- **HTTP/WebDAV/S3**: For cloud storage integration
+- **Private BitTorrent**: Fallback between known peers only
+  - No public DHT announcement
+  - No public tracker registration
+  - Only shared with mesh peers you trust
+- **Optional**: LAN discovery, IPFS, WebTorrent
+
+**Signed Identity**:
+- Each peer has Ed25519 keypair for identity
+- Public key fingerprint is PeerId (e.g., `peer:a1b2c3...`)
+- Sign all DHT publications, messages, variant opinions
+- Enables trust, reputation, moderation without central authority
+
+#### MediaCore: ContentID & Variant System
+
+**ContentID Abstraction**:
+```csharp
+class ContentId
+{
+    ContentDomain Domain;     // Audio, Movie, TV
+    string MetadataSource;    // "mb", "tmdb", "tvdb"
+    string ExternalId;        // "artist:12345", "movie:67890"
+}
+```
+- Unified identifiers across MusicBrainz, TMDB, TVDb
+- Domain-specific cores: AudioCore, MovieCore, TvCore
+- Pluggable metadata via facade pattern
+
+**MediaVariant Model**:
+- Track different editions/masterings/cuts of same content
+- Example: Daft Punk RAM (2013 CD) vs (2013 vinyl rip) vs (2024 remaster)
+- Canonical scoring: quality metrics, transcode detection, community opinions
+- Cross-codec deduplication: "This MP3 is transcoded from that FLAC"
+
+**Metadata Facade**:
+- Abstract interface: `IMetadataProvider`
+- Implementations: MusicBrainz, TMDB, TVDb, local cache
+- No tight coupling to specific APIs
+- Graceful degradation when services unavailable
 
 #### PodCore: Taste-Based Communities
-- **Pod Concept**: Small, topic- or trust-based groups (e.g. "Fans of Daft Punk", "Trusted Friends", "JP City Pop Collectors")
-- **Membership & Roles**: Owner/Moderator/Member roles, signed membership records, invitation flows
-- **Pod Chat**: Decentralized message routing via mesh overlay, local-only storage, optional backfill
-- **Content-Linked Pods**: Associate pods with specific artists/albums/shows via ContentID
-- **Pod Variant Opinions**: Share quality preferences (signed hashes + scores), feed into canonicality engine
-- **Collection vs Pod Views**: "You have 8/10 canonical albums the pod likes", "Pod's favorite masterings"
-- **Safety Constraints**: 
-  - Pods are about **taste, recommendations, and social context**
-  - **NOT** torrent indexes or magnet link feeds
-  - UI shaped around discussion, not direct file sharing
-  - No auto-linkifying of magnets/URLs
-  - Pod membership doesn't trigger implicit swarm participation
 
-#### SecurityCore & Moderation
-- **Pod-Level Trust**: Extend reputation system with pod-specific trust scores
-- **Abuse Controls**: Owner/moderator kick/ban capabilities, signed membership updates
-- **Global Reputation Feed**: Pods inform global trust scoring (consistent abuse across pods → lower global trust)
-- **Privacy-First**: Pod data scoped to members only, no global indexing, configurable retention
+**Vision**: Small, decentralized groups for sharing taste and recommendations **without** becoming torrent indexes.
+
+**Pod Data Model**:
+```csharp
+class Pod
+{
+    PodId Id;                    // "pod:artist:mb:daft-punk-hash"
+    string DisplayName;          // "Fans of Daft Punk"
+    PodVisibility Visibility;    // Private/Unlisted/Listed
+    PodFocusType FocusType;      // ContentId/TagCluster/None
+    ContentId? FocusContentId;   // artist:mb:daft-punk (optional)
+    List<string> Tags;           // ["electronic", "french-house"]
+}
+
+class PodMember
+{
+    PodId PodId;
+    string PeerId;               // Mesh identity
+    PodRole Role;                // Owner/Moderator/Member
+    bool IsBanned;
+    string Signature;            // Signed membership
+}
+```
+
+**Key Features**:
+1. **Pod Creation & Membership**
+   - Owner creates pod, sets visibility and focus
+   - Invite flows for private pods
+   - Discovery for listed pods (via DHT search)
+   - Signed membership records prevent spoofing
+
+2. **Pod Chat**
+   - Decentralized message routing via mesh overlay
+   - Each pod has channels (at minimum: `general`)
+   - Local-only storage, optional peer backfill
+   - No central message server
+
+3. **Content-Linked Pods**
+   - Associate pod with ContentId (artist, album, show)
+   - "Fans of Daft Punk" → `ContentId(AudioArtist, "mb:artist:...")`
+   - UI shows "Your collection vs pod's canonical discography"
+
+4. **Pod Variant Opinions**
+   - Members share quality preferences: `(ContentId, hash, score, note)`
+   - Example: "For RAM, this FLAC has best DR" → signed opinion
+   - Opinions feed into canonicality engine (weighted by trust)
+   - **NOT file links**: just hashes + scores
+
+5. **Collection vs Pod Views**
+   - "You have 8/10 canonical albums the pod likes"
+   - "Pod's favorite masterings" for each release
+   - "Missing: Discovery (2001), Homework (1997)"
+   - UI shaped around **taste comparison**, not downloading
+
+**Safety Constraints**:
+
+What Pods **ARE**:
+- Social/preference/reputation spaces
+- Discussion forums with content context
+- Quality recommendation engines
+- Collection completion dashboards
+
+What Pods **ARE NOT**:
+- Torrent indexes or magnet link feeds
+- Public "download everything" hubs
+- Auto-posting bots for new releases
+- Direct file-sharing mechanisms
+
+**Implementation Guardrails**:
+1. No "paste magnet and share" UI
+2. No auto-linkifying of magnets/URLs in chat
+3. Pod membership doesn't trigger swarm participation
+4. Variant opinions are hashes + scores, not paths/links
+5. Transfers still go through MediaCore → SwarmCore → MeshCore
+
+#### SecurityCore: Trust & Moderation
+
+**Pod-Level Trust Extensions**:
+- Extend existing peer reputation with pod context
+- `PodAffinity`: engagement score, pod-specific trust
+- High-trust pods (friends/family) get more bandwidth/leniency
+- Low-trust pods (public/anonymous) get stricter policies
+
+**Moderation Tools**:
+- Owners/Moderators can kick/ban peers from pod
+- Banned peer's membership record updated, signed, published to DHT
+- SecurityCore enforces bans at mesh/transfer level
+- Global reputation: consistent abuse across pods → lower global trust
+
+**Privacy Guarantees**:
+- Pod data scoped to members only
+- No global indexing of pods or messages
+- Configurable retention (delete old messages)
+- Optional E2E encryption for pod chat
 
 #### Domain-Specific Apps (Long-Term)
-- **Soulbeet** (Music): Artist discographies, album completion, quality recommendations, pod integration
-- **Moviebeet** (Movies): Collection management, edition tracking (director's cuts, etc.)
-- **Tvbeet** (TV): Series tracking, episode completion, rewatch clubs
-- **Unified UI**: Tabbed interface across domains, shared swarm/mesh/metadata infrastructure
+
+**Soulbeet (Music)**:
+- Artist discographies, album completion tracking
+- Quality recommendations per release
+- Pod integration: "Join the Daft Punk fan pod"
+- Variant comparison: "Your FLAC vs pod's canonical FLAC"
+
+**Moviebeet (Movies)**:
+- Collection management, watchlist
+- Edition tracking (theatrical, director's cut, extended)
+- Quality scoring: resolution, bitrate, codec
+- Pod integration: "Join the Criterion Collection pod"
+
+**Tvbeet (TV)**:
+- Series tracking, episode completion
+- Rewatch clubs as pods
+- Season/episode variant tracking
+- "Your collection vs pod's preferred cuts"
+
+**Unified UI**:
+- Tabbed interface: Soulbeet | Moviebeet | Tvbeet
+- Shared infrastructure: SwarmCore, MeshCore, MediaCore
+- Consistent UX across domains
 
 ---
 
@@ -265,9 +463,10 @@ The `experimental/brainz` branch explores a significantly expanded architecture:
 - Basic domain app UIs (Soulbeet artist/album views)
 
 **Timeline:**
-- Phases 1-4: ✅ Complete (experimental/brainz, Dec 2025)
+- Phases 1-4: ✅ Complete (experimental/brainz)
 - Phase 5-6: 📋 Next up (Soulbeet integration, virtual Soulfind bridge)
-- Phase 7+: 🔬 Research (Mesh/MediaCore/PodCore, 2026+)
+- Phase 7: 🔬 Research (Virtual Soulfind mesh, shadow index)
+- Phase 8-9: 🔬 Long-term (MeshCore, MediaCore, PodCore)
 
 ---
 
