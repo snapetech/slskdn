@@ -1445,104 +1445,104 @@
 
 #### Phase 7A: Test Harness Infrastructure
 
-- [ ] **T-900**: Implement Soulfind test harness
-  - Status: Not started
+- [x] **T-900**: Implement Soulfind test harness
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: SoulfindRunner class for starting/stopping local Soulfind, binary discovery, ephemeral port allocation, readiness detection.
 
-- [ ] **T-901**: Implement slskdn test client harness
-  - Status: Not started
+- [x] **T-901**: Implement slskdn test client harness
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: SlskdnTestClient class for isolated test instances, config directory isolation, share directory configuration, API wrappers.
 
-- [ ] **T-902**: Create audio test fixtures
-  - Status: Not started
+- [x] **T-902**: Create audio test fixtures
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Small deterministic audio files (FLAC, MP3, Opus, AAC), known good and transcode variants, metadata sidecar with expected scores.
 
-- [ ] **T-903**: Create MusicBrainz stub responses
-  - Status: Not started
+- [x] **T-903**: Create MusicBrainz stub responses
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: JSON fixtures for MB API responses, mock IMusicBrainzClient, test helper to inject mock into DI.
 
 #### Phase 7B: Protocol & Integration Tests
 
-- [ ] **T-904**: Implement L1 protocol contract tests
-  - Status: Not started
+- [x] **T-904**: Implement L1 protocol contract tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Test suite for basic Soulseek protocol: login/handshake, keepalive, search, rooms, browse.
 
-- [ ] **T-905**: Implement L2 multi-client integration tests
-  - Status: Not started
+- [x] **T-905**: Implement L2 multi-client integration tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Alice/Bob/Carol topology, scenarios for search/download/capture/rooms, assertions on MBID mapping and quality scores.
 
-- [ ] **T-906**: Implement mesh simulator
-  - Status: Not started
+- [x] **T-906**: Implement mesh simulator
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: MeshSimulator class for in-process DHT/overlay, SimulatedNode with fake library, network partition/message drop simulation.
 
 #### Phase 7C: Disaster Mode & Mesh-Only Tests
 
-- [ ] **T-907**: Implement L3 disaster mode tests
-  - Status: Not started
+- [x] **T-907**: Implement L3 disaster mode tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Soulfind-assisted disaster drills, kill Soulfind mid-transfer, verify mesh takeover and disaster mode activation.
 
-- [ ] **T-908**: Implement L3 mesh-only tests
-  - Status: Not started
+- [x] **T-908**: Implement L3 mesh-only tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Pure mesh simulation (no Soulfind), discography job across mesh, repair mission tests, DHT/overlay-only discovery.
 
-- [ ] **T-909**: Add CI test categorization
-  - Status: Not started
+- [x] **T-909**: Add CI test categorization
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Test traits/categories for L0/L1/L2/L3, CI configuration, environment variable detection for Soulfind.
 
-- [ ] **T-910**: Add test documentation
-  - Status: Not started
+- [x] **T-910**: Add test documentation
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: README for running integration tests locally, instructions for Soulfind setup, troubleshooting guide.
 
 #### Phase 7D: Feature-Specific Integration Tests
 
-- [ ] **T-911**: Implement test result visualization
-  - Status: Not started
+- [x] **T-911**: Implement test result visualization
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Test report generation (HTML/Markdown), coverage reports, performance benchmarks for mesh operations.
 
-- [ ] **T-912**: Add rescue mode integration tests
-  - Status: Not started
+- [x] **T-912**: Add rescue mode integration tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Tests for underperforming transfer detection, overlay rescue activation, mixed Soulseek+overlay completion.
 
-- [ ] **T-913**: Add canonical selection integration tests
-  - Status: Not started
+- [x] **T-913**: Add canonical selection integration tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Verify canonical variant preference, quality score-based source selection, cross-codec deduplication with real files.
 
-- [ ] **T-914**: Add library health integration tests
-  - Status: Not started
+- [x] **T-914**: Add library health integration tests
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: End-to-end library scanning, issue detection validation (transcodes, non-canonical), remediation job creation/execution.
 
-- [ ] **T-915**: Performance benchmarking suite
-  - Status: Not started
+- [x] **T-915**: Performance benchmarking suite
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Benchmark tests for DHT query latency, overlay throughput, canonical stats aggregation, mesh simulation at scale (100+ nodes).
