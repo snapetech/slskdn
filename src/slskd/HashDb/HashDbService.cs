@@ -1749,6 +1749,64 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT json_data
+                FROM ArtistReleaseGraphs
+                WHERE artist_id = @artist_id";
+            cmd.Parameters.AddWithValue("@artist_id", artistId);
+
+            var json = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<ArtistReleaseGraph>(json);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Failed to deserialize release graph for artist {ArtistId}", artistId);
+                return null;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task UpsertArtistReleaseGraphAsync(ArtistReleaseGraph graph, CancellationToken cancellationToken = default)
+        {
+            if (graph == null || string.IsNullOrWhiteSpace(graph.ArtistId))
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(graph);
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO ArtistReleaseGraphs (artist_id, name, cached_at, expires_at, json_data)
+                VALUES (@artist_id, @name, @cached_at, @expires_at, @json_data)
+                ON CONFLICT(artist_id) DO UPDATE SET
+                    name = excluded.name,
+                    cached_at = excluded.cached_at,
+                    expires_at = excluded.expires_at,
+                    json_data = excluded.json_data";
+
+            cmd.Parameters.AddWithValue("@artist_id", graph.ArtistId);
+            cmd.Parameters.AddWithValue("@name", graph.Name ?? string.Empty);
+            cmd.Parameters.AddWithValue("@cached_at", graph.CachedAt.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@expires_at", graph.ExpiresAt?.ToUnixTimeSeconds() ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@json_data", json);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
         public async Task IncrementHashUseCountAsync(string flacKey, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();

@@ -192,6 +192,18 @@ namespace slskd.HashDb
         /// </summary>
         Task<List<string>> GetCodecProfilesForRecordingAsync(string recordingId, CancellationToken cancellationToken = default);
 
+        // ========== MusicBrainz Release Graph Cache ==========
+
+        /// <summary>
+        ///     Gets a cached artist release graph (if any).
+        /// </summary>
+        Task<Integrations.MusicBrainz.Models.ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Upserts a cached artist release graph.
+        /// </summary>
+        Task UpsertArtistReleaseGraphAsync(Integrations.MusicBrainz.Models.ArtistReleaseGraph graph, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

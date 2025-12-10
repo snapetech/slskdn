@@ -717,6 +717,7 @@ namespace slskd
             services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
             services.AddSingleton<IDedupeService, DedupeService>();
             services.AddSingleton<IAnalyzerMigrationService, AnalyzerMigrationService>();
+            services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 

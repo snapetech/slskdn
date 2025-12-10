@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -530,6 +530,28 @@ public static class HashDbMigrations
                         CREATE INDEX IF NOT EXISTS idx_hashdb_aac_profile ON HashDb(aac_profile);
                     ";
                     indexCmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 8,
+                Name = "Artist release graph cache",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS ArtistReleaseGraphs (
+                            artist_id TEXT PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            cached_at INTEGER NOT NULL,
+                            expires_at INTEGER,
+                            json_data TEXT NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_artist_release_graph_expiry ON ArtistReleaseGraphs(expires_at);
+                    ";
+                    cmd.ExecuteNonQuery();
                 },
             },
         };

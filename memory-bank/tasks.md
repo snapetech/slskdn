@@ -295,8 +295,9 @@
 
 #### Phase 3A: Release-Graph Guided Discovery (Discographies)
 
-- [ ] **T-500**: Build MB artist release graph service
-  - Status: Not started
+- [x] **T-500**: Build MB artist release graph service
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Fetch and cache Release Groups for MB Artist ID. Fetch Releases under each group (albums, EPs, etc.) from MusicBrainz API.

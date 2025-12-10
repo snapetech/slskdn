@@ -29,14 +29,16 @@ namespace slskd.Integrations.MusicBrainz.API
     {
         private readonly IMusicBrainzClient client;
         private readonly IHashDbService hashDbService;
+        private readonly IArtistReleaseGraphService releaseGraphService;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MusicBrainzController"/> class.
         /// </summary>
-        public MusicBrainzController(IMusicBrainzClient client, IHashDbService hashDbService)
+        public MusicBrainzController(IMusicBrainzClient client, IHashDbService hashDbService, IArtistReleaseGraphService releaseGraphService)
         {
             this.client = client;
             this.hashDbService = hashDbService;
+            this.releaseGraphService = releaseGraphService;
         }
 
         /// <summary>
@@ -171,6 +173,24 @@ namespace slskd.Integrations.MusicBrainz.API
             {
                 Albums = summaries.ToArray(),
             });
+        }
+
+        /// <summary>
+        ///     Fetches (and caches) an artist release graph from MusicBrainz.
+        /// </summary>
+        [HttpGet("artist/{artistId}/release-graph")]
+        public async Task<ActionResult<ArtistReleaseGraph>> GetReleaseGraph(
+            string artistId,
+            [FromQuery] bool forceRefresh = false,
+            CancellationToken cancellationToken = default)
+        {
+            var graph = await releaseGraphService.GetArtistReleaseGraphAsync(artistId, forceRefresh, cancellationToken).ConfigureAwait(false);
+            if (graph == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(graph);
         }
     }
 }
