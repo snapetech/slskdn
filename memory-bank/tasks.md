@@ -403,17 +403,17 @@
   - Branch: experimental/brainz
   - Notes: Event model with type/source/backend, job/track/variant/peer, chunk and byte context, timestamp/error fields.
 
-- [ ] **T-604**: Implement event persistence and rotation
-  - Status: Not started
+- [x] **T-604**: Implement event persistence and rotation
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Store events per job in DB or log files (logs/sessions/<job_id>.log). Add configurable retention: max jobs, max size, TTL.
+  - Notes: File-based SwarmEventStore with JSONL per job, rotation at 5MB, TTL 7d, max 200 jobs.
 
-- [ ] **T-605**: Build session trace summaries
-  - Status: Not started
+- [x] **T-605**: Build session trace summaries
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: CLI/API to summarise per-job: peer contributions, overlay vs Soulseek split, key events (rescue mode, peer failures). For power users and debugging.
+  - Notes: Trace summarizer + API endpoint; per-job bytes by source/backend, event counts, peer contributions, rescue flag.
 
 #### Phase 4C: Warm Cache Nodes (Optional)
 
