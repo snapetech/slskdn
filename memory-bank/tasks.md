@@ -238,11 +238,12 @@
   - Completed: 2025-12-10
   - Notes: PeerPerformanceMetrics model with EMA tracking for RTT, throughput, reliability; PeerMetricsService with sliding windows; HashDb placeholder methods (schema + persistence pending full implementation)
 
-- [ ] **T-407**: Build configurable cost function for peer ranking
-  - Status: Not started
+- [x] **T-407**: Build configurable cost function for peer ranking
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Implement cost(peer) = α / throughput + β * error_rate + γ * timeout_rate. Provide API to rank peer candidates for a chunk.
+  - Completed: 2025-12-10
+  - Notes: PeerCostFunction with 5 components (inverse throughput, error rate penalty, timeout rate penalty, RTT penalty, variance penalty); configurable weights (α,β,γ,δ); RankPeers method; integrated into PeerMetricsService
 
 - [ ] **T-408**: Integrate cost-based scheduling into swarm manager
   - Status: Not started
