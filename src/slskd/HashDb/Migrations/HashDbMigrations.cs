@@ -719,6 +719,25 @@ public static class HashDbMigrations
                     cmd.ExecuteNonQuery();
                 },
             },
+
+            new Migration
+            {
+                Version = 15,
+                Name = "Virtual Soulfind pseudonyms",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS Pseudonyms (
+                            SoulseekUsername TEXT PRIMARY KEY NOT NULL,
+                            PeerId TEXT NOT NULL,
+                            UpdatedAt INTEGER NOT NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_pseudonyms_peer_id ON Pseudonyms(PeerId);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

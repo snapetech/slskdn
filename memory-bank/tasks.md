@@ -889,35 +889,35 @@
 
 #### Phase 6A: Capture & Normalization Pipeline
 
-- [ ] **T-800**: Implement Soulseek traffic observer
-  - Status: Not started
+- [x] **T-800**: Implement Soulseek traffic observer
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
-  - Notes: Passively monitor Soulseek searches and transfers, extract metadata for normalization
+  - Branch: experimental/brainz
+  - Notes: TrafficObserver hooks search results and transfer completions, extracts metadata from paths, feeds normalization pipeline.
 
-- [ ] **T-801**: Build MBID normalization pipeline
-  - Status: Not started
+- [x] **T-801**: Build MBID normalization pipeline
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
-  - Notes: Convert observed files to AudioVariant records via fingerprinting + AcoustID + quality scoring
+  - Branch: experimental/brainz
+  - Notes: NormalizationPipeline converts observations to AudioVariant via fingerprinting + AcoustID + MB lookups, computes quality scores.
 
-- [ ] **T-802**: Implement username pseudonymization
-  - Status: Not started
+- [x] **T-802**: Implement username pseudonymization
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
-  - Notes: Map Soulseek usernames to overlay peer IDs for privacy
+  - Branch: experimental/brainz
+  - Notes: UsernamePseudonymizer maps Soulseek usernames to peer IDs with HMAC-SHA256 salt, stores in Pseudonyms table.
 
-- [ ] **T-803**: Create observation database schema
-  - Status: Not started
+- [x] **T-803**: Create observation database schema
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
-  - Notes: Optional persistence of raw observations for debugging and replay
+  - Branch: experimental/brainz
+  - Notes: ObservationStore interface with in-memory stub (optional persistence for debugging), migration v15 for Pseudonyms table.
 
-- [ ] **T-804**: Add privacy controls and data retention
-  - Status: Not started
+- [x] **T-804**: Add privacy controls and data retention
+  - Status: Done
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
-  - Notes: Configuration for anonymization levels, retention policies, opt-out
+  - Branch: experimental/brainz
+  - Notes: PrivacyControls with anonymization levels (None/Pseudonymized/Aggregate) and retention policies, VirtualSoulfindOptions configuration.
 
 #### Phase 6B: Shadow Index Over DHT
 

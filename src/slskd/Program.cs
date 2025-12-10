@@ -736,6 +736,13 @@ namespace slskd
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 
+            // Virtual Soulfind services
+            services.AddSingleton<VirtualSoulfind.Capture.ITrafficObserver, VirtualSoulfind.Capture.TrafficObserver>();
+            services.AddSingleton<VirtualSoulfind.Capture.INormalizationPipeline, VirtualSoulfind.Capture.NormalizationPipeline>();
+            services.AddSingleton<VirtualSoulfind.Capture.IUsernamePseudonymizer, VirtualSoulfind.Capture.UsernamePseudonymizer>();
+            services.AddSingleton<VirtualSoulfind.Capture.IObservationStore, VirtualSoulfind.Capture.InMemoryObservationStore>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilderStub>();
+
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 

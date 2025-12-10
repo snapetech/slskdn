@@ -347,6 +347,16 @@ namespace slskd
         public IntegrationOptions Integration { get; init; } = new IntegrationOptions();
 
         /// <summary>
+        /// Gets or sets warm cache configuration.
+        /// </summary>
+        public WarmCacheOptions? WarmCache { get; set; }
+
+        /// <summary>
+        /// Gets or sets Virtual Soulfind configuration.
+        /// </summary>
+        public VirtualSoulfindOptions? VirtualSoulfind { get; set; }
+
+        /// <summary>
         ///     Handles top-level validation that doesn't fit anywhere else.
         /// </summary>
         /// <param name="validationContext"></param>
