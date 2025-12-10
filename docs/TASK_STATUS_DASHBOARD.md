@@ -122,8 +122,8 @@ Overall: ██████░░░░░░░░░░░░░░  28% (48/1
 - ✅ T-601: Implement job manifest export
 - ✅ T-602: Build job manifest import
 
-### Phase 4B: Session Traces / Swarm Debugging (0/3) 📋
-- ⏳ T-603: Define swarm event model
+### Phase 4B: Session Traces / Swarm Debugging (1/3) 🔄
+- ✅ T-603: Define swarm event model
 - ⏳ T-604: Implement event persistence and rotation
 - ⏳ T-605: Build session trace summaries
 

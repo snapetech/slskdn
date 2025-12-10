@@ -397,11 +397,11 @@
 
 #### Phase 4B: Session Traces / Swarm Debugging
 
-- [ ] **T-603**: Define swarm event model
-  - Status: Not started
+- [x] **T-603**: Define swarm event model
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Define structured events: job/track/variant/peer IDs, timestamps, action (chunk_request, chunk_received, error, rescue_invoked, etc.), source (Soulseek vs overlay).
+  - Notes: Event model with type/source/backend, job/track/variant/peer, chunk and byte context, timestamp/error fields.
 
 - [ ] **T-604**: Implement event persistence and rotation
   - Status: Not started
