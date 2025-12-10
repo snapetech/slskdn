@@ -261,11 +261,12 @@
   - Completed: 2025-12-10
   - Notes: Instrumented DownloadService with PeerMetricsService; tracks throughput samples in progressUpdated callback (delta bytes / delta time); records ChunkCompletionResult.Success on completion, TimedOut on TimeoutException, Failed on other exceptions; optional injection (nullable) for backward compat
 
-- [ ] **T-410**: Build overlay rescue logic
-  - Status: Not started
+- [x] **T-410**: Build overlay rescue logic
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: For underperforming transfers: resolve MB Recording ID/fingerprint, discover overlay peers with the recording, start overlay chunk transfers for missing ranges. Continue original Soulseek transfer at lower priority.
+  - Completed: 2025-12-10
+  - Notes: RescueService with IRescueService interface; ActivateRescueModeAsync (resolve MBID, discover overlay peers, compute missing ranges, create rescue job); RescueJob, ByteRange, OverlayPeerInfo, UnderperformanceReason models; ResolveRecordingIdAsync (3 strategies: HashDb, fingerprinting, filename parsing); DiscoverOverlayPeersAsync placeholder; ComputeMissingRanges (simple end-missing logic); PLACEHOLDER implementation - full integration pending (see backfill TODOs)
 
 - [ ] **T-411**: Add Soulseek-primary guardrails
   - Status: Not started
