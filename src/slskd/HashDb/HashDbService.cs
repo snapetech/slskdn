@@ -66,6 +66,7 @@ namespace slskd.HashDb
         private readonly TranscodeDetector transcodeDetector = new();
         private readonly FlacAnalyzer flacAnalyzer = new();
         private readonly Mp3Analyzer mp3Analyzer = new();
+        private readonly OpusAnalyzer opusAnalyzer = new();
         private long currentSeqId;
 
         /// <summary>
@@ -417,6 +418,33 @@ namespace slskd.HashDb
                 catch (Exception ex)
                 {
                     log.Warning(ex, "[HashDb] MP3 analysis failed for {File}", filePath);
+                    variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
+                    var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
+                    variant.TranscodeSuspect = suspect;
+                    variant.TranscodeReason = reason;
+                }
+            }
+            else if (string.Equals(variant.Codec, "Opus", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var opusResult = opusAnalyzer.Analyze(filePath, variant);
+
+                    variant.OpusStreamHash = opusResult.OpusStreamHash;
+                    variant.OpusNominalBitrateKbps = opusResult.OpusNominalBitrateKbps;
+                    variant.OpusApplication = opusResult.OpusApplication;
+                    variant.OpusBandwidthMode = opusResult.OpusBandwidthMode;
+                    variant.EffectiveBandwidthHz = opusResult.EffectiveBandwidthHz;
+                    variant.HfEnergyRatio = opusResult.HfEnergyRatio;
+                    variant.AnalyzerVersion = opusResult.AnalyzerVersion;
+
+                    variant.QualityScore = opusResult.QualityScore;
+                    variant.TranscodeSuspect = opusResult.TranscodeSuspect;
+                    variant.TranscodeReason = opusResult.TranscodeReason;
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[HashDb] Opus analysis failed for {File}", filePath);
                     variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
                     var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
                     variant.TranscodeSuspect = suspect;

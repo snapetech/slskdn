@@ -184,8 +184,9 @@
   - Branch: experimental/brainz
   - Notes: Tag-stripped stream hash, encoder detection (LAME), spectral features (bandwidth, flatness), transcode detection.
 
-- [ ] **T-423**: Implement Opus analyzer
-  - Status: Not started
+- [x] **T-423**: Implement Opus analyzer
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Ogg Opus stream hash, bitrate/bandwidth mode extraction, quality scoring tuned for Opus.
