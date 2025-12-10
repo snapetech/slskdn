@@ -4,6 +4,7 @@ import Data from './Data';
 import Events from './Events';
 import Files from './Files';
 import Info from './Info';
+import LibraryHealth from './LibraryHealth';
 import Logs from './Logs';
 import Network from './Network';
 import Options from './Options';
@@ -123,6 +124,19 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'shares',
+    },
+    {
+      menuItem: {
+        content: 'Library Health',
+        icon: 'heartbeat',
+        key: 'library-health',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <LibraryHealth />
+        </Tab.Pane>
+      ),
+      route: 'library-health',
     },
     {
       menuItem: {

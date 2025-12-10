@@ -28,7 +28,7 @@ namespace slskd.LibraryHealth
 
         public async Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default)
         {
-            var scanId = Ulid.NewUlid().ToString();
+            var scanId = Guid.NewGuid().ToString();
             var scan = new LibraryHealthScan
             {
                 ScanId = scanId,
@@ -69,7 +69,7 @@ namespace slskd.LibraryHealth
         public Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)
         {
             // Placeholder: remediation job orchestration lives in T-404/T-405
-            var jobId = Ulid.NewUlid().ToString();
+            var jobId = Guid.NewGuid().ToString();
             log.LogInformation("[LH] Created remediation job {JobId} for {Count} issues", jobId, issueIds?.Count ?? 0);
             return Task.FromResult(jobId);
         }

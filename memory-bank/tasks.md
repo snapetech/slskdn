@@ -144,8 +144,9 @@
   - Branch: experimental/brainz
   - Notes: Background/on-demand job to walk library paths, resolve MB IDs via fingerprints, compare to canonical stats. Emit issues: suspected transcodes, non-canonical variants, track not in tagged release, missing tracks.
 
-- [ ] **T-404**: Build library health UI/API
-  - Status: Not started
+- [x] **T-404**: Build library health UI/API
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Provide aggregate and per-issue views (by type, artist, release). Allow marking issues as "ignored" or "resolved".
