@@ -10,7 +10,7 @@
 
 ```
 Phase 1:  ████████████████████ 100% (14/14 tasks complete)
-Phase 2:  █████░░░░░░░░░░░░░░░  23% ( 5/22 tasks complete)
+Phase 2:  ███████████░░░░░░░░░  50% (11/22 tasks complete)
 Phase 3:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/11 tasks complete)
 Phase 4:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/12 tasks complete)
 Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
@@ -18,7 +18,7 @@ Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/30 tasks complete)
 
-Overall: ███░░░░░░░░░░░░░░░░░  12% (19/160 tasks complete)
+Overall: ████░░░░░░░░░░░░░░░░  16% (25/160 tasks complete)
 ```
 
 ---
@@ -51,20 +51,20 @@ Overall: ███░░░░░░░░░░░░░░░░░  12% (19/1
 
 ## 🔄 Phase 2: Canonical Scoring & Library Health (IN PROGRESS)
 
-**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 4/22 (18%)
+**Branch**: `experimental/brainz` | **Status**: 🔄 In Progress | **Progress**: 11/22 (50%)
 
 ### Phase 2A: Canonical Edition Scoring (3/3) ✅
 - ✅ T-400: Implement local quality scoring for AudioVariant (Completed: 2025-12-10)
 - ✅ T-401: Build canonical stats aggregation per recording/release (Completed: 2025-12-10)
 - ✅ T-402: Integrate canonical-aware download selection (Completed: 2025-12-10)
 
-### Phase 2B: Collection Doctor / Library Health (2/3) ✅
+### Phase 2B: Collection Doctor / Library Health (3/3) ✅
 - ✅ T-403: Implement library scan service (Completed: 2025-12-10)
 - ✅ T-404: Build library health UI/API (Completed: 2025-12-10)
-- ⏳ T-405: Add "Fix via multi-swarm" actions [NEXT]
+- ✅ T-405: Add "Fix via multi-swarm" actions (Completed: 2025-12-10)
 
 ### Phase 2-Extended: Advanced AudioVariant Fingerprinting (0/11) 📋
-- ⏳ T-420: Extend AudioVariant model with codec-specific fields
+- ⏳ T-420: Extend AudioVariant model with codec-specific fields [NEXT]
 - ⏳ T-421: Implement FLAC analyzer
 - ⏳ T-422: Implement MP3 analyzer
 - ⏳ T-423: Implement Opus analyzer
@@ -76,15 +76,15 @@ Overall: ███░░░░░░░░░░░░░░░░░  12% (19/1
 - ⏳ T-429: Add codec-specific stats to Library Health
 - ⏳ T-430: Unit tests for codec analyzers
 
-### Phase 2C: RTT + Throughput-Aware Swarm Scheduler (0/3) 📋
-- ⏳ T-406: Implement per-peer metrics collection
-- ⏳ T-407: Build configurable cost function for peer ranking
-- ⏳ T-408: Integrate cost-based scheduling into swarm manager
+### Phase 2C: RTT + Throughput-Aware Swarm Scheduler (3/3) ✅
+- ✅ T-406: Implement per-peer metrics collection (Completed: 2025-12-10)
+- ✅ T-407: Build configurable cost function for peer ranking (Completed: 2025-12-10)
+- ✅ T-408: Integrate cost-based scheduling into swarm manager (Completed: 2025-12-10)
 
-### Phase 2D: Rescue Mode for Underperforming Soulseek Transfers (0/3) 📋
-- ⏳ T-409: Implement transfer underperformance detection
-- ⏳ T-410: Build overlay rescue logic
-- ⏳ T-411: Add Soulseek-primary guardrails
+### Phase 2D: Rescue Mode for Underperforming Soulseek Transfers (3/3) ✅
+- ✅ T-409: Implement transfer underperformance detection (Completed: 2025-12-10)
+- ✅ T-410: Build overlay rescue logic (Completed: 2025-12-10)
+- ✅ T-411: Add Soulseek-primary guardrails (Completed: 2025-12-10)
 
 ---
 
@@ -268,30 +268,30 @@ Overall: ███░░░░░░░░░░░░░░░░░  12% (19/1
 
 ## 🎯 Current Sprint (Next 5 Tasks)
 
-1. **T-405** (P1): Add "Fix via multi-swarm" actions [NEXT]
+1. **T-420** (P1): Extend AudioVariant model with codec-specific fields [NEXT]
    - Status: Not started
-   - Blocker: T-404 (complete)
-   - Estimated: 2-3 days
-
-2. **T-406** (P1): Implement per-peer metrics collection
-   - Status: Not started
-   - Blocker: T-405
-   - Estimated: 1-2 days
-
-3. **T-420** (P1): Extend AudioVariant model with codec-specific fields
-   - Status: Not started
-   - Blocker: None (can start in parallel)
+   - Blocker: None
    - Estimated: 1 day
 
-4. **T-421** (P1): Implement FLAC analyzer
+2. **T-421** (P1): Implement FLAC analyzer
    - Status: Not started
    - Blocker: T-420
    - Estimated: 2-3 days
 
-5. **T-422** (P1): Implement MP3 analyzer
+3. **T-422** (P1): Implement MP3 analyzer
    - Status: Not started
    - Blocker: T-420
    - Estimated: 2-3 days
+
+4. **T-500** (P1): Build MB artist release graph service
+   - Status: Not started
+   - Blocker: None (can start in parallel with Phase 2-Extended)
+   - Estimated: 2-3 days
+
+5. **T-501** (P1): Define discography profiles
+   - Status: Not started
+   - Blocker: T-500
+   - Estimated: 1-2 days
 
 ---
 
@@ -323,18 +323,13 @@ Overall: ███░░░░░░░░░░░░░░░░░  12% (19/1
 
 ### 🔄 Milestone 2: Quality-Aware Downloads (IN PROGRESS)
 - Phase 2A-2B (T-400 to T-405)
-- Status: 🔄 **23% Complete** (5/22 tasks)
-- Target: End of Week 2
+- Status: ✅ **Complete** (5/5 tasks)
+- Completed: 2025-12-10
 
-### 📋 Milestone 3: Production-Grade Audio Analysis
-- Phase 2-Extended (T-420 to T-430)
-- Status: 📋 **Ready**
-- Target: End of Week 4
-
-### 📋 Milestone 4: Advanced Swarm Features
+### 🔄 Milestone 4: Advanced Swarm Features (COMPLETE)
 - Phase 2C-2D (T-406 to T-411)
-- Status: 📋 **Ready**
-- Target: End of Week 6
+- Status: ✅ **Complete** (6/6 tasks)
+- Completed: 2025-12-10
 
 ### 📋 Milestone 5: Intelligent Discovery
 - Phase 3 (T-500 to T-510)
@@ -376,9 +371,9 @@ Phase 8:  ■■■■■■■■■■■■■■■■■■■■■■■�
 ## 🏆 Completion Metrics
 
 - **Total Tasks**: 160
-- **Completed**: 19 (12%)
+- **Completed**: 25 (16%)
 - **In Progress**: 0 (0%)
-- **Ready**: 141 (88%)
+- **Ready**: 135 (84%)
 - **Blocked**: 0 (0%)
 
 **Estimated Remaining Time**: 56-76 weeks
