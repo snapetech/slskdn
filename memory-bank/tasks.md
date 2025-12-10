@@ -302,71 +302,71 @@
   - Branch: experimental/brainz
   - Notes: Fetch and cache Release Groups for MB Artist ID. Fetch Releases under each group (albums, EPs, etc.) from MusicBrainz API.
 
-- [ ] **T-501**: Define discography profiles
-  - Status: Not started
+ - [x] **T-501**: Define discography profiles
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Define profiles: core_discography (main studio albums), extended_discography (core + selected EPs/live), all_releases (everything). Represent as lists of MB Release IDs.
+  - Notes: Core/extended/all profiles mapped to release-group types (albums, EPs, live, singles, comps, soundtracks, remixes).
 
-- [ ] **T-502**: Implement discography job type
-  - Status: Not started
+- [x] **T-502**: Implement discography job type
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Create discography job: input MB Artist ID + profile, create sub-jobs (one mb_release job per release), aggregate progress across sub-jobs.
+  - Notes: Discography job creates per-release sub-jobs, persists progress in HashDb, aggregates status.
 
 #### Phase 3B: Label Crate Mode
 
-- [ ] **T-503**: Build label presence aggregation
-  - Status: Not started
+- [x] **T-503**: Build label presence aggregation
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: From overlay metadata, count releases per label per mesh view. Maintain local popularity metrics per label.
+  - Notes: Aggregate label counts from AlbumTargets; exposed via HashDb helpers.
 
-- [ ] **T-504**: Implement label crate job type
-  - Status: Not started
+- [x] **T-504**: Implement label crate job type
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Create label_crate job: input label name/MB Label ID + limit, select top N releases by popularity, spawn mb_release sub-jobs, provide progress across the crate.
+  - Notes: Label crate jobs with per-release sub-jobs; API endpoints to create and query.
 
 #### Phase 3C: Local-Only Peer Reputation
 
-- [ ] **T-505**: Implement peer reputation metric collection
-  - Status: Not started
+- [x] **T-505**: Implement peer reputation metric collection
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Track per-peer: successful chunks, failed/corrupt chunks, timeouts, peer-initiated cancellations.
+  - Notes: Peer metrics persisted in HashDb; collects success/fail/timeout/corrupt events with EMAs.
 
-- [ ] **T-506**: Build reputation scoring algorithm
-  - Status: Not started
+- [x] **T-506**: Build reputation scoring algorithm
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Compute reputation_score (0..1) from metrics. Add decay over time so old behaviour doesn't dominate.
+  - Notes: Reputation score with decay (half-life), weighted updates per outcome, stored with metrics.
 
-- [ ] **T-507**: Integrate reputation into swarm scheduling
-  - Status: Not started
+- [x] **T-507**: Integrate reputation into swarm scheduling
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Integrate reputation into peer selection: down-weight or quarantine low-score peers. Keep reputation strictly local (no sharing).
+  - Notes: Chunk scheduler filters low-rep peers and uses reputation-weighted cost function.
 
 #### Phase 3D: Mesh-Level Fairness Governor
 
-- [ ] **T-508**: Implement traffic accounting
-  - Status: Not started
+- [x] **T-508**: Implement traffic accounting
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Track overlay_upload_bytes, overlay_download_bytes, soulseek_upload_bytes, soulseek_download_bytes globally.
+  - Notes: TrafficStats table + HashDb API + service to accumulate overlay/Soulseek upload/download totals.
 
-- [ ] **T-509**: Build fairness constraint enforcement
-  - Status: Not started
+- [x] **T-509**: Build fairness constraint enforcement
+  - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
-  - Notes: Implement configurable invariants: minimum overlay upload/download ratio, maximum overlay-to-Soulseek upload ratio. If violated: throttle overlay downloads, increase Soulseek preference.
+  - Notes: FairnessGuard computes ratios and throttle decisions from traffic totals; DI-registered.
 
-- [ ] **T-510**: Add contribution summary UI (optional)
-  - Status: Not started
+- [x] **T-510**: Add contribution summary API/UI (optional)
+  - Status: Done
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: Provide per-time-window summary: overlay vs Soulseek bytes and ratios. Informational only; logic remains in fairness governor.
+  - Notes: /api/v0/fairness/summary returns throttle flag, ratios, and traffic totals for display.
 
 ---
 
@@ -1400,5 +1400,5 @@
 
 ---
 
-*Last updated: December 9, 2025*
+*Last updated: December 10, 2025*
 
