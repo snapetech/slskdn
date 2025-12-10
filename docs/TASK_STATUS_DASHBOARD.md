@@ -13,14 +13,14 @@ Phase 1:  ████████████████████ 100% (14/
 Phase 2:  ████████████████████ 100% (22/22 tasks complete)
 Phase 3:  ████████████████████ 100% (11/11 tasks complete)
 Phase 4:  ████████████████████ 100% (12/12 tasks complete)
-Phase 5:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete)
+Phase 5:  ████████████████████ 100% (13/13 tasks complete)
 Phase 6:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/52 tasks complete)
 Phase 7:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/16 tasks complete)
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/13 tasks complete) [MeshCore/MediaCore]
 Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% ( 0/32 tasks complete) [PodCore + Soulseek Bridge]
 Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% ( 0/2 tasks complete) [Domain Apps]
 
-Overall: ██████░░░░░░░░░░░░░░  27% (59/217 tasks complete)
+Overall: ████████░░░░░░░░░░░░  33% (72/217 tasks complete)
 ```
 
 ---
