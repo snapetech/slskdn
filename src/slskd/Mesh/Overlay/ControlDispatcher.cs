@@ -14,18 +14,19 @@ public interface IControlDispatcher
 public class ControlDispatcher : IControlDispatcher
 {
     private readonly ILogger<ControlDispatcher> logger;
+    private readonly IControlSigner signer;
 
-    public ControlDispatcher(ILogger<ControlDispatcher> logger)
+    public ControlDispatcher(ILogger<ControlDispatcher> logger, IControlSigner signer)
     {
         this.logger = logger;
+        this.signer = signer;
     }
 
     public Task<bool> HandleAsync(ControlEnvelope envelope, CancellationToken ct = default)
     {
-        // Basic signature presence check
-        if (string.IsNullOrWhiteSpace(envelope.PublicKey) || string.IsNullOrWhiteSpace(envelope.Signature))
+        if (!signer.Verify(envelope))
         {
-            logger.LogWarning("[Overlay] Reject envelope: missing signature");
+            logger.LogWarning("[Overlay] Reject envelope: signature invalid");
             return Task.FromResult(false);
         }
 

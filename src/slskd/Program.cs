@@ -807,7 +807,9 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IContentPeerPublisher, Mesh.Dht.ContentPeerPublisher>();
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
+            services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();
             services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
+            services.AddSingleton<Mesh.Overlay.Ed25519KeyPair>();
             services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
             services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.UdpOverlayClient>();
 
