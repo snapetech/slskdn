@@ -16,10 +16,10 @@ Phase 4:  ████████████████████ 100% ( 12
 Phase 5:  ████████████████████ 100% ( 13/13  tasks complete)
 Phase 6:  ████████████████████ 100% ( 52/52  tasks complete)
 Phase 7:  ████████████████████ 100% ( 16/16  tasks complete)
-Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/13  tasks complete) [MeshCore/MediaCore]
-Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/32  tasks complete) [PodCore + Soulseek Bridge]
-Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% (  0/2   tasks complete) [Domain Apps]
-Phase 11: ░░░░░░░░░░░░░░░░░░░░   0% (  0/30  tasks complete) [Code Quality & Refactoring]
+Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) [MeshCore Foundation]
+Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) [MediaCore Foundation]
+Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% (  0/32  tasks complete) [PodCore + Chat Bridge]
+Phase 11: ░░░░░░░░░░░░░░░░░░░░   0% (  0/15  tasks complete) [Code Quality]
 
 Overall: ████████████████░░░░  64% (140/217 tasks complete)
 ```
@@ -271,127 +271,123 @@ Overall: ████████████████░░░░  64% (140/
 
 ---
 
-## 📋 Phase 8: MeshCore & MediaCore (Research Phase)
+## 📋 Phase 8: MeshCore Foundation (Research Phase)
 
-**Branch**: TBD | **Status**: 📋 Ready | **Progress**: 0/13 (0%)
+**Branch**: TBD | **Status**: 📋 Ready | **Progress**: 0/7 (0%)
 
-*Research phase for mesh networking and media identification infrastructure.*
+*Research phase for decentralized mesh networking infrastructure.*
 
-### Phase 8A: MeshCore Foundation (7 tasks) 📋
-- ⏳ Research DHT architecture and key patterns
-- ⏳ Design Ed25519 signed identity system
-- ⏳ Prototype DHT node and routing table
-- ⏳ Design DHT storage with TTL and signatures
-- ⏳ Design DHT bootstrap and discovery
-- ⏳ Research overlay protocol design
-- ⏳ Research NAT traversal strategies
-
-### Phase 8B: MediaCore Foundation (6 tasks) 📋
-- ⏳ Research ContentID architecture
-- ⏳ Design multi-domain content addressing
-- ⏳ Design IPLD/IPFS integration strategy
-- ⏳ Research perceptual hash research
-- ⏳ Design fuzzy content matching
-- ⏳ Design metadata portability layer
+- ⏳ T-1032: Research DHT architecture and key patterns
+- ⏳ T-1033: Design Ed25519 signed identity system
+- ⏳ T-1034: Prototype DHT node and routing table
+- ⏳ T-1035: Design DHT storage with TTL and signatures
+- ⏳ T-1036: Design DHT bootstrap and discovery
+- ⏳ T-1037: Research overlay protocol design
+- ⏳ T-1038: Research NAT traversal strategies
 
 ---
 
-## 📋 Phase 9: PodCore & Soulseek Chat Bridge (Research Phase)
+## 📋 Phase 9: MediaCore Foundation (Research Phase)
+
+**Branch**: TBD | **Status**: 📋 Ready | **Progress**: 0/6 (0%)
+
+*Research phase for multi-domain media identification infrastructure.*
+
+- ⏳ T-1039: Research ContentID architecture
+- ⏳ T-1040: Design multi-domain content addressing
+- ⏳ T-1041: Design IPLD/IPFS integration strategy
+- ⏳ T-1042: Research perceptual hash systems
+- ⏳ T-1043: Design fuzzy content matching
+- ⏳ T-1044: Design metadata portability layer
+
+---
+
+## 📋 Phase 10: PodCore & Soulseek Chat Bridge
 
 **Branch**: TBD | **Status**: 📋 Ready | **Progress**: 0/32 (0%)
 
-*Research phase for social/community layer and Soulseek integration.*
+*Social/community layer with Soulseek chat integration.*
 
-### Phase 9A: PodCore Foundation (15 tasks) 📋
-- ⏳ Research pod identity and key management
-- ⏳ Design pod discovery mechanisms
-- ⏳ Design trust and reputation systems
-- ⏳ Research pod-to-pod messaging protocols
-- ⏳ Design group chat and rooms
-- ⏳ Research content sharing within pods
-- ⏳ Design moderation and governance
-- ⏳ Research pod metadata and profiles
-- ⏳ Design pod invitations and onboarding
-- ⏳ Research pod analytics and insights
-- ⏳ Design pod backups and exports
-- ⏳ Research pod federation strategies
-- ⏳ Design pod privacy controls
-- ⏳ Research pod UI/UX patterns
-- ⏳ Design pod API specifications
+### Phase 10A: Pod Identity & Discovery (5/5) 📋
+- ⏳ T-1000: Define pod data models (Pod, PodMember, PodRole)
+- ⏳ T-1001: Implement pod creation and metadata publishing
+- ⏳ T-1002: Build signed membership record system
+- ⏳ T-1003: Implement pod join/leave flows
+- ⏳ T-1004: Add pod discovery for listed pods
 
-### Phase 9B: Soulseek Chat Bridge (17 tasks) 📋
-- ⏳ Research Soulseek chat protocol
-- ⏳ Design room → pod mapping
-- ⏳ Design bidirectional message sync
-- ⏳ Research username mapping strategies
-- ⏳ Design presence and online status sync
-- ⏳ Research private message bridging
-- ⏳ Design room discovery from Soulseek
-- ⏳ Research moderation tools for bridged rooms
-- ⏳ Design chat history persistence
-- ⏳ Research notification systems
-- ⏳ Design bridge configuration UI
-- ⏳ Research bridge status monitoring
-- ⏳ Design fallback strategies
-- ⏳ Research bridge performance optimization
-- ⏳ Design bridge security considerations
-- ⏳ Research bridge testing strategies
-- ⏳ Design bridge documentation
+### Phase 10B: Pod Messaging (5/5) 📋
+- ⏳ T-1005: Define pod message data model
+- ⏳ T-1006: Implement decentralized message routing
+- ⏳ T-1007: Build local message storage and backfill
+- ⏳ T-1008: Add pod channels (general, custom)
+- ⏳ T-1009: Implement message validation and signature checks
 
----
+### Phase 10C: Content-Linked Pods (4/4) 📋
+- ⏳ T-1010: Implement content-linked pod creation
+- ⏳ T-1011: Build "collection vs pod" view
+- ⏳ T-1012: Define PodVariantOpinion data model
+- ⏳ T-1013: Implement variant opinion publishing and retrieval
 
-## 📋 Phase 10: Domain-Specific Applications (Research Phase)
+### Phase 10D: Pod Trust & Moderation (5/5) 📋
+- ⏳ T-1014: Integrate pod opinions into canonicality engine
+- ⏳ T-1015: Implement owner/moderator kick/ban actions
+- ⏳ T-1016: Build PodAffinity scoring (engagement, trust)
+- ⏳ T-1017: Integrate pod trust with SecurityCore
+- ⏳ T-1018: Add global reputation feed from pod abuse
 
-**Branch**: TBD | **Status**: 📋 Ready | **Progress**: 0/2 (0%)
+### Phase 10E: Pod UI (5/5) 📋
+- ⏳ T-1019: Design pod UI mockups (list, detail, chat, collection views)
+- ⏳ T-1020: Implement pod list and detail views
+- ⏳ T-1021: Build pod chat UI with safety guardrails
+- ⏳ T-1022: Add "collection vs pod" dashboard integration
+- ⏳ T-1023: Implement pod-scoped variant opinion UI
 
-*Research phase for extensibility to other media types.*
+### Phase 10F: Soulseek Chat Bridge (6/6) 📋
+- ⏳ T-1024: Design external binding data model
+- ⏳ T-1025: Implement ISoulseekChatBridge interface
+- ⏳ T-1026: Add ExternalBinding to PodMetadata
+- ⏳ T-1027: Implement bound channel creation and mirroring
+- ⏳ T-1028: Add two-way mirroring (Mirror mode)
+- ⏳ T-1029: Build pod-from-room creation flow
+- ⏳ T-1030: Add Soulseek identity mapping
+- ⏳ T-1031: Implement bound channel UI with safety indicators
 
-- ⏳ Research extensibility for other media domains
-- ⏳ Design plugin architecture for domain apps
+### Phase 10G: Domain Apps (2/2) 📋
+- ⏳ T-1100: Design Soulbeet (music) app architecture
+- ⏳ T-1101: Research extensibility for other media domains
 
 ---
 
 ## 📋 Phase 11: Code Quality & Refactoring
 
-**Branch**: TBD | **Status**: 📋 Ready | **Progress**: 0/30 (0%)
+**Branch**: `experimental/brainz` | **Status**: 📋 Ready | **Progress**: 0/15 (0%)
 
 *Post-implementation quality improvements and architectural refinement.*
 
-### Architecture & Design (10 tasks) 📋
-- ⏳ Extract overlay protocol to library
-- ⏳ Refactor job system architecture
-- ⏳ Implement plugin system for job types
-- ⏳ Add comprehensive API versioning
-- ⏳ Refactor configuration system
-- ⏳ Implement feature flags system
-- ⏳ Add telemetry and observability
-- ⏳ Refactor database migrations
-- ⏳ Implement backup and restore
-- ⏳ Add disaster recovery procedures
+### Phase 11A: Configuration Cleanup (3/3) 📋
+- ⏳ T-1050: Create strongly-typed options
+- ⏳ T-1051: Wire options via IOptions<T>
+- ⏳ T-1052: Remove direct IConfiguration access
 
-### Performance & Scalability (10 tasks) 📋
-- ⏳ Optimize DHT query performance
-- ⏳ Add caching layer for MB queries
-- ⏳ Optimize fingerprint extraction
-- ⏳ Add batch processing for jobs
-- ⏳ Optimize database queries
-- ⏳ Add connection pooling
-- ⏳ Optimize memory usage
-- ⏳ Add rate limiting
-- ⏳ Optimize network protocols
-- ⏳ Add load balancing support
+### Phase 11B: Dependency Injection Cleanup (3/3) 📋
+- ⏳ T-1060: Eliminate static singletons
+- ⏳ T-1061: Add interfaces for subsystems
+- ⏳ T-1062: Constructor injection cleanup
 
-### Testing & Documentation (10 tasks) 📋
-- ⏳ Add comprehensive unit tests
-- ⏳ Add integration test suite
-- ⏳ Add end-to-end tests
-- ⏳ Add performance benchmarks
-- ⏳ Add security audit
-- ⏳ Create developer documentation
-- ⏳ Create user documentation
-- ⏳ Create API documentation
-- ⏳ Create deployment guide
-- ⏳ Create troubleshooting guide
+### Phase 11C: Integration Test Implementation (4/4) 📋
+- ⏳ T-1070: Implement Soulfind test harness
+- ⏳ T-1071: Implement MeshSimulator with DHT-first + disaster mode
+- ⏳ T-1072: Write integration-soulseek tests
+- ⏳ T-1073: Write integration-mesh tests
+
+### Phase 11D: Code Cleanup (4/4) 📋
+- ⏳ T-1080: Remove dead code
+- ⏳ T-1081: Normalize naming
+- ⏳ T-1082: Move narrative comments to docs
+- ⏳ T-1083: Collapse forwarding classes
+
+### Phase 11E: Extended Testing (1/1) 📋
+- ⏳ T-1090: Multi-client test orchestration (Alice/Bob/Carol topology)
 
 ---
 
@@ -426,16 +422,16 @@ Overall: ████████████████░░░░  64% (140/
 - Status: ✅ **Complete** - Completed: 2025-12-10
 
 ### 📋 Milestone 8: Mesh & Media Infrastructure
-- Phase 8 (Research)
+- Phase 8-9 (T-1032 to T-1044)
 - Status: 📋 **Ready** - Research phase
 
 ### 📋 Milestone 9: Social & Community Layer
-- Phase 9 (Research)
+- Phase 10 (T-1000 to T-1101)
 - Status: 📋 **Ready** - Research phase
 
 ### 📋 Milestone 10: Production Readiness
-- Phase 11 (Refactoring & Quality)
-- Status: 📋 **Planned**
+- Phase 11 (T-1050 to T-1090)
+- Status: 📋 **Ready** - Refactoring phase
 
 ---
 
