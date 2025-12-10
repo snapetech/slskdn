@@ -184,11 +184,14 @@ namespace slskd.Transfers.MultiSource.Metrics
             // Get all peers from cache and database
             var allMetrics = await hashDb.GetAllPeerMetricsAsync(ct).ConfigureAwait(false);
 
-            // Rank by throughput (descending) and success rate
-            return allMetrics
-                .OrderByDescending(m => m.ThroughputAvgBytesPerSec)
-                .ThenByDescending(m => m.SuccessRate)
+            // Use cost function to rank peers
+            var costFunction = new PeerCostFunction();
+            var rankedPeers = costFunction.RankPeers(allMetrics);
+
+            // Return top peers with metrics
+            return rankedPeers
                 .Take(limit)
+                .Select(rp => rp.Metrics)
                 .ToList();
         }
 
