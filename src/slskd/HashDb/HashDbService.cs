@@ -62,6 +62,7 @@ namespace slskd.HashDb
         private readonly IAutoTaggingService autoTaggingService;
         private readonly IMusicBrainzClient musicBrainzClient;
         private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
+        private readonly AudioSketchService audioSketchService;
         private readonly QualityScorer qualityScorer = new();
         private readonly TranscodeDetector transcodeDetector = new();
         private readonly FlacAnalyzer flacAnalyzer = new();
@@ -92,6 +93,10 @@ namespace slskd.HashDb
             this.autoTaggingService = autoTaggingService;
             this.musicBrainzClient = musicBrainzClient;
             this.optionsMonitor = optionsMonitor;
+            if (optionsMonitor != null)
+            {
+                audioSketchService = new AudioSketchService(optionsMonitor);
+            }
             dbPath = Path.Combine(appDirectory, "hashdb.db");
             InitializeDatabase();
             currentSeqId = GetLatestSeqIdSync();
@@ -486,6 +491,18 @@ namespace slskd.HashDb
                 var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
                 variant.TranscodeSuspect = suspect;
                 variant.TranscodeReason = reason;
+            }
+
+            if (audioSketchService != null && string.IsNullOrWhiteSpace(variant.AudioSketchHash))
+            {
+                try
+                {
+                    variant.AudioSketchHash = audioSketchService.ComputeSketchHash(filePath);
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[HashDb] Audio sketch hash failed for {File}", filePath);
+                }
             }
 
             return variant;

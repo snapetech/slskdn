@@ -198,8 +198,9 @@
   - Branch: experimental/brainz
   - Notes: AAC stream hash (MP4/ADTS), profile detection (LC/HE/HEv2), SBR/PS flags, transcode detection.
 
-- [ ] **T-425**: Implement audio_sketch_hash (PCM-window hash)
-  - Status: Not started
+- [x] **T-425**: Implement audio_sketch_hash (PCM-window hash)
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Decode short PCM windows from arbitrary audio files, downsample to mono 4 kHz, hash with xxHash64.
