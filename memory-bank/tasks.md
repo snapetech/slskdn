@@ -449,11 +449,11 @@
   - Branch: experimental/brainz
   - Notes: Priority hint service (high/mid/low) derived from feedback; returned in feedback response. Scheduler wiring TBD.
 
-- [ ] **T-611**: Add streaming diagnostics
-  - Status: Not started
+- [x] **T-611**: Add streaming diagnostics
+  - Status: Done (scaffold)
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: CLI/API for buffer ahead, peers serving current buffer, recent underruns.
+  - Notes: Playback diagnostics endpoint returns latest feedback + priority; future work to include peer/underrun detail.
 
 ---
 

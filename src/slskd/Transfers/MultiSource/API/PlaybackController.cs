@@ -43,5 +43,35 @@ namespace slskd.Transfers.MultiSource.API
             var priority = priorities.GetPriority(payload.JobId);
             return Ok(new { priority });
         }
+
+        /// <summary>
+        ///     Gets current playback diagnostics for a job.
+        /// </summary>
+        [HttpGet("{jobId}/diagnostics")]
+        public IActionResult GetDiagnostics(string jobId)
+        {
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return BadRequest("jobId is required");
+            }
+
+            var fb = priorities.GetLatest(jobId);
+            if (fb == null)
+            {
+                return NotFound();
+            }
+
+            var diag = new PlaybackDiagnostics
+            {
+                JobId = jobId,
+                TrackId = fb.TrackId,
+                PositionMs = fb.PositionMs,
+                BufferAheadMs = fb.BufferAheadMs,
+                Priority = priorities.GetPriority(jobId),
+            };
+
+            return Ok(diag);
+        }
     }
 }
+

@@ -13,6 +13,11 @@ namespace slskd.Transfers.MultiSource.Playback
         ///     High when buffer is low relative to desired, low when ahead.
         /// </summary>
         PriorityZone GetPriority(string jobId);
+
+        /// <summary>
+        ///     Gets the latest feedback for a job, if any.
+        /// </summary>
+        PlaybackFeedback? GetLatest(string jobId);
     }
 
     /// <summary>
@@ -60,5 +65,17 @@ namespace slskd.Transfers.MultiSource.Playback
 
             return PriorityZone.Mid;
         }
+
+        public PlaybackFeedback? GetLatest(string jobId)
+        {
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return null;
+            }
+
+            latest.TryGetValue(jobId, out var fb);
+            return fb;
+        }
     }
 }
+
