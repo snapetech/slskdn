@@ -28,27 +28,30 @@ namespace slskd.Audio
                 return null;
             }
 
+            // Deduplicate identical streams within the profile using codec-specific hashes
+            var distinctVariants = DeduplicateStreams(variants);
+
             var stats = new CanonicalStats
             {
                 Id = $"{recordingId}:{codecProfileKey}",
                 MusicBrainzRecordingId = recordingId,
                 CodecProfileKey = codecProfileKey,
-                VariantCount = variants.Count,
-                TotalSeenCount = variants.Sum(v => v.SeenCount <= 0 ? 1 : v.SeenCount),
-                AvgQualityScore = variants.Average(v => v.QualityScore),
-                MaxQualityScore = variants.Max(v => v.QualityScore),
-                PercentTranscodeSuspect = (variants.Count(v => v.TranscodeSuspect) / (double)variants.Count) * 100.0,
+                VariantCount = distinctVariants.Count,
+                TotalSeenCount = distinctVariants.Sum(v => v.SeenCount <= 0 ? 1 : v.SeenCount),
+                AvgQualityScore = distinctVariants.Average(v => v.QualityScore),
+                MaxQualityScore = distinctVariants.Max(v => v.QualityScore),
+                PercentTranscodeSuspect = (distinctVariants.Count(v => v.TranscodeSuspect) / (double)distinctVariants.Count) * 100.0,
                 LastUpdated = DateTimeOffset.UtcNow,
             };
 
-            stats.CodecDistribution = variants.GroupBy(v => v.Codec ?? "unknown")
+            stats.CodecDistribution = distinctVariants.GroupBy(v => v.Codec ?? "unknown")
                 .ToDictionary(g => g.Key, g => g.Count());
-            stats.BitrateDistribution = variants.GroupBy(v => RoundToNearestBitrate(v.BitrateKbps))
+            stats.BitrateDistribution = distinctVariants.GroupBy(v => RoundToNearestBitrate(v.BitrateKbps))
                 .ToDictionary(g => g.Key, g => g.Count());
-            stats.SampleRateDistribution = variants.GroupBy(v => v.SampleRateHz)
+            stats.SampleRateDistribution = distinctVariants.GroupBy(v => v.SampleRateHz)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            var bestVariant = variants
+            var bestVariant = distinctVariants
                 .OrderByDescending(v => v.QualityScore)
                 .ThenByDescending(v => v.SeenCount)
                 .First();
@@ -68,9 +71,12 @@ namespace slskd.Audio
                 return new List<AudioVariant>();
             }
 
+            // Deduplicate across codecs using stream hash or audio sketch + duration bucket
+            var deduped = DeduplicateStreams(variants, crossCodec: true);
+
             // Group by codec profile
             var statsByProfile = new Dictionary<string, CanonicalStats>();
-            foreach (var v in variants)
+            foreach (var v in deduped)
             {
                 var profileKey = CodecProfile.FromVariant(v).ToKey();
                 if (!statsByProfile.ContainsKey(profileKey))
@@ -80,8 +86,9 @@ namespace slskd.Audio
                 }
             }
 
-            return variants
-                .OrderByDescending(v =>
+            return deduped
+                .OrderByDescending(v => IsLossless(v.Codec))
+                .ThenByDescending(v =>
                 {
                     var key = CodecProfile.FromVariant(v).ToKey();
                     return statsByProfile.GetValueOrDefault(key)?.CanonicalityScore ?? 0.0;
@@ -109,6 +116,57 @@ namespace slskd.Audio
             if (bitrate <= 0) return 0;
             // round to nearest 32 kbps bucket
             return (int)(Math.Round(bitrate / 32.0) * 32);
+        }
+
+        private static List<AudioVariant> DeduplicateStreams(List<AudioVariant> variants, bool crossCodec = false)
+        {
+            return variants
+                .GroupBy(v => BuildDedupKey(v, crossCodec))
+                .Select(g => g
+                    .OrderByDescending(v => v.QualityScore)
+                    .ThenByDescending(v => v.SeenCount)
+                    .First())
+                .ToList();
+        }
+
+        private static string BuildDedupKey(AudioVariant v, bool crossCodec)
+        {
+            var streamHash = v.Codec switch
+            {
+                "FLAC" => v.FlacStreamInfoHash42 ?? v.FlacPcmMd5 ?? v.FileSha256,
+                "MP3" => v.Mp3StreamHash ?? v.FileSha256,
+                "Opus" => v.OpusStreamHash ?? v.FileSha256,
+                "AAC" => v.AacStreamHash ?? v.FileSha256,
+                _ => v.FileSha256,
+            };
+
+            var sketch = string.IsNullOrWhiteSpace(v.AudioSketchHash) ? "nosketch" : v.AudioSketchHash;
+            var durationBucket = RoundDuration(v.DurationMs);
+            var codecPart = crossCodec ? string.Empty : (v.Codec ?? "unknown");
+            return $"{codecPart}:{streamHash}:{sketch}:{durationBucket}";
+        }
+
+        private static int RoundDuration(int durationMs)
+        {
+            if (durationMs <= 0)
+            {
+                return 0;
+            }
+
+            const int bucketMs = 1500;
+            return (int)(Math.Round(durationMs / (double)bucketMs) * bucketMs);
+        }
+
+        private static bool IsLossless(string codec)
+        {
+            return codec switch
+            {
+                "FLAC" => true,
+                "ALAC" => true,
+                "WAV" => true,
+                "AIFF" => true,
+                _ => false,
+            };
         }
 
         private static double ComputeCanonicalityScore(AudioVariant variant, CanonicalStats stats)

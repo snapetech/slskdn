@@ -219,8 +219,9 @@
   - Branch: experimental/brainz
   - Notes: Background job to detect stale analyzer_version, recompute quality scores from raw features. CLI command.
 
-- [ ] **T-428**: Update CanonicalStatsService with codec-specific logic
-  - Status: Not started
+- [x] **T-428**: Update CanonicalStatsService with codec-specific logic
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Use codec-specific stream hashes for deduplication, prefer lossless over lossy explicitly, use audio_sketch_hash.
