@@ -811,7 +811,8 @@ namespace slskd
             services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
             services.AddSingleton<Mesh.Overlay.Ed25519KeyPair>();
             services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
-            services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.UdpOverlayClient>();
+            services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();
+            services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
 
             // MediaCore publisher
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.InMemoryContentDescriptorSource>();
