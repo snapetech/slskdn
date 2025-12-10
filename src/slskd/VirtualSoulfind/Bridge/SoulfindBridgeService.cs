@@ -182,4 +182,14 @@ public class BridgeOptions
     /// Bridge listening port (Soulseek protocol).
     /// </summary>
     public int Port { get; set; } = 2242;
+    
+    /// <summary>
+    /// Maximum concurrent legacy clients.
+    /// </summary>
+    public int MaxClients { get; set; } = 10;
+    
+    /// <summary>
+    /// Require authentication for bridge connections.
+    /// </summary>
+    public bool RequireAuth { get; set; } = false;
 }

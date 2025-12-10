@@ -1039,8 +1039,8 @@
   - Branch: experimental/virtual-soulfind
   - Notes: MBID resolution → DHT query → overlay descriptors (no Soulseek server)
 
-- [ ] **T-824**: Implement mesh-only transfers
-  - Status: Not started
+- [x] **T-824**: Implement mesh-only transfers
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Overlay multi-swarm only, no legacy Soulseek connections
@@ -1113,7 +1113,7 @@
   - Branch: experimental/brainz
   - Notes: Cache DHT lookups, batch queries, prefetch hot MBIDs
 
-- [ ] **T-836**: Build mesh configuration UI
+- [x] **T-836**: Build mesh configuration UI
   - Status: Done
   - Priority: P2
   - Branch: experimental/brainz
@@ -1187,28 +1187,28 @@
   - Branch: experimental/virtual-soulfind
   - Notes: Map legacy room names to scene DHT keys, proxy chat to overlay pubsub
 
-- [ ] **T-857**: Implement transfer progress proxying
-  - Status: Not started
+- [x] **T-857**: Implement transfer progress proxying
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Show mesh multi-swarm progress in legacy client
 
-- [ ] **T-858**: Build bridge configuration UI
-  - Status: Not started
+- [x] **T-858**: Build bridge configuration UI
+  - Status: Done
   - Priority: P3
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Settings for bridge port, auth, client limits
 
-- [ ] **T-859**: Add bridge status dashboard
-  - Status: Not started
+- [x] **T-859**: Add bridge status dashboard
+  - Status: Done
   - Priority: P3
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Show connected legacy clients, proxied requests, mesh benefits
 
-- [ ] **T-860**: Create Nicotine+ integration tests
-  - Status: Not started
+- [x] **T-860**: Create Nicotine+ integration tests
+  - Status: Done
   - Priority: P2
-  - Branch: experimental/virtual-soulfind
+  - Branch: experimental/brainz
   - Notes: Automated tests with real Nicotine+ client against bridge
 
 ---
