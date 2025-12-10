@@ -1305,26 +1305,26 @@
 
 #### Stage 4: Security Policy Engine (Week 7)
 
-- [ ] **T-1040**: Implement ISecurityPolicyEngine
-  - Status: Not started
+- [x] **T-1040**: Implement ISecurityPolicyEngine
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Policy engine abstraction with SecurityContext, SecurityDecision
 
-- [ ] **T-1041**: Create CompositeSecurityPolicy
-  - Status: Not started
+- [x] **T-1041**: Create CompositeSecurityPolicy
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Compose multiple policies with short-circuit evaluation
 
-- [ ] **T-1042**: Implement individual policies
-  - Status: Not started
+- [x] **T-1042**: Implement individual policies
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: NetworkGuardPolicy, ReputationPolicy, ConsensusPolicy, ContentSafetyPolicy, HoneypotPolicy, NatAbuseDetectionPolicy
 
-- [ ] **T-1043**: Replace inline security checks
-  - Status: Not started
+- [x] **T-1043**: Replace inline security checks
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Remove scattered security logic from controllers, use policy engine
