@@ -10,6 +10,7 @@ namespace slskd.LibraryHealth
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using slskd.HashDb;
+    using slskd.LibraryHealth.Remediation;
 
     /// <summary>
     /// Library Health scanner (simplified placeholder implementation).
@@ -17,12 +18,17 @@ namespace slskd.LibraryHealth
     public class LibraryHealthService : ILibraryHealthService
     {
         private readonly IHashDbService hashDb;
+        private readonly ILibraryHealthRemediationService remediationService;
         private readonly ILogger<LibraryHealthService> log;
         private readonly ConcurrentDictionary<string, LibraryHealthScan> activeScans = new();
 
-        public LibraryHealthService(IHashDbService hashDb, ILogger<LibraryHealthService> log)
+        public LibraryHealthService(
+            IHashDbService hashDb,
+            ILibraryHealthRemediationService remediationService,
+            ILogger<LibraryHealthService> log)
         {
             this.hashDb = hashDb;
+            this.remediationService = remediationService;
             this.log = log;
         }
 
@@ -66,12 +72,10 @@ namespace slskd.LibraryHealth
             return hashDb.UpdateLibraryIssueStatusAsync(issueId, newStatus, ct);
         }
 
-        public Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)
+        public async Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)
         {
-            // Placeholder: remediation job orchestration lives in T-404/T-405
-            var jobId = Guid.NewGuid().ToString();
-            log.LogInformation("[LH] Created remediation job {JobId} for {Count} issues", jobId, issueIds?.Count ?? 0);
-            return Task.FromResult(jobId);
+            log.LogInformation("[LH] Creating remediation job for {Count} issues", issueIds?.Count ?? 0);
+            return await remediationService.CreateRemediationJobAsync(issueIds, ct).ConfigureAwait(false);
         }
 
         public async Task<LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default)

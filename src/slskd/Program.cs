@@ -716,6 +716,7 @@ namespace slskd
                 sp.GetRequiredService<IOptionsMonitor<Options>>()));
             services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
+            services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();

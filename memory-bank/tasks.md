@@ -151,11 +151,12 @@
   - Branch: experimental/brainz
   - Notes: Provide aggregate and per-issue views (by type, artist, release). Allow marking issues as "ignored" or "resolved".
 
-- [ ] **T-405**: Add "Fix via multi-swarm" actions
-  - Status: Not started
+- [x] **T-405**: Add "Fix via multi-swarm" actions
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: From library health issues, allow "Download missing track(s)" or "Replace with canonical variant" by spawning MB Release/Recording jobs. Link job completion back to originating issue.
+  - Completed: 2025-12-10
+  - Notes: From library health issues, allow "Download missing track(s)" or "Replace with canonical variant" by spawning MB Release/Recording jobs. Link job completion back to originating issue. Remediation service implemented with UI fix buttons and bulk operations.
 
 #### Phase 2-Extended: Advanced AudioVariant Fingerprinting (Codec-Specific)
 
