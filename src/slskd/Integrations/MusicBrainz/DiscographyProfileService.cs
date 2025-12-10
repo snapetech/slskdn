@@ -48,6 +48,9 @@ namespace slskd.Integrations.MusicBrainz
             if (filter.IncludeSingles) allowedTypes.Add(ReleaseGroupType.Single);
             if (filter.IncludeCompilations) allowedTypes.Add(ReleaseGroupType.Compilation);
             if (filter.IncludeLive) allowedTypes.Add(ReleaseGroupType.Live);
+            if (filter.IncludeSoundtracks) allowedTypes.Add(ReleaseGroupType.Soundtrack);
+            if (filter.IncludeRemixes) allowedTypes.Add(ReleaseGroupType.Remix);
+            if (filter.IncludeOther) allowedTypes.Add(ReleaseGroupType.Other);
 
             bool CountryAllowed(string country)
             {

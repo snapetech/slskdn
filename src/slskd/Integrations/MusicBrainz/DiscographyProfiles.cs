@@ -23,6 +23,12 @@ namespace slskd.Integrations.MusicBrainz
 
         public bool IncludeLive { get; set; }
 
+        public bool IncludeSoundtracks { get; set; }
+
+        public bool IncludeRemixes { get; set; }
+
+        public bool IncludeOther { get; set; }
+
         public int? MinYear { get; set; }
 
         public int? MaxYear { get; set; }
@@ -40,6 +46,9 @@ namespace slskd.Integrations.MusicBrainz
                     IncludeSingles = false,
                     IncludeCompilations = false,
                     IncludeLive = false,
+                    IncludeSoundtracks = false,
+                    IncludeRemixes = false,
+                    IncludeOther = false,
                 },
                 DiscographyProfile.ExtendedDiscography => new()
                 {
@@ -48,6 +57,9 @@ namespace slskd.Integrations.MusicBrainz
                     IncludeSingles = false,
                     IncludeCompilations = false,
                     IncludeLive = true,
+                    IncludeSoundtracks = false,
+                    IncludeRemixes = false,
+                    IncludeOther = false,
                 },
                 DiscographyProfile.AllReleases => new()
                 {
@@ -56,6 +68,9 @@ namespace slskd.Integrations.MusicBrainz
                     IncludeSingles = true,
                     IncludeCompilations = true,
                     IncludeLive = true,
+                    IncludeSoundtracks = true,
+                    IncludeRemixes = true,
+                    IncludeOther = true,
                 },
                 _ => throw new ArgumentException($"Unknown profile: {profile}", nameof(profile)),
             };
