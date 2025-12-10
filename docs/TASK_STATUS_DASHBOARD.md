@@ -19,7 +19,7 @@ Phase 7:  ████████████████████ 100% ( 16
 Phase 8:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) [MeshCore Foundation]
 Phase 9:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) [MediaCore Foundation]
 Phase 10: ░░░░░░░░░░░░░░░░░░░░   0% (  0/32  tasks complete) [PodCore + Chat Bridge]
-Phase 11: ░░░░░░░░░░░░░░░░░░░░   0% (  0/15  tasks complete) [Code Quality]
+Phase 11: ░░░░░░░░░░░░░░░░░░░░   0% (  0/15  tasks complete) [Code Quality & Refactoring]
 
 Overall: ████████████████░░░░  64% (140/217 tasks complete)
 ```
