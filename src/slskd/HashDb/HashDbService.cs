@@ -65,6 +65,7 @@ namespace slskd.HashDb
         private readonly QualityScorer qualityScorer = new();
         private readonly TranscodeDetector transcodeDetector = new();
         private readonly FlacAnalyzer flacAnalyzer = new();
+        private readonly Mp3Analyzer mp3Analyzer = new();
         private long currentSeqId;
 
         /// <summary>
@@ -387,6 +388,35 @@ namespace slskd.HashDb
                 catch (Exception ex)
                 {
                     log.Warning(ex, "[HashDb] FLAC analysis failed for {File}", filePath);
+                    variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
+                    var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
+                    variant.TranscodeSuspect = suspect;
+                    variant.TranscodeReason = reason;
+                }
+            }
+            else if (string.Equals(variant.Codec, "MP3", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var mp3Result = mp3Analyzer.Analyze(filePath, variant);
+
+                    variant.Mp3StreamHash = mp3Result.Mp3StreamHash;
+                    variant.Mp3Encoder = mp3Result.Mp3Encoder;
+                    variant.Mp3EncoderPreset = mp3Result.Mp3EncoderPreset;
+                    variant.Mp3FramesAnalyzed = mp3Result.Mp3FramesAnalyzed;
+                    variant.EffectiveBandwidthHz = mp3Result.EffectiveBandwidthHz;
+                    variant.NominalLowpassHz = mp3Result.NominalLowpassHz;
+                    variant.SpectralFlatnessScore = mp3Result.SpectralFlatnessScore;
+                    variant.HfEnergyRatio = mp3Result.HfEnergyRatio;
+                    variant.AnalyzerVersion = mp3Result.AnalyzerVersion;
+
+                    variant.QualityScore = mp3Result.QualityScore;
+                    variant.TranscodeSuspect = mp3Result.TranscodeSuspect;
+                    variant.TranscodeReason = mp3Result.TranscodeReason;
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[HashDb] MP3 analysis failed for {File}", filePath);
                     variant.QualityScore = qualityScorer.ComputeQualityScore(variant);
                     var (suspect, reason) = transcodeDetector.DetectTranscode(variant);
                     variant.TranscodeSuspect = suspect;

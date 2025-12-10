@@ -177,8 +177,9 @@
   - Branch: experimental/brainz
   - Notes: STREAMINFO parser (42-byte hash, PCM MD5), quality scoring, transcode detection via spectral analysis.
 
-- [ ] **T-422**: Implement MP3 analyzer
-  - Status: Not started
+- [x] **T-422**: Implement MP3 analyzer
+  - Status: Done
+  - Completed: 2025-12-10
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Tag-stripped stream hash, encoder detection (LAME), spectral features (bandwidth, flatness), transcode detection.
