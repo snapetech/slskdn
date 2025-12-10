@@ -74,6 +74,12 @@ namespace slskd.Transfers.MultiSource.Metrics
         /// </summary>
         public double RttWeight { get; set; } = 0.2;
 
+        /// <summary>
+        ///     Gets or sets the reputation weight (ρ - rho).
+        ///     Higher value = penalize low reputation more strongly.
+        /// </summary>
+        public double ReputationWeight { get; set; } = 1.0;
+
         // Penalty multipliers
         /// <summary>
         ///     Gets or sets the penalty for peers with no throughput data.
@@ -84,6 +90,11 @@ namespace slskd.Transfers.MultiSource.Metrics
         ///     Gets or sets the penalty multiplier for high error/timeout rates.
         /// </summary>
         public double HighErrorRatePenalty { get; set; } = 10.0;
+
+        /// <summary>
+        ///     Gets or sets the penalty multiplier for low reputation (applied to (1 - reputation)).
+        /// </summary>
+        public double ReputationPenalty { get; set; } = 5.0;
 
         /// <summary>
         ///     Compute cost for a peer. Lower cost = better peer.
@@ -127,6 +138,11 @@ namespace slskd.Transfers.MultiSource.Metrics
                 double coefficientOfVariation = metrics.ThroughputStdDevBytesPerSec / metrics.ThroughputAvgBytesPerSec;
                 cost += 0.1 * coefficientOfVariation;
             }
+
+            // Component 6: Reputation penalty (lower reputation => higher cost)
+            // Reputation is in [0,1]; neutral = 0.5
+            var rep = Math.Clamp(metrics.ReputationScore, 0.0, 1.0);
+            cost += ReputationWeight * (1.0 - rep) * ReputationPenalty;
 
             return cost;
         }
