@@ -1,352 +1,251 @@
-# ✅ READY FOR CODEX - Implementation Handoff
+# Handoff to Codex: Next Phase Instructions
 
-> **Date**: December 10, 2025  
-> **Status**: 🟢 PLANNING COMPLETE - CLEARED FOR IMPLEMENTATION  
-> **Branch**: `experimental/brainz`  
-> **Commits**: 2 new commits with complete specifications
-
----
-
-## 🎯 What You're Getting
-
-**21 comprehensive documents**  
-**~50,000 lines of specifications**  
-**114 fully-defined tasks (T-400 to T-860)**  
-**Zero design decisions remaining**
+**Date**: December 10, 2025  
+**Session**: Phase 2C-D Complete (T-406 through T-411)  
+**Current Branch**: `experimental/brainz`  
+**Working Directory**: `/home/keith/Documents/Code/slskdn`
 
 ---
 
-## 📖 WHERE TO START
+## 🎉 Session Summary
 
-### Step 1: Read the Quick Start (5 minutes)
+**Completed**: 6 major tasks (T-406 to T-411)
+- ✅ Phase 2C: RTT + Throughput-Aware Swarm Scheduler (3 tasks)
+- ✅ Phase 2D: Rescue Mode Foundation (3 tasks)
+- ✅ Backfill: Multi-source job creation in RescueService
+
+**Overall Progress**: 25/160 tasks complete (16%)  
+**Phase 2 Progress**: 11/22 tasks complete (50%)
+
+---
+
+## 📍 Current State
+
+### Repository Location
 ```bash
-cat docs/START_HERE_CODEX.md
+cd /home/keith/Documents/Code/slskdn
 ```
 
-### Step 2: Read Phase 2 Overview (20 minutes)
+### Active Branch
 ```bash
-cat docs/phase2-implementation-guide.md
+git branch
+# Should show: * experimental/brainz
 ```
 
-### Step 3: Read First Task Spec (30 minutes)
+### Latest Commits
+```
+f70298f9 docs: update task dashboard (25/160 complete, Phase 2 50%)
+47be2db7 feat(transfers): add Soulseek-primary guardrails for rescue mode (T-411)
+8e8db8cc feat(transfers): complete multi-source job creation in RescueService (backfill)
+f8a57a09 feat(transfers): add rescue service for underperforming transfers (T-410)
+6a79e3b2 feat(transfers): instrument downloads with peer metrics tracking (T-409)
+```
+
+### Key Files Modified This Session
+- `src/slskd/Transfers/MultiSource/Metrics/` (3 new files)
+- `src/slskd/Transfers/MultiSource/Scheduling/` (2 new files)
+- `src/slskd/Transfers/Rescue/` (2 new files)
+- `src/slskd/Transfers/Downloads/DownloadService.cs` (metrics integration)
+- `src/slskd/Program.cs` (DI registration)
+
+---
+
+## 🎯 Next Tasks - Two Options
+
+You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in parallel):
+
+### Option 1: Phase 2-Extended - Advanced AudioVariant Fingerprinting
+
+**Start with**: **T-420** (Extend AudioVariant model with codec-specific fields)
+
+**Design Doc**: `/home/keith/Documents/Code/slskdn/docs/phase2-advanced-fingerprinting-design.md`
+
+**Task Spec** (from `memory-bank/tasks.md`):
+```
+- [ ] **T-420**: Extend AudioVariant model with codec-specific fields
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Add FLAC streaminfo hash (42 bytes), MP3 stream hash, Opus stream hash, 
+    AAC stream hash, audio_sketch_hash (PCM-window), spectral_fingerprint fields. 
+    Add analyzer_version for migration tracking.
+```
+
+**Next Steps**:
+1. Read design doc: `docs/phase2-advanced-fingerprinting-design.md`
+2. Extend `src/slskd/Audio/AudioVariant.cs` with new codec-specific fields
+3. Update database schema (add columns to AudioVariants table)
+4. Proceed to T-421 (FLAC analyzer), T-422 (MP3 analyzer), etc.
+
+**Estimated Duration**: 11 tasks, ~3-4 weeks
+
+---
+
+### Option 2: Phase 3 - Discovery, Reputation, and Fairness
+
+**Start with**: **T-500** (Build MB artist release graph service)
+
+**Design Doc**: `/home/keith/Documents/Code/slskdn/docs/phase3-discovery-reputation-fairness-design.md`
+
+**Task Spec** (from `memory-bank/tasks.md`):
+```
+- [ ] **T-500**: Build MB artist release graph service
+  - Status: Not started
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Query MusicBrainz for artist's full discography. Build release graph 
+    with relationships (recordings, release groups, labels). Cache in local DB. 
+    Expose API for discography job creation.
+```
+
+**Next Steps**:
+1. Read design doc: `docs/phase3-discovery-reputation-fairness-design.md`
+2. Create `src/slskd/Integrations/MusicBrainz/ReleaseGraphService.cs`
+3. Implement MusicBrainz artist query (paginated, rate-limited)
+4. Build local cache (SQLite table for release graphs)
+5. Proceed to T-501 (Discography profiles), T-502 (Discography job type)
+
+**Estimated Duration**: 11 tasks, ~3-4 weeks
+
+---
+
+## 🔧 Development Environment
+
+### Prerequisites
+- .NET 8 SDK
+- SQLite (for local DB)
+- All dependencies already installed (MusicBrainz client, AcoustID, Chromaprint, etc.)
+
+### Build and Test
 ```bash
-cat docs/phase2-canonical-scoring-design.md
+cd /home/keith/Documents/Code/slskdn
+dotnet build src/slskd/slskd.csproj
+dotnet test  # When tests exist
 ```
 
-### Step 4: Start Implementing
+### Run Application
 ```bash
-# Task T-400: AudioVariant model + quality scorer
-# Everything you need is in the spec above
+cd /home/keith/Documents/Code/slskdn
+dotnet run --project src/slskd/slskd.csproj
 ```
 
 ---
 
-## 📋 Implementation Checklist
+## 📚 Key Documentation
 
-For each task:
-- [ ] Read task section in design doc
-- [ ] Create files (types, services, controllers)
-- [ ] Add database migrations
-- [ ] Wire up dependency injection
-- [ ] Implement methods (logic provided)
-- [ ] Add configuration keys
-- [ ] Write tests (scenarios provided)
-- [ ] Run tests
-- [ ] Mark done in `memory-bank/tasks.md`
-- [ ] Move to next task
+### Design Documents (in `docs/`)
+- `phase2-advanced-fingerprinting-design.md` - T-420 to T-430 specs
+- `phase3-discovery-reputation-fairness-design.md` - T-500 to T-510 specs
+- `phase2-rescue-mode-design.md` - Just completed (reference)
+- `phase8-refactoring-design.md` - Future refactoring roadmap
 
----
+### Memory Bank (in `memory-bank/`)
+- `tasks.md` - Canonical task list (SOURCE OF TRUTH)
+- `activeContext.md` - Current project context
+- `adr-0001-known-gotchas.md` - Known issues and workarounds
 
-## 📚 Documentation Map
-
-### 🚀 Start Here (Required)
-1. **START_HERE_CODEX.md** ← Your quick start guide
-2. **phase2-implementation-guide.md** ← Phase 2 overview
-3. **phase2-canonical-scoring-design.md** ← Task T-400 (first task)
-
-### 📖 Reference (As Needed)
-- **COMPLETE_PLANNING_INDEX.md** - Navigate all docs
-- **FINAL_PLANNING_SUMMARY.md** - High-level overview
-- **phase2-*.md** (5 files) - Phase 2 detailed specs
-- **phase3-*.md** - Phase 3 detailed specs
-- **phase4-*.md** - Phase 4 detailed specs
-- **phase5-*.md** - Phase 5 detailed specs
-- **phase6-*.md** (3 files) - Phase 6 detailed specs
-
-### 🎨 Context (Optional)
-- **VISUAL_ARCHITECTURE_GUIDE.md** - For understanding the vision
-- **SESSION_SUMMARY.md** - What was accomplished in planning
-- **virtual-soulfind-mesh-architecture.md** - Phase 6 architecture
-
-### 🔧 Dev Notes
-- **dev/soulfind-integration-notes.md** - Dev-only usage of Soulfind
+### Task Dashboard
+- `docs/TASK_STATUS_DASHBOARD.md` - Visual progress tracking
 
 ---
 
-## 🎯 Task Sequence
-
-Work through phases **sequentially**:
-
-```
-Phase 2 (T-400 to T-411) → 8 weeks
-  ├─ T-400-402: Canonical scoring
-  ├─ T-403-405: Library health
-  ├─ T-406-408: Swarm scheduling
-  └─ T-409-411: Rescue mode
-
-Phase 3 (T-500 to T-510) → 10 weeks
-  ├─ T-500-503: Discovery
-  ├─ T-504-507: Reputation
-  └─ T-508-510: Fairness
-
-Phase 4 (T-600 to T-611) → 8 weeks
-  ├─ T-600-603: Manifests
-  ├─ T-604-607: Traces
-  └─ T-608-611: Advanced
-
-Phase 5 (T-700 to T-712) → 6 weeks
-  ├─ T-700-705: Compat layer
-  └─ T-706-712: Native APIs
-
-Phase 6 (T-800 to T-840) → 16 weeks
-  ├─ T-800-804: Capture pipeline
-  ├─ T-805-812: Shadow index
-  ├─ T-813-820: Scenes
-  ├─ T-821-830: Disaster mode
-  └─ T-831-840: Integration
-
-Phase 6X (T-850 to T-860) → 4 weeks [OPTIONAL]
-  └─ Compatibility bridge
-```
-
-**Total**: ~52 weeks (without bridge) or ~56 weeks (with bridge)
-
----
-
-## ✅ What Each Task Includes
-
-Every task specification provides:
-
-**1. Complete Type Definitions**
-```csharp
-namespace slskd.Canonical
-{
-    public class AudioVariant
-    {
-        public string FileHash { get; set; }
-        // ... (all properties specified)
-    }
-}
-```
-→ **Copy/paste ready**
-
-**2. Exact Method Signatures + Logic**
-```csharp
-public double ComputeQualityScore(AudioVariant variant)
-{
-    double score = 0.0;
-    // ... (algorithm provided)
-    return score;
-}
-```
-→ **Implementation guidance**
-
-**3. Database Schemas**
-```sql
-CREATE TABLE IF NOT EXISTS audio_variants (
-    file_hash TEXT PRIMARY KEY,
-    -- ... (all columns specified)
-);
-```
-→ **Migration ready**
-
-**4. Configuration Keys**
-```json
-{
-  "canonical": {
-    "enabled": true,
-    "transcode_threshold": 0.7
-  }
-}
-```
-→ **Settings defined**
-
-**5. API Endpoints**
-```csharp
-[HttpGet("quality/{hash}")]
-public async Task<IActionResult> GetQuality(string hash)
-{
-    // ... (request/response defined)
-}
-```
-→ **Routes specified**
-
-**6. Test Scenarios**
-```csharp
-[Fact]
-public void QualityScorer_Should_Detect_Transcode()
-{
-    // ... (arrange/act/assert provided)
-}
-```
-→ **Test coverage planned**
-
----
-
-## 🚨 Important Notes
-
-### Design Decisions
-**You don't need to make any.**  
-Every decision has been made. Just implement what's specified.
-
-### Dependencies
-**All in place from Phase 1:**
-- ✅ .NET 8
-- ✅ SQLite
-- ✅ React frontend
-- ✅ DHT library
-- ✅ MusicBrainz client
-- ✅ Chromaprint
+## 💡 Implementation Guidelines
 
 ### Code Style
-**Follow existing patterns:**
-- Dependency injection for services
-- `IOptionsMonitor<Options>` for config
-- Xunit + Moq for tests
-- Async/await throughout
-- Serilog logging
+- Follow existing patterns in `src/slskd/`
+- Use dependency injection (register in `Program.cs`)
+- Add XML documentation comments
+- Follow StyleCop rules (warnings are okay for now)
+
+### Testing
+- Write unit tests as you go (when test infrastructure exists)
+- Test with real MusicBrainz API calls (use rate limiting)
+- Verify database migrations work correctly
 
 ### Git Workflow
+1. Work on `experimental/brainz` branch
+2. Commit after each task completion
+3. Use descriptive commit messages (see recent commits as examples)
+4. Update `memory-bank/tasks.md` after completing tasks
+5. Push regularly to backup progress
+
+### Task Completion Checklist
+For each task (e.g., T-420):
+1. ✅ Read the task spec in `memory-bank/tasks.md`
+2. ✅ Read the relevant design doc
+3. ✅ Implement the feature
+4. ✅ Build and verify no errors
+5. ✅ Update `memory-bank/tasks.md` (mark as done, add completion date)
+6. ✅ Commit with descriptive message
+7. ✅ Push to remote
+
+---
+
+## 🚀 Recommended Next Steps
+
+**If continuing Phase 2** (codec analyzers):
 ```bash
-# After each task:
-git add .
-git commit -m "feat(canonical): implement AudioVariant model (T-400)"
-
-# After each phase:
-git push origin experimental/brainz
-```
-
----
-
-## 📊 Progress Tracking
-
-Update `memory-bank/tasks.md` after each task:
-
-```markdown
-- [x] **T-400**: Implement local quality scoring
-  - Status: Done
-  - Completed: 2025-12-XX
-```
-
-Check progress:
-```bash
-grep -c "Status: Done" memory-bank/tasks.md
-```
-
----
-
-## 🎉 Success Criteria
-
-### You'll Know You're Done When:
-
-**Phase 2**:
-- [ ] Quality scores computed for all audio
-- [ ] Library health dashboard working
-- [ ] Swarm uses cost-based peer selection
-- [ ] Rescue mode activates automatically
-
-**Phase 3**:
-- [ ] Discographies downloadable in bulk
-- [ ] Label crates functional
-- [ ] Reputation tracked and used
-- [ ] Fairness constraints enforced
-
-**Phase 4**:
-- [ ] Jobs export/import as YAML
-- [ ] Session traces available
-- [ ] Warm cache operational
-- [ ] Playback-aware swarming works
-
-**Phase 5**:
-- [ ] Soulbeet connects successfully
-- [ ] MBID jobs work via API
-- [ ] Integration tests pass
-
-**Phase 6**:
-- [ ] Shadow index operational
-- [ ] Scenes functional
-- [ ] Disaster mode tested
-- [ ] Mesh-only mode works
-
-**Phase 6X** (optional):
-- [ ] Bridge accepts legacy clients
-- [ ] MBID enhancement transparent
-- [ ] Nicotine+ test passes
-
----
-
-## 🌟 The Vision
-
-You're building a **next-generation P2P music network** that:
-
-✅ Works with Soulseek today  
-✅ Survives without Soulseek tomorrow  
-✅ Makes every client smarter  
-✅ Extends to legacy clients via bridge  
-✅ Remains fully decentralized  
-
-**The network that can't be stopped.**
-
----
-
-## ⚡ Quick Commands
-
-```bash
-# Navigate
 cd /home/keith/Documents/Code/slskdn
+# Start with T-420
+# Read: docs/phase2-advanced-fingerprinting-design.md
+# Edit: src/slskd/Audio/AudioVariant.cs
+```
 
-# Read start guide
-cat docs/START_HERE_CODEX.md
-
-# Read phase 2 overview
-cat docs/phase2-implementation-guide.md
-
-# Read first task
-cat docs/phase2-canonical-scoring-design.md
-
-# Start coding Task T-400
-mkdir -p src/slskd/Canonical/Models
-code src/slskd/Canonical/Models/AudioVariant.cs
-
-# Run tests
-cd tests/slskd.Tests.Unit
-dotnet test
-
-# Check progress
-grep "Status: Done" memory-bank/tasks.md
+**If starting Phase 3** (discovery):
+```bash
+cd /home/keith/Documents/Code/slskdn
+# Start with T-500
+# Read: docs/phase3-discovery-reputation-fairness-design.md
+# Create: src/slskd/Integrations/MusicBrainz/ReleaseGraphService.cs
 ```
 
 ---
 
-## 🎯 Your Mission
+## 📊 Progress Metrics
 
-**Implement 114 tasks over ~60 weeks.**  
-**Every task is fully specified.**  
-**No design decisions needed.**  
-**Pure execution.**
+- **Milestones Complete**: 2/8
+  - ✅ Milestone 1: MusicBrainz Foundation
+  - ✅ Milestone 2: Quality-Aware Downloads
+  - ✅ Milestone 4: Advanced Swarm Features
 
----
-
-## 🚀 Ready?
-
-**Status**: ✅ **CLEARED FOR IMPLEMENTATION**
-
-**Start here**: `docs/START_HERE_CODEX.md`
-
-**Let's build something revolutionary!** 🎉
+- **Current Velocity**: ~6 tasks per session
+- **Estimated Remaining**: ~27 sessions (at current pace)
 
 ---
 
-*Last updated: December 10, 2025*  
-*Planning by: Claude Sonnet 4.5*  
-*Implementation by: Codex (you!)*
+## 🎯 Success Criteria
+
+**Phase 2-Extended Complete When**:
+- All codec analyzers implemented (FLAC, MP3, Opus, AAC)
+- Cross-codec deduplication working
+- Audio sketch hash for PCM comparison
+- Canonical stats include codec-specific metrics
+
+**Phase 3 Complete When**:
+- Discography jobs download full artist catalogs
+- Label crate mode discovers popular releases
+- Peer reputation influences swarm scheduling
+- Fairness governor enforces upload/download ratios
+
+---
+
+## 📝 Notes
+
+### Outstanding Backfills (from T-410)
+- `t410-backfill-resolve`: Complete MBID resolution (HashDb lookup, fingerprinting)
+- `t410-backfill-discover`: Complete overlay peer discovery (needs mesh/DHT)
+- `t410-backfill-wire`: Wire RescueService to underperformance detector
+
+**These can wait** until Phase 6 (mesh infrastructure) or when you need them.
+
+### Known Dependencies
+- Phase 6 (Virtual Soulfind Mesh) needed for full rescue mode overlay discovery
+- Phase 7 (Testing) can run in parallel with any phase
+
+---
+
+**Good luck, Codex! You've got a solid foundation to build on.** 🚀
+
+**Working Directory**: `/home/keith/Documents/Code/slskdn`  
+**Branch**: `experimental/brainz`  
+**Next Task Options**: T-420 (Phase 2-Extended) OR T-500 (Phase 3)
