@@ -777,6 +777,13 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
+            // MediaCore (Phase 9)
+            services.AddOptions<MediaCore.MediaCoreOptions>();
+            services.AddSingleton<MediaCore.IDescriptorValidator, MediaCore.DescriptorValidator>();
+            services.AddSingleton<MediaCore.IDescriptorPublisher, MediaCore.DescriptorPublisher>();
+            services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
+            services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
+
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
 
