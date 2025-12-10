@@ -231,11 +231,12 @@
 
 #### Phase 2C: RTT + Throughput-Aware Swarm Scheduler
 
-- [ ] **T-406**: Implement per-peer metrics collection
-  - Status: Not started
+- [x] **T-406**: Implement per-peer metrics collection
+  - Status: Done
   - Priority: P1
   - Branch: experimental/brainz
-  - Notes: Track per-peer RTT average, throughput average (bytes/sec), error and timeout rates. Maintain sliding window / exponential moving averages.
+  - Completed: 2025-12-10
+  - Notes: PeerPerformanceMetrics model with EMA tracking for RTT, throughput, reliability; PeerMetricsService with sliding windows; HashDb placeholder methods (schema + persistence pending full implementation)
 
 - [ ] **T-407**: Build configurable cost function for peer ranking
   - Status: Not started

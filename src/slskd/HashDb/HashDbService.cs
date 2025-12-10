@@ -2073,6 +2073,25 @@ namespace slskd.HashDb
             issue.Metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(metaJson) ?? new Dictionary<string, object>();
             return issue;
         }
+
+        // Peer metrics methods (placeholder implementations for T-406)
+        public Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default)
+        {
+            // TODO (T-406): Implement database query for peer metrics
+            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>(null);
+        }
+
+        public Task UpsertPeerMetricsAsync(Transfers.MultiSource.Metrics.PeerPerformanceMetrics metrics, CancellationToken cancellationToken = default)
+        {
+            // TODO (T-406): Implement database upsert for peer metrics
+            return Task.CompletedTask;
+        }
+
+        public Task<List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>> GetAllPeerMetricsAsync(CancellationToken cancellationToken = default)
+        {
+            // TODO (T-406): Implement database query for all peer metrics
+            return Task.FromResult(new List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>());
+        }
     }
 }
 
