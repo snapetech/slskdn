@@ -16,18 +16,18 @@ public interface IControlSigner
 public class ControlSigner : IControlSigner
 {
     private readonly ILogger<ControlSigner> logger;
-    private readonly Ed25519KeyPair keyPair;
+    private readonly IKeyStore keyStore;
 
-    public ControlSigner(ILogger<ControlSigner> logger, Ed25519KeyPair keyPair)
+    public ControlSigner(ILogger<ControlSigner> logger, IKeyStore keyStore)
     {
         this.logger = logger;
-        this.keyPair = keyPair;
+        this.keyStore = keyStore;
     }
 
     public ControlEnvelope Sign(ControlEnvelope envelope)
     {
-        envelope.PublicKey = keyPair.PublicKeyBase64;
-        envelope.Signature = ComputeSignature(envelope);
+        envelope.PublicKey = keyStore.Current.PublicKeyBase64;
+        envelope.Signature = ComputeSignature(envelope, keyStore.Current.PrivateKey);
         return envelope;
     }
 
@@ -40,10 +40,18 @@ public class ControlSigner : IControlSigner
 
         try
         {
-            var pub = Convert.FromBase64String(envelope.PublicKey);
             var sig = Convert.FromBase64String(envelope.Signature);
             var payload = BuildSignablePayload(envelope);
-            return Ed25519.Verify(sig, Encoding.UTF8.GetBytes(payload), pub);
+            var payloadBytes = Encoding.UTF8.GetBytes(payload);
+
+            foreach (var pub in keyStore.VerificationPublicKeys)
+            {
+                if (Ed25519.Verify(sig, payloadBytes, pub))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         catch (Exception ex)
         {
@@ -52,11 +60,11 @@ public class ControlSigner : IControlSigner
         }
     }
 
-    private string ComputeSignature(ControlEnvelope envelope)
+    private string ComputeSignature(ControlEnvelope envelope, byte[] privateKey)
     {
         var payload = BuildSignablePayload(envelope);
         var bytes = Encoding.UTF8.GetBytes(payload);
-        var sig = Ed25519.Sign(bytes, keyPair.PrivateKey);
+        var sig = Ed25519.Sign(bytes, privateKey);
         return Convert.ToBase64String(sig);
     }
 
