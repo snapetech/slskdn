@@ -31,6 +31,19 @@ public class ControlDispatcher : IControlDispatcher
         }
 
         logger.LogDebug("[Overlay] Received control {Type} ts={Ts}", envelope.Type, envelope.TimestampUnixMs);
-        return Task.FromResult(true);
+
+        switch (envelope.Type)
+        {
+            case OverlayControlTypes.Ping:
+                // No payload; accept
+                return Task.FromResult(true);
+            case OverlayControlTypes.Pong:
+                return Task.FromResult(true);
+            case OverlayControlTypes.Probe:
+                return Task.FromResult(true);
+            default:
+                logger.LogDebug("[Overlay] Unknown control type {Type}", envelope.Type);
+                return Task.FromResult(false);
+        }
     }
 }

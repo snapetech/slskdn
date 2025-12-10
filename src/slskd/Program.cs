@@ -783,6 +783,7 @@ namespace slskd
             services.AddSingleton<MediaCore.IDescriptorPublisher, MediaCore.DescriptorPublisher>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
+            services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
 
             // PodCore (Phase 10 scaffolding)
             services.AddSingleton<PodCore.IPodService, PodCore.PodService>();
@@ -815,7 +816,6 @@ namespace slskd
             services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
 
             // MediaCore publisher
-            services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.InMemoryContentDescriptorSource>();
             services.AddHostedService<MediaCore.ContentPublisherService>();
 
             // Capabilities - tracks available features per peer
