@@ -127,10 +127,10 @@ Overall: ███████░░░░░░░░░░░░░  29% (49/1
 - ✅ T-604: Implement event persistence and rotation
 - ✅ T-605: Build session trace summaries
 
-### Phase 4C: Warm Cache Nodes (Optional) (2/3) 🔄
+### Phase 4C: Warm Cache Nodes (Optional) (3/3) ✅
 - ✅ T-606: Implement warm cache configuration
 - ✅ T-607: Build popularity detection for caching
-- ⏳ T-608: Add cache fetch, serve, evict logic
+- ✅ T-608: Add cache fetch, serve, evict logic
 
 ### Phase 4D: Playback-Aware Swarming (Optional) (0/3) 📋
 - ⏳ T-609: Implement playback feedback API

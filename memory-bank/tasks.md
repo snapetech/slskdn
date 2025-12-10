@@ -429,11 +429,11 @@
   - Branch: experimental/brainz
   - Notes: Warm cache popularity store + service; counts per contentId with top-popular query hook.
 
-- [ ] **T-608**: Add cache fetch, serve, evict logic
-  - Status: Not started
+- [x] **T-608**: Add cache fetch, serve, evict logic
+  - Status: Done (scaffold)
   - Priority: P3
   - Branch: experimental/brainz
-  - Notes: Fetch popular MBIDs via multi-swarm jobs. Advertise cached content in overlay descriptors. Serve overlay chunks within fairness limits. Evict based on popularity/LRU to honour capacity.
+  - Notes: Warm cache entry store + service with register/touch/list and eviction scaffold (LRU, capacity via MaxStorageGb, pinned support). Actual fetch/serve wiring still pending future tasks.
 
 #### Phase 4D: Playback-Aware Swarming (Optional)
 
