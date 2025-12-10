@@ -720,6 +720,7 @@ namespace slskd
             services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
             services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
+            services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
             services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
 

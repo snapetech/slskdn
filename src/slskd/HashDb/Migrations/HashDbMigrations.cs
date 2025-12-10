@@ -588,6 +588,39 @@ public static class HashDbMigrations
                     cmd.ExecuteNonQuery();
                 },
             },
+
+            new Migration
+            {
+                Version = 10,
+                Name = "Label crate job cache",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS LabelCrateJobs (
+                            job_id TEXT PRIMARY KEY,
+                            label_id TEXT,
+                            label_name TEXT NOT NULL,
+                            limit_count INTEGER DEFAULT 0,
+                            total_releases INTEGER DEFAULT 0,
+                            completed_releases INTEGER DEFAULT 0,
+                            failed_releases INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'pending',
+                            created_at INTEGER NOT NULL,
+                            json_data TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS LabelCrateReleaseJobs (
+                            label_crate_job_id TEXT NOT NULL,
+                            release_id TEXT NOT NULL,
+                            status TEXT DEFAULT 'pending',
+                            PRIMARY KEY (label_crate_job_id, release_id),
+                            FOREIGN KEY (label_crate_job_id) REFERENCES LabelCrateJobs(job_id)
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

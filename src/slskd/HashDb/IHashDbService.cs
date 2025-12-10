@@ -223,6 +223,20 @@ namespace slskd.HashDb
         /// </summary>
         Task<IReadOnlyList<slskd.Integrations.MusicBrainz.Models.LabelPresence>> GetLabelPresenceAsync(CancellationToken cancellationToken = default);
 
+        // ========== Label Crate Jobs ==========
+
+        Task<Jobs.LabelCrateJob?> GetLabelCrateJobAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertLabelCrateJobAsync(Jobs.LabelCrateJob job, CancellationToken cancellationToken = default);
+
+        Task<List<Jobs.DiscographyReleaseJobStatus>> GetLabelCrateReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertLabelCrateReleaseJobsAsync(string jobId, IEnumerable<Jobs.DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default);
+
+        Task SetLabelCrateReleaseJobStatusAsync(string jobId, string releaseId, Jobs.JobStatus status, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<string>> GetReleaseIdsByLabelAsync(string labelNameOrId, int limit, CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>

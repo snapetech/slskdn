@@ -1921,6 +1921,179 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<IReadOnlyList<string>> GetReleaseIdsByLabelAsync(string labelNameOrId, int limit, CancellationToken cancellationToken = default)
+        {
+            var results = new List<string>();
+            if (string.IsNullOrWhiteSpace(labelNameOrId) || limit <= 0)
+            {
+                return results;
+            }
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT release_id
+                FROM AlbumTargets
+                WHERE (metadata_label = @label OR discogs_release_id = @label)
+                ORDER BY created_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("@label", labelNameOrId);
+            cmd.Parameters.AddWithValue("@limit", limit);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                results.Add(reader.GetString(0));
+            }
+
+            return results;
+        }
+
+        // ========== Label Crate Jobs ==========
+
+        /// <inheritdoc/>
+        public async Task<LabelCrateJob?> GetLabelCrateJobAsync(string jobId, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT json_data FROM LabelCrateJobs WHERE job_id = @job_id";
+            cmd.Parameters.AddWithValue("@job_id", jobId);
+
+            var json = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<LabelCrateJob>(json);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[HashDb] Failed to deserialize label crate job {JobId}", jobId);
+                return null;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task UpsertLabelCrateJobAsync(LabelCrateJob job, CancellationToken cancellationToken = default)
+        {
+            if (job == null || string.IsNullOrWhiteSpace(job.JobId))
+            {
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(job);
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO LabelCrateJobs (job_id, label_id, label_name, limit_count, total_releases, completed_releases, failed_releases, status, created_at, json_data)
+                VALUES (@job_id, @label_id, @label_name, @limit_count, @total_releases, @completed_releases, @failed_releases, @status, @created_at, @json_data)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    label_id = excluded.label_id,
+                    label_name = excluded.label_name,
+                    limit_count = excluded.limit_count,
+                    total_releases = excluded.total_releases,
+                    completed_releases = excluded.completed_releases,
+                    failed_releases = excluded.failed_releases,
+                    status = excluded.status,
+                    json_data = excluded.json_data";
+
+            cmd.Parameters.AddWithValue("@job_id", job.JobId);
+            cmd.Parameters.AddWithValue("@label_id", (object?)job.LabelId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@label_name", job.LabelName ?? string.Empty);
+            cmd.Parameters.AddWithValue("@limit_count", job.Limit);
+            cmd.Parameters.AddWithValue("@total_releases", job.TotalReleases);
+            cmd.Parameters.AddWithValue("@completed_releases", job.CompletedReleases);
+            cmd.Parameters.AddWithValue("@failed_releases", job.FailedReleases);
+            cmd.Parameters.AddWithValue("@status", job.Status.ToString());
+            cmd.Parameters.AddWithValue("@created_at", job.CreatedAt.ToUnixTimeSeconds());
+            cmd.Parameters.AddWithValue("@json_data", json);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<DiscographyReleaseJobStatus>> GetLabelCrateReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default)
+        {
+            var list = new List<DiscographyReleaseJobStatus>();
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT release_id, status
+                FROM LabelCrateReleaseJobs
+                WHERE label_crate_job_id = @job_id";
+            cmd.Parameters.AddWithValue("@job_id", jobId);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var releaseId = reader.GetString(0);
+                var statusText = reader.GetString(1);
+                var status = Enum.TryParse<JobStatus>(statusText, ignoreCase: true, out var s) ? s : JobStatus.Pending;
+                list.Add(new DiscographyReleaseJobStatus
+                {
+                    ReleaseId = releaseId,
+                    Status = status,
+                });
+            }
+
+            return list;
+        }
+
+        /// <inheritdoc/>
+        public async Task UpsertLabelCrateReleaseJobsAsync(string jobId, IEnumerable<DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(jobId) || releases == null)
+            {
+                return;
+            }
+
+            using var conn = GetConnection();
+            using var tx = conn.BeginTransaction();
+
+            foreach (var release in releases)
+            {
+                if (release == null || string.IsNullOrWhiteSpace(release.ReleaseId))
+                {
+                    continue;
+                }
+
+                using var cmd = conn.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = @"
+                    INSERT INTO LabelCrateReleaseJobs (label_crate_job_id, release_id, status)
+                    VALUES (@job_id, @release_id, @status)
+                    ON CONFLICT(label_crate_job_id, release_id) DO UPDATE SET
+                        status = excluded.status";
+
+                cmd.Parameters.AddWithValue("@job_id", jobId);
+                cmd.Parameters.AddWithValue("@release_id", release.ReleaseId);
+                cmd.Parameters.AddWithValue("@status", release.Status.ToString().ToLowerInvariant());
+
+                await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            tx.Commit();
+        }
+
+        /// <inheritdoc/>
+        public Task SetLabelCrateReleaseJobStatusAsync(string jobId, string releaseId, JobStatus status, CancellationToken cancellationToken = default)
+        {
+            return UpsertLabelCrateReleaseJobsAsync(jobId, new[]
+            {
+                new DiscographyReleaseJobStatus
+                {
+                    ReleaseId = releaseId,
+                    Status = status,
+                },
+            }, cancellationToken);
+        }
+
+        /// <inheritdoc/>
         public async Task<ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();
