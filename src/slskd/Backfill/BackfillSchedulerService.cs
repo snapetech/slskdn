@@ -25,7 +25,7 @@ namespace slskd.Backfill
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Hosting;
-    using Serilog;
+    using Microsoft.Extensions.Logging;
     using Soulseek;
     using slskd.HashDb;
     using slskd.HashDb.Models;
@@ -40,7 +40,7 @@ namespace slskd.Backfill
         private readonly IHashDbService hashDb;
         private readonly IMeshSyncService meshSync;
         private readonly ISoulseekClient soulseekClient;
-        private readonly ILogger log = Log.ForContext<BackfillSchedulerService>();
+        private readonly ILogger<BackfillSchedulerService> logger;
 
         private readonly BackfillConfig config = new();
         private readonly BackfillStats stats = new();
@@ -55,11 +55,13 @@ namespace slskd.Backfill
         public BackfillSchedulerService(
             IHashDbService hashDb,
             IMeshSyncService meshSync,
-            ISoulseekClient soulseekClient)
+            ISoulseekClient soulseekClient,
+            ILogger<BackfillSchedulerService> logger)
         {
             this.hashDb = hashDb;
             this.meshSync = meshSync;
             this.soulseekClient = soulseekClient;
+            this.logger = logger;
         }
 
         /// <inheritdoc/>
@@ -90,7 +92,7 @@ namespace slskd.Backfill
         public void SetEnabled(bool enabled)
         {
             config.Enabled = enabled;
-            log.Information("[BACKFILL] Scheduler {State}", enabled ? "enabled" : "disabled");
+            logger.LogInformation("[BACKFILL] Scheduler {State}", enabled ? "enabled" : "disabled");
         }
 
         /// <inheritdoc/>
@@ -100,7 +102,7 @@ namespace slskd.Backfill
             {
                 isIdle = true;
                 idleStartTime = DateTime.UtcNow;
-                log.Debug("[BACKFILL] System now idle");
+                logger.LogDebug("[BACKFILL] System now idle");
             }
         }
 
@@ -111,7 +113,7 @@ namespace slskd.Backfill
             {
                 isIdle = false;
                 idleStartTime = null;
-                log.Debug("[BACKFILL] System now busy");
+                logger.LogDebug("[BACKFILL] System now busy");
             }
         }
 
@@ -131,7 +133,7 @@ namespace slskd.Backfill
                 {
                     if (activeBackfills >= config.MaxGlobalConnections)
                     {
-                        log.Debug("[BACKFILL] Max concurrent limit reached, stopping cycle");
+                        logger.LogDebug("[BACKFILL] Max concurrent limit reached, stopping cycle");
                         break;
                     }
 
@@ -175,11 +177,11 @@ namespace slskd.Backfill
             }
             catch (Exception ex)
             {
-                log.Warning(ex, "[BACKFILL] Cycle failed");
+                logger.LogWarning(ex, "[BACKFILL] Cycle failed");
             }
 
             result.DurationMs = sw.ElapsedMilliseconds;
-            log.Information("[BACKFILL] Cycle complete: {Attempted} attempted, {Success} success, {Failed} failed, {RateLimited} rate-limited in {Duration}ms",
+            logger.LogInformation("[BACKFILL] Cycle complete: {Attempted} attempted, {Success} success, {Failed} failed, {RateLimited} rate-limited in {Duration}ms",
                 result.BackfillsAttempted, result.Successful, result.Failed, result.RateLimited, result.DurationMs);
 
             return result;
@@ -239,7 +241,7 @@ namespace slskd.Backfill
                 await backfillLock.WaitAsync(cancellationToken);
                 Interlocked.Increment(ref activeBackfills);
 
-                log.Debug("[BACKFILL] Probing {Peer}/{Path} ({Size} bytes)", peerId, path, size);
+                logger.LogDebug("[BACKFILL] Probing {Peer}/{Path} ({Size} bytes)", peerId, path, size);
 
                 // Download header bytes
                 var buffer = new byte[config.MaxHeaderBytes];
@@ -320,7 +322,7 @@ namespace slskd.Backfill
                     // Increment backfill count
                     await hashDb.IncrementPeerBackfillCountAsync(peerId, cancellationToken);
 
-                    log.Information("[BACKFILL] ✓ Discovered hash for {Peer}/{Path}: {Hash}", peerId, System.IO.Path.GetFileName(path), hash.Substring(0, 16));
+                    logger.LogInformation("[BACKFILL] ✓ Discovered hash for {Peer}/{Path}: {Hash}", peerId, System.IO.Path.GetFileName(path), hash.Substring(0, 16));
                 }
                 else
                 {
@@ -332,7 +334,7 @@ namespace slskd.Backfill
             {
                 result.Error = ex.Message;
                 await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
-                log.Debug("[BACKFILL] ✗ Failed {Peer}/{Path}: {Error}", peerId, System.IO.Path.GetFileName(path), ex.Message);
+                logger.LogDebug("[BACKFILL] ✗ Failed {Peer}/{Path}: {Error}", peerId, System.IO.Path.GetFileName(path), ex.Message);
             }
             finally
             {
@@ -347,7 +349,7 @@ namespace slskd.Backfill
         /// <inheritdoc/>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            log.Information("[BACKFILL] Background service started (interval: {Interval}s, max concurrent: {Max})",
+            logger.LogInformation("[BACKFILL] Background service started (interval: {Interval}s, max concurrent: {Max})",
                 config.RunIntervalSeconds, config.MaxGlobalConnections);
 
             // Initial delay
@@ -365,19 +367,19 @@ namespace slskd.Backfill
                     }
                     else
                     {
-                        log.Debug("[BACKFILL] Skipping cycle (enabled={Enabled}, idle={Idle}, idleTime={IdleTime})",
+                        logger.LogDebug("[BACKFILL] Skipping cycle (enabled={Enabled}, idle={Idle}, idleTime={IdleTime})",
                             config.Enabled, isIdle, stats.IdleDuration);
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    log.Warning(ex, "[BACKFILL] Background cycle error");
+                    logger.LogWarning(ex, "[BACKFILL] Background cycle error");
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(config.RunIntervalSeconds), stoppingToken);
             }
 
-            log.Information("[BACKFILL] Background service stopped");
+            logger.LogInformation("[BACKFILL] Background service stopped");
         }
 
         private bool ShouldRunCycle()

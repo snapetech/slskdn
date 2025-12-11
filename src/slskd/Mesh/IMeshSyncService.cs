@@ -166,6 +166,22 @@ namespace slskd.Mesh
 
         /// <summary>Gets or sets count of entries skipped during merge due to validation failures.</summary>
         public long SkippedEntries { get; set; }
+
+        // SECURITY: Security metrics (T-1436)
+        /// <summary>Gets or sets count of signature verification failures.</summary>
+        public long SignatureVerificationFailures { get; set; }
+
+        /// <summary>Gets or sets count of messages rejected due to reputation checks.</summary>
+        public long ReputationBasedRejections { get; set; }
+
+        /// <summary>Gets or sets count of rate limit violations triggered.</summary>
+        public long RateLimitViolations { get; set; }
+
+        /// <summary>Gets or sets count of peers quarantined.</summary>
+        public int QuarantinedPeers { get; set; }
+
+        /// <summary>Gets or sets count of quarantine events (including extensions).</summary>
+        public long QuarantineEvents { get; set; }
     }
 
     /// <summary>

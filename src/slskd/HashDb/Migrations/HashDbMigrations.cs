@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 9;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -296,8 +296,448 @@ public static class HashDbMigrations
                 },
             },
 
-            // Future migrations go here...
-            // new Migration { Version = 3, Name = "...", Apply = conn => { ... } },
+            new Migration
+            {
+                Version = 3,
+                Name = "MusicBrainz Album Targets",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS AlbumTargets (
+                            release_id TEXT PRIMARY KEY,
+                            discogs_release_id TEXT,
+                            title TEXT NOT NULL,
+                            artist TEXT NOT NULL,
+                            metadata_release_date TEXT,
+                            metadata_country TEXT,
+                            metadata_label TEXT,
+                            metadata_status TEXT,
+                            created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+                        );
+
+                        CREATE TABLE IF NOT EXISTS AlbumTargetTracks (
+                            release_id TEXT NOT NULL,
+                            track_position INTEGER NOT NULL,
+                            recording_id TEXT,
+                            title TEXT NOT NULL,
+                            artist TEXT NOT NULL,
+                            duration_ms INTEGER,
+                            isrc TEXT,
+                            PRIMARY KEY (release_id, track_position)
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_album_tracks_recording ON AlbumTargetTracks(recording_id);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 4,
+                Name = "Canonical scoring variant metadata",
+                Apply = conn =>
+                {
+                    var alterStatements = new[]
+                    {
+                        "ALTER TABLE HashDb ADD COLUMN variant_id TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN codec TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN container TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN sample_rate_hz INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN bit_depth INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN channels INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN duration_ms INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN bitrate_kbps INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN quality_score REAL DEFAULT 0.0",
+                        "ALTER TABLE HashDb ADD COLUMN transcode_suspect BOOLEAN DEFAULT FALSE",
+                        "ALTER TABLE HashDb ADD COLUMN transcode_reason TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN dynamic_range_dr REAL",
+                        "ALTER TABLE HashDb ADD COLUMN loudness_lufs REAL",
+                        "ALTER TABLE HashDb ADD COLUMN has_clipping BOOLEAN",
+                        "ALTER TABLE HashDb ADD COLUMN encoder_signature TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN seen_count INTEGER DEFAULT 1",
+                        "ALTER TABLE HashDb ADD COLUMN file_sha256 TEXT"
+                    };
+
+                    foreach (var alter in alterStatements)
+                    {
+                        try
+                        {
+                            using var alterCmd = conn.CreateCommand();
+                            alterCmd.CommandText = alter;
+                            alterCmd.ExecuteNonQuery();
+                        }
+                        catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+                        {
+                            // Column already exists - skip
+                        }
+                    }
+
+                    using var indexCmd = conn.CreateCommand();
+                    indexCmd.CommandText = @"
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_variant ON HashDb(variant_id);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_recording_codec ON HashDb(musicbrainz_id, codec, sample_rate_hz);
+                    ";
+                    indexCmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 5,
+                Name = "Canonical stats table",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS CanonicalStats (
+                            id TEXT PRIMARY KEY,
+                            musicbrainz_recording_id TEXT NOT NULL,
+                            codec_profile_key TEXT NOT NULL,
+                            variant_count INTEGER DEFAULT 0,
+                            total_seen_count INTEGER DEFAULT 0,
+                            avg_quality_score REAL DEFAULT 0.0,
+                            max_quality_score REAL DEFAULT 0.0,
+                            percent_transcode_suspect REAL DEFAULT 0.0,
+                            codec_distribution TEXT,
+                            bitrate_distribution TEXT,
+                            sample_rate_distribution TEXT,
+                            best_variant_id TEXT,
+                            canonicality_score REAL DEFAULT 0.0,
+                            last_updated INTEGER NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_canonical_recording ON CanonicalStats(musicbrainz_recording_id);
+                        CREATE INDEX IF NOT EXISTS idx_canonical_profile ON CanonicalStats(codec_profile_key);
+                        CREATE INDEX IF NOT EXISTS idx_canonical_score ON CanonicalStats(canonicality_score DESC);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 6,
+                Name = "Library Health tables",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS LibraryHealthIssues (
+                            issue_id TEXT PRIMARY KEY,
+                            type TEXT NOT NULL,
+                            severity TEXT NOT NULL,
+                            file_path TEXT,
+                            mb_recording_id TEXT,
+                            mb_release_id TEXT,
+                            artist TEXT,
+                            album TEXT,
+                            title TEXT,
+                            reason TEXT,
+                            metadata TEXT,
+                            can_auto_fix BOOLEAN DEFAULT FALSE,
+                            suggested_action TEXT,
+                            remediation_job_id TEXT,
+                            status TEXT DEFAULT 'detected',
+                            detected_at INTEGER NOT NULL,
+                            resolved_at INTEGER,
+                            resolved_by TEXT
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_issues_status ON LibraryHealthIssues(status);
+                        CREATE INDEX IF NOT EXISTS idx_issues_type ON LibraryHealthIssues(type);
+                        CREATE INDEX IF NOT EXISTS idx_issues_severity ON LibraryHealthIssues(severity);
+                        CREATE INDEX IF NOT EXISTS idx_issues_release ON LibraryHealthIssues(mb_release_id);
+                        CREATE INDEX IF NOT EXISTS idx_issues_file ON LibraryHealthIssues(file_path);
+
+                        CREATE TABLE IF NOT EXISTS LibraryHealthScans (
+                            scan_id TEXT PRIMARY KEY,
+                            library_path TEXT NOT NULL,
+                            started_at INTEGER NOT NULL,
+                            completed_at INTEGER,
+                            status TEXT DEFAULT 'running',
+                            files_scanned INTEGER DEFAULT 0,
+                            issues_detected INTEGER DEFAULT 0,
+                            error_message TEXT
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_scans_path ON LibraryHealthScans(library_path);
+                        CREATE INDEX IF NOT EXISTS idx_scans_completed ON LibraryHealthScans(completed_at DESC);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 7,
+                Name = "Codec-specific fingerprints and analyzer version",
+                Apply = conn =>
+                {
+                    var alterStatements = new[]
+                    {
+                        "ALTER TABLE HashDb ADD COLUMN flac_streaminfo_hash42 TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN flac_pcm_md5 TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN flac_min_block_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_max_block_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_min_frame_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_max_frame_size INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN flac_total_samples INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_stream_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_encoder TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_encoder_preset TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN mp3_frames_analyzed INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN effective_bandwidth_hz REAL",
+                        "ALTER TABLE HashDb ADD COLUMN nominal_lowpass_hz REAL",
+                        "ALTER TABLE HashDb ADD COLUMN spectral_flatness_score REAL",
+                        "ALTER TABLE HashDb ADD COLUMN hf_energy_ratio REAL",
+                        "ALTER TABLE HashDb ADD COLUMN opus_stream_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN opus_nominal_bitrate_kbps INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN opus_application TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN opus_bandwidth_mode TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN aac_stream_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN aac_profile TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN aac_sbr_present BOOLEAN",
+                        "ALTER TABLE HashDb ADD COLUMN aac_ps_present BOOLEAN",
+                        "ALTER TABLE HashDb ADD COLUMN aac_nominal_bitrate_kbps INTEGER",
+                        "ALTER TABLE HashDb ADD COLUMN audio_sketch_hash TEXT",
+                        "ALTER TABLE HashDb ADD COLUMN analyzer_version TEXT",
+                    };
+
+                    foreach (var alter in alterStatements)
+                    {
+                        try
+                        {
+                            using var alterCmd = conn.CreateCommand();
+                            alterCmd.CommandText = alter;
+                            alterCmd.ExecuteNonQuery();
+                        }
+                        catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+                        {
+                            // Column already exists - skip
+                        }
+                    }
+
+                    using var indexCmd = conn.CreateCommand();
+                    indexCmd.CommandText = @"
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_flac_streaminfo ON HashDb(flac_streaminfo_hash42);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_flac_pcm ON HashDb(flac_pcm_md5);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_mp3_stream ON HashDb(mp3_stream_hash);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_encoder ON HashDb(mp3_encoder);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_opus_stream ON HashDb(opus_stream_hash);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_aac_stream ON HashDb(aac_stream_hash);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_aac_profile ON HashDb(aac_profile);
+                    ";
+                    indexCmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 8,
+                Name = "Artist release graph cache",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS ArtistReleaseGraphs (
+                            artist_id TEXT PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            cached_at INTEGER NOT NULL,
+                            expires_at INTEGER,
+                            json_data TEXT NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_artist_release_graph_expiry ON ArtistReleaseGraphs(expires_at);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 9,
+                Name = "Discography job cache",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS DiscographyJobs (
+                            job_id TEXT PRIMARY KEY,
+                            artist_id TEXT NOT NULL,
+                            artist_name TEXT NOT NULL,
+                            profile TEXT NOT NULL,
+                            target_directory TEXT NOT NULL,
+                            total_releases INTEGER DEFAULT 0,
+                            completed_releases INTEGER DEFAULT 0,
+                            failed_releases INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'pending',
+                            created_at INTEGER NOT NULL,
+                            json_data TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS DiscographyReleaseJobs (
+                            discography_job_id TEXT NOT NULL,
+                            release_id TEXT NOT NULL,
+                            status TEXT DEFAULT 'pending',
+                            PRIMARY KEY (discography_job_id, release_id),
+                            FOREIGN KEY (discography_job_id) REFERENCES DiscographyJobs(job_id)
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 10,
+                Name = "Label crate job cache",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS LabelCrateJobs (
+                            job_id TEXT PRIMARY KEY,
+                            label_id TEXT,
+                            label_name TEXT NOT NULL,
+                            limit_count INTEGER DEFAULT 0,
+                            total_releases INTEGER DEFAULT 0,
+                            completed_releases INTEGER DEFAULT 0,
+                            failed_releases INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'pending',
+                            created_at INTEGER NOT NULL,
+                            json_data TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS LabelCrateReleaseJobs (
+                            label_crate_job_id TEXT NOT NULL,
+                            release_id TEXT NOT NULL,
+                            status TEXT DEFAULT 'pending',
+                            PRIMARY KEY (label_crate_job_id, release_id),
+                            FOREIGN KEY (label_crate_job_id) REFERENCES LabelCrateJobs(job_id)
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 11,
+                Name = "Peer metrics storage",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS PeerMetrics (
+                            peer_id TEXT PRIMARY KEY,
+                            source TEXT NOT NULL,
+                            rtt_avg_ms REAL,
+                            rtt_stddev_ms REAL,
+                            last_rtt_sample INTEGER,
+                            throughput_avg_bps REAL,
+                            throughput_stddev_bps REAL,
+                            total_bytes INTEGER,
+                            last_throughput_sample INTEGER,
+                            chunks_requested INTEGER,
+                            chunks_completed INTEGER,
+                            chunks_failed INTEGER,
+                            chunks_timedout INTEGER,
+                            chunks_corrupted INTEGER,
+                            sample_count INTEGER,
+                            first_seen INTEGER,
+                            last_updated INTEGER,
+                            reputation_score REAL,
+                            reputation_updated_at INTEGER
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 12,
+                Name = "Traffic accounting",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS TrafficStats (
+                            key TEXT PRIMARY KEY,
+                            overlay_upload_bytes INTEGER DEFAULT 0,
+                            overlay_download_bytes INTEGER DEFAULT 0,
+                            soulseek_upload_bytes INTEGER DEFAULT 0,
+                            soulseek_download_bytes INTEGER DEFAULT 0,
+                            updated_at INTEGER NOT NULL
+                        );
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 13,
+                Name = "Warm cache popularity",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS WarmCachePopularity (
+                            content_id TEXT PRIMARY KEY,
+                            hits INTEGER DEFAULT 0,
+                            last_updated INTEGER NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_warmcache_hits ON WarmCachePopularity(hits DESC);
+                        CREATE INDEX IF NOT EXISTS idx_warmcache_updated ON WarmCachePopularity(last_updated DESC);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 14,
+                Name = "Warm cache entries",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS WarmCacheEntries (
+                            content_id TEXT PRIMARY KEY,
+                            path TEXT NOT NULL,
+                            size_bytes INTEGER NOT NULL,
+                            pinned INTEGER DEFAULT 0,
+                            last_accessed INTEGER NOT NULL
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_warmcache_last_accessed ON WarmCacheEntries(last_accessed);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 15,
+                Name = "Virtual Soulfind pseudonyms",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS Pseudonyms (
+                            SoulseekUsername TEXT PRIMARY KEY NOT NULL,
+                            PeerId TEXT NOT NULL,
+                            UpdatedAt INTEGER NOT NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_pseudonyms_peer_id ON Pseudonyms(PeerId);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
         };
     }
 

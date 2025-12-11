@@ -196,6 +196,7 @@ namespace slskd.Transfers.MultiSource
                     continue;
                 }
 
+                var entry = await LookupHashDbEntryAsync(sourcesToVerify[username], request.FileSize, cancellationToken).ConfigureAwait(false);
                 if (!result.SourcesByHash.TryGetValue(hash, out var sources))
                 {
                     sources = new List<VerifiedSource>();
@@ -209,7 +210,12 @@ namespace slskd.Transfers.MultiSource
                     ContentHash = hash,
                     Method = method,
                     VerificationTimeMs = timeMs,
+                    MusicBrainzRecordingId = entry?.MusicBrainzId,
+                    AudioFingerprint = entry?.AudioFingerprint,
+                    CodecProfile = method.ToString(),
                 });
+
+                AddSemanticSource(result, sources.Last());
             }
 
             Log.Information(
@@ -225,7 +231,43 @@ namespace slskd.Transfers.MultiSource
                 await StoreVerifiedHashAsync(request.Filename, request.FileSize, bestHash, cancellationToken);
             }
 
+            SetBestSemanticKey(result);
             return result;
+        }
+
+        private static void AddSemanticSource(ContentVerificationResult result, VerifiedSource source)
+        {
+            var semanticKey = ComputeSemanticKey(source);
+            if (!result.SourcesBySemanticKey.TryGetValue(semanticKey, out var bucket))
+            {
+                bucket = new List<VerifiedSource>();
+                result.SourcesBySemanticKey[semanticKey] = bucket;
+            }
+
+            bucket.Add(source);
+        }
+
+        private static string ComputeSemanticKey(VerifiedSource source)
+        {
+            var keyParts = new List<string>();
+            keyParts.Add(string.IsNullOrWhiteSpace(source.MusicBrainzRecordingId) ? "no-mbid" : source.MusicBrainzRecordingId);
+            keyParts.Add(string.IsNullOrWhiteSpace(source.CodecProfile) ? source.Method.ToString() : source.CodecProfile);
+            return string.Join(":", keyParts);
+        }
+
+        private static void SetBestSemanticKey(ContentVerificationResult result)
+        {
+            if (result.SourcesBySemanticKey.Count == 0)
+            {
+                return;
+            }
+
+            var best = result.SourcesBySemanticKey
+                .OrderByDescending(kvp => kvp.Value.Count)
+                .ThenBy(kvp => kvp.Key.Contains("no-mbid") ? 1 : 0)
+                .First();
+
+            result.BestSemanticKey = best.Key;
         }
 
         /// <inheritdoc/>
@@ -343,6 +385,25 @@ namespace slskd.Transfers.MultiSource
                 stopwatch.Stop();
                 Log.Warning(ex, "Verification failed for {Username} on {Filename}: {Message}", username, filename, ex.Message);
                 return (username, null, default, stopwatch.ElapsedMilliseconds, ex.Message);
+            }
+        }
+
+        private async Task<HashDbEntry> LookupHashDbEntryAsync(string filename, long fileSize, CancellationToken cancellationToken)
+        {
+            if (HashDb == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var flacKey = HashDbEntry.GenerateFlacKey(filename, fileSize);
+                return await HashDb.LookupHashAsync(flacKey, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[HASHDB] Unable to lookup entry for {Filename}", filename);
+                return null;
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// <copyright file="DefaultValueConfigurationSource.cs" company="slskd Team">
+// <copyright file="DefaultValueConfigurationSource.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -94,7 +94,7 @@ namespace slskd.Configuration
                 {
                     var key = ConfigurationPath.Combine(path, property.Name.ToLowerInvariant());
 
-                    if (property.PropertyType.Namespace.StartsWith(Namespace))
+                    if (property.PropertyType.Namespace != null && property.PropertyType.Namespace.StartsWith(Namespace))
                     {
                         Map(property.PropertyType, key);
                     }

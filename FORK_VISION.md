@@ -1,4 +1,13 @@
-# slskdn - The Rich-Featured Soulseek Client
+# slskdn - The Rich-Featured Soulseek Distribution
+
+## Positioning
+
+**slskdn** is a **distribution** of slskd—not just a fork, but a complete ecosystem with:
+- Batteries-included UX (wishlist, auto-replace, smart ranking, etc.)
+- Advanced research subsystems (multi-source, DHT mesh, hash DB, backfill, reputation)
+- AI-assisted development governance (ADRs, memory-bank, anti-slop rules)
+
+This is **slskd-plus with bundled opinions**—a legitimate place to land for users who want everything built-in and are okay living on the sharp edge.
 
 ## Why Fork?
 
@@ -182,4 +191,287 @@ We welcome contributions! Priority areas:
 
 *slskdn - Because "just write a script" isn't always the answer.*
 
+---
 
+## 🚀 Phase 9+: Long-Term Vision (Experimental)
+
+### Multi-Source & Mesh Architecture (experimental/brainz)
+
+The `experimental/brainz` branch explores a significantly expanded architecture:
+
+| Feature Area | Status | Description |
+|--------------|--------|-------------|
+| **MusicBrainz Integration** | ✅ Phase 1 Complete | Full MB API integration, album targets, Chromaprint fingerprinting, AcoustID lookups, auto-tagging pipeline |
+| **Canonical Edition Scoring** | ✅ Phase 2 Complete | Quality scoring (DR, transcode detection, codec-specific analysis), library health scanning, canonical variant selection |
+| **Multi-Source Chunked Downloads** | ✅ Phase 2 Complete | Parallel chunk-based downloads from multiple Soulseek peers + overlay mesh, RTT/throughput-aware scheduling, rescue mode for slow transfers |
+| **Peer Reputation System** | ✅ Phase 3 Complete | Local-only peer metrics (RTT, throughput, chunk success/failure), decay-based reputation scoring, reputation-gated scheduling |
+| **Traffic Accounting & Fairness** | ✅ Phase 3 Complete | Global traffic counters (overlay vs Soulseek upload/download), fairness governor with configurable ratio thresholds |
+| **Discovery & Jobs** | ✅ Phase 3 Complete | Discography profiles, artist release graph queries, label crate jobs, sub-job tracking |
+| **Job Manifests** | ✅ Phase 4 Complete | YAML export/import for job definitions (mb_release, discography, label_crate), version-controlled job schemas |
+| **Session Traces** | ✅ Phase 4 Complete | Structured swarm event logging (chunk-level, per-peer, per-backend), file-based persistence with rotation, trace summarization API |
+| **Warm Cache Nodes** | ✅ Phase 4 Complete | Popularity-based caching, LRU eviction, configurable storage limits, pinned content support |
+| **Playback-Aware Swarming** | ✅ Phase 4 Complete | Real-time playback feedback API, priority zone derivation (high/mid/low), streaming diagnostics endpoint |
+| **Soulbeet API Bridge** | 📋 Phase 5 Planned | Compatibility layer for external music apps, native job APIs, advanced query endpoints |
+| **Virtual Soulfind Bridge** | 📋 Phase 6 Planned | Protocol-level compatibility with legacy Soulseek clients, virtual directory generation, transparent multi-source routing |
+
+### Phase 7: Virtual Soulfind Mesh (Research)
+
+**Vision**: Transform slskdn into a **truly decentralized music network** that:
+- Enhances Soulseek when the server is available (hybrid mode)
+- Replaces Soulseek when the server is unavailable (disaster mode)
+- Never requires central servers or privileged nodes
+
+#### Key Concepts
+
+**Shadow Index**: Decentralized MBID→peers mapping via DHT
+- Passive observation of Soulseek traffic builds knowledge graph
+- Peers share what they've seen: "User X has Album Y"
+- DHT stores mappings: `mbid:album:ABC → [peer1, peer2, peer3]`
+- When Soulseek dies, mesh already knows who has what
+
+**Scenes**: Decentralized rooms/communities via DHT topics
+- DHT topics like `scene:electronic:house` for discovery
+- Subscribe to topics to see what peers are sharing
+- No central room servers required
+
+**Disaster Resilience**: Mesh-only operation when Soulseek down
+- Transfers continue via overlay, guided by shadow index
+- Think: BitTorrent DHT + MBID awareness + multi-swarm
+
+#### Architecture Components
+
+1. **Capture & Normalization Pipeline**
+   - Observe Soulseek search results and transfers
+   - Extract metadata from filenames
+   - Normalize to MBID via fingerprinting + MB lookups
+   - Build local knowledge: `(username, filepath) → MBID`
+
+2. **Shadow Index DHT**
+   - Publish observations to DHT: `mbid:release:X → username`
+   - TTL-based expiry (30 days default)
+   - Aggregate: multiple peers contribute to index
+   - Query: "Who has mbid:release:Y?" → list of usernames
+
+3. **Virtual Directory Generator**
+   - Legacy Soulseek clients browse slskdn as if it's a normal user
+   - slskdn generates virtual file listings from shadow index
+   - Example: `/Daft Punk/Random Access Memories [FLAC]/01-track.flac`
+   - Filenames are **virtual** but download triggers multi-swarm
+
+4. **Transparent Multi-Source Routing**
+   - Legacy client requests file from virtual path
+   - slskdn translates to MBID, queries shadow index for sources
+   - Initiates multi-source chunked download from real sources
+   - Streams result to legacy client as if single-source
+
+#### Safety & Legal Constraints
+
+**What Shadow Index Is NOT**:
+- NOT a public torrent tracker (no magnet links)
+- NOT a global catalogue (partial view, TTL expiry)
+- NOT a copyright index (MBID mappings, not files)
+
+**Positioning**:
+- Shadow index is **peer reputation data** ("I've seen User X share Album Y")
+- Used for **disaster recovery** when Soulseek server fails
+- Enables **multi-source optimization** within private peer groups
+
+---
+
+### Phase 8: Decentralized Foundation (Research)
+
+**Experimental directions for long-term decentralization:**
+
+#### MeshCore: Transport & Identity Layer
+
+**Overlay DHT**:
+- Kademlia-style DHT for decentralized key-value storage
+- Keys: pod metadata, membership, shadow index, scene topics
+- Values: signed, TTL-based, small payloads only
+- Relay-only partial view: no peer is "special"
+
+**Multi-Backend Transfers**:
+- **Native mesh protocol**: Direct peer-to-peer over overlay
+- **HTTP/WebDAV/S3**: For cloud storage integration
+- **Private BitTorrent**: Fallback between known peers only
+  - No public DHT announcement
+  - No public tracker registration
+  - Only shared with mesh peers you trust
+- **Optional**: LAN discovery, IPFS, WebTorrent
+
+**Signed Identity**:
+- Each peer has Ed25519 keypair for identity
+- Public key fingerprint is PeerId (e.g., `peer:a1b2c3...`)
+- Sign all DHT publications, messages, variant opinions
+- Enables trust, reputation, moderation without central authority
+
+#### MediaCore: ContentID & Variant System
+
+**ContentID Abstraction**:
+```csharp
+class ContentId
+{
+    ContentDomain Domain;     // Audio, (future: other media types)
+    string MetadataSource;    // "mb", etc.
+    string ExternalId;        // "artist:12345", "album:67890"
+}
+```
+- Unified identifiers across MusicBrainz and other metadata sources
+- Domain-specific cores: AudioCore (others possible in future)
+- Pluggable metadata via facade pattern
+
+**MediaVariant Model**:
+- Track different editions/masterings/cuts of same content
+- Example: Daft Punk RAM (2013 CD) vs (2013 vinyl rip) vs (2024 remaster)
+- Canonical scoring: quality metrics, transcode detection, community opinions
+- Cross-codec deduplication: "This MP3 is transcoded from that FLAC"
+
+**Metadata Facade**:
+- Abstract interface: `IMetadataProvider`
+- Implementations: MusicBrainz, local cache, extensible to other sources
+- No tight coupling to specific APIs
+- Graceful degradation when services unavailable
+
+#### PodCore: Taste-Based Communities
+
+**Vision**: Small, decentralized groups for sharing taste and recommendations **without** becoming torrent indexes.
+
+**Adoption Strategy**: Pods can optionally **bridge to existing Soulseek chat rooms**, allowing users to:
+- Participate in Soulseek rooms from within the mesh UI
+- Layer pod features (collection stats, variant opinions, recommendations) on top of existing communities
+- Gradually migrate users from Soulseek-only to mesh-native pods
+- Bridge modes: ReadOnly (safe, one-way mirroring) or Mirror (two-way messaging)
+
+**Pod Data Model**:
+```csharp
+class Pod
+{
+    PodId Id;                    // "pod:artist:mb:daft-punk-hash"
+    string DisplayName;          // "Fans of Daft Punk"
+    PodVisibility Visibility;    // Private/Unlisted/Listed
+    PodFocusType FocusType;      // ContentId/TagCluster/None
+    ContentId? FocusContentId;   // artist:mb:daft-punk (optional)
+    List<string> Tags;           // ["electronic", "french-house"]
+}
+
+class PodMember
+{
+    PodId PodId;
+    string PeerId;               // Mesh identity
+    PodRole Role;                // Owner/Moderator/Member
+    bool IsBanned;
+    string Signature;            // Signed membership
+}
+```
+
+**Key Features**:
+1. **Pod Creation & Membership**
+   - Owner creates pod, sets visibility and focus
+   - Invite flows for private pods
+   - Discovery for listed pods (via DHT search)
+   - Signed membership records prevent spoofing
+
+2. **Pod Chat**
+   - Decentralized message routing via mesh overlay
+   - Each pod has channels (at minimum: `general`)
+   - Local-only storage, optional peer backfill
+   - No central message server
+
+3. **Content-Linked Pods**
+   - Associate pod with ContentId (artist, album, etc.)
+   - "Fans of Daft Punk" → `ContentId(AudioArtist, "mb:artist:...")`
+   - UI shows "Your collection vs pod's canonical discography"
+
+4. **Pod Variant Opinions**
+   - Members share quality preferences: `(ContentId, hash, score, note)`
+   - Example: "For RAM, this FLAC has best DR" → signed opinion
+   - Opinions feed into canonicality engine (weighted by trust)
+   - **NOT file links**: just hashes + scores
+
+5. **Collection vs Pod Views**
+   - "You have 8/10 canonical albums the pod likes"
+   - "Pod's favorite masterings" for each release
+   - "Missing: Discovery (2001), Homework (1997)"
+   - UI shaped around **taste comparison**, not downloading
+
+**Safety Constraints**:
+
+What Pods **ARE**:
+- Social/preference/reputation spaces
+- Discussion forums with content context
+- Quality recommendation engines
+- Collection completion dashboards
+
+What Pods **ARE NOT**:
+- Torrent indexes or magnet link feeds
+- Public "download everything" hubs
+- Auto-posting bots for new releases
+- Direct file-sharing mechanisms
+
+**Implementation Guardrails**:
+1. No "paste magnet and share" UI
+2. No auto-linkifying of magnets/URLs in chat
+3. Pod membership doesn't trigger swarm participation
+4. Variant opinions are hashes + scores, not paths/links
+5. Transfers still go through MediaCore → SwarmCore → MeshCore
+
+#### SecurityCore: Trust & Moderation
+
+**Pod-Level Trust Extensions**:
+- Extend existing peer reputation with pod context
+- `PodAffinity`: engagement score, pod-specific trust
+- High-trust pods (friends/family) get more bandwidth/leniency
+- Low-trust pods (public/anonymous) get stricter policies
+
+**Moderation Tools**:
+- Owners/Moderators can kick/ban peers from pod
+- Banned peer's membership record updated, signed, published to DHT
+- SecurityCore enforces bans at mesh/transfer level
+- Global reputation: consistent abuse across pods → lower global trust
+
+**Privacy Guarantees**:
+- Pod data scoped to members only
+- No global indexing of pods or messages
+- Configurable retention (delete old messages)
+- Optional E2E encryption for pod chat
+
+#### Domain-Specific Apps (Long-Term)
+
+**Soulbeet (Music)**:
+- Artist discographies, album completion tracking
+- Quality recommendations per release
+- Pod integration: "Join the Daft Punk fan pod"
+- Variant comparison: "Your FLAC vs pod's canonical FLAC"
+
+**Future Domain Expansion**:
+- Architecture designed to support other media domains
+- Shared infrastructure: SwarmCore, MeshCore, MediaCore
+- Extensible ContentID system
+- Same quality/canonicality principles apply across domains
+
+---
+
+### Implementation Principles
+
+**What Guides This Vision:**
+1. **Privacy-First**: No central servers, no global catalogues, relay-only mesh
+2. **Protocol-Agnostic**: Multi-backend transfers, graceful fallbacks, no single point of failure
+3. **Legal Safety**: Private BT only between known peers, pods are taste/social layers not indexes
+4. **Testable**: Simulation-friendly architecture, unit tests at every layer
+5. **Incremental**: Each phase builds on previous work, can be tested/deployed independently
+
+**Dependencies Before Advanced Features:**
+- Stable overlay DHT and signed message routing (MeshCore foundation)
+- ContentID system operational for music domain (MediaCore)
+- Trust/reputation primitives mature (SecurityCore)
+- Basic Soulbeet UI with artist/album views
+
+**Timeline:**
+- Phases 1-4: ✅ Complete (experimental/brainz)
+- Phase 5-6: 📋 Next up (Soulbeet integration, virtual Soulfind bridge)
+- Phase 7: 🔬 Research (Virtual Soulfind mesh, shadow index)
+- Phase 8-9: 🔬 Long-term (MeshCore, MediaCore, PodCore)
+
+---
+
+*slskdn: From batteries-included client to decentralized media mesh.*

@@ -21,13 +21,15 @@ namespace slskd.HashDb
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using slskd.Audio;
     using slskd.Capabilities;
     using slskd.HashDb.Models;
+    using slskd.Integrations.MusicBrainz.Models;
 
     /// <summary>
     ///     Service for managing the local hash database.
     /// </summary>
-    public interface IHashDbService
+    public partial interface IHashDbService
     {
         /// <summary>
         ///     Gets the current sequence ID for mesh sync.
@@ -43,6 +45,31 @@ namespace slskd.HashDb
         ///     Gets the current schema version of the database.
         /// </summary>
         int GetSchemaVersion();
+
+        /// <summary>
+        ///     Stores or updates an album target in the database.
+        /// </summary>
+        Task UpsertAlbumTargetAsync(AlbumTarget target, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets an album target by release id.
+        /// </summary>
+        Task<AlbumTargetEntry?> GetAlbumTargetAsync(string releaseId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets the stored track list for a release.
+        /// </summary>
+        Task<IEnumerable<AlbumTargetTrackEntry>> GetAlbumTracksAsync(string releaseId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets the stored album targets.
+        /// </summary>
+        Task<IEnumerable<AlbumTargetEntry>> GetAlbumTargetsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Looks up hash entries by MusicBrainz recording identifier.
+        /// </summary>
+        Task<IEnumerable<HashDbEntry>> LookupHashesByRecordingIdAsync(string recordingId, CancellationToken cancellationToken = default);
 
         // ========== Peer Management ==========
 
@@ -125,6 +152,127 @@ namespace slskd.HashDb
         /// </summary>
         Task IncrementHashUseCountAsync(string flacKey, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        ///     Updates the stored fingerprint for a hash entry.
+        /// </summary>
+        Task UpdateHashFingerprintAsync(string flacKey, string fingerprint, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Updates variant metadata (quality scoring, codec profile, etc.).
+        /// </summary>
+        Task UpdateVariantMetadataAsync(string flacKey, AudioVariant variant, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get all variants for a recording.
+        /// </summary>
+        Task<List<AudioVariant>> GetVariantsByRecordingAsync(string recordingId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get variants for a recording and codec profile key.
+        /// </summary>
+        Task<List<AudioVariant>> GetVariantsByRecordingAndProfileAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Upsert canonical stats entry.
+        /// </summary>
+        Task UpsertCanonicalStatsAsync(CanonicalStats stats, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get canonical stats for recording/profile.
+        /// </summary>
+        Task<CanonicalStats?> GetCanonicalStatsAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get recording IDs that have variants.
+        /// </summary>
+        Task<List<string>> GetRecordingIdsWithVariantsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get codec profile keys present for a recording.
+        /// </summary>
+        Task<List<string>> GetCodecProfilesForRecordingAsync(string recordingId, CancellationToken cancellationToken = default);
+
+        // ========== MusicBrainz Release Graph Cache ==========
+
+        /// <summary>
+        ///     Gets a cached artist release graph (if any).
+        /// </summary>
+        Task<Integrations.MusicBrainz.Models.ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Upserts a cached artist release graph.
+        /// </summary>
+        Task UpsertArtistReleaseGraphAsync(Integrations.MusicBrainz.Models.ArtistReleaseGraph graph, CancellationToken cancellationToken = default);
+
+        // ========== Discography Jobs ==========
+
+        Task<Jobs.DiscographyJob?> GetDiscographyJobAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default);
+
+        Task<List<Jobs.DiscographyReleaseJobStatus>> GetDiscographyReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertDiscographyReleaseJobsAsync(string jobId, IEnumerable<Jobs.DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default);
+
+        Task SetDiscographyReleaseJobStatusAsync(string jobId, string releaseId, Jobs.JobStatus status, CancellationToken cancellationToken = default);
+
+        // ========== Label Presence ==========
+
+        /// <summary>
+        ///     Aggregates local label presence counts from AlbumTargets.
+        /// </summary>
+        Task<IReadOnlyList<slskd.Integrations.MusicBrainz.Models.LabelPresence>> GetLabelPresenceAsync(CancellationToken cancellationToken = default);
+
+        // ========== Label Crate Jobs ==========
+
+        Task<Jobs.LabelCrateJob?> GetLabelCrateJobAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertLabelCrateJobAsync(Jobs.LabelCrateJob job, CancellationToken cancellationToken = default);
+
+        Task<List<Jobs.DiscographyReleaseJobStatus>> GetLabelCrateReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task UpsertLabelCrateReleaseJobsAsync(string jobId, IEnumerable<Jobs.DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default);
+
+        Task SetLabelCrateReleaseJobStatusAsync(string jobId, string releaseId, Jobs.JobStatus status, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<string>> GetReleaseIdsByLabelAsync(string labelNameOrId, int limit, CancellationToken cancellationToken = default);
+
+        // ========== Traffic Accounting ==========
+
+        /// <summary>
+        ///     Gets aggregate traffic counters for overlay and Soulseek.
+        /// </summary>
+        Task<Models.TrafficTotals> GetTrafficTotalsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Adds to traffic counters (can pass zero for unused directions).
+        /// </summary>
+        Task AddTrafficAsync(long overlayUpload, long overlayDownload, long soulseekUpload, long soulseekDownload, CancellationToken cancellationToken = default);
+
+        // ========== Warm Cache Popularity ==========
+
+        /// <summary>
+        ///     Increment popularity for a content id (e.g., MB release or recording).
+        /// </summary>
+        Task IncrementPopularityAsync(string contentId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Get top popular content IDs above threshold.
+        /// </summary>
+        Task<IReadOnlyList<(string ContentId, long Hits)>> GetTopPopularAsync(int limit, long minHits = 1, CancellationToken cancellationToken = default);
+
+        // ========== Warm Cache Entries ==========
+
+        Task UpsertWarmCacheEntryAsync(Models.WarmCacheEntry entry, CancellationToken cancellationToken = default);
+
+        Task DeleteWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default);
+
+        Task<Models.WarmCacheEntry?> GetWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<Models.WarmCacheEntry>> ListWarmCacheEntriesAsync(CancellationToken cancellationToken = default);
+
+        Task<long> GetWarmCacheTotalSizeAsync(CancellationToken cancellationToken = default);
+
         // ========== Mesh Sync ==========
 
         /// <summary>
@@ -198,6 +346,23 @@ namespace slskd.HashDb
         /// <param name="oldestProcessed">Timestamp of the oldest search processed in this batch.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         Task SetBackfillProgressAsync(DateTimeOffset oldestProcessed, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Updates a hash entry with an AcoustID-resolution MusicBrainz recording ID.
+        /// </summary>
+        Task UpdateHashRecordingIdAsync(string flacKey, string musicBrainzId, CancellationToken cancellationToken = default);
+
+        // ========== Library Health ==========
+        Task UpsertLibraryHealthScanAsync(LibraryHealth.LibraryHealthScan scan, CancellationToken cancellationToken = default);
+        Task<LibraryHealth.LibraryHealthScan?> GetLibraryHealthScanAsync(string scanId, CancellationToken cancellationToken = default);
+        Task<List<LibraryHealth.LibraryIssue>> GetLibraryIssuesAsync(LibraryHealth.LibraryHealthIssueFilter filter, CancellationToken cancellationToken = default);
+        Task UpdateLibraryIssueStatusAsync(string issueId, LibraryHealth.LibraryIssueStatus status, CancellationToken cancellationToken = default);
+        Task InsertLibraryIssueAsync(LibraryHealth.LibraryIssue issue, CancellationToken cancellationToken = default);
+
+        // Peer metrics
+        Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default);
+        Task UpsertPeerMetricsAsync(Transfers.MultiSource.Metrics.PeerPerformanceMetrics metrics, CancellationToken cancellationToken = default);
+        Task<List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>> GetAllPeerMetricsAsync(CancellationToken cancellationToken = default);
     }
 
     /// <summary>

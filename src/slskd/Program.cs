@@ -16,6 +16,7 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace slskd
 {
@@ -54,12 +55,18 @@ namespace slskd
     using Serilog.Sinks.Grafana.Loki;
     using Serilog.Sinks.SystemConsole.Themes;
     using slskd.Authentication;
+    using slskd.Audio;
+    using slskd.LibraryHealth;
     using slskd.Configuration;
     using slskd.Core.API;
     using slskd.Cryptography;
     using slskd.Events;
     using slskd.Files;
+    using slskd.Integrations.AcoustId;
+    using slskd.Integrations.AutoTagging;
+    using slskd.Integrations.Chromaprint;
     using slskd.Integrations.FTP;
+    using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
     using slskd.Integrations.Webhooks;
@@ -79,6 +86,7 @@ namespace slskd
     using slskd.DhtRendezvous;
     using slskd.DhtRendezvous.Security;
     using slskd.Transfers.MultiSource.Discovery;
+    using slskd.Signals;
     using Soulseek;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
@@ -698,7 +706,216 @@ namespace slskd
             // HashDb - content-addressed storage for file verification
             // Subscribes to download events to automatically hash completed downloads
             // Uses IServiceProvider for lazy resolution of IMeshSyncService (avoids circular dependency)
-            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(Program.AppDirectory, sp.GetRequiredService<EventBus>(), sp));
+            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(
+                Program.AppDirectory,
+                sp.GetRequiredService<EventBus>(),
+                sp,
+                sp.GetRequiredService<IFingerprintExtractionService>(),
+                sp.GetRequiredService<IAcoustIdClient>(),
+                sp.GetRequiredService<IAutoTaggingService>(),
+                sp.GetRequiredService<IMusicBrainzClient>(),
+                sp.GetRequiredService<IOptionsMonitor<Options>>()));
+            services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
+            services.AddSingleton<IDedupeService, DedupeService>();
+            services.AddSingleton<IAnalyzerMigrationService, AnalyzerMigrationService>();
+            services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
+            services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
+            services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
+            services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
+            services.AddSingleton<Signals.Swarm.ISwarmJobStore, Signals.Swarm.InMemorySwarmJobStore>();
+            services.AddSingleton<Signals.Swarm.ISecurityPolicyEngine, Signals.Swarm.StubSecurityPolicyEngine>();
+            services.AddSingleton<Signals.Swarm.IBitTorrentBackend, Signals.Swarm.StubBitTorrentBackend>();
+            services.AddSingleton<Transfers.MultiSource.Metrics.ITrafficAccountingService, Transfers.MultiSource.Metrics.TrafficAccountingService>();
+            services.AddSingleton<Transfers.MultiSource.Metrics.IFairnessGuard>(sp =>
+                new Transfers.MultiSource.Metrics.FairnessGuard(
+                    sp.GetRequiredService<Transfers.MultiSource.Metrics.ITrafficAccountingService>()));
+            services.AddSingleton<Jobs.Manifests.IJobManifestValidator, Jobs.Manifests.JobManifestValidator>();
+            services.AddSingleton<Jobs.Manifests.IJobManifestService, Jobs.Manifests.JobManifestService>();
+            services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmEventStore, Transfers.MultiSource.Tracing.SwarmEventStore>();
+            services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmTraceSummarizer, Transfers.MultiSource.Tracing.SwarmTraceSummarizer>();
+            services.AddSingleton<Transfers.MultiSource.Caching.IWarmCachePopularityService, Transfers.MultiSource.Caching.WarmCachePopularityService>();
+            services.AddSingleton<Transfers.MultiSource.Caching.IWarmCacheService, Transfers.MultiSource.Caching.WarmCacheService>();
+
+            // Add signal system
+            services.AddSignalSystem();
+            services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackPriorityService, Transfers.MultiSource.Playback.PlaybackPriorityService>();
+            services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackFeedbackService, Transfers.MultiSource.Playback.PlaybackFeedbackService>();
+            services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
+            services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
+
+            // Virtual Soulfind services
+            services.AddSingleton<VirtualSoulfind.Capture.ITrafficObserver, VirtualSoulfind.Capture.TrafficObserver>();
+            services.AddSingleton<VirtualSoulfind.Capture.INormalizationPipeline, VirtualSoulfind.Capture.NormalizationPipeline>();
+            services.AddSingleton<VirtualSoulfind.Capture.IUsernamePseudonymizer, VirtualSoulfind.Capture.UsernamePseudonymizer>();
+            services.AddSingleton<VirtualSoulfind.Capture.IObservationStore, VirtualSoulfind.Capture.InMemoryObservationStore>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilder>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, VirtualSoulfind.ShadowIndex.DhtClientStub>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardPublisher, VirtualSoulfind.ShadowIndex.ShardPublisher>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexQuery, VirtualSoulfind.ShadowIndex.ShadowIndexQuery>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardMerger, VirtualSoulfind.ShadowIndex.ShardMerger>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardCache, VirtualSoulfind.ShadowIndex.ShardCache>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtRateLimiter, VirtualSoulfind.ShadowIndex.DhtRateLimiter>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneService, VirtualSoulfind.Scenes.SceneService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneAnnouncementService, VirtualSoulfind.Scenes.SceneAnnouncementService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneMembershipTracker, VirtualSoulfind.Scenes.SceneMembershipTracker>();
+            services.AddSingleton<VirtualSoulfind.Scenes.IScenePubSubService, VirtualSoulfind.Scenes.ScenePubSubService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneJobService, VirtualSoulfind.Scenes.SceneJobService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneChatService, VirtualSoulfind.Scenes.SceneChatService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneModerationService, VirtualSoulfind.Scenes.SceneModerationService>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekClient>(sp => 
+                new VirtualSoulfind.DisasterMode.SoulseekClientWrapper(sp.GetRequiredService<Soulseek.ISoulseekClient>()));
+            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekHealthMonitor, VirtualSoulfind.DisasterMode.SoulseekHealthMonitor>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IDisasterModeCoordinator, VirtualSoulfind.DisasterMode.DisasterModeCoordinator>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IMeshSearchService, VirtualSoulfind.DisasterMode.MeshSearchService>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IMeshTransferService, VirtualSoulfind.DisasterMode.MeshTransferService>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IScenePeerDiscovery, VirtualSoulfind.DisasterMode.ScenePeerDiscovery>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IDisasterModeTelemetry, VirtualSoulfind.DisasterMode.DisasterModeTelemetryService>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IGracefulDegradationService, VirtualSoulfind.DisasterMode.GracefulDegradationService>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.IDisasterModeRecovery, VirtualSoulfind.DisasterMode.DisasterModeRecovery>();
+            services.AddSingleton<VirtualSoulfind.Integration.IShadowIndexJobIntegration, VirtualSoulfind.Integration.ShadowIndexJobIntegration>();
+            services.AddSingleton<VirtualSoulfind.Integration.ISceneLabelCrateIntegration, VirtualSoulfind.Integration.SceneLabelCrateIntegration>();
+            services.AddSingleton<VirtualSoulfind.Integration.IDisasterRescueIntegration, VirtualSoulfind.Integration.DisasterRescueIntegration>();
+            services.AddSingleton<VirtualSoulfind.Integration.IPrivacyAudit, VirtualSoulfind.Integration.PrivacyAudit>();
+            services.AddSingleton<VirtualSoulfind.Integration.IPerformanceOptimizer, VirtualSoulfind.Integration.PerformanceOptimizer>();
+            services.AddSingleton<VirtualSoulfind.Integration.ITelemetryDashboard, VirtualSoulfind.Integration.TelemetryDashboardService>();
+            services.AddSingleton<VirtualSoulfind.Bridge.ISoulfindBridgeService, VirtualSoulfind.Bridge.SoulfindBridgeService>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IPeerIdAnonymizer, VirtualSoulfind.Bridge.PeerIdAnonymizer>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IFilenameGenerator, VirtualSoulfind.Bridge.FilenameGenerator>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IRoomSceneMapper, VirtualSoulfind.Bridge.RoomSceneMapper>();
+            services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
+
+            // MediaCore (Phase 9)
+            services.AddOptions<MediaCore.MediaCoreOptions>();
+            services.AddSingleton<MediaCore.IDescriptorValidator, MediaCore.DescriptorValidator>();
+            services.AddSingleton<MediaCore.IDescriptorPublisher, MediaCore.DescriptorPublisher>();
+            services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
+            services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
+            services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
+
+            // PodCore (Phase 10 - SQLite persistence)
+            var podDbPath = Path.Combine(Program.AppDirectory, "pods.db");
+            services.AddDbContextFactory<PodCore.PodDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={podDbPath}");
+            });
+
+            // Ensure pod database is created with secure permissions
+            using (var podContext = new PodCore.PodDbContext(
+                new DbContextOptionsBuilder<PodCore.PodDbContext>()
+                    .UseSqlite($"Data Source={podDbPath}")
+                    .Options))
+            {
+                podContext.Database.EnsureCreated();
+                
+                // SECURITY: Set restrictive file permissions on the database (Unix/Linux only)
+                if (System.IO.File.Exists(podDbPath))
+                {
+                    try
+                    {
+                        // Unix chmod 600 (owner read/write only) - requires Mono.Posix.NETStandard package
+                        // For now, just log warning if on Windows (file permissions are more complex there)
+                        if (!OperatingSystem.IsWindows())
+                        {
+                            Log.Information("Pod database created at {Path} - ensure file permissions are secure (chmod 600)", podDbPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Could not verify secure file permissions on pods.db");
+                    }
+                }
+            }
+
+            // Pod membership signer
+            services.AddSingleton<PodCore.IPodMembershipSigner, PodCore.PodMembershipSigner>();
+
+            // Pod DHT publishing + discovery
+            services.AddSingleton<PodCore.IPodPublisher, PodCore.PodPublisher>();
+            services.AddSingleton<PodCore.IPodDiscovery, PodCore.PodDiscovery>();
+
+            // Peer resolution service (for PeerReputation lookup)
+            services.AddSingleton<PodCore.IPeerResolutionService, PodCore.PeerResolutionService>();
+
+            // Soulseek chat bridge
+            services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
+
+            // Main pod service (SQLite-backed with persistence)
+            services.AddScoped<PodCore.IPodService>(sp =>
+            {
+                var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
+                var dbContext = factory.CreateDbContext();
+                return new PodCore.SqlitePodService(
+                    dbContext,
+                    sp.GetService<PodCore.IPodPublisher>(),
+                    sp.GetService<PodCore.IPodMembershipSigner>(),
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>());
+            });
+
+            // Pod messaging service (SQLite-backed)
+            services.AddScoped<PodCore.IPodMessaging>(sp =>
+            {
+                var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
+                var dbContext = factory.CreateDbContext();
+                return new PodCore.SqlitePodMessaging(
+                    dbContext,
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodMessaging>>());
+            });
+
+            // Background service for periodic pod metadata refresh
+            services.AddHostedService<PodCore.PodPublisherBackgroundService>();
+
+            // Typed options (Phase 11)
+            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
+            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
+            services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
+            services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
+            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
+            services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
+
+            // MeshCore (Phase 8 implementation)
+            services.Configure<Mesh.MeshOptions>(Configuration.GetSection("Mesh"));
+            services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
+            services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
+            services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
+            services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
+            // DHT: use in-memory Kademlia-style implementation for now
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, Mesh.Dht.InMemoryDhtClient>();
+            services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
+            services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
+            services.AddSingleton<Mesh.IMeshDirectory, Mesh.Dht.ContentDirectory>();
+            services.AddSingleton<Mesh.IMeshAdvanced>(sp => new Mesh.MeshAdvanced(
+                sp.GetRequiredService<ILogger<Mesh.MeshAdvanced>>(),
+                sp.GetRequiredService<Mesh.IMeshDirectory>(),
+                sp.GetRequiredService<Mesh.MeshStatsCollector>()));
+            services.AddSingleton<Mesh.MeshStatsCollector>();
+            services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
+            services.AddHostedService<Mesh.Dht.PeerDescriptorRefreshService>();
+            services.AddSingleton<Mesh.Dht.IContentPeerPublisher, Mesh.Dht.ContentPeerPublisher>();
+            services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
+            services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
+            services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
+            // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
+            services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
+            services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();
+            services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
+            // Mesh message signing for mesh sync security
+            services.AddSingleton<Mesh.IMeshMessageSigner, Mesh.MeshMessageSigner>();
+            services.AddSingleton(sp =>
+            {
+                var keyStore = sp.GetRequiredService<Mesh.Overlay.IKeyStore>();
+                return keyStore.Current;
+            });
+            services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
+            services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();
+            services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
+            services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(Configuration.GetSection("OverlayData"));
+            services.AddHostedService<Mesh.Overlay.QuicDataServer>();
+            services.AddSingleton<Mesh.Overlay.IOverlayDataPlane, Mesh.Overlay.QuicDataClient>();
+
+            // MediaCore publisher
+            services.AddHostedService<MediaCore.ContentPublisherService>();
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
@@ -730,6 +947,16 @@ namespace slskd
                 sp.GetRequiredService<Transfers.MultiSource.IContentVerificationService>()));
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
             services.AddSingleton<Transfers.MultiSource.IContentVerificationService, Transfers.MultiSource.ContentVerificationService>();
+            services.AddSingleton<Transfers.MultiSource.Metrics.IPeerMetricsService, Transfers.MultiSource.Metrics.PeerMetricsService>();
+            services.AddSingleton<Transfers.MultiSource.Scheduling.IChunkScheduler>(sp =>
+            {
+                // TODO: Get enableCostBasedScheduling from configuration (Options.Transfers.CostBasedScheduling)
+                // For now, default to enabled
+                bool enableCostBasedScheduling = true;
+                return new Transfers.MultiSource.Scheduling.ChunkScheduler(
+                    sp.GetRequiredService<Transfers.MultiSource.Metrics.IPeerMetricsService>(),
+                    enableCostBasedScheduling: enableCostBasedScheduling);
+            });
 
             // Wishlist services
             var wishlistDbPath = Path.Combine(Program.AppDirectory, "wishlist.db");
@@ -760,6 +987,11 @@ namespace slskd
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
             services.AddSingleton<IFTPService, FTPService>();
 
+            services.AddSingleton<IChromaprintService, ChromaprintService>();
+            services.AddSingleton<IFingerprintExtractionService, FingerprintExtractionService>();
+            services.AddSingleton<IAcoustIdClient, AcoustIdClient>();
+            services.AddSingleton<IAutoTaggingService, AutoTaggingService>();
+            services.AddSingleton<IMusicBrainzClient, MusicBrainzClient>();
             services.AddSingleton<IPushbulletService, PushbulletService>();
             services.AddSingleton<Integrations.Notifications.INotificationService, Integrations.Notifications.NotificationService>();
 
@@ -950,6 +1182,7 @@ namespace slskd
                     });
             }
 
+            services.AddMemoryCache(); // Required by ShardCache and others
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddControllers()
                 .ConfigureApiBehaviorOptions(options =>

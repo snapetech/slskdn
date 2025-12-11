@@ -166,6 +166,10 @@ Key-value store for miscellaneous state.
 Used for:
 - `backfill_progress`: Current offset in search history backfill
 
+### AcoustID Results
+
+After each fingerprint extraction slskdn optionally calls the AcoustID lookup service (`Integration.AcoustId.Enabled`). Successful resolutions populate `HashDb.musicbrainz_id`, allowing downstream features to match a hash to a canonical MusicBrainz Recording.
+
 ## Hash Types Explained
 
 ### byte_hash (Primary Identity)
@@ -203,6 +207,24 @@ Where `AppDirectory` is:
 ```bash
 cp ~/.local/share/slskd/hashdb.sqlite hashdb-backup-$(date +%Y%m%d).sqlite
 ```
+
+### Album Targets
+
+These tables support the MusicBrainz/Discogs lookups in `experimental/brainz` by persisting release metadata and track lists for later comparisons.
+
+| Table | Description |
+|-------|-------------|
+| `AlbumTargets` | One row per release: MusicBrainz release id, Discogs release/master id, title, artist, release date (YYYY-MM-DD), country, label, status, and creation timestamp. |
+| `AlbumTargetTracks` | One row per track/position: release id, position, recording id, title, artist, duration in milliseconds, and the primary ISRC. |
+
+Primary keys:
+- `AlbumTargets.release_id`
+- `AlbumTargetTracks (release_id, track_position)`
+
+Indexes:
+- `idx_album_tracks_recording` exists on `AlbumTargetTracks(recording_id)` to accelerate matching downloads to target recordings.
+
+## Backup & Recovery
 
 ### Export to JSON (Future)
 API endpoint planned for exporting hash database to JSON for mesh sharing.

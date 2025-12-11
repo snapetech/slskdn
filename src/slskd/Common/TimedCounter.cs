@@ -1,4 +1,4 @@
-﻿// <copyright file="TimedCounter.cs" company="slskd Team">
+// <copyright file="TimedCounter.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -34,7 +34,7 @@ namespace slskd
         {
             OnElapsed = onElapsed;
 
-            Timer = new Timer(interval);
+            Timer = new System.Timers.Timer(interval.TotalMilliseconds);
             Timer.Elapsed += Elapsed;
             Timer.Start();
         }
@@ -44,7 +44,7 @@ namespace slskd
         /// </summary>
         public long Count { get; private set; } = 0;
 
-        private Timer Timer { get; }
+        private System.Timers.Timer Timer { get; }
         private Action<long> OnElapsed { get; }
         private bool Disposed { get; set; }
 

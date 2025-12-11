@@ -92,6 +92,13 @@ private async void Handler(object s, EventArgs e)
 - No defensive null checks on internal code
 - No logging method entry/exit
 
+### Never Use Stubs - Create Tasks Instead
+- **NEVER** leave stub implementations (placeholder returns, `NotImplementedException`, `// TODO` comments)
+- **ALWAYS** either implement the functionality properly OR create a task in `memory-bank/tasks.md`
+- Stubs hide incomplete work and create technical debt
+- Tasks make incomplete work visible and trackable
+- See `memory-bank/decisions/adr-0003-anti-slop-rules.md` Rule 35 for details
+
 ## Task Format
 
 ```markdown

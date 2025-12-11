@@ -1,4 +1,4 @@
-﻿// <copyright file="DownloadService.cs" company="slskd Team">
+// <copyright file="DownloadService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,7 @@
 
 using Microsoft.Extensions.Options;
 using Soulseek;
+using slskd.Transfers.MultiSource.Metrics;
 
 namespace slskd.Transfers.Downloads
 {
@@ -141,7 +142,8 @@ namespace slskd.Transfers.Downloads
             FileService fileService,
             IRelayService relayService,
             IFTPService ftpClient,
-            EventBus eventBus)
+            EventBus eventBus,
+            IPeerMetricsService peerMetricsService = null)
         {
             Client = soulseekClient;
             OptionsMonitor = optionsMonitor;
@@ -150,6 +152,7 @@ namespace slskd.Transfers.Downloads
             FTP = ftpClient;
             Relay = relayService;
             EventBus = eventBus;
+            PeerMetrics = peerMetricsService;
 
             Clock.EveryMinute += (_, _) => Task.Run(() => CleanupEnqueueSemaphoresAsync());
         }
@@ -181,6 +184,7 @@ namespace slskd.Transfers.Downloads
         private ILogger Log { get; } = Serilog.Log.ForContext<DownloadService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private EventBus EventBus { get; }
+        private IPeerMetricsService PeerMetrics { get; }
 
         /// <summary>
         ///     Allow only one enqueue operation for a given user at a time. Entries are added on the fly if they
@@ -943,6 +947,10 @@ namespace slskd.Transfers.Downloads
 
             var updateSyncRoot = new SemaphoreSlim(1, 1);
 
+            // Track bytes for throughput calculation
+            long lastBytesTransferred = 0;
+            DateTime lastProgressUpdate = DateTime.UtcNow;
+
             try
             {
                 using var rateLimiter = new RateLimiter(250, concurrencyLimit: 1, flushOnDispose: true);
@@ -998,6 +1006,26 @@ namespace slskd.Transfers.Downloads
                                     transfer.BytesTransferred = args.Transfer.BytesTransferred;
                                     transfer.AverageSpeed = args.Transfer.AverageSpeed;
 
+                                    // Record throughput sample for peer metrics (Phase 2C - T-409)
+                                    if (PeerMetrics != null)
+                                    {
+                                        var now = DateTime.UtcNow;
+                                        var bytesThisUpdate = args.Transfer.BytesTransferred - lastBytesTransferred;
+                                        var duration = now - lastProgressUpdate;
+
+                                        if (bytesThisUpdate > 0 && duration.TotalMilliseconds > 0)
+                                        {
+                                            _ = PeerMetrics.RecordThroughputSampleAsync(
+                                                transfer.Username,
+                                                bytesThisUpdate,
+                                                duration,
+                                                cancellationToken);
+
+                                            lastBytesTransferred = args.Transfer.BytesTransferred;
+                                            lastProgressUpdate = now;
+                                        }
+                                    }
+
                                     using var context = ContextFactory.CreateDbContext();
 
                                     context.Transfers.Where(t => t.Id == transfer.Id).ExecuteUpdate(setter => setter
@@ -1043,6 +1071,15 @@ namespace slskd.Transfers.Downloads
                     options: topts);
 
                 Log.Debug("Invocation of Soulseek DownloadAsync() for {Filename} from user {Username} completed successfully", transfer.Filename, transfer.Username);
+
+                // Record successful chunk completion for peer metrics (Phase 2C - T-409)
+                if (PeerMetrics != null)
+                {
+                    _ = PeerMetrics.RecordChunkCompletionAsync(
+                        transfer.Username,
+                        ChunkCompletionResult.Success,
+                        cancellationToken);
+                }
 
                 // explicitly dispose the rate limiter to prevent updates from it beyond this point, and in doing so we
                 // flush any pending update, _probably_ pushing the state of the transfer back to InProgress
@@ -1130,6 +1167,16 @@ namespace slskd.Transfers.Downloads
             {
                 Log.Error(ex, "Download of {Filename} from user {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
 
+                // Record failed/timed out chunk completion for peer metrics (Phase 2C - T-409)
+                if (PeerMetrics != null)
+                {
+                    var result = ex is TimeoutException ? ChunkCompletionResult.TimedOut : ChunkCompletionResult.Failed;
+                    _ = PeerMetrics.RecordChunkCompletionAsync(
+                        transfer.Username,
+                        result,
+                        cancellationToken: CancellationToken.None);
+                }
+
                 TryFail(transfer.Id, exception: ex);
 
                 // todo: broadcast
@@ -1140,6 +1187,15 @@ namespace slskd.Transfers.Downloads
             catch (Exception ex)
             {
                 Log.Error(ex, "Download of {Filename} from user {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
+
+                // Record failed chunk completion for peer metrics (Phase 2C - T-409)
+                if (PeerMetrics != null)
+                {
+                    _ = PeerMetrics.RecordChunkCompletionAsync(
+                        transfer.Username,
+                        ChunkCompletionResult.Failed,
+                        cancellationToken: CancellationToken.None);
+                }
 
                 TryFail(transfer.Id, exception: ex);
 

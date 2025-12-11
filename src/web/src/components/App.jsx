@@ -10,6 +10,7 @@ import AppContext from './AppContext';
 import Browse from './Browse/Browse';
 import Chat from './Chat/Chat';
 import LoginForm from './LoginForm';
+import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
 import {
@@ -572,7 +573,7 @@ class App extends Component {
             </Menu>
           </Sidebar>
           <Sidebar.Pusher className="app-content">
-            <SlskdnStatusBar />
+            {session.isLoggedIn() || isPassthroughEnabled() ? <SlskdnStatusBar /> : null}
             <AppContext.Provider
               // eslint-disable-next-line no-warning-comments
               // TODO: needs useMemo, but class component. yolo for now.
@@ -644,6 +645,12 @@ class App extends Component {
                           state={applicationState}
                         />,
                       )
+                    }
+                  />
+                  <Route
+                    path={`${urlBase}/pods/:podId?/channels/:channelId?`}
+                    render={(props) =>
+                      this.withTokenCheck(<Pods {...props} />)
                     }
                   />
                   <Route

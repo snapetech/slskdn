@@ -1,6 +1,8 @@
 # slskdn
 
-**An experimental fork of [slskd](https://github.com/slskd/slskd)** exploring advanced download features, protocol extensions, and network enhancements for Soulseek.
+**A feature-rich distribution of [slskd](https://github.com/slskd/slskd)** with batteries-included UX, advanced download features, protocol extensions, and network enhancements for Soulseek.
+
+> **Note**: slskdn is not just a fork—it's a complete distribution with bundled opinions, advanced features, and experimental subsystems. While based on slskd's excellent foundation, slskdn diverges significantly in scope and philosophy.
 
 ---
 
@@ -188,7 +190,21 @@ Security:
 
 ## ⚠️ Experimental Status
 
-This is an **experimental fork**. Features are in active development and may change. Use at your own risk.
+This is an **experimental distribution** of slskd with advanced features. Many features are in active development and may change. Use at your own risk.
+
+### Feature Status
+
+| Feature Category | Status | Notes |
+|------------------|--------|-------|
+| **Multi-Source Downloads** | ✅ Stable | Production-ready with concurrency limits |
+| **DHT Peer Discovery** | ✅ Stable | Fully functional mesh overlay |
+| **Security Hardening** | ✅ Stable | Comprehensive security framework |
+| **UI Enhancements** | ✅ Stable | Status bars, network monitoring |
+| **PodCore** | 🟡 Experimental | Subject to change, API may evolve |
+| **Rescue Mode** | 🟡 Experimental | Advanced features may change |
+| **Backfill Pipeline** | 🟡 Experimental | Conservative scheduling, may be refined |
+
+**Note**: Features marked as "✅ Stable" are production-ready. Features marked as "🟡 Experimental" are functional but may have API changes or refinements in future releases.
 
 For the stable upstream client, see [slskd/slskd](https://github.com/slskd/slskd).
 

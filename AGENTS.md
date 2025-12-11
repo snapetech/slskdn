@@ -30,10 +30,11 @@ This is **highest priority** - do it before moving on to other work.
 
 ### Required Reading (in order)
 
-1. **`memory-bank/decisions/adr-0001-known-gotchas.md`** - Critical bugs to avoid
-2. **`memory-bank/decisions/adr-0002-code-patterns.md`** - Exact patterns to follow
-3. **`memory-bank/decisions/adr-0003-anti-slop-rules.md`** - What NOT to do
-4. **`memory-bank/activeContext.md`** - Current session state
+1. **`docs/AI_START_HERE.md`** - Complete AI assistant guide
+2. **`memory-bank/decisions/adr-0001-known-gotchas.md`** - Critical bugs to avoid
+3. **`memory-bank/decisions/adr-0002-code-patterns.md`** - Exact patterns to follow
+4. **`memory-bank/decisions/adr-0003-anti-slop-rules.md`** - What NOT to do
+5. **`memory-bank/activeContext.md`** - Current session state
 
 ### Before Writing Code
 
@@ -141,6 +142,7 @@ For significant architectural decisions:
 See `memory-bank/decisions/adr-0003-anti-slop-rules.md` for the full list.
 
 **Critical**:
+- ❌ **Stubs, placeholders, or `NotImplementedException`** (create tasks in `memory-bank/tasks.md` instead)
 - ❌ Factory/wrapper/builder patterns (use DI directly)
 - ❌ Defensive null checks on internal code
 - ❌ Swallowing exceptions with catch-return-null
