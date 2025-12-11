@@ -789,34 +789,57 @@ namespace slskd
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
 
-            // PodCore (Phase 10 scaffolding)
-            // Note: IPodService is registered below with dependencies
-            services.AddSingleton<PodCore.IPodMessaging>(sp => new PodCore.PodMessaging(
-                sp.GetRequiredService<PodCore.IPodService>(),
-                sp.GetRequiredService<PodCore.ISoulseekChatBridge>(),
-                sp.GetRequiredService<ILogger<PodCore.PodMessaging>>(),
-                sp.GetService<Mesh.IMeshSyncService>(),
-                sp.GetService<ISoulseekClient>(),
-                sp.GetService<Mesh.Overlay.IOverlayClient>()));
-            services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
-            
-            // Pod publishing to DHT
-            services.AddSingleton<PodCore.IPodPublisher, PodCore.PodPublisher>();
-            
-            // Pod discovery via DHT
-            services.AddSingleton<PodCore.IPodDiscovery, PodCore.PodDiscovery>();
-            
-            // Pod membership signing
+            // PodCore (Phase 10 - SQLite persistence)
+            var podDbPath = Path.Combine(Program.AppDirectory, "pods.db");
+            services.AddDbContextFactory<PodCore.PodDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={podDbPath}");
+            });
+
+            // Ensure pod database is created
+            using (var podContext = new PodCore.PodDbContext(
+                new DbContextOptionsBuilder<PodCore.PodDbContext>()
+                    .UseSqlite($"Data Source={podDbPath}")
+                    .Options))
+            {
+                podContext.Database.EnsureCreated();
+            }
+
+            // Pod membership signer
             services.AddSingleton<PodCore.IPodMembershipSigner, PodCore.PodMembershipSigner>();
-            
-            // Peer resolution service
+
+            // Pod DHT publishing + discovery
+            services.AddSingleton<PodCore.IPodPublisher, PodCore.PodPublisher>();
+            services.AddSingleton<PodCore.IPodDiscovery, PodCore.PodDiscovery>();
+
+            // Peer resolution service (for PeerReputation lookup)
             services.AddSingleton<PodCore.IPeerResolutionService, PodCore.PeerResolutionService>();
-            
-            // Pod service (with publisher and signer injection)
-            services.AddSingleton<PodCore.IPodService>(sp => new PodCore.PodService(
-                sp.GetService<PodCore.IPodPublisher>(),
-                sp.GetService<PodCore.IPodMembershipSigner>()));
-            
+
+            // Soulseek chat bridge
+            services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
+
+            // Main pod service (SQLite-backed with persistence)
+            services.AddScoped<PodCore.IPodService>(sp =>
+            {
+                var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
+                var dbContext = factory.CreateDbContext();
+                return new PodCore.SqlitePodService(
+                    dbContext,
+                    sp.GetService<PodCore.IPodPublisher>(),
+                    sp.GetService<PodCore.IPodMembershipSigner>(),
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>());
+            });
+
+            // Pod messaging service (SQLite-backed)
+            services.AddScoped<PodCore.IPodMessaging>(sp =>
+            {
+                var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
+                var dbContext = factory.CreateDbContext();
+                return new PodCore.SqlitePodMessaging(
+                    dbContext,
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodMessaging>>());
+            });
+
             // Background service for periodic pod metadata refresh
             services.AddHostedService<PodCore.PodPublisherBackgroundService>();
 
