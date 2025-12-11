@@ -2935,7 +2935,6 @@ namespace slskd
                 /// <summary>
                 ///     Gets the AcoustID API key (client identifier).
                 /// </summary>
-                [NotNullOrWhiteSpace]
                 public string ClientId { get; init; } = string.Empty;
 
                 /// <summary>

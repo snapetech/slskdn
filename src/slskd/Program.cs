@@ -870,6 +870,7 @@ namespace slskd
             services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
 
             // MeshCore (Phase 8 implementation)
+            services.Configure<Mesh.MeshOptions>(Configuration.GetSection("Mesh"));
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
             services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
             services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
