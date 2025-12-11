@@ -52,7 +52,12 @@ class Footer extends Component {
     // Determine if stats are connected
     const isDhtConnected = isLoggedIn && stats && stats.dht > 0;
     const isOverlayConnected = isLoggedIn && stats && stats.overlay > 0;
-    const isNatResolved = isLoggedIn && stats && stats.natType !== 'Unknown';
+    const isNatResolved = isLoggedIn && stats && stats.natType && stats.natType !== 'Unknown';
+    
+    // Format NAT type tooltip
+    const natTooltip = isLoggedIn && stats 
+      ? `NAT Type: ${stats.natType || 'Unknown'}` 
+      : 'NAT: Login to see stats';
 
     return (
       <footer className="slskdn-footer">
@@ -100,19 +105,19 @@ class Footer extends Component {
               <Icon 
                 name="sitemap" 
                 className={isDhtConnected ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isLoggedIn && stats ? `DHT: ${stats.dht} peers` : 'DHT: Login to see stats'}
+                title={isLoggedIn && stats ? `DHT Nodes: ${stats.dht}` : 'DHT: Login to see stats'}
               />
               <span className="slskdn-footer-divider">|</span>
               <Icon 
                 name="shield alternate" 
                 className={isNatResolved ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isLoggedIn && stats ? `NAT: ${stats.natType}` : 'NAT: Login to see stats'}
+                title={natTooltip}
               />
               <span className="slskdn-footer-divider">|</span>
               <Icon 
                 name="globe" 
                 className={isOverlayConnected ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isLoggedIn && stats ? `Overlay: ${stats.overlay} peers` : 'Overlay: Login to see stats'}
+                title={isLoggedIn && stats ? `Overlay Peers: ${stats.overlay}` : 'Overlay: Login to see stats'}
               />
             </div>
             <span className="slskdn-footer-divider">•</span>

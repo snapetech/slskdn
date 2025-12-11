@@ -37,12 +37,16 @@ namespace slskd.Mesh.API
         /// <summary>
         ///     Initializes a new instance of the <see cref="MeshController"/> class.
         /// </summary>
-        public MeshController(IMeshSyncService meshSync)
+        public MeshController(
+            IMeshSyncService meshSync,
+            MeshStatsCollector transportStatsCollector)
         {
             MeshSync = meshSync;
+            TransportStatsCollector = transportStatsCollector;
         }
 
         private IMeshSyncService MeshSync { get; }
+        private MeshStatsCollector TransportStatsCollector { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<MeshController>();
 
         /// <summary>
@@ -53,6 +57,24 @@ namespace slskd.Mesh.API
         public IActionResult GetStats()
         {
             return Ok(MeshSync.Stats);
+        }
+
+        /// <summary>
+        ///     Gets mesh transport statistics (DHT, Overlay, NAT).
+        /// </summary>
+        [HttpGet("transport")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public IActionResult GetTransportStats()
+        {
+            var stats = TransportStatsCollector.GetStats();
+            
+            // Return in format expected by frontend
+            return Ok(new
+            {
+                dht = stats.ActiveDhtSessions,
+                overlay = stats.ActiveOverlaySessions,
+                natType = stats.DetectedNatType.ToString()
+            });
         }
 
         /// <summary>

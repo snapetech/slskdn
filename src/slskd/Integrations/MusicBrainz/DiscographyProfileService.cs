@@ -5,6 +5,7 @@ namespace slskd.Integrations.MusicBrainz
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using slskd.Integrations.MusicBrainz.Models;
 
     public interface IDiscographyProfileService
@@ -17,22 +18,35 @@ namespace slskd.Integrations.MusicBrainz
     public class DiscographyProfileService : IDiscographyProfileService
     {
         private readonly IArtistReleaseGraphService releaseGraphService;
+        private readonly ILogger<DiscographyProfileService> logger;
 
-        public DiscographyProfileService(IArtistReleaseGraphService releaseGraphService)
+        public DiscographyProfileService(
+            IArtistReleaseGraphService releaseGraphService,
+            ILogger<DiscographyProfileService> logger)
         {
             this.releaseGraphService = releaseGraphService;
+            this.logger = logger;
         }
 
         public async Task<List<string>> GetReleaseIdsForProfileAsync(string artistId, DiscographyProfile profile, CancellationToken ct = default)
         {
+            logger.LogInformation("[MusicBrainz] Fetching releases for artist {ArtistId} with profile {Profile}", 
+                artistId, profile.ToString());
+            
             var graph = await releaseGraphService.GetArtistReleaseGraphAsync(artistId, forceRefresh: false, ct).ConfigureAwait(false);
             if (graph == null)
             {
+                logger.LogWarning("[MusicBrainz] No release graph found for artist {ArtistId}", artistId);
                 return new List<string>();
             }
 
             var filter = DiscographyProfileFilter.FromProfile(profile);
-            return ApplyProfile(graph, filter);
+            var releases = ApplyProfile(graph, filter);
+            
+            logger.LogInformation("[MusicBrainz] Found {Count} releases for artist {ArtistId} matching profile", 
+                releases.Count, artistId);
+            
+            return releases;
         }
 
         public List<string> ApplyProfile(ArtistReleaseGraph graph, DiscographyProfileFilter filter)
@@ -41,6 +55,9 @@ namespace slskd.Integrations.MusicBrainz
             {
                 return new List<string>();
             }
+
+            logger.LogDebug("[MusicBrainz] Applying profile filter to {Count} release groups", 
+                graph.ReleaseGroups.Count);
 
             var allowedTypes = new HashSet<ReleaseGroupType>();
             if (filter.IncludeAlbums) allowedTypes.Add(ReleaseGroupType.Album);
