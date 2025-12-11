@@ -509,9 +509,9 @@ docker pull ghcr.io/snapetech/slskdn:latest
 **⚠️ Unstable builds from experimental branches**
 
 <!-- BEGIN_DEV_BUILD -->
-**[Development Build dev-20251211-060556 →](https://github.com/snapetech/slskdn/releases/tag/dev-20251211-060556)** 
+**[Development Build dev-20251211-004551 →](https://github.com/snapetech/slskdn/releases/tag/dev-20251211-004551)** 
 
-Version: `0.24.1-dev-20251211-060615` | Branch: `experimental/multi-source-swarm` 
+Version: `0.24.1-dev-20251211-064611` | Branch: `experimental/multi-source-swarm` 
 
 ```bash
 # Arch Linux (AUR)
