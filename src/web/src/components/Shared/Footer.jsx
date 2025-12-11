@@ -96,6 +96,16 @@ class Footer extends Component {
           )}
           <a
             className="slskdn-footer-link"
+            href="https://github.com/sponsors/snapetech"
+            rel="noopener noreferrer"
+            target="_blank"
+            title="because Cursor isn't cheap!"
+          >
+            <Icon name="heart" /> Sponsor
+          </a>
+          <span className="slskdn-footer-divider">•</span>
+          <a
+            className="slskdn-footer-link"
             href={GITHUB_BASE}
             rel="noopener noreferrer"
             target="_blank"
