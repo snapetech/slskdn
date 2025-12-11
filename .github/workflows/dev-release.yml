@@ -219,7 +219,7 @@ jobs:
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: slskdn-dev-linux-x64
+          name: slskdn-dev-all-platforms
 
       - name: Create Timestamped Release
         uses: softprops/action-gh-release@v2
@@ -242,16 +242,24 @@ jobs:
             ### Changes in this build
             See commit ${{ needs.build.outputs.short_sha }} for details.
             
+            ### Downloads
+            - **Linux x64**: `slskdn-dev-linux-x64.zip`
+            - **Windows x64**: `slskdn-dev-win-x64.zip`
+            - **macOS x64** (Intel): `slskdn-dev-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdn-dev-osx-arm64.zip`
+            
             ### Installation
             **Package Managers** (recommended):
             - Arch: `yay -S slskdn-dev`
             - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn-dev && sudo dnf install slskdn-dev`
             - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn-dev`
             - Docker: `docker pull ghcr.io/snapetech/slskdn:dev-latest`
+            - Windows: `choco install slskdn --pre`
+            - macOS: `brew install snapetech/slskdn/slskdn-dev`
             
-            **Direct Download**: Extract the zip below and run `./slskd`
+            **Direct Download**: Extract the zip for your platform and run the binary
           prerelease: false
-          files: slskdn-dev-linux-x64.zip
+          files: slskdn-dev-*.zip
 
       - name: Delete Previous Dev Release
         env:
@@ -278,6 +286,12 @@ jobs:
             This is an **unstable development build** from the experimental branch.
             It includes cutting-edge features that may contain bugs.
             
+            ### Downloads
+            - **Linux x64**: `slskdn-dev-linux-x64.zip`
+            - **Windows x64**: `slskdn-dev-win-x64.zip`
+            - **macOS x64** (Intel): `slskdn-dev-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdn-dev-osx-arm64.zip`
+            
             ### Features in this build:
             - 🔀 **Multi-source swarm downloads** - Download from multiple peers simultaneously
             - 🌐 **DHT mesh network** - Distributed hash table for content verification
@@ -298,9 +312,21 @@ jobs:
             sudo add-apt-repository ppa:keefshape/slskdn
             sudo apt update
             sudo apt install slskdn-dev
+            
+            # Windows (Chocolatey)
+            choco install slskdn --pre
+            
+            # macOS (Homebrew)
+            brew install snapetech/slskdn/slskdn-dev
+            
+            # Snap
+            sudo snap install slskdn --edge
+            
+            # Docker
+            docker pull ghcr.io/snapetech/slskdn:dev
             ```
           prerelease: true
-          files: slskdn-dev-linux-x64.zip
+          files: slskdn-dev-*.zip
 
   aur:
     name: Publish to AUR
