@@ -398,7 +398,7 @@ namespace slskd.Transfers.API
             var activeDownloads = Transfers.Downloads.List(t => 
                 t.State == Soulseek.TransferStates.InProgress);
             var activeUploads = Transfers.Uploads.List(t => 
-                t.State == Soulseek.TransferStates.InProgress);
+                t.State == Soulseek.TransferStates.InProgress, includeRemoved: false);
 
             var totalDownloadSpeed = activeDownloads.Sum(t => t.AverageSpeed);
             var totalUploadSpeed = activeUploads.Sum(t => t.AverageSpeed);

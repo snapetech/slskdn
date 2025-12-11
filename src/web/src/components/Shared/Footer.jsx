@@ -1,21 +1,26 @@
 import './Footer.css';
-import React, { Component } from 'react';
-import { Icon } from 'semantic-ui-react';
 import * as mesh from '../../lib/mesh';
 import * as session from '../../lib/session';
 import * as transfers from '../../lib/transfers';
 import { formatBytes } from '../../lib/util';
+import React, { Component } from 'react';
+import { Icon } from 'semantic-ui-react';
 
 const GITHUB_BASE = 'https://github.com/snapetech/slskdn';
 const SLSKD_GITHUB = 'https://github.com/slskd/slskd';
+
+const formatSpeed = (bytesPerSec) => {
+  if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
+  return `${formatBytes(bytesPerSec)}/s`;
+};
 
 class Footer extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      stats: null,
-      speeds: null,
       interval: null,
+      speeds: null,
+      stats: null,
     };
   }
 
@@ -26,7 +31,7 @@ class Footer extends Component {
       const interval = setInterval(() => {
         this.fetchStats();
         this.fetchSpeeds();
-      }, 2000); // Every 2s for real-time feel
+      }, 2_000); // Every 2s for real-time feel
       this.setState({ interval });
     }
   }
@@ -67,24 +72,20 @@ class Footer extends Component {
 
   render() {
     const year = new Date().getFullYear();
-    const { stats, speeds } = this.state;
+    const { speeds, stats } = this.state;
     const isLoggedIn = session.isLoggedIn();
 
     // Determine if stats are connected
     const isDhtConnected = isLoggedIn && stats && stats.dht > 0;
     const isOverlayConnected = isLoggedIn && stats && stats.overlay > 0;
-    const isNatResolved = isLoggedIn && stats && stats.natType && stats.natType !== 'Unknown';
-    
+    const isNatResolved =
+      isLoggedIn && stats && stats.natType && stats.natType !== 'Unknown';
+
     // Format NAT type tooltip
-    const natTooltip = isLoggedIn && stats 
-      ? `NAT Type: ${stats.natType || 'Unknown'}` 
-      : 'NAT: Login to see stats';
-    
-    // Format speeds
-    const formatSpeed = (bytesPerSec) => {
-      if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
-      return `${formatBytes(bytesPerSec)}/s`;
-    };
+    const natTooltip =
+      isLoggedIn && stats
+        ? `NAT Type: ${stats.natType || 'Unknown'}`
+        : 'NAT: Login to see stats';
 
     return (
       <footer className="slskdn-footer">
@@ -105,15 +106,24 @@ class Footer extends Component {
           {/* Center-Left: Transfer Speeds */}
           {isLoggedIn && speeds && (
             <div className="slskdn-footer-speeds">
-              <span className="slskdn-footer-speed-item" title="Total transfer speed (upload + download)">
+              <span
+                className="slskdn-footer-speed-item"
+                title="Total transfer speed (upload + download)"
+              >
                 <strong>T:</strong> {formatSpeed(speeds.total)}
               </span>
               <span className="slskdn-footer-divider">•</span>
-              <span className="slskdn-footer-speed-item" title="Soulseek network speed">
+              <span
+                className="slskdn-footer-speed-item"
+                title="Soulseek network speed"
+              >
                 <strong>S:</strong> {formatSpeed(speeds.soulseek)}
               </span>
               <span className="slskdn-footer-divider">•</span>
-              <span className="slskdn-footer-speed-item" title="Mesh network speed">
+              <span
+                className="slskdn-footer-speed-item"
+                title="Mesh network speed"
+              >
                 <strong>M:</strong> {formatSpeed(speeds.mesh)}
               </span>
             </div>
@@ -146,22 +156,42 @@ class Footer extends Component {
           {/* Right: Stats icons and quote */}
           <div className="slskdn-footer-right">
             <div className="slskdn-footer-stats">
-              <Icon 
-                name="sitemap" 
-                className={isDhtConnected ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isLoggedIn && stats ? `DHT Nodes: ${stats.dht}` : 'DHT: Login to see stats'}
+              <Icon
+                className={
+                  isDhtConnected
+                    ? 'slskdn-footer-stat-icon connected'
+                    : 'slskdn-footer-stat-icon'
+                }
+                name="sitemap"
+                title={
+                  isLoggedIn && stats
+                    ? `DHT Nodes: ${stats.dht}`
+                    : 'DHT: Login to see stats'
+                }
               />
               <span className="slskdn-footer-divider">|</span>
-              <Icon 
-                name="shield alternate" 
-                className={isNatResolved ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
+              <Icon
+                className={
+                  isNatResolved
+                    ? 'slskdn-footer-stat-icon connected'
+                    : 'slskdn-footer-stat-icon'
+                }
+                name="shield alternate"
                 title={natTooltip}
               />
               <span className="slskdn-footer-divider">|</span>
-              <Icon 
-                name="globe" 
-                className={isOverlayConnected ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isLoggedIn && stats ? `Overlay Peers: ${stats.overlay}` : 'Overlay: Login to see stats'}
+              <Icon
+                className={
+                  isOverlayConnected
+                    ? 'slskdn-footer-stat-icon connected'
+                    : 'slskdn-footer-stat-icon'
+                }
+                name="globe"
+                title={
+                  isLoggedIn && stats
+                    ? `Overlay Peers: ${stats.overlay}`
+                    : 'Overlay: Login to see stats'
+                }
               />
             </div>
             <span className="slskdn-footer-divider">•</span>

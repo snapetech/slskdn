@@ -4,6 +4,7 @@ import * as transfers from '../../lib/transfers';
 import * as userNotes from '../../lib/userNotes';
 import * as users from '../../lib/users';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import UserCard from '../Shared/UserCard';
 import UserNoteModal from '../Users/UserNoteModal';
 import Directory from './Directory';
 import DirectoryTree from './DirectoryTree';
@@ -514,7 +515,7 @@ class BrowseSession extends Component {
                             color="green"
                             name="circle"
                           />
-                          {username}
+                          <UserCard username={username}>{username}</UserCard>
                           {userNote && (
                             <Icon
                               color={userNote.color || 'grey'}

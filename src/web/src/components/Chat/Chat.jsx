@@ -2,6 +2,7 @@ import './Chat.css';
 import { activeChatKey } from '../../config';
 import * as chat from '../../lib/chat';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import UserCard from '../Shared/UserCard';
 import ChatMenu from './ChatMenu';
 import React, { Component, createRef } from 'react';
 import {
@@ -268,7 +269,7 @@ class Chat extends Component {
                   color="green"
                   name="circle"
                 />
-                {active}
+                <UserCard username={active}>{active}</UserCard>
                 <Icon
                   className="close-button"
                   color="red"

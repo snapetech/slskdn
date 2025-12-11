@@ -1,0 +1,222 @@
+.user-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.user-card-inline {
+  display: inline-flex;
+}
+
+.user-card-username {
+  font-weight: 500;
+}
+
+.user-card-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.user-card-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.user-card-stat:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-card-stat .icon {
+  margin: 0 !important;
+  opacity: 0.8;
+}
+
+.user-card-stat-value {
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+/* Color variations */
+.user-card-stat-green {
+  background: rgba(33, 186, 69, 0.15);
+  border-color: rgba(33, 186, 69, 0.3);
+  color: #21ba45;
+}
+
+.user-card-stat-purple {
+  background: rgba(163, 51, 200, 0.15);
+  border-color: rgba(163, 51, 200, 0.3);
+  color: #a333c8;
+}
+
+.user-card-stat-olive {
+  background: rgba(181, 204, 24, 0.15);
+  border-color: rgba(181, 204, 24, 0.3);
+  color: #b5cc18;
+}
+
+.user-card-stat-yellow {
+  background: rgba(251, 189, 8, 0.15);
+  border-color: rgba(251, 189, 8, 0.3);
+  color: #fbbd08;
+}
+
+.user-card-stat-orange {
+  background: rgba(242, 113, 28, 0.15);
+  border-color: rgba(242, 113, 28, 0.3);
+  color: #f2711c;
+}
+
+.user-card-stat-red {
+  background: rgba(219, 40, 40, 0.15);
+  border-color: rgba(219, 40, 40, 0.3);
+  color: #db2828;
+}
+
+.user-card-stat-blue {
+  background: rgba(33, 133, 208, 0.15);
+  border-color: rgba(33, 133, 208, 0.3);
+  color: #2185d0;
+}
+
+.user-card-stat-grey {
+  background: rgba(118, 118, 118, 0.08);
+  border-color: rgba(118, 118, 118, 0.2);
+  color: #999;
+  opacity: 0.6;
+}
+
+/* Neon glow effect for high reputation */
+.user-card-stat-glow {
+  animation: neon-pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.user-card-stat-purple.user-card-stat-glow {
+  box-shadow: 0 0 15px rgba(163, 51, 200, 0.8), 0 0 30px rgba(163, 51, 200, 0.4);
+}
+
+.user-card-stat-green.user-card-stat-glow {
+  box-shadow: 0 0 15px rgba(33, 186, 69, 0.8), 0 0 30px rgba(33, 186, 69, 0.4);
+}
+
+.user-card-stat-red.user-card-stat-glow {
+  box-shadow: 0 0 15px rgba(219, 40, 40, 0.8), 0 0 30px rgba(219, 40, 40, 0.4);
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor;
+  }
+  50% {
+    box-shadow: 
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor;
+  }
+}
+
+.user-card-loading {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  opacity: 0.5;
+}
+
+.user-card-loading .icon {
+  margin: 0 !important;
+}
+
+/* Dark theme enhancements */
+html.dark .user-card-stat {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .user-card-stat-green {
+  background: rgba(33, 186, 69, 0.2);
+  border-color: rgba(33, 186, 69, 0.4);
+  color: #4caf50;
+}
+
+html.dark .user-card-stat-purple {
+  background: rgba(163, 51, 200, 0.2);
+  border-color: rgba(163, 51, 200, 0.4);
+  color: #bb86fc;
+}
+
+html.dark .user-card-stat-olive {
+  background: rgba(181, 204, 24, 0.2);
+  border-color: rgba(181, 204, 24, 0.4);
+  color: #c5e17a;
+}
+
+html.dark .user-card-stat-yellow {
+  background: rgba(251, 189, 8, 0.2);
+  border-color: rgba(251, 189, 8, 0.4);
+  color: #fdd835;
+}
+
+html.dark .user-card-stat-orange {
+  background: rgba(242, 113, 28, 0.2);
+  border-color: rgba(242, 113, 28, 0.4);
+  color: #ff9800;
+}
+
+html.dark .user-card-stat-red {
+  background: rgba(219, 40, 40, 0.2);
+  border-color: rgba(219, 40, 40, 0.4);
+  color: #f44336;
+}
+
+html.dark .user-card-stat-blue {
+  background: rgba(33, 133, 208, 0.2);
+  border-color: rgba(33, 133, 208, 0.4);
+  color: #42a5f5;
+}
+
+html.dark .user-card-stat-grey {
+  background: rgba(158, 158, 158, 0.1);
+  border-color: rgba(158, 158, 158, 0.2);
+  color: #888;
+  opacity: 0.5;
+}
+
+/* Enhanced glow for dark theme */
+html.dark .user-card-stat-purple.user-card-stat-glow {
+  box-shadow: 0 0 20px rgba(187, 134, 252, 0.9), 0 0 40px rgba(187, 134, 252, 0.5);
+}
+
+html.dark .user-card-stat-green.user-card-stat-glow {
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.9), 0 0 40px rgba(76, 175, 80, 0.5);
+}
+
+html.dark .user-card-stat-red.user-card-stat-glow {
+  box-shadow: 0 0 20px rgba(244, 67, 54, 0.9), 0 0 40px rgba(244, 67, 54, 0.5);
+}
+
+/* Compact variant for tight spaces */
+.user-card-compact .user-card-stats {
+  gap: 2px;
+}
+
+.user-card-compact .user-card-stat {
+  padding: 1px 3px;
+  font-size: 0.75em;
+}

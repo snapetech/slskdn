@@ -2,6 +2,7 @@ import * as transfers from '../../lib/transfers';
 import { getDirectoryContents } from '../../lib/users';
 import { formatBytes, getDirectoryName } from '../../lib/util';
 import FileList from '../Shared/FileList';
+import UserCard from '../Shared/UserCard';
 import UserNoteModal from '../Users/UserNoteModal';
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
@@ -270,7 +271,9 @@ class Response extends Component {
                 state: { user: response.username },
               }}
             >
-              {response.username}
+              <UserCard username={response.username}>
+                {response.username}
+              </UserCard>
             </Link>
             {downloadStats && (
               <Popup
