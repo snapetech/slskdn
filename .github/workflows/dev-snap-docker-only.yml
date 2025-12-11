@@ -1,0 +1,121 @@
+name: Dev Release (Snap + Docker Only)
+
+on:
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8'
+  BASE_VERSION: '0.24.1'
+
+jobs:
+  get-version:
+    name: Get Latest Dev Version
+    runs-on: ubuntu-latest
+    outputs:
+      dev_version: ${{ steps.version.outputs.dev_version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+    steps:
+      - name: Get Latest Dev Release
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get version from latest dev release
+          DEV_VERSION=$(gh release view dev --repo ${{ github.repository }} --json tagName -q '.tagName')
+          SHORT_SHA=$(gh release view dev --repo ${{ github.repository }} --json body -q '.body' | grep -oP '(?<=\*\*Commit:\*\* )[a-f0-9]+' | head -1)
+          
+          echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "📦 Using version: ${DEV_VERSION} (commit: ${SHORT_SHA})"
+
+  snap:
+    name: Publish to Snap (Edge)
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: experimental/multi-source-swarm }
+      
+      - name: Download from Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download dev \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
+      
+      - name: Build and Push
+        env: { SNAPCRAFT_STORE_CREDENTIALS: "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" }
+        if: "${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}"
+        run: |
+          unzip slskdn-dev-linux-x64.zip -d slskdn_dist
+          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
+          sed -i "s|version: .*|version: '${{ needs.get-version.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
+          sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
+          
+          # Install LXD for snapcraft
+          sudo snap install lxd
+          sudo lxd init --auto
+          sudo usermod -a -G lxd $USER
+          
+          # Install Snapcraft
+          sudo snap install snapcraft --classic
+          
+          # Build with LXD
+          cd packaging/snap
+          sg lxd -c "snapcraft --use-lxd"
+          
+          # Publish
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+          snapcraft upload --release=edge *.snap
+
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: get-version
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: experimental/multi-source-swarm
+
+      - name: Download from Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download dev \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Dev Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:dev
+            ghcr.io/${{ github.repository }}:dev-${{ needs.get-version.outputs.short_sha }}
+            ghcr.io/${{ github.repository }}:dev-latest
+          build-args: |
+            VERSION=${{ needs.get-version.outputs.dev_version }}
+            BUILD_ARTIFACT=slskdn-dev-linux-x64.zip

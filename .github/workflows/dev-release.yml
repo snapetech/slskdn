@@ -884,7 +884,8 @@ jobs:
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: slskdn-dev-linux-x64
+          name: slskdn-dev-all-platforms
+          pattern: slskdn-dev-linux-x64.zip
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -997,8 +998,20 @@ jobs:
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.build.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
+          
+          # Install LXD for snapcraft
+          sudo snap install lxd
+          sudo lxd init --auto
+          sudo usermod -a -G lxd $USER
+          
+          # Install Snapcraft
           sudo snap install snapcraft --classic
-          cd packaging/snap && snapcraft
+          
+          # Build (use --destructive-mode to avoid LXD requirement)
+          cd packaging/snap
+          sg lxd -c "snapcraft --use-lxd"
+          
+          # Publish
           echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
           snapcraft login --with snap.login
           snapcraft upload --release=edge *.snap
