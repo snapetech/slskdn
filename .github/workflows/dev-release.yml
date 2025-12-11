@@ -915,10 +915,111 @@ jobs:
           tag_name: dev
           files: ${{ env.DEB_FILE }}
 
+  snap:
+    name: Publish to Snap (Edge)
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: experimental/multi-source-swarm }
+      - uses: actions/download-artifact@v4
+        with: { name: dev-builds }
+      
+      - name: Build and Push
+        env: { SNAPCRAFT_STORE_CREDENTIALS: "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" }
+        if: "${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}"
+        run: |
+          unzip slskdn-dev-linux-x64.zip -d slskdn_dist
+          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
+          sed -i "s|version: .*|version: '${{ needs.build.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
+          sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
+          sudo snap install snapcraft --classic
+          cd packaging/snap && snapcraft
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+          snapcraft upload --release=edge *.snap
+
+  chocolatey:
+    name: Publish to Chocolatey (Pre)
+    runs-on: windows-latest
+    needs: [build, release]
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: experimental/multi-source-swarm }
+      - uses: actions/download-artifact@v4
+        with: { name: dev-builds }
+      
+      - name: Pack and Push
+        env: { CHOCO_API_KEY: "${{ secrets.CHOCO_API_KEY }}" }
+        if: "${{ env.CHOCO_API_KEY != '' }}"
+        run: |
+          $Version = "${{ needs.build.outputs.dev_version }}"
+          $Url = "https://github.com/${{ github.repository }}/releases/download/dev/slskdn-dev-win-x64.zip"
+          $Checksum = (Get-FileHash slskdn-dev-win-x64.zip -Algorithm SHA256).Hash
+          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          cd packaging/chocolatey
+          choco pack
+          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+
+  homebrew:
+    name: Update Homebrew Tap (Dev)
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dev-builds }
+        
+      - name: Update Tap
+        env: { GH_TOKEN: "${{ secrets.TAP_GITHUB_TOKEN }}" }
+        if: "${{ env.GH_TOKEN != '' }}"
+        run: |
+          SHA_MAC_X64=$(sha256sum slskdn-dev-osx-x64.zip | cut -d' ' -f1)
+          SHA_MAC_ARM=$(sha256sum slskdn-dev-osx-arm64.zip | cut -d' ' -f1)
+          SHA_LINUX=$(sha256sum slskdn-dev-linux-x64.zip | cut -d' ' -f1)
+          VERSION="${{ needs.build.outputs.dev_version }}"
+          git clone https://x-access-token:${GH_TOKEN}@github.com/snapetech/homebrew-slskdn.git tap
+          cd tap
+          cat > Formula/slskdn-dev.rb <<EOF
+          class SlskdnDev < Formula
+            desc "Batteries-included Soulseek web client (Development Build)"
+            homepage "https://github.com/snapetech/slskdn"
+            license "AGPL-3.0-or-later"
+            version "${VERSION}"
+            url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip"
+            sha256 "${SHA_LINUX}"
+            on_macos do
+              on_arm do
+                url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-osx-arm64.zip"
+                sha256 "${SHA_MAC_ARM}"
+              end
+              on_intel do
+                url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-osx-x64.zip"
+                sha256 "${SHA_MAC_X64}"
+              end
+            end
+            on_linux do
+              url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip"
+              sha256 "${SHA_LINUX}"
+            end
+            conflicts_with "slskdn", because: "both install slskdn binary"
+            def install
+              libexec.install Dir["*"]
+              (bin/"slskdn-dev").write_exec_script libexec/"slskd"
+            end
+          end
+          EOF
+          git config user.name "slskdn CI" && git config user.email "slskdn@proton.me"
+          git add Formula/slskdn-dev.rb
+          git commit -m "Update slskdn-dev to $VERSION" || echo "No changes"
+          git push
+
   notify:
     name: Notify
     runs-on: ubuntu-latest
-    needs: [build, release, aur, copr, ppa, docker, packages]
+    needs: [build, release, aur, copr, ppa, docker, packages, nix, winget, snap, chocolatey, homebrew]
     if: always()
     steps:
       - name: Summary
@@ -935,6 +1036,11 @@ jobs:
           echo "- PPA (slskdn-dev): ${{ needs.ppa.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Docker: ${{ needs.docker.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Packages (.deb/.rpm): ${{ needs.packages.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Nix Flake: ${{ needs.nix.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Winget: ${{ needs.winget.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Snap (Edge): ${{ needs.snap.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Chocolatey (Pre): ${{ needs.chocolatey.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Homebrew Tap: ${{ needs.homebrew.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Install Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
