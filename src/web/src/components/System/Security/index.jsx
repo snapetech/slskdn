@@ -57,11 +57,66 @@ const Security = () => {
         <Message.Header>Security Module Unavailable</Message.Header>
         <p>{error}</p>
         <p>Security features may not be enabled on this server.</p>
+        <Button
+          onClick={fetchData}
+          size="small"
+        >
+          Retry
+        </Button>
       </Message>
     );
   }
 
   const stats = dashboard || {};
+  
+  // Check if security is enabled but no data is available yet
+  const hasAnyData = stats.networkGuardStats || stats.reputationStats || 
+                     stats.violationStats || stats.eventStats ||
+                     stats.paranoidStats || stats.honeypotStats ||
+                     stats.fingerprintStats || stats.canaryStats ||
+                     stats.entropyStats || stats.consensusStats ||
+                     stats.verificationStats || stats.disclosureStats ||
+                     stats.temporalStats;
+
+  if (!hasAnyData) {
+    return (
+      <Message info>
+        <Message.Header>
+          <Icon name="info circle" />
+          Security System Active - No Activity Yet
+        </Message.Header>
+        <p>
+          The security subsystem is running but hasn't collected data yet. This is normal for:
+        </p>
+        <ul>
+          <li><strong>Fresh installations</strong> - Security features need time to observe network activity</li>
+          <li><strong>Standalone mode</strong> - Most security features activate when mesh networking is enabled</li>
+          <li><strong>Low traffic</strong> - Peer reputation, violation tracking, and behavioral analysis require peer interactions</li>
+        </ul>
+        <p>
+          <strong>To activate security features:</strong>
+        </p>
+        <ol>
+          <li>Connect to the Soulseek network (if not already connected)</li>
+          <li>Enable mesh networking via DHT/Overlay (check footer for connectivity)</li>
+          <li>Wait for peer connections and transfer activity</li>
+        </ol>
+        <p>
+          Security monitoring will begin automatically once peer activity is detected.
+          Check the <strong>Mesh</strong> tab to verify connectivity.
+        </p>
+        <Button
+          icon="refresh"
+          loading={refreshing}
+          onClick={fetchData}
+          size="small"
+          primary
+        >
+          Refresh Status
+        </Button>
+      </Message>
+    );
+  }
 
   return (
     <div className="security-dashboard">
