@@ -1177,6 +1177,7 @@ namespace slskd
                     });
             }
 
+            services.AddMemoryCache(); // Required by ShardCache and others
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddControllers()
                 .ConfigureApiBehaviorOptions(options =>
