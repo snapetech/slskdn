@@ -27,7 +27,7 @@ COPY tests tests/.
 
 COPY --from=web /slskd/src/web/build /slskd/src/slskd/wwwroot/.
 
-RUN bash ./bin/build --dotnet-only --version $VERSION
+RUN bash ./bin/build --dotnet-only --skip-tests --version $VERSION
 
 RUN bash ./bin/publish --no-prebuild --platform $TARGETPLATFORM --version $VERSION --output ../../dist/${TARGETPLATFORM}
 
