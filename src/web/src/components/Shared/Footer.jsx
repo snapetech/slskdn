@@ -64,7 +64,7 @@ class Footer extends Component {
               href="https://github.com/sponsors/snapetech"
               rel="noopener noreferrer"
               target="_blank"
-              title="because Cursor isn't cheap!"
+              title="Support development - because Cursor isn't cheap!"
             >
               <Icon name="heart" /> Sponsor
             </a>
@@ -78,6 +78,7 @@ class Footer extends Component {
                 href={GITHUB_BASE}
                 rel="noopener noreferrer"
                 target="_blank"
+                title="slskdN - the fork"
               >
                 slskdN
               </a>
@@ -95,21 +96,23 @@ class Footer extends Component {
 
           {/* Right: Stats icons and quote */}
           <div className="slskdn-footer-right">
-            <div className="slskdn-footer-stats" title="Mesh Transport Stats">
+            <div className="slskdn-footer-stats">
               <Icon 
                 name="sitemap" 
                 className={isDhtConnected ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isDhtConnected ? `DHT: ${stats.dht} peers` : 'DHT: Not connected'}
+                title={isLoggedIn && stats ? `DHT: ${stats.dht} peers` : 'DHT: Login to see stats'}
               />
+              <span className="slskdn-footer-divider">|</span>
               <Icon 
-                name="shield" 
+                name="shield alternate" 
                 className={isNatResolved ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isNatResolved ? `NAT: ${stats.natType}` : 'NAT: Unknown'}
+                title={isLoggedIn && stats ? `NAT: ${stats.natType}` : 'NAT: Login to see stats'}
               />
+              <span className="slskdn-footer-divider">|</span>
               <Icon 
-                name="network" 
+                name="globe" 
                 className={isOverlayConnected ? 'slskdn-footer-stat-icon connected' : 'slskdn-footer-stat-icon'}
-                title={isOverlayConnected ? `Overlay: ${stats.overlay} peers` : 'Overlay: Not connected'}
+                title={isLoggedIn && stats ? `Overlay: ${stats.overlay} peers` : 'Overlay: Login to see stats'}
               />
             </div>
             <span className="slskdn-footer-divider">•</span>

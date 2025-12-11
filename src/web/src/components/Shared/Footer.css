@@ -198,6 +198,8 @@ html:not(.dark) .slskdn-footer-stat-icon.connected {
 
 .slskdn-footer-sponsor .icon {
     color: #ff6b9d;
+    display: flex;
+    align-items: center;
 }
 
 html:not(.dark) .slskdn-footer-sponsor {
