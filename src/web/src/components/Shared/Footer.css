@@ -202,6 +202,38 @@ html:not(.dark) .slskdn-footer-stat-icon.connected {
     align-items: center;
 }
 
+.slskdn-footer-speeds {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    background: rgba(88, 166, 255, 0.05);
+    border-radius: 4px;
+    border: 1px solid rgba(88, 166, 255, 0.15);
+}
+
+.slskdn-footer-speed-item {
+    white-space: nowrap;
+}
+
+.slskdn-footer-speed-item strong {
+    color: #58a6ff;
+    margin-right: 3px;
+}
+
+html:not(.dark) .slskdn-footer-speeds {
+    color: rgba(0, 0, 0, 0.6);
+    background: rgba(9, 105, 218, 0.05);
+    border-color: rgba(9, 105, 218, 0.15);
+}
+
+html:not(.dark) .slskdn-footer-speed-item strong {
+    color: #0969da;
+}
+
 html:not(.dark) .slskdn-footer-sponsor {
     color: rgba(0, 0, 0, 0.5);
 }

@@ -3,6 +3,8 @@ import React, { Component } from 'react';
 import { Icon } from 'semantic-ui-react';
 import * as mesh from '../../lib/mesh';
 import * as session from '../../lib/session';
+import * as transfers from '../../lib/transfers';
+import { formatBytes } from '../../lib/util';
 
 const GITHUB_BASE = 'https://github.com/snapetech/slskdn';
 const SLSKD_GITHUB = 'https://github.com/slskd/slskd';
@@ -12,6 +14,7 @@ class Footer extends Component {
     super(props);
     this.state = {
       stats: null,
+      speeds: null,
       interval: null,
     };
   }
@@ -19,7 +22,11 @@ class Footer extends Component {
   componentDidMount() {
     if (session.isLoggedIn()) {
       this.fetchStats();
-      const interval = setInterval(() => this.fetchStats(), 10000); // Every 10s
+      this.fetchSpeeds();
+      const interval = setInterval(() => {
+        this.fetchStats();
+        this.fetchSpeeds();
+      }, 2000); // Every 2s for real-time feel
       this.setState({ interval });
     }
   }
@@ -44,9 +51,23 @@ class Footer extends Component {
     }
   };
 
+  fetchSpeeds = async () => {
+    if (!session.isLoggedIn()) {
+      return;
+    }
+
+    try {
+      const speeds = await transfers.getSpeeds();
+      this.setState({ speeds });
+    } catch (error) {
+      // Silently fail - speeds are non-critical
+      console.debug('Failed to fetch transfer speeds:', error);
+    }
+  };
+
   render() {
     const year = new Date().getFullYear();
-    const { stats } = this.state;
+    const { stats, speeds } = this.state;
     const isLoggedIn = session.isLoggedIn();
 
     // Determine if stats are connected
@@ -58,6 +79,12 @@ class Footer extends Component {
     const natTooltip = isLoggedIn && stats 
       ? `NAT Type: ${stats.natType || 'Unknown'}` 
       : 'NAT: Login to see stats';
+    
+    // Format speeds
+    const formatSpeed = (bytesPerSec) => {
+      if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
+      return `${formatBytes(bytesPerSec)}/s`;
+    };
 
     return (
       <footer className="slskdn-footer">
@@ -74,6 +101,23 @@ class Footer extends Component {
               <Icon name="heart" /> Sponsor
             </a>
           </div>
+
+          {/* Center-Left: Transfer Speeds */}
+          {isLoggedIn && speeds && (
+            <div className="slskdn-footer-speeds">
+              <span className="slskdn-footer-speed-item" title="Total transfer speed (upload + download)">
+                <strong>T:</strong> {formatSpeed(speeds.total)}
+              </span>
+              <span className="slskdn-footer-divider">•</span>
+              <span className="slskdn-footer-speed-item" title="Soulseek network speed">
+                <strong>S:</strong> {formatSpeed(speeds.soulseek)}
+              </span>
+              <span className="slskdn-footer-divider">•</span>
+              <span className="slskdn-footer-speed-item" title="Mesh network speed">
+                <strong>M:</strong> {formatSpeed(speeds.mesh)}
+              </span>
+            </div>
+          )}
 
           {/* Center: Copyright */}
           <div className="slskdn-footer-center">

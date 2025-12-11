@@ -13,6 +13,11 @@ export const getAll = async ({ direction }) => {
   return response;
 };
 
+export const getSpeeds = async () => {
+  const response = await api.get('/transfers/speeds');
+  return response.data;
+};
+
 export const download = ({ username, files = [], destination }) => {
   const parameters = destination
     ? `?destination=${encodeURIComponent(destination)}`

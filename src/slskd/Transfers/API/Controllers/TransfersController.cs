@@ -1,4 +1,4 @@
-﻿// <copyright file="TransfersController.cs" company="slskd Team">
+// <copyright file="TransfersController.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -382,6 +382,41 @@ namespace slskd.Transfers.API
             {
                 return StatusCode(500, ex.Message);
             }
+        }
+
+        /// <summary>
+        ///     Gets real-time transfer speeds (total, soulseek, mesh).
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        [HttpGet("speeds")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(200)]
+        public IActionResult GetSpeeds()
+        {
+            // Calculate total speeds from active transfers
+            var activeDownloads = Transfers.Downloads.List(t => 
+                t.State == Soulseek.TransferStates.InProgress);
+            var activeUploads = Transfers.Uploads.List(t => 
+                t.State == Soulseek.TransferStates.InProgress);
+
+            var totalDownloadSpeed = activeDownloads.Sum(t => t.AverageSpeed);
+            var totalUploadSpeed = activeUploads.Sum(t => t.AverageSpeed);
+            var totalSpeed = totalDownloadSpeed + totalUploadSpeed;
+
+            // TODO: Distinguish mesh vs soulseek transfers
+            // For now, all transfers are soulseek-based
+            var soulseekSpeed = totalSpeed;
+            var meshSpeed = 0.0;
+
+            return Ok(new
+            {
+                total = totalSpeed,
+                soulseek = soulseekSpeed,
+                mesh = meshSpeed,
+                download = totalDownloadSpeed,
+                upload = totalUploadSpeed
+            });
         }
 
         /// <summary>
