@@ -19,7 +19,7 @@ public class InMemoryDhtClient : IDhtClient
     private readonly byte[] selfId;
     private readonly int maxReplicas;
 
-    public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, MeshOptions options)
+    public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, IOptions<MeshOptions> options)
     {
         this.logger = logger;
         selfId = RandomNodeId();

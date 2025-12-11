@@ -897,7 +897,11 @@ namespace slskd
             services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
             // Mesh message signing for mesh sync security
             services.AddSingleton<Mesh.IMeshMessageSigner, Mesh.MeshMessageSigner>();
-            services.AddSingleton<Mesh.Overlay.Ed25519KeyPair>();
+            services.AddSingleton(sp =>
+            {
+                var keyStore = sp.GetRequiredService<Mesh.Overlay.IKeyStore>();
+                return keyStore.Current;
+            });
             services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
             services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();
             services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
