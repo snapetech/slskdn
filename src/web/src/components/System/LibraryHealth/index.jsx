@@ -13,8 +13,8 @@ import {
   Tab,
   Loader,
 } from 'semantic-ui-react';
-import * as libraryHealth from '../../lib/libraryHealth';
-import { LoaderSegment } from '../Shared';
+import * as libraryHealth from '../../../lib/libraryHealth';
+import { LoaderSegment } from '../../Shared';
 
 const LibraryHealth = () => {
   const [libraryPath, setLibraryPath] = useState('');

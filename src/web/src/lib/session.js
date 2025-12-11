@@ -45,3 +45,8 @@ export const check = async () => {
     }
   }
 };
+
+export const authHeaders = () => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
