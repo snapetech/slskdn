@@ -54,17 +54,12 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.get-version.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
           
-          # Install LXD for snapcraft
-          sudo snap install lxd
-          sudo lxd init --auto
-          sudo usermod -a -G lxd $USER
-          
           # Install Snapcraft
           sudo snap install snapcraft --classic
           
-          # Build with LXD
+          # Build in destructive mode (no container needed)
           cd packaging/snap
-          sg lxd -c "snapcraft --use-lxd"
+          snapcraft --destructive-mode
           
           # Publish
           echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
