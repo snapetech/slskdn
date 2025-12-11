@@ -3,6 +3,7 @@ namespace slskd.Transfers.MultiSource.Playback
     using System.Collections.Concurrent;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
 
     public interface IPlaybackPriorityService
     {
@@ -26,12 +27,30 @@ namespace slskd.Transfers.MultiSource.Playback
     public class PlaybackPriorityService : IPlaybackPriorityService
     {
         private readonly ConcurrentDictionary<string, PlaybackFeedback> latest = new();
+        private readonly ILogger<PlaybackPriorityService> logger;
+
+        public PlaybackPriorityService(ILogger<PlaybackPriorityService> logger)
+        {
+            this.logger = logger;
+        }
 
         public Task RecordAsync(PlaybackFeedback feedback, CancellationToken ct = default)
         {
             if (feedback != null && !string.IsNullOrWhiteSpace(feedback.JobId))
             {
+                var isNew = !latest.ContainsKey(feedback.JobId);
                 latest[feedback.JobId] = feedback;
+                
+                if (isNew)
+                {
+                    logger.LogInformation("[Playback] Started tracking playback for job {JobId} (buffer target: {BufferMs}ms)", 
+                        feedback.JobId, feedback.BufferAheadMs);
+                }
+                else
+                {
+                    logger.LogDebug("[Playback] Updated playback feedback for job {JobId} (buffer target: {BufferMs}ms)", 
+                        feedback.JobId, feedback.BufferAheadMs);
+                }
             }
 
             return Task.CompletedTask;
@@ -53,17 +72,25 @@ namespace slskd.Transfers.MultiSource.Playback
                 return PriorityZone.Mid;
             }
 
+            PriorityZone zone;
             if (actual < desired)
             {
-                return PriorityZone.High;
+                zone = PriorityZone.High;
+                logger.LogDebug("[Playback] Job {JobId} priority: HIGH (buffer {Actual}ms < target {Desired}ms)", 
+                    jobId, actual, desired);
             }
-
-            if (actual >= desired * 2)
+            else if (actual >= desired * 2)
             {
-                return PriorityZone.Low;
+                zone = PriorityZone.Low;
+                logger.LogDebug("[Playback] Job {JobId} priority: LOW (buffer {Actual}ms >= 2x target {Desired}ms)", 
+                    jobId, actual, desired);
+            }
+            else
+            {
+                zone = PriorityZone.Mid;
             }
 
-            return PriorityZone.Mid;
+            return zone;
         }
 
         public PlaybackFeedback? GetLatest(string jobId)

@@ -27,6 +27,9 @@ public class MeshBootstrapService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[MeshBootstrap] Starting service (refresh interval: {Minutes} minutes, bootstrap nodes: {Count})", 
+            refreshInterval.TotalMinutes, options.BootstrapNodes.Count);
+        
         await PublishOnce(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -41,10 +44,13 @@ public class MeshBootstrapService : BackgroundService
                 // shutdown
             }
         }
+        
+        logger.LogInformation("[MeshBootstrap] Service stopped");
     }
 
     private async Task PublishOnce(CancellationToken ct)
     {
+        logger.LogInformation("[MeshBootstrap] Publishing self descriptor to DHT");
         await publisher.PublishSelfAsync(ct);
         logger.LogDebug("[MeshBootstrap] Self descriptor published; bootstrap nodes={Count}", options.BootstrapNodes.Count);
     }

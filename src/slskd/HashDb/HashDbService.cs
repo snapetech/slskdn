@@ -2416,8 +2416,14 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<int> MergeEntriesFromMeshAsync(IEnumerable<HashDbEntry> entries, CancellationToken cancellationToken = default)
         {
+            var entriesList = entries.ToList();
+            log.Information("[HashDb] Merging {Count} entries from mesh", entriesList.Count);
+            
             var merged = 0;
-            foreach (var entry in entries)
+            var conflicts = 0;
+            var skipped = 0;
+            
+            foreach (var entry in entriesList)
             {
                 // Check if we have this entry
                 var existing = await LookupHashAsync(entry.FlacKey, cancellationToken);
@@ -2430,9 +2436,22 @@ namespace slskd.HashDb
                 else if (existing.ByteHash != entry.ByteHash)
                 {
                     // Conflict! Keep the one with higher use_count
-                    log.Warning("[HashDb] Hash conflict for {Key}: local={Local} vs remote={Remote}", entry.FlacKey, existing.ByteHash?.Substring(0, 16), entry.ByteHash?.Substring(0, 16));
+                    log.Warning("[HashDb] Hash conflict for {Key}: local={Local} (uses:{LocalUse}) vs remote={Remote} (uses:{RemoteUse})", 
+                        entry.FlacKey, 
+                        existing.ByteHash?.Substring(0, 16), 
+                        existing.UseCount,
+                        entry.ByteHash?.Substring(0, 16),
+                        entry.UseCount);
+                    conflicts++;
+                }
+                else
+                {
+                    skipped++;
                 }
             }
+
+            log.Information("[HashDb] Mesh merge complete: {Merged} new, {Conflicts} conflicts, {Skipped} already known", 
+                merged, conflicts, skipped);
 
             return merged;
         }
