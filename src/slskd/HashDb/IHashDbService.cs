@@ -29,7 +29,7 @@ namespace slskd.HashDb
     /// <summary>
     ///     Service for managing the local hash database.
     /// </summary>
-    public interface IHashDbService
+    public partial interface IHashDbService
     {
         /// <summary>
         ///     Gets the current sequence ID for mesh sync.

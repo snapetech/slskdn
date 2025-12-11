@@ -36,6 +36,11 @@ public class MeshOptions
     public List<string> SelfEndpoints { get; set; } = new();
 
     /// <summary>
+    /// Relay endpoints (relay://host:port) we volunteer for others.
+    /// </summary>
+    public List<string> RelayEndpoints { get; set; } = new();
+
+    /// <summary>
     /// Enable STUN-based NAT detection.
     /// </summary>
     public bool EnableStun { get; set; } = true;

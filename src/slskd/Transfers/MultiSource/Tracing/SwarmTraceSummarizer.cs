@@ -88,9 +88,6 @@ namespace slskd.Transfers.MultiSource.Tracing
                         case SwarmEventType.ChunkTimedOut:
                             peer.ChunksTimedOut++;
                             break;
-                        case SwarmEventType.ChunkCorrupted:
-                            peer.ChunksCorrupted++;
-                            break;
                     }
                 }
             }

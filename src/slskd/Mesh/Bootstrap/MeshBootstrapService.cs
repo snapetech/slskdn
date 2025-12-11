@@ -49,3 +49,4 @@ public class MeshBootstrapService : BackgroundService
         logger.LogDebug("[MeshBootstrap] Self descriptor published; bootstrap nodes={Count}", options.BootstrapNodes.Count);
     }
 }
+

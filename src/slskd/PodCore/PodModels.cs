@@ -54,6 +54,7 @@ public class PodMember
     public string PeerId { get; set; } = string.Empty;
     public string Role { get; set; } = "member"; // owner|mod|member
     public bool IsBanned { get; set; }
+    public string? PublicKey { get; set; } // Ed25519 public key (base64)
 }
 
 public class PodMessage

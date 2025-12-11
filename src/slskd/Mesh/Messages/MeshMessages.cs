@@ -60,6 +60,27 @@ namespace slskd.Mesh.Messages
         /// </summary>
         [JsonPropertyName("proto_version")]
         public int ProtocolVersion { get; set; } = 1;
+
+        /// <summary>
+        ///     Gets or sets the sender's Ed25519 public key (Base64-encoded).
+        ///     SECURITY: Used for message authentication.
+        /// </summary>
+        [JsonPropertyName("public_key")]
+        public string PublicKey { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the Ed25519 signature of the message (Base64-encoded).
+        ///     SECURITY: Signature covers: type|timestamp|payload_json
+        /// </summary>
+        [JsonPropertyName("signature")]
+        public string Signature { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the message timestamp (Unix milliseconds).
+        ///     SECURITY: Used for replay protection and signature payload.
+        /// </summary>
+        [JsonPropertyName("timestamp_ms")]
+        public long TimestampUnixMs { get; set; }
     }
 
     /// <summary>

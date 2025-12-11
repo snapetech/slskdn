@@ -874,6 +874,86 @@ find . -name "*.cs" | xargs grep -l "TODO"
 
 ---
 
+## Rule 35: Never Use Stubs - Create Tasks Instead
+
+**Problem**: AI creates stub implementations (methods that return placeholder values, throw `NotImplementedException`, or have `// TODO` comments) instead of properly implementing functionality or creating tasks.
+
+**Slop**:
+```csharp
+// WRONG - stub implementation
+public bool Verify(ControlEnvelope envelope)
+{
+    // Stub verification always true for build
+    return true;
+}
+
+public static Ed25519KeyPair Generate()
+{
+    // Stub: generate random bytes for pub/priv
+    var priv = RandomNumberGenerator.GetBytes(32);
+    var pub = RandomNumberGenerator.GetBytes(32);
+    return new Ed25519KeyPair(pub, priv, DateTimeOffset.UtcNow);
+}
+
+public Task<string> CreateJobAsync()
+{
+    // TODO: Implement job creation
+    return Task.FromResult(Guid.NewGuid().ToString());
+}
+```
+
+**Correct**: Either implement the functionality properly, or create a task/todo in `memory-bank/tasks.md` and document what needs to be done.
+
+```csharp
+// CORRECT - real implementation
+public bool Verify(ControlEnvelope envelope)
+{
+    if (string.IsNullOrWhiteSpace(envelope.PublicKey) || string.IsNullOrWhiteSpace(envelope.Signature))
+    {
+        return false;
+    }
+
+    try
+    {
+        var publicKeyBytes = Convert.FromBase64String(envelope.PublicKey);
+        var signatureBytes = Convert.FromBase64String(envelope.Signature);
+        var payload = BuildSignablePayload(envelope);
+        var payloadBytes = Encoding.UTF8.GetBytes(payload);
+
+        var publicKey = PublicKey.Import(SignatureAlgorithm.Ed25519, publicKeyBytes, KeyBlobFormat.RawPublicKey);
+        return SignatureAlgorithm.Ed25519.Verify(publicKey, payloadBytes, signatureBytes);
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Signature verification failed");
+        return false;
+    }
+}
+
+// OR if not ready to implement, create a task:
+// In memory-bank/tasks.md:
+// - [ ] **T-1421**: Implement Ed25519 keypair generation using NSec.Cryptography
+//   - Status: pending
+//   - Priority: P1 (security critical)
+//   - Notes: Currently returns random bytes, needs real Ed25519 key generation
+```
+
+**When to create tasks instead of stubs**:
+- The feature is not yet designed
+- Dependencies are missing
+- The implementation requires significant research
+- It's part of a larger feature that isn't started
+
+**When to implement immediately**:
+- The feature is well-defined
+- All dependencies are available
+- It's a small, isolated change
+- It's blocking other work
+
+**Key principle**: **Stubs hide incomplete work and create technical debt. Tasks make incomplete work visible and trackable.**
+
+---
+
 ## Quick Self-Check
 
 Before submitting code, ask yourself:
@@ -883,10 +963,13 @@ Before submitting code, ask yourself:
 - [ ] Am I adding code just because "it might be useful"?
 - [ ] Is there a simpler way to do this?
 - [ ] Does this match how the rest of the codebase does it?
+- [ ] Did I leave any stubs, placeholders, or `NotImplementedException`?
+- [ ] If I couldn't implement something, did I create a task in `memory-bank/tasks.md`?
 
 If you answered "no" to the first question, stop and grep first.
+If you answered "yes" to the stub question, either implement it or create a task.
 
 ---
 
-*Last updated: 2025-12-08*
+*Last updated: 2025-12-10*
 

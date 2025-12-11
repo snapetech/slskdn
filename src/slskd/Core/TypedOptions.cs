@@ -20,3 +20,4 @@ public class BrainzOptions
     public string? ApiBaseUrl { get; set; }
     public int CacheSeconds { get; set; } = 300;
 }
+

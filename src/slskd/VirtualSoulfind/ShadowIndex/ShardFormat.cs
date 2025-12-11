@@ -1,6 +1,8 @@
-namespace slskd.VirtualSoulfind.ShadowIndex;
-
+using System;
+using System.Collections.Generic;
 using MessagePack;
+
+namespace slskd.VirtualSoulfind.ShadowIndex;
 
 /// <summary>
 /// Compact shadow index shard (stored in DHT).

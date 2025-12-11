@@ -1,4 +1,13 @@
-# slskdn - The Rich-Featured Soulseek Client
+# slskdn - The Rich-Featured Soulseek Distribution
+
+## Positioning
+
+**slskdn** is a **distribution** of slskd—not just a fork, but a complete ecosystem with:
+- Batteries-included UX (wishlist, auto-replace, smart ranking, etc.)
+- Advanced research subsystems (multi-source, DHT mesh, hash DB, backfill, reputation)
+- AI-assisted development governance (ADRs, memory-bank, anti-slop rules)
+
+This is **slskd-plus with bundled opinions**—a legitimate place to land for users who want everything built-in and are okay living on the sharp edge.
 
 ## Why Fork?
 

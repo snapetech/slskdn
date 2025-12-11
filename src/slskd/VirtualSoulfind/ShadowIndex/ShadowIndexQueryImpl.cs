@@ -1,5 +1,7 @@
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
+using slskd.VirtualSoulfind.Capture;
+
 /// <summary>
 /// Interface for querying shadow index via DHT.
 /// </summary>

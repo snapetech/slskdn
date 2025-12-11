@@ -1,7 +1,6 @@
 namespace slskd.VirtualSoulfind.Integration;
 
 using slskd.VirtualSoulfind.Scenes;
-using slskd.Jobs.LabelCrate;
 
 /// <summary>
 /// Integrates scenes with label crate jobs.

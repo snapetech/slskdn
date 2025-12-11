@@ -28,3 +28,4 @@ public class FuzzyMatcher : IFuzzyMatcher
          .Where(x => x.Length > 0)
          .ToHashSet();
 }
+

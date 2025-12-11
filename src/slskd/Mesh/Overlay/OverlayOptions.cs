@@ -17,3 +17,4 @@ public class OverlayOptions
     /// <summary>Rotate key after N days (0 = never).</summary>
     public int RotateDays { get; set; } = 30;
 }
+

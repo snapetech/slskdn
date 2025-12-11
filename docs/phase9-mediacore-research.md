@@ -54,3 +54,4 @@ Scope: T-1039..T-1044
 - Add phash slots and validation harness for collision testing.
 - Implement local fuzzy matcher with confidence scoring and guardrails.
 - Add config flags for IPFS/IPLD publishing (default off).
+

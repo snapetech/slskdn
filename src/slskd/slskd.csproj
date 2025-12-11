@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <RepositoryUrl>https://github.com/slskd/slskd</RepositoryUrl>
     <PackageProjectUrl>https://slskd.org</PackageProjectUrl>
@@ -9,6 +9,7 @@
   
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <CodeAnalysisRuleSet>Properties\analysis.ruleset</CodeAnalysisRuleSet>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
@@ -29,6 +30,11 @@
     <Content Update="wwwroot\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive" Version="6.0.0" />
+    <PackageReference Include="MessagePack" Version="2.5.140" />
   </ItemGroup>
 
   <Target Name="CopyAfterBuild" AfterTargets="AfterBuild">
@@ -81,5 +87,6 @@
     <PackageReference Include="Utility.CommandLine.Arguments" Version="6.0.0" />
     <PackageReference Include="Utility.EnvironmentVariables" Version="1.0.5" />
     <PackageReference Include="YamlDotNet" Version="15.3.0" />
+    <PackageReference Include="NSec.Cryptography" Version="24.2.0" />
   </ItemGroup>
 </Project>

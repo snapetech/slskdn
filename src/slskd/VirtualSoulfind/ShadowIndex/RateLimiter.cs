@@ -99,3 +99,4 @@ public class ShadowIndexOptions
     /// </summary>
     public int CacheTTLMinutes { get; set; } = 10;
 }
+

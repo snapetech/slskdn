@@ -37,6 +37,7 @@ namespace slskd
     using slskd.Shares;
     using slskd.Validation;
     using slskd.DhtRendezvous;
+    using slskd.Signals;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
     using YamlDotNet.Serialization;
@@ -349,12 +350,17 @@ namespace slskd
         /// <summary>
         /// Gets or sets warm cache configuration.
         /// </summary>
-        public WarmCacheOptions? WarmCache { get; set; }
 
         /// <summary>
         /// Gets or sets Virtual Soulfind configuration.
         /// </summary>
-        public VirtualSoulfindOptions? VirtualSoulfind { get; set; }
+        public Core.VirtualSoulfindOptions? VirtualSoulfind { get; set; }
+
+        /// <summary>
+        ///     Gets or sets signal system configuration for multi-channel control signaling.
+        /// </summary>
+        [Validate]
+        public Signals.SignalSystemOptions SignalSystem { get; init; } = new Signals.SignalSystemOptions();
 
         /// <summary>
         ///     Handles top-level validation that doesn't fit anywhere else.

@@ -1,3 +1,6 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace slskd.HashDb;
 
 public partial interface IHashDbService

@@ -19,7 +19,6 @@ public class MeshAdvanced : IMeshAdvanced
 
     public async Task<IReadOnlyList<MeshPeerDescriptor>> DiscoverPeersAdvancedAsync(string contentId, MeshTransportPreference preference, CancellationToken ct = default)
     {
-        // Currently no content->peer index; reuse directory stub.
         var peers = await directory.FindPeersByContentAsync(contentId, ct);
         logger.LogDebug("[MeshAdvanced] Discover peers for {ContentId} pref={Pref} found={Count}", contentId, preference, peers.Count);
         return peers;
@@ -27,17 +26,14 @@ public class MeshAdvanced : IMeshAdvanced
 
     public Task<IReadOnlyList<MeshRouteDiagnostics>> TraceRoutesAsync(string peerId, CancellationToken ct = default)
     {
-        // Placeholder route diagnostics
-        var diag = new List<MeshRouteDiagnostics>
-        {
-            new(peerId, "dht", 1, false)
-        };
+        var diag = new List<MeshRouteDiagnostics>();
+        diag.Add(new MeshRouteDiagnostics(peerId, "dht", 1, false));
         return Task.FromResult<IReadOnlyList<MeshRouteDiagnostics>>(diag);
     }
 
     public Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct = default)
     {
-        // Placeholder stats
+        // Minimal counters for now (can be wired to real metrics later)
         var stats = new MeshTransportStats(
             ActiveDhtSessions: 0,
             ActiveOverlaySessions: 0,

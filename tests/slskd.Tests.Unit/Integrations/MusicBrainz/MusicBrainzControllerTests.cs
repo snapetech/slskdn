@@ -17,11 +17,12 @@ public class MusicBrainzControllerTests
 {
     private readonly Mock<IMusicBrainzClient> client = new();
     private readonly Mock<IHashDbService> hashDb = new();
+    private readonly Mock<IArtistReleaseGraphService> releaseGraph = new();
     private readonly MusicBrainzController controller;
 
     public MusicBrainzControllerTests()
     {
-        controller = new MusicBrainzController(client.Object, hashDb.Object);
+        controller = new MusicBrainzController(client.Object, hashDb.Object, releaseGraph.Object);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using MessagePack;
 
 namespace slskd.Mesh.Dht;

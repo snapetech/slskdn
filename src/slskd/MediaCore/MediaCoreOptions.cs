@@ -11,3 +11,4 @@ public class MediaCoreOptions
     public int MaxDescriptorBytes { get; set; } = 10 * 1024;
     public int MaxTtlMinutes { get; set; } = 60;
 }
+

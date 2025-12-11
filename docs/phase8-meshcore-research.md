@@ -64,3 +64,4 @@ Scope: T-1032..T-1038
 - Implement peer descriptor publisher/refresh worker.
 - Integrate MeshTransportService preference with DHT vs overlay selection.
 - Add NAT detection utility and descriptor flagging.
+

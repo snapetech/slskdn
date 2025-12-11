@@ -867,3 +867,4 @@ log.Warning("[RESCUE] Guardrail violation: {Type} - {Details}");
 
 This comprehensive design ensures Rescue Mode works safely while maintaining Soulseek as the primary network!
 
+

@@ -3,7 +3,7 @@
 **Date**: December 10, 2025  
 **Session**: Phase 2C-D Complete (T-406 through T-411)  
 **Current Branch**: `experimental/brainz`  
-**Working Directory**: `/home/keith/Documents/Code/slskdn`
+**Working Directory**: `~/Documents/Code/slskdn`
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### Repository Location
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd ~/Documents/Code/slskdn
 ```
 
 ### Active Branch
@@ -58,7 +58,7 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 **Start with**: **T-420** (Extend AudioVariant model with codec-specific fields)
 
-**Design Doc**: `/home/keith/Documents/Code/slskdn/docs/phase2-advanced-fingerprinting-design.md`
+**Design Doc**: `~/Documents/Code/slskdn/docs/phase2-advanced-fingerprinting-design.md`
 
 **Task Spec** (from `memory-bank/tasks.md`):
 ```
@@ -85,7 +85,7 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 **Start with**: **T-500** (Build MB artist release graph service)
 
-**Design Doc**: `/home/keith/Documents/Code/slskdn/docs/phase3-discovery-reputation-fairness-design.md`
+**Design Doc**: `~/Documents/Code/slskdn/docs/phase3-discovery-reputation-fairness-design.md`
 
 **Task Spec** (from `memory-bank/tasks.md`):
 ```
@@ -118,14 +118,14 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 ### Build and Test
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd ~/Documents/Code/slskdn
 dotnet build src/slskd/slskd.csproj
 dotnet test  # When tests exist
 ```
 
 ### Run Application
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd ~/Documents/Code/slskdn
 dotnet run --project src/slskd/slskd.csproj
 ```
 
@@ -185,7 +185,7 @@ For each task (e.g., T-420):
 
 **If continuing Phase 2** (codec analyzers):
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd ~/Documents/Code/slskdn
 # Start with T-420
 # Read: docs/phase2-advanced-fingerprinting-design.md
 # Edit: src/slskd/Audio/AudioVariant.cs
@@ -193,7 +193,7 @@ cd /home/keith/Documents/Code/slskdn
 
 **If starting Phase 3** (discovery):
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd ~/Documents/Code/slskdn
 # Start with T-500
 # Read: docs/phase3-discovery-reputation-fairness-design.md
 # Create: src/slskd/Integrations/MusicBrainz/ReleaseGraphService.cs
@@ -246,7 +246,8 @@ cd /home/keith/Documents/Code/slskdn
 
 **Good luck, Codex! You've got a solid foundation to build on.** 🚀
 
-**Working Directory**: `/home/keith/Documents/Code/slskdn`  
+**Working Directory**: `~/Documents/Code/slskdn`  
 **Branch**: `experimental/brainz`  
 **Next Task Options**: T-420 (Phase 2-Extended) OR T-500 (Phase 3)
+
 

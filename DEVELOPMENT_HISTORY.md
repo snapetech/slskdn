@@ -1,4 +1,6 @@
-# slskdN Development History
+# slskdn Development History
+
+> **Note**: slskdn is a **distribution** of slskd with advanced features and experimental subsystems. This document tracks development progress across all phases.
 
 ## Phase Summary
 

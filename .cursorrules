@@ -1,0 +1,26 @@
+## Core Development Rules
+
+1. **NEVER include local file paths** (e.g., /home/keith/) in documentation
+   - Always use relative paths from repo root (e.g., src/slskd/...)
+   - Or use ~/Documents if referencing workspace
+   - NO ABSOLUTE PATHS WITH USERNAMES
+
+2. **NEVER dummy down tests to make them pass**
+   - Fix the actual implementation issue
+   - Don't reduce functionality
+   - Don't adjust test expectations to match broken behavior
+   - Tests exist to verify correctness - if a test fails, the CODE is wrong, not the test
+   - Exception: If the test itself has a bug (wrong test data, incorrect assertions), then fix the TEST
+
+3. **NEVER use stubs** - create tasks instead
+   - No placeholder returns
+   - No NotImplementedException
+   - No // TODO comments without associated tasks
+   - Either implement properly OR create a task in memory-bank/tasks.md
+
+4. **ALWAYS use RELATIVE PATHS everywhere** - not just in docs
+   - Commit messages: "Modified tests/slskd.Tests.Unit/Mesh/..." NOT "/home/keith/..."
+   - Error messages: "Failed to load src/slskd/..." NOT absolute paths
+   - Log messages: Use relative paths from repo root
+   - Documentation: Always relative to repo root or use ~/Documents
+   - NEVER expose username or local filesystem structure in ANY output

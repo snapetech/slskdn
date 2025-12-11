@@ -166,3 +166,4 @@ public record BridgeSearchRequest(string Query);
 /// Bridge download request.
 /// </summary>
 public record BridgeDownloadRequest(string Username, string Filename, string TargetPath);
+

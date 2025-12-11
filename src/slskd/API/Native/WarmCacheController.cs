@@ -3,6 +3,8 @@ namespace slskd.API.Native;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using slskd;
+using OptionsModel = slskd.Options;
 using slskd.Transfers.MultiSource.Caching;
 
 /// <summary>
@@ -14,12 +16,12 @@ using slskd.Transfers.MultiSource.Caching;
 public class WarmCacheController : ControllerBase
 {
     private readonly IWarmCachePopularityService popularityService;
-    private readonly IOptionsMonitor<Options> optionsMonitor;
+    private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private readonly ILogger<WarmCacheController> logger;
 
     public WarmCacheController(
         IWarmCachePopularityService popularityService,
-        IOptionsMonitor<Options> optionsMonitor,
+        IOptionsMonitor<OptionsModel> optionsMonitor,
         ILogger<WarmCacheController> logger)
     {
         this.popularityService = popularityService;
@@ -54,7 +56,7 @@ public class WarmCacheController : ControllerBase
         {
             foreach (var releaseId in request.MbReleaseIds)
             {
-                tasks.Add(popularityService.RecordPopularityAsync($"mb:release:{releaseId}", cancellationToken));
+                tasks.Add(popularityService.RecordAccessAsync($"mb:release:{releaseId}", cancellationToken));
             }
         }
 
@@ -62,7 +64,7 @@ public class WarmCacheController : ControllerBase
         {
             foreach (var artistId in request.MbArtistIds)
             {
-                tasks.Add(popularityService.RecordPopularityAsync($"mb:artist:{artistId}", cancellationToken));
+                tasks.Add(popularityService.RecordAccessAsync($"mb:artist:{artistId}", cancellationToken));
             }
         }
 
@@ -70,7 +72,7 @@ public class WarmCacheController : ControllerBase
         {
             foreach (var labelId in request.MbLabelIds)
             {
-                tasks.Add(popularityService.RecordPopularityAsync($"mb:label:{labelId}", cancellationToken));
+                tasks.Add(popularityService.RecordAccessAsync($"mb:label:{labelId}", cancellationToken));
             }
         }
 

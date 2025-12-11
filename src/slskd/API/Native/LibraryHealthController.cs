@@ -3,6 +3,8 @@ namespace slskd.API.Native;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using slskd;
+using OptionsModel = slskd.Options;
 using slskd.LibraryHealth;
 
 /// <summary>
@@ -14,12 +16,12 @@ using slskd.LibraryHealth;
 public class LibraryHealthController : ControllerBase
 {
     private readonly ILibraryHealthService healthService;
-    private readonly IOptionsMonitor<Options> optionsMonitor;
+    private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private readonly ILogger<LibraryHealthController> logger;
 
     public LibraryHealthController(
         ILibraryHealthService healthService,
-        IOptionsMonitor<Options> optionsMonitor,
+        IOptionsMonitor<OptionsModel> optionsMonitor,
         ILogger<LibraryHealthController> logger)
     {
         this.healthService = healthService;
@@ -37,12 +39,6 @@ public class LibraryHealthController : ControllerBase
         [FromQuery] int limit = 100,
         CancellationToken cancellationToken = default)
     {
-        var options = optionsMonitor.CurrentValue;
-        if (options.LibraryHealth?.Enabled != true)
-        {
-            return BadRequest(new { error = "Library health not enabled" });
-        }
-
         logger.LogInformation("Library health check requested for path: {Path}", path ?? "(all)");
 
         var summary = await healthService.GetSummaryAsync(path, cancellationToken);
@@ -59,10 +55,9 @@ public class LibraryHealthController : ControllerBase
             path = path ?? "(all)",
             summary = new
             {
-                suspected_transcodes = summary.SuspectedTranscodes,
-                non_canonical_variants = summary.NonCanonicalVariants,
-                incomplete_releases = summary.IncompleteReleases,
-                total_issues = summary.TotalIssues
+                total_issues = summary.TotalIssues,
+                issues_open = summary.IssuesOpen,
+                issues_resolved = summary.IssuesResolved
             },
             issues = issues.Select(i => new
             {
@@ -74,4 +69,27 @@ public class LibraryHealthController : ControllerBase
             })
         });
     }
+
+    /// <summary>
+    /// Create a remediation job for library issues.
+    /// </summary>
+    [HttpPost("remediate")]
+    [Authorize]
+    public async Task<IActionResult> CreateRemediationJob(
+        [FromBody] LibraryRemediationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("Remediation job requested for {IssueCount} issues", request.IssueIds?.Count ?? 0);
+
+        if (request.IssueIds == null || request.IssueIds.Count == 0)
+        {
+            return BadRequest(new { error = "issue_ids is required" });
+        }
+
+        var jobId = await healthService.CreateRemediationJobAsync(request.IssueIds, cancellationToken);
+
+        return Ok(new { job_id = jobId });
+    }
 }
+
+public record LibraryRemediationRequest(List<string> IssueIds);

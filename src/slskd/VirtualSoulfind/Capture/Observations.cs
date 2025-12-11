@@ -42,3 +42,4 @@ public class TransferObservation
     public double ThroughputBytesPerSec { get; set; }
     public bool Success { get; set; }
 }
+

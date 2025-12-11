@@ -162,7 +162,7 @@ public static class MusicBrainzFixtures
 /// <summary>
 /// Mock MusicBrainz client for testing.
 /// </summary>
-public class MockMusicBrainzClient : IMusicBrainzClient
+public class MockMusicBrainzClient
 {
     private readonly Dictionary<string, MbRecording> recordings = new();
     private readonly Dictionary<string, MbRelease> releases = new();
@@ -221,7 +221,7 @@ public static class MusicBrainzTestHelper
 {
     public static IServiceCollection AddMockMusicBrainz(this IServiceCollection services)
     {
-        services.AddSingleton<IMusicBrainzClient, MockMusicBrainzClient>();
+        services.AddSingleton<MockMusicBrainzClient>();
         return services;
     }
 }

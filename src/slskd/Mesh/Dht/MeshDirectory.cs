@@ -1,6 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.MediaCore;
+using MeshPeer = slskd.Mesh.MeshPeerDescriptor;
+using MeshContent = slskd.Mesh.MeshContentDescriptor;
 
 namespace slskd.Mesh.Dht;
 
@@ -23,7 +30,7 @@ public class MeshDirectory : IMeshDirectory
         this.descriptorValidator = descriptorValidator;
     }
 
-    public async Task<MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
+    public async Task<MeshPeer?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer:{peerId}";
         var raw = await dht.GetRawAsync(key, ct);
@@ -32,7 +39,8 @@ public class MeshDirectory : IMeshDirectory
         try
         {
             var desc = MessagePackSerializer.Deserialize<MeshPeerDescriptor>(raw);
-            return desc;
+            var endpoint = desc.Endpoints?.FirstOrDefault();
+            return new MeshPeer(desc.PeerId, endpoint, null, null);
         }
         catch (Exception ex)
         {
@@ -41,29 +49,45 @@ public class MeshDirectory : IMeshDirectory
         }
     }
 
-    public async Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshPeer>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
         var key = $"mesh:content-peers:{contentId}";
         var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
-        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeerDescriptor>();
+        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeer>();
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var fresh = hints.Peers
             .Where(p => now - p.TimestampUnixMs < 3600_000) // 1h freshness
-            .Select(p => new MeshPeerDescriptor
-            {
-                PeerId = p.PeerId,
-                Endpoints = p.Endpoints,
-                TimestampUnixMs = p.TimestampUnixMs
-            })
+            .Select(p => new MeshPeer(p.PeerId, p.Endpoints?.FirstOrDefault(), null, null))
             .ToList();
 
         return fresh;
     }
 
-    public async Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshContent>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
     {
-        // Not implemented; would require peer advertisement of content keys.
-        return Array.Empty<MeshContentDescriptor>();
+        var key = $"mesh:peer-content:{peerId}";
+        var contentList = await dht.GetAsync<List<string>>(key, ct);
+        if (contentList == null || contentList.Count == 0) return Array.Empty<MeshContent>();
+
+        var results = new List<MeshContent>();
+        foreach (var cid in contentList)
+        {
+            var contentDescriptor = await dht.GetAsync<MediaCore.ContentDescriptor>($"mesh:content:{cid}", ct);
+            if (contentDescriptor == null) continue;
+            if (!descriptorValidator.Validate(contentDescriptor, out var reason))
+            {
+                logger.LogWarning("[MeshDirectory] Invalid content descriptor for {ContentId}: {Reason}", cid, reason);
+                continue;
+            }
+
+            results.Add(new MeshContent(
+                cid,
+                contentDescriptor.Hashes?.FirstOrDefault()?.Hex,
+                contentDescriptor.SizeBytes ?? 0,
+                contentDescriptor.Codec));
+        }
+
+        return results;
     }
 }

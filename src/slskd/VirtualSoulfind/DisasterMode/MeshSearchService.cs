@@ -1,43 +1,29 @@
 namespace slskd.VirtualSoulfind.DisasterMode;
 
-using slskd.VirtualSoulfind.ShadowIndex;
-using slskd.VirtualSoulfind.Scenes;
-using slskd.Integrations.MusicBrainz;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using slskd.Mesh;
+using slskd.Mesh.Dht;
 
 /// <summary>
-/// Interface for mesh-only search (disaster mode).
-/// </summary>
-public interface IMeshSearchService
-{
-    /// <summary>
-    /// Search for content using only mesh/DHT (no Soulseek).
-    /// </summary>
-    Task<MeshSearchResult> SearchAsync(
-        string query,
-        CancellationToken ct = default);
-    
-    /// <summary>
-    /// Search by MBID using shadow index.
-    /// </summary>
-    Task<MeshSearchResult> SearchByMbidAsync(
-        string mbid,
-        CancellationToken ct = default);
-}
-
-/// <summary>
-/// Mesh search result.
+/// Result of a mesh search operation.
 /// </summary>
 public class MeshSearchResult
 {
     public string Query { get; set; } = string.Empty;
     public List<MeshPeerResult> PeerResults { get; set; } = new();
     public int TotalPeerCount { get; set; }
-    public DateTimeOffset Timestamp { get; set; }
-    public TimeSpan SearchDuration { get; set; }
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public TimeSpan SearchDuration { get; set; } = TimeSpan.Zero;
 }
 
 /// <summary>
-/// Peer result from mesh search.
+/// Result from a single mesh peer.
 /// </summary>
 public class MeshPeerResult
 {
@@ -59,176 +45,225 @@ public class MeshFileResult
 }
 
 /// <summary>
-/// Mesh-only search service (DHT + shadow index).
+/// Service for searching the mesh overlay network.
+/// </summary>
+public interface IMeshSearchService
+{
+    Task<MeshSearchResult> SearchAsync(string query, CancellationToken ct = default);
+    Task<MeshSearchResult> SearchByMbidAsync(string mbid, CancellationToken ct = default);
+}
+
+/// <summary>
+/// Implements mesh search by querying DHT and mesh peers.
 /// </summary>
 public class MeshSearchService : IMeshSearchService
 {
     private readonly ILogger<MeshSearchService> logger;
-    private readonly IShadowIndexQuery shadowIndex;
-    private readonly IMusicBrainzClient musicBrainz;
-    private readonly ISceneMembershipTracker sceneTracker;
+    private readonly IMeshDirectory meshDirectory;
+    private readonly IMeshSyncService meshSync;
 
     public MeshSearchService(
         ILogger<MeshSearchService> logger,
-        IShadowIndexQuery shadowIndex,
-        IMusicBrainzClient musicBrainz,
-        ISceneMembershipTracker sceneTracker)
+        IMeshDirectory meshDirectory = null,
+        IMeshSyncService meshSync = null)
     {
         this.logger = logger;
-        this.shadowIndex = shadowIndex;
-        this.musicBrainz = musicBrainz;
-        this.sceneTracker = sceneTracker;
+        this.meshDirectory = meshDirectory;
+        this.meshSync = meshSync;
     }
 
-    public async Task<MeshSearchResult> SearchAsync(string query, CancellationToken ct)
+    public async Task<MeshSearchResult> SearchAsync(string query, CancellationToken ct = default)
     {
-        logger.LogInformation("[VSF-MESH-SEARCH] Searching mesh for: {Query}", query);
-
-        var startTime = DateTimeOffset.UtcNow;
-
-        // Parse query to extract artist/title
-        var (artist, title) = ParseQuery(query);
-
-        if (string.IsNullOrEmpty(artist) || string.IsNullOrEmpty(title))
-        {
-            logger.LogWarning("[VSF-MESH-SEARCH] Could not parse query: {Query}", query);
-            return new MeshSearchResult
-            {
-                Query = query,
-                Timestamp = DateTimeOffset.UtcNow,
-                SearchDuration = TimeSpan.Zero
-            };
-        }
-
-        // Search MusicBrainz for recordings
-        var mbResults = await musicBrainz.SearchRecordingAsync(
-            $"artist:\"{artist}\" AND recording:\"{title}\"",
-            ct);
-
-        if (mbResults == null || mbResults.Count == 0)
-        {
-            logger.LogDebug("[VSF-MESH-SEARCH] No MusicBrainz matches for {Query}", query);
-            return new MeshSearchResult
-            {
-                Query = query,
-                Timestamp = DateTimeOffset.UtcNow,
-                SearchDuration = DateTimeOffset.UtcNow - startTime
-            };
-        }
-
-        // Query shadow index for each MBID
-        var allPeerResults = new Dictionary<string, MeshPeerResult>();
-
-        foreach (var recording in mbResults.Take(5)) // Top 5 matches
-        {
-            var shadowResult = await shadowIndex.QueryAsync(recording.Id, ct);
-            if (shadowResult != null)
-            {
-                foreach (var peerId in shadowResult.PeerIds)
-                {
-                    if (!allPeerResults.ContainsKey(peerId))
-                    {
-                        allPeerResults[peerId] = new MeshPeerResult { PeerId = peerId };
-                    }
-
-                    // Add variant hints as file results
-                    foreach (var variant in shadowResult.CanonicalVariants)
-                    {
-                        allPeerResults[peerId].Files.Add(new MeshFileResult
-                        {
-                            Filename = $"{artist} - {title}.{variant.Codec.ToLowerInvariant()}",
-                            Size = variant.SizeBytes,
-                            Codec = variant.Codec,
-                            BitrateKbps = variant.BitrateKbps,
-                            QualityScore = variant.QualityScore,
-                            MbRecordingId = recording.Id
-                        });
-                    }
-                }
-            }
-        }
+        var stopwatch = Stopwatch.StartNew();
+        logger.LogInformation("[VSF-MESH-SEARCH] Searching mesh for query: {Query}", query);
 
         var result = new MeshSearchResult
         {
             Query = query,
-            PeerResults = allPeerResults.Values.ToList(),
-            TotalPeerCount = allPeerResults.Count,
             Timestamp = DateTimeOffset.UtcNow,
-            SearchDuration = DateTimeOffset.UtcNow - startTime
         };
 
-        logger.LogInformation("[VSF-MESH-SEARCH] Found {PeerCount} peers with content for: {Query}",
-            result.TotalPeerCount, query);
-
-        return result;
-    }
-
-    public async Task<MeshSearchResult> SearchByMbidAsync(string mbid, CancellationToken ct)
-    {
-        logger.LogInformation("[VSF-MESH-SEARCH] Searching mesh by MBID: {MBID}", mbid);
-
-        var startTime = DateTimeOffset.UtcNow;
-
-        var shadowResult = await shadowIndex.QueryAsync(mbid, ct);
-        if (shadowResult == null)
+        if (meshDirectory == null)
         {
-            return new MeshSearchResult
-            {
-                Query = mbid,
-                Timestamp = DateTimeOffset.UtcNow,
-                SearchDuration = DateTimeOffset.UtcNow - startTime
-            };
+            logger.LogWarning("[VSF-MESH-SEARCH] MeshDirectory not available, returning empty results");
+            result.SearchDuration = stopwatch.Elapsed;
+            return result;
         }
 
-        var peerResults = new List<MeshPeerResult>();
-
-        foreach (var peerId in shadowResult.PeerIds)
+        try
         {
-            var peerResult = new MeshPeerResult { PeerId = peerId };
+            // Strategy 1: Query mesh peers directly for content matching query
+            // For text queries, we search peers' content lists
+            var meshPeers = meshSync?.GetMeshPeers()?.ToList() ?? new List<MeshPeerInfo>();
 
-            foreach (var variant in shadowResult.CanonicalVariants)
+            if (meshPeers.Count == 0)
             {
-                peerResult.Files.Add(new MeshFileResult
-                {
-                    Filename = $"recording-{mbid}.{variant.Codec.ToLowerInvariant()}",
-                    Size = variant.SizeBytes,
-                    Codec = variant.Codec,
-                    BitrateKbps = variant.BitrateKbps,
-                    QualityScore = variant.QualityScore,
-                    MbRecordingId = mbid
-                });
+                logger.LogDebug("[VSF-MESH-SEARCH] No mesh peers available");
+                result.SearchDuration = stopwatch.Elapsed;
+                return result;
             }
 
-            peerResults.Add(peerResult);
+            logger.LogDebug("[VSF-MESH-SEARCH] Querying {Count} mesh peers", meshPeers.Count);
+
+            // Query each peer's content in parallel (with limit)
+            var queryTasks = meshPeers
+                .Take(10) // Limit to 10 peers to avoid flooding
+                .Select(async peer =>
+                {
+                    try
+                    {
+                        var peerContent = await meshDirectory.FindContentByPeerAsync(peer.Username, ct);
+                        return new { Peer = peer, Content = peerContent };
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogDebug(ex, "[VSF-MESH-SEARCH] Failed to query peer {Peer}", peer.Username);
+                        return null;
+                    }
+                });
+
+            var peerContentResults = await Task.WhenAll(queryTasks);
+            var validResults = peerContentResults.Where(r => r != null).ToList();
+
+            // Filter content by query (simple text matching for now)
+            var queryLower = query.ToLowerInvariant();
+            var matchingPeers = new Dictionary<string, MeshPeerResult>();
+
+            foreach (var peerResult in validResults)
+            {
+                var matchingFiles = new List<MeshFileResult>();
+
+                foreach (var content in peerResult.Content)
+                {
+                    // Simple matching: check if content ID or codec contains query
+                    // In a real implementation, would parse ContentDescriptor metadata
+                    var contentIdLower = content.ContentId?.ToLowerInvariant() ?? "";
+                    var codecLower = content.Codec?.ToLowerInvariant() ?? "";
+
+                    if (contentIdLower.Contains(queryLower) || codecLower.Contains(queryLower))
+                    {
+                        matchingFiles.Add(new MeshFileResult
+                        {
+                            Filename = content.ContentId ?? "unknown",
+                            Size = content.SizeBytes ?? 0,
+                            Codec = content.Codec,
+                            QualityScore = 0.5, // Default score
+                        });
+                    }
+                }
+
+                if (matchingFiles.Count > 0)
+                {
+                    if (!matchingPeers.ContainsKey(peerResult.Peer.Username))
+                    {
+                        matchingPeers[peerResult.Peer.Username] = new MeshPeerResult
+                        {
+                            PeerId = peerResult.Peer.Username,
+                            Files = new List<MeshFileResult>(),
+                        };
+                    }
+
+                    matchingPeers[peerResult.Peer.Username].Files.AddRange(matchingFiles);
+                }
+            }
+
+            result.PeerResults = matchingPeers.Values.ToList();
+            result.TotalPeerCount = matchingPeers.Count;
+            result.SearchDuration = stopwatch.Elapsed;
+
+            logger.LogInformation(
+                "[VSF-MESH-SEARCH] Search completed: {PeerCount} peers, {FileCount} files in {Duration}ms",
+                result.TotalPeerCount,
+                result.PeerResults.Sum(p => p.Files.Count),
+                result.SearchDuration.TotalMilliseconds);
+
+            return result;
         }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[VSF-MESH-SEARCH] Search failed for query: {Query}", query);
+            result.SearchDuration = stopwatch.Elapsed;
+            return result;
+        }
+    }
+
+    public async Task<MeshSearchResult> SearchByMbidAsync(string mbid, CancellationToken ct = default)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        logger.LogInformation("[VSF-MESH-SEARCH] Searching mesh for MBID: {Mbid}", mbid);
 
         var result = new MeshSearchResult
         {
             Query = mbid,
-            PeerResults = peerResults,
-            TotalPeerCount = peerResults.Count,
             Timestamp = DateTimeOffset.UtcNow,
-            SearchDuration = DateTimeOffset.UtcNow - startTime
         };
 
-        logger.LogInformation("[VSF-MESH-SEARCH] Found {PeerCount} peers for MBID: {MBID}",
-            result.TotalPeerCount, mbid);
-
-        return result;
-    }
-
-    private (string artist, string title) ParseQuery(string query)
-    {
-        // Try to parse "Artist - Title" format
-        var dashIndex = query.IndexOf(" - ", StringComparison.Ordinal);
-        if (dashIndex > 0)
+        if (meshDirectory == null)
         {
-            var artist = query.Substring(0, dashIndex).Trim();
-            var title = query.Substring(dashIndex + 3).Trim();
-            return (artist, title);
+            logger.LogWarning("[VSF-MESH-SEARCH] MeshDirectory not available, returning empty results");
+            result.SearchDuration = stopwatch.Elapsed;
+            return result;
         }
 
-        // Fallback: treat as title only
-        return (string.Empty, query);
+        try
+        {
+            // Query DHT for peers with this MusicBrainz recording ID
+            var contentId = $"mbid:recording:{mbid}";
+            var peers = await meshDirectory.FindPeersByContentAsync(contentId, ct);
+
+            logger.LogDebug("[VSF-MESH-SEARCH] Found {Count} peers with MBID {Mbid}", peers.Count, mbid);
+
+            var peerResults = new List<MeshPeerResult>();
+
+            // Get content details from each peer
+            foreach (var peer in peers)
+            {
+                try
+                {
+                    var peerContent = await meshDirectory.FindContentByPeerAsync(peer.PeerId, ct);
+                    var matchingContent = peerContent.Where(c => c.ContentId?.Contains(mbid, StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+                    if (matchingContent.Count > 0)
+                    {
+                        var files = matchingContent.Select(c => new MeshFileResult
+                        {
+                            Filename = c.ContentId ?? "unknown",
+                            Size = c.SizeBytes ?? 0,
+                            Codec = c.Codec,
+                            MbRecordingId = mbid,
+                            QualityScore = 0.8, // Higher score for MBID matches
+                        }).ToList();
+
+                        peerResults.Add(new MeshPeerResult
+                        {
+                            PeerId = peer.PeerId,
+                            Files = files,
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "[VSF-MESH-SEARCH] Failed to get content from peer {Peer}", peer.PeerId);
+                }
+            }
+
+            result.PeerResults = peerResults;
+            result.TotalPeerCount = peerResults.Count;
+            result.SearchDuration = stopwatch.Elapsed;
+
+            logger.LogInformation(
+                "[VSF-MESH-SEARCH] MBID search completed: {PeerCount} peers, {FileCount} files in {Duration}ms",
+                result.TotalPeerCount,
+                result.PeerResults.Sum(p => p.Files.Count),
+                result.SearchDuration.TotalMilliseconds);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[VSF-MESH-SEARCH] MBID search failed: {Mbid}", mbid);
+            result.SearchDuration = stopwatch.Elapsed;
+            return result;
+        }
     }
 }

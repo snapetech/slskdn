@@ -1,6 +1,8 @@
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.VirtualSoulfind.ShadowIndex;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace slskd.Mesh.Dht;
 
@@ -12,6 +14,16 @@ public interface IMeshDhtClient
     Task PutAsync(string key, object value, int ttlSeconds, CancellationToken ct = default);
     Task<byte[]?> GetRawAsync(string key, CancellationToken ct = default);
     Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
+
+    /// <summary>
+    /// Find closest node IDs for a target key (Kademlia-style).
+    /// </summary>
+    Task<IReadOnlyList<KNode>> FindNodesAsync(byte[] targetId, int count = 20, CancellationToken ct = default);
+
+    /// <summary>
+    /// Find value by key, returning multiple replicas when available.
+    /// </summary>
+    Task<IReadOnlyList<byte[]>> FindValueAsync(byte[] key, CancellationToken ct = default);
 }
 
 public class MeshDhtClient : IMeshDhtClient
@@ -27,18 +39,18 @@ public class MeshDhtClient : IMeshDhtClient
 
     public async Task PutAsync(string key, object value, int ttlSeconds, CancellationToken ct = default)
     {
-        var payload = MessagePackSerializer.Serialize(value);
+        var payload = value as byte[] ?? MessagePackSerializer.Serialize(value);
         var ttl = Math.Min(Math.Max(ttlSeconds, 60), 3600); // clamp 1m..1h
-        await inner.PutAsync(key, payload, ttl, ct);
+        await inner.PutAsync(KeyBytes(key), payload, ttl, ct);
         logger.LogDebug("[MeshDHT] Put {Key} ttl={Ttl}s size={Size}", key, ttl, payload.Length);
     }
 
     public Task<byte[]?> GetRawAsync(string key, CancellationToken ct = default) =>
-        inner.GetAsync(key, ct);
+        inner.GetAsync(KeyBytes(key), ct);
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
     {
-        var raw = await inner.GetAsync(key, ct);
+        var raw = await inner.GetAsync(KeyBytes(key), ct);
         if (raw == null) return default;
         try
         {
@@ -50,4 +62,29 @@ public class MeshDhtClient : IMeshDhtClient
             return default;
         }
     }
+
+    public async Task<IReadOnlyList<KNode>> FindNodesAsync(byte[] targetId, int count = 20, CancellationToken ct = default)
+    {
+        if (inner is InMemoryDhtClient mem)
+        {
+            return mem.FindClosest(targetId, count);
+        }
+
+        // Fallback: no remote routing; return empty
+        return Array.Empty<KNode>();
+    }
+
+    public async Task<IReadOnlyList<byte[]>> FindValueAsync(byte[] key, CancellationToken ct = default)
+    {
+        if (inner is InMemoryDhtClient mem)
+        {
+            return await mem.GetMultipleAsync(key, ct);
+        }
+
+        var val = await inner.GetAsync(key, ct);
+        return val == null ? Array.Empty<byte[]>() : new List<byte[]> { val };
+    }
+
+    private static byte[] KeyBytes(string key) =>
+        SHA256.HashData(Encoding.UTF8.GetBytes(key));
 }

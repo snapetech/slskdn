@@ -25,6 +25,7 @@ namespace slskd.LibraryHealth.Remediation
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using slskd.HashDb;
+    using slskd.Integrations.MusicBrainz;
     using slskd.Transfers.MultiSource;
 
     /// <summary>
@@ -35,6 +36,7 @@ namespace slskd.LibraryHealth.Remediation
         private readonly ILibraryHealthService healthService;
         private readonly IHashDbService hashDb;
         private readonly IMultiSourceDownloadService multiSourceDownloads;
+        private readonly IMusicBrainzClient musicBrainzClient;
         private readonly ILogger<LibraryHealthRemediationService> log;
 
         /// <summary>
@@ -44,11 +46,13 @@ namespace slskd.LibraryHealth.Remediation
             ILibraryHealthService healthService,
             IHashDbService hashDb,
             IMultiSourceDownloadService multiSourceDownloads,
+            IMusicBrainzClient musicBrainzClient,
             ILogger<LibraryHealthRemediationService> log)
         {
             this.healthService = healthService;
             this.hashDb = hashDb;
             this.multiSourceDownloads = multiSourceDownloads;
+            this.musicBrainzClient = musicBrainzClient;
             this.log = log;
         }
 
@@ -226,13 +230,103 @@ namespace slskd.LibraryHealth.Remediation
                 recordingIds.Count,
                 targetDir);
 
-            // For now, return a placeholder job ID
-            // Full implementation would integrate with multi-source download service
-            // to create actual download jobs for each recording
-            var jobId = Guid.NewGuid().ToString();
+            // Create download jobs for each recording
+            var downloadJobs = new List<Guid>();
+            
+            foreach (var recordingId in recordingIds)
+            {
+                try
+                {
+                    // Get track metadata from MusicBrainz
+                    var trackMetadata = await musicBrainzClient.GetRecordingAsync(recordingId, ct).ConfigureAwait(false);
+                    
+                    if (trackMetadata == null)
+                    {
+                        log.LogWarning("[LH-Remediation] Could not fetch metadata for recording {RecordingId}", recordingId);
+                        continue;
+                    }
+
+                    // Construct search query from track metadata
+                    var searchQuery = $"{trackMetadata.Artist} {trackMetadata.Title}";
+                    
+                    // Find verified sources using multi-source download service
+                    // Note: We need a filename - use a constructed one based on metadata
+                    var constructedFilename = $"{trackMetadata.Artist} - {trackMetadata.Title}.flac";
+                    
+                    // Try to find sources - this will search and verify
+                    var verificationResult = await multiSourceDownloads.FindVerifiedSourcesAsync(
+                        constructedFilename,
+                        fileSize: 0, // Unknown size, will be determined during search
+                        excludeUsername: null,
+                        ct).ConfigureAwait(false);
+
+                    if (verificationResult.BestSources.Count == 0)
+                    {
+                        log.LogWarning("[LH-Remediation] No verified sources found for recording {RecordingId}", recordingId);
+                        continue;
+                    }
+
+                    // Select canonical sources if available
+                    var sources = await multiSourceDownloads.SelectCanonicalSourcesAsync(verificationResult, ct).ConfigureAwait(false);
+                    
+                    if (sources.Count == 0)
+                    {
+                        log.LogWarning("[LH-Remediation] No suitable sources selected for recording {RecordingId}", recordingId);
+                        continue;
+                    }
+
+                    // Get file size from verification result
+                    var fileSize = verificationResult.FileSize > 0 ? verificationResult.FileSize : 0;
+
+                    // Create download request
+                    var downloadRequest = new MultiSourceDownloadRequest
+                    {
+                        Id = Guid.NewGuid(),
+                        Filename = constructedFilename,
+                        FileSize = fileSize,
+                        Sources = sources,
+                        OutputPath = Path.Combine(targetDir, constructedFilename),
+                        TargetMusicBrainzRecordingId = recordingId,
+                        TargetSemanticKey = verificationResult.BestSemanticKey
+                    };
+
+                    // Start download asynchronously (fire and forget for now)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await multiSourceDownloads.DownloadAsync(downloadRequest, ct).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            log.LogError(ex, "[LH-Remediation] Download failed for recording {RecordingId}", recordingId);
+                        }
+                    }, ct);
+
+                    downloadJobs.Add(downloadRequest.Id);
+                    log.LogInformation(
+                        "[LH-Remediation] Created download job {DownloadId} for recording {RecordingId}",
+                        downloadRequest.Id,
+                        recordingId);
+                }
+                catch (Exception ex)
+                {
+                    log.LogError(ex, "[LH-Remediation] Failed to create download job for recording {RecordingId}", recordingId);
+                }
+            }
+
+            if (downloadJobs.Count == 0)
+            {
+                throw new InvalidOperationException("Failed to create any download jobs");
+            }
+
+            // Return the first job ID as the main job ID
+            // All jobs are tracked individually via multi-source download service
+            var jobId = downloadJobs[0].ToString();
             
             log.LogInformation(
-                "[LH-Remediation] Created remediation job {JobId} (placeholder - full integration pending)",
+                "[LH-Remediation] Created {Count} download jobs, main job ID: {JobId}",
+                downloadJobs.Count,
                 jobId);
 
             return jobId;

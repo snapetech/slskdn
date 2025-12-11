@@ -31,3 +31,4 @@ public class CompositeSecurityPolicy : ISecurityPolicyEngine
         return new SecurityDecision(true, "all policies passed");
     }
 }
+

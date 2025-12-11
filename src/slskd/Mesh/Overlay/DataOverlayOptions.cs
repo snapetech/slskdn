@@ -12,3 +12,4 @@ public class DataOverlayOptions
     public int ReceiveBufferBytes { get; set; } = 512 * 1024;
     public int SendBufferBytes { get; set; } = 512 * 1024;
 }
+

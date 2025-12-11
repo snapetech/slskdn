@@ -1,8 +1,11 @@
 namespace slskd.API.Compatibility;
 
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using slskd.Transfers;
+using slskd.Transfers.Downloads;
 using Soulseek;
 
 /// <summary>
@@ -13,14 +16,14 @@ using Soulseek;
 [Produces("application/json")]
 public class DownloadsCompatibilityController : ControllerBase
 {
-    private readonly ITransferService transferService;
+    private readonly IDownloadService downloadService;
     private readonly ILogger<DownloadsCompatibilityController> logger;
 
     public DownloadsCompatibilityController(
-        ITransferService transferService,
+        IDownloadService downloadService,
         ILogger<DownloadsCompatibilityController> logger)
     {
-        this.transferService = transferService;
+        this.downloadService = downloadService;
         this.logger = logger;
     }
 
@@ -33,31 +36,57 @@ public class DownloadsCompatibilityController : ControllerBase
         [FromBody] DownloadRequest request,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Compatibility download: {Count} items", request.Items.Count);
+        logger.LogInformation("Compatibility download: {ItemCount} items", request.Items?.Count ?? 0);
+
+        if (request.Items == null || request.Items.Count == 0)
+        {
+            return BadRequest(new { error = "Items are required" });
+        }
 
         var downloadIds = new List<string>();
+        var enqueued = new List<slskd.Transfers.Transfer>();
+        var failed = new List<string>();
 
         foreach (var item in request.Items)
         {
             try
             {
-                var transfer = await transferService.EnqueueDownloadAsync(
+                // Enqueue download using IDownloadService
+                var files = new List<(string Filename, long Size)>
+                {
+                    (item.RemotePath, 0) // Size unknown, will be determined during transfer
+                };
+
+                var (enqueuedTransfers, failedFiles) = await downloadService.EnqueueAsync(
                     item.User,
-                    item.RemotePath,
-                    item.TargetDir,
+                    files,
                     cancellationToken);
 
-                downloadIds.Add(transfer.Id.ToString());
+                if (enqueuedTransfers.Count > 0)
+                {
+                    enqueued.AddRange(enqueuedTransfers);
+                    downloadIds.Add(enqueuedTransfers[0].Id.ToString("N"));
+                }
+
+                if (failedFiles.Count > 0)
+                {
+                    failed.AddRange(failedFiles);
+                }
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to enqueue download for {User}/{Path}",
-                    item.User, item.RemotePath);
-                // Continue with other downloads
+                logger.LogError(ex, "Failed to enqueue download for {User}/{Path}", item.User, item.RemotePath);
+                failed.Add($"{item.User}/{item.RemotePath}: {ex.Message}");
             }
         }
 
-        return Ok(new { download_ids = downloadIds });
+        return Ok(new
+        {
+            DownloadIds = downloadIds,
+            Enqueued = enqueued.Count,
+            Failed = failed.Count,
+            Errors = failed.Count > 0 ? failed : null
+        });
     }
 
     /// <summary>
@@ -69,29 +98,37 @@ public class DownloadsCompatibilityController : ControllerBase
         [FromQuery] string? status,
         CancellationToken cancellationToken)
     {
-        var transfers = await transferService.GetAllDownloadsAsync(cancellationToken);
+        logger.LogDebug("Getting downloads list with status filter: {Status}", status);
 
-        if (!string.IsNullOrEmpty(status))
+        // Get all downloads from IDownloadService
+        var allDownloads = downloadService.List(includeRemoved: false);
+
+        // Filter by status if provided
+        if (!string.IsNullOrWhiteSpace(status))
         {
-            var filterStatus = ParseStatus(status);
-            transfers = transfers.Where(t => MapStatus(t.State) == filterStatus).ToList();
+            var statusLower = status.ToLowerInvariant();
+            allDownloads = allDownloads.Where(d =>
+            {
+                var mappedStatus = MapStatus(d.State);
+                return mappedStatus.Equals(statusLower, StringComparison.OrdinalIgnoreCase);
+            }).ToList();
         }
 
-        return Ok(new
+        // Convert to compatibility format
+        var downloads = allDownloads.Select(d => new
         {
-            downloads = transfers.Select(t => new
-            {
-                id = t.Id.ToString(),
-                user = t.Username,
-                remote_path = t.Filename,
-                local_path = System.IO.Path.Combine(t.Data.LocalFilename ?? string.Empty),
-                status = MapStatus(t.State),
-                progress = t.PercentComplete / 100.0,
-                bytes_total = t.Size,
-                bytes_transferred = t.BytesTransferred,
-                error = t.Exception?.Message
-            })
-        });
+            Id = d.Id.ToString("N"),
+            User = d.Username,
+            RemotePath = d.Filename,
+            LocalPath = d.Filename, // TODO: Get actual local path
+            Status = MapStatus(d.State),
+            Progress = d.PercentComplete / 100.0,
+            Size = d.Size,
+            Remaining = d.Size - d.BytesTransferred
+        }).ToList();
+
+        await Task.CompletedTask;
+        return Ok(new { Downloads = downloads });
     }
 
     /// <summary>
@@ -100,27 +137,36 @@ public class DownloadsCompatibilityController : ControllerBase
     [HttpGet("downloads/{id}")]
     [Authorize]
     public async Task<IActionResult> GetDownload(
-        Guid id,
+        string id,
         CancellationToken cancellationToken)
     {
-        var transfer = await transferService.GetDownloadAsync(id, cancellationToken);
+        logger.LogDebug("Getting download: {Id}", id);
 
-        if (transfer == null)
+        if (!Guid.TryParse(id, out var downloadGuid))
         {
-            return NotFound();
+            return BadRequest(new { error = "Invalid download ID format" });
         }
 
+        // Find download by ID
+        var download = downloadService.Find(d => d.Id == downloadGuid);
+
+        if (download == null)
+        {
+            return NotFound(new { error = "Download not found" });
+        }
+
+        await Task.CompletedTask;
         return Ok(new
         {
-            id = transfer.Id.ToString(),
-            user = transfer.Username,
-            remote_path = transfer.Filename,
-            local_path = System.IO.Path.Combine(transfer.Data.LocalFilename ?? string.Empty),
-            status = MapStatus(transfer.State),
-            progress = transfer.PercentComplete / 100.0,
-            bytes_total = transfer.Size,
-            bytes_transferred = transfer.BytesTransferred,
-            error = transfer.Exception?.Message
+            Id = download.Id.ToString("N"),
+            User = download.Username,
+            RemotePath = download.Filename,
+            LocalPath = download.Filename, // TODO: Get actual local path
+            Status = MapStatus(download.State),
+            Progress = download.PercentComplete / 100.0,
+            Size = download.Size,
+            Remaining = download.Size - download.BytesTransferred,
+            Speed = download.AverageSpeed
         });
     }
 

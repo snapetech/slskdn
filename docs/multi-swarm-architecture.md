@@ -574,3 +574,4 @@ Rescue mode keeps Soulseek as origin/authority while using the overlay as an acc
 This architecture document is the conceptual foundation. See `multi-swarm-roadmap.md` for phased implementation details and GitHub issue breakdowns.
 
 
+

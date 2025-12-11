@@ -48,7 +48,7 @@ namespace slskd.HashDb
     /// <summary>
     ///     SQLite-based hash database service.
     /// </summary>
-    public class HashDbService : IHashDbService
+    public partial class HashDbService : IHashDbService
     {
         /// <summary>
         ///     Size of verification chunk for hashing (32KB).
@@ -2963,19 +2963,6 @@ namespace slskd.HashDb
             var metaJson = reader.IsDBNull(reader.GetOrdinal("metadata")) ? "{}" : reader.GetString(reader.GetOrdinal("metadata"));
             issue.Metadata = JsonSerializer.Deserialize<Dictionary<string, object>>(metaJson) ?? new Dictionary<string, object>();
             return issue;
-        }
-
-        // Peer metrics methods (placeholder implementations for T-406)
-        public Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default)
-        {
-            // TODO (T-406): Implement database query for peer metrics
-            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>(null);
-        }
-
-        public Task UpsertPeerMetricsAsync(Transfers.MultiSource.Metrics.PeerPerformanceMetrics metrics, CancellationToken cancellationToken = default)
-        {
-            // TODO (T-406): Implement database upsert for peer metrics
-            return Task.CompletedTask;
         }
 
         public Task<List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>> GetAllPeerMetricsAsync(CancellationToken cancellationToken = default)

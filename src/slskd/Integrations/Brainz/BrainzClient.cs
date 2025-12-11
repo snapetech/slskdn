@@ -16,3 +16,4 @@ public class BrainzClient : IBrainzClient
         return Task.FromResult<string?>(null);
     }
 }
+

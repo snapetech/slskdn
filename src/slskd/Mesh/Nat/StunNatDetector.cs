@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -28,34 +29,67 @@ public class StunNatDetector : INatDetector
             return NatType.Unknown;
         }
 
-        foreach (var server in options.StunServers)
+        // Strategy:
+        // 1) Probe primary STUN server to get mapping1
+        // 2) Probe same server with a DIFFERENT local port to get mapping2
+        // 3) Probe a second server (if available) with a new port to get mapping3
+        // Classification (given enum constraints: Direct, Restricted, Symmetric):
+        //  - Direct: mapping == local endpoint
+        //  - Symmetric: mapping changes when destination changes or when local port changes
+        //  - Restricted (covers full/port-restricted cone): mapping stable across probes but differs from local
+
+        var servers = options.StunServers.Take(2).ToArray();
+        if (servers.Length == 0) return NatType.Unknown;
+
+        try
         {
-            try
+            var mapping1 = await ProbeServer(servers[0], ct);
+            if (mapping1 == null) return NatType.Unknown;
+
+            if (mapping1.IsDirect) return NatType.Direct;
+
+            // Second probe to same server with a new local socket
+            var mapping2 = await ProbeServer(servers[0], ct, forceNewLocal: true);
+            if (mapping2 == null) return NatType.Unknown;
+
+            if (mapping1.MappedEndPoint.Address.ToString() != mapping2.MappedEndPoint.Address.ToString() ||
+                mapping1.MappedEndPoint.Port != mapping2.MappedEndPoint.Port)
             {
-                var nat = await ProbeServer(server, ct);
-                if (nat != NatType.Unknown)
+                return NatType.Symmetric;
+            }
+
+            // Optional third probe to a different server to detect destination-dependent mapping
+            if (servers.Length > 1)
+            {
+                var mapping3 = await ProbeServer(servers[1], ct, forceNewLocal: true);
+                if (mapping3 == null) return NatType.Restricted; // fall back to restricted
+
+                if (mapping1.MappedEndPoint.Address.ToString() != mapping3.MappedEndPoint.Address.ToString() ||
+                    mapping1.MappedEndPoint.Port != mapping3.MappedEndPoint.Port)
                 {
-                    return nat;
+                    return NatType.Symmetric;
                 }
             }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "[NAT] STUN probe failed for {Server}", server);
-            }
-        }
 
-        return NatType.Unknown;
+            // Mapping is stable but differs from local -> Restricted (covers full/port-restricted cone)
+            return NatType.Restricted;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "[NAT] STUN detection failed");
+            return NatType.Unknown;
+        }
     }
 
-    private async Task<NatType> ProbeServer(string server, CancellationToken ct)
+    private async Task<MappingResult?> ProbeServer(string server, CancellationToken ct, bool forceNewLocal = false)
     {
         var parts = server.Split(':', 2);
         if (parts.Length != 2 || !int.TryParse(parts[1], out var port))
         {
-            return NatType.Unknown;
+            return null;
         }
 
-        using var udp = new UdpClient();
+        using var udp = forceNewLocal ? new UdpClient(0) : new UdpClient(); // allocate a new local port when requested
         udp.Client.ReceiveTimeout = 2000;
         udp.Client.SendTimeout = 2000;
 
@@ -63,31 +97,25 @@ public class StunNatDetector : INatDetector
         var txn = RandomNumberGenerator.GetBytes(12);
         var request = BuildBindingRequest(txn);
 
-        await udp.SendAsync(request, request.Length, endpoint, ct);
+        await udp.SendAsync(request, request.Length, endpoint);
 
-        var receiveTask = udp.ReceiveAsync(ct);
+        var receiveTask = udp.ReceiveAsync();
         if (await Task.WhenAny(receiveTask, Task.Delay(2000, ct)) != receiveTask)
         {
-            return NatType.Unknown;
+            return null;
         }
 
         var response = receiveTask.Result;
         var mapped = ParseMappedAddress(response.Buffer, txn);
         if (mapped == null)
         {
-            return NatType.Unknown;
+            return null;
         }
 
-        // Best-effort classification:
-        // If mapped address differs from local endpoint, assume NAT (Restricted)
-        // Otherwise Direct.
         var localEp = (IPEndPoint)udp.Client.LocalEndPoint!;
-        if (!mapped.Address.Equals(localEp.Address) || mapped.Port != localEp.Port)
-        {
-            return NatType.Restricted;
-        }
+        var isDirect = mapped.Address.Equals(localEp.Address) && mapped.Port == localEp.Port;
 
-        return NatType.Direct;
+        return new MappingResult(mapped, localEp, isDirect);
     }
 
     private static byte[] BuildBindingRequest(byte[] txn)
@@ -151,4 +179,6 @@ public class StunNatDetector : INatDetector
 
     private static uint ReadUInt32(byte[] buf, int offset) =>
         (uint)((buf[offset] << 24) | (buf[offset + 1] << 16) | (buf[offset + 2] << 8) | buf[offset + 3]);
+
+    private sealed record MappingResult(IPEndPoint MappedEndPoint, IPEndPoint LocalEndPoint, bool IsDirect);
 }

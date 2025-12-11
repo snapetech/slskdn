@@ -20,3 +20,4 @@ public static class SelfSignedCertificate
         return cert;
     }
 }
+

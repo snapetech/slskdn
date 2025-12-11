@@ -18,3 +18,4 @@ public interface ISecurityPolicy
 {
     Task<SecurityDecision> EvaluateAsync(SecurityContext context, CancellationToken ct = default);
 }
+

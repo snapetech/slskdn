@@ -28,3 +28,4 @@ public class ContentDescriptor
     public double? Confidence { get; set; } // for fuzzy matches (local-only)
     public DescriptorSignature? Signature { get; set; }
 }
+

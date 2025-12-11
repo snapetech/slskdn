@@ -7,18 +7,18 @@ using Xunit;
 /// <summary>
 /// Integration tests for slskdn-native advanced features.
 /// </summary>
-public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Program>>
+public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.StubWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> factory;
+    private readonly slskd.Tests.Integration.StubWebApplicationFactory factory;
     private readonly HttpClient client;
 
-    public SoulbeetAdvancedModeTests(WebApplicationFactory<Program> factory)
+    public SoulbeetAdvancedModeTests(slskd.Tests.Integration.StubWebApplicationFactory factory)
     {
         this.factory = factory;
         this.client = factory.CreateClient();
     }
 
-    [Fact]
+[Fact]
     public async Task GetCapabilities_ShouldDetectSlskdn()
     {
         // Act
@@ -34,7 +34,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.Contains("mbid_jobs", capabilities.Features);
     }
 
-    [Fact]
+[Fact]
     public async Task GetCapabilities_ShouldReturn404_OnVanillaSlskd()
     {
         // This test would run against vanilla slskd instance
@@ -43,7 +43,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
+[Fact]
     public async Task CreateMbReleaseJob_ShouldReturnJobId()
     {
         // Arrange
@@ -73,7 +73,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.Equal("pending", jobResult.Status);
     }
 
-    [Fact]
+[Fact]
     public async Task CreateDiscographyJob_ShouldReturnJobId()
     {
         // Arrange
@@ -99,7 +99,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.NotNull(jobResult.JobId);
     }
 
-    [Fact]
+[Fact]
     public async Task CreateLabelCrateJob_ShouldReturnJobId()
     {
         // Arrange
@@ -122,7 +122,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.NotNull(jobResult.JobId);
     }
 
-    [Fact]
+[Fact]
     public async Task GetJobs_ShouldReturnList()
     {
         // Act
@@ -136,7 +136,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.NotNull(jobs.Jobs);
     }
 
-    [Fact]
+[Fact]
     public async Task GetJobs_WithFilters_ShouldReturnFilteredList()
     {
         // Act
@@ -150,7 +150,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.NotNull(jobs.Jobs);
     }
 
-    [Fact]
+[Fact]
     public async Task GetJob_ById_ShouldReturnDetails()
     {
         // Arrange - create a job first
@@ -175,7 +175,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
         Assert.Equal("discography", job.Type);
     }
 
-    [Fact]
+[Fact]
     public async Task SubmitWarmCacheHints_ShouldAccept()
     {
         // Arrange
@@ -249,7 +249,12 @@ public class SoulbeetAdvancedModeTests : IClassFixture<WebApplicationFactory<Pro
 
 // Response models
 public record CapabilitiesResponse(string Impl, string Version, List<string> Features);
-public record JobResponse(string JobId, string Status);
+public record JobResponse
+{
+    [System.Text.Json.Serialization.JsonPropertyName("job_id")]
+    public string JobId { get; init; } = null!;
+    public string Status { get; init; } = null!;
+}
 public record JobsListResponse(List<JobItem> Jobs);
 public record JobItem(string Id, string Type, string Status);
 public record JobDetailResponse(string Id, string Type, string Status, object Spec, object Progress);

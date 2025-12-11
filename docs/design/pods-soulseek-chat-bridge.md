@@ -376,3 +376,4 @@ Pods remain:
 - Soulseek chat is **a bridged external stream** that can be attached to a pod's "bound channel."
 - Short term, this means the mesh can sit in existing Soulseek rooms and layer all the advanced features (pods, collection doctor, variant opinions) on top, without forcing anyone else to move off Soulseek yet.
 - This provides a smooth migration path: users can gradually adopt mesh features while still participating in their existing Soulseek communities.
+

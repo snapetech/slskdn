@@ -162,13 +162,13 @@ public class BridgeDashboard : IBridgeDashboard
         switch (requestType.ToLowerInvariant())
         {
             case "search":
-                Interlocked.Increment(ref stats.TotalSearches);
+                stats.TotalSearches++;
                 break;
             case "download":
-                Interlocked.Increment(ref stats.TotalDownloads);
+                stats.TotalDownloads++;
                 break;
             case "room":
-                Interlocked.Increment(ref stats.TotalRoomJoins);
+                stats.TotalRoomJoins++;
                 break;
         }
 
@@ -178,8 +178,8 @@ public class BridgeDashboard : IBridgeDashboard
 
     public void RecordMeshBenefit(long bytesViaMesh)
     {
-        Interlocked.Add(ref benefits.BytesViaMesh, bytesViaMesh);
-        Interlocked.Add(ref stats.TotalBytesProxied, bytesViaMesh);
+        benefits.BytesViaMesh += bytesViaMesh;
+        stats.TotalBytesProxied += bytesViaMesh;
 
         logger.LogDebug("[VSF-BRIDGE-DASHBOARD] Recorded {Bytes} bytes via mesh", bytesViaMesh);
     }

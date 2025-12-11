@@ -42,14 +42,14 @@ public class DescriptorPublisher : IDescriptorPublisher
         }
 
         var payload = MessagePackSerializer.Serialize(descriptor);
-        var key = $"mesh:content:{descriptor.ContentId}";
+        var keyBytes = KeyBytes(descriptor.ContentId);
 
         // TTL capped by options (minutes)
         var ttlSeconds = Math.Min(options.MaxTtlMinutes, 60) * 60;
 
         try
         {
-            await dht.PutAsync(key, payload, ttlSeconds, ct);
+            await dht.PutAsync(keyBytes, payload, ttlSeconds, ct);
             logger.LogInformation("[MediaCore] Published descriptor {ContentId} (ttl={Ttl}s, size={Size} bytes)",
                 descriptor.ContentId, ttlSeconds, payload.Length);
             return true;
@@ -60,4 +60,7 @@ public class DescriptorPublisher : IDescriptorPublisher
             return false;
         }
     }
+
+    private static byte[] KeyBytes(string key) =>
+        System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(key));
 }

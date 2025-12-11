@@ -1,6 +1,8 @@
 namespace slskd.VirtualSoulfind.Scenes;
 
 using Microsoft.Extensions.Options;
+using slskd;
+using OptionsModel = slskd.Options;
 using System.Collections.Concurrent;
 
 /// <summary>
@@ -34,13 +36,13 @@ public class SceneChatService : ISceneChatService
 {
     private readonly ILogger<SceneChatService> logger;
     private readonly IScenePubSubService pubsub;
-    private readonly IOptionsMonitor<Options> optionsMonitor;
+    private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private readonly ConcurrentDictionary<string, List<SceneChatMessage>> messageCache = new();
 
     public SceneChatService(
         ILogger<SceneChatService> logger,
         IScenePubSubService pubsub,
-        IOptionsMonitor<Options> optionsMonitor)
+        IOptionsMonitor<OptionsModel> optionsMonitor)
     {
         this.logger = logger;
         this.pubsub = pubsub;

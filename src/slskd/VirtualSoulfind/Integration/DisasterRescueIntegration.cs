@@ -71,3 +71,4 @@ public class DisasterRescueIntegration : IDisasterRescueIntegration
         return null;
     }
 }
+

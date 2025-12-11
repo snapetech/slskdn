@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NSec.Cryptography;
 
 namespace slskd.Mesh.Overlay;
 
@@ -115,12 +118,16 @@ public class Ed25519KeyPair
 
     public static Ed25519KeyPair Generate()
     {
-        var seed = RandomNumberGenerator.GetBytes(32);
-        var priv = new byte[32];
-        Buffer.BlockCopy(seed, 0, priv, 0, 32);
-        var pub = new byte[Ed25519.PublicKeySize];
-        Ed25519.PublicKeyFromSeed(priv, pub);
-        return new Ed25519KeyPair(pub, priv, DateTimeOffset.UtcNow);
+        // Generate real Ed25519 keypair using NSec (libsodium)
+        using var key = Key.Create(SignatureAlgorithm.Ed25519);
+        
+        // Export public key (32 bytes for Ed25519)
+        var publicKey = key.PublicKey.Export(KeyBlobFormat.RawPublicKey);
+        
+        // Export private key (32 bytes for Ed25519)
+        var privateKey = key.Export(KeyBlobFormat.RawPrivateKey);
+        
+        return new Ed25519KeyPair(publicKey, privateKey, DateTimeOffset.UtcNow);
     }
 
     public static Ed25519KeyPair FromBase64(string pub, string priv, long createdMs)

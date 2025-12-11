@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace slskd.Mesh.Overlay;
 
 /// <summary>
-/// Handles overlay control envelopes (signature verification stub).
+/// Handles overlay control envelopes with signature verification.
 /// </summary>
 public interface IControlDispatcher
 {

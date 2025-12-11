@@ -86,6 +86,7 @@ namespace slskd
     using slskd.DhtRendezvous;
     using slskd.DhtRendezvous.Security;
     using slskd.Transfers.MultiSource.Discovery;
+    using slskd.Signals;
     using Soulseek;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
@@ -731,6 +732,9 @@ namespace slskd
             services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmTraceSummarizer, Transfers.MultiSource.Tracing.SwarmTraceSummarizer>();
             services.AddSingleton<Transfers.MultiSource.Caching.IWarmCachePopularityService, Transfers.MultiSource.Caching.WarmCachePopularityService>();
             services.AddSingleton<Transfers.MultiSource.Caching.IWarmCacheService, Transfers.MultiSource.Caching.WarmCacheService>();
+
+            // Add signal system
+            services.AddSignalSystem();
             services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackPriorityService, Transfers.MultiSource.Playback.PlaybackPriorityService>();
             services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackFeedbackService, Transfers.MultiSource.Playback.PlaybackFeedbackService>();
             services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
@@ -786,9 +790,35 @@ namespace slskd
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
 
             // PodCore (Phase 10 scaffolding)
-            services.AddSingleton<PodCore.IPodService, PodCore.PodService>();
-            services.AddSingleton<PodCore.IPodMessaging, PodCore.PodMessaging>();
+            // Note: IPodService is registered below with dependencies
+            services.AddSingleton<PodCore.IPodMessaging>(sp => new PodCore.PodMessaging(
+                sp.GetRequiredService<PodCore.IPodService>(),
+                sp.GetRequiredService<PodCore.ISoulseekChatBridge>(),
+                sp.GetRequiredService<ILogger<PodCore.PodMessaging>>(),
+                sp.GetService<Mesh.IMeshSyncService>(),
+                sp.GetService<ISoulseekClient>(),
+                sp.GetService<Mesh.Overlay.IOverlayClient>()));
             services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
+            
+            // Pod publishing to DHT
+            services.AddSingleton<PodCore.IPodPublisher, PodCore.PodPublisher>();
+            
+            // Pod discovery via DHT
+            services.AddSingleton<PodCore.IPodDiscovery, PodCore.PodDiscovery>();
+            
+            // Pod membership signing
+            services.AddSingleton<PodCore.IPodMembershipSigner, PodCore.PodMembershipSigner>();
+            
+            // Peer resolution service
+            services.AddSingleton<PodCore.IPeerResolutionService, PodCore.PeerResolutionService>();
+            
+            // Pod service (with publisher and signer injection)
+            services.AddSingleton<PodCore.IPodService>(sp => new PodCore.PodService(
+                sp.GetService<PodCore.IPodPublisher>(),
+                sp.GetService<PodCore.IPodMembershipSigner>()));
+            
+            // Background service for periodic pod metadata refresh
+            services.AddHostedService<PodCore.PodPublisherBackgroundService>();
 
             // Typed options (Phase 11)
             services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
@@ -800,16 +830,27 @@ namespace slskd
 
             // MeshCore (Phase 8 implementation)
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
+            services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
+            services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
+            services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
+            // DHT: use in-memory Kademlia-style implementation for now
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, Mesh.Dht.InMemoryDhtClient>();
             services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
             services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
-            services.AddSingleton<Mesh.Dht.IMeshDirectory, Mesh.Dht.ContentDirectory>();
+            services.AddSingleton<Mesh.IMeshDirectory, Mesh.Dht.ContentDirectory>();
             services.AddSingleton<Mesh.IMeshAdvanced, Mesh.MeshAdvanced>();
             services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
+            services.AddHostedService<Mesh.Dht.PeerDescriptorRefreshService>();
             services.AddSingleton<Mesh.Dht.IContentPeerPublisher, Mesh.Dht.ContentPeerPublisher>();
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
+            services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
+            // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
+            services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();
             services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
+            // Mesh message signing for mesh sync security
+            services.AddSingleton<Mesh.IMeshMessageSigner, Mesh.MeshMessageSigner>();
             services.AddSingleton<Mesh.Overlay.Ed25519KeyPair>();
             services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
             services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();

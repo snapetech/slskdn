@@ -115,3 +115,4 @@ public class ScenesOptions
     /// </summary>
     public int AnnouncementRefreshMinutes { get; set; } = 15;
 }
+

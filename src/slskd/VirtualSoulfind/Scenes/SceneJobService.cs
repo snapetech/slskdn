@@ -1,7 +1,6 @@
 namespace slskd.VirtualSoulfind.Scenes;
 
-using slskd.Jobs.Discography;
-using slskd.Jobs.LabelCrate;
+using slskd.Jobs;
 
 /// <summary>
 /// Interface for scene-scoped job creation.
@@ -69,17 +68,17 @@ public class SceneJobService : ISceneJobService
         var labelName = ExtractLabelName(sceneId);
 
         // Create label crate job
-        var job = await labelCrateJobs.CreateJobAsync(
-            labelName: labelName,
-            labelId: null, // Let service resolve
-            targetDir: targetDir,
-            limit: limit,
-            ct: ct);
+        var jobId = await labelCrateJobs.CreateJobAsync(new LabelCrateJobRequest
+        {
+            LabelName = labelName,
+            LabelId = null,
+            Limit = limit
+        }, ct);
 
         logger.LogInformation("[VSF-SCENE-JOB] Created label crate job {JobId} for scene {SceneId}",
-            job.JobId, sceneId);
+            jobId, sceneId);
 
-        return job.JobId;
+        return jobId;
     }
 
     public async Task<string> CreateSceneDiscographyJobAsync(
@@ -99,16 +98,16 @@ public class SceneJobService : ISceneJobService
         }
 
         // Create discography job
-        var job = await discographyJobs.CreateJobAsync(
-            artistId: artistId,
-            targetDir: targetDir,
-            profile: "default",
-            ct: ct);
+        var jobId = await discographyJobs.CreateJobAsync(new DiscographyJobRequest
+        {
+            ArtistId = artistId,
+            TargetDirectory = targetDir
+        }, ct);
 
         logger.LogInformation("[VSF-SCENE-JOB] Created discography job {JobId} for scene {SceneId}",
-            job.JobId, sceneId);
+            jobId, sceneId);
 
-        return job.JobId;
+        return jobId;
     }
 
     private string ExtractLabelName(string sceneId)

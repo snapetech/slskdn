@@ -13,3 +13,4 @@ namespace slskd.Transfers.MultiSource.Playback
         public PriorityZone Priority { get; set; } = PriorityZone.Mid;
     }
 }
+

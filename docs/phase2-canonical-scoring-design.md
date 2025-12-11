@@ -766,3 +766,4 @@ public async Task CanonicalStatsService_Should_IdentifyBestVariant()
 
 This design provides a complete roadmap for implementing canonical scoring in slskdn. All types, methods, and schemas are specified in detail for Codex to implement.
 
+

@@ -1,23 +1,28 @@
+#pragma warning disable CA2252 // Preview features - QUIC APIs require preview features
+
+namespace slskd.Mesh.Overlay;
+
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace slskd.Mesh.Overlay;
-
 /// <summary>
-/// QUIC overlay server for control envelopes.
+/// QUIC overlay server for control-plane messages (ControlEnvelope).
 /// </summary>
 public class QuicOverlayServer : BackgroundService
 {
     private readonly ILogger<QuicOverlayServer> logger;
     private readonly OverlayOptions options;
     private readonly IControlDispatcher dispatcher;
-    private readonly X509Certificate2 cert;
-    private QuicListener? listener;
+    private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
 
     public QuicOverlayServer(
         ILogger<QuicOverlayServer> logger,
@@ -27,88 +32,157 @@ public class QuicOverlayServer : BackgroundService
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
-        this.cert = SelfSignedCertificate.Create();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Enable)
         {
-            logger.LogInformation("[Overlay-QUIC] Disabled");
+            logger.LogInformation("[Overlay-QUIC] Disabled by configuration");
             return;
         }
 
-        var listenerOpts = new QuicListenerOptions
+        if (!QuicListener.IsSupported)
         {
-            ListenEndPoint = new IPEndPoint(IPAddress.Any, options.ListenPort),
-            ApplicationProtocols = new List<SslApplicationProtocol> { new("mesh-overlay") },
-            ConnectionOptionsCallback = _ => ValueTask.FromResult(new QuicServerConnectionOptions
-            {
-                ServerAuthenticationOptions = new SslServerAuthenticationOptions
-                {
-                    ApplicationProtocols = new List<SslApplicationProtocol> { new("mesh-overlay") },
-                    ServerCertificate = cert
-                }
-            })
-        };
-
-        listener = await QuicListener.ListenAsync(listenerOpts, stoppingToken);
-        logger.LogInformation("[Overlay-QUIC] Listening on {Port}", options.ListenPort);
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                var conn = await listener.AcceptConnectionAsync(stoppingToken);
-                _ = HandleConnection(conn, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                // shutdown
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "[Overlay-QUIC] Accept failed");
-            }
+            logger.LogWarning("[Overlay-QUIC] QUIC is not supported on this platform");
+            return;
         }
-    }
 
-    private async Task HandleConnection(QuicConnection conn, CancellationToken ct)
-    {
         try
         {
-            await using var stream = await conn.AcceptStreamAsync(ct);
-            using var ms = new MemoryStream();
-            var buffer = new byte[4096];
-            int read;
-            while ((read = await stream.ReadAsync(buffer, ct)) > 0)
-            {
-                ms.Write(buffer, 0, read);
-            }
+            // Generate self-signed certificate for QUIC/TLS
+            var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic");
 
-            var envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(ms.ToArray());
-            await dispatcher.HandleAsync(envelope, ct);
-        }
-        catch (OperationCanceledException)
-        {
-            // shutdown
+            var listenerOptions = new QuicListenerOptions
+            {
+                ListenEndPoint = new IPEndPoint(IPAddress.Any, options.ListenPort),
+                ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
+                ConnectionOptionsCallback = (connection, hello, token) =>
+                {
+                    return new ValueTask<QuicServerConnectionOptions>(new QuicServerConnectionOptions
+                    {
+                        DefaultStreamErrorCode = 0x01,
+                        DefaultCloseErrorCode = 0x01,
+                        ServerAuthenticationOptions = new SslServerAuthenticationOptions
+                        {
+                            ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
+                            ServerCertificate = certificate,
+                            ClientCertificateRequired = false,
+                            RemoteCertificateValidationCallback = (sender, cert, chain, errors) => true // Accept self-signed certs
+                        }
+                    });
+                }
+            };
+
+            await using var listener = await QuicListener.ListenAsync(listenerOptions, stoppingToken);
+            logger.LogInformation("[Overlay-QUIC] Listening on port {Port}", options.ListenPort);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    var connection = await listener.AcceptConnectionAsync(stoppingToken);
+                    _ = HandleConnectionAsync(connection, stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "[Overlay-QUIC] Error accepting connection");
+                }
+            }
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "[Overlay-QUIC] Connection handler error");
-        }
-        finally
-        {
-            await conn.DisposeAsync();
+            logger.LogError(ex, "[Overlay-QUIC] Server failed");
         }
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    private async Task HandleConnectionAsync(QuicConnection connection, CancellationToken ct)
     {
-        if (listener != null)
+        var remoteEndPoint = connection.RemoteEndPoint as IPEndPoint;
+        if (remoteEndPoint != null)
         {
-            await listener.DisposeAsync();
+            activeConnections.TryAdd(remoteEndPoint, connection);
         }
-        await base.StopAsync(cancellationToken);
+
+        try
+        {
+            await using (connection)
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var stream = await connection.AcceptInboundStreamAsync(ct);
+                        _ = HandleStreamAsync(stream, remoteEndPoint, ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "[Overlay-QUIC] Error accepting stream from {Endpoint}", remoteEndPoint);
+                        break;
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on shutdown
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Overlay-QUIC] Connection error from {Endpoint}", remoteEndPoint);
+        }
+        finally
+        {
+            if (remoteEndPoint != null)
+            {
+                activeConnections.TryRemove(remoteEndPoint, out _);
+            }
+        }
+    }
+
+    private async Task HandleStreamAsync(QuicStream stream, IPEndPoint? remoteEndPoint, CancellationToken ct)
+    {
+        try
+        {
+            await using (stream)
+            {
+                // Read ControlEnvelope (MessagePack serialized)
+                var buffer = new byte[options.MaxDatagramBytes];
+                var totalRead = 0;
+
+                while (totalRead < buffer.Length)
+                {
+                    var read = await stream.ReadAsync(buffer.AsMemory(totalRead), ct);
+                    if (read == 0) break;
+                    totalRead += read;
+                }
+
+                if (totalRead == 0)
+                {
+                    return;
+                }
+
+                var envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(buffer.AsMemory(0, totalRead));
+                logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
+
+                var handled = await dispatcher.HandleAsync(envelope, ct);
+                if (!handled)
+                {
+                    logger.LogWarning("[Overlay-QUIC] Failed to handle envelope {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Overlay-QUIC] Stream error from {Endpoint}", remoteEndPoint);
+        }
     }
 }

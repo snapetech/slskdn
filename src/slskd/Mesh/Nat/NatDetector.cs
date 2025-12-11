@@ -24,3 +24,4 @@ public class NatDetector : INatDetector
         return Task.FromResult(NatType.Unknown);
     }
 }
+

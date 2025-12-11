@@ -1,6 +1,10 @@
 namespace slskd.VirtualSoulfind.Bridge;
 
+using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using slskd;
+using OptionsModel = slskd.Options;
 
 /// <summary>
 /// Interface for Soulfind bridge service lifecycle management.
@@ -46,14 +50,14 @@ public class BridgeHealthStatus
 public class SoulfindBridgeService : ISoulfindBridgeService
 {
     private readonly ILogger<SoulfindBridgeService> logger;
-    private readonly IOptionsMonitor<Options> optionsMonitor;
+    private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private bool isRunning;
     private DateTimeOffset? startedAt;
     private Process? soulfindProcess;
 
     public SoulfindBridgeService(
         ILogger<SoulfindBridgeService> logger,
-        IOptionsMonitor<Options> optionsMonitor)
+        IOptionsMonitor<OptionsModel> optionsMonitor)
     {
         this.logger = logger;
         this.optionsMonitor = optionsMonitor;
@@ -81,8 +85,12 @@ public class SoulfindBridgeService : ISoulfindBridgeService
         try
         {
             // Start Soulfind in proxy mode
-            var soulfindPath = options.VirtualSoulfind.Bridge.SoulfindPath ?? "soulfind";
-            var bridgePort = options.VirtualSoulfind.Bridge.Port ?? 2242;
+            var soulfindPath = string.IsNullOrWhiteSpace(options.VirtualSoulfind.Bridge.SoulfindPath)
+                ? "soulfind"
+                : options.VirtualSoulfind.Bridge.SoulfindPath;
+            var bridgePort = options.VirtualSoulfind.Bridge.Port > 0
+                ? options.VirtualSoulfind.Bridge.Port
+                : 2242;
 
             var startInfo = new ProcessStartInfo
             {

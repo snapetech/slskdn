@@ -384,3 +384,4 @@ def create_mb_release_job_safe(mb_id, target_dir):
 For questions or issues:
 - GitHub: https://github.com/snapetech/slskdn
 - Ensure you're using a compatible version of slskdn (check `/api/slskdn/capabilities`)
+

@@ -1,8 +1,12 @@
-namespace slskd.VirtualSoulfind.Integration;
-
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using slskd.VirtualSoulfind.ShadowIndex;
 using slskd.VirtualSoulfind.DisasterMode;
-using slskd.Jobs.Discography;
+
+namespace slskd.VirtualSoulfind.Integration;
 
 /// <summary>
 /// Integrates shadow index with job resolvers.

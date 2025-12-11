@@ -188,10 +188,10 @@ ANY Client → Local Bridge → slskdn → Mesh
 1. Review `docs/FINAL_PLANNING_SUMMARY.md` for high-level overview
 2. Read `docs/phase6-compatibility-bridge-design.md` (your favorite feature)
 3. Decide: implement bridge (Phase 6X) or skip it?
-4. Hand off to Codex with: `docs/START_HERE_CODEX.md`
+4. Hand off to AI with: `docs/AI_START_HERE.md`
 
 ### For Codex (Implementation)
-1. Read `docs/START_HERE_CODEX.md`
+1. Read `docs/AI_START_HERE.md`
 2. Read `docs/phase2-implementation-guide.md`
 3. Start with Task T-400 (canonical scoring)
 4. Work sequentially through all phases
@@ -244,7 +244,7 @@ This design embodies slskdn's core principles:
 5. ✅ **Well explained**: Multiple levels of documentation:
    - High-level: FINAL_PLANNING_SUMMARY.md
    - Navigation: COMPLETE_PLANNING_INDEX.md
-   - Quick start: START_HERE_CODEX.md
+   - Quick start: AI_START_HERE.md
    - Deep dive: Phase-specific designs
    - For viewers: Clear "why" explanations throughout
 
@@ -309,7 +309,7 @@ Codex, you have complete specifications for Phases 2-6 of slskdn.
 
 Phase 1 is done. You will implement Phases 2-6 (114 tasks total).
 
-Start here: docs/START_HERE_CODEX.md
+Start here: docs/AI_START_HERE.md
 
 Then: docs/phase2-implementation-guide.md
 
@@ -356,4 +356,5 @@ You wanted the Virtual Soulfind mesh integrated, documented, and tasked up.
 ---
 
 **Now hand it to Codex and watch the magic happen!** 🚀✨
+
 

@@ -22,15 +22,19 @@ namespace slskd.Mesh
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Text;
+    using System.Text.Json;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
     using Serilog;
     using slskd.Capabilities;
+    using slskd.Core;
     using slskd.DhtRendezvous.Security;
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh.Messages;
+    using Soulseek;
 
     /// <summary>
     ///     Service for epidemic mesh synchronization of hash databases.
@@ -46,21 +50,181 @@ namespace slskd.Mesh
         /// <summary>Maximum peers to sync with per cycle.</summary>
         public const int MaxPeersPerCycle = 5;
 
+        /// <summary>
+        ///     Maximum invalid entries allowed per time window (T-1432).
+        /// </summary>
+        private const int MaxInvalidEntriesPerWindow = 50;
+        
+        /// <summary>
+        ///     Maximum invalid messages allowed per time window (T-1432).
+        /// </summary>
+        private const int MaxInvalidMessagesPerWindow = 10;
+        
+        /// <summary>
+        ///     Rate limiting time window in minutes (T-1432).
+        /// </summary>
+        private const int RateLimitWindowMinutes = 5;
+        
+        /// <summary>
+        ///     Number of rate limit violations before automatic quarantine (T-1433).
+        /// </summary>
+        private const int QuarantineViolationThreshold = 3;
+        
+        /// <summary>
+        ///     Quarantine duration in minutes (T-1433).
+        /// </summary>
+        private const int QuarantineDurationMinutes = 30;
+
         private readonly IHashDbService hashDb;
         private readonly ICapabilityService capabilities;
+        private readonly IManagedState<State> appState;
+        private readonly ISoulseekClient soulseekClient;
+        private readonly IMeshMessageSigner messageSigner;
+        private readonly Common.Security.PeerReputation? peerReputation;
         private readonly ILogger log = Log.ForContext<MeshSyncService>();
 
         private readonly ConcurrentDictionary<string, MeshPeerState> peerStates = new(StringComparer.OrdinalIgnoreCase);
         private readonly MeshSyncStats stats = new();
         private readonly SemaphoreSlim syncLock = new(1, 1);
+        
+        // Pending requests: requestId -> TaskCompletionSource
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>> pendingRequests = new();
+        private const string MeshMessagePrefix = "MESH:";
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MeshSyncService"/> class.
         /// </summary>
-        public MeshSyncService(IHashDbService hashDb, ICapabilityService capabilities)
+        public MeshSyncService(
+            IHashDbService hashDb,
+            ICapabilityService capabilities,
+            ISoulseekClient soulseekClient,
+            IMeshMessageSigner messageSigner,
+            Common.Security.PeerReputation? peerReputation = null,
+            IManagedState<State> appState = null)
         {
             this.hashDb = hashDb;
             this.capabilities = capabilities;
+            this.soulseekClient = soulseekClient;
+            this.messageSigner = messageSigner;
+            this.peerReputation = peerReputation;
+            this.appState = appState;
+            
+            // Subscribe to private messages for mesh protocol
+            if (soulseekClient != null)
+            {
+                soulseekClient.PrivateMessageReceived += SoulseekClient_PrivateMessageReceived;
+            }
+        }
+        
+        private void SoulseekClient_PrivateMessageReceived(object sender, PrivateMessageReceivedEventArgs e)
+        {
+            // Check if this is a mesh message
+            if (!e.Message.StartsWith(MeshMessagePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            
+            // Extract message type and payload
+            var messageText = e.Message.Substring(MeshMessagePrefix.Length);
+            var parts = messageText.Split(new[] { ':' }, 2);
+            if (parts.Length != 2)
+            {
+                log.Warning("[MESH] Invalid mesh message format from {Peer}: {Message}", e.Username, e.Message);
+                return;
+            }
+            
+            var messageType = parts[0];
+            var payload = parts[1];
+            
+            // Handle response messages
+            if (messageType == "RESPKEY")
+            {
+                try
+                {
+                    var response = JsonSerializer.Deserialize<MeshRespKeyMessage>(payload);
+                    if (response != null && !string.IsNullOrEmpty(response.FlacKey))
+                    {
+                        // Find pending request by FlacKey (simplified - in production would use request IDs)
+                        var requestId = response.FlacKey;
+                        if (pendingRequests.TryRemove(requestId, out var tcs))
+                        {
+                            tcs.SetResult(response);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[MESH] Failed to deserialize RESPKEY message from {Peer}", e.Username);
+                }
+            }
+            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO")
+            {
+                // Handle incoming requests by routing to HandleMessageAsync
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        MeshMessage message = messageType switch
+                        {
+                            "REQKEY" => JsonSerializer.Deserialize<MeshReqKeyMessage>(payload),
+                            "REQDELTA" => JsonSerializer.Deserialize<MeshReqDeltaMessage>(payload),
+                            "PUSHDELTA" => JsonSerializer.Deserialize<MeshPushDeltaMessage>(payload),
+                            "HELLO" => JsonSerializer.Deserialize<MeshHelloMessage>(payload),
+                            _ => null,
+                        };
+                        
+                        if (message != null)
+                        {
+                            var response = await HandleMessageAsync(e.Username, message);
+                            if (response != null)
+                            {
+                                // Send response back
+                                await SendMeshMessageAsync(e.Username, response);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warning(ex, "[MESH] Error handling mesh message from {Peer}", e.Username);
+                    }
+                });
+            }
+        }
+        
+        private async Task SendMeshMessageAsync(string username, MeshMessage message)
+        {
+            if (soulseekClient == null)
+            {
+                log.Warning("[MESH] Cannot send mesh message - Soulseek client not available");
+                return;
+            }
+            
+            try
+            {
+                // SECURITY: Sign message before sending (T-1430)
+                var signedMessage = messageSigner.SignMessage(message);
+                
+                var messageType = message.Type switch
+                {
+                    MeshMessageType.RespKey => "RESPKEY",
+                    MeshMessageType.ReqKey => "REQKEY",
+                    MeshMessageType.ReqDelta => "REQDELTA",
+                    MeshMessageType.PushDelta => "PUSHDELTA",
+                    MeshMessageType.Hello => "HELLO",
+                    MeshMessageType.Ack => "ACK",
+                    _ => "UNKNOWN",
+                };
+                
+                var payload = JsonSerializer.Serialize(signedMessage);
+                var messageText = $"{MeshMessagePrefix}{messageType}:{payload}";
+                
+                await soulseekClient.SendPrivateMessageAsync(username, messageText);
+                log.Debug("[MESH] Sent signed {Type} message to {Peer}", messageType, username);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[MESH] Failed to send mesh message to {Peer}", username);
+            }
         }
 
         /// <inheritdoc/>
@@ -70,6 +234,17 @@ namespace slskd.Mesh
             {
                 stats.CurrentSeqId = hashDb.CurrentSeqId;
                 stats.KnownMeshPeers = peerStates.Count(p => p.Value.IsMeshCapable);
+                
+                // SECURITY: Update security metrics (T-1436)
+                stats.QuarantinedPeers = peerStates.Count(p => 
+                {
+                    var state = p.Value;
+                    lock (state)
+                    {
+                        return state.QuarantinedUntil.HasValue && state.QuarantinedUntil.Value > DateTime.UtcNow;
+                    }
+                });
+                
                 return stats;
             }
         }
@@ -168,12 +343,55 @@ namespace slskd.Mesh
                 return null;
             }
 
+            // SECURITY: Check if peer is quarantined (T-1433)
+            if (IsQuarantined(fromUser))
+            {
+                log.Warning("[MESH] Rejecting message from quarantined peer {Peer}", fromUser);
+                stats.RejectedMessages++;
+                // Note: QuarantinedPeers count is updated in Stats getter
+                return null;
+            }
+
+            // SECURITY: Verify message signature (T-1430)
+            if (!messageSigner.VerifyMessage(message))
+            {
+                log.Warning("[MESH] Rejecting message with invalid signature from {Peer}", fromUser);
+                stats.RejectedMessages++;
+                stats.SignatureVerificationFailures++; // T-1436
+                return null;
+            }
+
             // SECURITY: Validate message-specific constraints before processing
             var messageValidation = ValidateIncomingMessage(fromUser, message);
             if (!messageValidation.IsValid)
             {
                 log.Warning("[MESH] Rejecting invalid message from {Peer}: {Error}", fromUser, messageValidation.Error);
                 stats.RejectedMessages++;
+                
+                // SECURITY: Track invalid message for rate limiting (T-1432)
+                RecordInvalidMessage(fromUser);
+                
+                // Check if peer exceeded rate limit
+                if (IsRateLimited(fromUser, isMessage: true))
+                {
+                    log.Warning("[MESH] Peer {Peer} exceeded invalid message rate limit, rejecting", fromUser);
+                    stats.RateLimitViolations++; // T-1436
+                    
+                    if (peerReputation != null)
+                    {
+                        peerReputation.RecordProtocolViolation(fromUser, "Exceeded invalid message rate limit");
+                    }
+                    
+                    // SECURITY: Record rate limit violation and check for quarantine (T-1433)
+                    RecordRateLimitViolation(fromUser);
+                    if (ShouldQuarantine(fromUser))
+                    {
+                        QuarantinePeer(fromUser, "Exceeded invalid message rate limit multiple times");
+                    }
+                    
+                    return null;
+                }
+                
                 return null;
             }
 
@@ -273,10 +491,141 @@ namespace slskd.Mesh
                 };
             }
 
-            // TODO: Query mesh neighbors
-            // For now, return null - mesh queries would be implemented
-            // when we have actual peer-to-peer message transport
-            return null;
+            // Query mesh neighbors
+            var meshPeers = GetMeshPeers()
+                .Where(p => p.LastSeen > DateTime.UtcNow.AddHours(-24)) // Only query recently seen peers
+                .OrderByDescending(p => p.LastSyncTime ?? DateTime.MinValue) // Prefer recently synced peers
+                .Take(5) // Limit to 5 peers to avoid flooding
+                .ToList();
+
+            if (meshPeers.Count == 0)
+            {
+                log.Debug("[MESH] No mesh peers available for hash lookup: {Key}", flacKey);
+                return null;
+            }
+
+            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key}", meshPeers.Count, flacKey);
+
+            // Query peers in parallel (with limit)
+            var queryTasks = meshPeers.Select(async peer =>
+            {
+                try
+                {
+                    return await QueryPeerForHashAsync(peer.Username, flacKey, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    log.Debug(ex, "[MESH] Failed to query peer {Peer} for hash {Key}", peer.Username, flacKey);
+                    return null;
+                }
+            });
+
+            var results = await Task.WhenAll(queryTasks);
+            var foundEntry = results.FirstOrDefault(r => r != null);
+
+            if (foundEntry != null)
+            {
+                log.Debug("[MESH] Found hash {Key} via mesh query", flacKey);
+                // Optionally cache the result locally
+                if (foundEntry.ByteHash != null && foundEntry.Size > 0)
+                {
+                    try
+                    {
+                        await hashDb.StoreHashAsync(new HashDbEntry
+                        {
+                            FlacKey = foundEntry.FlacKey,
+                            ByteHash = foundEntry.ByteHash,
+                            Size = foundEntry.Size,
+                            MetaFlags = foundEntry.MetaFlags,
+                        }, cancellationToken);
+                        log.Debug("[MESH] Cached mesh query result for {Key}", flacKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Debug(ex, "[MESH] Failed to cache mesh query result for {Key}", flacKey);
+                    }
+                }
+            }
+            else
+            {
+                log.Debug("[MESH] Hash {Key} not found in any queried mesh peer", flacKey);
+            }
+
+            return foundEntry;
+        }
+
+        /// <summary>
+        ///     Queries a specific peer for a hash entry.
+        /// </summary>
+        private async Task<MeshHashEntry> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
+        {
+            // Check if peer supports mesh sync
+            var peerCaps = capabilities.GetPeerCapabilities(username);
+            if (peerCaps == null || !peerCaps.CanMeshSync)
+            {
+                log.Debug("[MESH] Peer {Peer} does not support mesh sync", username);
+                return null;
+            }
+
+            if (soulseekClient == null)
+            {
+                log.Debug("[MESH] Cannot query peer {Peer} - Soulseek client not available", username);
+                return null;
+            }
+
+            // Create request message
+            var request = new MeshReqKeyMessage
+            {
+                FlacKey = flacKey,
+            };
+
+            // Create TaskCompletionSource to wait for response
+            var tcs = new TaskCompletionSource<MeshRespKeyMessage>();
+            var requestId = flacKey; // Use FlacKey as request ID for simplicity
+            
+            // Register pending request
+            if (!pendingRequests.TryAdd(requestId, tcs))
+            {
+                log.Warning("[MESH] Duplicate request for key {Key} to peer {Peer}", flacKey, username);
+                return null;
+            }
+
+            try
+            {
+                // Send request message
+                await SendMeshMessageAsync(username, request);
+                
+                log.Debug("[MESH] Sent REQKEY message to {Peer} for key {Key}", username, flacKey);
+
+                // Wait for response with timeout
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(10)); // 10 second timeout
+                
+                var response = await tcs.Task.WaitAsync(timeoutCts.Token);
+                
+                if (response.Found && response.Entry != null)
+                {
+                    log.Debug("[MESH] Peer {Peer} found key {Key}", username, flacKey);
+                    return response.Entry;
+                }
+                else
+                {
+                    log.Debug("[MESH] Peer {Peer} did not have key {Key}", username, flacKey);
+                    return null;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                log.Debug("[MESH] Request timeout for key {Key} from peer {Peer}", flacKey, username);
+                pendingRequests.TryRemove(requestId, out _);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[MESH] Error querying peer {Peer} for key {Key}", username, flacKey);
+                pendingRequests.TryRemove(requestId, out _);
+                return null;
+            }
         }
 
         /// <inheritdoc/>
@@ -319,9 +668,19 @@ namespace slskd.Mesh
         public MeshHelloMessage GenerateHelloMessage()
         {
             var dbStats = hashDb.GetStats();
+            
+            // Get actual username from application state, fallback to "slskdn" if not available
+            var currentState = this.appState?.CurrentValue;
+            var username = currentState?.User?.Username;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                username = "slskdn"; // Fallback if state not available
+                log.Debug("[MESH] Using fallback username 'slskdn' (state not available)");
+            }
+
             return new MeshHelloMessage
             {
-                ClientId = "slskdn", // TODO: Get actual username
+                ClientId = username,
                 ClientVersion = capabilities.VersionString,
                 LatestSeqId = hashDb.CurrentSeqId,
                 HashCount = dbStats.TotalHashEntries,
@@ -358,6 +717,27 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<int> MergeEntriesAsync(string fromUser, IEnumerable<MeshHashEntry> entries, CancellationToken cancellationToken = default)
         {
+            // SECURITY: Check if peer is quarantined (T-1433)
+            if (IsQuarantined(fromUser))
+            {
+                log.Warning("[MESH] Rejecting entries from quarantined peer {Peer}", fromUser);
+                stats.RejectedMessages++;
+                return 0;
+            }
+
+            // SECURITY: Check peer reputation before processing entries (T-1431)
+            if (peerReputation != null && peerReputation.IsUntrusted(fromUser))
+            {
+                var score = peerReputation.GetScore(fromUser);
+                log.Warning("[MESH] Rejecting entries from untrusted peer {Peer} (score={Score})", fromUser, score);
+                stats.RejectedMessages++;
+                stats.ReputationBasedRejections++; // T-1436
+                
+                // Record protocol violation for attempting to sync with low reputation
+                peerReputation.RecordProtocolViolation(fromUser, "Attempted mesh sync with untrusted reputation");
+                return 0;
+            }
+
             // SECURITY: Validate each entry before merging
             var validatedEntries = new List<HashDbEntry>();
             var skipped = 0;
@@ -413,6 +793,37 @@ namespace slskd.Mesh
             {
                 log.Warning("[MESH] Skipped {Skipped}/{Total} invalid entries from {Peer}", skipped, entryList.Count, fromUser);
                 stats.SkippedEntries += skipped;
+                
+                // SECURITY: Track invalid entries for rate limiting (T-1432)
+                RecordInvalidEntries(fromUser, skipped);
+                
+                // SECURITY: Check if peer exceeded rate limit
+                if (IsRateLimited(fromUser, isMessage: false))
+                {
+                    log.Warning("[MESH] Peer {Peer} exceeded invalid entry rate limit, rejecting remaining entries", fromUser);
+                    stats.RateLimitViolations++; // T-1436
+                    
+                    if (peerReputation != null)
+                    {
+                        peerReputation.RecordProtocolViolation(fromUser, $"Exceeded invalid entry rate limit ({skipped} invalid entries)");
+                    }
+                    
+                    // SECURITY: Record rate limit violation and check for quarantine (T-1433)
+                    RecordRateLimitViolation(fromUser);
+                    if (ShouldQuarantine(fromUser))
+                    {
+                        QuarantinePeer(fromUser, "Exceeded invalid entry rate limit multiple times");
+                    }
+                    
+                    return 0;
+                }
+                
+                // SECURITY: Record malformed message for peers sending invalid entries (T-1431)
+                if (peerReputation != null && skipped > entryList.Count / 2)
+                {
+                    // If more than half the entries are invalid, record as malformed message
+                    peerReputation.RecordMalformedMessage(fromUser);
+                }
             }
 
             if (validatedEntries.Count == 0)
@@ -513,6 +924,187 @@ namespace slskd.Mesh
                 LastSeen = DateTime.UtcNow,
             });
         }
+        
+        /// <summary>
+        ///     Records invalid entries for rate limiting (T-1432).
+        /// </summary>
+        private void RecordInvalidEntries(string username, int count)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                var now = DateTime.UtcNow;
+                var cutoff = now.AddMinutes(-RateLimitWindowMinutes);
+                
+                // Clean up old timestamps outside the window
+                while (state.InvalidEntryTimestamps.Count > 0 && state.InvalidEntryTimestamps.Peek() < cutoff)
+                {
+                    state.InvalidEntryTimestamps.Dequeue();
+                    state.InvalidEntryCount--;
+                }
+                
+                // Add new invalid entry timestamps
+                for (int i = 0; i < count; i++)
+                {
+                    state.InvalidEntryTimestamps.Enqueue(now);
+                    state.InvalidEntryCount++;
+                }
+            }
+        }
+        
+        /// <summary>
+        ///     Records invalid message for rate limiting (T-1432).
+        /// </summary>
+        private void RecordInvalidMessage(string username)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                var now = DateTime.UtcNow;
+                var cutoff = now.AddMinutes(-RateLimitWindowMinutes);
+                
+                // Clean up old timestamps outside the window
+                while (state.InvalidMessageTimestamps.Count > 0 && state.InvalidMessageTimestamps.Peek() < cutoff)
+                {
+                    state.InvalidMessageTimestamps.Dequeue();
+                    state.InvalidMessageCount--;
+                }
+                
+                // Add new invalid message timestamp
+                state.InvalidMessageTimestamps.Enqueue(now);
+                state.InvalidMessageCount++;
+            }
+        }
+        
+        /// <summary>
+        ///     Checks if a peer has exceeded the rate limit (T-1432).
+        /// </summary>
+        private bool IsRateLimited(string username, bool isMessage)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                var now = DateTime.UtcNow;
+                var cutoff = now.AddMinutes(-RateLimitWindowMinutes);
+                
+                if (isMessage)
+                {
+                    // Clean up old message timestamps
+                    while (state.InvalidMessageTimestamps.Count > 0 && state.InvalidMessageTimestamps.Peek() < cutoff)
+                    {
+                        state.InvalidMessageTimestamps.Dequeue();
+                        state.InvalidMessageCount--;
+                    }
+                    
+                    return state.InvalidMessageCount >= MaxInvalidMessagesPerWindow;
+                }
+                else
+                {
+                    // Clean up old entry timestamps
+                    while (state.InvalidEntryTimestamps.Count > 0 && state.InvalidEntryTimestamps.Peek() < cutoff)
+                    {
+                        state.InvalidEntryTimestamps.Dequeue();
+                        state.InvalidEntryCount--;
+                    }
+                    
+                    return state.InvalidEntryCount >= MaxInvalidEntriesPerWindow;
+                }
+            }
+        }
+        
+        /// <summary>
+        ///     Records a rate limit violation for quarantine tracking (T-1433).
+        /// </summary>
+        private void RecordRateLimitViolation(string username)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                state.RateLimitViolationCount++;
+                state.LastRateLimitViolation = DateTime.UtcNow;
+                log.Debug("[MESH] Peer {Peer} rate limit violation count: {Count}", username, state.RateLimitViolationCount);
+            }
+        }
+        
+        /// <summary>
+        ///     Checks if a peer should be quarantined (T-1433).
+        /// </summary>
+        private bool ShouldQuarantine(string username)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                // Reset violation count if last violation was more than the rate limit window ago
+                if (state.LastRateLimitViolation.HasValue)
+                {
+                    var timeSinceLastViolation = DateTime.UtcNow - state.LastRateLimitViolation.Value;
+                    if (timeSinceLastViolation.TotalMinutes > RateLimitWindowMinutes)
+                    {
+                        // Reset count if violations are old
+                        state.RateLimitViolationCount = 1;
+                        return false;
+                    }
+                }
+                
+                return state.RateLimitViolationCount >= QuarantineViolationThreshold;
+            }
+        }
+        
+        /// <summary>
+        ///     Quarantines a peer for the configured duration (T-1433).
+        /// </summary>
+        private void QuarantinePeer(string username, string reason)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                if (state.QuarantinedUntil.HasValue && state.QuarantinedUntil.Value > DateTime.UtcNow)
+                {
+                    // Already quarantined, extend duration
+                    state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(QuarantineDurationMinutes);
+                    log.Warning("[MESH] Extended quarantine for peer {Peer} until {Until} (reason: {Reason})", 
+                        username, state.QuarantinedUntil, reason);
+                }
+                else
+                {
+                    // New quarantine
+                    state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(QuarantineDurationMinutes);
+                    log.Warning("[MESH] Quarantined peer {Peer} until {Until} (reason: {Reason}, violations: {Count})", 
+                        username, state.QuarantinedUntil, reason, state.RateLimitViolationCount);
+                    
+                    stats.QuarantineEvents++; // T-1436
+                    
+                    // Reset violation count after quarantine
+                    state.RateLimitViolationCount = 0;
+                }
+            }
+        }
+        
+        /// <summary>
+        ///     Checks if a peer is currently quarantined (T-1433).
+        /// </summary>
+        private bool IsQuarantined(string username)
+        {
+            var state = GetOrCreatePeerState(username);
+            lock (state)
+            {
+                if (!state.QuarantinedUntil.HasValue)
+                {
+                    return false;
+                }
+                
+                // Check if quarantine has expired
+                if (state.QuarantinedUntil.Value <= DateTime.UtcNow)
+                {
+                    // Quarantine expired, lift it
+                    state.QuarantinedUntil = null;
+                    log.Information("[MESH] Quarantine lifted for peer {Peer}", username);
+                    return false;
+                }
+                
+                return true;
+            }
+        }
 
         /// <summary>
         ///     Internal peer state tracking.
@@ -526,6 +1118,17 @@ namespace slskd.Mesh
             public DateTime? LastSyncTime { get; set; }
             public DateTime LastSeen { get; set; }
             public string ClientVersion { get; set; }
+            
+            // SECURITY: Rate limiting for invalid entries/messages (T-1432)
+            public readonly Queue<DateTime> InvalidEntryTimestamps = new();
+            public readonly Queue<DateTime> InvalidMessageTimestamps = new();
+            public int InvalidEntryCount { get; set; }
+            public int InvalidMessageCount { get; set; }
+            
+            // SECURITY: Quarantine tracking (T-1433)
+            public DateTime? QuarantinedUntil { get; set; }
+            public int RateLimitViolationCount { get; set; }
+            public DateTime? LastRateLimitViolation { get; set; }
         }
     }
 }

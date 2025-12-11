@@ -1,6 +1,7 @@
 namespace slskd.API.Native;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using slskd.Jobs;
 using slskd.Integrations.MusicBrainz;
@@ -15,15 +16,18 @@ public class JobsController : ControllerBase
 {
     private readonly IDiscographyJobService discographyJobService;
     private readonly ILabelCrateJobService labelCrateJobService;
+    private readonly IJobServiceWithList? jobServiceList;
     private readonly ILogger<JobsController> logger;
 
     public JobsController(
         IDiscographyJobService discographyJobService,
         ILabelCrateJobService labelCrateJobService,
-        ILogger<JobsController> logger)
+        ILogger<JobsController> logger,
+        IJobServiceWithList? jobServiceList = null)
     {
         this.discographyJobService = discographyJobService;
         this.labelCrateJobService = labelCrateJobService;
+        this.jobServiceList = jobServiceList;
         this.logger = logger;
     }
 
@@ -39,23 +43,18 @@ public class JobsController : ControllerBase
         logger.LogInformation("Creating MB release job for {ReleaseId}", request.MbReleaseId);
 
         // For now, create as a discography job with single release
-        // TODO: Implement dedicated MB release job service
-        var job = await discographyJobService.CreateJobAsync(
+        var jobId = await discographyJobService.CreateJobAsync(
             new DiscographyJobRequest
             {
-                ArtistId = request.MbReleaseId, // Temp: treat as artist for now
+                ArtistId = request.MbReleaseId, // treated as artist ID placeholder
                 Profile = DiscographyProfile.AllReleases,
-                TargetDirectory = request.TargetDir,
-                PreferredCodecs = request.Constraints?.PreferredCodecs ?? new[] { "FLAC" },
-                AllowLossy = request.Constraints?.AllowLossy ?? false,
-                PreferCanonical = request.Constraints?.PreferCanonical ?? true,
-                UseOverlay = request.Constraints?.UseOverlay ?? true
+                TargetDirectory = request.TargetDir
             },
             cancellationToken);
 
         return Ok(new
         {
-            job_id = job.JobId,
+            job_id = jobId,
             status = "pending"
         });
     }
@@ -71,12 +70,12 @@ public class JobsController : ControllerBase
     {
         logger.LogInformation("Creating discography job for {ArtistId}", request.ArtistId);
 
-        var job = await discographyJobService.CreateJobAsync(request, cancellationToken);
+        var jobId = await discographyJobService.CreateJobAsync(request, cancellationToken);
 
         return Ok(new
         {
-            job_id = job.JobId,
-            status = MapStatus(job.Status)
+            job_id = jobId,
+            status = "pending"
         });
     }
 
@@ -91,12 +90,12 @@ public class JobsController : ControllerBase
     {
         logger.LogInformation("Creating label crate job for {Label}", request.LabelName);
 
-        var job = await labelCrateJobService.CreateJobAsync(request, cancellationToken);
+        var jobId = await labelCrateJobService.CreateJobAsync(request, cancellationToken);
 
         return Ok(new
         {
-            job_id = job.JobId,
-            status = MapStatus(job.Status)
+            job_id = jobId,
+            status = "pending"
         });
     }
 
@@ -110,63 +109,53 @@ public class JobsController : ControllerBase
         [FromQuery] string? status,
         CancellationToken cancellationToken)
     {
-        logger.LogDebug("Getting jobs: type={Type}, status={Status}", type, status);
-
-        // Get both types of jobs
-        var discographyJobs = await discographyJobService.GetAllJobsAsync(cancellationToken);
-        var labelCrateJobs = await labelCrateJobService.GetAllJobsAsync(cancellationToken);
+        logger.LogDebug("Getting jobs with filters: type={Type}, status={Status}", type, status);
 
         var allJobs = new List<object>();
 
-        // Map discography jobs
-        allJobs.AddRange(discographyJobs
-            .Where(j => string.IsNullOrEmpty(type) || type.ToLowerInvariant() == "discography")
-            .Where(j => string.IsNullOrEmpty(status) || MapStatus(j.Status).ToLowerInvariant() == status.ToLowerInvariant())
-            .Select(j => new
+        // Get discography jobs
+        if (type == null || type.Equals("discography", StringComparison.OrdinalIgnoreCase))
+        {
+            if (jobServiceList != null)
             {
-                id = j.JobId,
-                type = "discography",
-                status = MapStatus(j.Status),
-                spec = new
+                var discJobs = jobServiceList.GetAllDiscographyJobs();
+                foreach (var job in discJobs)
                 {
-                    artist_id = j.ArtistId,
-                    profile = j.Profile.ToString(),
-                    target_dir = j.TargetDirectory
-                },
-                progress = new
-                {
-                    releases_total = j.TotalReleases,
-                    releases_done = j.CompletedReleases,
-                    releases_failed = j.FailedReleases
-                },
-                created_at = j.CreatedAt,
-                updated_at = j.UpdatedAt
-            }));
+                    if (status == null || MapStatus(job.Status).Equals(status, StringComparison.OrdinalIgnoreCase))
+                    {
+                        allJobs.Add(new
+                        {
+                            id = job.JobId,
+                            type = "discography",
+                            status = MapStatus(job.Status)
+                        });
+                    }
+                }
+            }
+        }
 
-        // Map label crate jobs
-        allJobs.AddRange(labelCrateJobs
-            .Where(j => string.IsNullOrEmpty(type) || type.ToLowerInvariant() == "label_crate")
-            .Where(j => string.IsNullOrEmpty(status) || MapStatus(j.Status).ToLowerInvariant() == status.ToLowerInvariant())
-            .Select(j => new
+        // Get label crate jobs
+        if (type == null || type.Equals("label_crate", StringComparison.OrdinalIgnoreCase))
+        {
+            if (jobServiceList != null)
             {
-                id = j.JobId,
-                type = "label_crate",
-                status = MapStatus(j.Status),
-                spec = new
+                var labelJobs = jobServiceList.GetAllLabelCrateJobs();
+                foreach (var job in labelJobs)
                 {
-                    label_name = j.LabelName,
-                    target_dir = j.TargetDirectory
-                },
-                progress = new
-                {
-                    releases_total = j.TotalReleases,
-                    releases_done = j.CompletedReleases,
-                    releases_failed = j.FailedReleases
-                },
-                created_at = j.CreatedAt,
-                updated_at = j.UpdatedAt
-            }));
+                    if (status == null || MapStatus(job.Status).Equals(status, StringComparison.OrdinalIgnoreCase))
+                    {
+                        allJobs.Add(new
+                        {
+                            id = job.JobId,
+                            type = "label_crate",
+                            status = MapStatus(job.Status)
+                        });
+                    }
+                }
+            }
+        }
 
+        await Task.CompletedTask;
         return Ok(new { jobs = allJobs });
     }
 
@@ -202,8 +191,7 @@ public class JobsController : ControllerBase
                     releases_done = discographyJob.CompletedReleases,
                     releases_failed = discographyJob.FailedReleases
                 },
-                created_at = discographyJob.CreatedAt,
-                updated_at = discographyJob.UpdatedAt
+                created_at = discographyJob.CreatedAt
             });
         }
 
@@ -218,8 +206,7 @@ public class JobsController : ControllerBase
                 status = MapStatus(labelCrateJob.Status),
                 spec = new
                 {
-                    label_name = labelCrateJob.LabelName,
-                    target_dir = labelCrateJob.TargetDirectory
+                    label_name = labelCrateJob.LabelName
                 },
                 progress = new
                 {
@@ -227,8 +214,7 @@ public class JobsController : ControllerBase
                     releases_done = labelCrateJob.CompletedReleases,
                     releases_failed = labelCrateJob.FailedReleases
                 },
-                created_at = labelCrateJob.CreatedAt,
-                updated_at = labelCrateJob.UpdatedAt
+                created_at = labelCrateJob.CreatedAt
             });
         }
 
@@ -240,10 +226,9 @@ public class JobsController : ControllerBase
         return status switch
         {
             JobStatus.Pending => "pending",
-            JobStatus.InProgress => "running",
+            JobStatus.Running => "running",
             JobStatus.Completed => "completed",
             JobStatus.Failed => "failed",
-            JobStatus.Cancelled => "cancelled",
             _ => "unknown"
         };
     }
@@ -260,3 +245,12 @@ public record JobConstraints(
     bool AllowLossy = false,
     bool PreferCanonical = true,
     bool UseOverlay = true);
+
+/// <summary>
+/// Helper interface for test host to access all jobs.
+/// </summary>
+public interface IJobServiceWithList
+{
+    IReadOnlyList<DiscographyJob> GetAllDiscographyJobs();
+    IReadOnlyList<LabelCrateJob> GetAllLabelCrateJobs();
+}

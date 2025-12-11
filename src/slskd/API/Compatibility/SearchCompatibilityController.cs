@@ -1,8 +1,10 @@
 namespace slskd.API.Compatibility;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using slskd.Search;
+using Soulseek;
 
 /// <summary>
 /// Provides slskd-compatible search API.
@@ -34,40 +36,57 @@ public class SearchCompatibilityController : ControllerBase
     {
         logger.LogInformation("Compatibility search: {Query}", request.Query);
 
-        var scope = request.Type?.ToLowerInvariant() == "room"
-            ? SearchScope.Room
-            : SearchScope.Network;
-
-        var results = await searchService.SearchAsync(
-            request.Query,
-            scope: scope,
-            filterResponses: true,
-            minimumResponseFileCount: 1,
-            minimumPeerFreeUploadSlots: 0,
-            maximumPeerQueueLength: int.MaxValue,
-            timeout: 30000,
-            responseLimit: request.Limit ?? 200,
-            fileLimit: int.MaxValue,
-            cancellationToken: cancellationToken);
-
-        return Ok(new
+        if (string.IsNullOrWhiteSpace(request.Query))
         {
-            search_id = results.Id.ToString(),
-            query = request.Query,
-            results = results.Responses.Select(r => new
+            return BadRequest(new { error = "Query is required" });
+        }
+
+        // Generate a search ID
+        var searchId = Guid.NewGuid();
+
+        try
+        {
+            // Perform actual search using ISearchService
+            var searchQuery = Soulseek.SearchQuery.FromText(request.Query);
+            var searchScope = Soulseek.SearchScope.Network;
+            var searchOptions = new Soulseek.SearchOptions(
+                filterResponses: true,
+                responseLimit: request.Limit ?? 50);
+
+            var search = await searchService.StartAsync(searchId, searchQuery, searchScope, searchOptions);
+
+            // Convert search results to compatibility format
+            var results = new List<object>();
+            if (search?.Responses != null)
             {
-                user = r.Username,
-                speed_kbps = r.UploadSpeed / 1024,
-                files = r.Files.Select(f => new
+                foreach (var response in search.Responses)
                 {
-                    path = f.Filename,
-                    size_bytes = f.Size,
-                    bitrate = f.BitRate,
-                    length_ms = f.Length.HasValue ? f.Length.Value * 1000 : (int?)null,
-                    ext = System.IO.Path.GetExtension(f.Filename).TrimStart('.')
-                })
-            })
-        });
+                    foreach (var file in response.Files)
+                    {
+                        results.Add(new
+                        {
+                            Username = response.Username,
+                            Filename = file.Filename,
+                            Size = file.Size,
+                            Code = file.Code,
+                            Extension = file.Extension
+                        });
+                    }
+                }
+            }
+
+            return Ok(new
+            {
+                SearchId = searchId.ToString("N"),
+                Query = request.Query,
+                Results = results
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Search failed: {Message}", ex.Message);
+            return StatusCode(500, new { error = "Search failed", message = ex.Message });
+        }
     }
 }
 

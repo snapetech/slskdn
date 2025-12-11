@@ -183,3 +183,4 @@ public class RoomSceneMapper : IRoomSceneMapper
         return labelKeywords.Any(keyword => lower.Contains(keyword));
     }
 }
+

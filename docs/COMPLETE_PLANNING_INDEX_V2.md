@@ -128,8 +128,10 @@
 | Document | Lines | Description |
 |----------|-------|-------------|
 | `dev/soulfind-integration-notes.md` | 600 | Soulfind policy (dev-only, never production) |
-| `READY_FOR_CODEX.md` | 400 | Handoff guide for implementation |
-| `START_HERE_CODEX.md` | 500 | Implementation process overview |
+| `AI_START_HERE.md` | 800 | **START HERE** - Complete guide for AI assistants |
+| `FINAL_PLANNING_SUMMARY.md` | 400 | Executive summary - all phases |
+| `TASK_STATUS_DASHBOARD.md` | 700 | Visual progress tracking |
+| `COMPLETE_PLANNING_INDEX.md` | 350 | Navigation map (all docs) |
 | `FINAL_PLANNING_SUMMARY.md` | 800 | Comprehensive summary of all phases |
 | `SESSION_SUMMARY.md` | 600 | Planning session recap |
 | `VISUAL_ARCHITECTURE_GUIDE.md` | 900 | ASCII diagrams for non-technical viewers |
@@ -398,4 +400,5 @@ The following tasks must be completed in order:
 *Last Updated: December 10, 2025*  
 *Planning Status: Complete through Phase 7*  
 *Next: Continue Phase 2 implementation (T-404+)*
+
 

@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -39,7 +41,7 @@ public class UdpOverlayClient : IOverlayClient
         using var udp = new UdpClient();
         try
         {
-            await udp.SendAsync(payload, payload.Length, endpoint, ct);
+            await udp.SendAsync(payload, endpoint, ct);
             logger.LogDebug("[Overlay] Sent control {Type} to {Endpoint}", envelope.Type, endpoint);
             return true;
         }

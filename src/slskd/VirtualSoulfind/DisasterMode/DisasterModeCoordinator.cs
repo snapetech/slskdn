@@ -1,6 +1,8 @@
 namespace slskd.VirtualSoulfind.DisasterMode;
 
 using Microsoft.Extensions.Options;
+using slskd;
+using OptionsModel = slskd.Options;
 
 /// <summary>
 /// Interface for disaster mode coordination.
@@ -45,7 +47,7 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
 {
     private readonly ILogger<DisasterModeCoordinator> logger;
     private readonly ISoulseekHealthMonitor healthMonitor;
-    private readonly IOptionsMonitor<Options> optionsMonitor;
+    private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private bool isDisasterModeActive;
     private DateTimeOffset? lastHealthCheck;
     private int consecutiveUnhealthyChecks;
@@ -53,7 +55,7 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
     public DisasterModeCoordinator(
         ILogger<DisasterModeCoordinator> logger,
         ISoulseekHealthMonitor healthMonitor,
-        IOptionsMonitor<Options> optionsMonitor)
+        IOptionsMonitor<OptionsModel> optionsMonitor)
     {
         this.logger = logger;
         this.healthMonitor = healthMonitor;
@@ -140,7 +142,9 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
         {
             consecutiveUnhealthyChecks++;
 
-            var threshold = disasterOptions.UnavailableThresholdMinutes ?? 10;
+            var threshold = disasterOptions.UnavailableThresholdMinutes > 0
+                ? disasterOptions.UnavailableThresholdMinutes
+                : 10;
             var elapsedMinutes = consecutiveUnhealthyChecks * 0.5; // Checks every 30 seconds
 
             if (elapsedMinutes >= threshold)

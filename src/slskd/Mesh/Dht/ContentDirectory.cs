@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
 using slskd.MediaCore;
+using System.Linq;
+using MeshPeer = slskd.Mesh.MeshPeerDescriptor;
+using MeshContent = slskd.Mesh.MeshContentDescriptor;
 
 namespace slskd.Mesh.Dht;
 
@@ -22,22 +25,47 @@ public class ContentDirectory : IMeshDirectory
         this.validator = validator;
     }
 
-    public async Task<MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
+    public async Task<MeshPeer?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer:{peerId}";
-        return await dht.GetAsync<MeshPeerDescriptor>(key, ct);
+        var desc = await dht.GetAsync<MeshPeerDescriptor>(key, ct);
+        if (desc == null) return null;
+        var endpoint = desc.Endpoints?.FirstOrDefault();
+        return new MeshPeer(desc.PeerId, endpoint, null, null);
     }
 
-    public async Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshPeer>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
-        // For now, peers are not indexed per content; return empty.
-        return Array.Empty<MeshPeerDescriptor>();
+        var key = $"mesh:content-peers:{contentId}";
+        var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
+        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeer>();
+
+        return hints.Peers
+            .Select(p =>
+            {
+                var endpoint = p.Endpoints?.FirstOrDefault();
+                return new MeshPeer(p.PeerId, endpoint, null, null);
+            })
+            .ToList();
     }
 
-    public async Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshContent>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
     {
-        // Not implemented; would require peer advertisement of content keys.
-        return Array.Empty<MeshContentDescriptor>();
+        var key = $"mesh:peer-content:{peerId}";
+        var contentList = await dht.GetAsync<List<string>>(key, ct);
+        if (contentList == null || contentList.Count == 0) return Array.Empty<MeshContent>();
+
+        var results = new List<MeshContent>();
+        foreach (var cid in contentList)
+        {
+            var descriptor = await GetContentDescriptorAsync(cid, ct);
+            if (descriptor != null)
+            {
+                results.Add(new MeshContent(cid, descriptor.Hashes?.FirstOrDefault()?.Hex, descriptor.SizeBytes ?? 0, descriptor.Codec));
+            }
+        }
+
+        return results;
     }
 
     /// <summary>

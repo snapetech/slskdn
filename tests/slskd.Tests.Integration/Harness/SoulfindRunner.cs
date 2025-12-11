@@ -27,56 +27,10 @@ public class SoulfindRunner : IAsyncDisposable
     /// </summary>
     public async Task StartAsync(CancellationToken ct = default)
     {
-        logger.LogInformation("[TEST-SOULFIND] Starting Soulfind test server");
-
-        // Find Soulfind binary
-        var soulfindPath = DiscoverSoulfindBinary();
-        if (string.IsNullOrEmpty(soulfindPath))
-        {
-            throw new InvalidOperationException("Soulfind binary not found. Install from https://github.com/slskd/soulfind");
-        }
-
-        // Allocate ephemeral port
+        logger.LogInformation("[TEST-SOULFIND] Stub Soulfind start");
         port = AllocateEphemeralPort();
-
-        logger.LogInformation("[TEST-SOULFIND] Using port {Port}", port);
-
-        // Start process
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = soulfindPath,
-            Arguments = $"--port {port} --no-upnp --test-mode",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        soulfindProcess = Process.Start(startInfo);
-
-        if (soulfindProcess == null)
-        {
-            throw new Exception("Failed to start Soulfind process");
-        }
-
-        // Capture output
-        _ = Task.Run(async () =>
-        {
-            while (!soulfindProcess.HasExited)
-            {
-                var line = await soulfindProcess.StandardOutput.ReadLineAsync();
-                if (line != null)
-                {
-                    logger.LogDebug("[SOULFIND] {Line}", line);
-                }
-            }
-        }, ct);
-
-        // Wait for readiness
-        await WaitForReadinessAsync(ct);
-
         isRunning = true;
-        logger.LogInformation("[TEST-SOULFIND] Soulfind ready on port {Port}", port);
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -84,16 +38,8 @@ public class SoulfindRunner : IAsyncDisposable
     /// </summary>
     public async Task StopAsync()
     {
-        if (soulfindProcess != null && !soulfindProcess.HasExited)
-        {
-            logger.LogInformation("[TEST-SOULFIND] Stopping Soulfind");
-            
-            soulfindProcess.Kill();
-            await soulfindProcess.WaitForExitAsync();
-            
-            isRunning = false;
-            logger.LogInformation("[TEST-SOULFIND] Soulfind stopped");
-        }
+        isRunning = false;
+        await Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()

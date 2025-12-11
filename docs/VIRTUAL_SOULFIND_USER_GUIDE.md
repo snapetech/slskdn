@@ -220,3 +220,4 @@ POST /api/virtualsoulfind/scenes/{sceneId}/chat
 For issues or questions:
 - GitHub Issues: `https://github.com/snapetech/slskdn/issues`
 - Documentation: `docs/VIRTUAL_SOULFIND.md`
+

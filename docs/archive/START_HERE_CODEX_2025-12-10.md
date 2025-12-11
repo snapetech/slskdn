@@ -1,8 +1,25 @@
 # 🚀 START HERE - Implementation Guide for Codex
 
-> **You are here**: All planning is complete. You will implement 114 fully-specified tasks.  
-> **Timeline**: ~60 weeks (1 year) conservative, ~26 weeks (6 months) optimistic  
+> **You are here**: All planning is complete. You will implement 217+ fully-specified tasks.  
+> **Timeline**: ~80 weeks conservative, ~40 weeks optimistic  
 > **Your job**: Execute. No design decisions needed.
+
+---
+
+## 🆕 NEW: Phase 12 - Adversarial Resilience & Privacy Hardening
+
+> **100 new tasks** for protecting users in adversarial environments (dissidents, journalists, activists).  
+> **Design doc**: `docs/phase12-adversarial-resilience-design.md`  
+> **All features OPTIONAL and DISABLED by default, configurable via WebGUI.**
+
+### Phase 12 Quick Overview
+- **12A**: Privacy Layer (padding, timing, batching) — hide message patterns
+- **12B**: Anonymity Layer (Tor, I2P, relays) — hide IP addresses  
+- **12C**: Obfuscated Transports (WebSocket, obfs4, Meek) — evade DPI
+- **12D**: Native Onion Routing — build circuits within mesh
+- **12E**: Censorship Resistance (bridges, domain fronting) — bypass firewalls
+- **12F**: Plausible Deniability (hidden volumes, decoy pods) — legal protection
+- **12G-H**: WebGUI integration, testing, documentation
 
 ---
 
@@ -32,7 +49,7 @@ Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 6X (optional)
 
 ### Step 1: Read the Overview
 ```bash
-cd /home/keith/Documents/Code/slskdn/docs
+cd ~/Documents/Code/slskdn/docs
 cat FINAL_PLANNING_SUMMARY.md  # Big picture (10 min read)
 ```
 
@@ -108,6 +125,14 @@ cat phase2-canonical-scoring-design.md  # Your first task (30 min read)
 
 **Phase 6X** (11 tasks, OPTIONAL):
 - `phase6-compatibility-bridge-design.md` (T-850 to T-860)
+
+**Phase 7-11**: Testing, MeshCore, MediaCore, PodCore, Refactoring
+- See `docs/phase7-testing-strategy-soulfind.md` through `docs/phase11-refactor-summary.md`
+
+**Phase 12** (100 tasks, NEW):
+- `phase12-adversarial-resilience-design.md` (T-1200 to T-1299)
+- Privacy/anonymity/obfuscation/censorship-resistance layers
+- All features optional, disabled by default, configurable via WebGUI
 
 ---
 
@@ -240,7 +265,7 @@ If truly stuck (should be rare - everything is specified).
 
 ```bash
 # Navigate to project
-cd /home/keith/Documents/Code/slskdn
+cd ~/Documents/Code/slskdn
 
 # Checkout correct branch
 git checkout experimental/brainz
@@ -300,6 +325,15 @@ touch src/slskd/Canonical/Models/AudioVariant.cs
 - [ ] Legacy clients connect to bridge
 - [ ] Nicotine+ integration test passes
 - [ ] MBID enhancement transparent to legacy clients
+
+**Phase 12 Complete** (Adversarial Resilience):
+- [ ] Privacy layer operational (padding, timing, batching)
+- [ ] Tor integration working (all traffic through SOCKS5)
+- [ ] Obfuscated transports available (WebSocket, obfs4)
+- [ ] Native onion routing circuits built within mesh
+- [ ] Bridges operational for censored users
+- [ ] WebGUI settings panel complete with presets
+- [ ] User documentation comprehensive
 
 ---
 
@@ -368,7 +402,7 @@ Follow existing patterns in the codebase:
 
 **Your first command**:
 ```bash
-cd /home/keith/Documents/Code/slskdn/docs && cat FINAL_PLANNING_SUMMARY.md
+cd ~/Documents/Code/slskdn/docs && cat FINAL_PLANNING_SUMMARY.md
 ```
 
 **Then**:
@@ -388,9 +422,9 @@ cat phase2-canonical-scoring-design.md
 ## 🎉 Final Words
 
 You have:
-- ✅ 19 comprehensive design documents
-- ✅ ~50,000 lines of specifications
-- ✅ 114 fully-planned tasks
+- ✅ 20+ comprehensive design documents
+- ✅ ~70,000 lines of specifications
+- ✅ 317 fully-planned tasks (217 complete + 100 Phase 12)
 - ✅ Complete type definitions
 - ✅ Complete test scenarios
 - ✅ Zero ambiguity
@@ -403,5 +437,7 @@ You have:
 
 **Questions? Start here**: `docs/FINAL_PLANNING_SUMMARY.md`  
 **Task list**: `memory-bank/tasks.md`  
-**Current status**: Phase 1 complete, Phase 2 ready to start
+**Task dashboard**: `docs/TASK_STATUS_DASHBOARD.md`  
+**Phase 12 (new)**: `docs/phase12-adversarial-resilience-design.md`  
+**Current status**: Phases 1-11 complete, Phase 12 ready to start
 

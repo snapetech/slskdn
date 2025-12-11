@@ -1,3 +1,8 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
+
 namespace slskd.HashDb;
 
 public partial class HashDbService

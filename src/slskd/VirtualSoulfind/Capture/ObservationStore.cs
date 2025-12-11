@@ -74,3 +74,4 @@ public class InMemoryObservationStore : IObservationStore
         return Task.CompletedTask;
     }
 }
+

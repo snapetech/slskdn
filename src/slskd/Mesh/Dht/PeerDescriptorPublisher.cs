@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -36,7 +40,9 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         var descriptor = new MeshPeerDescriptor
         {
             PeerId = options.SelfPeerId,
-            Endpoints = options.SelfEndpoints,
+            Endpoints = options.SelfEndpoints
+                .Concat(options.RelayEndpoints ?? new List<string>())
+                .ToList(),
             NatType = nat.ToString().ToLowerInvariant(),
             RelayRequired = nat == NatType.Symmetric
         };

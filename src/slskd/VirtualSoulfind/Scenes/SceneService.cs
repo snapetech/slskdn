@@ -1,7 +1,13 @@
-namespace slskd.VirtualSoulfind.Scenes;
-
-using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace slskd.VirtualSoulfind.Scenes;
 
 /// <summary>
 /// Interface for scene management.
@@ -77,7 +83,9 @@ public class SceneService : ISceneService
             throw new InvalidOperationException("Scenes are not enabled");
         }
 
-        var maxScenes = options.VirtualSoulfind.Scenes.MaxJoinedScenes ?? 20;
+        var maxScenes = options.VirtualSoulfind.Scenes.MaxJoinedScenes > 0
+            ? options.VirtualSoulfind.Scenes.MaxJoinedScenes
+            : 20;
         if (joinedScenes.Count >= maxScenes)
         {
             throw new InvalidOperationException($"Maximum joined scenes limit reached ({maxScenes})");
