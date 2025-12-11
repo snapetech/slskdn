@@ -154,9 +154,11 @@ jobs:
           if git diff --quiet README.md; then
             echo "No changes to README.md"
           else
+            git fetch origin experimental/multi-source-swarm
+            git rebase origin/experimental/multi-source-swarm || git rebase --abort
             git add README.md
             git commit -m "docs: update README with dev build ${{ needs.build.outputs.dev_version }} [skip ci]"
-            git push origin HEAD:experimental/multi-source-swarm
+            git push origin HEAD:experimental/multi-source-swarm || echo "Push failed, likely already updated"
             echo "✅ README.md updated and pushed"
           fi
 
