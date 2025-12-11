@@ -12,5 +12,9 @@ public interface IMeshAdvanced
 
 public record MeshRouteDiagnostics(string PeerId, string Transport, int Hops, bool NatTraversalAttempted);
 
-public record MeshTransportStats(int ActiveDhtSessions, int ActiveOverlaySessions, int ActiveMirroredSessions);
+public record MeshTransportStats(
+    int ActiveDhtSessions, 
+    int ActiveOverlaySessions, 
+    int ActiveMirroredSessions, 
+    NatType DetectedNatType = NatType.Unknown);
 

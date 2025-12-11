@@ -30,6 +30,11 @@ public class QuicOverlayClient : IOverlayClient
         this.options = options.Value;
     }
 
+    /// <summary>
+    /// Gets the count of active client connections (for metrics).
+    /// </summary>
+    public int GetActiveConnectionCount() => connections.Count;
+
     public async Task<bool> SendAsync(ControlEnvelope envelope, IPEndPoint endpoint, CancellationToken ct = default)
     {
         if (!options.Enable)

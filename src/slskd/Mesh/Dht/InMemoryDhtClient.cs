@@ -26,6 +26,11 @@ public class InMemoryDhtClient : IDhtClient
         maxReplicas = 20; // align with k
     }
 
+    /// <summary>
+    /// Gets the count of nodes in the routing table (for metrics).
+    /// </summary>
+    public int GetNodeCount() => routing.Count;
+
     public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;

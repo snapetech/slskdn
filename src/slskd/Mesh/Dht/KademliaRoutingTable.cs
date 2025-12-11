@@ -19,6 +19,11 @@ public class KademliaRoutingTable
         this.selfId = selfId;
     }
 
+    /// <summary>
+    /// Gets the total count of nodes across all buckets (for metrics).
+    /// </summary>
+    public int Count => buckets.Values.Sum(b => b.Nodes.Count);
+
     public void Touch(byte[] nodeId, string address)
     {
         if (nodeId.Length != selfId.Length) return;

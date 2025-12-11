@@ -15,6 +15,7 @@ public class StunNatDetector : INatDetector
     private const uint StunMagicCookie = 0x2112A442;
     private readonly ILogger<StunNatDetector> logger;
     private readonly MeshOptions options;
+    private NatType lastDetectedType = NatType.Unknown;
 
     public StunNatDetector(ILogger<StunNatDetector> logger, IOptions<MeshOptions> options)
     {
@@ -22,10 +23,16 @@ public class StunNatDetector : INatDetector
         this.options = options.Value;
     }
 
+    /// <summary>
+    /// Gets the last detected NAT type (for metrics).
+    /// </summary>
+    public NatType LastDetectedType => lastDetectedType;
+
     public async Task<NatType> DetectAsync(CancellationToken ct = default)
     {
         if (!options.EnableStun || options.StunServers.Count == 0)
         {
+            lastDetectedType = NatType.Unknown;
             return NatType.Unknown;
         }
 
@@ -44,17 +51,30 @@ public class StunNatDetector : INatDetector
         try
         {
             var mapping1 = await ProbeServer(servers[0], ct);
-            if (mapping1 == null) return NatType.Unknown;
+            if (mapping1 == null)
+            {
+                lastDetectedType = NatType.Unknown;
+                return NatType.Unknown;
+            }
 
-            if (mapping1.IsDirect) return NatType.Direct;
+            if (mapping1.IsDirect)
+            {
+                lastDetectedType = NatType.Direct;
+                return NatType.Direct;
+            }
 
             // Second probe to same server with a new local socket
             var mapping2 = await ProbeServer(servers[0], ct, forceNewLocal: true);
-            if (mapping2 == null) return NatType.Unknown;
+            if (mapping2 == null)
+            {
+                lastDetectedType = NatType.Unknown;
+                return NatType.Unknown;
+            }
 
             if (mapping1.MappedEndPoint.Address.ToString() != mapping2.MappedEndPoint.Address.ToString() ||
                 mapping1.MappedEndPoint.Port != mapping2.MappedEndPoint.Port)
             {
+                lastDetectedType = NatType.Symmetric;
                 return NatType.Symmetric;
             }
 
@@ -62,21 +82,28 @@ public class StunNatDetector : INatDetector
             if (servers.Length > 1)
             {
                 var mapping3 = await ProbeServer(servers[1], ct, forceNewLocal: true);
-                if (mapping3 == null) return NatType.Restricted; // fall back to restricted
+                if (mapping3 == null)
+                {
+                    lastDetectedType = NatType.Restricted;
+                    return NatType.Restricted; // fall back to restricted
+                }
 
                 if (mapping1.MappedEndPoint.Address.ToString() != mapping3.MappedEndPoint.Address.ToString() ||
                     mapping1.MappedEndPoint.Port != mapping3.MappedEndPoint.Port)
                 {
+                    lastDetectedType = NatType.Symmetric;
                     return NatType.Symmetric;
                 }
             }
 
             // Mapping is stable but differs from local -> Restricted (covers full/port-restricted cone)
+            lastDetectedType = NatType.Restricted;
             return NatType.Restricted;
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "[NAT] STUN detection failed");
+            lastDetectedType = NatType.Unknown;
             return NatType.Unknown;
         }
     }

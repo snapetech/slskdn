@@ -34,6 +34,11 @@ public class QuicOverlayServer : BackgroundService
         this.dispatcher = dispatcher;
     }
 
+    /// <summary>
+    /// Gets the count of active QUIC connections (for metrics).
+    /// </summary>
+    public int GetActiveConnectionCount() => activeConnections.Count;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Enable)

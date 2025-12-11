@@ -10,11 +10,16 @@ public class MeshAdvanced : IMeshAdvanced
 {
     private readonly ILogger<MeshAdvanced> logger;
     private readonly IMeshDirectory directory;
+    private readonly MeshStatsCollector statsCollector;
 
-    public MeshAdvanced(ILogger<MeshAdvanced> logger, IMeshDirectory directory)
+    public MeshAdvanced(
+        ILogger<MeshAdvanced> logger, 
+        IMeshDirectory directory,
+        MeshStatsCollector statsCollector)
     {
         this.logger = logger;
         this.directory = directory;
+        this.statsCollector = statsCollector;
     }
 
     public async Task<IReadOnlyList<MeshPeerDescriptor>> DiscoverPeersAdvancedAsync(string contentId, MeshTransportPreference preference, CancellationToken ct = default)
@@ -33,11 +38,13 @@ public class MeshAdvanced : IMeshAdvanced
 
     public Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct = default)
     {
-        // Minimal counters for now (can be wired to real metrics later)
-        var stats = new MeshTransportStats(
-            ActiveDhtSessions: 0,
-            ActiveOverlaySessions: 0,
-            ActiveMirroredSessions: 0);
+        // Get real stats from collector
+        var stats = statsCollector.GetStats();
+        logger.LogDebug(
+            "[MeshAdvanced] Transport stats: DHT={DhtNodes}, Overlay={OverlayConns}, NAT={NatType}",
+            stats.ActiveDhtSessions,
+            stats.ActiveOverlaySessions,
+            stats.DetectedNatType);
         return Task.FromResult(stats);
     }
 }
