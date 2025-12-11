@@ -6,6 +6,13 @@ using slskd.Signals;
 using slskd.Swarm;
 using slskd.Security;
 
+public class StubBitTorrentBackend : IBitTorrentBackend 
+{ 
+    public bool IsSupported() => false;
+    public Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken ct = default) => 
+        Task.FromResult(string.Empty);
+}
+
 /// <summary>
 /// Signal handlers for Swarm control signals.
 /// </summary>
@@ -239,11 +246,14 @@ public class SwarmSignalHandlers
 }
 
 /// <summary>
-/// Interface for storing and retrieving swarm jobs.
+/// Security policy engine stub for testing.
 /// </summary>
-public interface ISwarmJobStore
+public class StubSecurityPolicyEngine : ISecurityPolicyEngine
 {
-    Task<SwarmJob?> TryGetJobAsync(string jobId, CancellationToken cancellationToken = default);
+    public Task<SecurityDecision> EvaluateAsync(SecurityContext context, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new SecurityDecision { Allowed = true, Reason = "Stub allows all" });
+    }
 }
 
 /// <summary>

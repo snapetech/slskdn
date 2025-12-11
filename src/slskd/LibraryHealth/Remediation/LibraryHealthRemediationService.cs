@@ -33,28 +33,32 @@ namespace slskd.LibraryHealth.Remediation
     /// </summary>
     public class LibraryHealthRemediationService : ILibraryHealthRemediationService
     {
-        private readonly ILibraryHealthService healthService;
+        private readonly IServiceProvider serviceProvider;
         private readonly IHashDbService hashDb;
         private readonly IMultiSourceDownloadService multiSourceDownloads;
         private readonly IMusicBrainzClient musicBrainzClient;
         private readonly ILogger<LibraryHealthRemediationService> log;
+        private ILibraryHealthService? healthService;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="LibraryHealthRemediationService"/> class.
         /// </summary>
         public LibraryHealthRemediationService(
-            ILibraryHealthService healthService,
+            IServiceProvider serviceProvider,
             IHashDbService hashDb,
             IMultiSourceDownloadService multiSourceDownloads,
             IMusicBrainzClient musicBrainzClient,
             ILogger<LibraryHealthRemediationService> log)
         {
-            this.healthService = healthService;
+            this.serviceProvider = serviceProvider;
             this.hashDb = hashDb;
             this.multiSourceDownloads = multiSourceDownloads;
             this.musicBrainzClient = musicBrainzClient;
             this.log = log;
         }
+
+        private ILibraryHealthService HealthService => 
+            healthService ??= serviceProvider.GetRequiredService<ILibraryHealthService>();
 
         /// <inheritdoc/>
         public async Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)

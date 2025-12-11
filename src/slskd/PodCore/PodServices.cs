@@ -551,8 +551,7 @@ public interface ISoulseekChatBridge
 /// </summary>
 public class SoulseekChatBridge : ISoulseekChatBridge
 {
-    private readonly IPodService podService;
-    private readonly IPodMessaging podMessaging;
+    private readonly IServiceScopeFactory scopeFactory;
     private readonly IRoomService roomService;
     private readonly ISoulseekClient soulseekClient;
     private readonly Microsoft.Extensions.Logging.ILogger<SoulseekChatBridge> logger;
@@ -566,14 +565,12 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     private readonly object mappingLock = new();
 
     public SoulseekChatBridge(
-        IPodService podService,
-        IPodMessaging podMessaging,
+        IServiceScopeFactory scopeFactory,
         IRoomService roomService,
         ISoulseekClient soulseekClient,
         Microsoft.Extensions.Logging.ILogger<SoulseekChatBridge> logger)
     {
-        this.podService = podService;
-        this.podMessaging = podMessaging;
+        this.scopeFactory = scopeFactory;
         this.roomService = roomService;
         this.soulseekClient = soulseekClient;
         this.logger = logger;
@@ -582,8 +579,34 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         soulseekClient.RoomMessageReceived += SoulseekClient_RoomMessageReceived;
     }
 
+    private void SoulseekClient_RoomMessageReceived(object sender, RoomMessageReceivedEventArgs e)
+    {
+        // Find bindings for this room
+        List<RoomBinding> bindings;
+        lock (bindingsLock)
+        {
+            bindings = activeBindings.Values
+                .Where(b => b.RoomName.Equals(e.RoomName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (bindings.Count == 0)
+        {
+            return; // No bindings for this room
+        }
+
+        // Forward to all bound pod channels
+        foreach (var binding in bindings)
+        {
+            _ = ForwardSoulseekToPodAsync(binding, e.Username, e.Message);
+        }
+    }
+
     public async Task<bool> BindRoomAsync(string podId, string channelId, string roomName, string mode, CancellationToken ct = default)
     {
+        using var scope = scopeFactory.CreateScope();
+        var podService = scope.ServiceProvider.GetRequiredService<IPodService>();
+        
         logger.LogInformation("[ChatBridge] Binding pod {PodId} channel {ChannelId} to Soulseek room {Room} (mode: {Mode})",
             podId, channelId, roomName, mode);
 
@@ -662,31 +685,11 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         return Task.FromResult(false);
     }
 
-    private void SoulseekClient_RoomMessageReceived(object sender, RoomMessageReceivedEventArgs e)
-    {
-        // Find bindings for this room
-        List<RoomBinding> bindings;
-        lock (bindingsLock)
-        {
-            bindings = activeBindings.Values
-                .Where(b => b.RoomName.Equals(e.RoomName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        if (bindings.Count == 0)
-        {
-            return; // No bindings for this room
-        }
-
-        // Forward to all bound pod channels
-        foreach (var binding in bindings)
-        {
-            _ = ForwardSoulseekToPodAsync(binding, e.Username, e.Message);
-        }
-    }
-
     private async Task ForwardSoulseekToPodAsync(RoomBinding binding, string soulseekUsername, string message)
     {
+        using var scope = scopeFactory.CreateScope();
+        var podMessaging = scope.ServiceProvider.GetRequiredService<IPodMessaging>();
+        
         try
         {
             // Map Soulseek username to Pod PeerId (for now, use username as-is)

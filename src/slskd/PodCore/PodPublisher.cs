@@ -35,18 +35,18 @@ public interface IPodPublisher
 public class PodPublisher : IPodPublisher
 {
     private readonly IMeshDhtClient dht;
-    private readonly IPodService podService;
+    private readonly IServiceScopeFactory scopeFactory;
     private readonly ILogger<PodPublisher> logger;
     private const int DefaultTTLSeconds = 3600; // 1 hour
     private const string PodKeyPrefix = "pod:metadata:";
 
     public PodPublisher(
         IMeshDhtClient dht,
-        IPodService podService,
+        IServiceScopeFactory scopeFactory,
         ILogger<PodPublisher> logger)
     {
         this.dht = dht;
-        this.podService = podService;
+        this.scopeFactory = scopeFactory;
         this.logger = logger;
     }
 
@@ -128,6 +128,9 @@ public class PodPublisher : IPodPublisher
 
         try
         {
+            using var scope = scopeFactory.CreateScope();
+            var podService = scope.ServiceProvider.GetRequiredService<IPodService>();
+            
             var pod = await podService.GetPodAsync(podId, ct);
             if (pod != null)
             {
@@ -198,17 +201,17 @@ public class PodIndex
 /// </summary>
 public class PodPublisherBackgroundService : BackgroundService
 {
-    private readonly IPodService podService;
+    private readonly IServiceScopeFactory scopeFactory;
     private readonly IPodPublisher podPublisher;
     private readonly ILogger<PodPublisherBackgroundService> logger;
     private const int RefreshIntervalMinutes = 30; // Refresh every 30 minutes
 
     public PodPublisherBackgroundService(
-        IPodService podService,
+        IServiceScopeFactory scopeFactory,
         IPodPublisher podPublisher,
         ILogger<PodPublisherBackgroundService> logger)
     {
-        this.podService = podService;
+        this.scopeFactory = scopeFactory;
         this.podPublisher = podPublisher;
         this.logger = logger;
     }
@@ -223,6 +226,9 @@ public class PodPublisherBackgroundService : BackgroundService
             {
                 await Task.Delay(TimeSpan.FromMinutes(RefreshIntervalMinutes), stoppingToken);
 
+                using var scope = scopeFactory.CreateScope();
+                var podService = scope.ServiceProvider.GetRequiredService<IPodService>();
+                
                 // Refresh all listed pods
                 var pods = await podService.ListAsync(stoppingToken);
                 var listedPods = pods.Where(p => p.Visibility == PodVisibility.Listed).ToList();

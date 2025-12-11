@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Soulseek;
 
 public enum SoulseekHealth
 {
@@ -20,7 +21,23 @@ public class SoulseekHealthChangedEventArgs : EventArgs
     public string? Reason { get; set; }
 }
 
-public interface ISoulseekClient { }
+public interface ISoulseekClient 
+{ 
+    event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
+}
+
+public class SoulseekClientWrapper : ISoulseekClient
+{
+    private readonly Soulseek.ISoulseekClient client;
+    
+    public event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
+    
+    public SoulseekClientWrapper(Soulseek.ISoulseekClient client)
+    {
+        this.client = client;
+        this.client.RoomMessageReceived += (sender, e) => RoomMessageReceived?.Invoke(sender, e);
+    }
+}
 
 public interface ISoulseekHealthMonitor
 {

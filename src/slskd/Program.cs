@@ -722,6 +722,9 @@ namespace slskd
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
             services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
             services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
+            services.AddSingleton<Signals.Swarm.ISwarmJobStore, Signals.Swarm.InMemorySwarmJobStore>();
+            services.AddSingleton<Signals.Swarm.ISecurityPolicyEngine, Signals.Swarm.StubSecurityPolicyEngine>();
+            services.AddSingleton<Signals.Swarm.IBitTorrentBackend, Signals.Swarm.StubBitTorrentBackend>();
             services.AddSingleton<Transfers.MultiSource.Metrics.ITrafficAccountingService, Transfers.MultiSource.Metrics.TrafficAccountingService>();
             services.AddSingleton<Transfers.MultiSource.Metrics.IFairnessGuard>(sp =>
                 new Transfers.MultiSource.Metrics.FairnessGuard(
@@ -759,6 +762,8 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneJobService, VirtualSoulfind.Scenes.SceneJobService>();
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneChatService, VirtualSoulfind.Scenes.SceneChatService>();
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneModerationService, VirtualSoulfind.Scenes.SceneModerationService>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekClient>(sp => 
+                new VirtualSoulfind.DisasterMode.SoulseekClientWrapper(sp.GetRequiredService<Soulseek.ISoulseekClient>()));
             services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekHealthMonitor, VirtualSoulfind.DisasterMode.SoulseekHealthMonitor>();
             services.AddSingleton<VirtualSoulfind.DisasterMode.IDisasterModeCoordinator, VirtualSoulfind.DisasterMode.DisasterModeCoordinator>();
             services.AddSingleton<VirtualSoulfind.DisasterMode.IMeshSearchService, VirtualSoulfind.DisasterMode.MeshSearchService>();
