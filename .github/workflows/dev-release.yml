@@ -71,7 +71,7 @@ jobs:
           npm ci
           DISABLE_ESLINT_PLUGIN=true npm run build
 
-      - name: Build Backend
+      - name: Build Backend (Linux x64)
         run: |
           dotnet publish src/slskd/slskd.csproj \
             -c Release \
@@ -80,22 +80,53 @@ jobs:
             -r linux-x64 \
             /p:Version=${{ env.VERSION }}
 
+      - name: Build Backend (Windows x64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-win-x64 \
+            --self-contained true \
+            -r win-x64 \
+            /p:Version=${{ env.VERSION }}
+
+      - name: Build Backend (macOS x64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-osx-x64 \
+            --self-contained true \
+            -r osx-x64 \
+            /p:Version=${{ env.VERSION }}
+
+      - name: Build Backend (macOS ARM64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-osx-arm64 \
+            --self-contained true \
+            -r osx-arm64 \
+            /p:Version=${{ env.VERSION }}
+
       - name: Copy Web Assets
         run: |
           cp -r src/web/build/* publish-linux-x64/wwwroot/
+          cp -r src/web/build/* publish-win-x64/wwwroot/
+          cp -r src/web/build/* publish-osx-x64/wwwroot/
+          cp -r src/web/build/* publish-osx-arm64/wwwroot/
 
-      - name: Create Release Archive
+      - name: Create Release Archives
         run: |
-          cd publish-linux-x64
-          zip -r ../slskdn-dev-linux-x64.zip .
-          cd ..
-          ls -lh slskdn-dev-linux-x64.zip
+          cd publish-linux-x64 && zip -r ../slskdn-dev-linux-x64.zip . && cd ..
+          cd publish-win-x64 && zip -r ../slskdn-dev-win-x64.zip . && cd ..
+          cd publish-osx-x64 && zip -r ../slskdn-dev-osx-x64.zip . && cd ..
+          cd publish-osx-arm64 && zip -r ../slskdn-dev-osx-arm64.zip . && cd ..
+          ls -lh slskdn-dev-*.zip
 
-      - name: Upload Build Artifact
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: slskdn-dev-linux-x64
-          path: slskdn-dev-linux-x64.zip
+          name: slskdn-dev-all-platforms
+          path: slskdn-dev-*.zip
           retention-days: 30
 
   release:
