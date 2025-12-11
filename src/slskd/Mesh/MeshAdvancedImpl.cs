@@ -4,7 +4,8 @@ using slskd.Mesh.Dht;
 namespace slskd.Mesh;
 
 /// <summary>
-/// Advanced mesh operations (placeholder implementation).
+/// Advanced mesh operations for diagnostics and experimental features.
+/// Provides route diagnostics, transport statistics, and mesh health metrics.
 /// </summary>
 public class MeshAdvanced : IMeshAdvanced
 {

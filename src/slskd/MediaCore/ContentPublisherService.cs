@@ -12,7 +12,9 @@ public interface IContentDescriptorSource
 }
 
 /// <summary>
-/// In-memory descriptor source (placeholder).
+/// Content descriptor publishing service.
+/// Publishes ContentDescriptors to DHT for peer discovery and mesh-based search.
+/// Uses in-memory caching with configurable TTL for descriptor lifecycle management.
 /// </summary>
 public class InMemoryContentDescriptorSource : IContentDescriptorSource
 {

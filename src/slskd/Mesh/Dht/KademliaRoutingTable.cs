@@ -4,9 +4,8 @@ using System.Numerics;
 namespace slskd.Mesh.Dht;
 
 /// <summary>
-/// Simple in-memory k-bucket routing table for Kademlia-style lookups.
-/// NOTE: This is an in-process implementation to replace previous stubs.
-/// It is sufficient for single-node/dev scenarios and unit/integration tests.
+/// In-memory k-bucket routing table for Kademlia-style lookups.
+/// Provides functional DHT routing for single-node/dev scenarios and integration tests.
 /// </summary>
 public class KademliaRoutingTable
 {

@@ -8,7 +8,8 @@ namespace slskd.Mesh.Dht;
 
 /// <summary>
 /// In-memory DHT client implementing IDhtClient with Kademlia-style routing table.
-/// This replaces the previous stub to provide working PUT/GET for single-process/testing scenarios.
+/// Provides working PUT/GET operations for single-process/testing scenarios and development.
+/// For production multi-node DHT, this would be replaced with a distributed implementation.
 /// </summary>
 public class InMemoryDhtClient : IDhtClient
 {
