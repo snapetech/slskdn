@@ -1,10 +1,43 @@
-# Transport Stats Wiring - Upstream Design
+# Transport Stats Wiring - Implementation Complete
 
-**Source**: `docs/phase8-refactoring-design.md` (lines 404-413)  
-**Current Status**: Stub returns zeros  
+**Date**: December 10, 2025  
+**Status**: ✅ **IMPLEMENTED** (December 10, 2025 19:30 UTC)  
+**Commit**: `7bb3bd96` - feat(mesh): wire transport stats with login protection in footer  
 **Purpose**: "Mesh lab" / experimental features, network simulation, power user diagnostics
 
 ---
+
+## ✅ Implementation Summary
+
+### Backend Changes:
+- ✅ Added `Count` property to `KademliaRoutingTable`
+- ✅ Added `GetNodeCount()` to `InMemoryDhtClient`
+- ✅ Added `LastDetectedType` caching to `StunNatDetector`
+- ✅ Added `GetActiveConnectionCount()` to `QuicOverlayServer`/`QuicOverlayClient`
+- ✅ Created `MeshStatsCollector` service (aggregates all metrics)
+- ✅ Updated `MeshAdvanced.GetTransportStatsAsync()` to use real stats
+- ✅ Updated `MeshTransportStats` record to include `NatType`
+- ✅ Created `MeshStatsController` at `/api/v0/mesh/stats`
+
+### Frontend Changes:
+- ✅ Created `lib/mesh.js` API library
+- ✅ Updated `Footer.jsx` to show live transport stats
+- ✅ Shows "##" when logged out (no API calls before auth)
+- ✅ Shows "##" when loading
+- ✅ Shows "DHT: N | Overlay: N | NAT: type" when loaded
+- ✅ Refreshes every 10 seconds
+
+### Security:
+- ✅ API endpoint requires `[Authorize]`
+- ✅ No calls made before login
+- ✅ Graceful degradation on errors
+- ✅ No sensitive data in logs
+
+**Result**: Transport stats now show real-time mesh diagnostics in the footer, aligned with upstream dev's vision for debugging and test verification.
+
+---
+
+## Original Analysis (Pre-Implementation)
 
 ## Upstream Developer's Vision
 
@@ -162,11 +195,11 @@ public class TransportMetrics : ITransportMetrics
 
 ---
 
-## Recommendation
+## Recommendation ✅ IMPLEMENTED
 
-**Go with Approach 1** (Minimal Stats Aggregator) because:
+**Approach 1: Minimal Stats Aggregator** was implemented successfully.
 
-1. ✅ Matches upstream vision (diagnostics, not production monitoring)
+Aligns perfectly with upstream vision:
 2. ✅ Provides value to "mesh lab" / experimental users
 3. ✅ Enables the test assertions in the design doc
 4. ✅ Quick to implement (2-3 hours)
