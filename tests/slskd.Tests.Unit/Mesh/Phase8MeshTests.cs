@@ -44,7 +44,7 @@ public class Phase8MeshTests
     public async Task InMemoryDhtClient_PutGet_Expires()
     {
         var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<InMemoryDhtClient>>();
-        var opts = new MeshOptions();
+        var opts = Microsoft.Extensions.Options.Options.Create(new MeshOptions());
         var dht = new InMemoryDhtClient(logger, opts);
 
         var key = Enumerable.Repeat((byte)0xAA, 20).ToArray();

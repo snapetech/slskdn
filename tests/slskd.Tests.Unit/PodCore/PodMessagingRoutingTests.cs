@@ -415,7 +415,7 @@ public class PodMessagingRoutingTests
         mockMeshSync.Setup(m => m.GetMeshPeers())
             .Returns(meshPeers);
 
-        string? routedMessage = null;
+        string routedMessage = null;
         mockSoulseekClient.Setup(c => c.SendPrivateMessageAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
