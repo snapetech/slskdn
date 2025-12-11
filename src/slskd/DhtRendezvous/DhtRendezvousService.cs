@@ -276,6 +276,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     
     private void OnPeersFound(object? sender, PeersFoundEventArgs e)
     {
+        _logger.LogInformation("[DHT EVENT] OnPeersFound fired - InfoHash: {Hash}, Peer count: {Count}, IsOurs: {IsOurs}", 
+            e.InfoHash, e.Peers.Count, IsOurRendezvousHash(e.InfoHash));
+        
         // Check if this is for one of our rendezvous infohashes
         if (!IsOurRendezvousHash(e.InfoHash))
         {
@@ -368,22 +371,26 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             return 0;
         }
         
-        _logger.LogDebug("Running DHT peer discovery (get_peers)");
+        _logger.LogInformation("Running DHT peer discovery (get_peers) - DHT state: {State}, nodes: {NodeCount}", 
+            _dhtEngine.State, _dhtEngine.NodeCount);
         _lastDiscoveryTime = DateTimeOffset.UtcNow;
         
         var beforeCount = _totalPeersDiscovered;
         
         // Query all rendezvous infohashes
         // GetPeers is non-blocking; results come via PeersFound event
+        _logger.LogInformation("Querying DHT for rendezvous infohash 1: {Hash}", MainInfohash);
         _dhtEngine.GetPeers(MainInfohash);
+        _logger.LogInformation("Querying DHT for rendezvous infohash 2: {Hash}", BackupInfohash1);
         _dhtEngine.GetPeers(BackupInfohash1);
+        _logger.LogInformation("Querying DHT for rendezvous infohash 3: {Hash}", BackupInfohash2);
         _dhtEngine.GetPeers(BackupInfohash2);
         
         // Wait a bit for responses
         await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
         
         var newPeers = (int)(_totalPeersDiscovered - beforeCount);
-        _logger.LogInformation("DHT discovery found {Count} new peers", newPeers);
+        _logger.LogInformation("DHT discovery found {Count} new peers (total: {Total})", newPeers, _totalPeersDiscovered);
         
         return newPeers;
     }
