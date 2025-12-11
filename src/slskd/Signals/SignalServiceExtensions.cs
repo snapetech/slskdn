@@ -41,7 +41,8 @@ public static class SignalServiceExtensions
         // They should be created manually during initialization, not via DI
 
         // Register Swarm signal handlers
-        services.AddSingleton<SwarmSignalHandlers>();
+        // TODO: SwarmSignalHandlers requires string localPeerId parameter - cannot use DI without factory
+        // services.AddSingleton<SwarmSignalHandlers>();
 
         // Register security policies
         services.AddSingleton<ISecurityPolicy, NetworkGuardPolicy>();

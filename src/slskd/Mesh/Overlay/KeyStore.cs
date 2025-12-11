@@ -119,7 +119,7 @@ public class Ed25519KeyPair
     public static Ed25519KeyPair Generate()
     {
         // Generate real Ed25519 keypair using NSec (libsodium)
-        using var key = Key.Create(SignatureAlgorithm.Ed25519);
+        using var key = Key.Create(SignatureAlgorithm.Ed25519, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
         
         // Export public key (32 bytes for Ed25519)
         var publicKey = key.PublicKey.Export(KeyBlobFormat.RawPublicKey);
