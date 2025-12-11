@@ -922,8 +922,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: experimental/multi-source-swarm }
-      - uses: actions/download-artifact@v4
-        with: { name: dev-builds }
+      
+      - name: Download from Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download dev \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
       
       - name: Build and Push
         env: { SNAPCRAFT_STORE_CREDENTIALS: "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" }
@@ -947,8 +953,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: experimental/multi-source-swarm }
-      - uses: actions/download-artifact@v4
-        with: { name: dev-builds }
+      
+      - name: Download from Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download dev `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-dev-win-x64.zip"
       
       - name: Pack and Push
         env: { CHOCO_API_KEY: "${{ secrets.CHOCO_API_KEY }}" }
@@ -969,8 +981,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, release]
     steps:
-      - uses: actions/download-artifact@v4
-        with: { name: dev-builds }
+      - name: Download from Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download dev \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-*.zip"
         
       - name: Update Tap
         env: { GH_TOKEN: "${{ secrets.TAP_GITHUB_TOKEN }}" }
