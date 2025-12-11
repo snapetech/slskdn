@@ -59,48 +59,75 @@ namespace slskd.PodCore
             PodMessage message,
             CancellationToken ct = default)
         {
-            // Verify pod exists
-            var podExists = await dbContext.Pods.AnyAsync(p => p.PodId == podId, ct);
-            if (!podExists)
+            // SECURITY: Validate all inputs
+            if (!PodValidation.IsValidPodId(podId))
             {
-                logger.LogWarning("Attempted to send message to non-existent pod {PodId}", podId);
+                logger.LogWarning("Invalid pod ID in SendMessageAsync");
                 return false;
             }
 
-            // Verify sender is a member
-            var isMember = await dbContext.Members.AnyAsync(
-                m => m.PodId == podId && m.PeerId == message.SenderPeerId && !m.IsBanned,
-                ct);
-
-            if (!isMember)
+            if (!PodValidation.IsValidChannelId(channelId))
             {
-                logger.LogWarning(
-                    "Non-member {PeerId} attempted to send message to pod {PodId}",
-                    message.SenderPeerId,
-                    podId);
+                logger.LogWarning("Invalid channel ID in SendMessageAsync");
                 return false;
             }
 
-            var entity = new PodMessageEntity
+            var (isValid, error) = PodValidation.ValidateMessage(message);
+            if (!isValid)
             {
-                PodId = podId,
-                ChannelId = channelId,
-                TimestampUnixMs = message.TimestampUnixMs,
-                SenderPeerId = message.SenderPeerId,
-                Body = message.Body,
-                Signature = message.Signature,
-            };
+                logger.LogWarning("Message validation failed: {Reason}", error);
+                return false;
+            }
 
-            dbContext.Messages.Add(entity);
-            await dbContext.SaveChangesAsync(ct);
+            // SECURITY: Sanitize message body
+            message.Body = PodValidation.Sanitize(message.Body, PodValidation.MaxMessageBodyLength);
 
-            logger.LogDebug(
-                "Message from {PeerId} saved to pod {PodId} channel {ChannelId}",
-                message.SenderPeerId,
-                podId,
-                channelId);
+            // SECURITY: Use transaction
+            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            try
+            {
+                // Verify pod exists
+                var podExists = await dbContext.Pods.AnyAsync(p => p.PodId == podId, ct);
+                if (!podExists)
+                {
+                    logger.LogWarning("Attempted to send message to non-existent pod");
+                    return false;
+                }
 
-            return true;
+                // Verify sender is a member (AUTHORIZATION CHECK)
+                var isMember = await dbContext.Members.AnyAsync(
+                    m => m.PodId == podId && m.PeerId == message.SenderPeerId && !m.IsBanned,
+                    ct);
+
+                if (!isMember)
+                {
+                    logger.LogWarning("Non-member attempted to send message");
+                    return false;
+                }
+
+                var entity = new PodMessageEntity
+                {
+                    PodId = podId,
+                    ChannelId = channelId,
+                    TimestampUnixMs = message.TimestampUnixMs,
+                    SenderPeerId = message.SenderPeerId,
+                    Body = message.Body,
+                    Signature = message.Signature,
+                };
+
+                dbContext.Messages.Add(entity);
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                logger.LogDebug("Message saved successfully");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error saving message");
+                await transaction.RollbackAsync(ct);
+                return false;
+            }
         }
 
         public async Task<IReadOnlyList<PodMessage>> GetMessagesAsync(
@@ -119,26 +146,51 @@ namespace slskd.PodCore
             int limit = 100,
             CancellationToken ct = default)
         {
-            var query = dbContext.Messages
-                .Where(m => m.PodId == podId && m.ChannelId == channelId);
-
-            if (sinceTimestampUnixMs.HasValue)
+            // SECURITY: Validate inputs
+            if (!PodValidation.IsValidPodId(podId))
             {
-                query = query.Where(m => m.TimestampUnixMs > sinceTimestampUnixMs.Value);
+                logger.LogWarning("Invalid pod ID in GetMessagesInternalAsync");
+                return Array.Empty<PodMessage>();
             }
 
-            var entities = await query
-                .OrderBy(m => m.TimestampUnixMs)
-                .Take(limit)
-                .ToListAsync(ct);
-
-            return entities.Select(e => new PodMessage
+            if (!PodValidation.IsValidChannelId(channelId))
             {
-                TimestampUnixMs = e.TimestampUnixMs,
-                SenderPeerId = e.SenderPeerId,
-                Body = e.Body,
-                Signature = e.Signature,
-            }).ToList();
+                logger.LogWarning("Invalid channel ID in GetMessagesInternalAsync");
+                return Array.Empty<PodMessage>();
+            }
+
+            // SECURITY: Enforce reasonable limit
+            const int MaxLimit = 1000;
+            limit = Math.Min(limit, MaxLimit);
+
+            try
+            {
+                var query = dbContext.Messages
+                    .Where(m => m.PodId == podId && m.ChannelId == channelId);
+
+                if (sinceTimestampUnixMs.HasValue)
+                {
+                    query = query.Where(m => m.TimestampUnixMs > sinceTimestampUnixMs.Value);
+                }
+
+                var entities = await query
+                    .OrderBy(m => m.TimestampUnixMs)
+                    .Take(limit)
+                    .ToListAsync(ct);
+
+                return entities.Select(e => new PodMessage
+                {
+                    TimestampUnixMs = e.TimestampUnixMs,
+                    SenderPeerId = e.SenderPeerId,
+                    Body = e.Body,
+                    Signature = e.Signature,
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving messages");
+                return Array.Empty<PodMessage>();
+            }
         }
 
         public async Task<int> GetMessageCountAsync(

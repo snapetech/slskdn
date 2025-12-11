@@ -49,44 +49,68 @@ namespace slskd.PodCore
 
         public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
         {
+            // SECURITY: Validate input
+            var (isValid, error) = PodValidation.ValidatePod(pod);
+            if (!isValid)
+            {
+                logger.LogWarning("Pod creation rejected: {Reason}", error);
+                throw new ArgumentException(error, nameof(pod));
+            }
+
             if (string.IsNullOrWhiteSpace(pod.PodId))
             {
                 pod.PodId = $"pod:{Guid.NewGuid():N}";
             }
 
-            var entity = new PodEntity
+            // SECURITY: Sanitize inputs
+            pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+
+            // SECURITY: Use transaction for atomicity
+            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            try
             {
-                PodId = pod.PodId,
-                Name = pod.Name,
-                Visibility = pod.Visibility,
-                FocusContentId = pod.FocusContentId,
-                Tags = System.Text.Json.JsonSerializer.Serialize(pod.Tags),
-                Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels),
-                ExternalBindings = System.Text.Json.JsonSerializer.Serialize(pod.ExternalBindings),
-            };
-
-            dbContext.Pods.Add(entity);
-            await dbContext.SaveChangesAsync(ct);
-
-            logger.LogInformation("Pod {PodId} created successfully", pod.PodId);
-
-            // Publish to DHT if pod is listed
-            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
-            {
-                _ = Task.Run(async () =>
+                var entity = new PodEntity
                 {
-                    try
-                    {
-                        await podPublisher.PublishPodAsync(pod, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to publish pod {PodId} to DHT", pod.PodId);
-                    }
-                }, ct);
-            }
+                    PodId = pod.PodId,
+                    Name = pod.Name,
+                    Visibility = pod.Visibility,
+                    FocusContentId = pod.FocusContentId,
+                    Tags = System.Text.Json.JsonSerializer.Serialize(pod.Tags ?? new List<string>()),
+                    Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels ?? new List<PodChannel>()),
+                    ExternalBindings = System.Text.Json.JsonSerializer.Serialize(pod.ExternalBindings ?? new List<ExternalBinding>()),
+                };
 
-            return pod;
+                dbContext.Pods.Add(entity);
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                // SECURITY: Don't log sensitive pod details
+                logger.LogInformation("Pod created successfully (ID length: {IdLength})", pod.PodId?.Length ?? 0);
+
+                // Publish to DHT if pod is listed
+                if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await podPublisher.PublishPodAsync(pod, ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "Failed to publish pod to DHT");
+                        }
+                    }, ct);
+                }
+
+                return pod;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error creating pod");
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
         }
 
         public async Task<IReadOnlyList<Pod>> ListAsync(CancellationToken ct = default)
@@ -97,8 +121,23 @@ namespace slskd.PodCore
 
         public async Task<Pod?> GetPodAsync(string podId, CancellationToken ct = default)
         {
-            var entity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
-            return entity == null ? null : EntityToPod(entity);
+            // SECURITY: Validate pod ID format
+            if (!PodValidation.IsValidPodId(podId))
+            {
+                logger.LogWarning("Invalid pod ID format in GetPodAsync");
+                return null;
+            }
+
+            try
+            {
+                var entity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+                return entity == null ? null : EntityToPod(entity);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving pod");
+                return null;
+            }
         }
 
         public async Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default)
@@ -135,54 +174,80 @@ namespace slskd.PodCore
 
         public async Task<bool> JoinAsync(string podId, PodMember member, CancellationToken ct = default)
         {
-            var pod = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
-            if (pod == null)
+            // SECURITY: Validate inputs
+            if (!PodValidation.IsValidPodId(podId))
             {
-                logger.LogWarning("Attempted to join non-existent pod {PodId}", podId);
+                logger.LogWarning("Invalid pod ID in JoinAsync");
                 return false;
             }
 
-            var existingMember = await dbContext.Members
-                .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == member.PeerId, ct);
-
-            if (existingMember != null)
+            var (isValid, error) = PodValidation.ValidateMember(member);
+            if (!isValid)
             {
-                if (existingMember.IsBanned)
+                logger.LogWarning("Member validation failed: {Reason}", error);
+                return false;
+            }
+
+            // SECURITY: Use transaction
+            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            try
+            {
+                var pod = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+                if (pod == null)
                 {
-                    logger.LogWarning("Banned user {PeerId} attempted to join pod {PodId}", member.PeerId, podId);
+                    logger.LogWarning("Attempted to join non-existent pod");
                     return false;
                 }
 
-                logger.LogInformation("User {PeerId} already member of pod {PodId}", member.PeerId, podId);
+                var existingMember = await dbContext.Members
+                    .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == member.PeerId, ct);
+
+                if (existingMember != null)
+                {
+                    if (existingMember.IsBanned)
+                    {
+                        logger.LogWarning("Banned user attempted to join pod");
+                        return false;
+                    }
+
+                    logger.LogInformation("User already member of pod");
+                    return true;
+                }
+
+                var memberEntity = new PodMemberEntity
+                {
+                    PodId = podId,
+                    PeerId = member.PeerId,
+                    Role = member.Role ?? "member",
+                    PublicKey = member.PublicKey,
+                    IsBanned = false,
+                };
+
+                dbContext.Members.Add(memberEntity);
+
+                // Add membership record
+                var membershipRecord = new SignedMembershipRecordEntity
+                {
+                    PodId = podId,
+                    PeerId = member.PeerId,
+                    TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    Action = "join",
+                    Signature = string.Empty, // Will be populated by signing service
+                };
+
+                dbContext.MembershipRecords.Add(membershipRecord);
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                logger.LogInformation("User joined pod successfully");
                 return true;
             }
-
-            var memberEntity = new PodMemberEntity
+            catch (Exception ex)
             {
-                PodId = podId,
-                PeerId = member.PeerId,
-                Role = member.Role ?? "member",
-                PublicKey = member.PublicKey,
-                IsBanned = false,
-            };
-
-            dbContext.Members.Add(memberEntity);
-
-            // Add membership record
-            var membershipRecord = new SignedMembershipRecordEntity
-            {
-                PodId = podId,
-                PeerId = member.PeerId,
-                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Action = "join",
-                Signature = string.Empty, // Will be populated by signing service
-            };
-
-            dbContext.MembershipRecords.Add(membershipRecord);
-            await dbContext.SaveChangesAsync(ct);
-
-            logger.LogInformation("User {PeerId} joined pod {PodId}", member.PeerId, podId);
-            return true;
+                logger.LogError(ex, "Error during pod join operation");
+                await transaction.RollbackAsync(ct);
+                return false;
+            }
         }
 
         public async Task<bool> LeaveAsync(string podId, string peerId, CancellationToken ct = default)
@@ -245,15 +310,35 @@ namespace slskd.PodCore
             return true;
         }
 
-        private static Pod EntityToPod(PodEntity entity) => new Pod
+        private static Pod EntityToPod(PodEntity entity)
         {
-            PodId = entity.PodId,
-            Name = entity.Name,
-            Visibility = entity.Visibility,
-            FocusContentId = entity.FocusContentId,
-            Tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.Tags ?? "[]"),
-            Channels = System.Text.Json.JsonSerializer.Deserialize<List<PodChannel>>(entity.Channels ?? "[]"),
-            ExternalBindings = System.Text.Json.JsonSerializer.Deserialize<List<ExternalBinding>>(entity.ExternalBindings ?? "[]"),
-        };
+            try
+            {
+                return new Pod
+                {
+                    PodId = entity.PodId,
+                    Name = entity.Name,
+                    Visibility = entity.Visibility,
+                    FocusContentId = entity.FocusContentId,
+                    Tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.Tags ?? "[]") ?? new List<string>(),
+                    Channels = System.Text.Json.JsonSerializer.Deserialize<List<PodChannel>>(entity.Channels ?? "[]") ?? new List<PodChannel>(),
+                    ExternalBindings = System.Text.Json.JsonSerializer.Deserialize<List<ExternalBinding>>(entity.ExternalBindings ?? "[]") ?? new List<ExternalBinding>(),
+                };
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // SECURITY: Handle malformed JSON gracefully
+                return new Pod
+                {
+                    PodId = entity.PodId,
+                    Name = entity.Name,
+                    Visibility = entity.Visibility,
+                    FocusContentId = entity.FocusContentId,
+                    Tags = new List<string>(),
+                    Channels = new List<PodChannel>(),
+                    ExternalBindings = new List<ExternalBinding>(),
+                };
+            }
+        }
     }
 }
