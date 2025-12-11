@@ -43,6 +43,12 @@
   min-width: 150px;
 }
 
+.transferlist-speed {
+  width: 120px;
+  min-width: 120px;
+  text-align: right;
+}
+
 .transferlist-filename {
   word-wrap: break-word !important;
 }

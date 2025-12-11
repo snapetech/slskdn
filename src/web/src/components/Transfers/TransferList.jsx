@@ -111,6 +111,9 @@ class TransferList extends Component {
                     <Table.HeaderCell className="transferlist-progress">
                       Progress
                     </Table.HeaderCell>
+                    <Table.HeaderCell className="transferlist-speed">
+                      Speed
+                    </Table.HeaderCell>
                     <Table.HeaderCell className="transferlist-size">
                       Size
                     </Table.HeaderCell>
@@ -170,6 +173,11 @@ class TransferList extends Component {
                               {f.placeInQueue ? ` (#${f.placeInQueue})` : ''}
                             </Button>
                           )}
+                        </Table.Cell>
+                        <Table.Cell className="transferlist-speed">
+                          {f.state === 'InProgress' && f.averageSpeed
+                            ? `${formatBytes(f.averageSpeed)}/s`
+                            : '—'}
                         </Table.Cell>
                         <Table.Cell className="transferlist-size">
                           {formatBytesTransferred({
