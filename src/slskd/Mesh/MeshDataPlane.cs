@@ -44,6 +44,10 @@ public sealed class MeshDataPlane : IMeshDataPlane
     private readonly ILogger<MeshDataPlane> _logger;
     private readonly MeshNeighborRegistry _neighborRegistry;
     
+    // Configuration constants
+    private const int ChunkDownloadTimeout = 30; // seconds
+    private const int MaxChunkSize = 1024 * 1024; // 1MB
+    
     public MeshDataPlane(
         ILogger<MeshDataPlane> logger,
         MeshNeighborRegistry neighborRegistry)
@@ -62,12 +66,30 @@ public sealed class MeshDataPlane : IMeshDataPlane
         int length,
         CancellationToken cancellationToken = default)
     {
+        // Validate inputs
+        if (length <= 0 || length > MaxChunkSize)
+        {
+            throw new ArgumentException(
+                $"Invalid chunk length: {length} (must be 1-{MaxChunkSize} bytes)",
+                nameof(length));
+        }
+        
+        if (offset < 0)
+        {
+            throw new ArgumentException(
+                $"Invalid offset: {offset} (must be >= 0)",
+                nameof(offset));
+        }
+        
         // Get active overlay connection to this peer
         var connection = _neighborRegistry.GetConnectionByMeshPeerId(meshPeerId.ToString());
         
         if (connection == null || !connection.IsConnected)
         {
-            throw new InvalidOperationException($"No active connection to mesh peer {meshPeerId.ToShortString()}");
+            throw new InvalidOperationException(
+                $"No active connection to mesh peer {meshPeerId.ToShortString()}. " +
+                $"Available connections: {_neighborRegistry.GetAllConnections().Count}, " +
+                $"File: {filename}, Offset: {offset}, Length: {length}");
         }
         
         _logger.LogDebug(
@@ -77,37 +99,65 @@ public sealed class MeshDataPlane : IMeshDataPlane
             offset,
             length);
         
-        // Send chunk request message
-        var request = new MeshChunkRequestMessage
+        // Create timeout
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(ChunkDownloadTimeout));
+        
+        try
         {
-            RequestId = Guid.NewGuid().ToString(),
-            Filename = filename,
-            Offset = offset,
-            Length = length,
-        };
-        
-        await connection.WriteMessageAsync(request, cancellationToken);
-        
-        // Read chunk response
-        var response = await connection.ReadMessageAsync<MeshChunkResponseMessage>(cancellationToken);
-        
-        if (!response.Success)
-        {
-            throw new IOException($"Chunk request failed: {response.Error}");
+            // Send chunk request message
+            var request = new MeshChunkRequestMessage
+            {
+                RequestId = Guid.NewGuid().ToString(),
+                Filename = filename,
+                Offset = offset,
+                Length = length,
+            };
+            
+            await connection.WriteMessageAsync(request, cts.Token);
+            
+            // Read chunk response with timeout
+            var response = await connection.ReadMessageAsync<MeshChunkResponseMessage>(cts.Token);
+            
+            // Validate response
+            if (response == null)
+            {
+                throw new IOException(
+                    $"Received null response from mesh peer {meshPeerId.ToShortString()}");
+            }
+            
+            if (!response.Success)
+            {
+                throw new IOException(
+                    $"Chunk request failed from {meshPeerId.ToShortString()}: {response.Error}");
+            }
+            
+            if (response.Data == null)
+            {
+                throw new IOException(
+                    $"Received null data from mesh peer {meshPeerId.ToShortString()}");
+            }
+            
+            if (response.Data.Length != length)
+            {
+                throw new IOException(
+                    $"Received {response.Data.Length} bytes from {meshPeerId.ToShortString()}, expected {length}");
+            }
+            
+            _logger.LogDebug(
+                "Received chunk from {MeshPeer}: {Size} bytes at offset {Offset}",
+                meshPeerId.ToShortString(),
+                response.Data.Length,
+                offset);
+            
+            return response.Data;
         }
-        
-        if (response.Data == null || response.Data.Length != length)
+        catch (OperationCanceledException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw new IOException($"Received {response.Data?.Length ?? 0} bytes, expected {length}");
+            // Timeout occurred
+            throw new TimeoutException(
+                $"Chunk download from {meshPeerId.ToShortString()} timed out after {ChunkDownloadTimeout}s");
         }
-        
-        _logger.LogDebug(
-            "Received chunk from {MeshPeer}: {Size} bytes at offset {Offset}",
-            meshPeerId.ToShortString(),
-            response.Data.Length,
-            offset);
-        
-        return response.Data;
     }
 }
 

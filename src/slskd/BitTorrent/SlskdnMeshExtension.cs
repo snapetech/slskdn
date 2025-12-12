@@ -85,12 +85,44 @@ public sealed class SlskdnMeshExtension
     {
         try
         {
+            // 1. Validate data size
+            if (data.Length > 10 * 1024) // 10KB max
+            {
+                _logger.LogWarning(
+                    "Handshake data too large from {Address}: {Size} bytes",
+                    remoteAddress, data.Length);
+                return;
+            }
+            
+            // 2. Parse JSON with safety limits
+            var options = new JsonSerializerOptions
+            {
+                MaxDepth = 5,
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = false,
+            };
+            
             var json = Encoding.UTF8.GetString(data);
-            var handshake = JsonSerializer.Deserialize<MeshExtensionHandshake>(json);
+            var handshake = JsonSerializer.Deserialize<MeshExtensionHandshake>(json, options);
             
             if (handshake == null || string.IsNullOrEmpty(handshake.MeshPeerId))
             {
                 _logger.LogWarning("Received invalid mesh extension handshake from {Address}", remoteAddress);
+                return;
+            }
+            
+            // 3. Validate all fields
+            if (handshake.OverlayPort < 1 || handshake.OverlayPort > 65535)
+            {
+                _logger.LogWarning(
+                    "Invalid overlay port from {Address}: {Port}",
+                    remoteAddress, handshake.OverlayPort);
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(handshake.PublicKey) || handshake.PublicKey.Length > 1024)
+            {
+                _logger.LogWarning("Invalid public key from {Address}", remoteAddress);
                 return;
             }
             
@@ -101,39 +133,86 @@ public sealed class SlskdnMeshExtension
                 handshake.OverlayPort,
                 string.Join(",", handshake.Capabilities ?? new List<string>()));
             
-            // Parse public key
+            // 4. Parse and validate public key
             byte[] publicKey;
             try
             {
                 publicKey = Convert.FromBase64String(handshake.PublicKey);
+                
+                if (publicKey.Length != 32) // Ed25519 key is 32 bytes
+                {
+                    _logger.LogWarning(
+                        "Invalid public key length from {Address}: {Length} bytes (expected 32)",
+                        remoteAddress, publicKey.Length);
+                    return;
+                }
             }
-            catch
+            catch (FormatException)
             {
-                _logger.LogWarning("Invalid public key in mesh extension handshake from {Address}", remoteAddress);
+                _logger.LogWarning("Invalid base64 public key from {Address}", remoteAddress);
                 return;
             }
             
-            // Create mesh peer descriptor
-            var meshPeerId = MeshPeerId.Parse(handshake.MeshPeerId);
+            // 5. Parse mesh peer ID
+            MeshPeerId meshPeerId;
+            try
+            {
+                meshPeerId = MeshPeerId.Parse(handshake.MeshPeerId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Invalid mesh peer ID from {Address}: {MeshId}",
+                    remoteAddress, handshake.MeshPeerId);
+                return;
+            }
+            
+            // 6. Request signature proof via challenge-response
+            // For now, we create an unsigned descriptor and mark it as "unverified"
+            // TODO: Implement challenge-response to get a proper signature
             var endpoint = new IPEndPoint(remoteAddress, handshake.OverlayPort);
             
             var descriptor = new MeshPeerDescriptor
             {
                 MeshPeerId = meshPeerId,
                 PublicKey = publicKey,
-                Signature = Array.Empty<byte>(), // BT extension doesn't include full descriptor signature
+                Signature = Array.Empty<byte>(), // Will be filled by challenge-response
                 Endpoints = new[] { endpoint },
                 Capabilities = handshake.Capabilities ?? new List<string>(),
                 Timestamp = DateTimeOffset.UtcNow,
             };
             
-            // Register peer (without signature verification for BT-discovered peers)
+            // 7. Verify signature if present
+            // For BT-discovered peers without signature, we mark as unverified
+            // They can be upgraded to verified via challenge-response
+            if (descriptor.Signature.Length == 0)
+            {
+                _logger.LogInformation(
+                    "BitTorrent peer {MeshId} at {Endpoint} registered as unverified (no signature). " +
+                    "Will require proof before participating in mesh operations.",
+                    meshPeerId.ToShortString(),
+                    endpoint);
+                
+                // TODO: Initiate challenge-response to get signature
+                // For now, we DON'T register unverified peers
+                _logger.LogWarning(
+                    "Skipping registration of unverified BitTorrent peer {MeshId} from {Address}. " +
+                    "Signature verification required.",
+                    meshPeerId.ToShortString(),
+                    remoteAddress);
+                return;
+            }
+            
+            // Register peer only if verified
             await _meshPeerRegistry.RegisterOrUpdateAsync(descriptor, cancellationToken);
             
             _logger.LogInformation(
-                "Registered mesh peer from BitTorrent: {MeshId} at {Endpoint}",
+                "Registered verified mesh peer from BitTorrent: {MeshId} at {Endpoint}",
                 meshPeerId.ToShortString(),
                 endpoint);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Malformed JSON handshake from {Address}", remoteAddress);
         }
         catch (Exception ex)
         {

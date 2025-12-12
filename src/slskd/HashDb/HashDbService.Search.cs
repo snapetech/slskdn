@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
+using Serilog;
 using slskd.HashDb.Models;
 
 /// <summary>
@@ -19,13 +20,17 @@ using slskd.HashDb.Models;
 /// </summary>
 public partial class HashDbService
 {
+    // Configuration constants
+    private const int DefaultSearchTimeout = 10; // seconds
+    private const int MaxSearchResults = 100;
+    
     /// <summary>
     /// Searches the hash database for entries matching the query.
     /// Uses FTS5 if available, falls back to LIKE queries.
     /// </summary>
     public async Task<IEnumerable<HashDbSearchResult>> SearchAsync(
         string query, 
-        int limit = 100, 
+        int limit = MaxSearchResults, 
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -33,13 +38,15 @@ public partial class HashDbService
             return Array.Empty<HashDbSearchResult>();
         }
         
-        // Normalize query
+        // Clamp limit to prevent excessive results
+        limit = Math.Min(limit, MaxSearchResults);
+        
+        // Normalize and sanitize query
         var normalizedQuery = NormalizeSearchQuery(query);
         
         using var conn = GetConnection();
         
-        // Try FTS5 search first (if metadata table has FTS enabled)
-        // For now, use basic LIKE search on metadata fields
+        // Optimized query with pre-computed peer counts
         var sql = @"
             SELECT DISTINCT
                 h.flac_key AS FlacKey,
@@ -49,30 +56,35 @@ public partial class HashDbService
                 m.title AS Title,
                 m.recording_id AS RecordingId,
                 m.release_id AS ReleaseId,
-                (SELECT COUNT(DISTINCT username) 
-                 FROM flac_inventory 
-                 WHERE flac_key = h.flac_key 
-                 AND hash_value IS NOT NULL) AS PeerCount,
+                COALESCE(pc.peer_count, 0) AS PeerCount,
                 h.meta_flags AS MetaFlags
             FROM hashes h
             LEFT JOIN hash_metadata m ON h.flac_key = m.flac_key
+            LEFT JOIN (
+                SELECT flac_key, COUNT(DISTINCT username) as peer_count
+                FROM flac_inventory
+                WHERE hash_value IS NOT NULL
+                GROUP BY flac_key
+            ) pc ON h.flac_key = pc.flac_key
             WHERE 
-                (m.artist LIKE @query OR
-                 m.album LIKE @query OR
-                 m.title LIKE @query OR
-                 m.artist || ' ' || m.album LIKE @query OR
-                 m.artist || ' ' || m.title LIKE @query)
+                (m.artist LIKE @query ESCAPE '[' OR
+                 m.album LIKE @query ESCAPE '[' OR
+                 m.title LIKE @query ESCAPE '[' OR
+                 m.artist || ' ' || m.album LIKE @query ESCAPE '[' OR
+                 m.artist || ' ' || m.title LIKE @query ESCAPE '[')
             ORDER BY PeerCount DESC, m.artist, m.album, m.title
             LIMIT @limit";
         
         var searchPattern = $"%{normalizedQuery}%";
         
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = await conn.QueryAsync<dynamic>(
             sql,
             new { query = searchPattern, limit },
-            commandTimeout: 10);
+            commandTimeout: DefaultSearchTimeout);
+        stopwatch.Stop();
         
-        return results.Select(r => new HashDbSearchResult
+        var resultList = results.Select(r => new HashDbSearchResult
         {
             FlacKey = r.FlacKey,
             Size = r.Size,
@@ -86,6 +98,13 @@ public partial class HashDbService
             BitDepth = UnpackBitDepth(r.MetaFlags),
             Channels = UnpackChannels(r.MetaFlags),
         }).ToList();
+        
+        // Log successful searches for monitoring
+        Log.Information(
+            "Hash DB search for '{Query}' returned {Count} results in {Ms}ms",
+            query, resultList.Count, stopwatch.ElapsedMilliseconds);
+        
+        return resultList;
     }
     
     /// <summary>
@@ -100,25 +119,43 @@ public partial class HashDbService
             return Array.Empty<string>();
         }
         
+        // Validate flac_key format (should be hex string)
+        if (flacKey.Length > 128) // Reasonable limit
+        {
+            Log.Warning("FLAC key too long: {Length} chars", flacKey.Length);
+            return Array.Empty<string>();
+        }
+        
         using var conn = GetConnection();
         
+        const int PeerLookupTimeout = 5; // seconds
         var sql = @"
             SELECT DISTINCT username
             FROM flac_inventory
             WHERE flac_key = @flacKey
             AND hash_value IS NOT NULL
-            ORDER BY username";
+            ORDER BY username
+            LIMIT 50"; // Limit peers per hash to prevent abuse
         
-        var usernames = await conn.QueryAsync<string>(
-            sql,
-            new { flacKey },
-            commandTimeout: 5);
-        
-        return usernames.ToList();
+        try
+        {
+            var usernames = await conn.QueryAsync<string>(
+                sql,
+                new { flacKey },
+                commandTimeout: PeerLookupTimeout);
+            
+            return usernames.ToList();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error fetching peers for hash {FlacKey}", flacKey);
+            return Array.Empty<string>();
+        }
     }
     
     /// <summary>
     /// Normalizes search query for better matching.
+    /// Escapes SQL LIKE special characters to prevent injection.
     /// </summary>
     private static string NormalizeSearchQuery(string query)
     {
@@ -129,6 +166,19 @@ public partial class HashDbService
         while (query.Contains("  "))
         {
             query = query.Replace("  ", " ");
+        }
+        
+        // Escape SQL LIKE special characters to prevent injection
+        // Order matters! Escape [ first since we use it for escaping
+        query = query.Replace("[", "[[]")
+                     .Replace("%", "[%]")
+                     .Replace("_", "[_]");
+        
+        // Limit query length to prevent DoS
+        const int MaxQueryLength = 200;
+        if (query.Length > MaxQueryLength)
+        {
+            query = query.Substring(0, MaxQueryLength);
         }
         
         return query;

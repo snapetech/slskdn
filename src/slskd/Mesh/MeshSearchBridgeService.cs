@@ -7,6 +7,7 @@ namespace slskd.Mesh;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -130,10 +131,14 @@ public sealed class MeshSearchBridgeService
     {
         var results = new List<MeshSearchResult>();
         
+        // Configuration
+        const int MaxMeshSearchResults = 20; // Limit to prevent excessive queries
+        const int MaxUsernamesPerHash = 5; // Limit usernames per file
+        
         try
         {
-            // Search hash database
-            var hashResults = await _hashDb.SearchAsync(query, limit: 100, cancellationToken);
+            // Search hash database with limit
+            var hashResults = await _hashDb.SearchAsync(query, limit: MaxMeshSearchResults, cancellationToken);
             
             // Group by peer (username) to build per-user result sets
             var filesByUser = new Dictionary<string, List<Soulseek.File>>();
@@ -149,7 +154,8 @@ public sealed class MeshSearchBridgeService
                 // Look up actual usernames for this hash
                 var usernames = await _hashDb.GetPeersByHashAsync(hashResult.FlacKey, cancellationToken);
                 
-                foreach (var username in usernames)
+                // Limit usernames per hash to prevent abuse
+                foreach (var username in usernames.Take(MaxUsernamesPerHash))
                 {
                     if (!filesByUser.ContainsKey(username))
                     {
@@ -216,8 +222,8 @@ public sealed class MeshSearchBridgeService
         var album = result.Album ?? "Unknown Album";
         var title = result.Title ?? "Unknown Title";
         
-        // Format: Artist/Album/TrackTitle.flac
-        return $"{artist}/{album}/{title}.flac";
+        // Use Path.Combine for cross-platform compatibility
+        return Path.Combine(artist, album, title + ".flac");
     }
 }
 
