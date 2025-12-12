@@ -1971,31 +1971,40 @@ Federation security covers:
 
 **Catalogue**: Metadata-first brain of VirtualSoulfind
 
-#### T-V2-P1-04: LocalFile & VerifiedCopy Entities 📋
-**Status**: 📋 Planned  
+#### T-V2-P1-04: LocalFile & VerifiedCopy Entities ✅
+**Status**: ✅ COMPLETE  
 **Priority**: 🟡 MEDIUM  
-**Dependencies**: T-V2-P1-03  
-**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.2
+**Dependencies**: T-V2-P1-03 ✅  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.2  
+**Tests**: 21/21 passing
 
-- [ ] Define `LocalFile` entity:
-  - [ ] LocalFileId, Path, SizeBytes, DurationSeconds
-  - [ ] Codec, Bitrate, Channels
-  - [ ] HashPrimary, HashSecondary, AudioFingerprintId
-  - [ ] InferredTrackId (nullable)
-  - [ ] QualityRating (derived)
-- [ ] Define `VerifiedCopy` entity:
-  - [ ] VerifiedCopyId, TrackId, LocalFileId
-  - [ ] HashPrimary, DurationSeconds
-  - [ ] VerificationSource (manual, multi-check, etc.)
-- [ ] Add to `ICatalogueStore`:
-  - [ ] `FindLocalFileByPathAsync(path)`
-  - [ ] `FindVerifiedCopyForTrackAsync(trackId)`
-  - [ ] CRUD operations
-- [ ] Add tests:
-  - [ ] Linking LocalFile ↔ Track works
-  - [ ] VerifiedCopy enforces hash/duration
+- [x] Define `LocalFile` entity:
+  - [x] LocalFileId, Path, SizeBytes, DurationSeconds
+  - [x] Codec, Bitrate, Channels
+  - [x] HashPrimary, HashSecondary, AudioFingerprintId
+  - [x] InferredTrackId (nullable)
+  - [x] QualityRating (computed property: 0.0-1.0)
+- [x] Define `VerifiedCopy` entity:
+  - [x] VerifiedCopyId, TrackId, LocalFileId
+  - [x] HashPrimary, DurationSeconds
+  - [x] VerificationSource (Manual/MultiCheck/Fingerprint/Imported)
+  - [x] VerifiedAt timestamp, Notes
+- [x] Extend `ICatalogueStore` (14 new methods):
+  - [x] LocalFile: FindByPath, FindById, ListForTrack, FindByHash, Upsert, Count
+  - [x] VerifiedCopy: FindForTrack, ListForTrack, FindById, Upsert, Delete, Count
+- [x] Implement in `SqliteCatalogueStore`:
+  - [x] SQL schema with foreign keys
+  - [x] Indexes for performance
+  - [x] DateTimeOffset handler for Dapper
+- [x] Implement in `InMemoryCatalogueStore`
+- [x] Comprehensive tests:
+  - [x] Quality rating tests (FLAC, MP3, AAC)
+  - [x] LocalFile CRUD and linking
+  - [x] VerifiedCopy CRUD and verification sources
+  - [x] Referential integrity enforced
 
-**Local Files**: Bridge virtual catalogue to physical files
+**Local Files**: Bridge virtual catalogue to physical files  
+**Verified Copies**: Ground truth for match confidence
 
 ---
 
@@ -2392,17 +2401,17 @@ Federation security covers:
 ---
 
 **V2 Summary**: 
-- **V2-P1**: ✅ 4/4 tasks (Data model & stores)
+- **V2-P1**: ✅ 4/4 tasks (Data model & stores & local files)
 - **V2-P2**: ✅ 3/3 tasks (Intent queue & planner & config)
-- **V2-P3**: ✅ 2/3 tasks (Match & verification, verified copy registry deferred)
+- **V2-P3**: ✅ 2/2 tasks (Match & verification - verified copy complete!)
 - **V2-P4**: ✅ 6/6 tasks (All backend implementations)
 - **V2-P5**: ✅ 3/3 tasks (Integration & orchestration)
 - **V2-P6**: 📋 0/2 tasks (Future enhancements)
 
-**Total Phase 4**: ✅ 18/21 core tasks complete (86%), 3 future/deferred
-**Tests**: 139/139 passing (100% pass rate)
-**Production Files**: 58 (+1 VirtualSoulfindOptions)
-**Test Files**: 16 (+1 VirtualSoulfindOptionsTests)
+**Total Phase 4**: ✅ 18/20 core tasks complete (90%), 2 future/deferred
+**Tests**: 160/160 passing (100% pass rate)
+**Production Files**: 60 (+2 LocalFile, VerifiedCopy)
+**Test Files**: 17 (+1 LocalFileAndVerifiedCopyTests)
 - **V2-P6**: 2 tasks (Advanced features)
 - **Total**: 17 core tasks (vs 100+ original estimate - scoped down to MVP)
 
