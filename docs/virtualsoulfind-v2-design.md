@@ -613,25 +613,467 @@ Key principles:
 
 ---
 
-## 14. Open Questions / Future Work
+## 14. UI Integration
 
-* Audio fingerprinting:
+**Important**: VirtualSoulfind v2 integrates with the **existing slskdn web UI**, not creating a separate UI. We can harden the existing UI if necessary.
 
-  * Which fingerprint scheme do we standardize on (AcoustID, custom, etc.)?
-  * How do we handle CPU cost for large libraries?
+### 14.1 Web UI Enhancements
 
-* Shared "verified copy registry" over mesh:
+The existing web UI will be extended with VirtualSoulfind v2 views:
 
-  * Do we ever share verified hashes with trusted peers?
-  * How to avoid turning that into a global leak of libraries?
+* **Virtual Catalogue Browser**: Browse artists/releases/tracks from catalogue store
+* **Intent Queue Dashboard**: Manage desired releases and tracks
+* **Planner Visualization**: Show acquisition plans and backend choices
+* **Library Reconciliation View**: Show gaps, duplicates, upgrade opportunities
+* **Settings Panel**: Configure modes, backends, and limits
 
-* Smart prioritization:
+### 14.2 Security Considerations for UI
 
-  * Use ListenBrainz/Last.fm-like data to prioritize "most value per GB" backfills.
+* All UI endpoints go through hardened HTTP gateway (H-01)
+* API key and CSRF token required
+* No automatic execution of plans without explicit confirmation
+* Clear warnings when actions will trigger network activity
+* No generic "execute arbitrary service call" console exposed
 
-* UI:
+---
 
-  * How we expose these capabilities in the slskdn UI vs just via CLI/API.
+## 15. Security & Hardening Considerations
+
+This section assumes all the earlier hardening tasks (H-01…H-10) exist or will exist. Here we specifically look at how VirtualSoulfind v2 interacts with those, and where it needs its own protections.
+
+### 15.1 Threat Model Summary
+
+Primary threat vectors:
+
+1. **Remote mesh/DHT peers**
+   * Malicious or Sybil peers poisoning metadata, DHT entries, and service calls.
+
+2. **Untrusted HTTP callers**
+   * Local/remote processes or browsers abusing VirtualSoulfind via the gateway.
+
+3. **Correlation/deanonymization**
+   * Linking Soulseek, mesh, BT, HTTP and catalogue behavior to a single real-world identity.
+
+4. **Local compromise**
+   * Malicious software/users on the same machine accessing VirtualSoulfind's data, keys, and intents.
+
+5. **Abuse of the node as a workhorse**
+   * Using VirtualSoulfind as a control plane to cause massive download, indexing, or scanning activity.
+
+Design choices below should reduce damage from all of the above.
+
+---
+
+### 15.2 Identities, Privacy, and Correlation
+
+**Risks:**
+* VirtualSoulfind holds a detailed picture of your tastes and library, plus cross-network source/peer information.
+* It acts as a bridge between MBID-level metadata, local paths, and potentially multiple networks.
+
+**Mitigations / Requirements:**
+
+1. **Data-level separation of identifiers**
+   * Ensure schema and code never join Soulseek identifiers directly into persistent VirtualSoulfind entities.
+   * `SourceCandidate.BackendRef` for Soulseek should be an internal ID (e.g. `SoulseekPeerId`), not a username; mapping to username stays in a separate, Soulseek-specific table.
+   * Same goes for IPs: mesh/DHT IPs shouldn't be stored in VirtualSoulfind's catalogue structures.
+
+2. **Configurable "privacy mode"**
+   * Add `VirtualSoulfind.PrivacyMode` with options like:
+     * `Normal` – full features.
+     * `Reduced` – no storing of external peer identifiers, only booleans like "mesh has/does not have this content".
+   * In `Reduced` mode:
+     * `SourceCandidate` is abstract ("available via mesh DHT"), without peer attribution; you still can plan, but correlation is weaker.
+
+3. **Metrics and logging hygiene**
+   * No metrics that directly combine:
+     * Soulseek usernames, MBIDs, and IPs in labels.
+   * Logs for VirtualSoulfind must:
+     * Not include full local paths by default.
+     * Not include external user identifiers.
+     * Use IDs that are non-trivial to tie to a real person without additional context.
+
+4. **Key rotation awareness**
+   * If mesh identities are rotated (H-04), VirtualSoulfind must:
+     * Treat old peer IDs as historical only.
+     * Not assume a single mesh identity is stable forever.
+
+---
+
+### 15.3 Catalogue Store & Intent Queue
+
+These are "low-risk" but high-value for privacy.
+
+**Risks:**
+* Leak of catalogue + intents reveals listening habits, planned acquisitions, etc.
+* Malicious local or mesh/gateway access to the intent queue could be used to trigger huge amounts of downstream work.
+
+**Mitigations:**
+
+1. **Local storage permissions**
+   * Catalogue DB and intent queue DB should:
+     * Live under a dedicated app directory.
+     * Inherit restrictive filesystem permissions (from H-09's dedicated user).
+   * Provide a clear "data directory" config and recommend locking it down.
+
+2. **Gateway exposure**
+   * Any HTTP endpoints that read/write intents:
+     * MUST go through hardened gateway rule set (H-01).
+     * MUST require auth and CSRF headers.
+   * Add an explicit config to disable intent manipulation via HTTP:
+     * `VirtualSoulfind.AllowRemoteIntentManagement = false` by default.
+
+3. **Intent queue rate limiting**
+   * Add a simple per-peer/per-IP limit on:
+     * How many new `DesiredRelease`/`DesiredTrack` objects can be created per time window via mesh or gateway.
+   * For local CLI/interactive use, this won't matter; for remote callers, it stops abuse.
+
+---
+
+### 15.4 Source Registry & Backend Interfaces
+
+This is where we integrate VirtualSoulfind with all the networks.
+
+**Risks:**
+* `SourceCandidate` table becomes a "map of who has what".
+* Backend implementations could be tricked into doing SSRF-like actions (HTTP, LAN).
+* Backend misuse as an amplification vector (trigger lots of downstream work).
+
+**Mitigations:**
+
+1. **Avoid storing third-party identity in source registry**
+   * For Soulseek sources:
+     * Store a local "peer handle" only; the real username/IP stays in the Soulseek module.
+   * For mesh/DHT:
+     * Store peer IDs that are internal to the mesh, not IPs.
+
+2. **Backend-level work budget enforcement**
+   * Each `IContentBackend` implementation must:
+     * Consume the H-02 work budget before any external call (Soulseek search/browse, BT metadata, HTTP fetch, etc.).
+   * This prevents VirtualSoulfind from ignoring budgets.
+
+3. **HTTP / LAN backend isolation**
+   * If `HttpContentBackend` or `LanContentBackend` exist:
+     * They must use an outbound HTTP client / network wrapper that enforces:
+       * No access to loopback or private subnets by default (SSRF guard).
+     * They should only be used for URLs acquired from trusted sources (e.g., config or known registries), not arbitrary user input.
+
+4. **Per-backend caps (tied to config)**
+   * Backends must consult `VirtualSoulfind.Backends.*` config when planning and executing:
+     * Max parallel fetches.
+     * Max operations per minute.
+   * That plus work budget gives you two independent safety rails.
+
+---
+
+### 15.5 Planner & Resolver
+
+Planner + resolver are the "brains" that actually cause work to happen.
+
+**Risks:**
+* A malicious peer or user could enqueue thousands of intents, causing massive network/CPU usage when the resolver runs.
+* Bad planning logic could prefer Soulseek in ways that break your "SoulseekFriendly" contract.
+
+**Mitigations:**
+
+1. **Global limits on resolver throughput**
+   * Configurable caps such as:
+     * `Resolver.MaxTracksPerRun`
+     * `Resolver.MaxConcurrentPlans`
+   * Resolver never processes more than `N` tracks per execution window, regardless of queue size.
+
+2. **Per-origin splitting**
+   * Mark intents with `Origin`:
+     * `UserLocal`
+     * `LocalAutomation`
+     * `RemoteMesh`
+     * `RemoteGateway`
+   * Resolver can prioritize:
+     * `UserLocal` over others.
+     * Hard cap `Remote*` origins to small slices per run.
+
+3. **Policy enforcement inside the planner**
+   * Planner must respect modes:
+     * In `OfflinePlanning`: no network backends at all.
+     * In `MeshOnly`: never include Soulseek in plans.
+     * In `SoulseekFriendly`: Soulseek steps must conform to Soulseek caps from H-08.
+   * This solves "oops, I switched config but planner still uses Soulseek as primary".
+
+4. **Plan validation**
+   * Before executing a plan:
+     * Check that aggregated backend costs will not exceed:
+       * Per-call work budget.
+       * Per-peer budget.
+       * Soulseek-specific caps.
+   * If invalid:
+     * Planner must downgrade (e.g., drop certain backends, lower parallelism) or mark intent as `OnHold/Failed` with a reason.
+
+---
+
+### 15.6 Match & Verification Engine
+
+This is mostly offline, but it touches real files and might influence what you share/advertise.
+
+**Risks:**
+* A bug here could mark wrong files as "verified good" → you propagate garbage.
+* If fingerprinting calls external services, that may leak fragments of your library to third parties.
+
+**Mitigations:**
+
+1. **Local-only verification by default**
+   * Verification should:
+     * Use local metadata, hashes, and optional local fingerprints.
+   * No default calls to external online fingerprinting services.
+   * If remote fingerprint services are supported:
+     * Make them off by default with explicit config + documentation.
+
+2. **Safety checks before advertising**
+   * Only treat a track as "advertisable" when:
+     * It matches the Track's canonical duration within tolerance.
+     * Its hash is stable and (optionally) confirmed by multiple checks.
+   * This helps avoid poisoning the mesh/DHT with mislabeled content.
+
+3. **Guard against trusting unknown fingerprints**
+   * If you support crowd-fingerprint data:
+     * Treat it as one hint among others.
+     * Never rely on it as the sole criteria for verification.
+
+---
+
+### 15.7 Mesh Service & HTTP Gateway Facades
+
+These are major attack surfaces.
+
+**Risks:**
+* Mesh peers call VirtualSoulfind service to cause lots of work.
+* HTTP clients (local or remote) abuse VirtualSoulfind to drive heavy scanning or downloading.
+
+**Mitigations:**
+
+1. **Service-level allowlist & method scope**
+   * Mesh service:
+     * Limit what methods are exposed over mesh:
+       * Prefer read-only metadata queries (virtual releases, missing tracks summary).
+       * Restrict high-cost operations (planning, execute plan) or require special trust/whitelist.
+   * HTTP:
+     * Use gateway service allowlist and per-method/route allowlists:
+       * e.g. allow `GET /virtual/...` widely.
+       * Gate `POST /virtual/plan/.../execute` behind:
+         * API key.
+         * Strict work budgets.
+         * Maybe disabled by default.
+
+2. **Origin-based quotas**
+   * For mesh service:
+     * Use per-peer quotas in combination with H-02's work budget:
+       * Limit how often a given remote peer can ask for plans or candidate lists.
+   * For HTTP:
+     * Use IP-based quotas (via gateway) if you ever allow non-localhost exposure.
+
+3. **Design for read-heavy, write-light exposure**
+   * Prefer exposing:
+     * Metadata reading (catalogue, missing tracks) to external callers.
+   * Keep:
+     * Mutating operations (enqueue intents, execute plans) tightly constrained and auth-protected.
+
+---
+
+### 15.8 Observability & Logging
+
+**Risks:**
+* Over-verbose logs and metrics become a privacy and security liability.
+* Error paths might accidentally dump sensitive state.
+
+**Mitigations:**
+
+1. **Log redaction**
+   * Any logs related to:
+     * Local paths.
+     * External peer identifiers.
+     * Content hashes.
+   * Should be:
+     * Truncated.
+     * Sanitized (e.g. just the basename instead of full path, or just prefix of hash).
+
+2. **Metrics cardinality control**
+   * Avoid labels with:
+     * `ReleaseId`/`TrackId` at high cardinality.
+   * Use aggregated metrics instead:
+     * e.g. success/failure counts per backend, not per track.
+
+3. **Explicit log levels**
+   * Use:
+     * `DEBUG`/`TRACE` for verbose details (opt-in).
+     * `INFO` for high-level events.
+     * `WARN`/`ERROR` for serious issues, but still without sensitive payloads.
+
+---
+
+## 16. Open Questions – Concrete Decisions
+
+Now, specific answers to the open questions.
+
+### 16.1 Audio Fingerprinting – What and How?
+
+**Decision:**
+* Use **Chromaprint/AcoustID-compatible fingerprints** as the default internal fingerprint format.
+* Treat fingerprinting as **optional, local-first**:
+  * By default:
+    * Compute and store fingerprints locally.
+    * Do **not** query external services.
+  * Optionally:
+    * Allow querying AcoustID (or similar) via config:
+      * `VirtualSoulfind.Fingerprinting.UseExternalService = true`
+      * Require explicit API key and a big disclaimer.
+
+**Implementation notes:**
+* Add a `FingerprintId` field to `LocalFile`:
+  * Store the raw or compressed Chromaprint data.
+* Fingerprinting should be:
+  * Batchable:
+    * Run as a low-priority background job, throttled by CPU usage and I/O.
+  * Integrated with work budget:
+    * Treat fingerprinting as "local CPU-heavy work", with its own budget to avoid saturating the machine.
+
+**Security & privacy:**
+* Default: no external fingerprint submissions, so no library content is leaked to third-party services.
+* If user enables external lookups:
+  * Clearly document that some content info (acoustic fingerprints) will be sent to a third party.
+
+---
+
+### 16.2 Shared "Verified Copy Registry" Over Mesh
+
+**Question:** Should verified copies be shared at all, and if so, how?
+
+**Decision:**
+* Yes, but **only in a minimal, privacy-preserving, and trust-scoped way**.
+* Two layers:
+  1. **Local registry (mandatory):**
+     * Full `VerifiedCopy` records stay local.
+  2. **Mesh hints (optional):**
+     * Export only:
+       * `TrackId`/MBID (or a derived content key).
+       * A short fingerprint or hash prefix (for collision detection).
+       * A confidence score.
+     * No direct local paths, no user tags, no Soulseek usernames.
+
+**Mechanics:**
+* A dedicated mesh service (`verified-copy-hints`) that:
+  * Answers queries like:
+    * "Do you have a verified copy of TrackId X?"
+  * Responds with:
+    * Yes/No and, if yes, hash-prefixed fingerprints that can help validate others' copies.
+* Trust scoping:
+  * By default:
+    * Only answer such queries for "trusted peers":
+      * e.g. same pod, same friend list, or peers with high reputation.
+  * Configurable:
+    * `VerifiedCopyHints.Enabled = false` by default.
+    * `VerifiedCopyHints.TrustPolicy = {TrustedOnly, FriendsOnly, All}`.
+
+**Security implications:**
+* Avoid sharing full library contents; you only leak presence of particular MBIDs for peers that already know about them or are in your trust zone.
+* Hints are not enough to reconstruct exact file structure or full library, but help with correctness and validation across mesh participants.
+
+---
+
+### 16.3 Smart Prioritization – What Signals to Use?
+
+**Question:** How does VirtualSoulfind decide "what is most worth fetching/backfilling"?
+
+**Decision:**
+* Use a blend of **local signals** and **public catalogue signals**, but keep it offline-friendly and Soulseek-neutral.
+
+**Signals to combine:**
+
+1. **Local library gaps**
+   * Missing tracks for releases you already partially own.
+   * Upgrades where you have low-quality and know higher-quality releases exist.
+
+2. **User preferences**
+   * Explicit "favorite artists/labels/genres".
+   * Play counts from local player logs if available (or separate scrobbler).
+
+3. **Catalogue metadata**
+   * From MusicBrainz / similar:
+     * Release type (album > single > compilation).
+     * Popularity proxies if available (number of releases, tags like "essential"/"classic", etc.).
+   * We can treat these as static hints cached locally; no need to constantly hit external APIs.
+
+4. **External "importance" feeds (optional)**
+   * ListenBrainz/Last.fm/RYM integration could be offered as:
+     * Optional plugin/module.
+   * Same privacy stance as fingerprinting:
+     * Off by default.
+     * Requires explicit keys and user opt-in.
+
+**Algorithm sketch:**
+* Compute a simple score:
+  * `Score = f(LocalGapWeight, PreferenceWeight, CatalogueWeight, OptionalExternalWeight)`
+* Use that to:
+  * Rank `DesiredRelease`/`DesiredTrack` when the resolver chooses what to process.
+* Keep it deterministic and transparent:
+  * Store the components of the score in the DB for introspection.
+
+**Security & privacy:**
+* By default, prioritization should work purely off:
+  * Local library.
+  * Local preferences.
+  * Cached catalogue metadata.
+* Any external signals must be opt-in + documented.
+
+---
+
+### 16.4 UI – How to Expose This Safely and Usefully?
+
+**Question:** What UI elements make sense, and what are the security concerns?
+
+**Decision:**
+* Provide a **VirtualSoulfind UI layer** within the existing slskdn web UI that is:
+  * Mostly read-only.
+  * Very explicit when actions cause network work.
+
+**UI elements:**
+
+1. **Virtual Releases view**
+   * Displays:
+     * Artists → releases → tracks from the catalogue store.
+   * Shows:
+     * Local status (have/missing/partial, quality).
+     * Verified status (via icons).
+   * Actions:
+     * "Add release to intent queue" (with mode).
+   * No immediate network calls on simple browsing.
+
+2. **Intent Queue dashboard**
+   * Lists `DesiredRelease` / `DesiredTrack` with:
+     * Status.
+     * Mode.
+     * Planning mode (`MeshOnly`, etc.).
+   * Actions:
+     * "Plan & execute now" (if allowed).
+     * "Pause/hold".
+   * Require a confirmation for "execute" with a note summarizing potential network impact.
+
+3. **Planner explanation view**
+   * For a given planned track:
+     * Show the plan: which backends, why, what the constraints are.
+   * Useful for debugging and making it clear exactly how much work will be done.
+
+4. **Settings / Policy view**
+   * Clearly shows:
+     * Per-backend caps.
+     * Modes.
+     * Soulseek limits.
+   * This doubles as documentation and makes misconfiguration more obvious.
+
+**Security considerations:**
+* Any UI that sits on top of the HTTP gateway must:
+  * Use the gateway auth/CSRF correctly.
+  * Not expose endpoints beyond those intended (no generic "run arbitrary service calls" console by default).
+* UI must not automatically:
+  * enqueue thousands of intents without confirmation; nor
+  * schedule automatic executions without clear, opt-in configuration.
 
 ---
 
