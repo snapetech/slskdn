@@ -1,4 +1,4 @@
-﻿// <copyright file="SqliteShareRepository.cs" company="slskd Team">
+// <copyright file="SqliteShareRepository.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -176,7 +176,8 @@ namespace slskd.Shares
 
             conn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS files " +
                 "(maskedFilename TEXT PRIMARY KEY, originalFilename TEXT NOT NULL, size BIGINT NOT NULL, touchedAt TEXT NOT NULL, code INTEGER DEFAULT 1 NOT NULL, " +
-                "extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL);");
+                "extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL, " +
+                "isBlocked INTEGER DEFAULT 0 NOT NULL, isQuarantined INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT);");
         }
 
         /// <summary>
@@ -294,14 +295,26 @@ namespace slskd.Shares
         /// <param name="touchedAt">The timestamp at which the file was last modified, according to the host OS.</param>
         /// <param name="file">The Soulseek.File instance representing the file.</param>
         /// <param name="timestamp">The timestamp to assign to the record.</param>
-        public void InsertFile(string maskedFilename, string originalFilename, DateTime touchedAt, Soulseek.File file, long timestamp)
+        /// <param name="isBlocked">Whether the file is blocked by MCP (T-MCP02).</param>
+        /// <param name="isQuarantined">Whether the file is quarantined by MCP (T-MCP02).</param>
+        /// <param name="moderationReason">The moderation reason, if any (T-MCP02).</param>
+        public void InsertFile(
+            string maskedFilename,
+            string originalFilename,
+            DateTime touchedAt,
+            Soulseek.File file,
+            long timestamp,
+            bool isBlocked = false,
+            bool isQuarantined = false,
+            string moderationReason = null)
         {
             using var conn = GetConnection();
 
-            conn.ExecuteNonQuery("INSERT INTO files (maskedFilename, originalFilename, size, touchedAt, code, extension, attributeJson, timestamp) " +
-                "VALUES(@maskedFilename, @originalFilename, @size, @touchedAt, @code, @extension, @attributeJson, @timestamp) " +
+            conn.ExecuteNonQuery("INSERT INTO files (maskedFilename, originalFilename, size, touchedAt, code, extension, attributeJson, timestamp, isBlocked, isQuarantined, moderationReason) " +
+                "VALUES(@maskedFilename, @originalFilename, @size, @touchedAt, @code, @extension, @attributeJson, @timestamp, @isBlocked, @isQuarantined, @moderationReason) " +
                 "ON CONFLICT DO UPDATE SET originalFilename = excluded.originalFilename, size = excluded.size, touchedAt = excluded.touchedAt, " +
-                "code = excluded.code, extension = excluded.extension, attributeJson = excluded.attributeJson, timestamp = excluded.timestamp;", cmd =>
+                "code = excluded.code, extension = excluded.extension, attributeJson = excluded.attributeJson, timestamp = excluded.timestamp, " +
+                "isBlocked = excluded.isBlocked, isQuarantined = excluded.isQuarantined, moderationReason = excluded.moderationReason;", cmd =>
                 {
                     cmd.Parameters.AddWithValue("maskedFilename", maskedFilename);
                     cmd.Parameters.AddWithValue("originalFilename", originalFilename);
@@ -311,6 +324,9 @@ namespace slskd.Shares
                     cmd.Parameters.AddWithValue("extension", file.Extension);
                     cmd.Parameters.AddWithValue("attributeJson", file.Attributes.ToJson());
                     cmd.Parameters.AddWithValue("timestamp", timestamp);
+                    cmd.Parameters.AddWithValue("isBlocked", isBlocked ? 1 : 0);
+                    cmd.Parameters.AddWithValue("isQuarantined", isQuarantined ? 1 : 0);
+                    cmd.Parameters.AddWithValue("moderationReason", moderationReason ?? (object)DBNull.Value);
                 });
         }
 
@@ -385,13 +401,18 @@ namespace slskd.Shares
 
             try
             {
+                // T-MCP02: Exclude blocked and quarantined files from shares
                 if (string.IsNullOrEmpty(parentDirectory))
                 {
-                    cmd = new SqliteCommand("SELECT maskedFilename, code, size, extension, attributeJson FROM files ORDER BY maskedFilename ASC;", conn);
+                    cmd = new SqliteCommand("SELECT maskedFilename, code, size, extension, attributeJson FROM files " +
+                        "WHERE isBlocked = 0 AND isQuarantined = 0 " +
+                        "ORDER BY maskedFilename ASC;", conn);
                 }
                 else
                 {
-                    cmd = new SqliteCommand("SELECT maskedFilename, code, size, extension, attributeJson FROM files WHERE maskedFilename LIKE @match ORDER BY maskedFilename ASC;", conn);
+                    cmd = new SqliteCommand("SELECT maskedFilename, code, size, extension, attributeJson FROM files " +
+                        "WHERE maskedFilename LIKE @match AND isBlocked = 0 AND isQuarantined = 0 " +
+                        "ORDER BY maskedFilename ASC;", conn);
                     cmd.Parameters.AddWithValue("match", parentDirectory + '%');
                 }
 

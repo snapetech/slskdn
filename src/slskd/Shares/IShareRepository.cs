@@ -106,7 +106,18 @@ namespace slskd.Shares
         /// <param name="touchedAt">The timestamp at which the file was last modified, according to the host OS.</param>
         /// <param name="file">The Soulseek.File instance representing the file.</param>
         /// <param name="timestamp">The timestamp to assign to the record.</param>
-        void InsertFile(string maskedFilename, string originalFilename, DateTime touchedAt, File file, long timestamp);
+        /// <param name="isBlocked">Whether the file is blocked by MCP.</param>
+        /// <param name="isQuarantined">Whether the file is quarantined by MCP.</param>
+        /// <param name="moderationReason">The moderation reason, if any.</param>
+        void InsertFile(
+            string maskedFilename,
+            string originalFilename,
+            DateTime touchedAt,
+            File file,
+            long timestamp,
+            bool isBlocked = false,
+            bool isQuarantined = false,
+            string moderationReason = null);
 
         /// <summary>
         ///     Inserts a scan record at the specified <paramref name="timestamp"/>.

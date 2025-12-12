@@ -41,11 +41,13 @@ namespace slskd.Shares
         /// <param name="fileService"></param>
         /// <param name="shareRepositoryFactory"></param>
         /// <param name="optionsMonitor"></param>
+        /// <param name="moderationProvider">Moderation provider (T-MCP02).</param>
         /// <param name="scanner"></param>
         public ShareService(
             FileService fileService,
             IShareRepositoryFactory shareRepositoryFactory,
             IOptionsMonitor<Options> optionsMonitor,
+            Common.Moderation.IModerationProvider moderationProvider,
             IShareScanner scanner = null)
         {
             var options = optionsMonitor.CurrentValue;
@@ -63,7 +65,8 @@ namespace slskd.Shares
 
             Scanner = scanner ?? new ShareScanner(
                 workerCount: options.Shares.Cache.Workers,
-                fileService: fileService);
+                fileService: fileService,
+                moderationProvider: moderationProvider);
 
             Scanner.StateMonitor.OnChange(cacheState =>
             {

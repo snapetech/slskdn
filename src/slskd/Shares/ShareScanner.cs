@@ -1,4 +1,4 @@
-﻿// <copyright file="ShareScanner.cs" company="slskd Team">
+// <copyright file="ShareScanner.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -67,14 +67,17 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="workerCount"></param>
         /// <param name="fileService"></param>
+        /// <param name="moderationProvider">Moderation provider (T-MCP02).</param>
         /// <param name="soulseekFileFactory"></param>
         public ShareScanner(
             int workerCount,
             FileService fileService,
+            Common.Moderation.IModerationProvider moderationProvider,
             ISoulseekFileFactory soulseekFileFactory = null)
         {
             WorkerCount = workerCount;
             Files = fileService;
+            ModerationProvider = moderationProvider ?? throw new ArgumentNullException(nameof(moderationProvider));
             SoulseekFileFactory = soulseekFileFactory ?? new SoulseekFileFactory(fileService: Files);
 
             Flags = Program.Flags;
@@ -90,6 +93,7 @@ namespace slskd.Shares
         private ILogger Log { get; } = Serilog.Log.ForContext<ShareScanner>();
         private IReadOnlyList<Share> Shares { get; set; }
         private ISoulseekFileFactory SoulseekFileFactory { get; }
+        private Common.Moderation.IModerationProvider ModerationProvider { get; }
         private IManagedState<SharedFileCacheState> State { get; } = new ManagedState<SharedFileCacheState>();
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1);
         private CancellationTokenSource CancellationTokenSource { get; set; }
@@ -241,7 +245,7 @@ namespace slskd.Shares
                     workers.Add(new ChannelReader<string>(
                         channel: channel,
                         cancellationToken: cancellationToken,
-                        handler: (directory) =>
+                        handler: async (directory) =>
                         {
                             Log.Debug("Starting scan of {Directory} ({Current}/{Total})", directory, current + 1, unmaskedDirectories.Count);
 
@@ -280,7 +284,70 @@ namespace slskd.Shares
                                         continue;
                                     }
 
-                                    repository.InsertFile(maskedFilename: file.Filename, originalFilename, touchedAt: info.LastWriteTimeUtc, file, timestamp);
+                                    // T-MCP02: Check file against moderation provider before marking as shareable
+                                    bool isBlocked = false;
+                                    bool isQuarantined = false;
+                                    string moderationReason = null;
+
+                                    try
+                                    {
+                                        // Compute hash for moderation (use simple hash for now)
+                                        var fileHash = await Files.ComputeHashAsync(originalFilename, cancellationToken);
+
+                                        var localFileMetadata = new Common.Moderation.LocalFileMetadata
+                                        {
+                                            Id = Path.GetFileName(originalFilename), // Sanitized: filename only
+                                            SizeBytes = info.Length,
+                                            PrimaryHash = fileHash,
+                                            MediaInfo = $"File: {file.Extension}"
+                                        };
+
+                                        var decision = await ModerationProvider.CheckLocalFileAsync(localFileMetadata, cancellationToken);
+
+                                        if (decision.Verdict == Common.Moderation.ModerationVerdict.Blocked)
+                                        {
+                                            isBlocked = true;
+                                            moderationReason = decision.Reason;
+                                            filteredFiles++;
+
+                                            // 🔒 SECURITY: Log sanitized info only (no full path, no full hash)
+                                            Log.Warning(
+                                                "[SECURITY] MCP blocked file | Filename={Filename} | Size={Size} | Reason={Reason}",
+                                                Path.GetFileName(originalFilename),
+                                                info.Length,
+                                                decision.Reason);
+                                        }
+                                        else if (decision.Verdict == Common.Moderation.ModerationVerdict.Quarantined)
+                                        {
+                                            isQuarantined = true;
+                                            moderationReason = decision.Reason;
+                                            filteredFiles++;
+
+                                            // 🔒 SECURITY: Log sanitized info only
+                                            Log.Warning(
+                                                "[SECURITY] MCP quarantined file | Filename={Filename} | Size={Size} | Reason={Reason}",
+                                                Path.GetFileName(originalFilename),
+                                                info.Length,
+                                                decision.Reason);
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Log.Error(ex, "[SECURITY] MCP check failed for file | Filename={Filename}", Path.GetFileName(originalFilename));
+                                        // Note: Continue with isBlocked=false per failsafe logic in CompositeModerationProvider
+                                    }
+
+                                    // Always insert the file (even if blocked/quarantined), but mark it appropriately
+                                    // This allows tracking of blocked content without making it shareable
+                                    repository.InsertFile(
+                                        maskedFilename: file.Filename,
+                                        originalFilename,
+                                        touchedAt: info.LastWriteTimeUtc,
+                                        file,
+                                        timestamp,
+                                        isBlocked: isBlocked,
+                                        isQuarantined: isQuarantined,
+                                        moderationReason: moderationReason);
                                 }
                             }
                             catch (Exception ex)
