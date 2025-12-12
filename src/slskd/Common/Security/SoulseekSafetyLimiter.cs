@@ -39,7 +39,7 @@ public interface ISoulseekSafetyLimiter
 public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
 {
     private readonly ILogger<SoulseekSafetyLimiter> _logger;
-    private readonly IOptionsMonitor<Options.SoulseekOptions> _options;
+    private readonly IOptionsMonitor<slskd.Options> _options;
     
     private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _searchWindows = new();
     private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _browseWindows = new();
@@ -47,7 +47,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     private const int WindowDurationSeconds = 60;
 
     public SoulseekSafetyLimiter(
-        IOptionsMonitor<Options.SoulseekOptions> options,
+        IOptionsMonitor<slskd.Options> options,
         ILogger<SoulseekSafetyLimiter> logger)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -57,7 +57,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     /// <inheritdoc/>
     public bool TryConsumeSearch(string source = "user")
     {
-        var opts = _options.CurrentValue.Safety;
+        var opts = _options.CurrentValue.Soulseek.Safety;
         
         if (!opts.Enabled || opts.MaxSearchesPerMinute <= 0)
         {
@@ -88,7 +88,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     /// <inheritdoc/>
     public bool TryConsumeBrowse(string source = "user")
     {
-        var opts = _options.CurrentValue.Safety;
+        var opts = _options.CurrentValue.Soulseek.Safety;
         
         if (!opts.Enabled || opts.MaxBrowsesPerMinute <= 0)
         {
@@ -119,7 +119,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     /// <inheritdoc/>
     public SoulseekSafetyMetrics GetMetrics()
     {
-        var opts = _options.CurrentValue.Safety;
+        var opts = _options.CurrentValue.Soulseek.Safety;
         
         var searchesBySource = _searchWindows.ToDictionary(
             kvp => kvp.Key.Replace("search:", ""),
