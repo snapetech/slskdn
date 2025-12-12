@@ -34,9 +34,12 @@ Multi-Domain:         █████░░░░░░░░░░░░░░�
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
 VirtualSoulfind v2:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/100+ tasks complete) 📋
 Proxy/Relay:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
+Book Domain:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
+Video Domain:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
+Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: █████░░░░░░░░░░░░░░░  22% (21/~150 tasks complete)
+Overall: ████░░░░░░░░░░░░░░░░  13% (21/~160 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 ```
@@ -593,6 +596,246 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 - [ ] Planner integration (skip banned peers)
 - [ ] Work budget integration (reject/limit banned peers)
 - [ ] Tests: peer events change reputation, banned peers excluded
+
+---
+
+## 📋 Phase F: Social Federation / ActivityPub Integration (T-FED Series)
+
+**Status**: 📋 DOCUMENTED, Not Started  
+**Progress**: 0/10 (0%)  
+**Priority**: LOW (Phase F - AFTER MCP, Multi-Domain, Proxy/Relay, Book/Video domains)  
+**Last Updated**: December 11, 2025
+
+> **Design Doc**: See `docs/social-federation-design.md` for full architecture
+
+### Global Requirements for ALL T-FED Tasks
+
+**Mandatory constraints for all social federation work:**
+
+1. **Metadata-only**: ActivityPub is NEVER used to transport media files
+   - Content distribution remains on Soulseek (music-only), mesh, torrent, HTTP, or local disk
+
+2. **Privacy modes** (mandatory):
+   - `Hermit` (default) – No actors, no inbox/outbox, no federation
+   - `FriendsOnly` – Federation restricted to explicit instance/actor allowlists
+   - `Public` – Normal federation with allow/deny lists
+   - All components MUST check `SocialFederation.Mode` before exposing endpoints
+
+3. **Identity separation**:
+   - ActivityPub actors use their own keypairs, separate from mesh/pod identities
+   - No automatic mapping between mesh peers/IPs and ActivityPub actors
+   - Any alias mapping MUST be explicit config, not inferred
+   - Logs MUST NOT correlate mesh identities/IPs to ActivityPub handles
+
+4. **Abuse/spam/DoS hardening**:
+   - Per-instance and per-actor rate limits integrated with work-budget system
+   - Inbound ActivityPub inboxes MUST have bounded queue sizes
+   - Oversized, malformed, or unsupported activities MUST be rejected early
+
+5. **Logging/metrics hygiene**:
+   - No full ActivityPub JSON or raw headers in logs
+   - No full actor handles in logs except where explicitly gated for debug
+   - Metrics MUST use low-cardinality labels only (instanceDomain, result, objectType, privacyMode)
+
+6. **MCP / reputation integration**:
+   - All inbound social content and sources are untrusted by default
+   - Federation sources (instances/actors) feed into MCP/reputation as `SocialSource` events
+   - Social trust signals MUST NOT override hard-block decisions or core security policies
+
+### H-FED01: Federation Abuse, Spam, and DoS Protection 📋
+**Status**: 📋 Planned  
+**Dependencies**: H-02 ✅ (Work Budget), T-MCP01 ✅ (MCP Core)  
+**Priority**: CRITICAL (must be complete before any federation features)
+
+- [ ] Implement rate limiting for federation:
+  - [ ] Configure per-instance and per-actor quotas (activities per minute/hour/day)
+  - [ ] Wire into global work-budget system (no separate limiter)
+- [ ] Implement inbox queue limits:
+  - [ ] Maximum number of pending activities per actor/instance
+  - [ ] Maximum total storage for unprocessed activities
+  - [ ] Define overflow behavior (reject or drop)
+- [ ] Implement basic validation:
+  - [ ] Reject activities above configured maximum size
+  - [ ] Reject malformed JSON-LD or missing required fields
+  - [ ] Reject unsupported object types unless explicitly allowed
+- [ ] Logging/metrics integration:
+  - [ ] Sanitized log entries for rate limit/queue limit hits
+  - [ ] Metrics for `rejected_rate_limit`, `rejected_validation`, etc. (no PII)
+- [ ] Tests:
+  - [ ] Simulate spammy sources, ensure throttling without destabilizing pod
+  - [ ] Validate default configuration is conservative and safe
+
+### T-FED01: Social Federation Foundation (ActivityPub Server Skeleton) 📋
+**Status**: 📋 Planned  
+**Dependencies**: H-FED01, T-SF01-04 ✅ (Service Fabric), T-MCP01 ✅
+
+- [ ] Respect `SocialFederation.Mode`:
+  - [ ] `Hermit`: Do not expose WebFinger, actor documents, inbox, or outbox
+  - [ ] `FriendsOnly` / `Public`: Expose endpoints with filtering
+- [ ] Implement core ActivityPub components:
+  - [ ] WebFinger endpoint (`/.well-known/webfinger`)
+  - [ ] Actor document endpoints (`/actors/{domain}`)
+  - [ ] Inbox endpoint (`/actors/{domain}/inbox`)
+  - [ ] Outbox endpoint (`/actors/{domain}/outbox`)
+- [ ] Keypair management:
+  - [ ] Generate separate Ed25519/RSA keypairs per actor
+  - [ ] Store separately from mesh/pod keys
+  - [ ] Protect private keys with `IDataProtectionProvider`
+- [ ] HTTP signature verification (inbound)
+- [ ] HTTP signature signing (outbound)
+- [ ] Logging: No full AP payloads or raw headers, only minimal sanitized summaries
+- [ ] Tests: Verify actors not exposed in `Hermit` mode
+
+### T-FED02: Library Actors & WorkRef Object Types 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-FED01, T-VC01 ✅ (ContentDomain)
+
+- [ ] Define WorkRef object type:
+  - [ ] JSON-LD context and schema
+  - [ ] Fields: domain, externalIds, title, creator, year, metadata
+  - [ ] Security: NO local paths, hashes, mesh peer IDs, IP addresses
+- [ ] Implement Library Actors (one per domain):
+  - [ ] `@music@{instance}` (Music domain)
+  - [ ] `@books@{instance}` (Books domain)
+  - [ ] `@movies@{instance}` (Movies domain)
+  - [ ] `@tv@{instance}` (TV domain)
+- [ ] Actor document generation
+- [ ] Privacy mode awareness (actors report mode via internal metadata)
+- [ ] Tests:
+  - [ ] Verify WorkRef serialization never includes sensitive data
+  - [ ] Verify actors not exposed when `Mode = Hermit`
+
+### T-FED03: Outgoing Publishing from VirtualSoulfind 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-FED02, T-VC04 (domain-aware planner), T-MCP03 (IsAdvertisable)
+
+- [ ] Integrate per-domain and per-list publish policies:
+  - [ ] Configure which domains are publishable
+  - [ ] Per-list visibility: `private`, `circle:<name>`, `public`
+- [ ] Publishing logic:
+  - [ ] Respect `SocialFederation.Mode` (no publishing in `Hermit`, restricted in `FriendsOnly`)
+  - [ ] Skip publishing for `private` lists
+  - [ ] Restrict delivery for `circle:<name>` lists
+- [ ] Activity generation:
+  - [ ] Create Collection activities for lists
+  - [ ] Add WorkRef activities when items added to lists
+  - [ ] Update/Remove activities for list modifications
+- [ ] Delivery (fan-out):
+  - [ ] HTTP signatures for authentication
+  - [ ] Async queue with work-budget integration
+  - [ ] Graceful failure on remote errors
+- [ ] MCP integration: No WorkRef published for blocked/quarantined content
+- [ ] Tests:
+  - [ ] Verify `private` lists never generate outbound Activities
+  - [ ] Verify `circle:<name>` lists only deliver to that circle
+
+### T-FED04: Social Ingestion (Lists and WorkRefs → Intents & Lists) 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-FED02, T-MCP01 ✅
+
+- [ ] Apply `SocialFederation.Mode` and `H-FED01` protections:
+  - [ ] Ignore/reject inbound Activities in `Hermit` mode
+  - [ ] Apply per-instance/actor rate limits and inbox queue limits
+- [ ] Ingestion filtering:
+  - [ ] Only process Activities from allowed instances/actors in `FriendsOnly` mode
+  - [ ] Respect deny lists in `Public` mode
+- [ ] Apply MCP to:
+  - [ ] Instance/actor metadata (for abuse)
+  - [ ] Note content (e.g. abusive titles)
+- [ ] WorkRef → ContentWorkId mapping:
+  - [ ] Map external IDs (MBID, ISBN, TMDB, etc.) to local identifiers
+  - [ ] Create VirtualSoulfind acquisition intents for missing works
+- [ ] Tests:
+  - [ ] Verify no ingestion in `Hermit` mode
+  - [ ] Verify `FriendsOnly` mode respects allowlists/denylists
+  - [ ] Verify ingestion halts/throttles under simulated spam
+
+### T-FED05: Federated Comments & Social Signals 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-FED04, T-MCP04 (Peer Reputation)
+
+- [ ] Ingest comments/annotations from social sources
+- [ ] Store in a way that allows MCP to hide/remove if source is banned
+- [ ] Aggregate social signals (likes, shares, list appearances)
+- [ ] Integrate `SocialSource` reputation:
+  - [ ] Exclude signals from abusive/low-reputation sources
+  - [ ] Retroactively update signal aggregation when reputation changes
+- [ ] Ranking integration:
+  - [ ] Social signals as soft hints only (never override MCP, quality, or user intent)
+- [ ] Tests:
+  - [ ] Verify abusive sources don't influence recommendations after reputation downgrade
+  - [ ] Verify reputation changes affect annotation display/usage
+
+### T-FED06: Circles and Per-List Visibility (OPTIONAL) 📋
+**Status**: 📋 Planned (OPTIONAL feature)  
+**Dependencies**: T-FED03  
+**Priority**: OPTIONAL - Implement only if base federation is stable
+
+- [ ] Implement **circles** concept:
+  - [ ] Named groups of instances/actors (e.g., `close_friends`, `trusted_instances`, `public_fediverse`)
+  - [ ] Configuration for circle membership
+- [ ] Extend list metadata with `visibility` field:
+  - [ ] `private` (local only)
+  - [ ] `circle:<name>` (restricted to that circle)
+  - [ ] `public` (normal AP publication)
+- [ ] Modify publishing logic:
+  - [ ] Deliver list-related Activities only to appropriate circle
+  - [ ] No leaks between circles or to public
+- [ ] Tests:
+  - [ ] Verify `circle:close_friends` list only delivers to that circle
+  - [ ] Verify `private` lists do not produce outbound Activity
+
+### T-FED07: Ephemeral Rooms (Listening/Reading/Watching Rooms) (OPTIONAL) 📋
+**Status**: 📋 Planned (OPTIONAL feature)  
+**Dependencies**: T-FED02, T-FED06 (circles)  
+**Priority**: OPTIONAL - Implement only if base federation is stable
+
+- [ ] Implement ephemeral "room" model:
+  - [ ] Room ID, optional circle association, short-lived lifetime
+- [ ] Allow local users/pods to "join" room and publish WorkRefs as ephemeral status
+- [ ] Federate room participation as lightweight status Activities
+- [ ] UI integration: Show other participants by ActivityPub handles (opt-in)
+- [ ] Privacy and moderation:
+  - [ ] Room visibility bound by circles/privacy mode
+  - [ ] MCP can hide room content or ban abusive participants
+- [ ] Metadata-only: No streaming, no media transport
+
+### T-FED08: Shadow Following of Lists (Anonymous Mirroring) (OPTIONAL) 📋
+**Status**: 📋 Planned (OPTIONAL feature)  
+**Dependencies**: T-FED04, T-PR02 (Catalogue Fetch)  
+**Priority**: OPTIONAL - Privacy enhancement
+
+- [ ] Implement configuration-driven "shadow following":
+  - [ ] Operator specifies Collection URL to mirror
+  - [ ] `SocialIngestionService` polls URL using safe HTTP (catalogue-fetch style)
+- [ ] Do not emit `Follow` activities from local actors
+- [ ] Do not add remote actors/instances to `following` lists
+- [ ] Behavior:
+  - [ ] Mirror remote list into local list
+  - [ ] Map WorkRefs to local `ContentWorkId`s
+  - [ ] Respect MCP, allow/deny lists, rate limits
+- [ ] Tests:
+  - [ ] Verify shadow-followed lists mirrored without exposing local actor as follower
+
+### T-FED09: Federated Tags and Meta-Lists (OPTIONAL) 📋
+**Status**: 📋 Planned (OPTIONAL feature)  
+**Dependencies**: T-FED05  
+**Priority**: OPTIONAL - Discovery enhancement
+
+- [ ] Implement federated tagging:
+  - [ ] Allow Notes/annotations with WorkRefs to carry sanitized tags/keywords
+  - [ ] Aggregate tags per `ContentWorkId` from allowed, non-abusive sources
+- [ ] Provide tagging view per work in UI
+- [ ] Implement meta-lists:
+  - [ ] Lists of lists (Collections of Collections)
+  - [ ] Reference WorkRefs and/or other Collection IDs
+  - [ ] Metadata-only
+- [ ] Integrate with VirtualSoulfind:
+  - [ ] Tags and meta-lists influence recommendation (soft hints only)
+  - [ ] MCP and reputation can hide tags/lists from abusive sources
+- [ ] Tests:
+  - [ ] Validate tags from banned/abusive sources are excluded
+  - [ ] Validate meta-lists don't leak file-level or peer-level information
 
 ---
 
