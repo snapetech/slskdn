@@ -323,7 +323,245 @@ Prefer spinning up a new pod for a new realm and:
 
 ---
 
-## 9. Example Configurations
+## 9. What Pods Share (By Realm Configuration)
+
+This section explicitly defines what pods share under different realm configurations.
+
+### 9.1 Pods in the Same Realm
+
+**Assumption**: Same `realm.id`, same `governance_roots`, same `bootstrap_nodes`.
+
+#### Always Potentially Shared (Subject to Config/ACLs)
+
+**Transport / Overlay:**
+- ✅ Share the same mesh/DHT overlay namespace
+- ✅ Peer discovery within that overlay (subject to privacy constraints)
+- ✅ Can find each other as peers for content routing/signaling (gated by domain, policies)
+
+**Result**: Pods can discover and route to each other within the realm's overlay.
+
+---
+
+**Social / ActivityPub:**
+- ✅ Can follow each other's actors
+- ✅ Read/write posts across pods (like Mastodon instances in same fediverse)
+- ✅ Show each other's content in timelines (subject to moderation)
+
+**Result**: Social federation works naturally within the realm.
+
+---
+
+**Governance Feeds (F1000, Policy Profiles):**
+- ✅ Can subscribe to the same governance feeds:
+  - F1000 registry
+  - Policy profiles
+  - Moderation lists
+- ✅ Treat those as advisory inputs
+- ⚠️ Nothing forces them to apply policies—local admin still decides
+
+**Result**: Shared governance as advisory input, not mandatory.
+
+---
+
+**Gossip Feeds (HealthFeed / AbuseFeed):**
+- ✅ Can publish and consume realm-scoped health/abuse signals
+- ✅ Use those signals as hints to adjust:
+  - HealthScore
+  - Routing
+  - MCP heuristics
+
+**Result**: Optional health/abuse signal sharing for network resilience.
+
+---
+
+**Replication (Small Stuff Only):**
+- ✅ If enabled, can replicate **small, whitelisted objects**:
+  - Governance docs
+  - Moderation hash lists
+  - Small metadata constructs (lists, tags)
+- ❌ Big media remains non-replicated unless `FullCopy/Chunked` explicitly enabled (future)
+
+**Result**: Minimal replication for high-value, small objects only.
+
+---
+
+**Content / File-Sharing:**
+- ✅ Depending on domains and policies:
+  - Music/movie/book/etc. content can be fetched across pods
+  - Using allowed transports (Soulseek-like, HTTP, etc.)
+- ✅ This is the whole point of the mesh: get content from multiple pods in same realm
+
+**Result**: Distributed content access within realm.
+
+---
+
+#### Never Shared by Default (Same Realm)
+
+Even in the same realm, pods **do NOT** automatically share:
+
+**Pod-Local Secrets:**
+- ❌ Private keys (pod identity, AP actors)
+- ❌ API tokens
+- ❌ Database credentials
+
+**MCP Internals:**
+- ❌ Model keys, provider configs
+- ❌ Exact thresholds, internal logs
+- ❌ LLM endpoints or credentials
+
+**Pod-Local Admin:**
+- ❌ Who is an admin on that pod
+- ❌ Local ACLs/roles
+- ❌ Admin passwords/credentials
+
+**Private User Data:**
+- ❌ DM content (if DMs implemented)
+- ❌ Non-public library details
+- ❌ Private user preferences
+
+**Result**: Secrets, admin, and private data remain local by design. Sharing requires explicit API and policy choices.
+
+---
+
+### 9.2 Pods in Different Realms (No Bridge, No Peering)
+
+**Assumption**: Different `realm.id`s, no bridge configuration.
+
+#### By Default: Share Nothing at Protocol Level
+
+**No Overlay:**
+- ❌ DHT/mesh namespaces are different (`realm.id` used as namespace salt)
+- ❌ They don't see each other as peers
+- ❌ No automatic peer discovery
+
+**No Governance:**
+- ❌ Their F1000/governance roots are unrelated
+- ❌ Governance docs from one are irrelevant to the other
+- ❌ No shared governance feeds
+
+**No Gossip:**
+- ❌ Health/abuse feeds are realm-tagged
+- ❌ Feeds from other realms ignored by default
+
+**No Replication:**
+- ❌ ReplicatorService won't consider peers outside realm
+- ❌ No automatic replication across realms
+
+**No Content Routing:**
+- ❌ Planner doesn't consider peers from other realms
+- ❌ No automatic content discovery
+
+**Result**: Complete isolation at protocol level. Different realms = different universes.
+
+---
+
+**They MIGHT still talk as normal HTTP servers:**
+- ✅ If you manually point one at the other (generic web, not realm logic)
+- ✅ This is like any two web servers on the internet
+- ⚠️ Not part of realm protocol, just HTTP
+
+---
+
+### 9.3 Pods in Different Realms (With Bridge / Multi-Realm Pod)
+
+**Assumption**: Different `realm.id`s, `bridge.enabled = true`, specific `allowed_flows` configured.
+
+#### If You Allow `activitypub:read/write`
+
+**Bridge pod can:**
+- ✅ Read AP posts from Realm A and:
+  - Show them locally to users in Realm B
+  - Optionally re-post/share them into Realm B's social feed
+- ✅ Vice versa (depending on allowed flows)
+
+**What IS shared:**
+- ✅ Public social posts
+- ✅ Public actor profiles
+- ✅ Whatever AP objects bridge is configured to fetch/forward
+
+**What is NOT shared (unless you deliberately break your own rules):**
+- ❌ Governance roots / F1000 membership
+- ❌ Internal MCP decisions
+- ❌ Pod-local secrets
+- ❌ Private user data
+
+**Result**: Controlled social federation across realms (like bridging Mastodon instances from different servers).
+
+---
+
+#### If You Allow `metadata:read`
+
+**Bridge pod can:**
+- ✅ Query metadata/search endpoints in Realm A
+- ✅ Use that data in Realm B (e.g., for discovery)
+
+**What IS shared:**
+- ✅ Public metadata (titles, tags, indexes, etc.) exposed via APIs
+
+**What is NOT shared:**
+- ❌ Private user-specific info
+- ❌ Internal DB schemas or secrets
+- ❌ Non-public library details
+
+**Result**: Cross-realm discovery without exposing private data.
+
+---
+
+#### If You Later Allow `gossip:*` in Peering
+
+**Bridge pod can:**
+- ✅ Read health/abuse feeds from Realm A
+- ✅ Optionally inject them as weak advisory signals in Realm B
+
+**Still:**
+- ⚠️ Realm B is free to ignore them
+- ❌ This does NOT merge the realms' governance
+- ❌ This does NOT make Realm A authoritative for Realm B
+
+**Result**: Optional health hints across realms, purely advisory.
+
+---
+
+#### If You Were Reckless and Allowed `governance:root` or `replication:fullcopy`
+
+**You'd be saying:**
+- 💀 "Treat Realm A's governance as authoritative in B" OR
+- 💀 "Allow full-copy replication of B's content into A or vice versa"
+
+**We've already marked these as:**
+- ❌ **SHOULD BE DENIED BY DEFAULT**
+- ⚠️ Only allowed if you VERY explicitly decide that's what you want
+- 🚨 High risk of undermining realm isolation
+
+**Result**: Don't do this unless you're intentionally merging realms.
+
+---
+
+### 9.4 Summary Matrix
+
+| Layer/Feature | Same Realm | Different Realms (No Bridge) | Different Realms (With Bridge) |
+|---------------|------------|------------------------------|--------------------------------|
+| **Mesh/DHT Overlay** | ✅ Shared namespace | ❌ Separate namespaces | ❌ Separate (bridge doesn't merge overlays) |
+| **Peer Discovery** | ✅ Automatic | ❌ None | ❌ None (bridge is single pod, not discovery) |
+| **Social/ActivityPub** | ✅ Natural federation | ❌ None | ✅ If `activitypub:*` allowed |
+| **Governance (F1000, Profiles)** | ✅ Shared (advisory) | ❌ Separate roots | ❌ Separate (unless reckless `governance:root`) |
+| **Gossip (Health/Abuse)** | ✅ Shared realm feeds | ❌ Realm-tagged, ignored | ✅ If `gossip:*` allowed (advisory) |
+| **Replication (Small Objects)** | ✅ If enabled | ❌ Realm-scoped only | ❌ Separate (unless reckless `replication:fullcopy`) |
+| **Content Routing** | ✅ Cross-pod within realm | ❌ None | ❌ None (bridge doesn't route content automatically) |
+| **Metadata/Search** | ✅ Via APIs | ❌ None | ✅ If `metadata:read` allowed |
+| **Pod Secrets** | ❌ Never shared | ❌ Never shared | ❌ Never shared |
+| **MCP Internals** | ❌ Local only | ❌ Local only | ❌ Local only |
+| **Local Admin** | ❌ Local only | ❌ Local only | ❌ Local only |
+| **Private User Data** | ❌ Local only (unless explicit API) | ❌ Local only | ❌ Local only |
+
+**Key Takeaways:**
+- **Same realm**: Deep potential federation (overlay, social, gossip, small replication), but secrets/admin/private data remain local
+- **Different realms (no bridge)**: Complete isolation at protocol level (air-gapped)
+- **Different realms (with bridge)**: Only specified flows allowed (social, metadata, optionally gossip), governance/secrets remain isolated
+
+---
+
+## 10. Example Configurations
 
 ### Single-Realm Pod (Most Common)
 
