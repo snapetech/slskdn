@@ -2371,18 +2371,27 @@ Federation security covers:
 
 ### V2-P6: Advanced Features (Future)
 
-#### T-V2-P6-01: Library Reconciliation 📋
-**Status**: 📋 Planned (future)  
+#### T-V2-P6-01: Library Reconciliation ✅
+**Status**: ✅ COMPLETE  
 **Priority**: 🟢 LOW  
-**Dependencies**: V2-P5  
-**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 9.4
+**Dependencies**: V2-P5 ✅  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 9.4  
+**Tests**: 13/13 passing
 
-- [ ] Implement gap analysis:
-  - [ ] Find missing tracks for partial releases
-  - [ ] Suggest upgrades (low quality → better)
-- [ ] Add tests
+- [x] Implement gap analysis:
+  - [x] FindMissingTracksForReleaseAsync() - identifies missing tracks
+  - [x] ReleaseGapAnalysis DTO (completion %, isPartial flag)
+  - [ ] AnalyzeAllReleasesAsync() - deferred (needs pagination)
+- [x] Implement upgrade detection:
+  - [x] UpgradeSuggestion DTO (quality improvement data)
+  - [ ] FindUpgradeOpportunitiesAsync() - deferred (needs pagination)
+- [x] Orphan detection:
+  - [x] FindTracksWithoutLocalCopiesAsync()
+  - [x] FindOrphanedLocalFilesAsync()
+- [x] Comprehensive tests (13 tests)
 
-**Reconciliation**: Find gaps and upgrade opportunities
+**Reconciliation**: Find gaps and upgrade opportunities  
+**Note**: Core gap analysis complete, pagination-dependent features deferred
 
 #### T-V2-P6-02: Smart Prioritization 📋
 **Status**: 📋 Planned (future)  
@@ -2406,12 +2415,12 @@ Federation security covers:
 - **V2-P3**: ✅ 2/2 tasks (Match & verification - verified copy complete!)
 - **V2-P4**: ✅ 6/6 tasks (All backend implementations)
 - **V2-P5**: ✅ 3/3 tasks (Integration & orchestration)
-- **V2-P6**: 📋 0/2 tasks (Future enhancements)
+- **V2-P6**: 🚧 1/2 tasks (Advanced features - reconciliation done!)
 
-**Total Phase 4**: ✅ 18/20 core tasks complete (90%), 2 future/deferred
-**Tests**: 160/160 passing (100% pass rate)
-**Production Files**: 60 (+2 LocalFile, VerifiedCopy)
-**Test Files**: 17 (+1 LocalFileAndVerifiedCopyTests)
+**Total Phase 4**: ✅ 19/20 core tasks complete (95%), 1 future/deferred
+**Tests**: 173/173 passing (100% pass rate)
+**Production Files**: 62 (+2 reconciliation service)
+**Test Files**: 18 (+1 LibraryReconciliationServiceTests)
 - **V2-P6**: 2 tasks (Advanced features)
 - **Total**: 17 core tasks (vs 100+ original estimate - scoped down to MVP)
 
