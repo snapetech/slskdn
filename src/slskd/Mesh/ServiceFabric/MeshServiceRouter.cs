@@ -16,6 +16,7 @@ public class MeshServiceRouter
 {
     private readonly ILogger<MeshServiceRouter> _logger;
     private readonly ViolationTracker? _violationTracker;
+    private readonly SecurityEventLogger? _securityLogger;
     private readonly MeshServiceFabricOptions _options;
     private readonly ConcurrentDictionary<string, IMeshService> _services = new();
     
@@ -31,10 +32,12 @@ public class MeshServiceRouter
     public MeshServiceRouter(
         ILogger<MeshServiceRouter> logger,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
-        ViolationTracker? violationTracker = null)
+        ViolationTracker? violationTracker = null,
+        SecurityEventLogger? securityLogger = null)
     {
         _logger = logger;
         _violationTracker = violationTracker;
+        _securityLogger = securityLogger;
         _options = options.Value;
     }
 
@@ -137,6 +140,19 @@ public class MeshServiceRouter
             // 4. Check per-service rate limit
             if (!CheckServiceRateLimit(remotePeerId, call.ServiceName))
             {
+                var key = $"{remotePeerId}:{call.ServiceName}";
+                var (count, _) = _perPeerCallCounts.GetValueOrDefault(key);
+                var serviceLimit = _options.PerServiceRateLimits.GetValueOrDefault(
+                    call.ServiceName, 
+                    _options.DefaultMaxCallsPerMinute);
+                
+                _securityLogger?.LogRateLimitViolation(
+                    remotePeerId,
+                    call.ServiceName,
+                    "PerService",
+                    count,
+                    serviceLimit);
+                
                 _logger.LogWarning(
                     "[ServiceRouter] Service rate limit exceeded for peer: {PeerId}, service: {ServiceName}",
                     remotePeerId, call.ServiceName);
@@ -166,6 +182,12 @@ public class MeshServiceRouter
             var health = _serviceHealth.GetOrAdd(call.ServiceName, _ => new ServiceHealthTracker());
             if (health.IsCircuitOpen())
             {
+                _securityLogger?.LogCircuitBreakerStateChange(
+                    call.ServiceName,
+                    "Open",
+                    health.ConsecutiveFailures,
+                    health.CircuitOpenedAt);
+                
                 _logger.LogWarning(
                     "[ServiceRouter] Circuit breaker open for service: {ServiceName} (failures: {Failures}, opened: {OpenedAt})",
                     call.ServiceName, health.ConsecutiveFailures, health.CircuitOpenedAt);
@@ -205,6 +227,12 @@ public class MeshServiceRouter
             }
             catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
+                _securityLogger?.LogServiceTimeout(
+                    remotePeerId,
+                    call.ServiceName,
+                    call.Method,
+                    TimeSpan.FromSeconds(timeoutSeconds));
+                
                 _logger.LogWarning(
                     "[ServiceRouter] Service call timed out: {ServiceName}.{Method}",
                     call.ServiceName, call.Method);
@@ -219,6 +247,12 @@ public class MeshServiceRouter
             }
             catch (Exception ex)
             {
+                _securityLogger?.LogServiceException(
+                    remotePeerId,
+                    call.ServiceName,
+                    call.Method,
+                    ex);
+                
                 _logger.LogError(
                     ex,
                     "[ServiceRouter] Service handler threw exception: {ServiceName}.{Method}",

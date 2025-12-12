@@ -20,6 +20,7 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
     private readonly IMeshDhtClient _dhtClient;
     private readonly IMeshServiceDescriptorValidator _validator;
     private readonly MeshServiceFabricOptions _options;
+    private readonly SecurityEventLogger? _securityLogger;
 
     // Discovery metrics: peerId -> (queryCount, serviceNamesQueried, windowStart)
     private readonly ConcurrentDictionary<string, DiscoveryStats> _discoveryMetrics = new();
@@ -28,12 +29,14 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         ILogger<DhtMeshServiceDirectory> logger,
         IMeshDhtClient dhtClient,
         IMeshServiceDescriptorValidator validator,
-        Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options)
+        Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
+        SecurityEventLogger? securityLogger = null)
     {
         _logger = logger;
         _dhtClient = dhtClient;
         _validator = validator;
         _options = options.Value;
+        _securityLogger = securityLogger;
     }
 
     public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByNameAsync(
@@ -225,6 +228,12 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         // Pattern 1: Enumeration (querying many different service names)
         if (stats.ServiceNamesQueried.Count > 10)
         {
+            _securityLogger?.LogDiscoveryAbuse(
+                peerId, 
+                "Enumeration", 
+                stats.QueryCount, 
+                stats.ServiceNamesQueried.Count);
+            
             _logger.LogWarning(
                 "[ServiceDirectory] Possible enumeration attack from {PeerId}: {Count} unique service names queried in last minute",
                 peerId, stats.ServiceNamesQueried.Count);
@@ -233,6 +242,12 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         // Pattern 2: Rapid-fire queries (too many queries per minute)
         if (stats.QueryCount > 50)
         {
+            _securityLogger?.LogDiscoveryAbuse(
+                peerId, 
+                "RapidFire", 
+                stats.QueryCount, 
+                stats.ServiceNamesQueried.Count);
+            
             _logger.LogWarning(
                 "[ServiceDirectory] Possible discovery spam from {PeerId}: {Count} queries in last minute",
                 peerId, stats.QueryCount);
@@ -241,6 +256,12 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         // Pattern 3: Scanning behavior (combination of high count + high diversity)
         if (stats.QueryCount > 30 && stats.ServiceNamesQueried.Count > 5)
         {
+            _securityLogger?.LogDiscoveryAbuse(
+                peerId, 
+                "Scanning", 
+                stats.QueryCount, 
+                stats.ServiceNamesQueried.Count);
+            
             _logger.LogWarning(
                 "[ServiceDirectory] Possible scanning behavior from {PeerId}: {QueryCount} queries, {UniqueCount} unique services",
                 peerId, stats.QueryCount, stats.ServiceNamesQueried.Count);
