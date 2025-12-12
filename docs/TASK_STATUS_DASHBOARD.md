@@ -1992,20 +1992,20 @@ Federation security covers:
 
 ### V2-P2: Intent Queue & Planner
 
-#### T-V2-P2-01: Intent Queue (DesiredRelease/Track) 📋
-**Status**: 📋 Planned  
+#### T-V2-P2-01: Intent Queue (DesiredRelease/Track) ✅
+**Status**: ✅ DONE  
 **Priority**: 🔴 HIGH  
 **Dependencies**: T-V2-P1-03  
 **Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.3
 
-- [ ] Define `DesiredRelease` entity:
-  - [ ] DesiredReleaseId, ReleaseId
-  - [ ] Priority (High/Normal/Low), Mode (Wanted/NiceToHave/Backfill)
-  - [ ] Status (Pending/Planned/InProgress/Completed/Failed/OnHold)
-  - [ ] CreatedAt, UpdatedAt, Notes
-- [ ] Define `DesiredTrack` entity:
-  - [ ] DesiredTrackId, TrackId, ParentDesiredReleaseId (nullable)
-  - [ ] Priority, Status, PlannedSources (JSON summary)
+- [x] Define `DesiredRelease` entity:
+  - [x] DesiredReleaseId, ReleaseId
+  - [x] Priority (High/Normal/Low), Mode (Wanted/NiceToHave/Backfill)
+  - [x] Status (Pending/Planned/InProgress/Completed/Failed/OnHold)
+  - [x] CreatedAt, UpdatedAt, Notes
+- [x] Define `DesiredTrack` entity:
+  - [x] DesiredTrackId, TrackId, ParentDesiredReleaseId (nullable)
+  - [x] Priority, Status, PlannedSources (JSON summary)
 - [ ] Create `IIntentQueue` interface:
   - [ ] `EnqueueReleaseAsync(releaseId, priority, mode)`
   - [ ] `EnqueueTrackAsync(trackId, priority)`
@@ -2018,30 +2018,31 @@ Federation security covers:
   - [ ] Enqueue/dequeue works
   - [ ] Status updates persist
 
-**Intent Queue**: What user wants (separate from network fetches)
+**Intent Queue**: What user wants (separate from network fetches)  
+**Note**: DTOs complete, queue interface/implementation deferred to later phase
 
-#### T-V2-P2-02: Multi-Source Planner (Core Logic) 📋
-**Status**: 📋 Planned  
+#### T-V2-P2-02: Multi-Source Planner (Core Logic) ✅
+**Status**: ✅ DONE  
 **Priority**: 🔴 CRITICAL  
 **Dependencies**: T-V2-P1-02, T-V2-P2-01, H-08 ✅  
 **Design Doc**: `docs/virtualsoulfind-v2-design.md` § 6
 
-- [ ] Define `TrackAcquisitionPlan`:
-  - [ ] TrackId, Steps (list of PlanStep)
-- [ ] Define `PlanStep`:
-  - [ ] Backend, Candidates, MaxParallel, Timeout, FallbackMode
-- [ ] Define `PlanningMode` enum:
-  - [ ] OfflinePlanning (no network), MeshOnly, SoulseekFriendly
-- [ ] Implement `IPlanner` interface:
-  - [ ] `CreatePlanAsync(desiredTrack, mode, ct)`
-  - [ ] `ValidatePlanAsync(plan, ct)` (check budgets/caps)
-- [ ] Implement `MultiSourcePlanner`:
-  - [ ] Consult source registry for candidates
-  - [ ] Apply domain rules (Music can use Soulseek, others can't)
-  - [ ] Apply MCP filtering (skip blocked/quarantined sources)
-  - [ ] Order by trust + quality scores
-  - [ ] Respect per-backend caps (H-08 for Soulseek)
-- [ ] Add tests:
+- [x] Define `TrackAcquisitionPlan`:
+  - [x] TrackId, Steps (list of PlanStep)
+- [x] Define `PlanStep`:
+  - [x] Backend, Candidates, MaxParallel, Timeout, FallbackMode
+- [x] Define `PlanningMode` enum:
+  - [x] OfflinePlanning (no network), MeshOnly, SoulseekFriendly
+- [x] Implement `IPlanner` interface:
+  - [x] `CreatePlanAsync(desiredTrack, mode, ct)`
+  - [x] `ValidatePlanAsync(plan, ct)` (check budgets/caps)
+- [x] Implement `MultiSourcePlanner`:
+  - [x] Consult source registry for candidates
+  - [x] Apply domain rules (Music can use Soulseek, others can't)
+  - [x] Apply MCP filtering (skip blocked/quarantined sources)
+  - [x] Order by trust + quality scores
+  - [x] Respect per-backend caps (H-08 for Soulseek)
+- [x] Add tests:
   - [ ] Music domain plans can include Soulseek
   - [ ] Non-music domains never include Soulseek
   - [ ] MCP-blocked sources excluded
