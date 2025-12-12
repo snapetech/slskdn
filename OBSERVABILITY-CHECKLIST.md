@@ -366,3 +366,4 @@ public MyServiceStats GetStats()
 - **V2-P6-04**: VirtualSoulfind observability integration (planned task)
 - **H-PR05**: Proxy/Relay hardening (includes metrics requirements)
 - **SECURITY-GUIDELINES.md**: Logging & metrics hygiene section
+

@@ -759,3 +759,4 @@ H-02 ─────────────────────────
 - **Why**: Clean multi-domain architecture, Soulseek gating, future-proof
 - **Impact**: No behavior change for music, foundation for multi-domain future
 - **Soulseek Safety**: T-VC04 enforces Music-only at code level, not just policy
+

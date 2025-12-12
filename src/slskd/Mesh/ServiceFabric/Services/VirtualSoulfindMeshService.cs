@@ -226,3 +226,4 @@ public record QueryBatchRequest
 {
     public List<string> MBIDs { get; init; } = new();
 }
+

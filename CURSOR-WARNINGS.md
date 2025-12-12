@@ -892,3 +892,4 @@ Let me know which task you want to tackle first, and I'll craft the paranoid-bas
 *"Not all tasks are created equal. Some will bite you. Here's the map of where the mines are."*
 
 *"The paranoid bastard's guide to not getting wrecked by LLM code generation."*
+

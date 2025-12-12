@@ -593,3 +593,4 @@ Before enabling social federation in production:
 - [ActivityStreams 2.0](https://www.w3.org/TR/activitystreams-core/)
 - [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
 - [Mastodon's ActivityPub Implementation](https://docs.joinmastodon.org/spec/activitypub/)
+

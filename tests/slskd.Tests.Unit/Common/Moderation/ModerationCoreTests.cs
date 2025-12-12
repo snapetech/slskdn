@@ -385,3 +385,4 @@ public class CompositeModerationProviderTests
             Microsoft.Extensions.Options.Options.Create(opts));
     }
 }
+

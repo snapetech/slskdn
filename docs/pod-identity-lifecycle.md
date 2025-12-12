@@ -850,3 +850,4 @@ All operations require admin auth + confirmation.
 - `docs/security-hardening-guidelines.md` § 15 - Identity Separation
 - `docs/social-federation-design.md` - ActivityPub identity management
 - `TASK_STATUS_DASHBOARD.md` - T-POD01-03, H-POD01 tasks
+

@@ -181,3 +181,4 @@ public class MeshGatewayAuthMiddleware
         return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
     }
 }
+

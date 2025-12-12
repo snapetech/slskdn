@@ -46,3 +46,4 @@ namespace slskd.Common.Moderation
         public IDisposable? OnChange(Action<T, string?> listener) => null;
     }
 }
+

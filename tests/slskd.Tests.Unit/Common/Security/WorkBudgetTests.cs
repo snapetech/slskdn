@@ -255,3 +255,4 @@ public class WorkBudgetTests
         Assert.True(budget.InitialUnits > 1000000);
     }
 }
+

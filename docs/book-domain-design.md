@@ -265,3 +265,4 @@ See `TASK_STATUS_DASHBOARD.md`:
 - [EPUB Specification](https://www.w3.org/publishing/epub3/)
 - VirtualSoulfind V2 Design: `docs/virtualsoulfind-v2-design.md`
 - Multi-Domain Overview: `docs/virtualsoulfind-v2-design.md#multi-domain-model-overview`
+

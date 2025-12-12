@@ -109,3 +109,4 @@ public interface MeshServiceStream
     /// </summary>
     Task CloseAsync(CancellationToken cancellationToken = default);
 }
+

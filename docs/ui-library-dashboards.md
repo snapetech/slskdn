@@ -288,3 +288,4 @@ All dashboard endpoints MUST:
 - ✅ Use VirtualSoulfind as sole data source (not raw backends)
 - ✅ Apply authentication/authorization where needed (admin views)
 - ✅ Sanitize all outputs (no raw error messages with sensitive data)
+

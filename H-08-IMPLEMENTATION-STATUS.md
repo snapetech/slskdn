@@ -344,3 +344,4 @@ soulseek:
 
 **Status**: Part 1 Complete, Part 2 Ready to Implement  
 **Commit**: `68078221` - feat: H-08 Soulseek Safety Caps - Part 1 (Configuration + Limiter)
+

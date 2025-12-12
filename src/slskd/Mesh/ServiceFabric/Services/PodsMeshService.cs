@@ -310,3 +310,4 @@ public record GetMessagesRequest
     public string ChannelId { get; init; } = string.Empty;
     public long? SinceTimestamp { get; init; }
 }
+

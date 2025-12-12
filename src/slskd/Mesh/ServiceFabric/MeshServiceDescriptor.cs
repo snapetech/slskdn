@@ -160,3 +160,4 @@ public sealed record MeshServiceEndpoint
         return $"{Protocol}://{Host}{portPart}{pathPart}";
     }
 }
+

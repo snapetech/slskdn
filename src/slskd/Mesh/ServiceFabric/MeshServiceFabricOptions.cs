@@ -85,3 +85,4 @@ public class MeshServiceFabricOptions
     /// </summary>
     public int MaxWorkUnitsPerPeerPerMinute { get; set; } = 50;
 }
+

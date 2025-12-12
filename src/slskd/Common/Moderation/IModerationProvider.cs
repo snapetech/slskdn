@@ -145,3 +145,4 @@ namespace slskd.Common.Moderation
         public string? Notes { get; init; }
     }
 }
+

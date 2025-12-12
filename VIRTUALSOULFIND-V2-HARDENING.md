@@ -835,3 +835,4 @@ Add tests to verify:
 These tasks are the implementation-ready versions of the design doc's H-VS tasks. They provide detailed guidance in the same format as T-SF and earlier H-series tasks, ready to be fed directly to Cursor or other LLM agents for implementation.
 
 All tasks maintain the "paranoid bastard" security philosophy established in the earlier hardening work.
+

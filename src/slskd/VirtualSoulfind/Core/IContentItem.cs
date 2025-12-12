@@ -91,3 +91,4 @@ namespace slskd.VirtualSoulfind.Core
         TimeSpan? Duration { get; }
     }
 }
+

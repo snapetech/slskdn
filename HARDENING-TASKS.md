@@ -509,3 +509,4 @@ This document tracks security hardening tasks for `slskdn`. These tasks focus on
 - Each task should have its own implementation brief (H-XX-IMPLEMENTATION-BRIEF.md)
 - Test coverage required for all hardening measures
 - Document security decisions and trade-offs
+

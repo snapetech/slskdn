@@ -648,3 +648,4 @@ realm_peers:
 - `docs/social-federation-design.md` - ActivityPub (can bridge across realms)
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `TASK_STATUS_DASHBOARD.md` - T-REALM-01 through T-REALM-05 tasks
+

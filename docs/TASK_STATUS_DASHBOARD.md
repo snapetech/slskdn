@@ -1393,6 +1393,134 @@ Realms provide:
 
 ---
 
+### Federation Security & Hardening (H-FED-SEC, Critical)
+
+> **Design Doc**: See `docs/federation-security-hardening.md`  
+> **Status**: 🔴 CRITICAL (security-sensitive)  
+> **Priority**: 🔴 HIGH (before federation goes live)
+
+Federation security covers:
+- **ActivityPub / social federation** (authentication, validation, sanitization)
+- **Realm & bridge security** (trust model, flow control)
+- **Gossip feeds** (PII stripping, untrusted hints)
+- **Replication** (whitelisting, quotas, MCP integration)
+
+**Guiding Principles:**
+- **Isolation by default** (no unintended cross-instance/realm connectivity)
+- **Least privilege** (only minimal flows/data allowed)
+- **Explicit trust** (federation driven by explicit config)
+- **Fail-closed** (reject/drop remote input when in doubt)
+
+#### H-FED-SEC-01: ActivityPub Endpoint Hardening 🔴
+**Status**: 🔴 Critical (before AP features enabled)  
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-POD-SOCIAL-04 (SocialFeedModule)  
+**Design Doc**: `docs/federation-security-hardening.md` § 1
+
+- [ ] Implement all AP inbound/outbound protections:
+  - [ ] HTTP signature and origin validation
+  - [ ] Payload schema validation and strict size limits
+  - [ ] Per-host and per-actor rate limiting
+  - [ ] Robust HTML/content sanitization in UIs
+- [ ] Ensure federation modes (`Off`, `Hermit`, `Federated`) are:
+  - [ ] Config-driven
+  - [ ] Conservative by default (`Hermit` or `Off`)
+  - [ ] Logged when changed
+- [ ] Add tests:
+  - [ ] Malformed, unsigned, and oversized AP requests rejected
+  - [ ] Rate limits behave correctly under abusive conditions
+  - [ ] Sanitization prevents basic XSS payloads in social UIs
+
+**Attack Vectors Mitigated**: XSS, signature forgery, fanout abuse, privacy leaks
+
+#### H-FED-SEC-02: Realm & Bridge Security Enforcement 🔴
+**Status**: 🔴 Critical (before realm/bridge features enabled)  
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-REALM-01, T-REALM-02 (RealmConfig, MultiRealmConfig)  
+**Design Doc**: `docs/federation-security-hardening.md` § 2
+
+- [ ] Enforce realm trust model:
+  - [ ] Governance docs must match both `realm.id` AND `governance_roots`
+  - [ ] Mismatched realm/governance roots log warnings, ignored
+- [ ] For bridges:
+  - [ ] `bridge.enabled` defaults to `false`
+  - [ ] Only flows in `bridge.allowed_flows` permitted
+  - [ ] Flows in `bridge.disallowed_flows` always denied
+  - [ ] Dangerous flows (`governance:root`, `replication:fullcopy`, `mcp:control`) denied by default
+- [ ] Add tests:
+  - [ ] Pods in different realms don't interact without bridge config
+  - [ ] Bridge flows blocked when `bridge.enabled = false` or flow not allowed
+  - [ ] Dangerous flows always denied (even if misconfigured)
+
+**Attack Vectors Mitigated**: Governance takeover, unauthorized replication, MCP bypass, realm merge
+
+#### H-FED-SEC-03: Gossip Feed Security (HealthFeed/AbuseFeed) 🔴
+**Status**: 🔴 Critical (before gossip features enabled)  
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-RES-04 (Gossip Feeds)  
+**Design Doc**: `docs/federation-security-hardening.md` § 3
+
+- [ ] Implement all gossip constraints:
+  - [ ] Strip PII (no IPs, usernames, emails, identifiers)
+  - [ ] Avoid raw logging (no stack traces, HTTP error bodies)
+  - [ ] Enforce schema and payload size limits
+  - [ ] Sign feeds and verify signatures on inbound
+- [ ] Ensure:
+  - [ ] Inbound feeds treated as untrusted hints only
+  - [ ] Configuration can fully disable publishing and/or subscribing
+  - [ ] Feeds capped so they cannot fully override local HealthScore/MCP
+- [ ] Add tests:
+  - [ ] Invalid or oversized feeds rejected
+  - [ ] Health/abuse hints cannot override local MCP or HealthScore completely
+  - [ ] Opt-out works (no publishing, no subscribing)
+
+**Attack Vectors Mitigated**: PII leaks, log scraping, HealthScore manipulation
+
+#### H-FED-SEC-04: Replication Security (Small Objects) 🔴
+**Status**: 🔴 Critical (before replication features enabled)  
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-RES-03 (ReplicationPolicy/Service)  
+**Design Doc**: `docs/federation-security-hardening.md` § 4
+
+- [ ] Implement replication hardening:
+  - [ ] Strict whitelisting for replicated object types
+  - [ ] Handshake with mutual auth and capability negotiation
+  - [ ] MCP checks before replication
+  - [ ] Never replicate: arbitrary filesystem paths, private user content
+- [ ] Enforce quotas and rate limits:
+  - [ ] Per peer, per object class
+  - [ ] Immediate downgrade/block of peers repeatedly violating constraints
+- [ ] Add tests:
+  - [ ] Attempts to replicate disallowed/oversized objects blocked
+  - [ ] Quotas and rate limits work under stress conditions
+  - [ ] MCP integration blocks quarantined/disallowed objects
+
+**Attack Vectors Mitigated**: Arbitrary file access, quota exhaustion, MCP bypass
+
+#### H-FED-SEC-05: Defaults & Preset Verification 🔴
+**Status**: 🔴 Critical (before first release)  
+**Priority**: 🔴 HIGH  
+**Dependencies**: All federation features, First Pod preset  
+**Design Doc**: `docs/federation-security-hardening.md` § 7
+
+- [ ] Verify all default configs and presets (including First Pod):
+  - [ ] Use conservative federation defaults:
+    - [ ] Federation ≤ `Hermit` (not `Federated`)
+    - [ ] Gossip feeds off or minimal
+    - [ ] Replication limited to governance/metadata only (if at all)
+    - [ ] Bridges disabled by default
+- [ ] Add checks or warnings:
+  - [ ] If preset modified to widen federation, log and surface clearly
+  - [ ] Mode changes logged and require explicit admin action
+- [ ] Add tests:
+  - [ ] New pods created with default/preset configs don't federate/bridge unexpectedly
+  - [ ] Enabling federation/bridge requires explicit admin action
+  - [ ] Dangerous flows cannot be enabled via config alone (require code change)
+
+**Attack Vectors Mitigated**: Accidental exposure, unintended federation, misconfiguration
+
+---
+
 ### Attribution & Licensing (H-ATTR)
 
 #### H-ATTR01: Comprehensive Attribution & License Compliance 📋

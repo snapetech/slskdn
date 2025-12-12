@@ -206,3 +206,4 @@ public record SoulseekSafetyMetrics
     /// </summary>
     public Dictionary<string, int> BrowsesBySource { get; init; } = new();
 }
+

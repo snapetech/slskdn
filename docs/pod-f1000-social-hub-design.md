@@ -437,3 +437,4 @@ Additional specific requirements:
 - `docs/moderation-v1-design.md` - MCP design and hardening
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `TASK_STATUS_DASHBOARD.md` - T-SOCIAL-01 through T-SOCIAL-06 tasks
+

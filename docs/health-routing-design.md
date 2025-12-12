@@ -204,3 +204,4 @@ Planner, transport layers, and backends:
 - `docs/gossip-signals-design.md` - Optional gossip feeds for health/abuse signals
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `TASK_STATUS_DASHBOARD.md` - T-RES-01 through T-RES-05 tasks
+

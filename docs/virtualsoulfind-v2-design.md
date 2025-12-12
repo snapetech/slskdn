@@ -1402,3 +1402,4 @@ This design gives you a coherent architecture that:
 * Shifts "turbo" behavior firmly onto mesh/DHT/BT and away from Soulseek, by design.
 * Maintains backwards compatibility and Soulseek-friendly defaults.
 * **Supports multi-domain content (Music, Books, Movies, TV, GenericFile) with first-class domain abstractions.**
+

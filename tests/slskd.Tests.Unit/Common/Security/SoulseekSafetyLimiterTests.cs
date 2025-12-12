@@ -245,3 +245,4 @@ public class SoulseekSafetyLimiterTests
         public IDisposable OnChange(Action<T, string> listener) => null;
     }
 }
+

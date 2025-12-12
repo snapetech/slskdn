@@ -348,3 +348,4 @@ tests/slskd.Tests.LoadTest/
 - All tests must clean up resources
 - Tests should not require external services (mock DHT, Soulseek, etc.)
 - Security tests should validate both prevention AND logging
+

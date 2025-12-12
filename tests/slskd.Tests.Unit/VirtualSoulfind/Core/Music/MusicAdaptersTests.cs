@@ -408,3 +408,4 @@ public class MusicDomainMappingTests
         Assert.NotEqual(workId.Value, itemId.Value);
     }
 }
+
