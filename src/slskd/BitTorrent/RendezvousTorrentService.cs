@@ -27,6 +27,7 @@ public sealed class RendezvousTorrentService : IHostedService, IAsyncDisposable
     private readonly ILogger<RendezvousTorrentService> _logger;
     private readonly string _dataPath;
     private readonly BitTorrentOptions _options;
+    private readonly SlskdnMeshExtension? _meshExtension;
     
     // Deterministic torrent parameters (all instances MUST use the same values)
     private const string RendezvousTorrentName = "slskdn-mesh-rendezvous-v1";
@@ -48,11 +49,13 @@ public sealed class RendezvousTorrentService : IHostedService, IAsyncDisposable
     public RendezvousTorrentService(
         ILogger<RendezvousTorrentService> logger,
         string dataPath,
-        BitTorrentOptions options)
+        BitTorrentOptions options,
+        SlskdnMeshExtension? meshExtension = null)
     {
         _logger = logger;
         _dataPath = dataPath;
         _options = options;
+        _meshExtension = meshExtension;
     }
     
     public int ConnectedPeers
@@ -111,8 +114,44 @@ public sealed class RendezvousTorrentService : IHostedService, IAsyncDisposable
             
             _manager = await _engine.AddAsync(torrent, torrentDir, managerSettings);
             
-            // TODO: Register SlskdnMeshExtension here when MonoTorrent 3.x API supports it
-            // For now, we just seed the torrent
+            // Initialize mesh extension if available
+            if (_meshExtension != null)
+            {
+                await _meshExtension.InitializeAsync();
+                
+                // Hook into peer connection events
+                _manager.PeerConnected += async (sender, args) =>
+                {
+                    try
+                    {
+                        var peer = args.Peer;
+                        _logger.LogDebug(
+                            "BitTorrent peer connected: {Endpoint}",
+                            peer.Uri);
+                        
+                        // Send mesh extension handshake
+                        var handshakeData = _meshExtension.CreateHandshakeData();
+                        
+                        // MonoTorrent 3.x: Use extension protocol
+                        // Note: This is a placeholder - actual implementation depends on
+                        // MonoTorrent's extension API which may differ in 3.x
+                        // For now, we log the intent
+                        _logger.LogInformation(
+                            "Would send mesh extension handshake to {Endpoint} ({Size} bytes)",
+                            peer.Uri,
+                            handshakeData.Length);
+                        
+                        // TODO: When MonoTorrent 3.x extension API is available:
+                        // await peer.SendExtensionMessageAsync(SlskdnMeshExtension.ExtensionName, handshakeData);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error sending mesh extension handshake to peer");
+                    }
+                };
+                
+                _logger.LogInformation("BitTorrent mesh extension enabled");
+            }
             
             await _manager.StartAsync();
             

@@ -1,4 +1,4 @@
-﻿// <copyright file="SearchService.cs" company="slskd Team">
+// <copyright file="SearchService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -119,18 +119,21 @@ namespace slskd.Search
         /// <param name="soulseekClient"></param>
         /// <param name="contextFactory">The database context to use.</param>
         /// <param name="eventBus">The event bus for raising search events (optional).</param>
+        /// <param name="meshSearchBridge">The mesh search bridge service (optional).</param>
         public SearchService(
             IHubContext<SearchHub> searchHub,
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
             IDbContextFactory<SearchDbContext> contextFactory,
-            slskd.Events.EventBus eventBus = null)
+            slskd.Events.EventBus eventBus = null,
+            slskd.Mesh.MeshSearchBridgeService meshSearchBridge = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
             Client = soulseekClient;
             ContextFactory = contextFactory;
             EventBus = eventBus;
+            MeshSearchBridge = meshSearchBridge;
         }
 
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; }
@@ -142,6 +145,7 @@ namespace slskd.Search
         private ILogger Log { get; set; } = Serilog.Log.ForContext<Application>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IHubContext<SearchHub> SearchHub { get; set; }
+        private slskd.Mesh.MeshSearchBridgeService MeshSearchBridge { get; }
 
         /// <summary>
         ///     Deletes the specified search.
@@ -367,6 +371,32 @@ namespace slskd.Search
                         }
 
                         search.EndedAt = DateTime.UtcNow;
+                        
+                        // Get mesh supplemental responses if bridge is available
+                        if (MeshSearchBridge != null)
+                        {
+                            try
+                            {
+                                var meshResponses = await MeshSearchBridge.GetMeshSupplementalResponsesAsync(
+                                    query.SearchText,
+                                    responses,
+                                    cancellationTokenSource.Token);
+                                
+                                // Merge mesh responses into main response list
+                                responses.AddRange(meshResponses);
+                                
+                                Log.Information(
+                                    "Search for '{Query}' supplemented with {MeshCount} mesh responses (total: {Total})",
+                                    query.SearchText,
+                                    meshResponses.Count,
+                                    responses.Count);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning(ex, "Failed to get mesh supplemental responses for '{Query}'", query.SearchText);
+                            }
+                        }
+                        
                         search.Responses = responses.Select(r => Response.FromSoulseekSearchResponse(r));
 
                         Update(search);

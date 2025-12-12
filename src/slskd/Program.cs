@@ -973,6 +973,9 @@ namespace slskd
             services.AddSingleton<DhtRendezvous.SoulseekMeshBridgeService>();
             services.AddHostedService(sp => sp.GetRequiredService<DhtRendezvous.SoulseekMeshBridgeService>());
             services.AddSingleton<Mesh.MeshSearchBridgeService>();
+            
+            // Mesh data plane for chunk downloads
+            services.AddSingleton<Mesh.IMeshDataPlane, Mesh.MeshDataPlane>();
 
             // Multi-source download services (Swarm)
             services.AddSingleton<ISourceDiscoveryService>(sp => new SourceDiscoveryService(

@@ -26,6 +26,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
     private readonly IVerificationEngine verifier;
     private readonly IChunkScheduler chunkScheduler;
     private readonly ISoulseekClient soulseekClient;
+    private readonly slskd.Mesh.IMeshDataPlane meshDataPlane;
     private readonly Channel<SwarmJob> jobs = Channel.CreateUnbounded<SwarmJob>();
     private readonly ConcurrentDictionary<string, SwarmJobStatus> activeJobs = new();
 
@@ -33,12 +34,14 @@ public class SwarmDownloadOrchestrator : BackgroundService
         ILogger<SwarmDownloadOrchestrator> logger,
         IVerificationEngine verifier,
         IChunkScheduler chunkScheduler,
-        ISoulseekClient soulseekClient)
+        ISoulseekClient soulseekClient,
+        slskd.Mesh.IMeshDataPlane meshDataPlane = null)
     {
         this.logger = logger;
         this.verifier = verifier;
         this.chunkScheduler = chunkScheduler;
         this.soulseekClient = soulseekClient;
+        this.meshDataPlane = meshDataPlane;
     }
 
     public bool Enqueue(SwarmJob job)
@@ -402,14 +405,48 @@ public class SwarmDownloadOrchestrator : BackgroundService
             else if (source.Transport == "mesh" || source.Transport == "overlay")
             {
                 // For mesh/overlay transport, use mesh data plane
-                // TODO: Implement mesh chunk download when mesh transport supports range requests
-                logger.LogWarning("[SwarmOrchestrator] Mesh transport chunk download not yet implemented");
-                return new ChunkResult
+                if (meshDataPlane == null)
                 {
-                    ChunkIndex = chunk.Index,
-                    Success = false,
-                    Error = $"Mesh transport chunk download not yet implemented",
-                };
+                    logger.LogWarning("[SwarmOrchestrator] Mesh data plane not available");
+                    return new ChunkResult
+                    {
+                        ChunkIndex = chunk.Index,
+                        Success = false,
+                        Error = "Mesh data plane not initialized",
+                    };
+                }
+                
+                try
+                {
+                    var meshPeerId = slskd.Mesh.Identity.MeshPeerId.Parse(source.MeshPeerId);
+                    var filename = job.File.ContentId; // Use ContentId as filename
+                    var meshChunkSize = chunk.EndOffset - chunk.StartOffset;
+                    
+                    var data = await meshDataPlane.DownloadChunkAsync(
+                        meshPeerId,
+                        filename,
+                        chunk.StartOffset,
+                        (int)meshChunkSize,
+                        ct);
+                    
+                    return new ChunkResult
+                    {
+                        ChunkIndex = chunk.Index,
+                        Success = true,
+                        Data = data,
+                    };
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "[SwarmOrchestrator] Mesh chunk download failed from {MeshPeer}",
+                        source.MeshPeerId);
+                    return new ChunkResult
+                    {
+                        ChunkIndex = chunk.Index,
+                        Success = false,
+                        Error = ex.Message,
+                    };
+                }
             }
             else
             {

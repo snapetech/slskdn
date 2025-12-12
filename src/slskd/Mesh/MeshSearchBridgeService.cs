@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Soulseek;
+using slskd.HashDb;
 
 /// <summary>
 /// Bridges mesh hash database content back to Soulseek search responses.
@@ -21,16 +22,16 @@ using Soulseek;
 public sealed class MeshSearchBridgeService
 {
     private readonly ILogger<MeshSearchBridgeService> _logger;
-    private readonly IMeshSyncService _meshSync;
+    private readonly IHashDbService _hashDb;
     private readonly Identity.ISoulseekMeshIdentityMapper _identityMapper;
     
     public MeshSearchBridgeService(
         ILogger<MeshSearchBridgeService> logger,
-        IMeshSyncService meshSync,
+        IHashDbService hashDb,
         Identity.ISoulseekMeshIdentityMapper identityMapper)
     {
         _logger = logger;
-        _meshSync = meshSync;
+        _hashDb = hashDb;
         _identityMapper = identityMapper;
     }
     
@@ -127,16 +128,96 @@ public sealed class MeshSearchBridgeService
         string query,
         CancellationToken cancellationToken)
     {
-        // TODO: Implement actual hash DB search
-        // This would:
-        // 1. Parse search query into tags/terms
-        // 2. Query hash database for matching FLAC hashes
-        // 3. For each match, resolve mesh peer ID to Soulseek username (if mapped)
-        // 4. Return results in Soulseek-compatible format
+        var results = new List<MeshSearchResult>();
         
-        // Placeholder for now
-        await Task.CompletedTask;
-        return new List<MeshSearchResult>();
+        try
+        {
+            // Search hash database
+            var hashResults = await _hashDb.SearchAsync(query, limit: 100, cancellationToken);
+            
+            // Group by peer (username) to build per-user result sets
+            var filesByUser = new Dictionary<string, List<Soulseek.File>>();
+            var userStats = new Dictionary<string, (int freeSlots, int speed, int queueLength)>();
+            
+            foreach (var hashResult in hashResults)
+            {
+                if (hashResult.PeerCount == 0)
+                {
+                    continue; // No peers have this file
+                }
+                
+                // Look up actual usernames for this hash
+                var usernames = await _hashDb.GetPeersByHashAsync(hashResult.FlacKey, cancellationToken);
+                
+                foreach (var username in usernames)
+                {
+                    if (!filesByUser.ContainsKey(username))
+                    {
+                        filesByUser[username] = new List<Soulseek.File>();
+                        // Default stats - these would ideally come from peer reputation/status
+                        userStats[username] = (freeSlots: 1, speed: 1000000, queueLength: 0);
+                    }
+                    
+                    // Build filename from metadata
+                    var filename = BuildFilename(hashResult);
+                    
+                    // Create Soulseek File object
+                    var file = new Soulseek.File(
+                        code: 0,
+                        filename: filename,
+                        size: hashResult.Size,
+                        extension: "flac",
+                        attributeList: new List<Soulseek.FileAttribute>
+                        {
+                            new Soulseek.FileAttribute(FileAttributeType.BitRate, hashResult.BitDepth ?? 16),
+                            new Soulseek.FileAttribute(FileAttributeType.SampleRate, hashResult.SampleRate ?? 44100),
+                            new Soulseek.FileAttribute(FileAttributeType.BitDepth, hashResult.BitDepth ?? 16),
+                        });
+                    
+                    filesByUser[username].Add(file);
+                }
+            }
+            
+            // Convert to MeshSearchResult objects
+            foreach (var kvp in filesByUser)
+            {
+                var (freeSlots, speed, queueLength) = userStats[kvp.Key];
+                
+                results.Add(new MeshSearchResult
+                {
+                    Username = kvp.Key,
+                    FreeUploadSlots = freeSlots,
+                    UploadSpeed = speed,
+                    QueueLength = queueLength,
+                    Files = kvp.Value,
+                });
+            }
+            
+            _logger.LogInformation(
+                "Hash DB search for '{Query}' returned {FileCount} files from {PeerCount} peers",
+                query,
+                results.Sum(r => r.Files.Count),
+                results.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error searching mesh hash database for query: {Query}", query);
+        }
+        
+        return results;
+    }
+    
+    /// <summary>
+    /// Builds a filename from hash search result metadata.
+    /// </summary>
+    private static string BuildFilename(HashDbSearchResult result)
+    {
+        var artist = result.Artist ?? "Unknown Artist";
+        var album = result.Album ?? "Unknown Album";
+        var title = result.Title ?? "Unknown Title";
+        
+        // Format: Artist/Album/TrackTitle.flac
+        return $"{artist}/{album}/{title}.flac";
     }
 }
 
