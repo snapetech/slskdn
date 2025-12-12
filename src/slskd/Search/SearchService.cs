@@ -1,4 +1,4 @@
-﻿// <copyright file="SearchService.cs" company="slskd Team">
+// <copyright file="SearchService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -118,18 +118,21 @@ namespace slskd.Search
         /// <param name="optionsMonitor"></param>
         /// <param name="soulseekClient"></param>
         /// <param name="contextFactory">The database context to use.</param>
+        /// <param name="safetyLimiter">The Soulseek safety limiter (H-08).</param>
         /// <param name="eventBus">The event bus for raising search events (optional).</param>
         public SearchService(
             IHubContext<SearchHub> searchHub,
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
             IDbContextFactory<SearchDbContext> contextFactory,
+            slskd.Common.Security.ISoulseekSafetyLimiter safetyLimiter,
             slskd.Events.EventBus eventBus = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
             Client = soulseekClient;
             ContextFactory = contextFactory;
+            SafetyLimiter = safetyLimiter;
             EventBus = eventBus;
         }
 
@@ -141,6 +144,7 @@ namespace slskd.Search
         private slskd.Events.EventBus EventBus { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<Application>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private slskd.Common.Security.ISoulseekSafetyLimiter SafetyLimiter { get; }
         private IHubContext<SearchHub> SearchHub { get; set; }
 
         /// <summary>
@@ -247,6 +251,15 @@ namespace slskd.Search
         /// <returns>The completed search.</returns>
         public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null)
         {
+            // H-08: Check Soulseek safety caps before initiating search
+            if (!SafetyLimiter.TryConsumeSearch("user"))
+            {
+                var message = $"Search rate limit exceeded. See Soulseek safety configuration.";
+                Log.Warning("[SAFETY] Search rejected for query='{Query}': {Message}", query.SearchText, message);
+                
+                throw new InvalidOperationException(message);
+            }
+
             var token = Client.GetNextToken();
 
             var cancellationTokenSource = new CancellationTokenSource();

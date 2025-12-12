@@ -1065,6 +1065,7 @@ namespace slskd
 
             services.AddSingleton(jwtSigningKey);
             services.AddSingleton<ISecurityService, SecurityService>();
+            services.AddSingleton<Common.Security.ISoulseekSafetyLimiter, Common.Security.SoulseekSafetyLimiter>();
 
             if (!OptionsAtStartup.Web.Authentication.Disabled)
             {
