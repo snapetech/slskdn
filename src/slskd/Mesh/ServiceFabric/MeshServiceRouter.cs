@@ -397,25 +397,88 @@ public class MeshServiceRouter
     }
 
     /// <summary>
-    /// Get statistics about registered services and call counts.
+    /// Get comprehensive statistics about the router, services, and security state.
     /// </summary>
     public RouterStats GetStats()
     {
+        var now = DateTimeOffset.UtcNow;
+        var oneMinuteAgo = now.AddMinutes(-1);
+
+        // Circuit breaker stats
+        var circuitBreakerInfo = _serviceHealth
+            .Select(kvp => new CircuitBreakerInfo
+            {
+                ServiceName = kvp.Key,
+                ConsecutiveFailures = kvp.Value.ConsecutiveFailures,
+                IsOpen = kvp.Value.IsCircuitOpen(),
+                OpenedAt = kvp.Value.CircuitOpenedAt
+            })
+            .ToList();
+
+        // Rate limit stats (active peers in last minute)
+        var activeGlobalPeers = _globalPeerCallCounts
+            .Where(kvp => now - kvp.Value.windowStart <= TimeSpan.FromMinutes(1))
+            .Count();
+
+        var activeServicePeers = _perPeerCallCounts
+            .Where(kvp => now - kvp.Value.windowStart <= TimeSpan.FromMinutes(1))
+            .Count();
+
+        // Work budget stats
+        var workBudgetMetrics = _workBudgetTracker.GetMetrics();
+
         return new RouterStats
         {
             RegisteredServiceCount = _services.Count,
-            TrackedPeerCount = _perPeerCallCounts.Count
+            TrackedPeerCount = _perPeerCallCounts.Count,
+            
+            // Rate limiting
+            ActivePeersLastMinute = activeGlobalPeers,
+            PerServiceTrackedPeers = activeServicePeers,
+            
+            // Circuit breakers
+            CircuitBreakers = circuitBreakerInfo,
+            OpenCircuitCount = circuitBreakerInfo.Count(cb => cb.IsOpen),
+            
+            // Work budget
+            WorkBudgetEnabled = true,
+            WorkBudgetMetrics = workBudgetMetrics
         };
     }
 }
 
 /// <summary>
-/// Statistics for MeshServiceRouter.
+/// Comprehensive statistics for MeshServiceRouter.
+/// Includes service, rate limiting, circuit breaker, and work budget metrics.
 /// </summary>
 public sealed record RouterStats
 {
+    // Basic stats
     public int RegisteredServiceCount { get; init; }
     public int TrackedPeerCount { get; init; }
+    
+    // Rate limiting stats
+    public int ActivePeersLastMinute { get; init; }
+    public int PerServiceTrackedPeers { get; init; }
+    
+    // Circuit breaker stats
+    public List<CircuitBreakerInfo> CircuitBreakers { get; init; } = new();
+    public int OpenCircuitCount { get; init; }
+    
+    // Work budget stats
+    public bool WorkBudgetEnabled { get; init; }
+    public WorkBudgetMetrics? WorkBudgetMetrics { get; init; }
+}
+
+/// <summary>
+/// Circuit breaker information for a service.
+/// </summary>
+public sealed record CircuitBreakerInfo
+{
+    public string ServiceName { get; init; } = string.Empty;
+    public int ConsecutiveFailures { get; init; }
+    public bool IsOpen { get; init; }
+    public DateTimeOffset? OpenedAt { get; init; }
 }
 
 /// <summary>

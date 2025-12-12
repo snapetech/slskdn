@@ -78,12 +78,57 @@ public class MeshIntrospectionService : IMeshService
     {
         var stats = _router.GetStats();
         
+        // Get discovery metrics if directory supports it
+        DiscoveryMetrics? discoveryMetrics = null;
+        if (_serviceDirectory is DhtMeshServiceDirectory dhtDirectory)
+        {
+            discoveryMetrics = dhtDirectory.GetDiscoveryMetrics();
+        }
+        
         var status = new
         {
             Status = "healthy",
             UptimeSeconds = (int)(DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime()).TotalSeconds,
+            
+            // Service stats
             RegisteredServices = stats.RegisteredServiceCount,
             TrackedPeers = stats.TrackedPeerCount,
+            ActivePeersLastMinute = stats.ActivePeersLastMinute,
+            
+            // Circuit breaker stats
+            CircuitBreakers = new
+            {
+                TotalTracked = stats.CircuitBreakers.Count,
+                OpenCircuits = stats.OpenCircuitCount,
+                Services = stats.CircuitBreakers
+                    .Where(cb => cb.IsOpen || cb.ConsecutiveFailures > 0)
+                    .Select(cb => new
+                    {
+                        cb.ServiceName,
+                        cb.IsOpen,
+                        cb.ConsecutiveFailures,
+                        OpenedAt = cb.OpenedAt?.ToString("o")
+                    })
+                    .ToList()
+            },
+            
+            // Work budget stats
+            WorkBudget = new
+            {
+                Enabled = stats.WorkBudgetEnabled,
+                ActivePeers = stats.WorkBudgetMetrics?.ActivePeersLastMinute ?? 0,
+                TotalWorkConsumed = stats.WorkBudgetMetrics?.TotalWorkUnitsConsumedLastMinute ?? 0,
+                PeersNearQuota = stats.WorkBudgetMetrics?.PeersNearQuota?.Count ?? 0
+            },
+            
+            // Discovery abuse stats (if available)
+            Discovery = discoveryMetrics != null ? new
+            {
+                ActivePeers = discoveryMetrics.ActivePeersLastMinute,
+                TotalQueries = discoveryMetrics.TotalQueriesLastMinute,
+                SuspiciousPeers = discoveryMetrics.SuspiciousPeers.Count
+            } : null,
+            
             // DO NOT expose: hostname, OS username, filesystem paths, public IP
         };
 
