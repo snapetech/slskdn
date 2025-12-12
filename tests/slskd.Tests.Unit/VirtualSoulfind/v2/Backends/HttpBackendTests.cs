@@ -1,6 +1,7 @@
 // HTTP Backend tests (SIMPLIFIED FOR SPEED)
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {
+    using System;
     using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading.Tasks;
@@ -26,7 +27,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         {
             var options = new HttpBackendOptions { DomainAllowlist = new List<string>() };
             var backend = CreateBackend(options);
-            var itemId = ContentItemId.Parse("music:track:test123");
+            var itemId = ContentItemId.NewId();
             
             var candidates = await backend.FindCandidatesAsync(itemId);
             
@@ -39,12 +40,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var backend = CreateBackend();
             var candidate = new SourceCandidate
             {
-                Id = "cand1",
-                ItemId = ContentItemId.Parse("music:track:test123"),
+                Id = Guid.NewGuid().ToString(),
+                ItemId = ContentItemId.NewId(),
                 Backend = ContentBackendType.MeshDht,
                 BackendRef = "mesh:node123",
                 TrustScore = 0.7f,
-                ExpectedQuality = 80,
+                ExpectedQuality = 0.8f,
             };
             
             var result = await backend.ValidateCandidateAsync(candidate);
@@ -59,12 +60,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var backend = CreateBackend();
             var candidate = new SourceCandidate
             {
-                Id = "cand2",
-                ItemId = ContentItemId.Parse("music:track:test123"),
+                Id = Guid.NewGuid().ToString(),
+                ItemId = ContentItemId.NewId(),
                 Backend = ContentBackendType.Http,
                 BackendRef = "not-a-url",
                 TrustScore = 0.7f,
-                ExpectedQuality = 80,
+                ExpectedQuality = 0.8f,
             };
             
             var result = await backend.ValidateCandidateAsync(candidate);
@@ -83,12 +84,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var backend = CreateBackend(options);
             var candidate = new SourceCandidate
             {
-                Id = "cand3",
-                ItemId = ContentItemId.Parse("music:track:test123"),
+                Id = Guid.NewGuid().ToString(),
+                ItemId = ContentItemId.NewId(),
                 Backend = ContentBackendType.Http,
                 BackendRef = "https://evil.com/file.flac",
                 TrustScore = 0.7f,
-                ExpectedQuality = 80,
+                ExpectedQuality = 0.8f,
             };
             
             var result = await backend.ValidateCandidateAsync(candidate);
