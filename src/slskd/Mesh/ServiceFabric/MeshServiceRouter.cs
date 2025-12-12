@@ -25,6 +25,9 @@ public class MeshServiceRouter
     // Global per-peer rate limiting across all services: peerId -> (callCount, windowStart)
     private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _globalPeerCallCounts = new();
     
+    // Circuit breaker per service: serviceName -> health tracker
+    private readonly ConcurrentDictionary<string, ServiceHealthTracker> _serviceHealth = new();
+    
     public MeshServiceRouter(
         ILogger<MeshServiceRouter> logger,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
@@ -159,6 +162,20 @@ public class MeshServiceRouter
                     $"Service '{call.ServiceName}' not found");
             }
 
+            // 5a. Check circuit breaker
+            var health = _serviceHealth.GetOrAdd(call.ServiceName, _ => new ServiceHealthTracker());
+            if (health.IsCircuitOpen())
+            {
+                _logger.LogWarning(
+                    "[ServiceRouter] Circuit breaker open for service: {ServiceName} (failures: {Failures}, opened: {OpenedAt})",
+                    call.ServiceName, health.ConsecutiveFailures, health.CircuitOpenedAt);
+                
+                return CreateErrorReply(
+                    call.CorrelationId,
+                    ServiceStatusCodes.ServiceUnavailable,
+                    "Service temporarily unavailable (circuit breaker open)");
+            }
+
             // 6. Create context
             var context = new MeshServiceContext
             {
@@ -182,12 +199,18 @@ public class MeshServiceRouter
             try
             {
                 reply = await service.HandleCallAsync(call, context, cts.Token);
+                
+                // Success: reset circuit breaker
+                health.RecordSuccess();
             }
             catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 _logger.LogWarning(
                     "[ServiceRouter] Service call timed out: {ServiceName}.{Method}",
                     call.ServiceName, call.Method);
+                
+                // Timeout: record failure for circuit breaker
+                health.RecordFailure();
                 
                 return CreateErrorReply(
                     call.CorrelationId,
@@ -200,6 +223,9 @@ public class MeshServiceRouter
                     ex,
                     "[ServiceRouter] Service handler threw exception: {ServiceName}.{Method}",
                     call.ServiceName, call.Method);
+                
+                // Exception: record failure for circuit breaker
+                health.RecordFailure();
                 
                 return CreateErrorReply(
                     call.CorrelationId,
@@ -342,4 +368,59 @@ public sealed record RouterStats
 {
     public int RegisteredServiceCount { get; init; }
     public int TrackedPeerCount { get; init; }
+}
+
+/// <summary>
+/// Service health tracker for circuit breaker pattern.
+/// </summary>
+internal class ServiceHealthTracker
+{
+    private const int FailureThreshold = 5;
+    private static readonly TimeSpan CircuitOpenDuration = TimeSpan.FromMinutes(5);
+    
+    public int ConsecutiveFailures { get; private set; }
+    public DateTimeOffset? CircuitOpenedAt { get; private set; }
+
+    /// <summary>
+    /// Check if circuit breaker is currently open.
+    /// </summary>
+    public bool IsCircuitOpen()
+    {
+        if (ConsecutiveFailures < FailureThreshold)
+            return false;
+
+        // Circuit is open, check if it should reset (half-open state)
+        if (CircuitOpenedAt.HasValue && 
+            DateTimeOffset.UtcNow - CircuitOpenedAt.Value >= CircuitOpenDuration)
+        {
+            // Circuit has been open long enough, allow one test request (half-open)
+            ConsecutiveFailures = FailureThreshold - 1; // One more failure will re-open
+            CircuitOpenedAt = null;
+            return false; // Allow test request
+        }
+
+        return true; // Circuit remains open
+    }
+
+    /// <summary>
+    /// Record a successful call (resets circuit breaker).
+    /// </summary>
+    public void RecordSuccess()
+    {
+        ConsecutiveFailures = 0;
+        CircuitOpenedAt = null;
+    }
+
+    /// <summary>
+    /// Record a failed call (may open circuit breaker).
+    /// </summary>
+    public void RecordFailure()
+    {
+        ConsecutiveFailures++;
+        
+        if (ConsecutiveFailures >= FailureThreshold && !CircuitOpenedAt.HasValue)
+        {
+            CircuitOpenedAt = DateTimeOffset.UtcNow;
+        }
+    }
 }
