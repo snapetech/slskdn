@@ -338,13 +338,16 @@ namespace slskd.VirtualSoulfind.v2.API
         ///     Gets execution status for a plan.
         /// </summary>
         /// <param name="executionId">The execution ID.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The execution state.</returns>
         [HttpGet("executions/{executionId}")]
         [ProducesResponseType(typeof(PlanExecutionState), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetExecutionStatus(string executionId)
+        public async Task<IActionResult> GetExecutionStatus(
+            string executionId,
+            CancellationToken cancellationToken = default)
         {
-            var state = await _resolver.GetExecutionStatusAsync(executionId);
+            var state = await _resolver.GetExecutionStatusAsync(executionId, cancellationToken);
             
             if (state == null)
             {
