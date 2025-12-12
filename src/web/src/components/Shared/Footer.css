@@ -213,15 +213,33 @@ html:not(.dark) .slskdn-footer-stat-icon.connected {
     background: rgba(88, 166, 255, 0.05);
     border-radius: 4px;
     border: 1px solid rgba(88, 166, 255, 0.15);
+    min-width: 200px; /* Fixed minimum width */
 }
 
 .slskdn-footer-speed-item {
     white-space: nowrap;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
 }
 
 .slskdn-footer-speed-item strong {
     color: #58a6ff;
     margin-right: 3px;
+}
+
+.slskdn-footer-speed-item .speed-value {
+    display: inline-block;
+    min-width: 32px; /* Fixed width for 3 digits + decimal */
+    text-align: right;
+}
+
+.slskdn-footer-speed-item .speed-unit {
+    display: inline-block;
+    width: 8px; /* Fixed width for unit (K/M/G/B) */
+    text-align: left;
+    opacity: 0.8;
+    font-size: 10px;
 }
 
 html:not(.dark) .slskdn-footer-speeds {

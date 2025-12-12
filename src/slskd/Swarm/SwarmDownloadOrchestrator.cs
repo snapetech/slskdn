@@ -102,19 +102,29 @@ public class SwarmDownloadOrchestrator : BackgroundService
             var tempDir = IOPath.Combine(IOPath.GetTempPath(), "slskdn-swarm", job.JobId);
             IODirectory.CreateDirectory(tempDir);
 
-            // Convert SwarmSource to peer usernames for chunk scheduler
+            // Convert SwarmSource to peer identifiers for chunk scheduler
+            // Mesh-first approach: prefer overlay transport, fallback to Soulseek
             var availablePeers = job.Sources
-                .Where(s => s.Transport == "soulseek") // For now, only handle Soulseek peers
-                .Select(s => s.PeerId)
+                .OrderBy(s => s.Transport == "overlay" ? 0 : s.Transport == "soulseek" ? 1 : 2) // Mesh first
+                .Select(s => new { s.MeshPeerId, s.SoulseekUsername, s.Transport })
                 .ToList();
 
             if (availablePeers.Count == 0)
             {
-                logger.LogWarning("[SwarmOrchestrator] Job {JobId}: No Soulseek peers available", job.JobId);
+                logger.LogWarning("[SwarmOrchestrator] Job {JobId}: No peers available", job.JobId);
                 status.State = SwarmJobState.Failed;
-                status.Error = "No Soulseek peers available";
+                status.Error = "No peers available";
                 return;
             }
+            
+            logger.LogInformation(
+                "[SwarmOrchestrator] Job {JobId}: Using {OverlayCount} overlay peers, {SoulseekCount} Soulseek peers",
+                job.JobId,
+                availablePeers.Count(p => p.Transport == "overlay"),
+                availablePeers.Count(p => p.Transport == "soulseek"));
+
+            // Build peer ID list for scheduler (using mesh IDs)
+            var peerIds = availablePeers.Select(p => p.MeshPeerId).ToList();
 
             // Shared work queue for chunks
             var chunkQueue = new ConcurrentQueue<ChunkInfo>();
@@ -140,7 +150,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                             ChunkIndex = chunk.Index,
                             Size = chunk.EndOffset - chunk.StartOffset,
                         },
-                        availablePeers,
+                        peerIds,
                         ct);
 
                     if (assignment.Success && !string.IsNullOrEmpty(assignment.AssignedPeer))
@@ -293,23 +303,35 @@ public class SwarmDownloadOrchestrator : BackgroundService
 
         try
         {
-            // Find the source for this peer
-            var source = job.Sources.FirstOrDefault(s => s.PeerId == peerId);
+            // Find the source for this peer (by mesh peer ID)
+            var source = job.Sources.FirstOrDefault(s => s.MeshPeerId == peerId);
             if (source == null)
             {
                 return new ChunkResult
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Source not found for peer {peerId}",
+                    Error = $"Source not found for mesh peer {peerId}",
                 };
             }
 
             // For Soulseek transport, use Soulseek client with LimitedWriteStream
             if (source.Transport == "soulseek")
             {
-                logger.LogDebug("[SwarmOrchestrator] Downloading chunk {ChunkIndex} from {PeerId} (offset {Start}-{End}, size {Size})",
-                    chunk.Index, peerId, chunk.StartOffset, chunk.EndOffset, chunkSize);
+                // Soulseek requires a username - get it from the source
+                var soulseekUsername = source.SoulseekUsername;
+                if (string.IsNullOrEmpty(soulseekUsername))
+                {
+                    return new ChunkResult
+                    {
+                        ChunkIndex = chunk.Index,
+                        Success = false,
+                        Error = $"No Soulseek username for mesh peer {peerId}",
+                    };
+                }
+                
+                logger.LogDebug("[SwarmOrchestrator] Downloading chunk {ChunkIndex} from {Username} (mesh {MeshId}, offset {Start}-{End}, size {Size})",
+                    chunk.Index, soulseekUsername, peerId, chunk.StartOffset, chunk.EndOffset, chunkSize);
 
                 // Use LimitedWriteStream to download only the chunk range
                 // Soulseek doesn't support range requests, but we can start at the offset
@@ -326,7 +348,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                     // Use ContentId as filename if source doesn't have a specific path
                     var filename = job.File.ContentId;
                     await soulseekClient.DownloadAsync(
-                        username: peerId,
+                        username: soulseekUsername,
                         remoteFilename: filename,
                         outputStreamFactory: () => Task.FromResult<System.IO.Stream>(limitedStream),
                         size: job.File.SizeBytes,
@@ -339,8 +361,8 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 catch (OperationCanceledException) when (limitedStream.LimitReached)
                 {
                     // Expected - we cancelled after getting our chunk
-                    logger.LogDebug("[SwarmOrchestrator] Chunk {ChunkIndex} complete (cancelled remaining) from {PeerId}",
-                        chunk.Index, peerId);
+                    logger.LogDebug("[SwarmOrchestrator] Chunk {ChunkIndex} complete (cancelled remaining) from {Username} (mesh {MeshId})",
+                        chunk.Index, soulseekUsername, peerId);
                 }
 
                 stopwatch.Stop();
@@ -350,8 +372,8 @@ public class SwarmDownloadOrchestrator : BackgroundService
 
                 if (success)
                 {
-                    logger.LogInformation("[SwarmOrchestrator] ✓ Chunk {ChunkIndex} from {PeerId}: {Size}KB in {Time}ms @ {Speed:F0}KB/s",
-                        chunk.Index, peerId, chunkSize / 1024, stopwatch.ElapsedMilliseconds,
+                    logger.LogInformation("[SwarmOrchestrator] ✓ Chunk {ChunkIndex} from {Username} (mesh {MeshId}): {Size}KB in {Time}ms @ {Speed:F0}KB/s",
+                        chunk.Index, soulseekUsername, peerId, chunkSize / 1024, stopwatch.ElapsedMilliseconds,
                         (chunkSize * 1000.0 / stopwatch.ElapsedMilliseconds) / 1024.0);
 
                     // Read chunk data into memory for assembly

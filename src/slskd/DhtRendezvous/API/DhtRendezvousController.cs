@@ -132,6 +132,7 @@ public class DhtRendezvousController : ControllerBase
         var peers = _dhtService.GetMeshPeers()
             .Select(p => new MeshPeerInfoResponse
             {
+                MeshPeerId = p.MeshPeerId,
                 Username = p.Username,
                 Address = p.Endpoint.Address.ToString(),
                 Port = p.Endpoint.Port,
@@ -334,7 +335,8 @@ public sealed class DiscoveryResultResponse
 
 public sealed class MeshPeerInfoResponse
 {
-    public required string Username { get; init; }
+    public required string MeshPeerId { get; init; }
+    public string? Username { get; init; }
     public required string Address { get; init; }
     public int Port { get; init; }
     public required List<string> Features { get; init; }

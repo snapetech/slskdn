@@ -64,6 +64,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.6" />
     <PackageReference Include="Mono.Nat" Version="3.0.0" />
     <PackageReference Include="MonoTorrent" Version="3.0.2" />
+    <PackageReference Include="NSec.Cryptography" Version="24.9.0" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="prometheus-net" Version="8.2.1" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />

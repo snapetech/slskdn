@@ -16,11 +16,12 @@ using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Registry of active mesh overlay connections.
-/// Tracks connected peers and provides lookup by username or endpoint.
+/// Tracks connected peers by mesh peer ID (primary) and optionally by username/endpoint.
 /// </summary>
 public sealed class MeshNeighborRegistry : IAsyncDisposable
 {
     private readonly ILogger<MeshNeighborRegistry> _logger;
+    private readonly ConcurrentDictionary<string, MeshOverlayConnection> _connectionsByMeshPeerId = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, MeshOverlayConnection> _connectionsByUsername = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<IPEndPoint, MeshOverlayConnection> _connectionsByEndpoint = new();
     private readonly SemaphoreSlim _registrationLock = new(1, 1);
@@ -60,7 +61,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// <summary>
     /// Number of active neighbors.
     /// </summary>
-    public int Count => _connectionsByUsername.Count;
+    public int Count => _connectionsByMeshPeerId.Count;
     
     /// <summary>
     /// Whether we need more neighbors.
@@ -73,15 +74,15 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     public bool IsFull => Count >= MaxNeighbors;
     
     /// <summary>
-    /// Register a new mesh neighbor.
+    /// Register a new mesh neighbor. Mesh peer ID is required, username is optional.
     /// </summary>
     /// <param name="connection">The connection to register.</param>
     /// <returns>True if registered, false if rejected (duplicate, full, etc).</returns>
     public async Task<bool> RegisterAsync(MeshOverlayConnection connection)
     {
-        if (connection.Username is null)
+        if (string.IsNullOrEmpty(connection.MeshPeerId))
         {
-            _logger.LogWarning("Cannot register connection without username");
+            _logger.LogWarning("Cannot register connection without mesh peer ID");
             return false;
         }
         
@@ -91,14 +92,14 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             // Check capacity
             if (IsFull)
             {
-                _logger.LogDebug("Registry full, rejecting {Username}", connection.Username);
+                _logger.LogDebug("Registry full, rejecting {MeshPeerId}", connection.MeshPeerId);
                 return false;
             }
             
-            // Check for duplicate username
-            if (_connectionsByUsername.ContainsKey(connection.Username))
+            // Check for duplicate mesh peer ID
+            if (_connectionsByMeshPeerId.ContainsKey(connection.MeshPeerId))
             {
-                _logger.LogDebug("Already connected to {Username}", connection.Username);
+                _logger.LogDebug("Already connected to {MeshPeerId}", connection.MeshPeerId);
                 return false;
             }
             
@@ -109,15 +110,23 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                 return false;
             }
             
-            // Register
-            _connectionsByUsername[connection.Username] = connection;
+            // Register by mesh peer ID (primary key)
+            _connectionsByMeshPeerId[connection.MeshPeerId] = connection;
             _connectionsByEndpoint[connection.RemoteEndPoint] = connection;
+            
+            // Also register by username if provided (optional alias)
+            if (!string.IsNullOrEmpty(connection.Username))
+            {
+                _connectionsByUsername[connection.Username] = connection;
+            }
             
             var isFirstNeighbor = Count == 1 && !_firstNeighborEventFired;
             
+            var displayName = connection.Username ?? connection.MeshPeerId;
             _logger.LogInformation(
-                "Registered mesh neighbor {Username} from {Endpoint} (total: {Count}){First}",
-                connection.Username,
+                "Registered mesh neighbor {DisplayName} (MeshPeerId: {MeshPeerId}) from {Endpoint} (total: {Count}){First}",
+                displayName,
+                connection.MeshPeerId,
                 connection.RemoteEndPoint,
                 Count,
                 isFirstNeighbor ? " 🎉 First neighbor connected!" : "");
@@ -149,7 +158,12 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         {
             var removed = false;
             
-            if (connection.Username is not null)
+            if (!string.IsNullOrEmpty(connection.MeshPeerId))
+            {
+                removed |= _connectionsByMeshPeerId.TryRemove(connection.MeshPeerId, out _);
+            }
+            
+            if (!string.IsNullOrEmpty(connection.Username))
             {
                 removed |= _connectionsByUsername.TryRemove(connection.Username, out _);
             }
@@ -158,9 +172,10 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             
             if (removed)
             {
+                var displayName = connection.Username ?? connection.MeshPeerId ?? connection.RemoteEndPoint.ToString();
                 _logger.LogInformation(
-                    "Unregistered mesh neighbor {Username} (remaining: {Count})",
-                    connection.Username ?? connection.RemoteEndPoint.ToString(),
+                    "Unregistered mesh neighbor {DisplayName} (remaining: {Count})",
+                    displayName,
                     Count);
                 
                 NeighborRemoved?.Invoke(this, new MeshNeighborEventArgs(connection));
@@ -203,7 +218,16 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     }
     
     /// <summary>
-    /// Get connection by username.
+    /// Get connection by mesh peer ID.
+    /// </summary>
+    public MeshOverlayConnection? GetConnectionByMeshPeerId(string meshPeerId)
+    {
+        _connectionsByMeshPeerId.TryGetValue(meshPeerId, out var connection);
+        return connection;
+    }
+    
+    /// <summary>
+    /// Get connection by username (optional alias).
     /// </summary>
     public MeshOverlayConnection? GetConnection(string username)
     {
@@ -225,7 +249,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<MeshOverlayConnection> GetAllConnections()
     {
-        return _connectionsByUsername.Values.ToList();
+        return _connectionsByMeshPeerId.Values.ToList();
     }
     
     /// <summary>
@@ -233,11 +257,12 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<MeshPeerInfo> GetPeerInfo()
     {
-        return _connectionsByUsername.Values
-            .Where(c => c.Username is not null)
+        return _connectionsByMeshPeerId.Values
+            .Where(c => !string.IsNullOrEmpty(c.MeshPeerId))
             .Select(c => new MeshPeerInfo
             {
-                Username = c.Username!,
+                MeshPeerId = c.MeshPeerId!,
+                Username = c.Username, // May be null for mesh-only peers
                 Endpoint = c.RemoteEndPoint,
                 Features = c.Features,
                 ConnectedAt = c.ConnectedAt,

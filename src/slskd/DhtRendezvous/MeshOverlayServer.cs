@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.DhtRendezvous.Messages;
 using slskd.DhtRendezvous.Security;
 using slskd.Mesh;
 
@@ -34,6 +35,8 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private readonly MeshNeighborRegistry _registry;
     private readonly IMeshSyncService _meshSyncService;
     private readonly DhtRendezvousOptions _dhtOptions;
+    private readonly Mesh.Identity.LocalMeshIdentityService _localMeshIdentity;
+    private readonly IMeshOverlayMessageHandler? _meshMessageHandler;
     
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
@@ -45,7 +48,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     // Helper for deserializing raw messages (stateless, just need the JSON options)
     private readonly SecureMessageFramer _framerInstance = new(Stream.Null);
     
-    private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
+    private string? LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username;
     private int ListenPortConfig => _dhtOptions.OverlayPort;
     
     public MeshOverlayServer(
@@ -57,7 +60,9 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         OverlayBlocklist blocklist,
         MeshNeighborRegistry registry,
         IMeshSyncService meshSyncService,
-        DhtRendezvousOptions dhtOptions)
+        DhtRendezvousOptions dhtOptions,
+        Mesh.Identity.LocalMeshIdentityService localMeshIdentity,
+        IMeshOverlayMessageHandler? meshMessageHandler = null)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
@@ -68,6 +73,8 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _registry = registry;
         _meshSyncService = meshSyncService;
         _dhtOptions = dhtOptions;
+        _localMeshIdentity = localMeshIdentity;
+        _meshMessageHandler = meshMessageHandler;
     }
     
     public bool IsListening => _listener is not null;
@@ -209,11 +216,23 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             
             try
             {
-                // Perform protocol handshake
-                var hello = await connection.PerformServerHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
+                // Perform protocol handshake with mesh peer ID and optional Soulseek username
+                var localMeshPeerId = _localMeshIdentity.MeshPeerId.ToString();
                 
-                // Check if username is blocked
-                if (_blocklist.IsBlocked(hello.Username))
+                // Sign handshake payload (MeshPeerId + Features + Timestamp)
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var payloadToSign = BuildHandshakePayload(localMeshPeerId, timestamp);
+                var signature = _localMeshIdentity.Sign(payloadToSign);
+                
+                var hello = await connection.PerformServerHandshakeAsync(
+                    localMeshPeerId, 
+                    LocalUsername,
+                    publicKey: _localMeshIdentity.PublicKey,
+                    signature: signature,
+                    cancellationToken: cancellationToken);
+                
+                // Check if username is blocked (if provided)
+                if (!string.IsNullOrEmpty(hello.Username) && _blocklist.IsBlocked(hello.Username))
                 {
                     _logger.LogWarning("Rejected connection from blocked user {Username}", hello.Username);
                     Interlocked.Increment(ref _totalRejected);
@@ -410,7 +429,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     }
     
     /// <summary>
-    /// Handle mesh protocol messages by forwarding to MeshSyncService.
+    /// Handle mesh protocol messages by forwarding to the mesh message handler.
     /// </summary>
     private async Task HandleMeshMessageAsync(MeshOverlayConnection connection, byte[] rawMessage, string? messageType, CancellationToken cancellationToken)
     {
@@ -429,14 +448,32 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             
             if (meshMessage == null)
             {
-                _logger.LogDebug("Unknown message type {Type} from {Username}, ignoring", messageType, connection.Username);
+                var displayId = connection.Username ?? connection.MeshPeerId ?? connection.RemoteEndPoint.ToString();
+                _logger.LogDebug("Unknown message type {Type} from {DisplayId}, ignoring", messageType, displayId);
                 return;
             }
             
-            _logger.LogDebug("Forwarding {Type} message from {Username} to MeshSyncService", messageType, connection.Username);
+            var fromMeshPeerId = connection.MeshPeerId ?? throw new InvalidOperationException("Connection has no mesh peer ID");
+            var displayName = connection.Username ?? fromMeshPeerId;
             
-            // Forward to mesh sync service
-            var response = await _meshSyncService.HandleMessageAsync(connection.Username!, meshMessage, cancellationToken);
+            _logger.LogDebug("Handling {Type} message from {DisplayName}", messageType, displayName);
+            
+            // Forward to mesh message handler (if available, otherwise fall back to direct sync service)
+            Mesh.Messages.MeshMessage? response;
+            if (_meshMessageHandler != null)
+            {
+                response = await _meshMessageHandler.HandleMessageAsync(fromMeshPeerId, meshMessage, cancellationToken);
+            }
+            else
+            {
+                // Fallback to direct MeshSyncService (legacy, requires username)
+                if (string.IsNullOrEmpty(connection.Username))
+                {
+                    _logger.LogWarning("Cannot forward mesh message from mesh-only peer to legacy MeshSyncService");
+                    return;
+                }
+                response = await _meshSyncService.HandleMessageAsync(connection.Username!, meshMessage, cancellationToken);
+            }
             
             // Send response if any
             if (response != null)
@@ -446,12 +483,14 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         }
         catch (ProtocolViolationException ex)
         {
-            _logger.LogWarning("Protocol violation parsing mesh message from {Username}: {Error}", connection.Username, ex.Message);
+            var displayName = connection.Username ?? connection.MeshPeerId ?? connection.RemoteEndPoint.ToString();
+            _logger.LogWarning("Protocol violation parsing mesh message from {DisplayName}: {Error}", displayName, ex.Message);
             _rateLimiter.RecordViolation(connection.RemoteAddress);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error handling mesh message from {Username}", connection.Username);
+            var displayName = connection.Username ?? connection.MeshPeerId ?? connection.RemoteEndPoint.ToString();
+            _logger.LogWarning(ex, "Error handling mesh message from {DisplayName}", displayName);
         }
     }
     
@@ -472,6 +511,18 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     {
         await StopAsync();
         _cts?.Dispose();
+    }
+    
+    private static byte[] BuildHandshakePayload(string meshPeerId, long timestamp)
+    {
+        using var ms = new System.IO.MemoryStream();
+        using var writer = new System.IO.BinaryWriter(ms);
+        
+        writer.Write(meshPeerId);
+        writer.Write(string.Join(",", OverlayFeatures.All));
+        writer.Write(timestamp);
+        
+        return ms.ToArray();
     }
 }
 

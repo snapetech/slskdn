@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MonoTorrent;
@@ -35,6 +36,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private readonly IMeshOverlayConnector _overlayConnector;
     private readonly MeshNeighborRegistry _registry;
     private readonly DhtRendezvousOptions _options;
+    private readonly slskd.Mesh.Identity.IMeshPeerRegistry? _meshPeerRegistry;
+    private readonly slskd.Mesh.Identity.ISoulseekMeshIdentityMapper? _meshIdentityMapper;
+    private readonly OverlayMeshSyncAdapter? _meshSyncAdapter;
     
     // MonoTorrent DHT components
     private DhtEngine? _dhtEngine;
@@ -60,13 +64,22 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         IMeshOverlayServer overlayServer,
         IMeshOverlayConnector overlayConnector,
         MeshNeighborRegistry registry,
-        DhtRendezvousOptions options)
+        DhtRendezvousOptions options,
+        slskd.Mesh.Identity.IMeshPeerRegistry? meshPeerRegistry = null,
+        slskd.Mesh.Identity.ISoulseekMeshIdentityMapper? meshIdentityMapper = null,
+        OverlayMeshSyncAdapter? meshSyncAdapter = null)
     {
         _logger = logger;
         _overlayServer = overlayServer;
         _overlayConnector = overlayConnector;
         _registry = registry;
         _options = options;
+        _meshPeerRegistry = meshPeerRegistry;
+        _meshIdentityMapper = meshIdentityMapper;
+        _meshSyncAdapter = meshSyncAdapter;
+        
+        // Subscribe to neighbor events to register in mesh peer registry
+        _registry.NeighborAdded += OnNeighborAdded;
     }
     
     public bool IsBeaconCapable { get; private set; }
@@ -309,6 +322,13 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 var endpoint = new IPEndPoint(ip, uri.Port);
                 var endpointKey = $"{ip}:{uri.Port}";
                 
+                // Don't connect to ourselves
+                if (uri.Port == _options.OverlayPort && IsLocalAddress(ip))
+                {
+                    _logger.LogDebug("Skipping self-discovery: {Endpoint}", endpoint);
+                    continue;
+                }
+                
                 // SECURITY: Cap discovered peers to prevent memory exhaustion
                 if (_discoveredPeers.Count >= MaxDiscoveredPeers)
                 {
@@ -316,11 +336,11 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                     continue;
                 }
                 
-                // Don't add ourselves or already-known peers
+                // Don't add already-known peers
                 if (_discoveredPeers.TryAdd(endpointKey, endpoint))
                 {
                     Interlocked.Increment(ref _totalPeersDiscovered);
-                    _logger.LogDebug("Discovered new mesh peer: {Endpoint}", endpoint);
+                    _logger.LogInformation("Discovered new mesh peer: {Endpoint}", endpoint);
                     
                     // Try to connect asynchronously
                     _ = TryConnectToPeerAsync(endpoint);
@@ -331,6 +351,17 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 _logger.LogWarning(ex, "Failed to parse peer info: {Peer}", peerInfo);
             }
         }
+    }
+    
+    private bool IsLocalAddress(IPAddress address)
+    {
+        // Check if address is localhost or local network
+        if (IPAddress.IsLoopback(address))
+            return true;
+            
+        // Check if it's our local IP (if we know it)
+        // For now, just check loopback - could enhance later with local IP detection
+        return false;
     }
     
     private async Task TryConnectToPeerAsync(IPEndPoint endpoint)
@@ -516,7 +547,99 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             return false;
         }
     }
+    
+    /// <summary>
+    /// Handles NeighborAdded event to register mesh peers in the mesh peer registry.
+    /// </summary>
+    private void OnNeighborAdded(object? sender, MeshNeighborEventArgs e)
+    {
+        if (_meshPeerRegistry == null || e.Connection == null)
+        {
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(e.Connection.MeshPeerId))
+        {
+            _logger.LogWarning("Cannot register mesh peer without MeshPeerId");
+            return;
+        }
+        
+        // Create a MeshPeerDescriptor for registration
+        // Note: We don't have the peer's private key, so we can't create a fully signed descriptor here
+        // In practice, peers should exchange signed descriptors during handshake
+        // For now, create a descriptor with empty signature (will fail verification if RequireDescriptorSignature is true)
+        var descriptor = new slskd.Mesh.Identity.MeshPeerDescriptor
+        {
+            MeshPeerId = slskd.Mesh.Identity.MeshPeerId.Parse(e.Connection.MeshPeerId),
+            PublicKey = Array.Empty<byte>(), // TODO: Exchange during handshake
+            Signature = Array.Empty<byte>(), // TODO: Exchange during handshake
+            Endpoints = new[] { e.Connection.RemoteEndPoint },
+            Capabilities = e.Connection.Features?.ToList() ?? new List<string>(),
+            Timestamp = DateTimeOffset.UtcNow,
+        };
+        
+        // Register asynchronously (fire and forget, with error logging)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _meshPeerRegistry.RegisterOrUpdateAsync(descriptor, default);
+                
+                // If username is known, map it
+                if (!string.IsNullOrEmpty(e.Connection.Username) && _meshIdentityMapper != null)
+                {
+                    await _meshIdentityMapper.MapAsync(
+                        e.Connection.Username, 
+                        descriptor.MeshPeerId, 
+                        default);
+                    
+                    _logger.LogDebug(
+                        "Mapped Soulseek username {Username} to mesh peer {MeshPeerId}",
+                        e.Connection.Username,
+                        descriptor.MeshPeerId.ToShortString());
+                }
+                
+                _logger.LogInformation(
+                    "Registered mesh peer {MeshPeerId} (username: {Username})",
+                    descriptor.MeshPeerId.ToShortString(),
+                    e.Connection.Username ?? "<none>");
+                
+                // Auto-start hash sync with this peer (Epic 2)
+                if (_meshSyncAdapter != null)
+                {
+                    _logger.LogDebug("Auto-starting hash sync with {MeshPeerId}", descriptor.MeshPeerId.ToShortString());
+                    
+                    // Give the connection a moment to fully stabilize
+                    await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken.None);
+                    
+                    var syncSuccess = await _meshSyncAdapter.TrySyncWithPeerAsync(
+                        e.Connection.MeshPeerId, 
+                        CancellationToken.None);
+                    
+                    if (syncSuccess)
+                    {
+                        _logger.LogInformation(
+                            "Successfully initiated hash sync with {MeshPeerId}",
+                            descriptor.MeshPeerId.ToShortString());
+                    }
+                    else
+                    {
+                        _logger.LogDebug(
+                            "Could not initiate hash sync with {MeshPeerId} (connection may have closed)",
+                            descriptor.MeshPeerId.ToShortString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, 
+                    "Failed to register mesh peer {MeshPeerId}", 
+                    e.Connection.MeshPeerId);
+            }
+        });
+    }
 }
+
 
 /// <summary>
 /// Configuration options for DHT rendezvous.

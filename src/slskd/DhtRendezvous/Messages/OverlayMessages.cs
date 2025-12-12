@@ -79,10 +79,31 @@ public sealed class MeshHelloMessage : OverlayMessage
     public override string Type => OverlayMessageType.Hello;
     
     /// <summary>
-    /// Soulseek username of the connecting client.
+    /// Mesh peer ID (required, derived from Ed25519 public key).
+    /// This is the canonical identity for mesh operations.
+    /// </summary>
+    [JsonPropertyName("mesh_peer_id")]
+    public string MeshPeerId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Ed25519 public key (32 bytes, base64-encoded).
+    /// Used for signature verification and deriving mesh peer ID.
+    /// </summary>
+    [JsonPropertyName("public_key")]
+    public string? PublicKey { get; set; }
+    
+    /// <summary>
+    /// Ed25519 signature of the handshake (64 bytes, base64-encoded).
+    /// Signs: MeshPeerId + Features + Timestamp + Nonce
+    /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; set; }
+    
+    /// <summary>
+    /// Soulseek username (optional - may be null for mesh-only peers).
     /// </summary>
     [JsonPropertyName("username")]
-    public string Username { get; set; } = string.Empty;
+    public string? Username { get; set; }
     
     /// <summary>
     /// List of supported features.
@@ -91,7 +112,7 @@ public sealed class MeshHelloMessage : OverlayMessage
     public List<string> Features { get; set; } = new();
     
     /// <summary>
-    /// Soulseek listening ports.
+    /// Soulseek listening ports (optional - null for mesh-only peers).
     /// </summary>
     [JsonPropertyName("soulseek_ports")]
     public SoulseekPorts? SoulseekPorts { get; set; }
@@ -112,10 +133,29 @@ public sealed class MeshHelloAckMessage : OverlayMessage
     public override string Type => OverlayMessageType.HelloAck;
     
     /// <summary>
-    /// Soulseek username of the beacon.
+    /// Mesh peer ID (required, derived from Ed25519 public key).
+    /// This is the canonical identity for mesh operations.
+    /// </summary>
+    [JsonPropertyName("mesh_peer_id")]
+    public string MeshPeerId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Ed25519 public key (32 bytes, base64-encoded).
+    /// </summary>
+    [JsonPropertyName("public_key")]
+    public string? PublicKey { get; set; }
+    
+    /// <summary>
+    /// Ed25519 signature of the handshake (64 bytes, base64-encoded).
+    /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; set; }
+    
+    /// <summary>
+    /// Soulseek username (optional - may be null for mesh-only peers).
     /// </summary>
     [JsonPropertyName("username")]
-    public string Username { get; set; } = string.Empty;
+    public string? Username { get; set; }
     
     /// <summary>
     /// List of supported features.
@@ -124,7 +164,7 @@ public sealed class MeshHelloAckMessage : OverlayMessage
     public List<string> Features { get; set; } = new();
     
     /// <summary>
-    /// Soulseek listening ports.
+    /// Soulseek listening ports (optional - null for mesh-only peers).
     /// </summary>
     [JsonPropertyName("soulseek_ports")]
     public SoulseekPorts? SoulseekPorts { get; set; }

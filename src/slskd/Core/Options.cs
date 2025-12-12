@@ -257,6 +257,12 @@ namespace slskd
         /// </summary>
         [YamlMember(Alias = "dht")]
         public DhtRendezvousOptions DhtRendezvous { get; init; } = new DhtRendezvousOptions();
+        
+        /// <summary>
+        ///     Gets the BitTorrent rendezvous options.
+        /// </summary>
+        [YamlMember(Alias = "bittorrent")]
+        public BitTorrent.BitTorrentOptions BitTorrent { get; init; } = new BitTorrent.BitTorrentOptions();
 
         /// <summary>
         ///     Gets user groups.

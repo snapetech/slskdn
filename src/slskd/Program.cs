@@ -937,8 +937,42 @@ namespace slskd
             services.AddSingleton<Backfill.IBackfillSchedulerService, Backfill.BackfillSchedulerService>();
             services.AddHostedService(p => (Backfill.BackfillSchedulerService)p.GetRequiredService<Backfill.IBackfillSchedulerService>());
 
+            // Mesh identity services (DHT-first peer registry)
+            services.AddSingleton<Mesh.Identity.LocalMeshIdentityService>(sp => 
+                new Mesh.Identity.LocalMeshIdentityService(
+                    sp.GetRequiredService<ILogger<Mesh.Identity.LocalMeshIdentityService>>(),
+                    Path.Combine(AppDirectory, "mesh-identity.key")));
+            services.AddSingleton<Mesh.Identity.IMeshPeerRegistry>(sp => 
+                new Mesh.Identity.MeshPeerRegistry(
+                    sp.GetRequiredService<ILogger<Mesh.Identity.MeshPeerRegistry>>(),
+                    AppDirectory));
+            services.AddSingleton<Mesh.Identity.ISoulseekMeshIdentityMapper>(sp => 
+                new Mesh.Identity.SoulseekMeshIdentityMapper(
+                    sp.GetRequiredService<ILogger<Mesh.Identity.SoulseekMeshIdentityMapper>>(),
+                    AppDirectory));
+
+            // BitTorrent rendezvous service (optional peer discovery channel)
+            // Always register, service checks EnableRendezvousTorrent config internally
+            services.AddSingleton<BitTorrent.RendezvousTorrentService>(sp => 
+                new BitTorrent.RendezvousTorrentService(
+                    sp.GetRequiredService<ILogger<BitTorrent.RendezvousTorrentService>>(),
+                    AppDirectory,
+                    sp.GetRequiredService<IOptions<Options>>().Value.BitTorrent));
+            services.AddHostedService(p => p.GetRequiredService<BitTorrent.RendezvousTorrentService>());
+
+
             // Mesh services (Hash database synchronization)
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
+            
+            // Mesh overlay sync adapter (bridges mesh sync to overlay connections)
+            services.AddSingleton<DhtRendezvous.OverlayMeshSyncAdapter>();
+            services.AddSingleton<DhtRendezvous.IMeshOverlayMessageHandler>(sp => 
+                sp.GetRequiredService<DhtRendezvous.OverlayMeshSyncAdapter>());
+            
+            // Soulseek-Mesh bridge services (ensure mesh discoveries benefit Soulseek community)
+            services.AddSingleton<DhtRendezvous.SoulseekMeshBridgeService>();
+            services.AddHostedService(sp => sp.GetRequiredService<DhtRendezvous.SoulseekMeshBridgeService>());
+            services.AddSingleton<Mesh.MeshSearchBridgeService>();
 
             // Multi-source download services (Swarm)
             services.AddSingleton<ISourceDiscoveryService>(sp => new SourceDiscoveryService(

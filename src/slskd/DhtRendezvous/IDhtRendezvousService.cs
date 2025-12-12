@@ -88,8 +88,11 @@ public interface IDhtRendezvousService
 /// </summary>
 public sealed class MeshPeerInfo
 {
-    /// <summary>Soulseek username.</summary>
-    public required string Username { get; init; }
+    /// <summary>Mesh peer ID (canonical identity, required).</summary>
+    public required string MeshPeerId { get; init; }
+    
+    /// <summary>Soulseek username (optional alias).</summary>
+    public string? Username { get; init; }
     
     /// <summary>Remote endpoint.</summary>
     public required IPEndPoint Endpoint { get; init; }

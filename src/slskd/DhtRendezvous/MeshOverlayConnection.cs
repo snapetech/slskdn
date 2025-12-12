@@ -51,7 +51,13 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public IPAddress RemoteAddress => RemoteEndPoint.Address;
     
     /// <summary>
-    /// Soulseek username of the remote peer (set after handshake).
+    /// Mesh peer ID of the remote peer (primary identity).
+    /// </summary>
+    public string? MeshPeerId { get; private set; }
+    
+    /// <summary>
+    /// Soulseek username of the remote peer (optional alias).
+    /// May be null for mesh-only peers.
     /// </summary>
     public string? Username { get; private set; }
     
@@ -213,8 +219,11 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// Perform the protocol handshake as the client (send HELLO, receive ACK).
     /// </summary>
     public async Task<MeshHelloAckMessage> PerformClientHandshakeAsync(
-        string username,
+        string meshPeerId,
+        string? username = null,
         SoulseekPorts? ports = null,
+        byte[]? publicKey = null,
+        byte[]? signature = null,
         CancellationToken cancellationToken = default)
     {
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -226,6 +235,9 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         // Send HELLO
         var hello = new MeshHelloMessage
         {
+            MeshPeerId = meshPeerId,
+            PublicKey = publicKey != null ? Convert.ToBase64String(publicKey) : null,
+            Signature = signature != null ? Convert.ToBase64String(signature) : null,
             Username = username,
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
@@ -252,6 +264,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             throw new ProtocolViolationException("Nonce mismatch - possible replay attack");
         }
         
+        MeshPeerId = ack.MeshPeerId;
         Username = ack.Username;
         Features = ack.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
         IsHandshakeComplete = true;
@@ -264,8 +277,11 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// Perform the protocol handshake as the server (receive HELLO, send ACK).
     /// </summary>
     public async Task<MeshHelloMessage> PerformServerHandshakeAsync(
-        string username,
+        string meshPeerId,
+        string? username = null,
         SoulseekPorts? ports = null,
+        byte[]? publicKey = null,
+        byte[]? signature = null,
         CancellationToken cancellationToken = default)
     {
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -285,6 +301,9 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         // Send ACK
         var ack = new MeshHelloAckMessage
         {
+            MeshPeerId = meshPeerId,
+            PublicKey = publicKey != null ? Convert.ToBase64String(publicKey) : null,
+            Signature = signature != null ? Convert.ToBase64String(signature) : null,
             Username = username,
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
@@ -294,6 +313,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         await _framer.WriteMessageAsync(ack, handshakeCts.Token);
         LastActivity = DateTimeOffset.UtcNow;
         
+        MeshPeerId = hello.MeshPeerId;
         Username = hello.Username;
         Features = hello.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
         IsHandshakeComplete = true;

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.DhtRendezvous.Messages;
 using slskd.DhtRendezvous.Security;
 
 /// <summary>
@@ -28,6 +29,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
     private readonly Mesh.Nat.INatTraversalService _natTraversal;
+    private readonly Mesh.Identity.LocalMeshIdentityService _localMeshIdentity;
     
     private int _pendingConnections;
     private long _successfulConnections;
@@ -38,7 +40,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     /// </summary>
     public const int MaxConcurrentAttempts = 3;
     
-    private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
+    private string? LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username;
     
     public MeshOverlayConnector(
         ILogger<MeshOverlayConnector> logger,
@@ -48,7 +50,8 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         OverlayRateLimiter rateLimiter,
         OverlayBlocklist blocklist,
         MeshNeighborRegistry registry,
-        Mesh.Nat.INatTraversalService natTraversal)
+        Mesh.Nat.INatTraversalService natTraversal,
+        Mesh.Identity.LocalMeshIdentityService localMeshIdentity)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
@@ -58,6 +61,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         _blocklist = blocklist;
         _registry = registry;
         _natTraversal = natTraversal;
+        _localMeshIdentity = localMeshIdentity;
     }
     
     public int PendingConnections => _pendingConnections;
@@ -172,11 +176,23 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             
             try
             {
-                // Perform handshake
-                var ack = await connection.PerformClientHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
+                // Perform handshake with mesh peer ID and optional Soulseek username
+                var localMeshPeerId = _localMeshIdentity.MeshPeerId.ToString();
                 
-                // Check if username is blocked
-                if (_blocklist.IsBlocked(ack.Username))
+                // Sign handshake payload (MeshPeerId + Features + Timestamp)
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var payloadToSign = BuildHandshakePayload(localMeshPeerId, timestamp);
+                var signature = _localMeshIdentity.Sign(payloadToSign);
+                
+                var ack = await connection.PerformClientHandshakeAsync(
+                    localMeshPeerId, 
+                    LocalUsername,
+                    publicKey: _localMeshIdentity.PublicKey,
+                    signature: signature,
+                    cancellationToken: cancellationToken);
+                
+                // Check if username is blocked (if provided)
+                if (!string.IsNullOrEmpty(ack.Username) && _blocklist.IsBlocked(ack.Username))
                 {
                     _logger.LogWarning("Connected to blocked user {Username}, disconnecting", ack.Username);
                     await connection.DisconnectAsync("Blocked");
@@ -264,6 +280,18 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             SuccessfulConnections = _successfulConnections,
             FailedConnections = _failedConnections,
         };
+    }
+    
+    private static byte[] BuildHandshakePayload(string meshPeerId, long timestamp)
+    {
+        using var ms = new System.IO.MemoryStream();
+        using var writer = new System.IO.BinaryWriter(ms);
+        
+        writer.Write(meshPeerId);
+        writer.Write(string.Join(",", OverlayFeatures.All));
+        writer.Write(timestamp);
+        
+        return ms.ToArray();
     }
 }
 

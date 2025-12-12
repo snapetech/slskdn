@@ -2,7 +2,6 @@ import './Footer.css';
 import * as mesh from '../../lib/mesh';
 import * as session from '../../lib/session';
 import * as transfers from '../../lib/transfers';
-import { formatBytes } from '../../lib/util';
 import React, { Component } from 'react';
 import { Icon } from 'semantic-ui-react';
 
@@ -10,8 +9,25 @@ const GITHUB_BASE = 'https://github.com/snapetech/slskdn';
 const SLSKD_GITHUB = 'https://github.com/slskd/slskd';
 
 const formatSpeed = (bytesPerSec) => {
-  if (!bytesPerSec || bytesPerSec === 0) return '0 B/s';
-  return `${formatBytes(bytesPerSec)}/s`;
+  if (!bytesPerSec || bytesPerSec === 0) return { unit: 'B', value: '0' };
+
+  const kb = bytesPerSec / 1_024;
+  const mb = kb / 1_024;
+  const gb = mb / 1_024;
+
+  if (gb >= 1) {
+    return { unit: 'G', value: gb.toFixed(gb >= 10 ? 1 : 2) };
+  }
+
+  if (mb >= 1) {
+    return { unit: 'M', value: mb.toFixed(mb >= 10 ? 1 : 2) };
+  }
+
+  if (kb >= 1) {
+    return { unit: 'K', value: kb.toFixed(kb >= 10 ? 1 : 2) };
+  }
+
+  return { unit: 'B', value: bytesPerSec.toFixed(0) };
 };
 
 class Footer extends Component {
@@ -110,21 +126,39 @@ class Footer extends Component {
                 className="slskdn-footer-speed-item"
                 title="Total transfer speed (upload + download)"
               >
-                <strong>T:</strong> {formatSpeed(speeds.total)}
+                <strong>T:</strong>{' '}
+                <span className="speed-value">
+                  {formatSpeed(speeds.total).value}
+                </span>
+                <span className="speed-unit">
+                  {formatSpeed(speeds.total).unit}
+                </span>
               </span>
               <span className="slskdn-footer-divider">•</span>
               <span
                 className="slskdn-footer-speed-item"
                 title="Soulseek network speed"
               >
-                <strong>S:</strong> {formatSpeed(speeds.soulseek)}
+                <strong>S:</strong>{' '}
+                <span className="speed-value">
+                  {formatSpeed(speeds.soulseek).value}
+                </span>
+                <span className="speed-unit">
+                  {formatSpeed(speeds.soulseek).unit}
+                </span>
               </span>
               <span className="slskdn-footer-divider">•</span>
               <span
                 className="slskdn-footer-speed-item"
                 title="Mesh network speed"
               >
-                <strong>M:</strong> {formatSpeed(speeds.mesh)}
+                <strong>M:</strong>{' '}
+                <span className="speed-value">
+                  {formatSpeed(speeds.mesh).value}
+                </span>
+                <span className="speed-unit">
+                  {formatSpeed(speeds.mesh).unit}
+                </span>
               </span>
             </div>
           )}
