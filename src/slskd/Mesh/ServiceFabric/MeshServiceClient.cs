@@ -25,9 +25,13 @@ public class MeshServiceClient : IMeshServiceClient
     // Pending calls: correlationId -> TaskCompletionSource
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ServiceReply>> _pendingCalls = new();
     
+    // Per-peer concurrent call tracking: peerId -> call count
+    private readonly ConcurrentDictionary<string, int> _perPeerCallCounts = new();
+    
     // Configuration
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(30);
     private readonly int _maxConcurrentCallsPerPeer = 10;
+    private readonly int _maxTotalPendingCalls = 1000;
     
     public MeshServiceClient(
         ILogger<MeshServiceClient> logger,
@@ -49,6 +53,40 @@ public class MeshServiceClient : IMeshServiceClient
         
         if (call == null)
             throw new ArgumentNullException(nameof(call));
+
+        // MEDIUM-3 FIX 1: Check global pending call limit
+        if (_pendingCalls.Count >= _maxTotalPendingCalls)
+        {
+            _logger.LogWarning(
+                "[ServiceClient] Max total pending calls reached: {Count}",
+                _pendingCalls.Count);
+            
+            return new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.RateLimited,
+                ErrorMessage = "Too many pending calls (global limit)"
+            };
+        }
+
+        // MEDIUM-3 FIX 2: Check per-peer concurrent call limit
+        var currentPeerCalls = _perPeerCallCounts.GetOrAdd(targetPeerId, 0);
+        if (currentPeerCalls >= _maxConcurrentCallsPerPeer)
+        {
+            _logger.LogWarning(
+                "[ServiceClient] Max concurrent calls to peer reached: {PeerId}, count: {Count}",
+                targetPeerId, currentPeerCalls);
+            
+            return new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.RateLimited,
+                ErrorMessage = "Too many concurrent calls to this peer"
+            };
+        }
+
+        // Increment per-peer counter
+        _perPeerCallCounts.AddOrUpdate(targetPeerId, 1, (_, count) => count + 1);
 
         // Create task completion source for this call
         var tcs = new TaskCompletionSource<ServiceReply>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -134,6 +172,15 @@ public class MeshServiceClient : IMeshServiceClient
         {
             // Clean up pending call
             _pendingCalls.TryRemove(call.CorrelationId, out _);
+            
+            // MEDIUM-3 FIX 3: Decrement per-peer counter
+            _perPeerCallCounts.AddOrUpdate(targetPeerId, 0, (_, count) => Math.Max(0, count - 1));
+            
+            // Clean up zero entries to prevent memory leak
+            if (_perPeerCallCounts.TryGetValue(targetPeerId, out var remainingCalls) && remainingCalls == 0)
+            {
+                _perPeerCallCounts.TryRemove(targetPeerId, out _);
+            }
         }
     }
 
@@ -191,6 +238,13 @@ public class MeshServiceClient : IMeshServiceClient
             return;
         }
 
+        // MEDIUM-3 FIX 4: Validate correlation ID to prevent injection
+        if (string.IsNullOrWhiteSpace(reply.CorrelationId))
+        {
+            _logger.LogWarning("[ServiceClient] Received reply with empty correlation ID");
+            return;
+        }
+
         if (_pendingCalls.TryRemove(reply.CorrelationId, out var tcs))
         {
             tcs.TrySetResult(reply);
@@ -202,4 +256,29 @@ public class MeshServiceClient : IMeshServiceClient
                 reply.CorrelationId);
         }
     }
+
+    /// <summary>
+    /// Get client metrics for monitoring.
+    /// </summary>
+    public ClientMetrics GetMetrics()
+    {
+        return new ClientMetrics
+        {
+            TotalPendingCalls = _pendingCalls.Count,
+            PeersWithPendingCalls = _perPeerCallCounts.Count,
+            MaxConcurrentCallsPerPeer = _maxConcurrentCallsPerPeer,
+            MaxTotalPendingCalls = _maxTotalPendingCalls
+        };
+    }
+}
+
+/// <summary>
+/// Client metrics for monitoring.
+/// </summary>
+public sealed record ClientMetrics
+{
+    public int TotalPendingCalls { get; init; }
+    public int PeersWithPendingCalls { get; init; }
+    public int MaxConcurrentCallsPerPeer { get; init; }
+    public int MaxTotalPendingCalls { get; init; }
 }
