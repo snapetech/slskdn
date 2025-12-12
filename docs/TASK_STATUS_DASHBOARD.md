@@ -32,6 +32,7 @@ Service Fabric:       ███████████████████�
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
 Global Hardening:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Engineering Quality:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
+Pod Identity:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
 Attribution:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/1   tasks complete) 📋
 Multi-Domain Core:    █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
@@ -44,7 +45,7 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  12% (21/~181 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  11% (21/~185 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
@@ -54,6 +55,7 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
 > 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
 > 📋 **LLM/AI Moderation**: 5 OPTIONAL tasks (T-MCP-LM01-05, all disabled by default)
+> 📋 **Pod Identity & Lifecycle**: 4 tasks (T-POD01-03, H-POD01) - backup, transfer, retire, security
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
@@ -531,6 +533,110 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
   - [ ] Design docs updated if external behavior changes
 
 **Why**: Proactively address technical debt before it becomes critical
+
+---
+
+### Pod Identity & Lifecycle Management (T-POD, H-POD)
+
+> **Design Doc**: See `docs/pod-identity-lifecycle.md`
+
+#### T-POD01: Pod Identity Management Service 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM (foundational for multi-pod deployments)  
+**Dependencies**: None  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 4
+
+- [ ] Implement `IPodIdentityService`:
+  - [ ] `ExportIdentityBundleAsync` (encrypted with passphrase)
+  - [ ] `ImportIdentityBundleAsync` (decrypt and restore)
+  - [ ] `RotateMeshKeyAsync` (generate new mesh keypair)
+  - [ ] `RotateActorKeyAsync` (generate new AP actor key)
+- [ ] Identity bundle format:
+  - [ ] JSON or binary with versioning
+  - [ ] AES-256 encryption (key derived from passphrase)
+  - [ ] Contents: mesh keypair, AP keys, encryption keys, optional Soulseek creds
+- [ ] Storage layout:
+  - [ ] Well-defined paths for identity material (`data/identity/`)
+  - [ ] Filesystem permissions (read-only for pod, admin-only write)
+- [ ] Add tests:
+  - [ ] Export/import round-trip preserves keys
+  - [ ] Strong passphrase required
+  - [ ] Invalid bundles rejected
+
+**Use Cases**: Backup/recovery, transfer ownership, migration to new host
+
+#### T-POD02: Admin Account Management 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: None  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 6
+
+- [ ] Implement multi-admin support:
+  - [ ] `IAdminService` with CRUD operations
+  - [ ] Password hashing (bcrypt or Argon2)
+  - [ ] Role-based access control (admin, moderator, read-only)
+- [ ] Prevent lockout:
+  - [ ] Require at least one admin account
+  - [ ] Warn when removing last admin
+  - [ ] Provide recovery mechanism (offline password reset)
+- [ ] Add tests:
+  - [ ] Multi-admin scenarios
+  - [ ] Password reset flows
+  - [ ] Permission enforcement
+
+**Why**: Prevents single-controller SPOF (add second admin before losing first)
+
+#### T-POD03: Lifecycle Management (Retire/Wipe Flows) 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD01  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 5
+
+- [ ] Implement lifecycle operations:
+  - [ ] `SoftRetireAsync` (stop external services, keep data+keys, reversible)
+  - [ ] `IdentitySuicideAsync` (wipe keys, keep data, irreversible)
+  - [ ] `FullWipeAsync` (wipe keys + data, irreversible)
+- [ ] Protection mechanisms:
+  - [ ] Admin authentication required
+  - [ ] Confirmation required (type pod ID or hostname)
+  - [ ] Clear warnings about irreversibility
+  - [ ] Audit logging (sanitized)
+- [ ] Graceful shutdown:
+  - [ ] Notify peers (if possible) before offline
+  - [ ] Drain work queues
+  - [ ] Flush databases
+- [ ] Add tests:
+  - [ ] Soft retire is reversible
+  - [ ] Identity suicide destroys keys, keeps data
+  - [ ] Full wipe destroys everything
+  - [ ] Confirmation cannot be bypassed
+
+**Three Levels**: Soft retire (temporary), Identity suicide (privacy reset), Full wipe (complete)
+
+#### H-POD01: Identity Security & Key Protection 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (before multi-pod deployments)  
+**Dependencies**: T-POD01  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 9
+
+- [ ] Implement key protection:
+  - [ ] Filesystem permissions (restrict access to `identity/`)
+  - [ ] Optional: Encrypt keys at rest with passphrase
+  - [ ] Optional: HSM integration (future)
+- [ ] Key rotation:
+  - [ ] Rotate mesh key → new PodId (breaking change, document)
+  - [ ] Rotate AP actor keys → publish keyRotation activity (if spec supports)
+  - [ ] Rotate encryption keys → re-encrypt reputation data
+- [ ] Audit logging:
+  - [ ] Log all key operations (export, import, rotate, wipe)
+  - [ ] Sanitized (no actual key material)
+  - [ ] Include: timestamp, admin ID, operation type
+- [ ] Add tests:
+  - [ ] Unauthorized access to keys prevented
+  - [ ] Key rotation updates dependent systems
+  - [ ] Audit logs capture all operations
+
+**Critical**: Keys are the crown jewels (losing keys = losing identity)
 
 ---
 
