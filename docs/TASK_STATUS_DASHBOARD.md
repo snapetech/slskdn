@@ -30,20 +30,22 @@
 ```
 Service Fabric:       ████████████████████ 100% (  7/7   tasks complete) ✅
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
-Multi-Domain:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
+Multi-Domain:         █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
+Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
 VirtualSoulfind v2:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/100+ tasks complete) 📋
 Proxy/Relay:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
-Moderation:           ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ████░░░░░░░░░░░░░░░░  18% (17/~150 tasks complete)
+Overall: █████░░░░░░░░░░░░░░░  22% (21/~150 tasks complete)
 
-Test Coverage: 68 tests passing (Service Fabric + Security + H-08)
+Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 ```
 
 > ✅ **Service Fabric Foundation**: COMPLETE  
 > ✅ **Security Hardening (Phase 2)**: COMPLETE - H-08 done! 🎉  
-> 🚀 **Critical Path**: UNBLOCKED - All phases ready to start!  
+> 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
+> 🚧 **Phase C - Multi-Domain Foundation**: IN PROGRESS - T-VC01 Parts 1-2 ✅
+> 🚀 **Critical Path**: UNBLOCKED - Next: T-MCP03 or T-VC02  
 > 📊 **Code Quality**: Build green, linter clean, zero compromises
 
 ---
@@ -523,54 +525,74 @@ Test Coverage: 68 tests passing (Service Fabric + Security + H-08)
 
 ---
 
-## 📋 Phase 6: Moderation / Control Plane (T-MCP Series)
+## 🚧 Phase B: Moderation / Control Plane (T-MCP Series)
 
-**Status**: 📋 DOCUMENTED, Not Started  
-**Progress**: 0/4 (0%)  
-**Priority**: HIGH (legal/ethical protection)
+**Status**: 🚧 IN PROGRESS  
+**Progress**: 2/4 (50%)  
+**Priority**: HIGH (legal/ethical protection, "safety floor")  
+**Last Updated**: December 11, 2025
 
-### T-MCP01: Core Moderation Interfaces 📋
-**Status**: 📋 READY NOW (no blockers)  
+### T-MCP01: Core Moderation Interfaces ✅
+**Status**: ✅ COMPLETE  
+**Commit**: `c72bafec`  
+**Tests**: 22 passing  
 **Dependencies**: None
 
-- [ ] ModerationVerdict enum
-- [ ] ModerationDecision model
-- [ ] IModerationProvider interface
-- [ ] IHashBlocklistChecker interface
-- [ ] IPeerReputationStore interface
-- [ ] LocalFileMetadata DTO
-- [ ] Composite moderation provider
-- [ ] Configuration
+- ✅ ModerationVerdict enum (Allowed, Blocked, Quarantined, Unknown)
+- ✅ ModerationDecision model (verdict + reason + evidence keys)
+- ✅ IModerationProvider interface + sub-interfaces
+- ✅ IHashBlocklistChecker interface
+- ✅ IPeerReputationStore interface  
+- ✅ IExternalModerationClient interface
+- ✅ LocalFileMetadata DTO (sanitized file metadata)
+- ✅ CompositeModerationProvider (orchestrates sub-providers)
+- ✅ NoopModerationProvider (when moderation disabled)
+- ✅ ModerationOptions configuration
+- ✅ Failsafe modes (block/allow on error)
+- ✅ DI registration in Program.cs
+- ✅ 🔒 MCP-HARDENING.md compliance (privacy, no raw hashes/paths)
 
-### T-MCP02: Library Scanning Integration 📋
-**Status**: 📋 Planned  
-**Dependencies**: T-MCP01
+### T-MCP02: Library Scanning Integration ✅
+**Status**: ✅ COMPLETE  
+**Commit**: `99341aee`  
+**Tests**: 11 passing (6 scanner + 3 security + 2 repository)  
+**Dependencies**: T-MCP01 ✅
 
-- [ ] Hook moderation checks into file indexing
-- [ ] LocalFileMetadata construction
-- [ ] Hash-based blocking
-- [ ] IsAdvertisable flag tracking
-- [ ] Quarantine handling
+- ✅ Hook moderation checks into ShareScanner
+- ✅ FileService.ComputeHashAsync() (SHA256 for files)
+- ✅ LocalFileMetadata construction (sanitized: filename only, no full paths)
+- ✅ Database schema extended (isBlocked, isQuarantined, moderationReason)
+- ✅ Hash-based blocking at scan time
+- ✅ ListFiles() filtering (blocked/quarantined never appear in shares)
+- ✅ Security logging (🔒 filename only, no full paths, no raw hashes)
+- ✅ ShareService DI updated (passes IModerationProvider to scanner)
+- ✅ Safety floor established: blocked content NEVER becomes shareable
 
 ### T-MCP03: VirtualSoulfind + Content Relay Integration 📋
-**Status**: 📋 Planned  
-**Dependencies**: T-MCP01, V2-P4, T-PR03
+**Status**: 📋 READY TO START  
+**Dependencies**: T-MCP01 ✅, T-MCP02 ✅, T-VC04 (domain-aware planner), T-PR03 (content relay)
 
-- [ ] Moderation checks in catalogue
-- [ ] IsAdvertisable enforcement in VirtualSoulfind
-- [ ] DHT advertisement filtering
-- [ ] Content relay verification
-- [ ] Block handling
+- [ ] Add IsAdvertisable flag to VirtualSoulfind content items
+- [ ] Call IModerationProvider.CheckContentIdAsync() when linking files to ContentItemId
+- [ ] Set IsAdvertisable based on verdict (Blocked/Quarantined → false)
+- [ ] Filter DHT/mesh advertisement to only IsAdvertisable == true items
+- [ ] Content relay verification (only serve IsAdvertisable items)
+- [ ] Planner integration (only consider IsAdvertisable items)
+- [ ] Tests: verify blocked content never advertised or served
 
 ### T-MCP04: Peer Reputation & Enforcement 📋
 **Status**: 📋 Planned  
-**Dependencies**: T-MCP01
+**Dependencies**: T-MCP01 ✅
 
-- [ ] Peer reputation tracking
-- [ ] Report submission (content + peers)
-- [ ] Automatic blocking on threshold
-- [ ] Manual override UI
-- [ ] Integration with existing ViolationTracker
+- [ ] Implement IPeerReputationStore (track peer events)
+- [ ] Record events: associated_with_blocked_content, requested_blocked_content, served_bad_copy
+- [ ] Ban threshold logic (e.g., 10 negative events)
+- [ ] Reputation decay (prevent permanent bans)
+- [ ] Encrypted persistence (DataProtection API)
+- [ ] Sybil resistance (event rate limiting per peer)
+- [ ] Planner integration (skip banned peers)
+- [ ] Work budget integration (reject/limit banned peers)
+- [ ] Tests: peer events change reputation, banned peers excluded
 
 ---
 
