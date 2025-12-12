@@ -31,18 +31,20 @@
 Service Fabric:       ████████████████████ 100% (  7/7   tasks complete) ✅
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
 Global Hardening:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
-Multi-Domain:         █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
+Engineering Quality:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
+Multi-Domain Core:    █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
 VirtualSoulfind v2:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/100+ tasks complete) 📋
 Proxy/Relay:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Book Domain:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
 Video Domain:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
+UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  13% (21/~165 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  12% (21/~175 tasks complete)
 
-Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
+Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
 
 > ✅ **Service Fabric Foundation**: COMPLETE  
@@ -50,7 +52,9 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 > 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
 > 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
-> 📋 **Global Hardening**: 5 new cross-cutting tasks (logging, identity, validation, transport, MCP audit)
+> 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
+> 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
+> 📋 **Engineering Quality**: 4 tasks (async enforcement, linting, coverage, refactoring)
 > 🚀 **Critical Path**: UNBLOCKED - Next: T-MCP03 or T-VC02  
 > 📊 **Code Quality**: Build green, linter clean, zero compromises
 
@@ -442,6 +446,87 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 - [ ] Update `docs/moderation-v1-design.md` with additional integration points
 
 **Why Critical**: Ensures MCP "hard gate" is enforced everywhere, no gaps
+
+---
+
+### Engineering Standards & Code Quality
+
+> **Reference**: See `docs/engineering-standards.md` for full standards
+
+#### H-CODE01: Enforce Async and IO Rules 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM (audit existing, enforce for new code)  
+**Dependencies**: None
+
+- [ ] Audit existing code for:
+  - [ ] `.Result`, `.Wait()`, `Task.Run` usage around async operations
+  - [ ] Synchronous network or disk IO on hot paths
+- [ ] For each violation:
+  - [ ] Refactor to async pattern
+  - [ ] Ensure cancellation tokens passed through
+  - [ ] Apply timeouts for network operations
+- [ ] Add linters/analyzers (where possible):
+  - [ ] Warn or fail builds when new blocking patterns introduced
+- [ ] Add tests:
+  - [ ] Verify no deadlocks in critical paths
+  - [ ] Verify operations respect cancellation/timeouts
+
+**Why**: Async violations cause deadlocks, poor scalability, degraded performance
+
+#### H-CODE02: Introduce Static Analysis and Linting 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: None
+
+- [ ] Integrate static analysis tools:
+  - [ ] Nullability analysis
+  - [ ] Code style analyzers
+  - [ ] Basic security linting (unvalidated inputs, missing disposal, etc.)
+- [ ] Configure analyzers with:
+  - [ ] Baseline rule set matching `docs/engineering-standards.md`
+  - [ ] Warnings-as-errors for critical rules (nullability, async misuse, security)
+- [ ] Update CI:
+  - [ ] Static analysis runs as part of pipeline
+  - [ ] New code cannot regress below baseline
+
+**Why**: Catch bugs and anti-patterns at build time, not runtime
+
+#### H-CODE03: Test Coverage & Regression Harness 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: None (ongoing)
+
+- [ ] Identify critical subsystems:
+  - [ ] VirtualSoulfind domain providers
+  - [ ] Planner
+  - [ ] MCP and reputation
+  - [ ] Proxy/relay services
+  - [ ] Social federation core
+- [ ] For each subsystem:
+  - [ ] Ensure reasonable test suite exists
+  - [ ] Add regression harnesses for known edge cases/bugs
+- [ ] Introduce coverage reporting (where feasible):
+  - [ ] Track trends over time
+  - [ ] Increase expectations for critical subsystems
+
+**Why**: Prevent regressions, ensure critical paths are tested
+
+#### H-CODE04: Refactor Hotspots (OPTIONAL, Guided) 📋
+**Status**: 📋 Planned (OPTIONAL, as-needed)  
+**Priority**: LOW  
+**Dependencies**: None
+
+- [ ] Identify "hotspot" files:
+  - [ ] Very large files with many responsibilities
+  - [ ] Areas with frequent bugs or confusing logic
+- [ ] For each hotspot, create separate refactor task:
+  - [ ] Define clear goals (split into domain-specific helpers)
+  - [ ] Enforce no behavior changes (unless explicitly requested)
+- [ ] Ensure:
+  - [ ] Refactors reduce complexity, improve testability
+  - [ ] Design docs updated if external behavior changes
+
+**Why**: Proactively address technical debt before it becomes critical
 
 ---
 
@@ -1140,6 +1225,122 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 - [ ] Tests:
   - [ ] Validate tags from banned/abusive sources are excluded
   - [ ] Validate meta-lists don't leak file-level or peer-level information
+
+---
+
+## 📋 Phase G: UI & Library Dashboards (T-UI Series)
+
+**Status**: 📋 DOCUMENTED, Not Started  
+**Progress**: 0/6 (0%)  
+**Priority**: MEDIUM (Phase G - After VirtualSoulfind v2 core implementation)  
+**Last Updated**: December 11, 2025
+
+> **Design Doc**: See `docs/ui-library-dashboards.md`
+
+### UI / Library Dashboards (Multi-Domain)
+
+#### T-UI01: Library Overview Endpoints (Multi-Domain) 📋
+**Status**: 📋 Planned  
+**Dependencies**: V2-P1 (Catalogue), V2-P6 (Reconciliation)  
+**Design Doc**: `docs/ui-library-dashboards.md#common-library-api-concepts`
+
+- [ ] Implement backend endpoints to expose:
+  - [ ] `getDomainOverview(domain)`: Total works/items, completion/quality breakdowns
+  - [ ] `getWorkCompletion(workId)`: Have/missing summary for specified work
+- [ ] Use VirtualSoulfind reconciliation data (do not re-scan filesystem)
+- [ ] Wrap responses in domain-neutral DTOs parameterized by ContentDomain
+- [ ] Ensure responses contain NO:
+  - [ ] Filesystem paths
+  - [ ] Peer IDs or IPs
+  - [ ] External social handles
+- [ ] Add tests:
+  - [ ] Domain = Music, Video, Book returns expected shapes
+  - [ ] Missing or invalid ContentDomain handled safely
+
+#### T-UI02: Music Library Views 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-UI01, T-VC02 (Music Domain Provider)  
+**Design Doc**: `docs/ui-library-dashboards.md#music-dashboard`
+
+- [ ] Implement endpoints/views for Music dashboards:
+  - [ ] `listArtists`, `getArtistSummary`: Albums, tracks, completion per artist
+  - [ ] `listAlbums` (filter by artist), `getAlbumDetails`: Track list with presence/quality
+- [ ] Backed entirely by VirtualSoulfind (MusicWork/MusicItem + quality scores + MCP)
+- [ ] Enforce:
+  - [ ] No exposure of local paths
+  - [ ] No exposure of internal peer/source IDs
+- [ ] Add tests:
+  - [ ] Artist and album views behave correctly with partial/complete albums
+  - [ ] Works flagged as blocked/quarantined by MCP do not appear
+
+#### T-UI03: Video Library Views (Movies & TV) 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-UI01, T-VID01-05 (Video Domain)  
+**Design Doc**: `docs/ui-library-dashboards.md#video-dashboard-movies--tv`
+
+- [ ] Implement endpoints/views for Video dashboards:
+  - [ ] `listMovies`, `getMovieDetails`: Metadata + best copy quality
+  - [ ] `listShows`, `getShowDetails`: Seasons and episode completion grids
+- [ ] Use MovieWork/MovieItem, TvShowWork/EpisodeItem, VideoCopyQuality
+- [ ] Enforce:
+  - [ ] Only use VirtualSoulfind (do not query backends directly)
+  - [ ] MCP rules respected (blocked content hidden)
+- [ ] Add tests:
+  - [ ] Movie and TV views reflect reconciliation/planner data
+  - [ ] Missing episodes/seasons identified correctly
+
+#### T-UI04: Book Library Views 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-UI01, T-BK01-04 (Book Domain)  
+**Design Doc**: `docs/ui-library-dashboards.md#book-dashboard`
+
+- [ ] Implement endpoints/views for Book dashboards:
+  - [ ] `listAuthors`, `getAuthorSummary`: Works per author, completion per series
+  - [ ] `listSeries`, `getSeriesDetails`: Ordered works with have/missing/quality
+  - [ ] `getBookDetails(workId)`: Work metadata + items with BookCopyQuality
+- [ ] Use BookWork/BookItem + reconciliation/quality from VirtualSoulfind
+- [ ] Enforce:
+  - [ ] No paths, hashes, or IPs in responses
+  - [ ] MCP gating (blocked/quarantined hidden)
+- [ ] Add tests:
+  - [ ] Authors/series/work details reflect underlying data
+  - [ ] Blocked/quarantined content hidden from regular views
+
+#### T-UI05: Collections & Lists API 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-UI01, V2-P1 (Catalogue)  
+**Design Doc**: `docs/ui-library-dashboards.md#extensibility`
+
+- [ ] Implement endpoints for managing collections/lists across domains:
+  - [ ] `listCollections(domain, owner)`: Summary info (size, domain, visibility)
+  - [ ] `getCollectionDetails(collectionId)`: Items (work IDs) + minimal metadata
+  - [ ] `createCollection`, `updateCollection`, `deleteCollection`
+  - [ ] `addItemToCollection`, `removeItemFromCollection`
+- [ ] Requirements:
+  - [ ] Collections defined over ContentWorkIds (not file paths)
+  - [ ] Visibility: private (default), circle:<name>, public
+  - [ ] Integration with federation (T-FED03/T-FED06):
+    - [ ] Public/circle collections MAY be candidates for ActivityPub publishing
+    - [ ] MCP MUST be consulted before exposing WorkRefs
+- [ ] Add tests:
+  - [ ] CRUD operations work as expected
+  - [ ] Visibility flags stored/retrieved correctly
+  - [ ] Only WorkIds exposed, never file-level details
+
+#### T-UI06: Admin / Moderation Views (OPTIONAL) 📋
+**Status**: 📋 Planned (OPTIONAL feature)  
+**Dependencies**: T-UI01, T-MCP01-04  
+**Priority**: OPTIONAL
+
+- [ ] Implement admin-only views for:
+  - [ ] Quarantined/blocked content: Per-domain lists with reasons/timestamps
+  - [ ] Source reputation: Aggregated view of peer/protocol/social sources
+- [ ] Requirements:
+  - [ ] Access control (admin-only auth layer)
+  - [ ] Data hygiene (safe metadata only, no IPs/full paths/external handles)
+- [ ] Add tests:
+  - [ ] Admin-only endpoints not accessible to normal users
+  - [ ] MCP and reputation changes reflected
 
 ---
 
