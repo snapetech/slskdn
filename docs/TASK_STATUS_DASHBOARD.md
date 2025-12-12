@@ -59,7 +59,8 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > 📋 **LLM/AI Moderation**: 5 OPTIONAL tasks (T-MCP-LM01-05, all disabled by default)
 > 📋 **Pod Identity & Lifecycle**: 8 tasks (T-POD01-06 + H-POD01-02) - storage, export/import, retire/wipe, security
 > 📋 **F1000 Governance**: 6 FUTURE tasks (T-F1000-01-06) - transferable membership, advisory only, cap-exempt master-admins
-> 📋 **First Pod & Social**: 6 FUTURE tasks (T-SOCIAL-01-06) - chat, forums, ActivityPub, F1000 auto-join, community hub
+> 📋 **First Pod & Social**: 6 FUTURE tasks (T-POD-SOCIAL-01-06) - chat, forums, ActivityPub, F1000 auto-join, community hub
+> 📋 **Resilience Layer**: 5 FUTURE tasks (T-RES-01-05) - health/routing, minimal replication, optional gossip (least-first)
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
