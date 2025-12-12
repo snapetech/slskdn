@@ -1121,6 +1121,134 @@ The First Pod is:
 
 ---
 
+### Resilience Layer: Health, Replication, Gossip (T-RES, Future Layer)
+
+> **Design Docs**: See `docs/health-routing-design.md`, `docs/replication-policy-design.md`, `docs/gossip-signals-design.md`  
+> **Status**: 📋 FUTURE (after core architecture)  
+> **Priority**: 🟡 MEDIUM (health/routing), 🟢 LOW (replication/gossip)
+
+The Resilience Layer provides:
+- **Health scoring** (prefer reliable peers/backends)
+- **Minimal replication** (small, high-value data only)
+- **Optional gossip feeds** (advisory signals, not mandatory)
+
+**Guiding Philosophy: Principle of Least Replication**
+- **Default replication = 0** (None class)
+- Only small things, only for good reasons
+- Chunked/distributed only when it really helps healing
+
+**Key Principles:**
+- **Local-first** (no forced global consensus)
+- **Privacy-preserving** (no PII, anonymized metrics)
+- **Opt-in** (gossip feeds optional, replication explicit)
+- **Advisory** (external signals are hints, not commands)
+
+#### T-RES-01: HealthManager & HealthScore Implementation 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: None (foundational)  
+**Design Doc**: `docs/health-routing-design.md` § 2, 3, 6
+
+- [ ] Implement `HealthManager` and `HealthScore`:
+  - [ ] Track health for peers, backends, and routes
+  - [ ] Maintain decayed metrics and scores (0-100 scale)
+  - [ ] Provide read-only API to routing components
+- [ ] Integrate with:
+  - [ ] Transport layers (mesh, torrent, Soulseek client where appropriate)
+  - [ ] HTTP/metadata backends
+  - [ ] MCP (for abuse signals)
+- [ ] Add tests:
+  - [ ] Scores react correctly to successes/failures/timeouts
+  - [ ] Routing prefers healthier candidates in practice
+
+**HealthScore Ranges**: 0-20 (bad), 20-60 (degraded), 60-85 (normal), 85-100 (excellent)
+
+#### T-RES-02: Health-Aware Routing Integration 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-RES-01  
+**Design Doc**: `docs/health-routing-design.md` § 4
+
+- [ ] Update relevant routing/planning components to:
+  - [ ] Request ranked candidates from `HealthManager`
+  - [ ] Retry with fallback candidates on failure
+  - [ ] Report results back to `HealthManager` for learning
+- [ ] Ensure domain-aware and MCP-aware rules remain intact
+- [ ] Add tests:
+  - [ ] Under simulated failures, routing migrates to healthier routes automatically
+  - [ ] No infinite retry loops or thundering herds
+
+**Routing Logic**: Sort by HealthScore descending, attempt in order with backoff
+
+#### T-RES-03: ReplicationPolicy & ReplicatorService (MetadataOnly/SmallBlob) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (after health/routing)  
+**Dependencies**: T-POD01 (pod identity), T-MCP01 (MCP foundation)  
+**Design Doc**: `docs/replication-policy-design.md` § 1, 2, 3
+
+- [ ] Implement replication policy handling:
+  - [ ] Global defaults per domain (initially `None`)
+  - [ ] Per-object `ReplicationClass` and priority:
+    - [ ] `None` (default for everything)
+    - [ ] `MetadataOnly` (WorkRefs, tags, indexes)
+    - [ ] `SmallBlob` (governance docs, moderation lists, strict size limits)
+  - [ ] Quotas for `SmallBlob`
+- [ ] Implement `ReplicatorService` with:
+  - [ ] Handshake and capability negotiation between pods
+  - [ ] Secure, signed, encrypted replication for:
+    - [ ] Governance/F1000 registry
+    - [ ] Moderation lists
+    - [ ] Other small, explicitly allowed objects
+- [ ] Add tests:
+  - [ ] Replication only occurs for eligible objects
+  - [ ] Quotas and policies are honored
+  - [ ] Pods can fully opt out of replication
+
+**Initial Use-Cases**: Governance registry, moderation lists, social/discovery metadata
+
+**NOT Implemented Initially**: `FullCopy`, `Chunked` (future, feature-flagged)
+
+#### T-RES-04: GossipFeeds Client & Publisher (HealthFeed/AbuseFeed) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (optional enhancement)  
+**Dependencies**: T-RES-01 (HealthManager), T-MCP01 (MCP foundation)  
+**Design Doc**: `docs/gossip-signals-design.md` § 2, 3, 5
+
+- [ ] Implement basic publishing and consumption of:
+  - [ ] `HealthFeed` (aggregated health info about peers/backends)
+  - [ ] `AbuseFeed` (high-level abuse/misbehavior reports)
+- [ ] Respect gossip design constraints:
+  - [ ] No PII or detailed logs in feeds
+  - [ ] Signed payloads (pod identity or governance identity)
+  - [ ] Optional use; pods can disable entirely
+- [ ] Integrate feeds as **advisory** inputs only:
+  - [ ] HealthFeed → minor adjustments to HealthScore
+  - [ ] AbuseFeed → optional MCP signal, never overriding local blocklists
+- [ ] Add tests:
+  - [ ] Feeds are correctly signed/verified
+  - [ ] Pods behave identically when feeds are disabled
+
+**Feed Transport**: HTTPS (pull), ActivityPub (push/pull), small bounded payloads
+
+#### T-RES-05: ReplicationNeedFeed Hook (Optional/Future) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (optional, after replication)  
+**Dependencies**: T-RES-03 (ReplicatorService)  
+**Design Doc**: `docs/gossip-signals-design.md` § 4
+
+- [ ] Add hooks to allow `ReplicatorService` to:
+  - [ ] Publish lightweight hints about replication needs
+  - [ ] Consume hints from trusted sources
+- [ ] Ensure:
+  - [ ] Hints never override local policy/quotas
+  - [ ] Only eligible objects are mentioned
+- [ ] Add tests:
+  - [ ] Hints do not cause replication of disallowed or oversized objects
+
+**Use Case**: Provide hints about governance docs, moderation lists that benefit from extra replicas
+
+---
+
 ### Attribution & Licensing (H-ATTR)
 
 #### H-ATTR01: Comprehensive Attribution & License Compliance 📋
