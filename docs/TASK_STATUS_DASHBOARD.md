@@ -1123,6 +1123,139 @@ The First Pod is:
 
 ---
 
+### Slack-Grade Messaging & Self-Healing (Future)
+
+> **Design Docs**: See `docs/slack-grade-messaging-design.md`, `docs/self-healing-messaging-design.md`  
+> **Status**: 📋 FUTURE (after First Pod & Social baseline)  
+> **Priority**: 🟡 MEDIUM (production messaging platform features)
+
+Slack-grade messaging adds:
+- **Real-time semantics** (ordering, delivery, presence, typing)
+- **Search & retention** (per-pod index, time-based retention, compliance hooks)
+- **Org/workspace** (org metadata, org-shared channels)
+- **Attachments** (bounded file service, small objects only)
+
+Self-healing adds:
+- **Channel redundancy** (resilient channels with replica sets)
+- **Health-aware fanout** (cross-pod message delivery via HealthScore)
+- **Degraded modes** (localized outages, no stop-the-world)
+
+**Key Principles:**
+- **Principle of Least Replication** (default None, explicit opt-in for critical channels)
+- **Opt-in only** (resilient channels explicitly configured)
+- **Quotas & limits** (strict caps on replicated message volume)
+- **Security & privacy** (encrypted, ACL-aligned, no generic storage network)
+
+#### T-MSG-RT-01: Real-Time Channel Semantics & Cursors 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD-SOCIAL-02 (ChatModule)  
+**Design Doc**: `docs/slack-grade-messaging-design.md` § 1.1, 1.2
+
+- [ ] Implement per-channel message logs and cursors:
+  - [ ] Monotonic `message_id` per channel (locally)
+  - [ ] Append-only log semantics
+  - [ ] Client cursors for reconnect and "jump to last read"
+- [ ] Ensure:
+  - [ ] At-least-once delivery semantics within a pod
+  - [ ] Idempotent consumption by clients (using message IDs)
+- [ ] Add tests:
+  - [ ] Replay from cursor works after disconnect
+  - [ ] No duplicate messages are shown when reconnecting
+
+**Real-Time**: Append-only log with cursors (Slack-class reconnect behavior)
+
+#### T-MSG-RT-02: Presence & Typing 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (UX polish)  
+**Dependencies**: T-POD-SOCIAL-02 (ChatModule)  
+**Design Doc**: `docs/slack-grade-messaging-design.md` § 1.3
+
+- [ ] Implement local presence and typing indicators:
+  - [ ] Presence states and throttled updates
+  - [ ] Typing indicators as short-lived, ephemeral events
+- [ ] Optional cross-pod presence (same org only):
+  - [ ] Coarse-grained indicators if enabled by config
+- [ ] Add tests:
+  - [ ] Presence updates do not flood the system
+  - [ ] Typing indicators expire and are not persisted
+
+**Soft Layer**: Presence local-only by default, cross-pod opt-in
+
+#### T-SEARCH-01: Per-Pod Search & Retention 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD-SOCIAL-02, T-POD-SOCIAL-03 (ChatModule, ForumModule)  
+**Design Doc**: `docs/slack-grade-messaging-design.md` § 3
+
+- [ ] Implement a per-pod search index for:
+  - [ ] Chat messages
+  - [ ] Forums posts
+- [ ] Implement retention policies:
+  - [ ] Time-based retention per domain (chat/forums/social)
+  - [ ] Optional per-channel overrides
+  - [ ] Compliance hooks (prevent deletion for designated channels)
+- [ ] Add tests:
+  - [ ] Expired messages are no longer searchable
+  - [ ] Search returns correct results for recent content
+
+**Search & Retention**: Local index, configurable retention, compliance-aware
+
+#### T-ORG-01: Org Metadata & Org-Shared Channels 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD-SOCIAL-02 (ChatModule), T-REALM-01 (RealmConfig)  
+**Design Doc**: `docs/slack-grade-messaging-design.md` § 4
+
+- [ ] Implement optional Org metadata:
+  - [ ] `org_id`, pod membership
+  - [ ] Shared SSO/SCIM mapping hooks (future)
+- [ ] Implement org-shared channel wiring:
+  - [ ] Stable `org_channel_id`
+  - [ ] Local channel ↔ org channel mapping
+- [ ] Add tests:
+  - [ ] Messages in org-shared channels are correctly tagged and eligible for cross-pod sync
+
+**Workspaces**: Orgs as logical groupings of pods, org-shared channels for cross-pod messaging
+
+#### T-ATTACH-01: Bounded Attachment Service 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: T-POD-SOCIAL-02 (ChatModule)  
+**Design Doc**: `docs/slack-grade-messaging-design.md` § 5
+
+- [ ] Implement small, bounded attachment storage per pod:
+  - [ ] Size limits per file and global
+  - [ ] Association with parent message/post
+- [ ] Enforce ACL alignment with parent object
+- [ ] Add tests:
+  - [ ] Attachments follow message visibility and retention rules
+  - [ ] Size/volume quotas are enforced
+
+**Slack Drive**: Small attachments only, bounded quotas, ACL-aligned
+
+#### T-SELFHEAL-01: Resilient Channels & Replicas 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-RES-03 (ReplicationPolicy/Service), T-ORG-01 (Org metadata)  
+**Design Doc**: `docs/self-healing-messaging-design.md` § 1, 2
+
+- [ ] Implement `ResilientChannelConfig` and basic message replication for designated channels:
+  - [ ] Replication limited to text/metadata for now (no large attachments)
+  - [ ] Health-aware fanout for cross-pod delivery
+  - [ ] Replica set configuration per resilient channel
+- [ ] Ensure:
+  - [ ] Opt-in only (explicitly configured per channel)
+  - [ ] Quotas enforced (max resilient channels, max replicated volume)
+  - [ ] Encrypted and ACL-aligned
+- [ ] Add tests:
+  - [ ] Loss of a single pod does not cause channel data loss for resilient channels
+  - [ ] Backfill/resync works when the primary recovers
+
+**Self-Healing**: Optional channel redundancy, health-aware fanout, opt-in with strict quotas
+
+---
+
 ### Resilience Layer: Health, Replication, Gossip (T-RES, Future Layer)
 
 > **Design Docs**: See `docs/health-routing-design.md`, `docs/replication-policy-design.md`, `docs/gossip-signals-design.md`  
