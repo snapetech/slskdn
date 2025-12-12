@@ -32,6 +32,7 @@ Service Fabric:       ███████████████████�
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
 Global Hardening:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Engineering Quality:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
+Attribution:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/1   tasks complete) 📋
 Multi-Domain Core:    █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
 LLM/AI Moderation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
@@ -43,7 +44,7 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  12% (21/~180 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  12% (21/~181 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
@@ -57,6 +58,7 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
 > 📋 **Engineering Quality**: 4 tasks (async enforcement, linting, coverage, refactoring)
+> 🔴 **Attribution**: 1 CRITICAL task (H-ATTR01 - MUST complete before public release)
 > 🚀 **Critical Path**: UNBLOCKED - Next: T-MCP03 or T-VC02  
 > 📊 **Code Quality**: Build green, linter clean, zero compromises
 
@@ -529,6 +531,125 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
   - [ ] Design docs updated if external behavior changes
 
 **Why**: Proactively address technical debt before it becomes critical
+
+---
+
+### Attribution & Licensing (H-ATTR)
+
+#### H-ATTR01: Comprehensive Attribution & License Compliance 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (legal/ethical requirement, before any public release)  
+**Dependencies**: None (can start anytime)
+
+- [ ] Audit all dependencies and integrations:
+  - [ ] **Upstream Projects**:
+    - [ ] slskd (AGPL-3.0) - base fork
+    - [ ] Soulseek protocol/network
+    - [ ] Any other direct code dependencies
+  - [ ] **External Services & APIs**:
+    - [ ] MusicBrainz (metadata, rate limits, attribution requirements)
+    - [ ] AcoustID / Chromaprint (audio fingerprinting)
+    - [ ] Cover Art Archive
+    - [ ] TMDB / TVDB (video metadata, API terms)
+    - [ ] Open Library (book metadata, API terms)
+    - [ ] Goodreads (if used, check current API ToS)
+  - [ ] **Protocols & Networks**:
+    - [ ] Soulseek protocol (acknowledgment, etiquette)
+    - [ ] ActivityPub (W3C spec)
+    - [ ] BitTorrent protocol
+    - [ ] DHT implementations
+  - [ ] **Libraries & Frameworks**:
+    - [ ] .NET runtime and libraries (MIT)
+    - [ ] ASP.NET Core (MIT)
+    - [ ] SQLite (Public Domain)
+    - [ ] ffmpeg/ffprobe (LGPL/GPL - check linking)
+    - [ ] Any cryptography libraries (Ed25519, etc.)
+    - [ ] Any JSON/serialization libraries
+    - [ ] Any audio/video processing libraries
+    - [ ] Any EPUB/PDF parsing libraries
+
+- [ ] Create/update documentation:
+  - [ ] `ACKNOWLEDGMENTS.md`:
+    - [ ] Upstream projects (slskd, Soulseek)
+    - [ ] External services (MusicBrainz, TMDB, Open Library)
+    - [ ] Protocol specifications (ActivityPub, BitTorrent)
+    - [ ] Key libraries and their licenses
+  - [ ] `THIRD_PARTY_LICENSES.md`:
+    - [ ] Full license texts for all dependencies
+    - [ ] Version information
+    - [ ] Links to upstream projects
+  - [ ] `README.md`:
+    - [ ] Prominent attribution to slskd
+    - [ ] Acknowledgment of Soulseek network
+    - [ ] Links to external services
+    - [ ] License notice (AGPL-3.0)
+  - [ ] `API_TERMS.md` (if needed):
+    - [ ] Rate limits and quotas for external APIs
+    - [ ] Attribution requirements
+    - [ ] Terms of Service compliance notes
+
+- [ ] Update in-application attribution:
+  - [ ] About/Credits UI section (if UI exists):
+    - [ ] List all major dependencies
+    - [ ] Links to upstream projects
+  - [ ] API endpoints (if applicable):
+    - [ ] `/api/about` or `/api/credits` endpoint
+    - [ ] Return structured attribution data
+  - [ ] Startup logs:
+    - [ ] Brief attribution notice on startup
+    - [ ] Version information
+
+- [ ] Verify license compatibility:
+  - [ ] Ensure all dependencies compatible with AGPL-3.0
+  - [ ] Check for any GPL/LGPL linking requirements
+  - [ ] Verify commercial use restrictions (if any)
+  - [ ] Document any special requirements (e.g., ffmpeg codec patents)
+
+- [ ] External service compliance:
+  - [ ] MusicBrainz:
+    - [ ] Implement rate limiting (1 request/second default)
+    - [ ] Set proper User-Agent header
+    - [ ] Attribution in UI/docs where data displayed
+  - [ ] TMDB/TVDB:
+    - [ ] API key management
+    - [ ] Rate limit compliance
+    - [ ] Attribution requirements (logos, links)
+  - [ ] Open Library:
+    - [ ] Rate limit compliance
+    - [ ] Attribution where data displayed
+  - [ ] Chromaprint/AcoustID:
+    - [ ] Proper attribution
+    - [ ] API key (if required)
+
+- [ ] Add tests:
+  - [ ] Verify attribution files exist and are non-empty
+  - [ ] Verify User-Agent headers include proper identification
+  - [ ] Verify rate limits are configured for external APIs
+
+- [ ] Create maintenance process:
+  - [ ] Document how to update attributions when adding new dependencies
+  - [ ] Checklist for adding new external service integrations
+  - [ ] Regular audit schedule (e.g., quarterly)
+
+**Legal/Ethical Requirements**:
+- slskd attribution (REQUIRED by fork relationship)
+- Soulseek network acknowledgment (ethical requirement)
+- MusicBrainz attribution (required by usage guidelines)
+- TMDB attribution (required by API terms)
+- Open Library attribution (good practice)
+- ActivityPub spec acknowledgment (W3C standard)
+
+**Files to Create/Update**:
+- `ACKNOWLEDGMENTS.md` (new or update)
+- `THIRD_PARTY_LICENSES.md` (new or update)
+- `README.md` (ensure prominent attribution)
+- `API_TERMS.md` (new, if needed)
+- `docs/external-services.md` (rate limits, attribution requirements)
+
+**Before Public Release**:
+- This task MUST be complete before any public release
+- Legal review recommended if organization has legal counsel
+- Verify all ToS and API terms are current
 
 ---
 
