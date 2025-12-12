@@ -226,12 +226,13 @@ public sealed class MeshPeerRegistry : IMeshPeerRegistry, IDisposable
                 descriptor_json TEXT NOT NULL,
                 is_verified INTEGER NOT NULL DEFAULT 1,
                 last_seen_unix INTEGER NOT NULL,
-                soulseek_username TEXT NULL,
-                created_unix INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+                soulseek_username TEXT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_mesh_peers_last_seen ON mesh_peers(last_seen_unix);
             CREATE INDEX IF NOT EXISTS idx_mesh_peers_soulseek ON mesh_peers(soulseek_username);";
         cmd.ExecuteNonQuery();
+        
+        _logger.LogInformation("Mesh peer registry database initialized at {Path}", _dbPath);
     }
 
     private async Task LoadCacheAsync()
