@@ -5,6 +5,8 @@
 **Scope**: T-SF01 through T-SF04 (Service Fabric + HTTP Gateway)  
 **Status**: In Progress
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Executive Summary

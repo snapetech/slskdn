@@ -4,6 +4,10 @@
 **Branch**: experimental/brainz  
 **Total Tasks**: 397 (includes all phases + audit gaps + database poisoning protection)
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
+
+---
+
 **Recent Completions**:
 - ✅ **Test Coverage Sprint** (Dec 10): 99/107 new tests passing (92% success rate)
 - ✅ MediaCore Unit Tests: 44/52 passing (FuzzyMatcher, PerceptualHasher)

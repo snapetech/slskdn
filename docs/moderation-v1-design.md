@@ -5,6 +5,8 @@
 **Status:** Draft design  
 **Scope:** Moderation & control plane for content and peers across VirtualSoulfind, library scanning, DHT/mesh advertisement, and relay services.
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](../../README.md#acknowledgments) for attribution.
+
 ---
 
 ## 1. Goals & Non-Goals

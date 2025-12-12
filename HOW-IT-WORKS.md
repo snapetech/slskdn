@@ -4,6 +4,8 @@
 **Created**: December 11, 2025  
 **Purpose**: Show how service fabric, multi-domain, and proxy/relay synergize
 
+> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) with experimental mesh networking features. See [README.md](README.md#acknowledgments) for full attribution.
+
 ---
 
 ## Overview

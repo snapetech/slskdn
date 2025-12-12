@@ -2,6 +2,8 @@
 
 **slskdn** - Soulseek client with mesh networking, multi-domain content acquisition, and service fabric
 
+> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) with experimental mesh networking and advanced features. See [README.md](README.md#acknowledgments) for full attribution.
+
 ---
 
 ## Core Features (Existing)

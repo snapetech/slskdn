@@ -4,6 +4,8 @@
 **Status**: Planned (4 tasks)  
 **Priority**: HIGH (legal/ethical protection for operators)
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Task Summary

@@ -4,6 +4,8 @@
 
 **Last Updated**: December 11, 2025
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Completed (T-SF05 + H-02)

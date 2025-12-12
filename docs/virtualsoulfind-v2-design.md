@@ -7,6 +7,8 @@
 **Created:** December 11, 2025  
 **Scope:** Extend VirtualSoulfind into a full "virtual catalogue + multi-source planner" brain, integrated with the mesh/service fabric and DHT, without hammering Soulseek or making it second-class.
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../../README.md](../../README.md#acknowledgments) for attribution.
+
 ---
 
 ## 1. Background & Motivation

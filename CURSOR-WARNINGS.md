@@ -4,6 +4,8 @@
 **Created**: December 11, 2025  
 **Purpose**: Identify tasks where LLMs are most likely to introduce slop, bugs, or security issues
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Overview

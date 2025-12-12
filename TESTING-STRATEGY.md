@@ -4,6 +4,8 @@
 **Created**: December 11, 2025  
 **Priority**: Deferred until after T-SF05, T-SF06, T-SF07, H-02, H-08
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Overview

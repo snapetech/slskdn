@@ -4,6 +4,8 @@
 **Created**: December 11, 2025  
 **Status**: 🔬 Research → Implementation Planning
 
+> **Note**: This project is a fork of [slskd](https://github.com/slskd/slskd) by jpdillingham. We build experimental features on top of slskd's excellent foundation. See [README.md](README.md#acknowledgments) for full attribution.
+
 ---
 
 ## Executive Summary

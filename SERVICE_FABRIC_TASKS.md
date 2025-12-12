@@ -5,6 +5,8 @@
 **Created**: December 11, 2025  
 **Status**: In Progress - T-SF01 Complete, T-SF02 In Progress
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## ⚠️ SECURITY GATES

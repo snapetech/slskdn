@@ -5,6 +5,8 @@
 **Scope**: VirtualSoulfind v2, Multi-Domain, Proxy/Relay, ALL Future Work  
 **Philosophy**: Paranoid Bastard Mode - Security is Non-Negotiable
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Overview

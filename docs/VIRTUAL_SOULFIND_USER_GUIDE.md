@@ -1,5 +1,9 @@
 # Virtual Soulfind User Guide
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
+
+---
+
 ## Overview
 
 Virtual Soulfind is a decentralized mesh network that provides resilience when the Soulseek server is unavailable. It automatically captures metadata from Soulseek traffic and publishes it to a distributed hash table (DHT), creating a "shadow index" of available content.

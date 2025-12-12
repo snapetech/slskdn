@@ -5,6 +5,8 @@
 **Status**: Planning Phase  
 **Priority**: Should be completed BEFORE VirtualSoulfind v2 Phase 1 (V2-P1)
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Overview

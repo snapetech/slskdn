@@ -4,6 +4,8 @@
 **Status**: Designed, Ready to Implement  
 **Philosophy**: Application-specific relay primitives, NOT "Tor but worse"
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Executive Summary

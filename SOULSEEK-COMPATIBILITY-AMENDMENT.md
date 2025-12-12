@@ -5,6 +5,8 @@
 **Status**: 🔒 Mandatory - Must be integrated into all tasks  
 **Priority**: P0 - Overrides all other considerations
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## CRITICAL AMENDMENT

@@ -5,6 +5,8 @@
 **Status**: Planning Phase  
 **Design Doc**: `docs/virtualsoulfind-v2-design.md`
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## Overview

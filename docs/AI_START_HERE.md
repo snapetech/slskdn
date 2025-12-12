@@ -4,6 +4,8 @@
 **Current Status**: **✅ SERVER RUNNING** - All DI issues resolved | **543 Tests Passing**  
 **Branch**: experimental/brainz
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
+
 ---
 
 ## 📍 Quick Orientation

@@ -4,6 +4,8 @@
 **Date**: December 11, 2025  
 **Status**: ✅ All documentation complete, ready for implementation
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
 ---
 
 ## 📚 Documentation Files Created

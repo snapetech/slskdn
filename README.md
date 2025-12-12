@@ -336,9 +336,52 @@ Read [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md), pick a task, check [CURSO
 
 ---
 
+## Acknowledgments
+
+**slskdn** is built on the excellent work of others:
+
+### Upstream Project
+
+This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdillingham and contributors.
+
+- **slskd** is a modern, headless Soulseek client with a web interface and REST API
+- Licensed under AGPL-3.0
+- We maintain the same license and contribute our changes back to the community
+- Philosophy: slskd focuses on a lean core with API-driven extensibility; slskdn focuses on batteries-included features
+
+**Why we forked**: To build experimental mesh networking, decentralized discovery, and advanced automation features that go beyond slskd's core mission. We deeply respect the upstream project and its maintainer's design philosophy.
+
+### Development Dependencies
+
+- **[Soulfind](https://github.com/soulfind-dev/soulfind)** - Open-source Soulseek server implementation
+  - Used as a test fixture for integration testing (development only)
+  - Not a runtime dependency
+  - Helps us verify protocol compatibility and disaster mode behavior
+  - See `docs/dev/soulfind-integration-notes.md` for details
+
+### Protocol & Network
+
+- **Soulseek Protocol** - The P2P file-sharing protocol created by Nir Arbel
+  - We implement a compatible client
+  - No affiliation with the official Soulseek network or its operators
+
+### Metadata & Discovery
+
+- **[MusicBrainz](https://musicbrainz.org/)** - Open music encyclopedia for metadata enrichment
+- **[Cover Art Archive](https://coverartarchive.org/)** - Album art for verified releases
+
+---
+
 ## License
 
-See [LICENSE](LICENSE) file for details.
+This project is licensed under **AGPL-3.0**, the same license as the upstream slskd project.
+
+See [LICENSE](LICENSE) file for full license text.
+
+**Key requirements**:
+- Source code must be made available when running the software over a network
+- Derivative works must also be AGPL-3.0 licensed
+- Copyright notices and license information must be preserved
 
 ---
 
