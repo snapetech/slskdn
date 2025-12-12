@@ -30,6 +30,7 @@
 ```
 Service Fabric:       ████████████████████ 100% (  7/7   tasks complete) ✅
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
+Global Hardening:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Multi-Domain:         █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
 VirtualSoulfind v2:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/100+ tasks complete) 📋
@@ -39,7 +40,7 @@ Video Domain:         ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ████░░░░░░░░░░░░░░░░  13% (21/~160 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  13% (21/~165 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 ```
@@ -48,6 +49,7 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 > ✅ **Security Hardening (Phase 2)**: COMPLETE - H-08 done! 🎉  
 > 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
 > 🚧 **Phase C - Multi-Domain Foundation**: IN PROGRESS - T-VC01 Parts 1-2 ✅
+> 📋 **Global Hardening**: 5 new cross-cutting tasks (logging, identity, validation, transport, MCP audit)
 > 🚀 **Critical Path**: UNBLOCKED - Next: T-MCP03 or T-VC02  
 > 📊 **Code Quality**: Build green, linter clean, zero compromises
 
@@ -327,6 +329,118 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 - [ ] Trusted relay peer/service allowlists
 - [ ] Work budget integration
 - [ ] Abuse detection and automatic bans
+
+---
+
+### Global Hardening Tasks (H-GLOBAL, H-ID, H-VF, H-TRANSPORT, H-MCP)
+
+These tasks apply **cross-cutting security and privacy concerns** across the entire stack.
+
+#### H-GLOBAL01: Logging and Telemetry Hygiene Audit 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM (audit existing code, enforce for new code)  
+**Dependencies**: None (can start anytime)
+
+- [ ] Audit logging across all services:
+  - [ ] Identify places where full paths, hashes, IP addresses, external usernames/ActivityPub handles are logged
+  - [ ] Replace or redact with internal IDs, hashed/truncated forms
+- [ ] Audit metrics:
+  - [ ] Ensure all metrics use low-cardinality labels only
+  - [ ] Remove/rename metrics that include file names, paths, full URLs, external handles
+- [ ] Add unit/integration tests:
+  - [ ] Ensure new log calls use sanitized conventions
+  - [ ] Ensure new metrics use only approved labels
+- [ ] Update `SECURITY-GUIDELINES.md` with newly enforced patterns
+
+**Applies to**: All services, all protocols, all future code
+
+#### H-ID01: Identity Separation Enforcement 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (before social federation, Phase F)  
+**Dependencies**: None (conceptual separation already exists)
+
+- [ ] Review key and identity handling across:
+  - [ ] Mesh/pod identity
+  - [ ] Soulseek client identity
+  - [ ] ActivityPub actor identities (future)
+  - [ ] Local user/operator accounts
+- [ ] Ensure:
+  - [ ] No shared keypair or ID reused across contexts
+  - [ ] Config/code does not derive one identity from another
+- [ ] Introduce `IdentityConfig` / `IdentityRegistry` abstraction:
+  - [ ] Clearly separate identity material by category
+  - [ ] Provide safe methods for services to obtain only the identity they require
+- [ ] Add tests:
+  - [ ] Assert enabling social actor does not alter mesh or Soulseek identity
+  - [ ] Assert disabling social federation does not affect mesh/Soulseek behavior
+
+**Why Critical**: Prevents accidental correlation/leakage between protocol layers
+
+#### H-VF01: VirtualSoulfind Input Validation & Domain Gating 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM (before V2-P1)  
+**Dependencies**: T-VC01 (ContentDomain enum)
+
+- [ ] Audit VirtualSoulfind public interfaces and internal entry points:
+  - [ ] Verify `ContentDomain` always validated (no unknown values)
+  - [ ] Intents/requests include all required fields
+- [ ] Enforce domain gating:
+  - [ ] Ensure `ContentDomain.Music` requests alone reach Soulseek backends
+  - [ ] Non-music domains never schedule Soulseek work
+- [ ] Add checks:
+  - [ ] Invalid/unexpected domains return explicit errors or ignore safely
+  - [ ] Validate sizes/ranges for batch sizes, timeout values, quality parameters
+- [ ] Add tests:
+  - [ ] Behavior when invalid domains supplied
+  - [ ] Behavior when domain-specific rules violated (e.g., non-music asking for Soulseek)
+
+**Blocks**: V2-P1, V2-P2, V2-P4 (ensures domain isolation is enforced)
+
+#### H-TRANSPORT01: Mesh/DHT/Torrent/HTTP Transport Hardening 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM (ongoing)  
+**Dependencies**: T-SF01-04 ✅ (Service Fabric), H-02 ✅ (Work Budget)
+
+- [ ] Mesh / DHT:
+  - [ ] Validate message sizes and types
+  - [ ] Enforce per-peer and global message rate limits
+  - [ ] Drop unknown/malformed messages without expensive processing
+- [ ] Torrent:
+  - [ ] Ensure integration limits (simultaneous torrents, peer connections per torrent)
+  - [ ] Ensure no logging of local path or internal file structure to torrent layer
+- [ ] HTTP (catalogue + content):
+  - [ ] Confirm all HTTP calls use SSRF-safe client
+  - [ ] Confirm domain allowlists enforced for catalogue fetch
+  - [ ] Confirm response size caps applied
+- [ ] Add tests:
+  - [ ] Invalid/malformed messages
+  - [ ] Exceeding work budgets and quotas
+
+**Applies to**: All transport layers (mesh, DHT, torrent, HTTP)
+
+#### H-MCP01: Moderation Coverage Audit 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (after T-MCP02, before T-MCP03)  
+**Dependencies**: T-MCP01 ✅, T-MCP02 ✅
+
+- [ ] Review all code paths that:
+  - [ ] Introduce new files into library
+  - [ ] Link files to `ContentItemId`s
+  - [ ] Advertise content on mesh/DHT/torrent
+  - [ ] Serve content via relay services
+  - [ ] Publish WorkRefs to social federation
+- [ ] For each path, confirm MCP is consulted:
+  - [ ] File scanning (local files)
+  - [ ] Content linking (VirtualSoulfind)
+  - [ ] Advertisement/relay
+  - [ ] Social publishing
+- [ ] Introduce tests:
+  - [ ] Blocked/quarantined content never becomes `IsAdvertisable`
+  - [ ] Never served via relay
+  - [ ] Never published as WorkRef via social federation
+- [ ] Update `docs/moderation-v1-design.md` with additional integration points
+
+**Why Critical**: Ensures MCP "hard gate" is enforced everywhere, no gaps
 
 ---
 

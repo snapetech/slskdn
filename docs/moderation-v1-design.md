@@ -349,3 +349,119 @@ With MCP:
 - ✅ Peer reputation → bad actors get banned
 - ✅ Operator-controlled (no hard-coded lists)
 - ✅ Observability (metrics, structured logging)
+
+---
+
+## 10. Source Classification and Moderation Scope
+
+Moderation applies to **all** sources of content and metadata:
+
+- Local files (scanned from disk).
+- Remote peers:
+  - Mesh / DHT peers.
+  - Soulseek peers.
+  - Torrent peers (to the extent we identify them).
+- Social sources:
+  - ActivityPub instances and actors.
+- HTTP/remote APIs:
+  - Catalogue fetch targets and any HTTP-based metadata sources.
+
+We classify sources into types:
+
+- `LocalSource` – local files.
+- `ProtocolSource` – per-protocol, e.g. `MeshPeer`, `SoulseekPeer`, `TorrentPeer`.
+- `SocialSource` – ActivityPub instance + actor.
+- `HttpSource` – remote host/domain for HTTP interactions.
+
+Each source type can generate events in the reputation system, used by MCP for enforcement.
+
+---
+
+## 11. Moderation Integration Points
+
+Moderation MUST be applied at multiple points:
+
+1. **Scanning / Ingestion**
+   - When scanning local files:
+     - Run `IModerationProvider.CheckLocalFileAsync(LocalFileMetadata)` before marking a file as shareable.
+   - Files with verdict `Blocked`/`Quarantined`:
+     - MUST NOT be exposed as shareable content.
+     - MAY be quarantined in a separate state for operator review.
+
+2. **VirtualSoulfind Content Linking**
+   - When linking local files to `ContentItemId` / `ContentWorkId`:
+     - MCP MUST be consulted via `CheckContentIdAsync`.
+     - Items resulting in `Blocked`/`Quarantined` MUST NOT be marked `IsAdvertisable`.
+
+3. **DHT / Mesh / Torrent Advertisement**
+   - Any advertisement of content availability on DHT/mesh/torrent MUST:
+     - Be gated by MCP status.
+     - Avoid advertising items that are blocked or quarantined.
+
+4. **Content Relay / CDN**
+   - `IContentRelayService` MUST:
+     - Only serve chunks for items marked `IsAdvertisable`.
+     - Refuse requests for blocked/quarantined items.
+   - Repeated requests for blocked items from the same source MAY generate negative reputation events.
+
+5. **Social Federation**
+   - WorkRefs published via ActivityPub MUST:
+     - Only refer to content for which MCP allows advertisement.
+   - Inbound social content:
+     - Instances and actors can produce negative events if they repeatedly reference blocked or abusive content.
+
+6. **Planner and Recommendations**
+   - VirtualSoulfind planner MUST:
+     - Consider MCP verdicts and reputation when selecting:
+       - Sources for acquisition.
+       - Recommendations and upgrade suggestions.
+   - Peers or sources with poor reputation MUST be avoided or down-ranked.
+
+---
+
+## 12. Reputation and Enforcement
+
+The reputation system is shared across all protocols and social layers.
+
+- Each source can accrue:
+  - Positive events (good behavior).
+  - Negative events (associations with blocked content, spam, abuse).
+
+- MCP can use reputation to:
+  - Automatically ban certain sources.
+  - Tighten quotas and work budgets.
+  - Influence planner decisions (avoid low-reputation sources).
+
+- Reputation MUST NOT be used to bypass:
+  - Blocklists.
+  - Direct MCP `Blocked` verdicts.
+  - Security policies.
+
+When a source is banned:
+
+- All content from that source MUST be:
+  - Excluded from planner consideration.
+  - Excluded from advertisement and relay.
+  - Excluded from recommendation ranking.
+
+---
+
+## 13. Operator Controls
+
+Operators MUST have the ability to:
+
+- Configure blocklists and allowlists for:
+  - Hashes/content IDs.
+  - Protocol sources (peers).
+  - Social sources (instances/actors).
+  - HTTP targets (catalogue endpoints).
+
+- Override or clear reputation state:
+  - Unban a previously banned source (with appropriate warnings).
+  - Manually ban a problematic source.
+
+- Inspect moderation state:
+  - Quarantined content.
+  - Recent moderation events and their reasons (no PII or external handles).
+
+All operator controls MUST respect logging/metrics hygiene rules (no raw paths, hashes, IPs, or external handles in logs where not strictly necessary for admin tools).

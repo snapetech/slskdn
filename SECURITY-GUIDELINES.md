@@ -976,6 +976,236 @@ This document is your **security constitution**. When implementing any feature:
 
 ---
 
+## 15. Identity and Role Separation
+
+We treat different protocol layers and roles as separate identities:
+
+- **Mesh / pod identity** – used for pod-to-pod communication and internal services.
+- **Soulseek identity** – used solely for Soulseek protocol interactions.
+- **ActivityPub / social identities** – Library Actors and any other ActivityPub actors.
+- **Local users / operators** – people configuring/using the pod.
+
+Requirements:
+
+- Keys and identifiers for each identity type MUST be stored and managed separately.
+- The system MUST NOT:
+  - Reuse a single keypair across mesh, Soulseek, social, or other protocols.
+  - Autogenerate a social identity from mesh or Soulseek identity.
+  - Autogenerate a mesh or Soulseek identity from social identity.
+- Any explicit alias or linkage between identity types MUST:
+  - Be configured by the operator/user.
+  - Be stored in a dedicated configuration structure.
+  - NOT be inferred from traffic patterns or logs.
+
+Logging MUST NOT directly correlate identities across layers (e.g., no log line that maps `meshPeerId -> @user@example.com` or `soulseekUser -> ActivityPub actor`).
+
+---
+
+## 16. Content vs Metadata vs Transport
+
+Clear separation between:
+
+- **Content** – The actual media or files (audio, video, ebooks, archives, etc.).
+- **Metadata** – Titles, creators, years, IDs (MBID, ISBN, TMDB, etc.), tags.
+- **Transport** – The protocols and channels used to move data (Soulseek, mesh, torrent, HTTP, ActivityPub).
+
+Rules:
+
+- Metadata-only channels (e.g. ActivityPub social federation, catalogue fetch) MUST NOT be used to transport content payloads.
+- Content transport channels MUST be constrained to:
+  - Soulseek (music only, with etiquette and caps),
+  - Mesh proxy/relay services,
+  - Torrent backends,
+  - HTTP downloads,
+  - Local disk operations.
+- VirtualSoulfind uses metadata for:
+  - Identity (Work / Item keys),
+  - Matching and planning,
+  - Recommendations and lists.
+  It MUST NOT require exposing file paths or hashes outside the pod.
+
+Whenever possible:
+
+- External communication SHOULD use external IDs (MBID, ISBN, TMDB, etc.) and WorkRefs, NOT file-specific hashes or paths.
+- File hashes SHOULD stay internal to the pod and be used only for:
+  - Verification,
+  - De-duplication,
+  - Moderation.
+
+---
+
+## 17. Logging and Telemetry Hygiene (Global)
+
+Logging and telemetry MUST be designed so that:
+
+- They are helpful for debugging and operations.
+- They do not leak sensitive information or allow accidental de-anonymization.
+
+General rules:
+
+- Do NOT log:
+  - Full filesystem paths.
+  - Raw hashes (SHA-256, etc.).
+  - IP addresses of peers.
+  - External usernames or full ActivityPub handles.
+  - Full HTTP request headers or bodies.
+
+- Allow logging of:
+  - Internal IDs (ContentWorkId, ContentItemId, PeerId) only in forms that are:
+    - Not trivially linkable to external identities.
+    - Not combined with external handles.
+
+- Debug modes:
+  - Any debug mode that might log more detail MUST be:
+    - Explicitly opt-in.
+    - Clearly documented as unsafe for production.
+    - Disabled by default.
+
+Metrics:
+
+- MUST use low-cardinality labels:
+  - Examples:
+    - `backend`, `result`, `domain`, `privacyMode`, `instanceDomain` (possibly truncated/anonymized).
+  - MUST NOT include:
+    - File names, paths, hashes.
+    - Full ActivityPub handles.
+    - Raw URLs (with query strings).
+
+---
+
+## 18. Safe Defaults and Configuration
+
+- Default configuration MUST be conservative:
+  - Federation disabled (`SocialFederation.Mode = Hermit`).
+  - Proxy/relay services either:
+    - Disabled, or
+    - Limited to safe built-in use (e.g., catalogue fetch with strict allowlists).
+  - Soulseek behavior constrained to:
+    - Reasonable concurrency,
+    - Reasonable bandwidth and search/request limits,
+    - Non-abusive interaction patterns.
+
+- All "extension" features (social federation, advanced relay modes, circles, ephemeral rooms, etc.) MUST:
+  - Be disabled by default.
+  - Require explicit opt-in configuration (or UI action).
+
+- Configuration validation:
+  - System MUST validate configs at startup:
+    - Reject obviously unsafe values (e.g., empty allowlists in contexts that require whitelists, infinite queue sizes).
+    - Warn or fail-fast on invalid configurations.
+
+---
+
+## 19. Mesh / DHT / Torrent / HTTP Hardening
+
+### DHT and Mesh Advertisement
+
+- Any DHT/mesh advertisement about content MUST:
+  - Refer to abstract content IDs (e.g. WorkRef, ContentId, infohash) and NOT raw file paths.
+  - Avoid embedding user-specific or host-specific data.
+
+- DHT/mesh routing MUST treat all inputs as untrusted:
+  - Validate message sizes and types.
+  - Apply per-peer quotas.
+  - Drop malformed or unexpected messages early.
+
+### Torrent Integration
+
+- Torrent backends MUST:
+  - Use infohashes and magnet-like descriptors for planning.
+  - Avoid exposing local filesystem structure in metadata that leaves the pod.
+  - Be bound by concurrency/work-budget caps.
+
+- Any mapping between torrent swarms and VirtualSoulfind MUST:
+  - Stay internal.
+  - Avoid exposing user paths or internal file layout via torrent metadata reuse.
+
+### HTTP Fetching (Catalogue and Content)
+
+- All outbound HTTP MUST go through the SSRF-safe HTTP client.
+- Catalogue fetchers MUST:
+  - Enforce domain allowlists.
+  - Cap response size.
+  - Treat all responses as untrusted and validate before parsing.
+- Content downloads MUST:
+  - Be bounded in size and duration by work-budget and policies.
+  - Avoid logging URLs that contain user secrets (tokens, session IDs).
+
+---
+
+## 20. Soulseek Integration
+
+Soulseek integration MUST:
+
+- Be limited to `ContentDomain.Music`.
+- Respect protocol etiquette:
+  - Reasonable rate limits for:
+    - Searches,
+    - Requests,
+    - Queue sizes.
+- Never leak:
+  - Pod internal IDs,
+  - Mesh or social actor information,
+  - Local filesystem paths.
+
+All Soulseek traffic MUST be treated as untrusted input and subject to:
+
+- Input validation (message size/type).
+- Per-peer and global caps.
+- Moderation constraints (e.g., blocked/abusive peers tracked via MCP/reputation).
+
+---
+
+## 21. Moderation (MCP) as a Hard Gate
+
+The Moderation / Control Plane (MCP) is considered a "hard gate":
+
+- No content should become:
+  - Shareable,
+  - Advertisable on DHT/mesh,
+  - Served by content relay,
+  - Published in social WorkRefs/lists,
+  unless MCP indicates that it is Allowed or Unknown and not explicitly blocked by policy.
+
+- MCP MUST be integrated into:
+  - Local library scanner.
+  - VirtualSoulfind advertizable flags.
+  - DHT/mesh advertisement.
+  - Content relay services.
+  - Social federation (e.g. WorkRefs for blocked content MUST NOT be published).
+
+- MCP events MUST be fed into the reputation system:
+  - Sources associated with blocked content can be down-ranked or banned.
+  - Social sources that correlate with abusive content can be throttled or blocked.
+
+---
+
+## 22. Extensibility and Plugin Safety
+
+The system is intended to be extensible (new domains, new backends, new social integrations), but:
+
+- Any plugin or extension MUST:
+  - Respect this security/hardening document.
+  - Use existing infrastructure for:
+    - Work budgets,
+    - SSRF-safe HTTP,
+    - Logging/metrics hygiene,
+    - Moderation (MCP),
+    - Identity separation.
+
+- Plugin registration MUST:
+  - Be explicit.
+  - Provide a way to:
+    - Disable/remove the plugin.
+    - Scope its capabilities (e.g., which domains/backends it can touch).
+
+- Plugin code MUST NOT:
+  - Introduce generic proxying (SOCKS, CONNECT, raw TCP tunnels).
+  - Expose local filesystem structure externally.
+  - Bypass MCP or work budgets.
+
+---
+
 **Status**: MANDATORY FOR ALL WORK  
 **Last Updated**: December 11, 2025  
 **Applies To**: ALL tasks, ALL features, ALL refactorings, FOREVER  
