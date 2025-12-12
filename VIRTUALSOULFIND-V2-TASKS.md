@@ -446,12 +446,27 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 1. H-08 (Soulseek caps) MUST be complete before V2-P4-01
 2. H-02 (Work budget) MUST be complete before V2-P5-03
 3. T-SF05-07 SHOULD be complete before starting V2-P1
+4. **H-VS01 through H-VS12** (VirtualSoulfind-specific hardening) integrated throughout phases
 
 **External Dependencies**:
 - Service fabric (T-SF01-04) ✅ Complete
 - Gateway auth (H-01) ✅ Complete
 - Soulseek caps (H-08) ⏳ Pending - BLOCKS V2-P4-01
 - Work budget (H-02) ⏳ Pending - BLOCKS V2-P5-03
+
+**VirtualSoulfind-Specific Hardening Dependencies** (see design doc section 17):
+- H-VS01 (Privacy mode) - Required for V2-P1
+- H-VS02 (Intent queue security) - Required for V2-P2
+- H-VS03 (Backend work budget) - Required for V2-P4
+- H-VS04 (SSRF protection) - Required for V2-P4-05 (HTTP/LAN backends)
+- H-VS05 (Resolver throughput limits) - Required for V2-P5
+- H-VS06 (Plan validation) - Required for V2-P2-03
+- H-VS07 (Verification safety) - Required for V2-P3-02
+- H-VS08 (Mesh service restrictions) - Required for V2-P5-01
+- H-VS09 (Logging hygiene) - Required for V2 deployment
+- H-VS10 (Gateway endpoint protection) - Required for V2-P5-02
+- H-VS11 (Verified copy hints) - Optional for V2-P6
+- H-VS12 (Data directory permissions) - Required for V2 deployment
 
 ---
 
@@ -466,6 +481,197 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 6. Start V2-P1 (Foundation)
 7. Continue with V2-P2, V2-P3, V2-P4, V2-P5 in sequence
 8. V2-P6 (Advanced features) as time permits
+
+---
+
+## VirtualSoulfind-Specific Hardening Tasks (H-VS series)
+
+These tasks are integrated into the phases above but listed here for completeness. See design doc section 17 for full details.
+
+### H-VS01: Privacy Mode Implementation
+**Phase**: V2-P1 (Foundation)  
+**Priority**: P0  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Add `VirtualSoulfind.PrivacyMode` config enum (Normal, Reduced)
+- [ ] Implement Reduced mode logic (no external peer identifiers)
+- [ ] Abstract source candidates in Reduced mode
+- [ ] Add config validation and warnings
+- [ ] Add unit tests for both modes
+- [ ] Document trade-offs in user guide
+
+---
+
+### H-VS02: Intent Queue Security
+**Phase**: V2-P2 (Intent & Planning)  
+**Priority**: P0  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Add `AllowRemoteIntentManagement` config (default: false)
+- [ ] Implement per-peer/per-IP rate limits for intent creation
+- [ ] Add intent origin tracking (UserLocal, RemoteMesh, RemoteGateway)
+- [ ] Integrate with H-01 gateway auth for HTTP endpoints
+- [ ] Add unit tests for rate limiting
+- [ ] Add integration tests for auth enforcement
+
+---
+
+### H-VS03: Backend Work Budget Enforcement
+**Phase**: V2-P4 (Backend Implementations)  
+**Priority**: P0  
+**Status**: 📋 Planned (DEPENDS ON H-02)
+
+**Tasks**:
+- [ ] Add work budget check to IContentBackend interface
+- [ ] Implement budget consumption in all backend FindCandidatesAsync methods
+- [ ] Add budget exhaustion handling (fail fast, log, mark OnHold)
+- [ ] Add work budget integration tests
+- [ ] Verify budget enforcement for each backend type
+- [ ] Add metrics for budget usage per backend
+
+---
+
+### H-VS04: SSRF Protection for HTTP/LAN Backends
+**Phase**: V2-P4-05 (Optional backends)  
+**Priority**: P0 (if HTTP/LAN backends implemented)  
+**Status**: 📋 Planned (Future)
+
+**Tasks**:
+- [ ] Create outbound HTTP client wrapper with IP filtering
+- [ ] Implement IP allowlist/denylist (block loopback, private subnets)
+- [ ] Add URL validation (no arbitrary user-supplied URLs)
+- [ ] Make SSRF protection enabled by default
+- [ ] Add unit tests for IP filtering
+- [ ] Add integration tests for SSRF prevention
+
+---
+
+### H-VS05: Resolver Throughput Limits
+**Phase**: V2-P5 (Integration)  
+**Priority**: P0  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Add `Resolver.MaxTracksPerRun` config (default: 10)
+- [ ] Add `Resolver.MaxConcurrentPlans` config (default: 3)
+- [ ] Implement per-origin quotas (prioritize UserLocal)
+- [ ] Add throughput tracking and enforcement
+- [ ] Log when limits are hit
+- [ ] Add unit tests for limit enforcement
+
+---
+
+### H-VS06: Plan Validation and Cost Estimation
+**Phase**: V2-P2-03 (Multi-Source Planner)  
+**Priority**: P0  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Implement pre-execution cost estimation
+- [ ] Add validation against per-call work budget
+- [ ] Add validation against per-peer budget
+- [ ] Add validation against Soulseek caps (H-08)
+- [ ] Implement plan downgrade logic
+- [ ] Add OnHold/Failed status with reasons
+- [ ] Add unit tests for all validation scenarios
+
+---
+
+### H-VS07: Verification Safety Guards
+**Phase**: V2-P3-02 (Verified Copy Registry)  
+**Priority**: P1  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Make verification local-only by default
+- [ ] Add opt-in config for external fingerprint services
+- [ ] Implement duration tolerance validation
+- [ ] Implement hash stability checks (multiple confirmations)
+- [ ] Add advertising guard (only verified copies)
+- [ ] Add configurable verification confidence thresholds
+- [ ] Add unit tests for verification logic
+
+---
+
+### H-VS08: Mesh Service Method Restrictions
+**Phase**: V2-P5-01 (Mesh Service Facade)  
+**Priority**: P0  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Define read-only vs high-cost method categories
+- [ ] Implement method-level access control
+- [ ] Disable high-cost methods by default over mesh
+- [ ] Add per-peer quotas for all methods
+- [ ] Integrate with H-02 work budget
+- [ ] Add unit tests for access control
+- [ ] Add integration tests for mesh service security
+
+---
+
+### H-VS09: Logging and Metrics Hygiene
+**Phase**: V2-P5 (Integration) / Deployment  
+**Priority**: P1  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Implement path redaction (basename only)
+- [ ] Implement peer identifier redaction
+- [ ] Remove high-cardinality IDs from metrics
+- [ ] Implement aggregated metrics per backend
+- [ ] Make DEBUG/TRACE logs opt-in only
+- [ ] Add structured logging with safe field selection
+- [ ] Add tests verifying no PII in logs
+
+---
+
+### H-VS10: Gateway Endpoint Protection
+**Phase**: V2-P5-02 (HTTP Gateway Endpoints)  
+**Priority**: P0  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Integrate all endpoints with H-01 auth/CSRF
+- [ ] Add API key requirement for mutating operations
+- [ ] Add `AllowPlanExecution` config (default: false)
+- [ ] Implement IP-based rate limiting
+- [ ] Add endpoints to gateway AllowedServices config
+- [ ] Add work budget check for execution endpoints
+- [ ] Add integration tests for auth enforcement
+
+---
+
+### H-VS11: Verified Copy Hints Trust Model
+**Phase**: V2-P6 (Advanced Features)  
+**Priority**: P2 (Optional)  
+**Status**: 📋 Planned (Future)
+
+**Tasks**:
+- [ ] Add `VerifiedCopyHints.Enabled` config (default: false)
+- [ ] Add `VerifiedCopyHints.TrustPolicy` enum
+- [ ] Implement trust-scoped query handling
+- [ ] Implement privacy-preserving hint export (no paths, partial hashes only)
+- [ ] Create dedicated mesh service for hints
+- [ ] Add method-level limits to hints service
+- [ ] Add unit tests for trust scoping
+
+---
+
+### H-VS12: Data Directory Permissions
+**Phase**: V2-P1 (Foundation) / Deployment  
+**Priority**: P1  
+**Status**: 📋 Planned
+
+**Tasks**:
+- [ ] Define dedicated data directory structure
+- [ ] Implement directory permission checks on startup
+- [ ] Set restrictive permissions (0700) automatically where possible
+- [ ] Integrate with H-09 dedicated user setup
+- [ ] Add permission warnings to logs
+- [ ] Document in deployment guide
+- [ ] Add tests for permission validation
 
 ---
 
