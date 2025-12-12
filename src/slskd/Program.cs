@@ -1067,6 +1067,31 @@ namespace slskd
             services.AddSingleton<ISecurityService, SecurityService>();
             services.AddSingleton<Common.Security.ISoulseekSafetyLimiter, Common.Security.SoulseekSafetyLimiter>();
 
+            // T-MCP01: Register Moderation / Control Plane services
+            services.AddSingleton<Common.Moderation.IModerationProvider>(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptionsMonitor<Options>>();
+                var logger = sp.GetRequiredService<ILogger<Common.Moderation.CompositeModerationProvider>>();
+
+                if (!opts.CurrentValue.Moderation.Enabled)
+                {
+                    return new Common.Moderation.NoopModerationProvider();
+                }
+
+                // For now, use CompositeModerationProvider with no sub-providers
+                // T-MCP02+ will add actual implementations
+                // We need to wrap the Options.Moderation in an IOptionsMonitor
+                var moderationOptions = Microsoft.Extensions.Options.Options.Create(opts.CurrentValue.Moderation);
+                var moderationOptionsMonitor = new Common.Moderation.WrappedOptionsMonitor<Common.Moderation.ModerationOptions>(moderationOptions);
+
+                return new Common.Moderation.CompositeModerationProvider(
+                    moderationOptionsMonitor,
+                    logger,
+                    hashBlocklist: null,
+                    peerReputation: null,
+                    externalClient: null);
+            });
+
             if (!OptionsAtStartup.Web.Authentication.Disabled)
             {
                 services.AddAuthorization(options =>

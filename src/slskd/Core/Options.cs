@@ -31,6 +31,7 @@ namespace slskd
     using FluentFTP;
     using NetTools;
     using slskd.Authentication;
+    using slskd.Common.Moderation;
     using slskd.Configuration;
     using slskd.Events;
     using slskd.Relay;
@@ -346,6 +347,12 @@ namespace slskd
         /// </summary>
         [Validate]
         public IntegrationOptions Integration { get; init; } = new IntegrationOptions();
+
+        /// <summary>
+        ///     Gets options for moderation / control plane (T-MCP01).
+        /// </summary>
+        [Validate]
+        public ModerationOptions Moderation { get; init; } = new ModerationOptions();
 
         /// <summary>
         /// Gets or sets warm cache configuration.
