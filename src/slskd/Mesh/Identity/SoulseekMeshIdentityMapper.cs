@@ -27,7 +27,27 @@ public sealed class SoulseekMeshIdentityMapper : ISoulseekMeshIdentityMapper, ID
     {
         _logger = logger;
         _dbPath = System.IO.Path.Combine(appDirectory, "mesh-peers.db");
+        EnsureTablesExist();
         LoadCacheAsync().GetAwaiter().GetResult();
+    }
+
+    private void EnsureTablesExist()
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        connection.Open();
+
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS mesh_peers (
+                peer_id TEXT PRIMARY KEY NOT NULL,
+                descriptor_json TEXT NOT NULL,
+                is_verified INTEGER NOT NULL DEFAULT 1,
+                last_seen_unix INTEGER NOT NULL,
+                soulseek_username TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_mesh_peers_last_seen ON mesh_peers(last_seen_unix);
+            CREATE INDEX IF NOT EXISTS idx_mesh_peers_soulseek ON mesh_peers(soulseek_username);";
+        cmd.ExecuteNonQuery();
     }
 
     public async Task MapAsync(string soulseekUsername, MeshPeerId meshPeerId, CancellationToken ct = default)
