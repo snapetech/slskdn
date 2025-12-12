@@ -44,6 +44,12 @@ public partial class HashDbService
         // Normalize and sanitize query
         var normalizedQuery = NormalizeSearchQuery(query);
         
+        // After normalization, check if query is empty
+        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            return Array.Empty<HashDbSearchResult>();
+        }
+        
         using var conn = GetConnection();
         
         // Optimized query with pre-computed peer counts

@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 9;
+    public const int CurrentVersion = 16;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -734,6 +734,98 @@ public static class HashDbMigrations
                             UpdatedAt INTEGER NOT NULL
                         );
                         CREATE INDEX IF NOT EXISTS idx_pseudonyms_peer_id ON Pseudonyms(PeerId);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 16,
+                Name = "Mesh search tables (hashes, hash_metadata, flac_inventory)",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        -- Main hashes table: content-addressed hash database
+                        CREATE TABLE IF NOT EXISTS hashes (
+                            flac_key TEXT PRIMARY KEY NOT NULL,
+                            size INTEGER NOT NULL,
+                            meta_flags INTEGER DEFAULT 0,
+                            first_seen INTEGER NOT NULL,
+                            last_seen INTEGER NOT NULL,
+                            seq_id INTEGER NOT NULL DEFAULT 0
+                        );
+
+                        -- Hash metadata: MusicBrainz and audio metadata
+                        CREATE TABLE IF NOT EXISTS hash_metadata (
+                            flac_key TEXT PRIMARY KEY NOT NULL,
+                            artist TEXT,
+                            album TEXT,
+                            title TEXT,
+                            recording_id TEXT,
+                            release_id TEXT,
+                            track_number INTEGER,
+                            disc_number INTEGER,
+                            year INTEGER,
+                            duration_ms INTEGER,
+                            updated_at INTEGER NOT NULL,
+                            FOREIGN KEY (flac_key) REFERENCES hashes(flac_key) ON DELETE CASCADE
+                        );
+
+                        -- FLAC inventory: maps users to files they share
+                        CREATE TABLE IF NOT EXISTS flac_inventory (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            username TEXT NOT NULL,
+                            flac_key TEXT NOT NULL,
+                            hash_value TEXT,
+                            path TEXT NOT NULL,
+                            size INTEGER NOT NULL,
+                            discovered_at INTEGER NOT NULL,
+                            last_seen INTEGER NOT NULL,
+                            UNIQUE(username, flac_key)
+                        );
+
+                        -- Indexes for search performance
+                        CREATE INDEX IF NOT EXISTS idx_hashes_seq_id ON hashes(seq_id);
+                        CREATE INDEX IF NOT EXISTS idx_hashes_size ON hashes(size);
+                        
+                        CREATE INDEX IF NOT EXISTS idx_metadata_artist ON hash_metadata(artist);
+                        CREATE INDEX IF NOT EXISTS idx_metadata_album ON hash_metadata(album);
+                        CREATE INDEX IF NOT EXISTS idx_metadata_title ON hash_metadata(title);
+                        CREATE INDEX IF NOT EXISTS idx_metadata_recording_id ON hash_metadata(recording_id);
+                        CREATE INDEX IF NOT EXISTS idx_metadata_release_id ON hash_metadata(release_id);
+                        
+                        CREATE INDEX IF NOT EXISTS idx_inventory_username ON flac_inventory(username);
+                        CREATE INDEX IF NOT EXISTS idx_inventory_flac_key ON flac_inventory(flac_key);
+                        CREATE INDEX IF NOT EXISTS idx_inventory_hash_value ON flac_inventory(hash_value);
+                        CREATE INDEX IF NOT EXISTS idx_inventory_last_seen ON flac_inventory(last_seen);
+
+                        -- Full-text search index for metadata (SQLite FTS5)
+                        CREATE VIRTUAL TABLE IF NOT EXISTS hash_metadata_fts USING fts5(
+                            flac_key UNINDEXED,
+                            artist,
+                            album,
+                            title,
+                            content=hash_metadata,
+                            content_rowid=rowid
+                        );
+
+                        -- Triggers to keep FTS index in sync
+                        CREATE TRIGGER IF NOT EXISTS hash_metadata_ai AFTER INSERT ON hash_metadata BEGIN
+                            INSERT INTO hash_metadata_fts(rowid, flac_key, artist, album, title)
+                            VALUES (new.rowid, new.flac_key, new.artist, new.album, new.title);
+                        END;
+
+                        CREATE TRIGGER IF NOT EXISTS hash_metadata_ad AFTER DELETE ON hash_metadata BEGIN
+                            DELETE FROM hash_metadata_fts WHERE rowid = old.rowid;
+                        END;
+
+                        CREATE TRIGGER IF NOT EXISTS hash_metadata_au AFTER UPDATE ON hash_metadata BEGIN
+                            UPDATE hash_metadata_fts 
+                            SET artist = new.artist, album = new.album, title = new.title
+                            WHERE rowid = new.rowid;
+                        END;
                     ";
                     cmd.ExecuteNonQuery();
                 },
