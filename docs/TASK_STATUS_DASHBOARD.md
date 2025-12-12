@@ -3352,3 +3352,280 @@ Every hardening task exists for a reason. None are optional.
 *Last Updated: December 11, 2025*  
 *Branch: experimental/whatAmIThinking*  
 *Next Milestone: Complete H-08 (Soulseek Caps)*
+
+---
+
+## 📋 Phase 8: App Host & VS Code Shell Integration
+
+**Status**: 📋 PLANNED  
+**Progress**: 0/8 (0%)  
+**Priority**: 🟡 MEDIUM (Client shell for ecosystem)  
+**Design Doc**: `docs/app-host-design.md`
+
+### Overview
+
+Build a **VS Code-based client shell** that serves as the primary UI for the mesh/slskd ecosystem. The App Host manages context (realm/pod/user), loads app manifests, and renders surfaces (tree views, panels, status items, commands) into the VS Code workbench.
+
+**Key Principles**:
+- Use VS Code as a universal dashboard/window manager
+- Apps communicate with pods only through a controlled PodApiClient
+- Web-compatible (runs in desktop and browser)
+- Security-first design with per-app permissions
+
+### T-APPHOST-01: App Host Extension Skeleton 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: None  
+**Design Doc**: `docs/app-host-design.md` § 7
+
+- [ ] Create first-party VS Code extension (`mesh-app-host`)
+- [ ] Extension activates on startup
+- [ ] Log activation message to confirm extension loaded
+- [ ] Register test command (`mesh.appHost.helloWorld`) with notification
+- [ ] Verify:
+  - [ ] Extension runs in VS Code desktop (Code OSS)
+  - [ ] Extension runs in VS Code Web (if dev environment available)
+
+**Deliverable**: Skeleton extension that activates in both desktop and web
+
+### T-APPHOST-02: ContextManager Prototype 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-APPHOST-01  
+**Design Doc**: `docs/app-host-design.md` § 4.1
+
+- [ ] Implement `MeshContext` interface:
+  - [ ] `realmId: string | null`
+  - [ ] `podId: string | null`
+  - [ ] `userId: string | null`
+- [ ] Implement `ContextManager` class:
+  - [ ] `getContext(): MeshContext`
+  - [ ] `setContext(partial: Partial<MeshContext>): void`
+  - [ ] `onDidChangeContext(listener): vscode.Disposable`
+- [ ] Add command `mesh.appHost.setDummyContext` that:
+  - [ ] Updates context with test values
+  - [ ] Logs context change
+  - [ ] Emits change event
+- [ ] Verify:
+  - [ ] Context persists across commands
+  - [ ] Change listeners are notified
+
+**Deliverable**: Central context management with observable state
+
+### T-APPHOST-03: ManifestRegistry & Stub Manifests 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-APPHOST-02  
+**Design Doc**: `docs/app-host-design.md` § 3, § 4.2
+
+- [ ] Implement `ManifestRegistry` class:
+  - [ ] `registerManifest(manifest: AppManifest): void`
+  - [ ] `getApps(): AppManifest[]`
+  - [ ] `getAppById(id: string): AppManifest | undefined`
+- [ ] Define `AppManifest` TypeScript interface matching design doc
+- [ ] Create two stub app manifests in code:
+  - [ ] `mesh.mesh` manifest:
+    - [ ] Tree surface: "Realms & Pods" (`data_source: "pods://mesh/listPods"`)
+    - [ ] Panel surface: "Mesh Diagnostics" (`entrypoint: "app://mesh.mesh/main"`)
+  - [ ] `mesh.chat` manifest:
+    - [ ] Tree surface: "Channels" (`data_source: "pods://chat/listChannels"`)
+    - [ ] Panel surface: "Chat" (`entrypoint: "app://mesh.chat/main"`)
+- [ ] On extension activation:
+  - [ ] Register both manifests in `ManifestRegistry`
+  - [ ] Log registered apps
+
+**Deliverable**: Manifest registry with two stub apps
+
+### T-APPHOST-04: TreeSurfaceHost with Mock Data 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-APPHOST-03  
+**Design Doc**: `docs/app-host-design.md` § 4.3
+
+- [ ] Implement minimal `PodApiClient`:
+  - [ ] Recognize `pods://mesh/listPods` → return mock pod list
+  - [ ] Recognize `pods://chat/listChannels` → return mock channel list
+  - [ ] No real networking yet
+- [ ] Implement `TreeSurfaceHost`:
+  - [ ] Iterate over manifests to find `type: "tree"` surfaces
+  - [ ] For each surface, create VS Code `TreeView` in sidebar
+  - [ ] Implement `TreeDataProvider` that:
+    - [ ] Calls `PodApiClient` for data
+    - [ ] Renders mock data as tree items
+- [ ] Verify:
+  - [ ] "Realms & Pods" tree view appears in sidebar
+  - [ ] "Channels" tree view appears in sidebar
+  - [ ] Both show mock nodes
+
+**Deliverable**: Working tree views with mock data
+
+### T-APPHOST-05: WebviewSurfaceHost & Panel Webviews 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-APPHOST-04  
+**Design Doc**: `docs/app-host-design.md` § 4.3, § 4.5
+
+- [ ] Implement `WebviewSurfaceHost`:
+  - [ ] For each `type: "panel"` surface, provide command to open `WebviewPanel`
+  - [ ] Load simple inline HTML/JS for webview content
+- [ ] Create webview content that:
+  - [ ] Displays current context (realmId, podId, userId)
+  - [ ] Has button to send test message to extension
+  - [ ] Shows response from extension
+- [ ] Implement message bridge:
+  - [ ] Webview → extension: `postMessage` handler
+  - [ ] Extension → webview: `webview.postMessage` responses
+  - [ ] Test round-trip message flow
+- [ ] Register commands:
+  - [ ] `mesh.mesh.openDiagnostics` → opens Mesh Diagnostics panel
+  - [ ] `mesh.chat.openChat` → opens Chat panel
+- [ ] Verify:
+  - [ ] Panels open via commands
+  - [ ] Context displays correctly
+  - [ ] Message bridge works bidirectionally
+
+**Deliverable**: Working webview panels with message bridge
+
+### T-APPHOST-06: PodApiClient Interface & `pods://` Routing 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-APPHOST-05  
+**Design Doc**: `docs/app-host-design.md` § 4.4
+
+- [ ] Formalize `PodApiClient` interface:
+  - [ ] `PodsRequest` DTO (uri, payload)
+  - [ ] `PodsResponse` DTO (ok, data, error)
+  - [ ] `request(req: PodsRequest): Promise<PodsResponse>`
+- [ ] Implement `pods://` URI parser:
+  - [ ] Extract namespace (e.g., `chat`, `mesh`)
+  - [ ] Extract action (e.g., `listChannels`, `listPods`)
+  - [ ] Route to appropriate mock handler
+- [ ] Update all surfaces to use `PodApiClient`:
+  - [ ] Tree views call `PodApiClient.request()`
+  - [ ] Status bars call `PodApiClient.request()`
+  - [ ] Webviews route through bridge → `PodApiClient`
+- [ ] Verify:
+  - [ ] All pod data flows through PodApiClient
+  - [ ] No direct network calls from surfaces
+
+**Deliverable**: Centralized, typed Pod API client
+
+### T-APPHOST-07: Basic App Permissions 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (Security)  
+**Dependencies**: T-APPHOST-06  
+**Design Doc**: `docs/app-host-design.md` § 5
+
+- [ ] Define `AppPermissions` interface:
+  - [ ] `allowedNamespaces: string[]`
+- [ ] Create permission mapping:
+  - [ ] `mesh.chat` → allowed `["chat"]` namespace only
+  - [ ] `mesh.mesh` → allowed `["mesh"]` namespace only
+- [ ] Implement permission check in `PodApiClient.request()`:
+  - [ ] Extract namespace from `pods://` URI
+  - [ ] Verify calling app is allowed to access namespace
+  - [ ] If not allowed:
+    - [ ] Reject promise with error
+    - [ ] Log violation attempt
+- [ ] Add test that:
+  - [ ] Attempts `pods://mesh/...` call from `mesh.chat` context
+  - [ ] Verifies call is blocked
+  - [ ] Verifies violation is logged
+- [ ] Verify:
+  - [ ] Permission violations are caught and logged
+  - [ ] Apps can only access their designated namespaces
+
+**Deliverable**: Working per-app permission enforcement
+
+### T-APPHOST-08: Desktop & Web Compatibility Check 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-APPHOST-07  
+**Design Doc**: `docs/app-host-design.md` § 6
+
+- [ ] Test in VS Code desktop (Code OSS):
+  - [ ] Extension activates
+  - [ ] All surfaces render
+  - [ ] Commands work
+  - [ ] Message bridge functional
+- [ ] Test in VS Code Web:
+  - [ ] Extension activates (if web build available)
+  - [ ] All surfaces render
+  - [ ] Commands work
+  - [ ] Message bridge functional
+- [ ] Document any web-incompatible APIs:
+  - [ ] Identify Node-only APIs used
+  - [ ] Add feature detection/environment checks
+  - [ ] Fence off incompatible code paths
+- [ ] Ensure core logic is web-safe:
+  - [ ] `ContextManager` – web-compatible ✓
+  - [ ] `ManifestRegistry` – web-compatible ✓
+  - [ ] `TreeSurfaceHost` – web-compatible ✓
+  - [ ] `WebviewSurfaceHost` – web-compatible ✓
+  - [ ] `PodApiClient` (mocks) – web-compatible ✓
+- [ ] Verify:
+  - [ ] Extension works identically in desktop and web
+  - [ ] No runtime errors in either environment
+
+**Deliverable**: Verified cross-platform compatibility
+
+---
+
+## 📝 App Host Notes
+
+### Architecture Rationale
+
+The App Host design treats VS Code as a **universal dashboard/window manager** rather than just a text editor:
+
+- **Security-first**: All pod communication flows through a controlled PodApiClient with per-app permissions
+- **Extensible**: Apps are declarative manifests, not hard-coded UI wiring
+- **Cross-platform**: Same code runs in desktop and web browsers
+- **Context-aware**: Centralized context (realm/pod/user) passed to all surfaces
+
+### Why VS Code?
+
+- **Mature UI framework**: Activity bar, sidebar, panels, editor grid, status bar
+- **Cross-platform**: Electron (desktop) and web (browser) support
+- **Extensible**: Extension API designed for third-party additions
+- **Developer-familiar**: Most contributors already know VS Code
+
+### Security Model
+
+Apps never access pods directly:
+
+```
+┌─────────────┐
+│   Webview   │  (app UI, untrusted)
+└──────┬──────┘
+       │ postMessage (no direct fetch)
+       ▼
+┌─────────────┐
+│  App Host   │  (extension host, trusted)
+│ + PodApiClient │
+└──────┬──────┘
+       │ HTTP/WS (with auth)
+       ▼
+┌─────────────┐
+│     Pod     │  (server, trusted)
+└─────────────┘
+```
+
+### Future Enhancements
+
+After T-APPHOST-01 through T-APPHOST-08:
+
+- Replace mock `PodApiClient` with real pod HTTP/WebSocket calls
+- Add more apps: `mesh.media`, `mesh.forum`, `mesh.gov`
+- Load manifests from files or pods
+- Implement WebSocket-based live updates
+- Add authentication/session management
+- Build production webview frontends (React/Svelte)
+
