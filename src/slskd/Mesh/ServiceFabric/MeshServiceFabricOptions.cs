@@ -44,4 +44,32 @@ public class MeshServiceFabricOptions
     /// How often to republish local service descriptors in seconds (default: 1800 = 30 minutes).
     /// </summary>
     public int RepublishIntervalSeconds { get; set; } = 1800;
+
+    /// <summary>
+    /// Default maximum calls per peer per minute (default: 100).
+    /// Can be overridden per-service.
+    /// </summary>
+    public int DefaultMaxCallsPerMinute { get; set; } = 100;
+
+    /// <summary>
+    /// Global maximum calls per peer per minute across all services (default: 500).
+    /// </summary>
+    public int GlobalMaxCallsPerPeer { get; set; } = 500;
+
+    /// <summary>
+    /// Per-service rate limits (service name -> max calls per minute).
+    /// If not specified, uses DefaultMaxCallsPerMinute.
+    /// </summary>
+    public Dictionary<string, int> PerServiceRateLimits { get; set; } = new();
+
+    /// <summary>
+    /// Per-service timeout overrides in seconds (service name -> timeout seconds).
+    /// If not specified, uses default of 30 seconds.
+    /// </summary>
+    public Dictionary<string, int> PerServiceTimeoutSeconds { get; set; } = new()
+    {
+        ["shadow-index"] = 60,      // Complex MBID lookups need more time
+        ["mesh-stats"] = 5,          // Introspection should be fast
+        ["pod-chat"] = 10            // Chat operations should be quick
+    };
 }

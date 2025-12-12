@@ -22,6 +22,9 @@ public class MeshServiceRouter
     // Per-peer rate limiting: peerId -> (callCount, windowStart)
     private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _perPeerCallCounts = new();
     
+    // Global per-peer rate limiting across all services: peerId -> (callCount, windowStart)
+    private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _globalPeerCallCounts = new();
+    
     public MeshServiceRouter(
         ILogger<MeshServiceRouter> logger,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
@@ -113,22 +116,37 @@ public class MeshServiceRouter
                     $"Payload exceeds {_options.MaxDescriptorBytes} bytes");
             }
 
-            // 3. Check per-peer rate limit
-            if (!CheckRateLimit(remotePeerId))
+            // 3. Check global per-peer rate limit (across all services)
+            if (!CheckGlobalRateLimit(remotePeerId))
             {
                 _logger.LogWarning(
-                    "[ServiceRouter] Rate limit exceeded for peer: {PeerId}",
+                    "[ServiceRouter] Global rate limit exceeded for peer: {PeerId}",
                     remotePeerId);
                 
-                RecordViolation(remotePeerId, ViolationType.RateLimitExceeded, "Service call rate limit");
+                RecordViolation(remotePeerId, ViolationType.RateLimitExceeded, "Global service call rate limit");
                 
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.RateLimited,
-                    "Too many requests");
+                    "Too many requests (global limit)");
             }
 
-            // 4. Find service
+            // 4. Check per-service rate limit
+            if (!CheckServiceRateLimit(remotePeerId, call.ServiceName))
+            {
+                _logger.LogWarning(
+                    "[ServiceRouter] Service rate limit exceeded for peer: {PeerId}, service: {ServiceName}",
+                    remotePeerId, call.ServiceName);
+                
+                RecordViolation(remotePeerId, ViolationType.RateLimitExceeded, $"Service call rate limit for {call.ServiceName}");
+                
+                return CreateErrorReply(
+                    call.CorrelationId,
+                    ServiceStatusCodes.RateLimited,
+                    "Too many requests for this service");
+            }
+
+            // 5. Find service
             if (!_services.TryGetValue(call.ServiceName, out var service))
             {
                 _logger.LogDebug(
@@ -141,7 +159,7 @@ public class MeshServiceRouter
                     $"Service '{call.ServiceName}' not found");
             }
 
-            // 5. Create context
+            // 6. Create context
             var context = new MeshServiceContext
             {
                 RemotePeerId = remotePeerId,
@@ -152,9 +170,13 @@ public class MeshServiceRouter
                 Logger = _logger
             };
 
-            // 6. Invoke service handler with timeout
+            // 7. Invoke service handler with timeout (per-service or default)
+            var timeoutSeconds = _options.PerServiceTimeoutSeconds.GetValueOrDefault(
+                call.ServiceName, 
+                30); // Default 30 seconds
+            
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(30)); // TODO: Make configurable
+            cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
             ServiceReply reply;
             try
@@ -185,7 +207,7 @@ public class MeshServiceRouter
                     "Internal service error");
             }
 
-            // 7. Log and return
+            // 8. Log and return
             _logger.LogDebug(
                 "[ServiceRouter] Call completed: {ServiceName}.{Method} -> {Status}",
                 call.ServiceName, call.Method, reply.StatusCode);
@@ -203,20 +225,20 @@ public class MeshServiceRouter
     }
 
     /// <summary>
-    /// Check per-peer rate limit using sliding window.
+    /// Check global per-peer rate limit (across all services).
     /// </summary>
-    private bool CheckRateLimit(string peerId)
+    private bool CheckGlobalRateLimit(string peerId)
     {
         var now = DateTimeOffset.UtcNow;
         var windowDuration = TimeSpan.FromMinutes(1);
-        var maxCallsPerWindow = 100; // TODO: Make configurable
+        var maxCallsPerWindow = _options.GlobalMaxCallsPerPeer;
 
-        var (count, windowStart) = _perPeerCallCounts.GetOrAdd(peerId, _ => (0, now));
+        var (count, windowStart) = _globalPeerCallCounts.GetOrAdd(peerId, _ => (0, now));
 
         // Reset window if expired
         if (now - windowStart > windowDuration)
         {
-            _perPeerCallCounts[peerId] = (1, now);
+            _globalPeerCallCounts[peerId] = (1, now);
             return true;
         }
 
@@ -227,7 +249,43 @@ public class MeshServiceRouter
         }
 
         // Increment count
-        _perPeerCallCounts[peerId] = (count + 1, windowStart);
+        _globalPeerCallCounts[peerId] = (count + 1, windowStart);
+        return true;
+    }
+
+    /// <summary>
+    /// Check per-service rate limit for a peer using sliding window.
+    /// Uses per-service limit if configured, otherwise default.
+    /// </summary>
+    private bool CheckServiceRateLimit(string peerId, string serviceName)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var windowDuration = TimeSpan.FromMinutes(1);
+        
+        // Get per-service limit or fall back to default
+        var maxCallsPerWindow = _options.PerServiceRateLimits.GetValueOrDefault(
+            serviceName, 
+            _options.DefaultMaxCallsPerMinute);
+
+        // Use composite key for per-service tracking
+        var key = $"{peerId}:{serviceName}";
+        var (count, windowStart) = _perPeerCallCounts.GetOrAdd(key, _ => (0, now));
+
+        // Reset window if expired
+        if (now - windowStart > windowDuration)
+        {
+            _perPeerCallCounts[key] = (1, now);
+            return true;
+        }
+
+        // Check limit
+        if (count >= maxCallsPerWindow)
+        {
+            return false;
+        }
+
+        // Increment count
+        _perPeerCallCounts[key] = (count + 1, windowStart);
         return true;
     }
 
