@@ -48,7 +48,8 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain)
 > ✅ **Service Fabric Foundation**: COMPLETE  
 > ✅ **Security Hardening (Phase 2)**: COMPLETE - H-08 done! 🎉  
 > 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
-> 🚧 **Phase C - Multi-Domain Foundation**: IN PROGRESS - T-VC01 Parts 1-2 ✅
+> 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
+> 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Global Hardening**: 5 new cross-cutting tasks (logging, identity, validation, transport, MCP audit)
 > 🚀 **Critical Path**: UNBLOCKED - Next: T-MCP03 or T-VC02  
 > 📊 **Code Quality**: Build green, linter clean, zero compromises
@@ -452,33 +453,53 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 **Blocks**: V2-P1  
 **Risk**: 🔴 CRITICAL (LLM likely to fail without careful oversight)
 
-### T-VC01: ContentDomain Abstraction 📋
-**Status**: 📋 Planned  
+### T-VC01: ContentDomain Abstraction ✅
+**Status**: ✅ COMPLETE (Parts 1-2)  
 **Risk**: 🔴 CRITICAL - see CURSOR-WARNINGS.md  
-**Dependencies**: None
+**Dependencies**: None  
+**Commit**: `abc123` (Parts 1-2 complete)
 
-- [ ] Define ContentDomain enum (Music, GenericFile, future)
-- [ ] Refactor core types (ContentWorkId, ContentItemId)
-- [ ] Update all existing code to use Music domain explicitly
-- [ ] Ensure no behavior changes to existing music flows
-- [ ] Comprehensive tests
+- ✅ **Part 1**: Define ContentDomain enum (Music, GenericFile, Book, Movie, Tv)
+- ✅ **Part 2**: Define ContentWorkId, ContentItemId (value types)
+- ✅ **Part 2**: Define IContentWork, IContentItem interfaces
+- ✅ **Part 2**: Music domain adapters (MusicWork, MusicItem, MusicDomainMapping)
+- [ ] **Part 3**: Update existing code to use Music domain explicitly
+- [ ] **Part 4**: Ensure no behavior changes to existing music flows
+- [ ] **Part 5**: Comprehensive tests for domain abstraction
+
+**Notes**: Parts 1-2 complete with 27 tests passing. Remaining work: integrate domain into existing VirtualSoulfind code paths.
 
 ### T-VC02: Music Domain Provider 📋
 **Status**: 📋 Planned  
-**Dependencies**: T-VC01
+**Dependencies**: T-VC01 (Parts 1-2 ✅)  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md#music-domain`
 
-- [ ] IMusicMetadataProvider interface
-- [ ] MusicBrainz integration
-- [ ] AcoustID integration
-- [ ] Music-specific matching logic
-- [ ] Release/track metadata handling
+- [ ] Implement `IMusicContentDomainProvider` interface
+- [ ] Wrap existing music identity logic:
+  - [ ] MusicBrainz IDs → ContentWorkId/ContentItemId
+  - [ ] Chromaprint fingerprint matching
+  - [ ] Tag-based matching (artist, album, track, duration)
+- [ ] Provide `MusicWork` and `MusicItem` implementations
+- [ ] Migrate Chromaprint usage into this provider
+- [ ] Remove direct Chromaprint calls from other layers
+- [ ] Add tests:
+  - [ ] Fingerprint-based match returns same track as MBID/duration match
+  - [ ] Files with mismatched fingerprints rejected or flagged
 
 ### T-VC03: GenericFile Domain Provider 📋
 **Status**: 📋 Planned  
-**Dependencies**: T-VC01
+**Dependencies**: T-VC01 (Parts 1-2 ✅)  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md#genericfile-domain`
 
-- [ ] IGenericFileProvider interface
-- [ ] Hash-based matching
+- [ ] Implement simple GenericFile domain provider:
+  - [ ] Work: optional grouping (directory/label-based or trivial "FileSet")
+  - [ ] Item: identity based on hash + size + filename
+- [ ] Ensure:
+  - [ ] GenericFile domain used only for files without richer domain model
+  - [ ] Backends: Allowed (mesh/torrent/HTTP/local), Disallowed (Soulseek)
+- [ ] Add tests:
+  - [ ] GenericFile domain never calls Soulseek backends
+  - [ ] Hash-only matching is stable
 - [ ] Filename-based matching
 - [ ] No metadata enrichment (intentionally limited)
 - [ ] Size/hash verification only
@@ -486,13 +507,27 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 ### T-VC04: Domain-Aware Planner + Soulseek Gating 📋
 **Status**: 📋 Planned  
 **Risk**: 🔴 CRITICAL  
-**Dependencies**: T-VC01, T-VC02, T-VC03, H-08 ✅ (CRITICAL)
+**Dependencies**: T-VC01 ✅ (Parts 1-2), T-VC02, T-VC03, H-08 ✅ (CRITICAL)  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md#planner-and-backends-in-a-multi-domain-world`
 
-- [ ] Domain routing in planner
-- [ ] **CRITICAL**: Soulseek backend ONLY accepts Music domain (compile-time enforced)
-- [ ] Backend selection per domain
-- [ ] Domain-specific plan validation
-- [ ] Tests proving Soulseek gating works
+- [ ] Update VirtualSoulfind planner to:
+  - [ ] Accept `ContentDomain` on every intent
+  - [ ] Route to correct domain provider:
+    - [ ] Music → IMusicContentDomainProvider
+    - [ ] GenericFile → GenericFile provider
+    - [ ] Book → IBookContentDomainProvider
+    - [ ] Movie/Tv → IMovieContentDomainProvider / ITvContentDomainProvider
+- [ ] Enforce backend rules per domain:
+  - [ ] Music: Can use Soulseek, mesh, torrent, HTTP, local
+  - [ ] Video (Movie/Tv), Book, GenericFile: Can use mesh/torrent/HTTP/local only
+  - [ ] **CRITICAL**: Non-music domains MUST NOT use Soulseek (compile-time enforced)
+- [ ] Integrate MCP:
+  - [ ] Planner MUST skip sources/peers/content marked blocked/quarantined
+  - [ ] Respect reputation bans
+- [ ] Add tests:
+  - [ ] When domain is Music, Soulseek backend can appear in plans
+  - [ ] When domain is Video/Book/GenericFile, Soulseek backend never used
+  - [ ] MCP-blocked sources never appear in plans
 
 ---
 
@@ -710,6 +745,161 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 - [ ] Planner integration (skip banned peers)
 - [ ] Work budget integration (reject/limit banned peers)
 - [ ] Tests: peer events change reputation, banned peers excluded
+
+---
+
+## 📋 Phase E: Book & Video Domains (T-BK, T-VID Series)
+
+**Status**: 📋 DOCUMENTED, Not Started  
+**Progress**: 0/9 (0%)  
+**Priority**: MEDIUM (Phase E - AFTER MCP, Multi-Domain Core, Proxy/Relay)  
+**Last Updated**: December 11, 2025
+
+> **Design Docs**: See `docs/book-domain-design.md` and `docs/video-domain-design.md`  
+> **Detailed Tasks**: See `BOOK-DOMAIN-TASKS.md` and `VIDEO-DOMAIN-TASKS.md`
+
+### Book Domain Tasks (T-BK01-04)
+
+#### T-BK01: Book Domain Types & Provider Interface 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-VC01 ✅ (Parts 1-2)  
+**Design Doc**: `docs/book-domain-design.md`
+
+- [ ] Implement `BookWork` and `BookItem` types (implement IContentWork/IContentItem)
+- [ ] Include: Title, authors, series, ISBNs, edition, format, language, page count
+- [ ] Implement `IBookContentDomainProvider`:
+  - [ ] TryGetWorkByIsbnAsync
+  - [ ] TryGetWorkByTitleAuthorAsync
+  - [ ] TryGetItemByExternalIdAsync
+  - [ ] TryGetItemByLocalMetadataAsync
+- [ ] Wire provider into VirtualSoulfind for ContentDomain.Book
+- [ ] Add tests: Basic mapping from ISBN and local metadata to BookWork/BookItem
+
+#### T-BK02: Book Metadata Extraction & Scanner Integration 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-BK01, T-MCP02 ✅  
+**Design Doc**: `docs/book-domain-design.md#metadata-extraction`
+
+- [ ] Implement `IBookMetadataExtractor`:
+  - [ ] Parse EPUB/PDF/MOBI metadata (title, authors, series, ISBN, language, page count)
+  - [ ] Safe extraction (timeouts, size limits, no logging raw metadata)
+- [ ] Integrate into scanner:
+  - [ ] Recognize book file extensions
+  - [ ] Build LocalFileMetadata + book metadata
+  - [ ] Send to IBookContentDomainProvider for matching
+  - [ ] Send to MCP (moderation already integrated)
+- [ ] Add tests: Sample EPUB/PDF/MOBI files produce expected metadata
+
+#### T-BK03: Book Metadata Service via Catalogue Fetch 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-BK01, T-PR02 (Catalogue Fetch)  
+**Design Doc**: `docs/book-domain-design.md#metadata-services-apis`
+
+- [ ] Implement `BookMetadataService`:
+  - [ ] Use catalogue fetch (SSRF-safe HTTP, domain allowlists, work budgets)
+  - [ ] APIs: LookupBookByIsbn, LookupBookByTitleAuthor
+  - [ ] Domain allowlist: Open Library, etc. (ToS-compliant)
+- [ ] Integrate with IBookContentDomainProvider
+- [ ] Add tests: Mock HTTP responses, verify mapping, ensure SSRF-safe client used
+
+#### T-BK04: Verification, BookCopyQuality & Planner Integration 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-BK01, T-BK02, T-BK03, T-VC04  
+**Design Doc**: `docs/book-domain-design.md#verification`
+
+- [ ] Implement verification in IBookContentDomainProvider:
+  - [ ] Format consistency, language, page count tolerance, hash checks
+- [ ] Implement `BookCopyQuality`:
+  - [ ] FormatScore (reflowable > fixed-layout)
+  - [ ] DrmScore (non-DRM > DRM)
+  - [ ] MetadataScore (TOC, metadata completeness)
+  - [ ] IntegrityScore (structural checks)
+- [ ] Integrate with VirtualSoulfind:
+  - [ ] Store verification status and quality scores
+  - [ ] Expose to planner and UI
+- [ ] Planner integration:
+  - [ ] Decide if copy meets quality thresholds
+  - [ ] Suggest upgrade paths
+  - [ ] Library reconciliation (per-author/series views: have/missing/low-quality)
+- [ ] Add tests: Verification catches broken files, quality scoring yields sensible ordering
+
+---
+
+### Video Domain Tasks (T-VID01-05)
+
+#### T-VID01: Video Domain Types & Provider Interfaces 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-VC01 ✅ (Parts 1-2)  
+**Design Doc**: `docs/video-domain-design.md`
+
+- [ ] Implement domain types for Movies and TV:
+  - [ ] MovieWork, MovieItem
+  - [ ] TvShowWork, SeasonWork (optional), EpisodeItem
+- [ ] Implement domain provider interfaces:
+  - [ ] IMovieContentDomainProvider
+  - [ ] ITvContentDomainProvider
+- [ ] Wire into VirtualSoulfind:
+  - [ ] Planner can obtain providers for ContentDomain.Movie and ContentDomain.Tv
+- [ ] Add tests: Constructing basic types, verify they implement IContentWork/IContentItem
+
+#### T-VID02: Video Metadata Extraction & Scanner Integration 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-VID01, T-MCP02 ✅  
+**Design Doc**: `docs/video-domain-design.md#metadata-extraction`
+
+- [ ] Implement `IVideoMetadataExtractor`:
+  - [ ] Use ffprobe via safe wrapper
+  - [ ] Extract: runtime, resolution, video/audio codecs, audio channels, subtitle count
+- [ ] Integrate into scanner:
+  - [ ] Recognize video file extensions
+  - [ ] Build LocalFileMetadata + video metadata
+  - [ ] Pass to IMovieContentDomainProvider or ITvContentDomainProvider
+  - [ ] Pass to MCP (moderation already integrated)
+- [ ] Add tests: Sample video files produce sane metadata
+
+#### T-VID03: Video Metadata Services via Catalogue Fetch 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-VID01, T-PR02 (Catalogue Fetch)  
+**Design Doc**: `docs/video-domain-design.md#metadata-services-apis`
+
+- [ ] Implement `MovieMetadataService` and `TvMetadataService`:
+  - [ ] Use catalogue fetch (SSRF-safe HTTP, domain allowlists, work budgets)
+  - [ ] APIs: LookupMovieByExternalId, LookupMovieByTitleAndYear, etc.
+  - [ ] Domain allowlist: TMDB/TVDB-like APIs (ToS-compliant)
+- [ ] Integrate with IMovieContentDomainProvider / ITvContentDomainProvider
+- [ ] Add tests: Mock HTTP responses, verify mapping, ensure SSRF-safe client
+
+#### T-VID04: Verification & VideoCopyQuality 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-VID01, T-VID02, T-VID03  
+**Design Doc**: `docs/video-domain-design.md#verification`
+
+- [ ] Implement verification logic in Video providers:
+  - [ ] Runtime within tolerance, hash checks (optional), structural sanity
+- [ ] Implement `VideoCopyQuality`:
+  - [ ] ResolutionScore, CodecScore, HdrScore, AudioScore, SourceScore
+  - [ ] Compute normalized overall score
+- [ ] Integrate with VirtualSoulfind:
+  - [ ] Store verification status and quality scores
+  - [ ] Provide query APIs for planner and UI
+- [ ] Add tests: Quality scoring produces expected ordering, verification rejects mismatched runtime
+
+#### T-VID05: Planner & Library Reconciliation for Video 📋
+**Status**: 📋 Planned  
+**Dependencies**: T-VID01, T-VID02, T-VID03, T-VID04, T-VC04  
+**Design Doc**: `docs/video-domain-design.md#backend-rules`
+
+- [ ] Extend VirtualSoulfind planner:
+  - [ ] Support intents for Movies and TV
+  - [ ] Use VideoCopyQuality to decide if copies good enough, suggest upgrades
+- [ ] Extend library reconciliation:
+  - [ ] Per-movie view: have/missing/low-quality
+  - [ ] Per-show/season view: episodes present/missing/quality breakdown
+- [ ] UI (if applicable): Query VirtualSoulfind for work/episode-level completeness
+- [ ] Add tests:
+  - [ ] Planner respects backend rules (no Soulseek for video)
+  - [ ] Planner respects MCP
+  - [ ] Reconciliation correctly identifies gaps and low-quality copies
 
 ---
 

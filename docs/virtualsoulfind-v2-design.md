@@ -1117,9 +1117,288 @@ See `VIRTUALSOULFIND-V2-TASKS.md` for detailed task breakdown.
 
 ---
 
+## Multi-Domain Model Overview
+
+VirtualSoulfind V2 is explicitly **multi-domain**: it manages content across multiple media domains with a shared brain but domain-specific rules.
+
+Supported domains (initial set):
+
+- `Music`
+- `GenericFile` (baseline, non-semantic)
+- `Book`
+- `Movie`
+- `Tv`
+
+Each domain shares:
+
+- A common ID scheme:
+  - `ContentWorkId` – logical work (album, book, series, movie, etc.).
+  - `ContentItemId` – specific item/copy (a specific release, file, or edition).
+- Common interfaces:
+  - `IContentWork` – domain-neutral view of a work.
+  - `IContentItem` – domain-neutral view of an item.
+  - `IContentDomainProvider` – base interface with domain-specific subtypes.
+
+Domain-specific providers implement the details:
+
+- `IMusicContentDomainProvider`
+- `IBookContentDomainProvider`
+- `IMovieContentDomainProvider`
+- `ITvContentDomainProvider`
+- (plus a minimalist provider for `GenericFile`)
+
+---
+
+### Domain Contracts
+
+Each domain provider MUST implement:
+
+- Identity mapping:
+  - Map external IDs (MBID, ISBN, TMDB, etc.) → `ContentWorkId` / `ContentItemId`.
+  - Map local metadata (e.g., tags, names, durations) → best-effort work/item match.
+- Metadata enrichment:
+  - Provide canonical "work" and "item" records with:
+    - Title/names.
+    - Creator(s)/authors/artists.
+    - Year and/or release details.
+    - Domain-specific fields (runtime, series index, formats, etc.).
+- Verification:
+  - Given a local file, determine whether it is a valid representation of a specific `ContentItemId`.
+  - Use domain-appropriate checks (hashes, runtime, page count, codec, etc.).
+- Quality assessment:
+  - Produce a domain-specific "quality" struct that can be used by:
+    - Planner ("is this good enough?").
+    - Upgrade logic ("can we do better?").
+
+---
+
+## Music Domain
+
+The Music domain is the most mature and serves as the reference for other domains.
+
+### Identity
+
+- Works:
+  - Albums, EPs, singles, compilations, or other releases.
+  - Identified primarily via external IDs (MusicBrainz, etc.) and title/artist/year combinations.
+- Items:
+  - Tracks (recordings) associated with a work.
+  - Identified via:
+    - Track index/position, duration, and external IDs.
+    - (Where available) Chromaprint fingerprints.
+
+### Providers
+
+- `IMusicContentDomainProvider` is responsible for:
+
+  - Mapping from:
+    - MusicBrainz IDs → `ContentWorkId` / `ContentItemId`.
+    - Local library tags (artist, album, track names) → probable work/item.
+    - Chromaprint fingerprints → track identity.
+
+  - Producing:
+    - `MusicWork` – implementing `IContentWork`.
+    - `MusicItem` – implementing `IContentItem`.
+
+  - Providing matching utilities:
+    - `TryMatchTrackByFingerprintAsync(LocalFileMetadata + fingerprint)`.
+    - `TryMatchTrackByTagsAsync(LocalFileMetadata + tags)`.
+
+### Verification and Quality
+
+- Verification:
+  - Check:
+    - Hashes.
+    - Duration tolerance.
+    - Fingerprint (Chromaprint) where available.
+
+- Quality scoring:
+  - Consider:
+    - Codec (lossless vs lossy).
+    - Bitrate bracket.
+    - Sample rate / bit depth.
+  - Output `MusicCopyQuality` with normalized scoring that can be compared across items for the same work.
+
+---
+
+## Video Domain (Movies & TV)
+
+The Video domain is split into Movies and TV, but both are "video" with overlapping concerns.
+
+### Identity
+
+- Movie work:
+  - A film identified by:
+    - External ID (e.g., TMDB, IMDB-like ID).
+    - Title + year.
+- Movie item:
+  - A particular encoding or cut of a movie:
+    - Edition, resolution, codec, audio layout, etc.
+
+- TV work:
+  - A TV show (series-level identity).
+  - Seasons as structured sub-works.
+- Episode item:
+  - An episode identified by:
+    - Series ID + season + episode index (and/or absolute index).
+    - External IDs (episode IDs from TMDB/TVDB/etc.).
+
+### Providers
+
+- `IMovieContentDomainProvider`:
+  - Maps external movie IDs and (title + year) → `ContentWorkId` for movies.
+  - Resolves local video files to movie items using filename/NFO metadata and API lookup.
+- `ITvContentDomainProvider`:
+  - Maps series IDs, season/episode numbers → `ContentWorkId`/`ContentItemId` for episodes.
+  - Resolves local episode files using filename patterns and NFO/metadata.
+
+Both providers:
+
+- Expose `MovieWork`/`MovieItem` and `TvShowWork`/`EpisodeItem`, all implementing `IContentWork`/`IContentItem`.
+
+### Verification and Quality
+
+Verification:
+
+- Hash-based verification for known-good copies.
+- Runtime-based sanity check (within configured tolerance per work/episode).
+- Optional structural checks (e.g., container/codec sanity).
+
+Quality scoring (`VideoCopyQuality`):
+
+- Resolution (4K, 1080p, 720p, etc.).
+- Video codec (HEVC/AV1 vs H.264, etc.).
+- HDR vs SDR (if detectable).
+- Audio layout (stereo vs multichannel).
+- Bitrate bracket (approximate, not exact).
+
+Planner uses `VideoCopyQuality` to:
+
+- Decide if the local copy meets the user's profile.
+- Suggest upgrades where a higher-quality copy exists.
+
+---
+
+## Book Domain
+
+The Book domain covers ebooks and similar textual content.
+
+### Identity
+
+- Work:
+  - A logical book title (often mapped to a canonical edition).
+  - Identified by:
+    - ISBN (if available).
+    - Title + author (+ year).
+- Item:
+  - A specific file/edition:
+    - Format (EPUB, PDF, MOBI, etc.).
+    - Publisher, publication year.
+    - Language.
+    - Page count/length.
+
+### Provider
+
+- `IBookContentDomainProvider`:
+
+  - Maps:
+    - ISBN and Open Library IDs → `ContentWorkId` / `ContentItemId`.
+    - Local file metadata (title, authors, ISBN extracted from EPUB/PDF) → best work/item match.
+
+  - Produces:
+    - `BookWork` – `IContentWork`.
+    - `BookItem` – `IContentItem`.
+
+  - Provides methods such as:
+    - `TryMatchBookByIsbnAsync`.
+    - `TryMatchBookByTitleAuthorAsync`.
+    - `TryMatchBookByLocalMetadataAsync`.
+
+### Verification and Quality
+
+Verification:
+
+- Hash match for known-good editions.
+- Structural validation:
+  - Valid EPUB/PDF structure.
+  - Reasonable page count/size vs known metadata.
+
+Quality scoring (`BookCopyQuality`):
+
+- Format preference:
+  - Reflowable formats (EPUB, etc.) > fixed-layout (PDF, scanned images).
+- DRM:
+  - Non-DRM preferred over DRM where detectable.
+- Metadata completeness:
+  - Presence of TOC, proper metadata tags, etc.
+
+Planner uses `BookCopyQuality` to:
+
+- Offer upgrade suggestions (e.g., "replace low-quality PDF with high-quality EPUB").
+- Decide whether a given copy is "good enough" for user preferences.
+
+---
+
+## GenericFile Domain
+
+The GenericFile domain is intentionally minimal and non-semantic.
+
+- Purpose:
+  - Provide a domain for arbitrary files where we don't (yet) have a richer domain model.
+- Identity:
+  - Work: optional grouping (e.g., folder, tag, or arbitrary grouping).
+  - Item: a file identified primarily by:
+    - Hash (SHA256 or equivalent).
+    - Size, name (secondary).
+
+The GenericFile domain MUST:
+
+- Not rely on Soulseek backend.
+- Rely only on mesh/torrent/HTTP/local.
+- Be used cautiously, without any semantic assumptions about content type.
+
+---
+
+## Planner and Backends in a Multi-Domain World
+
+The planner is responsible for:
+
+- Receiving intents that specify:
+  - `ContentDomain`.
+  - Work/item targets (work IDs, item IDs, or selection criteria).
+- Selecting:
+  - Appropriate domain provider.
+  - Allowed backends for that domain.
+  - Sources that pass moderation (MCP) and reputation checks.
+
+Backend rules per domain:
+
+- Music:
+  - May use: Soulseek, mesh, torrent, HTTP, local.
+- Video (Movie/Tv):
+  - May use: mesh, torrent, HTTP, local.
+  - MUST NOT use Soulseek.
+- Book:
+  - May use: mesh, torrent, HTTP, local.
+  - MUST NOT use Soulseek.
+- GenericFile:
+  - May use: mesh, torrent, HTTP, local.
+  - MUST NOT use Soulseek.
+
+Planner MUST:
+
+- Enforce domain-specific backend rules.
+- Consult MCP before:
+  - Advertising sources.
+  - Accepting external sources.
+  - Serving data via content relay.
+
+---
+
 This design gives you a coherent architecture that:
 
 * Works with the multi-source-swarm/service-fabric work already completed.
 * Treats VirtualSoulfind as the hub for catalogue, planning, and verification.
 * Shifts "turbo" behavior firmly onto mesh/DHT/BT and away from Soulseek, by design.
 * Maintains backwards compatibility and Soulseek-friendly defaults.
+* **Supports multi-domain content (Music, Books, Movies, TV, GenericFile) with first-class domain abstractions.**
