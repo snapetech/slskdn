@@ -142,5 +142,72 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         ///     Counts total tracks in the catalogue.
         /// </summary>
         Task<int> CountTracksAsync(CancellationToken ct = default);
+
+        // ========== LocalFile Methods ==========
+
+        /// <summary>
+        ///     Finds a local file by its absolute path.
+        /// </summary>
+        Task<LocalFile?> FindLocalFileByPathAsync(string path, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Finds a local file by its internal ID.
+        /// </summary>
+        Task<LocalFile?> FindLocalFileByIdAsync(string localFileId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Finds local files linked to a specific track (via InferredTrackId or VerifiedCopy).
+        /// </summary>
+        Task<IReadOnlyList<LocalFile>> ListLocalFilesForTrackAsync(string trackId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Finds local files matching a primary hash.
+        /// </summary>
+        Task<IReadOnlyList<LocalFile>> FindLocalFilesByHashAsync(string hashPrimary, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Inserts or updates a local file.
+        /// </summary>
+        Task UpsertLocalFileAsync(LocalFile localFile, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Counts total local files in the catalogue.
+        /// </summary>
+        Task<int> CountLocalFilesAsync(CancellationToken ct = default);
+
+        // ========== VerifiedCopy Methods ==========
+
+        /// <summary>
+        ///     Finds a verified copy for a specific track.
+        /// </summary>
+        /// <remarks>
+        ///     Returns the most recent verified copy if multiple exist.
+        /// </remarks>
+        Task<VerifiedCopy?> FindVerifiedCopyForTrackAsync(string trackId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Finds all verified copies for a specific track.
+        /// </summary>
+        Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesForTrackAsync(string trackId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Finds a verified copy by its internal ID.
+        /// </summary>
+        Task<VerifiedCopy?> FindVerifiedCopyByIdAsync(string verifiedCopyId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Inserts or updates a verified copy.
+        /// </summary>
+        Task UpsertVerifiedCopyAsync(VerifiedCopy verifiedCopy, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Deletes a verified copy (e.g., if user marks it as incorrect).
+        /// </summary>
+        Task DeleteVerifiedCopyAsync(string verifiedCopyId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Counts total verified copies in the catalogue.
+        /// </summary>
+        Task<int> CountVerifiedCopiesAsync(CancellationToken ct = default);
     }
 }

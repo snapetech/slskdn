@@ -37,12 +37,15 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         private readonly ConcurrentDictionary<string, ReleaseGroup> _releaseGroups = new();
         private readonly ConcurrentDictionary<string, Release> _releases = new();
         private readonly ConcurrentDictionary<string, Track> _tracks = new();
+        private readonly ConcurrentDictionary<string, LocalFile> _localFiles = new();
+        private readonly ConcurrentDictionary<string, VerifiedCopy> _verifiedCopies = new();
 
         // Indexes for efficient lookup
         private readonly ConcurrentDictionary<string, string> _artistMbidToId = new();
         private readonly ConcurrentDictionary<string, string> _releaseGroupMbidToId = new();
         private readonly ConcurrentDictionary<string, string> _releaseMbidToId = new();
         private readonly ConcurrentDictionary<string, string> _trackMbidToId = new();
+        private readonly ConcurrentDictionary<string, string> _localFilePathToId = new();
 
         // ========== Artist Methods ==========
 
@@ -218,6 +221,99 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         public Task<int> CountTracksAsync(CancellationToken ct = default)
         {
             return Task.FromResult(_tracks.Count);
+        }
+
+        // ========== LocalFile Methods ==========
+
+        public Task<LocalFile?> FindLocalFileByPathAsync(string path, CancellationToken ct = default)
+        {
+            if (_localFilePathToId.TryGetValue(path, out var id))
+            {
+                return FindLocalFileByIdAsync(id, ct);
+            }
+
+            return Task.FromResult<LocalFile?>(null);
+        }
+
+        public Task<LocalFile?> FindLocalFileByIdAsync(string localFileId, CancellationToken ct = default)
+        {
+            _localFiles.TryGetValue(localFileId, out var localFile);
+            return Task.FromResult(localFile);
+        }
+
+        public Task<IReadOnlyList<LocalFile>> ListLocalFilesForTrackAsync(string trackId, CancellationToken ct = default)
+        {
+            var results = _localFiles.Values
+                .Where(lf => lf.InferredTrackId == trackId)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<LocalFile>>(results);
+        }
+
+        public Task<IReadOnlyList<LocalFile>> FindLocalFilesByHashAsync(string hashPrimary, CancellationToken ct = default)
+        {
+            var results = _localFiles.Values
+                .Where(lf => lf.HashPrimary == hashPrimary)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<LocalFile>>(results);
+        }
+
+        public Task UpsertLocalFileAsync(LocalFile localFile, CancellationToken ct = default)
+        {
+            _localFiles[localFile.LocalFileId] = localFile;
+            _localFilePathToId[localFile.Path] = localFile.LocalFileId;
+            return Task.CompletedTask;
+        }
+
+        public Task<int> CountLocalFilesAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult(_localFiles.Count);
+        }
+
+        // ========== VerifiedCopy Methods ==========
+
+        public Task<VerifiedCopy?> FindVerifiedCopyForTrackAsync(string trackId, CancellationToken ct = default)
+        {
+            var verifiedCopy = _verifiedCopies.Values
+                .Where(vc => vc.TrackId == trackId)
+                .OrderByDescending(vc => vc.VerifiedAt)
+                .FirstOrDefault();
+
+            return Task.FromResult(verifiedCopy);
+        }
+
+        public Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesForTrackAsync(string trackId, CancellationToken ct = default)
+        {
+            var results = _verifiedCopies.Values
+                .Where(vc => vc.TrackId == trackId)
+                .OrderByDescending(vc => vc.VerifiedAt)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<VerifiedCopy>>(results);
+        }
+
+        public Task<VerifiedCopy?> FindVerifiedCopyByIdAsync(string verifiedCopyId, CancellationToken ct = default)
+        {
+            _verifiedCopies.TryGetValue(verifiedCopyId, out var verifiedCopy);
+            return Task.FromResult(verifiedCopy);
+        }
+
+        public Task UpsertVerifiedCopyAsync(VerifiedCopy verifiedCopy, CancellationToken ct = default)
+        {
+            _verifiedCopies[verifiedCopy.VerifiedCopyId] = verifiedCopy;
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteVerifiedCopyAsync(string verifiedCopyId, CancellationToken ct = default)
+        {
+            _verifiedCopies.TryRemove(verifiedCopyId, out _);
+            return Task.CompletedTask;
+        }
+
+        public Task<int> CountVerifiedCopiesAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult(_verifiedCopies.Count);
         }
 
         public void Dispose()

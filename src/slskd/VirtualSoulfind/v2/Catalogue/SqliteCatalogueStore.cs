@@ -38,6 +38,12 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         private readonly string _connectionString;
         private bool _disposed;
 
+        static SqliteCatalogueStore()
+        {
+            // Register DateTimeOffset handler for SQLite + Dapper
+            SqlMapper.AddTypeHandler(new DateTimeOffsetHandler());
+        }
+
         public SqliteCatalogueStore(string databasePath)
         {
             _connectionString = $"Data Source={databasePath};";
@@ -123,6 +129,43 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
 
                 CREATE INDEX IF NOT EXISTS IX_Tracks_MusicBrainzRecordingId ON Tracks(MusicBrainzRecordingId);
                 CREATE INDEX IF NOT EXISTS IX_Tracks_ReleaseId ON Tracks(ReleaseId);
+
+                CREATE TABLE IF NOT EXISTS LocalFiles (
+                    LocalFileId TEXT PRIMARY KEY,
+                    Path TEXT NOT NULL,
+                    SizeBytes INTEGER NOT NULL,
+                    DurationSeconds INTEGER NOT NULL,
+                    Codec TEXT NOT NULL,
+                    Bitrate INTEGER NOT NULL,
+                    Channels INTEGER NOT NULL,
+                    HashPrimary TEXT NOT NULL,
+                    HashSecondary TEXT NOT NULL,
+                    AudioFingerprintId TEXT,
+                    InferredTrackId TEXT,
+                    AddedAt TEXT NOT NULL,
+                    UpdatedAt TEXT NOT NULL,
+                    FOREIGN KEY (InferredTrackId) REFERENCES Tracks(TrackId)
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS IX_LocalFiles_Path ON LocalFiles(Path);
+                CREATE INDEX IF NOT EXISTS IX_LocalFiles_HashPrimary ON LocalFiles(HashPrimary);
+                CREATE INDEX IF NOT EXISTS IX_LocalFiles_InferredTrackId ON LocalFiles(InferredTrackId);
+
+                CREATE TABLE IF NOT EXISTS VerifiedCopies (
+                    VerifiedCopyId TEXT PRIMARY KEY,
+                    TrackId TEXT NOT NULL,
+                    LocalFileId TEXT NOT NULL,
+                    HashPrimary TEXT NOT NULL,
+                    DurationSeconds INTEGER NOT NULL,
+                    VerificationSource INTEGER NOT NULL,
+                    VerifiedAt TEXT NOT NULL,
+                    Notes TEXT,
+                    FOREIGN KEY (TrackId) REFERENCES Tracks(TrackId),
+                    FOREIGN KEY (LocalFileId) REFERENCES LocalFiles(LocalFileId)
+                );
+
+                CREATE INDEX IF NOT EXISTS IX_VerifiedCopies_TrackId ON VerifiedCopies(TrackId);
+                CREATE INDEX IF NOT EXISTS IX_VerifiedCopies_LocalFileId ON VerifiedCopies(LocalFileId);
             ");
         }
 
@@ -352,6 +395,160 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         {
             using var connection = CreateConnection();
             return await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Tracks");
+        }
+
+        // LocalFile operations
+        public async Task<LocalFile?> FindLocalFileByPathAsync(string path, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            return await connection.QuerySingleOrDefaultAsync<LocalFile>(
+                "SELECT * FROM LocalFiles WHERE Path = @Path",
+                new { Path = path });
+        }
+
+        public async Task<LocalFile?> FindLocalFileByIdAsync(string localFileId, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            return await connection.QuerySingleOrDefaultAsync<LocalFile>(
+                "SELECT * FROM LocalFiles WHERE LocalFileId = @LocalFileId",
+                new { LocalFileId = localFileId });
+        }
+
+        public async Task<IReadOnlyList<LocalFile>> ListLocalFilesForTrackAsync(string trackId, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<LocalFile>(
+                "SELECT * FROM LocalFiles WHERE InferredTrackId = @TrackId",
+                new { TrackId = trackId });
+            return results.ToList();
+        }
+
+        public async Task<IReadOnlyList<LocalFile>> FindLocalFilesByHashAsync(string hashPrimary, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<LocalFile>(
+                "SELECT * FROM LocalFiles WHERE HashPrimary = @HashPrimary",
+                new { HashPrimary = hashPrimary });
+            return results.ToList();
+        }
+
+        public async Task UpsertLocalFileAsync(LocalFile localFile, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            await connection.ExecuteAsync(@"
+                INSERT INTO LocalFiles (
+                    LocalFileId, Path, SizeBytes, DurationSeconds, Codec, Bitrate, Channels,
+                    HashPrimary, HashSecondary, AudioFingerprintId, InferredTrackId,
+                    AddedAt, UpdatedAt
+                )
+                VALUES (
+                    @LocalFileId, @Path, @SizeBytes, @DurationSeconds, @Codec, @Bitrate, @Channels,
+                    @HashPrimary, @HashSecondary, @AudioFingerprintId, @InferredTrackId,
+                    @AddedAt, @UpdatedAt
+                )
+                ON CONFLICT(LocalFileId) DO UPDATE SET
+                    Path = @Path,
+                    SizeBytes = @SizeBytes,
+                    DurationSeconds = @DurationSeconds,
+                    Codec = @Codec,
+                    Bitrate = @Bitrate,
+                    Channels = @Channels,
+                    HashPrimary = @HashPrimary,
+                    HashSecondary = @HashSecondary,
+                    AudioFingerprintId = @AudioFingerprintId,
+                    InferredTrackId = @InferredTrackId,
+                    UpdatedAt = @UpdatedAt",
+                localFile);
+        }
+
+        public async Task<int> CountLocalFilesAsync(CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            return await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM LocalFiles");
+        }
+
+        // VerifiedCopy operations
+        public async Task<VerifiedCopy?> FindVerifiedCopyForTrackAsync(string trackId, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            return await connection.QuerySingleOrDefaultAsync<VerifiedCopy>(
+                "SELECT * FROM VerifiedCopies WHERE TrackId = @TrackId ORDER BY VerifiedAt DESC LIMIT 1",
+                new { TrackId = trackId });
+        }
+
+        public async Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesForTrackAsync(string trackId, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<VerifiedCopy>(
+                "SELECT * FROM VerifiedCopies WHERE TrackId = @TrackId ORDER BY VerifiedAt DESC",
+                new { TrackId = trackId });
+            return results.ToList();
+        }
+
+        public async Task<VerifiedCopy?> FindVerifiedCopyByIdAsync(string verifiedCopyId, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            return await connection.QuerySingleOrDefaultAsync<VerifiedCopy>(
+                "SELECT * FROM VerifiedCopies WHERE VerifiedCopyId = @VerifiedCopyId",
+                new { VerifiedCopyId = verifiedCopyId });
+        }
+
+        public async Task UpsertVerifiedCopyAsync(VerifiedCopy verifiedCopy, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            await connection.ExecuteAsync(@"
+                INSERT INTO VerifiedCopies (
+                    VerifiedCopyId, TrackId, LocalFileId, HashPrimary, DurationSeconds,
+                    VerificationSource, VerifiedAt, Notes
+                )
+                VALUES (
+                    @VerifiedCopyId, @TrackId, @LocalFileId, @HashPrimary, @DurationSeconds,
+                    @VerificationSource, @VerifiedAt, @Notes
+                )
+                ON CONFLICT(VerifiedCopyId) DO UPDATE SET
+                    TrackId = @TrackId,
+                    LocalFileId = @LocalFileId,
+                    HashPrimary = @HashPrimary,
+                    DurationSeconds = @DurationSeconds,
+                    VerificationSource = @VerificationSource,
+                    VerifiedAt = @VerifiedAt,
+                    Notes = @Notes",
+                verifiedCopy);
+        }
+
+        public async Task DeleteVerifiedCopyAsync(string verifiedCopyId, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            await connection.ExecuteAsync(
+                "DELETE FROM VerifiedCopies WHERE VerifiedCopyId = @VerifiedCopyId",
+                new { VerifiedCopyId = verifiedCopyId });
+        }
+
+        public async Task<int> CountVerifiedCopiesAsync(CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            return await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM VerifiedCopies");
+        }
+
+        /// <summary>
+        ///     Dapper type handler for DateTimeOffset with SQLite.
+        /// </summary>
+        private class DateTimeOffsetHandler : SqlMapper.TypeHandler<DateTimeOffset>
+        {
+            public override DateTimeOffset Parse(object value)
+            {
+                if (value is string str)
+                {
+                    return DateTimeOffset.Parse(str);
+                }
+
+                return DateTimeOffset.MinValue;
+            }
+
+            public override void SetValue(IDbDataParameter parameter, DateTimeOffset value)
+            {
+                parameter.Value = value.ToString("O"); // ISO 8601 format
+            }
         }
     }
 }
