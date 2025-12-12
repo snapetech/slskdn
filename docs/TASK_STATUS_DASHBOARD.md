@@ -34,6 +34,7 @@ Global Hardening:     ░░░░░░░░░░░░░░░░░░░�
 Engineering Quality:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
 Multi-Domain Core:    █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
+LLM/AI Moderation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 VirtualSoulfind v2:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/100+ tasks complete) 📋
 Proxy/Relay:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Book Domain:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
@@ -42,7 +43,7 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  12% (21/~175 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  12% (21/~180 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
@@ -51,6 +52,7 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > ✅ **Security Hardening (Phase 2)**: COMPLETE - H-08 done! 🎉  
 > 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
 > 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
+> 📋 **LLM/AI Moderation**: 5 OPTIONAL tasks (T-MCP-LM01-05, all disabled by default)
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
@@ -830,6 +832,130 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 - [ ] Planner integration (skip banned peers)
 - [ ] Work budget integration (reject/limit banned peers)
 - [ ] Tests: peer events change reputation, banned peers excluded
+
+---
+
+### LLM / AI-Assisted Moderation Integration (T-MCP-LM Series)
+
+> **Note**: These tasks extend MCP with optional LLM/AI-assisted moderation. All tasks are OPTIONAL and disabled by default.
+
+#### T-MCP-LM01: LLM Moderation Abstractions & Config 📋
+**Status**: 📋 Planned (OPTIONAL)  
+**Dependencies**: T-MCP01 ✅  
+**Priority**: LOW (optional enhancement to MCP)
+
+- [ ] Define DTOs and interfaces:
+  - [ ] `ModerationRequest` / `ModerationResponse`:
+    - [ ] Request: domain hints, source type, text snippets (sanitized)
+    - [ ] Response: category scores, reason codes, confidence values
+  - [ ] `IExternalModerationClient`:
+    - [ ] Async interface to call moderation/LLM backend
+    - [ ] Implementation-neutral (Local vs Remote)
+  - [ ] `ModerationConfig.Llm`:
+    - [ ] `Mode: Off | Local | Remote` (default: Off)
+    - [ ] `DataMode: MetadataOnly | MetadataPlusShortSnippet`
+    - [ ] Budgets: max requests per window, max chars/tokens, timeout
+- [ ] Implement `NoopExternalModerationClient` (used when Mode = Off)
+- [ ] Add tests:
+  - [ ] Config defaults to Mode = Off
+  - [ ] DTOs and interface wired but not yet used
+
+**Why Optional**: LLM moderation adds complexity and cost; hash/blocklist + reputation sufficient for many use cases
+
+#### T-MCP-LM02: LlmModerationProvider & Composite Integration 📋
+**Status**: 📋 Planned (OPTIONAL)  
+**Dependencies**: T-MCP-LM01, T-MCP01 ✅  
+**Priority**: LOW
+
+- [ ] Implement `LlmModerationProvider` (implements IModerationProvider):
+  - [ ] Accepts: LocalFileMetadata, ContentId metadata, social text inputs
+  - [ ] Performs:
+    - [ ] Data minimization (titles, descriptions, tags, optional short snippets)
+    - [ ] Sanitization (no paths, peer IDs, external handles)
+  - [ ] Calls IExternalModerationClient when:
+    - [ ] Mode != Off
+    - [ ] Budgets and rate limits allow
+  - [ ] Maps ModerationResponse → ModerationVerdict + ModerationDecision:
+    - [ ] Reason codes (ai_disallowed_category, ai_suspicious)
+    - [ ] Confidence values
+- [ ] Integrate into CompositeModerationProvider:
+  - [ ] Order: Hash/blocklist first → Reputation → LLM last (only if needed)
+- [ ] Add tests:
+  - [ ] LLM not invoked when Mode = Off
+  - [ ] Composite respects LLM responses, never overrides explicit Blocked from hash/blocklist
+
+**Why Last**: LLM is slowest and most expensive check; use only after deterministic checks
+
+#### T-MCP-LM03: Local & Remote LLM Client Implementations 📋
+**Status**: 📋 Planned (OPTIONAL)  
+**Dependencies**: T-MCP-LM01  
+**Priority**: LOW
+
+- [ ] Implement `LocalExternalModerationClient`:
+  - [ ] Talks to local LLM endpoint via HTTP or IPC
+  - [ ] Enforces: timeouts, request size limits, error handling with fallback
+- [ ] Implement `RemoteExternalModerationClient`:
+  - [ ] Talks to remote HTTP LLM/moderation API
+  - [ ] Uses SSRF-safe HTTP
+  - [ ] Uses domain allowlists for LLM endpoints
+  - [ ] Stores API keys/credentials securely in config
+  - [ ] Enforces: timeouts, work budgets, per-model rate limits
+- [ ] Wire up selection:
+  - [ ] Mode = Local → LocalExternalModerationClient
+  - [ ] Mode = Remote → RemoteExternalModerationClient
+  - [ ] Mode = Off → NoopExternalModerationClient
+- [ ] Add tests:
+  - [ ] Local/Remote clients selected correctly
+  - [ ] All network calls go through SSRF-safe HTTP
+  - [ ] API keys never logged
+
+**Security**: SSRF protection, domain allowlists, secure credential storage mandatory
+
+#### T-MCP-LM04: LLM Moderation Usage in Library & Social Pipelines 📋
+**Status**: 📋 Planned (OPTIONAL)  
+**Dependencies**: T-MCP-LM02, T-MCP-LM03, T-BK02, T-VID02, T-FED04  
+**Priority**: LOW
+
+- [ ] Integrate LlmModerationProvider into pipelines:
+  - [ ] Library scanning:
+    - [ ] After metadata extraction for Book/Video works (text-rich metadata)
+    - [ ] Optionally send samples based on source reputation, operator config
+  - [ ] Social ingestion (if federation enabled):
+    - [ ] Before storing ActivityPub Notes/annotations
+    - [ ] Optionally pass text to LLM moderation
+    - [ ] Drop/quarantine annotations if LLM + signals indicate disallowed content
+- [ ] Enforce budgets and sampling:
+  - [ ] Do NOT send every item blindly
+  - [ ] Configuration: sampling rate, max items per time window
+- [ ] Ensure MCP remains gate:
+  - [ ] LLM decisions combined with other providers
+  - [ ] Operator policies and blocklists always take precedence
+- [ ] Add tests:
+  - [ ] Library: LLM invoked only when enabled and within budget
+  - [ ] Blocked/quarantined content does not surface in normal views
+  - [ ] Social: disallowed annotations dropped/quarantined based on LLM + MCP
+
+**Key Principle**: LLM is advisory, not authoritative; operator policies override
+
+#### T-MCP-LM05: AI-Assisted Tagging & Recommendations (OPTIONAL) 📋
+**Status**: 📋 Planned (OPTIONAL, non-moderation)  
+**Dependencies**: T-MCP-LM03, V2-P1 (Catalogue)  
+**Priority**: LOW (after moderation side stable)
+
+- [ ] Implement separate, non-moderation use of LLM/AI for:
+  - [ ] Generating semantic tags (moods, themes, topics) for Music/Book/Video works
+  - [ ] Summarizing: Books (short descriptions), Movies/TV (short synopses)
+- [ ] Requirements:
+  - [ ] MUST be: separate pipeline from moderation, configurable, disabled by default
+  - [ ] MUST respect: same data minimization rules (no PII, paths), work budgets
+- [ ] Integrate with VirtualSoulfind:
+  - [ ] Tags and summaries attached as optional metadata per work
+  - [ ] Planner and UI can use for: search, filtering, recommendations (soft hints)
+- [ ] Add tests:
+  - [ ] Tagging and summarization work on sample items
+  - [ ] No additional risk to moderation pipeline
+
+**Use Case**: Enhance discovery without compromising moderation or security
 
 ---
 
