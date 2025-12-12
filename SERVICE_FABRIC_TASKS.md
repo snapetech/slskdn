@@ -3,7 +3,19 @@
 **Branch**: `experimental/whatAmIThinking`  
 **Parent Branch**: `experimental/multi-source-swarm`  
 **Created**: December 11, 2025  
-**Status**: Planning Phase
+**Status**: In Progress - T-SF01 Complete, T-SF02 In Progress
+
+---
+
+## ⚠️ SECURITY GATES
+
+**CRITICAL**: Before proceeding with certain tasks, hardening requirements must be met:
+
+- 🔒 **GATE 1**: H-01 (Gateway Auth/CSRF) MUST be implemented BEFORE T-SF04 (HTTP Gateway)
+- 🔒 **GATE 2**: H-08 (Soulseek Caps) MUST be implemented BEFORE any public deployment
+- 🔒 **GATE 3**: H-02 (Work Budget) SHOULD be implemented BEFORE T-SF03 (service wrappers)
+
+**See**: `HARDENING-TASKS.md` for detailed security hardening backlog.
 
 ---
 
@@ -20,17 +32,26 @@ This document outlines the phased implementation of a **generic service fabric**
 6. No heavy new dependencies
 7. Document what matters, briefly
 
+**Security-First Development**:
+- All tasks must consider abuse scenarios
+- Defense in depth at every layer
+- Fail secure by default
+- Privacy-aware design
+- Soulseek etiquette compliance
+
 ---
 
 ## Phase 1: Core Service Fabric Types & Directory (T-SF01)
 
-**Status**: 📋 Planned  
+**Status**: ✅ COMPLETE  
 **Priority**: P0  
-**Scope**: Types, directory interface, DHT integration ONLY - no routing, no HTTP gateway
+**Scope**: Types, directory interface, DHT integration ONLY - no routing, no HTTP gateway  
+**Completed**: December 11, 2025  
+**Commit**: `5ac8248b`
 
-### Tasks
+### Deliverables
 
-- [ ] **T-SF01-001**: Create `MeshServiceDescriptor` and `MeshServiceEndpoint` types
+- ✅ **T-SF01-001**: Create `MeshServiceDescriptor` and `MeshServiceEndpoint` types
   - Priority: P0
   - Notes: 
     - ServiceId: deterministic hash (`hash("svc:" + ServiceName + ":" + OwnerPeerId)`)
