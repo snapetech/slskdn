@@ -1,10 +1,32 @@
 # Moderation / Control Plane (MCP) Tasks
 
 **Design Doc**: `docs/moderation-v1-design.md`  
+**Hardening Doc**: `MCP-HARDENING.md` 🔒 **MANDATORY**  
 **Status**: Planned (4 tasks)  
 **Priority**: HIGH (legal/ethical protection for operators)
 
 > **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [README.md](README.md#acknowledgments) for attribution.
+
+---
+
+## ⚠️ CRITICAL: Read MCP Hardening Doc FIRST
+
+**Before implementing ANY MCP task**, you MUST read and follow `MCP-HARDENING.md`.
+
+The MCP layer handles:
+- Hash checks against blocklists (potentially prohibited content)
+- Peer reputation (behavior tracking)
+- External moderation services (third-party APIs)
+
+**Special security requirements**:
+- 🔒 Never log raw hashes or full paths
+- 🔒 SSRF protection for all external calls
+- 🔒 Timing attack mitigation for hash checks
+- 🔒 Peer ID anonymization in logs
+- 🔒 Failsafe mode (block on error)
+- 🔒 Encrypted reputation storage
+
+**See `MCP-HARDENING.md` for complete requirements.**
 
 ---
 
