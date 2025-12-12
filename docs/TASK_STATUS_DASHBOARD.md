@@ -61,6 +61,7 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > 📋 **F1000 Governance**: 6 FUTURE tasks (T-F1000-01-06) - transferable membership, advisory only, cap-exempt master-admins
 > 📋 **First Pod & Social**: 6 FUTURE tasks (T-POD-SOCIAL-01-06) - chat, forums, ActivityPub, F1000 auto-join, community hub
 > 📋 **Resilience Layer**: 5 FUTURE tasks (T-RES-01-05) - health/routing, minimal replication, optional gossip (least-first)
+> 📋 **Realms & Peering**: 5 FUTURE tasks (T-REALM-01-05) - network universes, isolation by default, explicit bridging
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
@@ -1247,6 +1248,148 @@ The Resilience Layer provides:
   - [ ] Hints do not cause replication of disallowed or oversized objects
 
 **Use Case**: Provide hints about governance docs, moderation lists that benefit from extra replicas
+
+---
+
+### Realms & Peering (T-REALM, Future Layer)
+
+> **Design Doc**: See `docs/realm-design.md`  
+> **Status**: 📋 FUTURE (after core architecture)  
+> **Priority**: 🟡 MEDIUM (network universes, isolation by default)
+
+Realms provide:
+- **Logical universes** (independent deployments)
+- **Strong default isolation** (different realm = different universe)
+- **Explicit peering** (controlled bridging between realms)
+- **No accidental global merge** (isolation by default)
+
+**Key Principles:**
+- **Isolation by default** (new realms don't interact)
+- **Explicit trust** (governance roots, bootstrap nodes, bridges)
+- **Realm-aware everything** (mesh/DHT, governance, gossip, replication)
+- **Controlled bridging** (multi-homed pods, explicit flow policies)
+
+#### T-REALM-01: RealmConfig & RealmID Plumbing 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: None (foundational)  
+**Design Doc**: `docs/realm-design.md` § 2, 3
+
+- [ ] Implement `RealmConfig` for single-realm pods:
+  - [ ] `realm.id` (stable identifier, e.g., "slskdn-main-v1")
+  - [ ] `realm.governance_roots` (governance identities trusted for this realm)
+  - [ ] `realm.bootstrap_nodes` (pods/endpoints to join overlay)
+  - [ ] `realm.policies` (gossip/replication toggles)
+- [ ] Wire `realm.id` into:
+  - [ ] Mesh/DHT overlay initialization (namespace salt)
+  - [ ] Governance client:
+    - [ ] Scoping which governance docs are relevant
+  - [ ] Gossip/replication:
+    - [ ] Tagging feeds and replication relationships with `realm.id`
+- [ ] Hardening:
+  - [ ] Require `realm.id` to be non-empty and explicit
+  - [ ] Warn strongly if generic IDs like "default" used
+- [ ] Add tests:
+  - [ ] Pods with different `realm.id` do not share overlays
+  - [ ] Governance client ignores docs from mismatched realms by default
+
+**Isolation**: Different `realm.id` = different universe (no automatic interaction)
+
+#### T-REALM-02: MultiRealmConfig & Bridge Skeleton 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-REALM-01  
+**Design Doc**: `docs/realm-design.md` § 5
+
+- [ ] Implement support for **multi-realm** configuration:
+  - [ ] `realms: [ RealmConfig, ... ]`
+  - [ ] Optional `bridge` section:
+    - [ ] `bridge.enabled`
+    - [ ] `bridge.allowed_flows`
+    - [ ] `bridge.disallowed_flows`
+- [ ] Provide minimal skeleton for multi-realm pods:
+  - [ ] Establish connections to multiple overlays (one per realm)
+  - [ ] Ensure each overlay uses own `realm.id` salt and bootstrap_nodes
+- [ ] Hardening:
+  - [ ] When `bridge.enabled` is false:
+    - [ ] No cross-realm flows allowed
+  - [ ] When `bridge.enabled` is true:
+    - [ ] Only flows in `bridge.allowed_flows` permitted
+- [ ] Add tests:
+  - [ ] Multi-realm pod joins two overlays correctly
+  - [ ] Disabling `bridge.enabled` fully isolates overlays at application layer
+
+**Multi-Homing**: Pods can participate in multiple realms (for bridging)
+
+#### T-REALM-03: Realm-Aware Governance & Gossip 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-REALM-01, T-F1000-01 (governance), T-RES-04 (gossip)  
+**Design Doc**: `docs/realm-design.md` § 3, 7
+
+- [ ] Extend governance client to be **realm-aware**:
+  - [ ] Associate governance docs (F1000, profiles) with specific `realm.id`
+  - [ ] Only accept docs signed by `realm.governance_roots` for that realm
+- [ ] Extend gossip components to be **realm-aware**:
+  - [ ] Tag outgoing feeds (HealthFeed/AbuseFeed) with `realm.id`
+  - [ ] Filter inbound feeds based on configured `RealmConfig`
+- [ ] Hardening:
+  - [ ] No governance doc from realm A treated as authoritative for realm B by default
+  - [ ] Pods can explicitly configure cross-realm trust (if desired, future)
+- [ ] Add tests:
+  - [ ] Governance docs from mismatched realms ignored
+  - [ ] Gossip feeds with unexpected `realm.id` ignored or logged as suspicious
+
+**Scoping**: Governance and gossip scoped to realm (no cross-contamination)
+
+#### T-REALM-04: Bridge Flow Policies (ActivityPub & Metadata First) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (after basic realm support)  
+**Dependencies**: T-REALM-02, T-POD-SOCIAL-04 (SocialFeedModule)  
+**Design Doc**: `docs/realm-design.md` § 5.2, 6
+
+- [ ] Implement basic cross-realm flow policies for:
+  - [ ] `activitypub:read` and `activitypub:write`
+  - [ ] `metadata:read`
+- [ ] Behavior:
+  - [ ] When `bridge.enabled` and `activitypub:*` flows allowed:
+    - [ ] Bridge pod may:
+      - [ ] Follow actors in remote realms
+      - [ ] Mirror or reboost posts into local realm (respecting MCP and local policies)
+  - [ ] When `metadata:read` allowed:
+    - [ ] Bridge pod may query remote realm's metadata/search APIs, use results locally
+- [ ] Hardening:
+  - [ ] No automatic adoption of remote governance roots
+  - [ ] No remote realm can cause local MCP or config changes
+  - [ ] No replication of content across realms unless explicitly allowed
+- [ ] Add tests:
+  - [ ] ActivityPub bridging works only when allowed
+  - [ ] No cross-realm flows when not listed in `bridge.allowed_flows`
+
+**Controlled Bridging**: Only specified flows allowed (governance/replication remain isolated)
+
+#### T-REALM-05: Realm Change & Migration Guardrails (Optional) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (safety feature)  
+**Dependencies**: T-REALM-01  
+**Design Doc**: `docs/realm-design.md` § 8
+
+- [ ] Implement guardrails for changing realms on existing pod:
+  - [ ] High-friction operation:
+    - [ ] Warnings
+    - [ ] Explicit confirmation (e.g., type current `realm.id`)
+  - [ ] Documented expectations:
+    - [ ] Governance roots and bootstrap nodes must be updated
+    - [ ] Existing social/federation relationships may no longer be valid
+- [ ] Provide basic tooling or docs for:
+  - [ ] Spinning up new pod in new realm and:
+    - [ ] Migrating data via export/import
+    - [ ] Optionally configuring as bridge between old and new realms
+- [ ] Add tests:
+  - [ ] Realm change requires explicit operator action
+  - [ ] Accidental realm misconfigurations detected and logged loudly
+
+**High-Friction**: Changing realms is major operation (like migrating to different universe)
 
 ---
 
