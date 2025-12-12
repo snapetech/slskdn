@@ -1,5 +1,32 @@
 # Task List & Roadmap
 
+## ✅ Completed Tasks (December 12, 2025)
+
+### Security & Testing
+- [x] Complete security audit (20 vulnerabilities identified)
+- [x] Fix CRITICAL: SQL injection in Hash DB search
+- [x] Fix HIGH: Server-side chunk request handler auth
+- [x] Fix HIGH: BitTorrent descriptor signature verification
+- [x] Fix MEDIUM: Timeouts, rate limiting, input validation (5 issues)
+- [x] Fix LOW: Code quality issues (12 issues)
+- [x] Create `HashDbSearchSecurityTests.cs` (17 tests)
+- [x] Create `MeshChunkRequestHandlerTests.cs` (22 tests)
+- [x] Create `MeshDataPlaneSecurityTests.cs` (3 tests)
+- [x] All tests passing (42/42 = 100%)
+- [x] Document security fixes
+- [x] Create test plan documentation
+
+### Database Schema
+- [x] Design Migration v16 schema
+- [x] Create `hashes` table (content-addressed hash database)
+- [x] Create `hash_metadata` table (MusicBrainz metadata)
+- [x] Create `flac_inventory` table (user file mappings)
+- [x] Add 15 performance indexes
+- [x] Implement FTS5 full-text search
+- [x] Create auto-sync triggers for FTS index
+- [x] Deploy migration to local test environment
+- [x] Verify all tables created correctly
+
 ## ✅ Completed Tasks (December 2025)
 
 ### Enhancement 1: Ed25519 Cryptography
@@ -61,6 +88,7 @@
 ## ⏳ In Progress
 
 ### Hash Database Search
+- [x] Create database tables (Migration v16)
 - [ ] Implement `SearchMeshHashDatabaseAsync()` in `MeshSearchBridgeService`
   - Parse search query into terms/tags
   - Query hash database for matching files
@@ -70,7 +98,8 @@
   - Est. Time: 2-3 days
 
 ### Search Service Integration
-- [ ] Hook `MeshSearchBridgeService` into `SearchService.SearchAsync()`
+- [x] Framework complete (MeshSearchBridgeService)
+- [ ] Hook into `SearchService.SearchAsync()`
   - Call `GetMeshSupplementalResponsesAsync()` during result aggregation
   - Merge mesh results with Soulseek results
   - Update UI to indicate supplemental sources

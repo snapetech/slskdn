@@ -5,6 +5,7 @@
 ### Quick Start
 - **[RELEASE_SUMMARY_DEC_2025.md](RELEASE_SUMMARY_DEC_2025.md)** - Executive summary and overview
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Commands, config, and troubleshooting
+- **[SECURITY_TESTING_DEC_12_2025.md](SECURITY_TESTING_DEC_12_2025.md)** - Security testing summary (NEW)
 
 ### Complete Reference
 - **[DEVELOPMENT_PROGRESS_DEC_2025.md](DEVELOPMENT_PROGRESS_DEC_2025.md)** - Detailed progress, features, and status
@@ -98,8 +99,9 @@
 
 | Document | Status | Last Updated |
 |----------|--------|--------------|
+| SECURITY_TESTING_DEC_12_2025.md | ✅ Complete | Dec 12, 2025 |
 | RELEASE_SUMMARY_DEC_2025.md | ✅ Complete | Dec 11, 2025 |
-| DEVELOPMENT_PROGRESS_DEC_2025.md | ✅ Complete | Dec 11, 2025 |
+| DEVELOPMENT_PROGRESS_DEC_2025.md | ✅ Updated | Dec 12, 2025 |
 | ENHANCEMENTS_COMPLETE.md | ✅ Complete | Dec 11, 2025 |
 | SOULSEEK_BRIDGE_STRATEGY.md | ✅ Complete | Dec 11, 2025 |
 | QUICK_REFERENCE.md | ✅ Complete | Dec 11, 2025 |

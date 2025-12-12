@@ -310,23 +310,58 @@ curl http://localhost:5030/api/v0/dht/mesh/peers
 
 ---
 
+## Recently Completed (December 12, 2025)
+
+### Database Schema Implementation ✅
+- **Migration v16 deployed** - Complete hash database schema
+- `hashes` table - Content-addressed hash database
+- `hash_metadata` table - MusicBrainz metadata
+- `flac_inventory` table - User file mappings
+- FTS5 full-text search with auto-sync triggers
+- 15 performance indexes for fast queries
+
+### Security Hardening ✅
+- **20 vulnerabilities fixed** (1 CRITICAL, 2 HIGH, 5 MEDIUM, 12 LOW)
+- SQL injection protection with parameter queries and escaping
+- Server-side chunk request handler with auth and rate limiting
+- BitTorrent descriptor signature verification
+- Comprehensive input validation
+- Timeout protection (30s chunks, 10s search)
+- Resource limits enforced (1MB chunks, 100 results)
+
+### Test Suite ✅
+- **42 security tests created** (100% passing)
+- `HashDbSearchSecurityTests.cs` - 17 tests for SQL injection, validation
+- `MeshChunkRequestHandlerTests.cs` - 22 tests for path traversal, rate limiting
+- `MeshDataPlaneSecurityTests.cs` - 3 tests for input validation
+- Complete test coverage on all security-critical paths
+
+### Documentation ✅
+- `SECURITY_AUDIT_DEC_11_2025.md` - Complete vulnerability audit
+- `SECURITY_FIXES_COMPLETE.md` - All fixes documented
+- `TEST_PLAN_DEC_11_2025.md` - Testing strategy
+- `SECURITY_TESTING_DEC_12_2025.md` - Security testing summary
+
 ## Pending Work
 
 ### High Priority
-1. **Complete hash DB search**
-   - Implement `SearchMeshHashDatabaseAsync()` in `MeshSearchBridgeService`
-   - Parse search terms and query hash database
-   - Return results in Soulseek-compatible format
+1. **Complete hash DB search** ⏳
+   - ✅ Database tables created
+   - ⏳ Implement `SearchMeshHashDatabaseAsync()` in `MeshSearchBridgeService`
+   - ⏳ Parse search terms and query hash database
+   - ⏳ Return results in Soulseek-compatible format
 
-2. **Hook search bridge into SearchService**
-   - Call `GetMeshSupplementalResponsesAsync()` from search aggregation
-   - Merge mesh results with Soulseek results
-   - Update UI to show supplemental sources
+2. **Hook search bridge into SearchService** ⏳
+   - ✅ Framework complete
+   - ⏳ Call `GetMeshSupplementalResponsesAsync()` from search aggregation
+   - ⏳ Merge mesh results with Soulseek results
+   - ⏳ Update UI to show supplemental sources
 
-3. **Implement BT extension**
-   - Exchange mesh identities over BT extension protocol
-   - Auto-register BT-discovered peers
-   - Bridge BT discoveries to Soulseek
+3. **Implement BT extension** ⏳
+   - ✅ Signature verification added
+   - ⏳ Exchange mesh identities over BT extension protocol
+   - ⏳ Auto-register BT-discovered peers
+   - ⏳ Bridge BT discoveries to Soulseek
 
 ### Medium Priority
 1. **Mesh data plane for swarm**
