@@ -1391,6 +1391,31 @@ Realms provide:
 
 **High-Friction**: Changing realms is major operation (like migrating to different universe)
 
+#### T-REALM-MIG-01: Cross-Realm Pod Migration & Successor Records 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-REALM-01, T-POD02, T-POD03 (RealmConfig, identity export/import)  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 15
+
+- [ ] Implement cross-realm migration flow:
+  - [ ] Provide tooling or CLI/UI flows to:
+    - [ ] Export pod data suitable for migration
+    - [ ] Import data into a new pod in a different realm
+    - [ ] Generate and publish a PodSuccessorRecord signed by the old pod
+    - [ ] Optionally countersign PodSuccessorRecords with a governance identity
+- [ ] Enforce guardrails:
+  - [ ] Disallow or strongly warn on in-place changes to `realm.id` for a running pod
+  - [ ] Warn and require explicit confirmation when reusing pod keys in a new realm
+- [ ] ActivityPub integration:
+  - [ ] Implement support for AP "move" / redirect patterns where applicable
+  - [ ] Optionally cross-link AP move with PodSuccessorRecord
+- [ ] Add tests:
+  - [ ] Migration via export/import + PodSuccessorRecord works end-to-end
+  - [ ] Attempted naive `realm.id` flips are intercepted and logged
+  - [ ] Remote consumers can parse PodSuccessorRecords and use them as advisory identity links
+
+**Migration Model**: Create successor pod in new realm (not teleport), link via signed PodSuccessorRecord
+
 ---
 
 ### Federation Security & Hardening (H-FED-SEC, Critical)

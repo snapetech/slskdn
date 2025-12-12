@@ -851,3 +851,228 @@ All operations require admin auth + confirmation.
 - `docs/social-federation-design.md` - ActivityPub identity management
 - `TASK_STATUS_DASHBOARD.md` - T-POD01-03, H-POD01 tasks
 
+---
+
+## 15. Cross-Realm Migration & Pod Successor Records
+
+This section defines how to safely migrate a pod and its data **across realms**, and how to represent that migration in a verifiable, non-spoofable way.
+
+**Key rules:**
+- Governance identities are **realm-agnostic** and remain stable across realms
+- Pod identity is effectively `(pod_key, realm_id)`. Changing realms or keys yields a **different pod**
+- Cross-realm migration is implemented as:
+  - **New pod** in the new realm
+  - **Data export/import**
+  - A signed **PodSuccessorRecord** that links old and new pods
+  - Optional ActivityPub "move" semantics for social identities
+
+---
+
+### 15.1 Identity Layers
+
+For migration, we distinguish:
+
+**Governance identity (human):**
+- `gov:<hash(pub_gov)>`
+- Exists outside of any realm; can appear in multiple realms unchanged
+
+**Pod identity:**
+- Pod keypair + `realm.id` from `RealmConfig`
+- For safety, treat `(pod_key, realm.id)` as the full identity
+- Changing `realm.id` without a new pod is disallowed; instead:
+  - Create a new pod in the new realm
+  - Link them via PodSuccessorRecord
+
+**Social identities (ActivityPub actors):**
+- URIs like `https://podA.example/users/alice`
+- Bound to pod host/domain + pod keys
+- Migration uses AP "move" / redirect patterns where possible
+
+**Data:**
+- Library content, lists, tags, social channel/forum data, etc.
+- Migrated via export/import, not "teleported" by flipping realm config
+
+---
+
+### 15.2 Cross-Realm Migration Flow
+
+Cross-realm migration is a **multi-step, explicit operation**:
+
+#### Step 1: Create a new pod in the target realm (Realm B)
+
+- New `RealmConfig` with `realm.id = B`
+- New pod keypair is recommended (fresh identity); reusing the key is allowed only with strong warnings and explicit binding steps
+- Initialize the new pod with empty application state
+
+#### Step 2: Export data from the source pod (Realm A)
+
+**Export library state:**
+- Works, lists, tags, preferences
+
+**Export social state (if desired and safe):**
+- Channels, forums, local AP actor configuration
+
+**Export minimal configuration that is safe to carry over:**
+- E.g., non-secret preferences, not keys or tokens
+
+#### Step 3: Import data into the new pod (Realm B)
+
+**Apply import routines that:**
+- Rebuild/merge library state under the new pod identity
+- Re-create channels/boards/forums as appropriate
+
+**Do not carry over:**
+- Old pod private keys
+- Secrets or tokens tied to the old realm
+
+#### Step 4: Publish a PodSuccessorRecord
+
+**Create a signed record that declares:**
+- "Pod B (in realm B) is the successor of Pod A (in realm A)."
+
+**Recommended signatures:**
+- The **old pod** (Pod A)
+- The **governance identity** of the operator (optional but strongly recommended)
+
+This record allows tools and other pods to link the old and new pod identities in a verifiable way.
+
+#### Step 5: Retire or limit the old pod (Realm A)
+
+**Mark Pod A as:**
+- `retired`, `read-only`, or `archived` state per lifecycle rules
+
+**Optionally:**
+- Keep a small, read-only footprint to serve redirects or "this pod moved" messages
+- Eventually decommission Pod A completely (including identity suicide), depending on operator preference and policy
+
+---
+
+### 15.3 PodSuccessorRecord
+
+A **PodSuccessorRecord** is a small, signed document that declares successorship between pods across realms.
+
+**Conceptual structure:**
+
+```text
+PodSuccessorRecord {
+  old_pod_id: "pod:<hash(pub_old_pod_key)>";
+  old_realm_id: string;
+
+  new_pod_id: "pod:<hash(pub_new_pod_key)>";
+  new_realm_id: string;
+
+  created_at: timestamp;
+  reason?: string;          // optional human-readable note
+  notes?: string;           // optional extra context
+
+  signatures: [
+    {
+      type: "pod_old";
+      signed_by: "pod:<hash(pub_old_pod_key)>";
+      signature: <signature over record>;
+    },
+    {
+      type: "gov_operator"; // optional but recommended
+      signed_by: "gov:<hash(pub_gov_operator)>";
+      signature: <signature over record>;
+    }
+  ];
+}
+```
+
+**Requirements:**
+- ✅ At minimum, the **old pod** MUST sign the record
+- ✅ Optionally, one or more governance identities MAY countersign to strengthen trust
+- ✅ The record MUST be:
+  - Serialized in a stable format (e.g., JSON with canonical ordering)
+  - Cryptographically signed over the entire payload
+
+**Publication:**
+- ✅ Pod A should host the PodSuccessorRecord at a well-known location:
+  - e.g., `/.well-known/pod-successor.json`
+- ✅ Pod B may also host the record or a reference to it
+- ✅ Governance docs or registry entries may optionally include references to PodSuccessorRecords for historical tracking
+
+**Consumption:**
+- ✅ Other pods and tools MAY use PodSuccessorRecords to:
+  - Recognize that Pod A is no longer active and Pod B is its successor
+  - Update local references or metadata (e.g., for social, library, or governance visualization)
+- ⚠️ PodSuccessorRecords are advisory, not mandatory:
+  - Each pod's admin decides how much to trust them
+
+---
+
+### 15.4 ActivityPub Account Migration
+
+For social identities, we leverage ActivityPub "move" or equivalent patterns:
+
+**If host/domain remains under the same control:**
+- ✅ Old actor (`https://podA.example/users/alice`) issues an AP `Move` activity or similar pattern pointing to the new actor (`https://podB.example/users/alice` or another path)
+- ✅ Where possible, HTTP redirects (e.g., 301 or 410 with link) from Pod A's endpoint can be used to guide remote instances
+- ✅ The AP `Move` / redirect should be:
+  - Signed by the old actor's key
+  - Optionally referenced in the PodSuccessorRecord
+
+**If host/domain changes and old host is no longer under control:**
+- ❌ The pod cannot provide HTTP redirects
+- ✅ Only AP activities and PodSuccessorRecords signed by the old actor and/or governance IDs can be used as hints
+- ⚠️ Remote instances decide whether to:
+  - Respect the move
+  - Follow the new actor
+  - Ignore if they deem it untrustworthy
+
+**In all cases:**
+- ⚠️ AP "move" semantics are **advisory**:
+  - Remote pods may or may not honor them
+- ✅ The combination of:
+  - AP `Move`/redirect, and
+  - A PodSuccessorRecord signed by the old pod and governance ID,
+  
+  gives the strongest possible signal of legitimate migration
+
+---
+
+### 15.5 Security & Hardening for Migration
+
+Cross-realm migration MUST respect the following security constraints:
+
+**No direct `realm.id` flip:**
+- ❌ Changing `realm.id` on a running pod in-place is not supported
+- ⚠️ Attempting to do so SHOULD:
+  - Emit warnings
+  - Be blocked or require explicit "I know what I'm doing" overrides reserved for advanced tools/tests
+
+**No key reuse without explicit acknowledgement:**
+- ⚠️ Reusing the same pod key in a new realm is discouraged
+- ✅ If allowed, tools MUST:
+  - Warn loudly
+  - Require explicit operator consent
+  - Still treat the new `(key, realm.id)` pair as a distinct identity and require a PodSuccessorRecord
+
+**No silent migration:**
+- ✅ Migration must be:
+  - An explicit operator action
+  - Logged
+  - Associated with a PodSuccessorRecord if any public/social continuity is desired
+
+**MCP & data handling:**
+- ❌ MCP configs, keys to external services, and secrets:
+  - MUST NOT be blindly copied across realms
+- ✅ Operators should:
+  - Reconfigure sensitive providers (e.g., API keys) on the new pod
+  - Keep public-facing, non-secret config only where appropriate
+
+**This keeps cross-realm migration as:**
+- ✅ A deliberate, traceable operation
+- ✅ With strong linkages where desired (PodSuccessorRecord + AP move)
+- ✅ Without enabling stealth or spoofed identity shifts between realms
+
+---
+
+### 15.6 Related Documents (Cross-Realm Migration)
+
+- `docs/realm-design.md` - Realm isolation and cross-realm bridging
+- `docs/social-federation-design.md` - ActivityPub "move" semantics
+- `docs/f1000-governance-design.md` - Governance identities (realm-agnostic)
+- `TASK_STATUS_DASHBOARD.md` - T-REALM-MIG-01 task
+
