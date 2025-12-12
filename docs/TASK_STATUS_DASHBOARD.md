@@ -34,6 +34,7 @@ Global Hardening:     ░░░░░░░░░░░░░░░░░░░�
 Engineering Quality:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
 Pod Identity:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/8   tasks complete) 📋
 F1000 Governance:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋 (future)
+First Pod & Social:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋 (future)
 Attribution:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/1   tasks complete) 📋
 Multi-Domain Core:    █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
@@ -46,7 +47,7 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  11% (21/~195 tasks complete)
+Overall: ██░░░░░░░░░░░░░░░░░░  10% (21/~201 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
@@ -57,6 +58,8 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
 > 📋 **LLM/AI Moderation**: 5 OPTIONAL tasks (T-MCP-LM01-05, all disabled by default)
 > 📋 **Pod Identity & Lifecycle**: 8 tasks (T-POD01-06 + H-POD01-02) - storage, export/import, retire/wipe, security
+> 📋 **F1000 Governance**: 6 FUTURE tasks (T-F1000-01-06) - transferable membership, advisory only, cap-exempt master-admins
+> 📋 **First Pod & Social**: 6 FUTURE tasks (T-SOCIAL-01-06) - chat, forums, ActivityPub, F1000 auto-join, community hub
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
@@ -916,6 +919,202 @@ F1000 is a **future governance layer** sitting above pods, providing:
   - [ ] Tooling produces governance documents that pods can validate and trust
 
 **Off-Pod**: Governance tools are separate from pod operation, high-security key handling
+
+---
+
+### First Pod & Social Modules (T-SOCIAL, Future Layer)
+
+> **Design Doc**: See `docs/pod-f1000-social-hub-design.md`  
+> **Status**: 📋 FUTURE (after core architecture, before public launch)  
+> **Priority**: 🟡 MEDIUM (reference implementation + community hub)
+
+The First Pod is:
+- **First canonical pod instance** (reference implementation)
+- **Community home for F1000 testers** (auto-join via governance IDs)
+- **Modular social framework** (chat, forums, ActivityPub)
+- **NOT a control plane** (pods remain sovereign)
+
+**Key Principles:**
+- **Modular** (each feature is a self-contained module)
+- **Hardened** (MCP integration, rate limiting, abuse protection)
+- **Isolated** (separate from pod keys, file-sharing, MCP config)
+- **Optional** (pods can disable all social features)
+
+#### T-SOCIAL-01: Core Framework & Module Registration 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD01 (pod identity), H-POD02 (admin accounts), T-MCP01 (MCP foundation)  
+**Design Doc**: `docs/pod-f1000-social-hub-design.md` § 2.1, 6
+
+- [ ] Implement module registration system:
+  - [ ] `ISocialModule` interface (lifecycle, routes, hooks)
+  - [ ] `SocialModuleRegistry` (enable/disable modules)
+- [ ] Shared auth/ACL layer:
+  - [ ] Role-based access control: `Admin`, `Moderator`, `F1000Member`, `User`, `Guest`
+  - [ ] Per-resource permissions (channels, boards, posts)
+- [ ] MCP integration hooks:
+  - [ ] `IModerationProvider` calls for text content
+  - [ ] Per-module moderation policies
+- [ ] Logging/metrics framework:
+  - [ ] Structured, minimal audit logs (no PII, no secrets)
+  - [ ] Low-cardinality metrics (module, action, result)
+- [ ] Add tests:
+  - [ ] Module registration/lifecycle
+  - [ ] Role/ACL enforcement
+  - [ ] MCP integration
+
+**Foundation**: Provides common infrastructure for all social modules
+
+#### T-SOCIAL-02: ChatModule (Discord-like Channels) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-SOCIAL-01  
+**Design Doc**: `docs/pod-f1000-social-hub-design.md` § 2.2, 6
+
+- [ ] Implement channel management:
+  - [ ] Named channels (`#general`, `#f1000-meta`, `#dev`)
+  - [ ] Scoped visibility (public, F1000-only, admin-only, private groups)
+  - [ ] Per-channel ACLs and membership lists
+- [ ] Real-time messaging:
+  - [ ] WebSocket API (send, receive, typing indicators)
+  - [ ] REST API (list channels, join, history)
+  - [ ] Message editing/deletion (with audit metadata)
+- [ ] Optional attachments:
+  - [ ] Small files only (configurable size limit)
+  - [ ] Strong quotas per user/channel
+- [ ] Rate limiting and abuse protection:
+  - [ ] Per-user, per-channel, per-IP limits
+  - [ ] MCP integration for text content
+- [ ] Add tests:
+  - [ ] Channel CRUD operations
+  - [ ] Real-time messaging (WebSocket)
+  - [ ] ACL enforcement (F1000-only channels work)
+  - [ ] Rate limiting triggers correctly
+
+**Use Case**: Community chat for F1000 testers, general discussion
+
+#### T-SOCIAL-03: ForumModule (Boards / Topics / Threads) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-SOCIAL-01  
+**Design Doc**: `docs/pod-f1000-social-hub-design.md` § 2.3, 6
+
+- [ ] Implement board/topic/thread data model:
+  - [ ] Boards (high-level categories: "Announcements", "Dev Notes", etc.)
+  - [ ] Topics/threads (hierarchical posts)
+  - [ ] Post metadata (author, timestamps, edit history)
+- [ ] REST API for CRUD operations:
+  - [ ] Create/edit/delete boards (admin-only)
+  - [ ] Create/reply/edit topics and posts
+  - [ ] List boards, topics, threads (with pagination)
+- [ ] Moderation tools:
+  - [ ] Pin/unpin posts
+  - [ ] Lock/unlock topics
+  - [ ] Archive old threads
+- [ ] Anti-spam measures:
+  - [ ] Rate limits on new topics, replies, edits
+  - [ ] Optional cooldowns for new accounts
+  - [ ] MCP integration for text moderation
+- [ ] Add tests:
+  - [ ] Board/topic/thread CRUD
+  - [ ] Moderation tools work correctly
+  - [ ] Rate limiting and anti-spam
+  - [ ] ACL enforcement (board-level visibility)
+
+**Use Case**: Longer-form discussions, announcements, persistent threads
+
+#### T-SOCIAL-04: SocialFeedModule (ActivityPub / Mastodon-style) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-SOCIAL-01, T-FED01 (ActivityPub foundation, if exists)  
+**Design Doc**: `docs/pod-f1000-social-hub-design.md` § 2.4, 6
+
+- [ ] Implement ActivityPub actor(s) for First Pod:
+  - [ ] Optional shared hub actor (`@f1000@firstpod`)
+  - [ ] Per-user social actors (optional)
+  - [ ] Actor discovery (WebFinger)
+- [ ] Timeline/feed views:
+  - [ ] Local feed (posts from local users/boards)
+  - [ ] Federated feed (posts from followed remote actors, if federation enabled)
+  - [ ] Per-user timelines (home, mentions, notifications)
+- [ ] WorkRef integration:
+  - [ ] Attach references to works (Music/Book/Video) in posts
+  - [ ] Display work metadata in feed
+- [ ] F1000 badges/labels:
+  - [ ] F1000 members get special badge in feed
+  - [ ] Optional: governance role display (master-admin, registrar)
+- [ ] Federation hardening:
+  - [ ] Mode configuration (`Off`, `Hermit`, `Federated`)
+  - [ ] Default conservative (Hermit or curated Federated)
+  - [ ] Signature validation, rate limiting
+  - [ ] MCP integration for incoming notes/posts
+- [ ] Add tests:
+  - [ ] Actor creation and WebFinger discovery
+  - [ ] Local feed population
+  - [ ] Federated feed ingestion (if enabled)
+  - [ ] WorkRef attachment and display
+  - [ ] Federation hardening (signature validation, rate limiting)
+
+**Use Case**: Mastodon-style social feed, federated timeline, work recommendations
+
+#### T-SOCIAL-05: F1000 Auto-Join Integration 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-SOCIAL-01, T-F1000-01 (governance identity types)  
+**Design Doc**: `docs/pod-f1000-social-hub-design.md` § 4, 6
+
+- [ ] Governance ID → First Pod user mapping:
+  - [ ] Pre-create pending user for each F1000 member
+  - [ ] Map GovernanceId (`gov:<hash>`) to local user ID
+- [ ] Pending user pre-provisioning:
+  - [ ] Assign default roles: `F1000Member`, `User`, optional `EarlyTester`
+  - [ ] Mark account as pending (not activated yet)
+- [ ] Challenge-response activation:
+  - [ ] Prove control of governance key (sign challenge)
+  - [ ] Activate account on successful proof
+  - [ ] No email/password required for F1000 members
+- [ ] Role assignment:
+  - [ ] F1000 members get `F1000Member` role
+  - [ ] Optional additional roles (early tester, contributor, etc.)
+  - [ ] Master-admins get `MasterAdmin` role (if desired)
+- [ ] Dormant account handling:
+  - [ ] Pending accounts remain dormant if never activated
+  - [ ] No messages/posts/federation for dormant accounts
+- [ ] Add tests:
+  - [ ] F1000 member can activate via governance key signature
+  - [ ] Pending accounts are pre-created correctly
+  - [ ] Roles assigned properly (F1000Member, etc.)
+  - [ ] Dormant accounts do not participate in social features
+
+**Policy Choice**: Auto-join is a governance/social policy, not a technical dependency
+
+#### T-SOCIAL-06: Non-F1000 Participation (Optional) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW (optional, after F1000 auto-join)  
+**Dependencies**: T-SOCIAL-01  
+**Design Doc**: `docs/pod-f1000-social-hub-design.md` § 4.2, 6
+
+- [ ] Standard auth flows:
+  - [ ] Password + 2FA (bcrypt/Argon2 hashing)
+  - [ ] Optional: OIDC integration (Google, GitHub, etc.)
+- [ ] Invite system:
+  - [ ] Generate invite codes (one-time use)
+  - [ ] Track inviter (accountability)
+  - [ ] Expiration and usage limits
+- [ ] Registration policies:
+  - [ ] Open registration (if allowed)
+  - [ ] Invite-only (default during early testing)
+  - [ ] F1000-sponsored invites (F1000 members can invite)
+- [ ] Role assignment for non-F1000 users:
+  - [ ] Default: `User` role (no F1000 privileges)
+  - [ ] Optional: `Guest` role (read-only, limited features)
+- [ ] Add tests:
+  - [ ] Registration flows work (password, OIDC, invite)
+  - [ ] Non-F1000 users get correct roles
+  - [ ] Invite system enforces limits
+  - [ ] Registration policies respected
+
+**Optional**: First Pod MAY allow non-F1000 participation, but not required
 
 ---
 
