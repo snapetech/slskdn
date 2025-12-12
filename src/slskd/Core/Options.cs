@@ -1784,6 +1784,12 @@ namespace slskd
             public ConnectionOptions Connection { get; init; } = new ConnectionOptions();
 
             /// <summary>
+            ///     Gets safety cap options for Soulseek activity (H-08).
+            /// </summary>
+            [Validate]
+            public SafetyOptions Safety { get; init; } = new SafetyOptions();
+
+            /// <summary>
             ///     Connection options.
             /// </summary>
             public class ConnectionOptions
@@ -1953,6 +1959,47 @@ namespace slskd
                         return results;
                     }
                 }
+            }
+
+            /// <summary>
+            ///     Safety cap options (H-08: Soulseek-Specific Safety Caps).
+            /// </summary>
+            public class SafetyOptions
+            {
+                /// <summary>
+                ///     Gets the maximum number of searches per minute.
+                /// </summary>
+                [Argument(default, "slsk-safety-max-searches-per-minute")]
+                [EnvironmentVariable("SLSK_SAFETY_MAX_SEARCHES_PER_MINUTE")]
+                [Description("maximum Soulseek searches per minute (0 = unlimited)")]
+                [Range(0, 1000)]
+                public int MaxSearchesPerMinute { get; init; } = 10;
+
+                /// <summary>
+                ///     Gets the maximum number of browse requests per minute.
+                /// </summary>
+                [Argument(default, "slsk-safety-max-browses-per-minute")]
+                [EnvironmentVariable("SLSK_SAFETY_MAX_BROWSES_PER_MINUTE")]
+                [Description("maximum Soulseek browse requests per minute (0 = unlimited)")]
+                [Range(0, 100)]
+                public int MaxBrowsesPerMinute { get; init; } = 5;
+
+                /// <summary>
+                ///     Gets the maximum number of download slots to use.
+                /// </summary>
+                [Argument(default, "slsk-safety-max-download-slots")]
+                [EnvironmentVariable("SLSK_SAFETY_MAX_DOWNLOAD_SLOTS")]
+                [Description("maximum concurrent Soulseek download slots (0 = unlimited)")]
+                [Range(0, 1000)]
+                public int MaxDownloadSlotsUsed { get; init; } = 50;
+
+                /// <summary>
+                ///     Gets a value indicating whether safety caps are enabled.
+                /// </summary>
+                [Argument(default, "slsk-safety-enabled")]
+                [EnvironmentVariable("SLSK_SAFETY_ENABLED")]
+                [Description("enable Soulseek safety caps")]
+                public bool Enabled { get; init; } = true;
             }
 
             /// <summary>
