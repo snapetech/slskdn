@@ -89,6 +89,32 @@ namespace slskd.VirtualSoulfind.Core
         ///     - GenericFile: N/A (null)
         /// </remarks>
         TimeSpan? Duration { get; }
+
+        /// <summary>
+        ///     Gets whether this content item is advertisable (T-MCP03).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         This flag gates whether content can be:
+        ///         - Advertised via mesh/DHT
+        ///         - Served via content relay
+        ///         - Included in VirtualSoulfind planner results
+        ///     </para>
+        ///     <para>
+        ///         Set to false for:
+        ///         - Blocked content (MCP verdict: Blocked)
+        ///         - Quarantined content (MCP verdict: Quarantined)
+        ///         - Content not yet checked by MCP
+        ///     </para>
+        ///     <para>
+        ///         Set to true only for:
+        ///         - Allowed content (MCP verdict: Allowed)
+        ///     </para>
+        ///     <para>
+        ///         Default: false (conservative - require explicit approval)
+        ///     </para>
+        /// </remarks>
+        bool IsAdvertisable { get; }
     }
 }
 

@@ -288,6 +288,7 @@ public class ContentInterfacesTests
         public string Title { get; init; }
         public int? Position { get; init; }
         public TimeSpan? Duration { get; init; }
+        public bool IsAdvertisable { get; init; } // T-MCP03
     }
 
     [Fact]

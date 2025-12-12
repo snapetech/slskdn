@@ -37,11 +37,13 @@ namespace slskd.VirtualSoulfind.Core.Music
         /// <param name="id">The domain-neutral item ID.</param>
         /// <param name="workId">The parent work ID (album).</param>
         /// <param name="trackEntry">The underlying track entry from the database.</param>
-        public MusicItem(ContentItemId id, ContentWorkId workId, AlbumTargetTrackEntry trackEntry)
+        /// <param name="isAdvertisable">Whether this item is advertisable (T-MCP03).</param>
+        public MusicItem(ContentItemId id, ContentWorkId workId, AlbumTargetTrackEntry trackEntry, bool isAdvertisable = false)
         {
             Id = id;
             WorkId = workId;
             TrackEntry = trackEntry ?? throw new ArgumentNullException(nameof(trackEntry));
+            IsAdvertisable = isAdvertisable;
         }
 
         /// <inheritdoc/>
@@ -63,6 +65,13 @@ namespace slskd.VirtualSoulfind.Core.Music
         public TimeSpan? Duration => TrackEntry.DurationMs.HasValue
             ? TimeSpan.FromMilliseconds(TrackEntry.DurationMs.Value)
             : null;
+
+        /// <inheritdoc/>
+        /// <remarks>
+        ///     T-MCP03: This must be set explicitly based on MCP check results.
+        ///     Default is false (conservative - require explicit MCP approval).
+        /// </remarks>
+        public bool IsAdvertisable { get; }
 
         /// <summary>
         ///     Gets the underlying track entry from the database.
@@ -102,14 +111,15 @@ namespace slskd.VirtualSoulfind.Core.Music
         ///     Creates a <see cref="MusicItem"/> from an <see cref="AlbumTargetTrackEntry"/>.
         /// </summary>
         /// <param name="trackEntry">The track entry.</param>
+        /// <param name="isAdvertisable">Whether this item is advertisable (default: false).</param>
         /// <returns>A new <see cref="MusicItem"/> instance.</returns>
-        public static MusicItem FromTrackEntry(AlbumTargetTrackEntry trackEntry)
+        public static MusicItem FromTrackEntry(AlbumTargetTrackEntry trackEntry, bool isAdvertisable = false)
         {
             // Generate deterministic IDs from MusicBrainz identifiers
             var itemId = MusicDomainMapping.RecordingIdToContentItemId(trackEntry.RecordingId);
             var workId = MusicDomainMapping.ReleaseIdToContentWorkId(trackEntry.ReleaseId);
 
-            return new MusicItem(itemId, workId, trackEntry);
+            return new MusicItem(itemId, workId, trackEntry, isAdvertisable);
         }
     }
 }
