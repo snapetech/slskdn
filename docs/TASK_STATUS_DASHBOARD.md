@@ -3629,3 +3629,274 @@ After T-APPHOST-01 through T-APPHOST-08:
 - Add authentication/session management
 - Build production webview frontends (React/Svelte)
 
+
+---
+
+## 📋 Phase 9: Pod API – Base Endpoints for App Host
+
+**Status**: 📋 PLANNED  
+**Progress**: 0/6 (0%)  
+**Priority**: 🟡 MEDIUM (Server-side API for client shell)  
+**Design Doc**: `docs/pod-api-design.md`
+
+### Overview
+
+Define and implement a **consistent HTTP/JSON API** that pods expose for the App Host and ecosystem apps. This API uses a standard response envelope, error codes, and domain-specific endpoints (context, mesh, chat).
+
+**Key Principles**:
+- Consistent response envelope: `{ ok, error, data }`
+- Standard error codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, etc.
+- In-memory/mocked implementation first (no persistence needed)
+- Clean mapping to `pods://` URIs used by App Host
+- Security-aware shapes (roles, realm/pod isolation)
+
+### T-PODAPI-01: Shared Response Envelope & Error Codes 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (Foundation)  
+**Dependencies**: None  
+**Design Doc**: `docs/pod-api-design.md` § 2.3, § 2.4
+
+- [ ] Implement common response envelope type for all `/api` endpoints:
+  - [ ] `ok: boolean`
+  - [ ] `error: { code, message, details? } | null`
+  - [ ] `data: any | null`
+- [ ] Define initial error code constants:
+  - [ ] `UNAUTHORIZED`
+  - [ ] `FORBIDDEN`
+  - [ ] `NOT_FOUND`
+  - [ ] `VALIDATION_FAILED`
+  - [ ] `INTERNAL_ERROR`
+  - [ ] `NOT_IMPLEMENTED`
+- [ ] Create helper functions:
+  - [ ] `success(data)` → envelope with `ok: true`
+  - [ ] `error(code, message, details?)` → envelope with `ok: false`
+- [ ] Ensure every existing and new `/api` route uses this envelope
+- [ ] Add tests:
+  - [ ] Successful responses set `ok: true`, `error: null`
+  - [ ] Failures set `ok: false`, `error` populated, `data: null`
+
+**Deliverable**: Standard response format for all Pod API endpoints
+
+### T-PODAPI-02: Context Endpoint (`GET /api/context`) 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-PODAPI-01  
+**Design Doc**: `docs/pod-api-design.md` § 3.1
+
+- [ ] Implement `GET /api/context` endpoint
+- [ ] Return static or lightly-configured values:
+  - [ ] `realm.id`, `realm.name`
+  - [ ] `pod.id`, `pod.name`, `pod.roles`
+  - [ ] `user.id`, `user.displayName`, `user.roles`, `user.isF1000`
+- [ ] For v0:
+  - [ ] Hard-code values or load from simple config
+  - [ ] No auth required yet (stub)
+- [ ] Add tests:
+  - [ ] Endpoint returns valid context object wrapped in envelope
+  - [ ] Response shape matches design doc
+
+**Deliverable**: Context endpoint for App Host to initialize MeshContext
+
+**Mapped URI**: `pods://mesh/getContext`
+
+### T-PODAPI-03: Mesh Endpoints (`/api/mesh/...`) 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-PODAPI-01  
+**Design Doc**: `docs/pod-api-design.md` § 5
+
+- [ ] Implement `GET /api/mesh/pods`:
+  - [ ] Return mock list of pods with:
+    - [ ] `id`, `name`, `status`, `healthScore`, `roles`
+  - [ ] Include at least 2-3 mock pods
+- [ ] Implement `GET /api/mesh/pods/:podId/health`:
+  - [ ] Return mock health info for requested pod
+  - [ ] Return `NOT_FOUND` error for unknown podId
+- [ ] Ensure shapes match design doc
+- [ ] Add tests:
+  - [ ] `GET /api/mesh/pods` returns non-empty mock list
+  - [ ] `GET /api/mesh/pods/:podId/health` returns data for known IDs
+  - [ ] Unknown podId returns `NOT_FOUND` error
+
+**Deliverable**: Mesh metadata endpoints for "Mesh Explorer" app
+
+**Mapped URIs**:
+- `pods://mesh/listPods` → `GET /api/mesh/pods`
+- `pods://mesh/getPodHealth?podId=X` → `GET /api/mesh/pods/X/health`
+
+### T-PODAPI-04: Chat Channel Endpoints (`/api/chat/channels`) 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-PODAPI-01  
+**Design Doc**: `docs/pod-api-design.md` § 6.2, § 6.5
+
+- [ ] Implement `GET /api/chat/channels`:
+  - [ ] Return in-memory list of channels (`ChatChannel`)
+  - [ ] Initial state: 2-3 default channels (e.g., #general, #mesh-dev)
+- [ ] Implement `POST /api/chat/channels`:
+  - [ ] Accept JSON body: `name`, `isPrivate`, `topic`
+  - [ ] Validate `name` is non-empty
+  - [ ] Create new `ChatChannel` with:
+    - [ ] Generated `id`
+    - [ ] Current timestamp for `createdAt`
+    - [ ] Current user for `createdBy`
+  - [ ] Store in in-memory list
+- [ ] Keep everything in memory for v0 (no persistence)
+- [ ] Add tests:
+  - [ ] Channels can be created via POST
+  - [ ] Created channels appear in subsequent GET calls
+  - [ ] Invalid `name` yields `VALIDATION_FAILED` error
+  - [ ] Response shapes match design doc
+
+**Deliverable**: Channel management endpoints for Chat app
+
+**Mapped URIs**:
+- `pods://chat/listChannels` → `GET /api/chat/channels`
+- `pods://chat/createChannel` → `POST /api/chat/channels`
+
+### T-PODAPI-05: Chat Message Endpoints 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-PODAPI-04  
+**Design Doc**: `docs/pod-api-design.md` § 6.3, § 6.4
+
+- [ ] Implement `GET /api/chat/channels/:channelId/messages`:
+  - [ ] Return array of messages for given channel
+  - [ ] For v0: ignore pagination or implement basic `limit` param
+  - [ ] Return `NOT_FOUND` if channelId doesn't exist
+- [ ] Implement `POST /api/chat/messages`:
+  - [ ] Accept JSON body: `channelId`, `body`, optional `threadRootId`
+  - [ ] Validate:
+    - [ ] `channelId` exists
+    - [ ] `body` is non-empty
+  - [ ] Create new message with:
+    - [ ] Generated `id`
+    - [ ] Current timestamp for `createdAt`
+    - [ ] Current user for `authorId`, `authorDisplayName`
+  - [ ] Store in in-memory messages list per channel
+- [ ] Maintain messages in memory per process
+- [ ] Add tests:
+  - [ ] Messages posted to channel are returned by GET endpoint
+  - [ ] Invalid `channelId` yields `NOT_FOUND` error
+  - [ ] Empty `body` yields `VALIDATION_FAILED` error
+  - [ ] Response shapes match design doc
+
+**Deliverable**: Message endpoints for Chat app functionality
+
+**Mapped URIs**:
+- `pods://chat/getChannelMessages?channelId=X` → `GET /api/chat/channels/X/messages`
+- `pods://chat/sendMessage` → `POST /api/chat/messages`
+
+### T-PODAPI-06: `pods://` Mapping Documentation & Tests 📋
+
+**Status**: 📋 Planned  
+**Priority**: 🟢 LOW (Documentation)  
+**Dependencies**: T-PODAPI-02, T-PODAPI-03, T-PODAPI-04, T-PODAPI-05  
+**Design Doc**: `docs/pod-api-design.md` § 7
+
+- [ ] Document `pods://` URI to HTTP endpoint mapping:
+  - [ ] Create mapping table in code comments or docs
+  - [ ] List all mappings from design doc:
+    - [ ] `pods://mesh/getContext` → `GET /api/context`
+    - [ ] `pods://mesh/listPods` → `GET /api/mesh/pods`
+    - [ ] `pods://mesh/getPodHealth?podId=X` → `GET /api/mesh/pods/X/health`
+    - [ ] `pods://chat/listChannels` → `GET /api/chat/channels`
+    - [ ] `pods://chat/getChannelMessages?channelId=X` → `GET /api/chat/channels/X/messages`
+    - [ ] `pods://chat/sendMessage` → `POST /api/chat/messages`
+    - [ ] `pods://chat/createChannel` → `POST /api/chat/channels`
+- [ ] Add integration tests:
+  - [ ] Test that PodApiClient (when implemented) can call these endpoints
+  - [ ] Verify response shapes are correct
+  - [ ] Verify envelope format is consistent
+- [ ] Create example curl commands or HTTP client tests
+
+**Deliverable**: Complete mapping documentation and integration verification
+
+---
+
+## 📝 Pod API Notes
+
+### Response Envelope Example
+
+All endpoints use this standard envelope:
+
+**Success**:
+```json
+{
+  "ok": true,
+  "error": null,
+  "data": {
+    "channels": [...]
+  }
+}
+```
+
+**Failure**:
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Channel name is required",
+    "details": { "field": "name" }
+  },
+  "data": null
+}
+```
+
+### Data Models (v0)
+
+**ChatChannel**:
+```typescript
+{
+  id: string;
+  name: string;
+  isPrivate: boolean;
+  topic?: string;
+  createdAt: string;  // ISO timestamp
+  createdBy: string;  // user id
+}
+```
+
+**ChatMessage**:
+```typescript
+{
+  id: string;
+  channelId: string;
+  authorId: string;
+  authorDisplayName: string;
+  body: string;
+  createdAt: string;
+  editedAt?: string;
+  threadRootId?: string;
+}
+```
+
+### Implementation Strategy
+
+**Phase 1** (T-PODAPI-01 through T-PODAPI-05):
+- In-memory storage only
+- No database/persistence
+- Mock user context (no real auth)
+- Data resets on pod restart
+
+**Phase 2** (Future):
+- Add SQLite/persistent storage
+- Wire to real auth/session management
+- Connect to mesh topology for pod lists
+- Add WebSocket support for real-time updates
+- Implement pagination properly
+
+### Security Considerations
+
+Even with mock data:
+- Use standard error codes (no stack traces)
+- Include `roles` fields in API shapes (for future RBAC)
+- Design for realm/pod isolation (no cross-realm data leakage)
+- Response envelope prevents accidental data exposure
+
