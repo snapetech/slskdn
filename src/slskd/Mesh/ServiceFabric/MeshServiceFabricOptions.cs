@@ -72,4 +72,16 @@ public class MeshServiceFabricOptions
         ["mesh-stats"] = 5,          // Introspection should be fast
         ["pod-chat"] = 10            // Chat operations should be quick
     };
+
+    /// <summary>
+    /// Maximum work units per call (default: 10).
+    /// Prevents a single call from triggering excessive downstream work (Soulseek searches, etc.).
+    /// </summary>
+    public int MaxWorkUnitsPerCall { get; set; } = 10;
+
+    /// <summary>
+    /// Maximum work units per peer per minute (default: 50).
+    /// Prevents a single peer from monopolizing expensive operations.
+    /// </summary>
+    public int MaxWorkUnitsPerPeerPerMinute { get; set; } = 50;
 }

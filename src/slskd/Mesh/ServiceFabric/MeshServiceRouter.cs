@@ -17,6 +17,7 @@ public class MeshServiceRouter
     private readonly ILogger<MeshServiceRouter> _logger;
     private readonly ViolationTracker? _violationTracker;
     private readonly SecurityEventLogger? _securityLogger;
+    private readonly PeerWorkBudgetTracker _workBudgetTracker;
     private readonly MeshServiceFabricOptions _options;
     private readonly ConcurrentDictionary<string, IMeshService> _services = new();
     
@@ -33,12 +34,22 @@ public class MeshServiceRouter
         ILogger<MeshServiceRouter> logger,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
         ViolationTracker? violationTracker = null,
-        SecurityEventLogger? securityLogger = null)
+        SecurityEventLogger? securityLogger = null,
+        PeerWorkBudgetTracker? workBudgetTracker = null)
     {
         _logger = logger;
         _violationTracker = violationTracker;
         _securityLogger = securityLogger;
         _options = options.Value;
+        
+        // Create work budget tracker with embedded options
+        _workBudgetTracker = workBudgetTracker ?? new PeerWorkBudgetTracker(
+            new WorkBudgetOptions
+            {
+                MaxWorkUnitsPerCall = _options.MaxWorkUnitsPerCall,
+                MaxWorkUnitsPerPeerPerMinute = _options.MaxWorkUnitsPerPeerPerMinute,
+                Enabled = true
+            });
     }
 
     /// <summary>
@@ -198,7 +209,9 @@ public class MeshServiceRouter
                     "Service temporarily unavailable (circuit breaker open)");
             }
 
-            // 6. Create context
+            // 6. Create context with work budget
+            var workBudget = _workBudgetTracker.CreateBudgetForPeer(remotePeerId);
+            
             var context = new MeshServiceContext
             {
                 RemotePeerId = remotePeerId,
@@ -206,6 +219,7 @@ public class MeshServiceRouter
                 ReceivedAt = DateTimeOffset.UtcNow,
                 TraceId = call.CorrelationId,
                 ViolationTracker = _violationTracker,
+                WorkBudget = workBudget,
                 Logger = _logger
             };
 

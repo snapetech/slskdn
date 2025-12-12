@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using slskd.Common.Security;
 
 namespace slskd.Mesh.ServiceFabric;
 
@@ -70,6 +71,15 @@ public class MeshServiceContext
     /// Optional: Reference to violation tracker for reporting abuse.
     /// </summary>
     public object? ViolationTracker { get; init; }
+
+    /// <summary>
+    /// Optional: Work budget for this call (limits expensive downstream operations).
+    /// Services should check and consume budget before triggering:
+    /// - Soulseek operations
+    /// - BitTorrent operations  
+    /// - Outbound mesh calls
+    /// </summary>
+    public WorkBudget? WorkBudget { get; init; }
 
     /// <summary>
     /// Optional: Logger for service-specific logging.
