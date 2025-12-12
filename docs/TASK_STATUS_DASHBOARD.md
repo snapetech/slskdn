@@ -1912,28 +1912,29 @@ Federation security covers:
 
 **Foundation**: All backends implement this interface
 
-#### T-V2-P1-02: Source Registry (SourceCandidate) 📋
-**Status**: 📋 Planned  
+#### T-V2-P1-02: Source Registry (SourceCandidate) ✅
+**Status**: ✅ DONE  
 **Priority**: 🔴 HIGH  
 **Dependencies**: T-V2-P1-01  
 **Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.4
 
-- [ ] Define `SourceCandidate` entity:
-  - [ ] Id, ItemId, Backend, BackendRef
-  - [ ] ExpectedQuality, TrustScore
-  - [ ] LastValidatedAt, LastSeenAt, IsPreferred
-- [ ] Create `ISourceRegistry` interface:
-  - [ ] `FindCandidatesForItemAsync(itemId)`
-  - [ ] `UpsertCandidateAsync(candidate)`
-  - [ ] `RemoveStaleCandidatesAsync(olderThan)`
-- [ ] Implement `SqliteSourceRegistry`:
-  - [ ] Table schema with indexes
-  - [ ] CRUD operations
-- [ ] Add tests:
-  - [ ] Insert/retrieve candidates
-  - [ ] Stale candidate cleanup
+- [x] Define `SourceCandidate` entity:
+  - [x] Id, ItemId, Backend, BackendRef
+  - [x] ExpectedQuality, TrustScore
+  - [x] LastValidatedAt, LastSeenAt, IsPreferred
+- [x] Create `ISourceRegistry` interface:
+  - [x] `FindCandidatesForItemAsync(itemId)`
+  - [x] `UpsertCandidateAsync(candidate)`
+  - [x] `RemoveStaleCandidatesAsync(olderThan)`
+- [x] Implement `SqliteSourceRegistry`:
+  - [x] Table schema with indexes
+  - [x] CRUD operations
+- [x] Add tests:
+  - [x] Insert/retrieve candidates
+  - [x] Stale candidate cleanup
 
-**Source Registry**: Tracks where content can be obtained
+**Source Registry**: Tracks where content can be obtained  
+**Tests**: 8/8 passing
 
 #### T-V2-P1-03: Virtual Catalogue Store (Artist/Release/Track) 📋
 **Status**: 📋 Planned  
