@@ -45,7 +45,7 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  11% (21/~185 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  11% (21/~189 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
@@ -540,34 +540,200 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
 
 > **Design Doc**: See `docs/pod-identity-lifecycle.md`
 
-#### T-POD01: Pod Identity Management Service 📋
+#### T-POD01: Identity Storage Layout & Config 📋
 **Status**: 📋 Planned  
 **Priority**: 🟡 MEDIUM (foundational for multi-pod deployments)  
 **Dependencies**: None  
-**Design Doc**: `docs/pod-identity-lifecycle.md` § 4
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 3
 
-- [ ] Implement `IPodIdentityService`:
-  - [ ] `ExportIdentityBundleAsync` (encrypted with passphrase)
-  - [ ] `ImportIdentityBundleAsync` (decrypt and restore)
-  - [ ] `RotateMeshKeyAsync` (generate new mesh keypair)
-  - [ ] `RotateActorKeyAsync` (generate new AP actor key)
-- [ ] Identity bundle format:
-  - [ ] JSON or binary with versioning
-  - [ ] AES-256 encryption (key derived from passphrase)
-  - [ ] Contents: mesh keypair, AP keys, encryption keys, optional Soulseek creds
-- [ ] Storage layout:
-  - [ ] Well-defined paths for identity material (`data/identity/`)
-  - [ ] Filesystem permissions (read-only for pod, admin-only write)
+- [ ] Implement clear identity storage layout under `data/keys/`:
+  - [ ] `keys/pod/` – Mesh/pod identity keypair
+  - [ ] `keys/social/` – ActivityPub actor keypairs
+  - [ ] `keys/soulseek/` – Soulseek backend credentials (if stored)
+  - [ ] `keys/tls/` – TLS certs/keys (UI/API)
+  - [ ] `keys/mcp/` – MCP-specific secrets (if needed)
+- [ ] Ensure:
+  - [ ] Directories configurable with sensible defaults
+  - [ ] Access permissions restricted to pod process
+- [ ] Implement `PodIdentityConfig` / `IdentityRegistry` abstraction:
+  - [ ] Loads and provides identity materials by category
+  - [ ] Enforces identity separation (no sharing keys across categories)
 - [ ] Add tests:
-  - [ ] Export/import round-trip preserves keys
-  - [ ] Strong passphrase required
-  - [ ] Invalid bundles rejected
+  - [ ] Each service only gets identity material it needs
+  - [ ] Failure behavior when keys missing or misconfigured
 
-**Use Cases**: Backup/recovery, transfer ownership, migration to new host
+**Why**: Clean separation prevents key leakage (mesh key ≠ social key ≠ backend creds)
 
-#### T-POD02: Admin Account Management 📋
+#### T-POD02: Identity Bundle Export 📋
 **Status**: 📋 Planned  
 **Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD01  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 4.2
+
+- [ ] Implement **admin-only** export operation:
+  - [ ] Export pod identity bundle containing:
+    - [ ] Pod keypair (`keys/pod/`)
+    - [ ] Social actor keypairs (`keys/social/`)
+    - [ ] Optional backend creds (`keys/soulseek/`, based on flags)
+- [ ] Behavior:
+  - [ ] Prompt for passphrase or key to encrypt bundle
+  - [ ] Serialize into single encrypted file (no plaintext on disk)
+  - [ ] Use modern authenticated encryption (e.g., AES-256-GCM + Argon2)
+- [ ] Logging / security:
+  - [ ] Do NOT log: Bundle contents, passphrases
+  - [ ] May log: Timestamp, admin ID, bundle filename
+- [ ] Add tests:
+  - [ ] Export/import round-trip maintains identity
+  - [ ] Failure on incorrect passphrase
+  - [ ] Export fails cleanly if no identities present
+
+**Use Case**: Backup/recovery, transfer ownership, migration to new host
+
+#### T-POD03: Identity Bundle Import 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD01  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 4.3
+
+- [ ] Implement **admin-only** import operation:
+  - [ ] Accept: Bundle file, passphrase/key
+- [ ] Behavior:
+  - [ ] Validate bundle integrity
+  - [ ] Show admin summary of what will be imported:
+    - [ ] Pod identity present: yes/no
+    - [ ] Social actors present: count and identifiers
+    - [ ] Backends present: Soulseek credentials yes/no
+  - [ ] On confirmation:
+    - [ ] Replace or initialize identities in `keys/` with bundle contents
+    - [ ] Update `PodIdentityConfig` / `IdentityRegistry`
+- [ ] Conflict handling:
+  - [ ] If existing keys present: Require explicit confirmation to overwrite
+  - [ ] Optional: Backup old keys before overwrite (configurable)
+- [ ] Add tests:
+  - [ ] Fresh install + import yields working identity
+  - [ ] Overwrite existing identity requires confirmation
+
+**Use Case**: Restore from backup, receive transferred pod identity
+
+#### T-POD04: Soft Retire / Reactivate Operations 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD01  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 5.1
+
+- [ ] Implement admin-only operations:
+  - [ ] **Soft retire**:
+    - [ ] Stop external-facing services:
+      - [ ] Mesh/DHT
+      - [ ] Torrent integrations
+      - [ ] Soulseek client
+      - [ ] Social federation
+    - [ ] Leave running:
+      - [ ] UI/API admin access
+      - [ ] Library and MCP DBs
+  - [ ] **Reactivate**:
+    - [ ] Restart external services per configuration
+- [ ] Provide clear status indicator:
+  - [ ] Pod state: `Active` vs `Retired`
+- [ ] Add tests:
+  - [ ] Retired pod does not accept/initiate external protocol traffic
+  - [ ] Reactivated pod resumes normal behavior
+
+**Use Case**: Temporary shutdown, maintenance, preparing for migration
+
+**Reversible**: ✅ Yes (reactivate restores full functionality)
+
+#### T-POD05: Identity Suicide Operation 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-POD01, T-POD04  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 5.2
+
+- [ ] Implement admin-only **identity suicide** operation:
+  - [ ] Requires:
+    - [ ] Admin authentication
+    - [ ] Explicit confirmation (type pod ID or hostname)
+- [ ] Behavior:
+  - [ ] Delete:
+    - [ ] `keys/pod/` (mesh/pod identity)
+    - [ ] `keys/social/` (AP actor keys)
+    - [ ] Optional: Backend credentials (based on additional flags)
+  - [ ] Preserve:
+    - [ ] DBs (library + MCP)
+    - [ ] Content files
+    - [ ] Basic config (enough for local-only operation)
+- [ ] After identity suicide:
+  - [ ] Pod must not attempt to connect to mesh/DHT/Soulseek/social
+  - [ ] Start only in local-only mode until new identities created
+- [ ] Add tests:
+  - [ ] Identities removed and cannot be reloaded after suicide
+  - [ ] Local library functionality remains (admin-only use)
+
+**Use Case**: Privacy-focused reset, offline-only use, cannot rejoin as same identity
+
+**Reversible**: ❌ No (keys destroyed, identity dead)
+
+#### T-POD06: Full Wipe Operation (Optional, High-Risk) 📋
+**Status**: 📋 Planned  
+**Priority**: 🟢 LOW (optional, implement with strong safeguards)  
+**Dependencies**: T-POD01, T-POD05  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 5.3
+
+- [ ] Implement admin-only **full wipe** operation:
+  - [ ] Requires:
+    - [ ] Admin authentication
+    - [ ] Multiple confirmations:
+      - [ ] Warn about irreversible nature
+      - [ ] Require explicit phrase entry (e.g., "DELETE POD <PodId>")
+- [ ] Behavior:
+  - [ ] Delete:
+    - [ ] `keys/` (all identity material)
+    - [ ] `db/` (all DBs: library, MCP, shares, collections)
+    - [ ] Optionally content files (if chosen)
+    - [ ] Non-essential config
+  - [ ] Leave:
+    - [ ] Minimal bootstrap config (or nothing), for fresh start
+- [ ] Logging:
+  - [ ] Log only: Timestamp, admin ID, that wipe occurred
+  - [ ] Do NOT log: Any sensitive contents
+- [ ] Add tests:
+  - [ ] Full wipe removes identity and DBs
+  - [ ] Restart after full wipe behaves like new install
+
+**Use Case**: Complete shutdown, decommissioning hardware, privacy-focused destruction
+
+**Reversible**: ❌ No (everything destroyed, cannot recover)
+
+**⚠️ WARNING**: This is a nuclear option. Implement only with multiple confirmations and clear warnings.
+
+#### H-POD01: Identity Security & Key Protection 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH (before multi-pod deployments)  
+**Dependencies**: T-POD01  
+**Design Doc**: `docs/pod-identity-lifecycle.md` § 9
+
+- [ ] Implement key protection:
+  - [ ] Filesystem permissions (restrict access to `keys/`)
+  - [ ] Optional: Encrypt keys at rest with passphrase
+  - [ ] Optional: HSM integration (future)
+- [ ] Key rotation:
+  - [ ] Rotate mesh key → new PodId (breaking change, document carefully)
+  - [ ] Rotate AP actor keys → publish keyRotation activity (if AP spec supports)
+  - [ ] Rotate encryption keys → re-encrypt reputation data
+- [ ] Audit logging:
+  - [ ] Log all key operations (export, import, rotate, wipe)
+  - [ ] Sanitized (no actual key material in logs)
+  - [ ] Include: timestamp, admin ID, operation type
+- [ ] Add tests:
+  - [ ] Unauthorized access to keys prevented
+  - [ ] Key rotation updates dependent systems
+  - [ ] Audit logs capture all operations
+
+**Critical**: Keys are the crown jewels (losing keys = losing identity)
+
+#### H-POD02: Admin Account Management 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM (before multi-pod deployments)  
 **Dependencies**: None  
 **Design Doc**: `docs/pod-identity-lifecycle.md` § 6
 
@@ -585,58 +751,6 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
   - [ ] Permission enforcement
 
 **Why**: Prevents single-controller SPOF (add second admin before losing first)
-
-#### T-POD03: Lifecycle Management (Retire/Wipe Flows) 📋
-**Status**: 📋 Planned  
-**Priority**: 🟡 MEDIUM  
-**Dependencies**: T-POD01  
-**Design Doc**: `docs/pod-identity-lifecycle.md` § 5
-
-- [ ] Implement lifecycle operations:
-  - [ ] `SoftRetireAsync` (stop external services, keep data+keys, reversible)
-  - [ ] `IdentitySuicideAsync` (wipe keys, keep data, irreversible)
-  - [ ] `FullWipeAsync` (wipe keys + data, irreversible)
-- [ ] Protection mechanisms:
-  - [ ] Admin authentication required
-  - [ ] Confirmation required (type pod ID or hostname)
-  - [ ] Clear warnings about irreversibility
-  - [ ] Audit logging (sanitized)
-- [ ] Graceful shutdown:
-  - [ ] Notify peers (if possible) before offline
-  - [ ] Drain work queues
-  - [ ] Flush databases
-- [ ] Add tests:
-  - [ ] Soft retire is reversible
-  - [ ] Identity suicide destroys keys, keeps data
-  - [ ] Full wipe destroys everything
-  - [ ] Confirmation cannot be bypassed
-
-**Three Levels**: Soft retire (temporary), Identity suicide (privacy reset), Full wipe (complete)
-
-#### H-POD01: Identity Security & Key Protection 📋
-**Status**: 📋 Planned  
-**Priority**: 🔴 HIGH (before multi-pod deployments)  
-**Dependencies**: T-POD01  
-**Design Doc**: `docs/pod-identity-lifecycle.md` § 9
-
-- [ ] Implement key protection:
-  - [ ] Filesystem permissions (restrict access to `identity/`)
-  - [ ] Optional: Encrypt keys at rest with passphrase
-  - [ ] Optional: HSM integration (future)
-- [ ] Key rotation:
-  - [ ] Rotate mesh key → new PodId (breaking change, document)
-  - [ ] Rotate AP actor keys → publish keyRotation activity (if spec supports)
-  - [ ] Rotate encryption keys → re-encrypt reputation data
-- [ ] Audit logging:
-  - [ ] Log all key operations (export, import, rotate, wipe)
-  - [ ] Sanitized (no actual key material)
-  - [ ] Include: timestamp, admin ID, operation type
-- [ ] Add tests:
-  - [ ] Unauthorized access to keys prevented
-  - [ ] Key rotation updates dependent systems
-  - [ ] Audit logs capture all operations
-
-**Critical**: Keys are the crown jewels (losing keys = losing identity)
 
 ---
 
