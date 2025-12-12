@@ -32,7 +32,8 @@ Service Fabric:       ███████████████████�
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
 Global Hardening:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Engineering Quality:  ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
-Pod Identity:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
+Pod Identity:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/8   tasks complete) 📋
+F1000 Governance:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋 (future)
 Attribution:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/1   tasks complete) 📋
 Multi-Domain Core:    █████░░░░░░░░░░░░░░░  25% (  2/8   tasks complete) 🚧
 Moderation (MCP):     ██████████░░░░░░░░░░  50% (  2/4   tasks complete) 🚧
@@ -45,7 +46,7 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: ███░░░░░░░░░░░░░░░░░  11% (21/~189 tasks complete)
+Overall: ███░░░░░░░░░░░░░░░░░  11% (21/~195 tasks complete)
 
 Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 ```
@@ -55,7 +56,7 @@ Test Coverage: 128 tests passing (SF + Security + MCP + Multi-Domain Core)
 > 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
 > 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
 > 📋 **LLM/AI Moderation**: 5 OPTIONAL tasks (T-MCP-LM01-05, all disabled by default)
-> 📋 **Pod Identity & Lifecycle**: 4 tasks (T-POD01-03, H-POD01) - backup, transfer, retire, security
+> 📋 **Pod Identity & Lifecycle**: 8 tasks (T-POD01-06 + H-POD01-02) - storage, export/import, retire/wipe, security
 > 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
 > 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
 > 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
@@ -751,6 +752,170 @@ These tasks apply **cross-cutting security and privacy concerns** across the ent
   - [ ] Permission enforcement
 
 **Why**: Prevents single-controller SPOF (add second admin before losing first)
+
+---
+
+### F1000 Governance (T-F1000, Future Layer)
+
+> **Design Doc**: See `docs/f1000-governance-design.md`  
+> **Status**: 📋 FUTURE (post-core architecture)  
+> **Priority**: 🟢 LOW (meta-governance layer, not required for basic operation)
+
+F1000 is a **future governance layer** sitting above pods, providing:
+- Advisory moderation feeds from early adopters
+- Signed policy profiles (recommended configs)
+- Distributed governance without centralized control
+
+**Key Principles:**
+- **Transferable** F1000 membership (requires holder + master-admin signature)
+- **Master-admins cap-exempt** (founder always fits, doesn't squeeze out testers)
+- **Advisory only** (pods remain sovereign, can disable governance)
+- **Heavily hardened** (all operations signed, auditable, explicit confirmations)
+
+#### T-F1000-01: Governance Identity & F1000 Registry Types 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: None  
+**Design Doc**: `docs/f1000-governance-design.md` § 1, 2
+
+- [ ] Implement basic data types/interfaces:
+  - [ ] `GovernanceId`: Wraps `gov:<hash(pub_gov)>`
+  - [ ] `GovernanceRole` enum: `root`, `master_admin`, `registrar`, `policy_signer`
+  - [ ] DTOs for:
+    - [ ] `F1000Epoch` (includes `f1000_cap`)
+    - [ ] `F1000Registry`
+    - [ ] `F1000Entry` (status: `active`, `revoked`, `transferred`)
+    - [ ] `Delegation`
+    - [ ] `F1000Transfer` and revocation documents
+- [ ] Enforce in code:
+  - [ ] `F1000_CAP` applies only to **non-master-admin** `F1000Entry` with `status = active`
+  - [ ] Governance identities with `Role.MasterAdmin` are **cap-exempt**
+- [ ] Add tests:
+  - [ ] Registry validation enforces cap correctly
+  - [ ] Master-admin entries do not cause cap violation
+
+**Cap Rule**: Master-admins (founder + governance core) do not count toward F1000_CAP
+
+#### T-F1000-02: Governance Client (Pod-Side, Advisory Only) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: T-F1000-01  
+**Design Doc**: `docs/f1000-governance-design.md` § 5
+
+- [ ] Implement pod-side **governance client** that can:
+  - [ ] Fetch F1000 registry and governance docs (HTTPS/AP)
+  - [ ] Validate signatures and delegation chains
+  - [ ] Provide read-only view of:
+    - [ ] Epochs and caps
+    - [ ] Active F1000 members
+    - [ ] Master-admin roles
+- [ ] Configuration:
+  - [ ] Pods can enable/disable governance integration globally
+  - [ ] Pin trusted governance root/council keys
+  - [ ] Select which epochs/registries to trust
+- [ ] Hardening:
+  - [ ] Governance client runs in separate module from local admin auth
+  - [ ] Never expose governance keys
+  - [ ] No assumptions about pod admin identities
+- [ ] Add tests:
+  - [ ] Client correctly parses/validates sample registry with transfers
+  - [ ] Pod behavior unchanged when governance disabled
+
+**Isolation**: Governance logic completely separate from pod keys, admin auth, MCP config
+
+#### T-F1000-03: Transferable F1000 Membership Handling 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: T-F1000-01, T-F1000-02  
+**Design Doc**: `docs/f1000-governance-design.md` § 3.2
+
+- [ ] Implement logic to process **F1000Transfer** documents:
+  - [ ] Require signatures:
+    - [ ] From current holder (`from_governance_id`)
+    - [ ] From governance identity with `Role.MasterAdmin` or `Role.Registrar`
+  - [ ] Update registry entries:
+    - [ ] Mark old entry `status = transferred`
+    - [ ] Create new entry for `to_governance_id` with `status = active`
+- [ ] Enforce:
+  - [ ] No double-active membership for single governance ID within epoch
+  - [ ] Cap compliance for non-master-admin members only
+- [ ] Add tests:
+  - [ ] Valid transfers succeed and update registry
+  - [ ] Transfers exceeding cap (for non-master-admin) rejected
+  - [ ] Transfers with missing/invalid sender signature rejected
+
+**Security**: Dual-signature requirement prevents unilateral hijacking
+
+#### T-F1000-04: HumanModerationProvider(F1000) (Optional, Advisory) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: T-F1000-02, T-MCP01 (MCP foundation)  
+**Design Doc**: `docs/f1000-governance-design.md` § 4.1
+
+- [ ] Implement optional `HumanModerationProvider` for MCP that uses:
+  - [ ] F1000-curated moderation feeds (hash lists, WorkRef verdicts)
+- [ ] Behavior:
+  - [ ] Treat F1000 signals as advisory inputs
+  - [ ] Map into `ModerationVerdict` according to local policy
+  - [ ] Never override local blocklists or explicit admin rules
+- [ ] Hardening:
+  - [ ] Entire provider MUST be disableable via config
+  - [ ] Provider MUST not:
+    - [ ] Modify MCP config or blocklists
+    - [ ] Introduce new network calls beyond governance feed fetches
+- [ ] Add tests:
+  - [ ] MCP integrates F1000 provider correctly when enabled
+  - [ ] No effect on moderation when disabled
+
+**Advisory Only**: F1000 signals are inputs to MCP, never mandatory gates
+
+#### T-F1000-05: Policy Profiles Signed by Governance Identities (Optional) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: T-F1000-02  
+**Design Doc**: `docs/f1000-governance-design.md` § 4.2
+
+- [ ] Implement support for governance-signed **policy profiles**:
+  - [ ] Define `PolicyProfile` DTO:
+    - [ ] Name, version, payload (config)
+    - [ ] One or more governance signatures (F1000 or council)
+  - [ ] Extend pod configuration bootstrapping:
+    - [ ] Optionally fetch policy profiles from governance feeds
+    - [ ] Offer admin-facing UI/CLI:
+      - [ ] Compare current config vs profile
+      - [ ] Apply profile changes only with explicit admin consent
+- [ ] Hardening:
+  - [ ] Never auto-apply profile changes that affect:
+    - [ ] LLM providers
+    - [ ] MCP decision thresholds
+    - [ ] Federation settings
+  - [ ] Admin must explicitly approve
+- [ ] Add tests:
+  - [ ] Profiles parsed and validated against governance keys
+  - [ ] Local admin override always wins
+
+**Explicit Consent**: Profile changes require admin approval, never auto-applied
+
+#### T-F1000-06: Governance Tooling (Out-of-Band, Optional) 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: T-F1000-01, T-F1000-03  
+**Design Doc**: `docs/f1000-governance-design.md` § 3
+
+- [ ] Implement out-of-band governance tools (CLI/desktop/web) for governance participants:
+  - [ ] To:
+    - [ ] Generate governance keys (gov IDs)
+    - [ ] Manage delegations (assign/revoke roles)
+    - [ ] Manage F1000 registry (add/revoke/transfer) with clear UX
+    - [ ] Sign policy profiles and governance transitions
+- [ ] These tools MUST:
+  - [ ] Never run on normal pods by default
+  - [ ] Treat governance private keys as high-security secrets
+  - [ ] Require explicit confirmations for any F1000 transfer or role grant/revocation
+- [ ] Add tests (where applicable):
+  - [ ] Tooling produces governance documents that pods can validate and trust
+
+**Off-Pod**: Governance tools are separate from pod operation, high-security key handling
 
 ---
 
