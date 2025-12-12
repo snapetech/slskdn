@@ -9,6 +9,22 @@
 
 ---
 
+## 🔒 **MANDATORY: Global Requirements**
+
+**ALL tasks must comply with:**
+- `docs/CURSOR-META-INSTRUCTIONS.md` - Meta-rules for implementation
+- `docs/security-hardening-guidelines.md` OR `SECURITY-GUIDELINES.md` - Security requirements
+- `MCP-HARDENING.md` - Moderation layer security (for T-MCP tasks)
+
+**Key Rules:**
+1. ❌ **DO NOT renumber or reorder existing tasks**
+2. ✅ **Append new tasks** under appropriate headings
+3. 🔒 **Security/privacy first** - No full paths, hashes, or external IDs in logs
+4. 💰 **Work budget required** - All network/CPU-heavy ops consume budget
+5. 🧪 **Test discipline** - Every task adds/updates tests
+
+---
+
 ## 📊 Overall Progress
 
 ```
