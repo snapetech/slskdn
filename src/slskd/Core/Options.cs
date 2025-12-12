@@ -364,6 +364,12 @@ namespace slskd
         public Core.VirtualSoulfindOptions? VirtualSoulfind { get; set; }
 
         /// <summary>
+        ///     Gets or sets VirtualSoulfind v2 configuration.
+        /// </summary>
+        [Validate]
+        public slskd.VirtualSoulfind.v2.Configuration.VirtualSoulfindOptions VirtualSoulfindV2 { get; init; } = new();
+
+        /// <summary>
         ///     Gets or sets signal system configuration for multi-channel control signaling.
         /// </summary>
         [Validate]
