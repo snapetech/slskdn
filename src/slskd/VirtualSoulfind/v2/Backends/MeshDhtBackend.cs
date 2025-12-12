@@ -22,6 +22,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Options;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Sources;
 
@@ -29,31 +30,70 @@ namespace slskd.VirtualSoulfind.v2.Backends
     ///     Backend for mesh/DHT content discovery.
     /// </summary>
     /// <remarks>
-    ///     Initial implementation: stub/noop until mesh layer is ready.
-    ///     Will query distributed hash table for content availability.
+    ///     Phase 2 implementation: Query source registry for mesh candidates.
+    ///     Future integration points:
+    ///     - IMeshClient for actual DHT queries
+    ///     - Kademlia overlay for peer discovery
+    ///     - Service fabric for content location
     /// </remarks>
     public sealed class MeshDhtBackend : IContentBackend
     {
+        private readonly ISourceRegistry _sourceRegistry;
+        private readonly IOptionsMonitor<MeshDhtBackendOptions> _options;
+
+        public MeshDhtBackend(
+            ISourceRegistry sourceRegistry,
+            IOptionsMonitor<MeshDhtBackendOptions> options)
+        {
+            _sourceRegistry = sourceRegistry;
+            _options = options;
+        }
+
         public ContentBackendType Type => ContentBackendType.MeshDht;
 
         public ContentDomain? SupportedDomain => null; // Supports all domains
 
         /// <summary>
-        ///     Find candidates via mesh/DHT (stub implementation).
+        ///     Find mesh/DHT candidates from source registry.
         /// </summary>
-        public Task<IReadOnlyList<SourceCandidate>> FindCandidatesAsync(
+        /// <remarks>
+        ///     Current implementation: Registry lookup only.
+        ///     Future: Active DHT queries when mesh layer is integrated.
+        /// </remarks>
+        public async Task<IReadOnlyList<SourceCandidate>> FindCandidatesAsync(
             ContentItemId itemId,
             CancellationToken cancellationToken = default)
         {
-            // TODO: T-V2-P4-03 - Implement actual mesh/DHT queries
-            // For now, return empty list
-            IReadOnlyList<SourceCandidate> empty = Array.Empty<SourceCandidate>();
-            return Task.FromResult(empty);
+            var opts = _options.CurrentValue;
+            if (!opts.Enabled)
+            {
+                return Array.Empty<SourceCandidate>();
+            }
+
+            // Query source registry for MeshDht candidates
+            var candidates = await _sourceRegistry.FindCandidatesForItemAsync(
+                itemId,
+                ContentBackendType.MeshDht,
+                cancellationToken);
+
+            // Apply trust score threshold
+            var filtered = candidates
+                .Where(c => c.TrustScore >= opts.MinimumTrustScore)
+                .OrderByDescending(c => c.TrustScore)
+                .ThenByDescending(c => c.ExpectedQuality)
+                .Take(opts.MaxCandidatesPerItem)
+                .ToList();
+
+            return filtered;
         }
 
         /// <summary>
-        ///     Validate mesh/DHT candidate (stub).
+        ///     Validate mesh/DHT candidate.
         /// </summary>
+        /// <remarks>
+        ///     Current: Type and format validation.
+        ///     Future: Actual node reachability checks via mesh client.
+        /// </remarks>
         public Task<SourceCandidateValidationResult> ValidateCandidateAsync(
             SourceCandidate candidate,
             CancellationToken cancellationToken = default)
@@ -63,8 +103,53 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 return Task.FromResult(SourceCandidateValidationResult.Invalid("Not a MeshDht candidate"));
             }
 
-            // TODO: T-V2-P4-03 - Implement DHT node reachability check
+            var opts = _options.CurrentValue;
+            if (!opts.Enabled)
+            {
+                return Task.FromResult(SourceCandidateValidationResult.Invalid("MeshDht backend disabled"));
+            }
+
+            // Validate BackendRef format (should be mesh node reference)
+            if (string.IsNullOrWhiteSpace(candidate.BackendRef))
+            {
+                return Task.FromResult(SourceCandidateValidationResult.Invalid("Empty BackendRef"));
+            }
+
+            // Trust score threshold
+            if (candidate.TrustScore < opts.MinimumTrustScore)
+            {
+                return Task.FromResult(SourceCandidateValidationResult.Invalid($"Trust score {candidate.TrustScore} below minimum {opts.MinimumTrustScore}"));
+            }
+
+            // TODO: T-V2-P4-03 - Add actual mesh node reachability check via IMeshClient when available
+            // For now, accept if trust score is adequate
             return Task.FromResult(SourceCandidateValidationResult.Valid(candidate.TrustScore, candidate.ExpectedQuality));
         }
+    }
+
+    /// <summary>
+    ///     Configuration for MeshDht backend.
+    /// </summary>
+    public sealed class MeshDhtBackendOptions
+    {
+        /// <summary>
+        ///     Enable mesh/DHT backend.
+        /// </summary>
+        public bool Enabled { get; init; } = false;
+
+        /// <summary>
+        ///     Minimum trust score to consider a mesh candidate (0.0 - 1.0).
+        /// </summary>
+        public float MinimumTrustScore { get; init; } = 0.3f;
+
+        /// <summary>
+        ///     Maximum candidates to return per item.
+        /// </summary>
+        public int MaxCandidatesPerItem { get; init; } = 20;
+
+        /// <summary>
+        ///     Query timeout for DHT lookups (seconds).
+        /// </summary>
+        public int QueryTimeoutSeconds { get; init; } = 30;
     }
 }
