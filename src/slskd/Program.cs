@@ -1078,6 +1078,9 @@ namespace slskd
                     return new Common.Moderation.NoopModerationProvider();
                 }
 
+                // T-MCP03: Inject share repository for content ID checking
+                var shareRepository = sp.GetService<Shares.IShareRepository>();
+
                 // For now, use CompositeModerationProvider with no sub-providers
                 // T-MCP02+ will add actual implementations
                 // We need to wrap the Options.Moderation in an IOptionsMonitor
@@ -1089,7 +1092,8 @@ namespace slskd
                     logger,
                     hashBlocklist: null,
                     peerReputation: null,
-                    externalClient: null);
+                    externalClient: null,
+                    shareRepository: shareRepository); // T-MCP03
             });
 
             if (!OptionsAtStartup.Web.Authentication.Disabled)

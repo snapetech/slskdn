@@ -178,6 +178,21 @@ namespace slskd.Shares
                 "(maskedFilename TEXT PRIMARY KEY, originalFilename TEXT NOT NULL, size BIGINT NOT NULL, touchedAt TEXT NOT NULL, code INTEGER DEFAULT 1 NOT NULL, " +
                 "extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL, " +
                 "isBlocked INTEGER DEFAULT 0 NOT NULL, isQuarantined INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT);");
+
+            // T-MCP03: Content items table for VirtualSoulfind advertisable gating
+            // Maps ContentId → file(s), tracks IsAdvertisable state per content item
+            conn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS content_items " +
+                "(contentId TEXT PRIMARY KEY, " +
+                "domain TEXT NOT NULL, " +
+                "workId TEXT, " +
+                "maskedFilename TEXT NOT NULL, " +
+                "isAdvertisable INTEGER DEFAULT 0 NOT NULL, " +
+                "moderationReason TEXT, " +
+                "checkedAt INTEGER NOT NULL, " +
+                "FOREIGN KEY(maskedFilename) REFERENCES files(maskedFilename) ON DELETE CASCADE);");
+
+            conn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_filename ON content_items(maskedFilename);");
+            conn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_advertisable ON content_items(isAdvertisable);");
         }
 
         /// <summary>
@@ -698,6 +713,108 @@ namespace slskd.Shares
         {
             using var conn = GetConnection();
             conn.ExecuteNonQuery("VACUUM;");
+        }
+
+        // T-MCP03: Content item management for VirtualSoulfind advertisable gating
+
+        /// <summary>
+        ///     Inserts or updates a content item mapping.
+        /// </summary>
+        public void UpsertContentItem(
+            string contentId,
+            string domain,
+            string workId,
+            string maskedFilename,
+            bool isAdvertisable,
+            string moderationReason,
+            long checkedAt)
+        {
+            using var conn = GetConnection();
+
+            conn.ExecuteNonQuery(
+                "INSERT OR REPLACE INTO content_items " +
+                "(contentId, domain, workId, maskedFilename, isAdvertisable, moderationReason, checkedAt) " +
+                "VALUES (@contentId, @domain, @workId, @maskedFilename, @isAdvertisable, @moderationReason, @checkedAt);",
+                cmd =>
+                {
+                    cmd.Parameters.AddWithValue("contentId", contentId);
+                    cmd.Parameters.AddWithValue("domain", domain);
+                    cmd.Parameters.AddWithValue("workId", workId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("maskedFilename", maskedFilename);
+                    cmd.Parameters.AddWithValue("isAdvertisable", isAdvertisable ? 1 : 0);
+                    cmd.Parameters.AddWithValue("moderationReason", moderationReason ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("checkedAt", checkedAt);
+                });
+        }
+
+        /// <summary>
+        ///     Finds a content item by content ID.
+        /// </summary>
+        public (string Domain, string WorkId, string MaskedFilename, bool IsAdvertisable, string ModerationReason, long CheckedAt)? FindContentItem(string contentId)
+        {
+            using var conn = GetConnection();
+            using var cmd = new SqliteCommand(
+                "SELECT domain, workId, maskedFilename, isAdvertisable, moderationReason, checkedAt " +
+                "FROM content_items WHERE contentId = @contentId;",
+                conn);
+
+            cmd.Parameters.AddWithValue("contentId", contentId);
+
+            using var reader = cmd.ExecuteReader();
+
+            if (reader.Read())
+            {
+                return (
+                    Domain: reader.GetString(0),
+                    WorkId: reader.IsDBNull(1) ? null : reader.GetString(1),
+                    MaskedFilename: reader.GetString(2),
+                    IsAdvertisable: reader.GetInt32(3) != 0,
+                    ModerationReason: reader.IsDBNull(4) ? null : reader.GetString(4),
+                    CheckedAt: reader.GetInt64(5)
+                );
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     Lists all content items associated with a file.
+        /// </summary>
+        public IEnumerable<(string ContentId, string Domain, string WorkId, bool IsAdvertisable, string ModerationReason)> ListContentItemsForFile(string maskedFilename)
+        {
+            using var conn = GetConnection();
+            using var cmd = new SqliteCommand(
+                "SELECT contentId, domain, workId, isAdvertisable, moderationReason " +
+                "FROM content_items WHERE maskedFilename = @maskedFilename;",
+                conn);
+
+            cmd.Parameters.AddWithValue("maskedFilename", maskedFilename);
+
+            using var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                yield return (
+                    ContentId: reader.GetString(0),
+                    Domain: reader.GetString(1),
+                    WorkId: reader.IsDBNull(2) ? null : reader.GetString(2),
+                    IsAdvertisable: reader.GetInt32(3) != 0,
+                    ModerationReason: reader.IsDBNull(4) ? null : reader.GetString(4)
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Counts advertisable content items.
+        /// </summary>
+        public int CountAdvertisableItems()
+        {
+            using var conn = GetConnection();
+            using var cmd = new SqliteCommand(
+                "SELECT COUNT(*) FROM content_items WHERE isAdvertisable = 1;",
+                conn);
+
+            return Convert.ToInt32(cmd.ExecuteScalar());
         }
 
         /// <summary>

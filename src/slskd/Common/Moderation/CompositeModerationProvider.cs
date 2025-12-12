@@ -22,6 +22,7 @@ namespace slskd.Common.Moderation
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using slskd.Shares;
 
     /// <summary>
     ///     Composite implementation of <see cref="IModerationProvider"/> that orchestrates multiple sub-providers.
@@ -47,6 +48,7 @@ namespace slskd.Common.Moderation
         private readonly IHashBlocklistChecker? _hashBlocklist;
         private readonly IPeerReputationStore? _peerReputation;
         private readonly IExternalModerationClient? _externalClient;
+        private readonly IShareRepository? _shareRepository; // T-MCP03: For looking up content items
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="CompositeModerationProvider"/> class.
@@ -56,13 +58,15 @@ namespace slskd.Common.Moderation
             ILogger<CompositeModerationProvider> logger,
             IHashBlocklistChecker? hashBlocklist = null,
             IPeerReputationStore? peerReputation = null,
-            IExternalModerationClient? externalClient = null)
+            IExternalModerationClient? externalClient = null,
+            IShareRepository? shareRepository = null) // T-MCP03: Optional injection
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _hashBlocklist = hashBlocklist;
             _peerReputation = peerReputation;
             _externalClient = externalClient;
+            _shareRepository = shareRepository; // T-MCP03
         }
 
         /// <inheritdoc/>
@@ -151,10 +155,106 @@ namespace slskd.Common.Moderation
                 throw new ArgumentException("Content ID cannot be null or empty.", nameof(contentId));
             }
 
-            // For now, return Unknown
-            // Future: Map contentId to file metadata and check
-            await Task.CompletedTask;
-            return ModerationDecision.Unknown("content_id_check_not_implemented");
+            // T-MCP03: Implement content ID checking
+            // Strategy:
+            // 1. Look up content item in database (if available)
+            // 2. If found and already checked, return cached decision
+            // 3. If found but stale or new, look up associated file and run CheckLocalFileAsync
+            // 4. If not found, return Unknown (content not yet mapped)
+
+            if (_shareRepository == null)
+            {
+                _logger.LogDebug("[MCP] CheckContentIdAsync called but no share repository available");
+                return ModerationDecision.Unknown("no_share_repository");
+            }
+
+            try
+            {
+                var contentItem = _shareRepository.FindContentItem(contentId);
+
+                if (contentItem == null)
+                {
+                    // Content ID not yet mapped to a file
+                    _logger.LogDebug("[MCP] Content ID not found | ContentId={ContentId}", contentId);
+                    return ModerationDecision.Unknown("content_not_mapped");
+                }
+
+                // Content item exists; check if decision is still valid
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var ageSeconds = now - contentItem.Value.CheckedAt;
+
+                // If checked recently (within 1 hour) and not advertisable, return cached decision
+                if (ageSeconds < 3600 && !contentItem.Value.IsAdvertisable)
+                {
+                    _logger.LogDebug(
+                        "[MCP] Returning cached non-advertisable decision | ContentId={ContentId} | Reason={Reason}",
+                        contentId,
+                        contentItem.Value.ModerationReason);
+
+                    return contentItem.Value.ModerationReason != null
+                        ? ModerationDecision.Block(contentItem.Value.ModerationReason, "cached_decision")
+                        : ModerationDecision.Quarantine(contentItem.Value.ModerationReason ?? "cached_quarantine", "cached_decision");
+                }
+
+                // If checked recently and advertisable, return Allowed
+                if (ageSeconds < 3600 && contentItem.Value.IsAdvertisable)
+                {
+                    _logger.LogDebug("[MCP] Returning cached advertisable decision | ContentId={ContentId}", contentId);
+                    return ModerationDecision.Allow("cached_allowed");
+                }
+
+                // Decision is stale or needs re-check; look up the file
+                var (filename, size) = _shareRepository.FindFileInfo(contentItem.Value.MaskedFilename);
+
+                if (string.IsNullOrEmpty(filename))
+                {
+                    _logger.LogWarning(
+                        "[MCP] Content item references missing file | ContentId={ContentId} | File={File}",
+                        contentId,
+                        contentItem.Value.MaskedFilename);
+
+                    return ModerationDecision.Unknown("file_not_found");
+                }
+
+                // Build LocalFileMetadata and check via CheckLocalFileAsync
+                // Note: We don't have full metadata here, so we'll use what we have
+                var fileMetadata = new LocalFileMetadata
+                {
+                    Id = contentItem.Value.MaskedFilename,
+                    SizeBytes = size,
+                    PrimaryHash = null, // Not available from FindFileInfo
+                    MediaInfo = System.IO.Path.GetExtension(filename),
+                };
+
+                // Re-check the file
+                var decision = await CheckLocalFileAsync(fileMetadata, ct);
+
+                // Update content item with new decision
+                var isAdvertisable = decision.Verdict == ModerationVerdict.Allowed;
+                _shareRepository.UpsertContentItem(
+                    contentId,
+                    contentItem.Value.Domain,
+                    contentItem.Value.WorkId,
+                    contentItem.Value.MaskedFilename,
+                    isAdvertisable,
+                    decision.Reason,
+                    now);
+
+                _logger.LogInformation(
+                    "[MCP] Content ID checked | ContentId={ContentId} | IsAdvertisable={IsAdvertisable} | Verdict={Verdict}",
+                    contentId,
+                    isAdvertisable,
+                    decision.Verdict);
+
+                return decision;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[MCP] Failed to check content ID | ContentId={ContentId}", contentId);
+
+                // Failsafe: On error, deny advertisement
+                return ModerationDecision.Block("check_failed", "failsafe");
+            }
         }
 
         /// <inheritdoc/>
