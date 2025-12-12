@@ -1888,80 +1888,388 @@ Federation security covers:
 
 **Status**: 📋 DOCUMENTED, Not Started  
 **Progress**: 0/100+ (0%)  
-**Blocks**: Requires T-VC01-04, H-02 ✅, H-08 ✅, H-11-15  
-**Tasks**: 100+ detailed tasks across 6 phases
+**Blocks**: Requires T-VC01-04, H-02 ✅, H-08 ✅  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md`
 
-### Phase Overview
+### V2-P1: Foundation (Data Model & Stores)
 
-#### V2-P1: Foundation (Data Model & Catalogue Store)
+#### T-V2-P1-01: ContentBackend Interface & Types 📋
 **Status**: 📋 Planned  
-**Dependencies**: T-VC01-04, H-11
+**Priority**: 🔴 HIGH (foundation)  
+**Dependencies**: T-VC01 ✅  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 5
 
-- ~20 tasks covering:
-  - Catalogue schema design
-  - ContentWork / ContentItem models
-  - Source registry
-  - AvailabilityIndex
-  - SQLite persistence
-  - Migration from Phase 6 shadow index
+- [ ] Define `ContentBackendType` enum:
+  - [ ] LocalLibrary, Soulseek, MeshDht, Torrent, Http, Lan
+- [ ] Define `IContentBackend` interface:
+  - [ ] `FindCandidatesAsync(itemId, ct)`
+  - [ ] `ValidateCandidateAsync(candidate, ct)`
+  - [ ] Backend-specific metadata
+- [ ] Define `SourceCandidateValidationResult`:
+  - [ ] IsValid, TrustScore, QualityScore
+- [ ] Add tests:
+  - [ ] Interface contracts verify expected behavior
 
-#### V2-P2: Intent Queue & Planner
+**Foundation**: All backends implement this interface
+
+#### T-V2-P1-02: Source Registry (SourceCandidate) 📋
 **Status**: 📋 Planned  
-**Dependencies**: V2-P1, H-12, H-14
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-V2-P1-01  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.4
 
-- ~25 tasks covering:
-  - Intent queue design
-  - Priority system
-  - Planner architecture
-  - Multi-backend coordination
-  - Work budget integration
-  - Plan validation
+- [ ] Define `SourceCandidate` entity:
+  - [ ] Id, ItemId, Backend, BackendRef
+  - [ ] ExpectedQuality, TrustScore
+  - [ ] LastValidatedAt, LastSeenAt, IsPreferred
+- [ ] Create `ISourceRegistry` interface:
+  - [ ] `FindCandidatesForItemAsync(itemId)`
+  - [ ] `UpsertCandidateAsync(candidate)`
+  - [ ] `RemoveStaleCandidatesAsync(olderThan)`
+- [ ] Implement `SqliteSourceRegistry`:
+  - [ ] Table schema with indexes
+  - [ ] CRUD operations
+- [ ] Add tests:
+  - [ ] Insert/retrieve candidates
+  - [ ] Stale candidate cleanup
 
-#### V2-P3: Match & Verification Engine
+**Source Registry**: Tracks where content can be obtained
+
+#### T-V2-P1-03: Virtual Catalogue Store (Artist/Release/Track) 📋
 **Status**: 📋 Planned  
-**Dependencies**: V2-P2
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-V2-P1-01  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.1
 
-- ~20 tasks covering:
-  - Domain-specific matching
-  - Quality scoring
-  - Verification pipeline
-  - Canonical selection
-  - Confidence thresholds
+- [ ] Define entities:
+  - [ ] `Artist` (ArtistId, MusicBrainzId, Name, SortName, Tags)
+  - [ ] `ReleaseGroup` (ReleaseGroupId, MusicBrainzId, ArtistId, Title, PrimaryType)
+  - [ ] `Release` (ReleaseId, MusicBrainzId, ReleaseGroupId, Title, Year, Country)
+  - [ ] `Track` (TrackId, MusicBrainzRecordingId, ReleaseId, DiscNumber, TrackNumber, Title, DurationSeconds)
+- [ ] Create `ICatalogueStore` interface:
+  - [ ] `FindArtistByMBIDAsync(mbid)`
+  - [ ] `FindReleaseByMBIDAsync(mbid)`
+  - [ ] `FindTrackByMBIDAsync(mbid)`
+  - [ ] `SearchArtistsAsync(query)`
+  - [ ] CRUD operations
+- [ ] Implement `SqliteCatalogueStore`:
+  - [ ] Schema with FKs and indexes
+  - [ ] Efficient queries
+- [ ] Add tests:
+  - [ ] CRUD operations work
+  - [ ] Search returns correct results
 
-#### V2-P4: Backend Implementations
+**Catalogue**: Metadata-first brain of VirtualSoulfind
+
+#### T-V2-P1-04: LocalFile & VerifiedCopy Entities 📋
 **Status**: 📋 Planned  
-**Dependencies**: V2-P2, V2-P3, H-13
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-V2-P1-03  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.2
 
-- ~15 tasks covering:
-  - Soulseek backend (Music only, with caps)
-  - Mesh/DHT backend
-  - Local library backend
-  - BitTorrent backend (future)
-  - HTTP backend (future)
+- [ ] Define `LocalFile` entity:
+  - [ ] LocalFileId, Path, SizeBytes, DurationSeconds
+  - [ ] Codec, Bitrate, Channels
+  - [ ] HashPrimary, HashSecondary, AudioFingerprintId
+  - [ ] InferredTrackId (nullable)
+  - [ ] QualityRating (derived)
+- [ ] Define `VerifiedCopy` entity:
+  - [ ] VerifiedCopyId, TrackId, LocalFileId
+  - [ ] HashPrimary, DurationSeconds
+  - [ ] VerificationSource (manual, multi-check, etc.)
+- [ ] Add to `ICatalogueStore`:
+  - [ ] `FindLocalFileByPathAsync(path)`
+  - [ ] `FindVerifiedCopyForTrackAsync(trackId)`
+  - [ ] CRUD operations
+- [ ] Add tests:
+  - [ ] Linking LocalFile ↔ Track works
+  - [ ] VerifiedCopy enforces hash/duration
 
-#### V2-P5: Integration & Work Budget
+**Local Files**: Bridge virtual catalogue to physical files
+
+---
+
+### V2-P2: Intent Queue & Planner
+
+#### T-V2-P2-01: Intent Queue (DesiredRelease/Track) 📋
 **Status**: 📋 Planned  
-**Dependencies**: V2-P4, H-02 ✅, H-15
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-V2-P1-03  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 4.3
 
-- ~10 tasks covering:
-  - End-to-end integration
-  - Work budget wiring
-  - Service fabric exposure
-  - HTTP API endpoints
-  - Error handling
+- [ ] Define `DesiredRelease` entity:
+  - [ ] DesiredReleaseId, ReleaseId
+  - [ ] Priority (High/Normal/Low), Mode (Wanted/NiceToHave/Backfill)
+  - [ ] Status (Pending/Planned/InProgress/Completed/Failed/OnHold)
+  - [ ] CreatedAt, UpdatedAt, Notes
+- [ ] Define `DesiredTrack` entity:
+  - [ ] DesiredTrackId, TrackId, ParentDesiredReleaseId (nullable)
+  - [ ] Priority, Status, PlannedSources (JSON summary)
+- [ ] Create `IIntentQueue` interface:
+  - [ ] `EnqueueReleaseAsync(releaseId, priority, mode)`
+  - [ ] `EnqueueTrackAsync(trackId, priority)`
+  - [ ] `GetPendingIntentsAsync(limit)`
+  - [ ] `UpdateStatusAsync(intentId, status)`
+- [ ] Implement `SqliteIntentQueue`:
+  - [ ] Schema with status indexes
+  - [ ] Priority-based ordering
+- [ ] Add tests:
+  - [ ] Enqueue/dequeue works
+  - [ ] Status updates persist
 
-#### V2-P6: Advanced Features
+**Intent Queue**: What user wants (separate from network fetches)
+
+#### T-V2-P2-02: Multi-Source Planner (Core Logic) 📋
 **Status**: 📋 Planned  
-**Dependencies**: V2-P5
+**Priority**: 🔴 CRITICAL  
+**Dependencies**: T-V2-P1-02, T-V2-P2-01, H-08 ✅  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 6
 
-- ~15 tasks covering:
-  - Offline planning mode
-  - Background intent processing
-  - Smart source selection
-  - Reputation integration
-  - Advanced UI features
+- [ ] Define `TrackAcquisitionPlan`:
+  - [ ] TrackId, Steps (list of PlanStep)
+- [ ] Define `PlanStep`:
+  - [ ] Backend, Candidates, MaxParallel, Timeout, FallbackMode
+- [ ] Define `PlanningMode` enum:
+  - [ ] OfflinePlanning (no network), MeshOnly, SoulseekFriendly
+- [ ] Implement `IPlanner` interface:
+  - [ ] `CreatePlanAsync(desiredTrack, mode, ct)`
+  - [ ] `ValidatePlanAsync(plan, ct)` (check budgets/caps)
+- [ ] Implement `MultiSourcePlanner`:
+  - [ ] Consult source registry for candidates
+  - [ ] Apply domain rules (Music can use Soulseek, others can't)
+  - [ ] Apply MCP filtering (skip blocked/quarantined sources)
+  - [ ] Order by trust + quality scores
+  - [ ] Respect per-backend caps (H-08 for Soulseek)
+- [ ] Add tests:
+  - [ ] Music domain plans can include Soulseek
+  - [ ] Non-music domains never include Soulseek
+  - [ ] MCP-blocked sources excluded
+  - [ ] Plans respect backend caps
 
-**Total**: 100+ tasks
+**Planner**: Brain that decides how to get content
+
+#### T-V2-P2-03: Policy & Limits Configuration 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-V2-P2-02  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 10
+
+- [ ] Define `VirtualSoulfindOptions`:
+  - [ ] DefaultMode (SoulseekFriendly/OfflinePlanning/MeshOnly)
+  - [ ] Per-backend configs (MaxSearchesPerMinute, MaxParallelSearches, etc.)
+  - [ ] Work budget limits
+- [ ] Add to `Options.cs` as `VirtualSoulfind` property
+- [ ] Wire into planner:
+  - [ ] Planner reads backend limits before planning
+  - [ ] Enforces caps at plan-time, not execution-time
+- [ ] Add tests:
+  - [ ] Config limits are respected
+  - [ ] Switching modes changes planner behavior
+
+**Config**: User-controllable limits per backend
+
+---
+
+### V2-P3: Match & Verification Engine
+
+#### T-V2-P3-01: Match Engine (Duration/Hash/Fingerprint) 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-V2-P1-03, T-V2-P1-04  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 7
+
+- [ ] Define `IMatchEngine` interface:
+  - [ ] `MatchLocalFileToTrackAsync(localFile, track)`
+  - [ ] `ComputeMatchScore(localFile, track)` → 0.0-1.0
+- [ ] Implement `MusicMatchEngine`:
+  - [ ] Duration match (within ±tolerance, e.g., ±2 seconds or ±0.5%)
+  - [ ] Hash match (if available)
+  - [ ] Fingerprint match (Chromaprint, if available)
+  - [ ] Track context (disc/track number compatibility)
+  - [ ] Scoring: MBID + duration + hash = high confidence
+- [ ] Add tests:
+  - [ ] Correct matches score high
+  - [ ] Wrong duration rejected
+  - [ ] Hash match boosts score
+
+**Match Engine**: Verify files match expected tracks
+
+#### T-V2-P3-02: Quality Scoring (Music/Video/Book) 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-V2-P3-01  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 7.1, plus domain docs
+
+- [ ] Define domain-specific quality structs:
+  - [ ] `MusicCopyQuality` (codec, bitrate, sample rate/bit depth)
+  - [ ] `VideoCopyQuality` (resolution, codec, HDR/SDR, audio layout)
+  - [ ] `BookCopyQuality` (format preference, DRM, metadata completeness)
+- [ ] Implement quality scorers per domain:
+  - [ ] `IMusicQualityScorer.ComputeQuality(localFile)` → MusicCopyQuality
+  - [ ] Similar for Video and Book
+- [ ] Add tests:
+  - [ ] Lossless > lossy (music)
+  - [ ] 4K > 1080p (video)
+  - [ ] EPUB > PDF (books)
+
+**Quality**: Objective scoring for "is this good enough?"
+
+#### T-V2-P3-03: Verified Copy Registry & Updates 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-V2-P3-01  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 7.2
+
+- [ ] Implement `IVerificationEngine`:
+  - [ ] `VerifyAndRegisterAsync(localFile, track, verificationSource)`
+  - [ ] `IsVerifiedCopyAsync(trackId)` → bool
+- [ ] Logic:
+  - [ ] When file passes all checks (match + quality threshold):
+    - [ ] Create/refresh VerifiedCopy entry
+    - [ ] Mark as truth source for future comparisons
+- [ ] Add tests:
+  - [ ] Verified copy created on successful verification
+  - [ ] Verified copy used to validate future candidates
+
+**Verified Copies**: Ground truth for content correctness
+
+---
+
+### V2-P4: Backend Implementations
+
+#### T-V2-P4-01: LocalLibrary Backend 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-V2-P1-01, T-V2-P1-04  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 5.1
+
+- [ ] Implement `LocalLibraryBackend : IContentBackend`:
+  - [ ] `FindCandidatesAsync`: Query LocalFile table
+  - [ ] `ValidateCandidateAsync`: Check file still exists, hash matches
+- [ ] Add tests:
+  - [ ] Returns candidates for local files
+  - [ ] Validates existing files correctly
+
+**Local Backend**: Files already on disk
+
+#### T-V2-P4-02: Soulseek Backend (Music Only) 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 CRITICAL  
+**Dependencies**: T-V2-P1-01, T-V2-P2-02, H-08 ✅  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 5.1
+
+- [ ] Implement `SoulseekContentBackend : IContentBackend`:
+  - [ ] `FindCandidatesAsync`: Search Soulseek network for track
+  - [ ] `ValidateCandidateAsync`: Verify peer still has file
+  - [ ] **CRITICAL**: Enforce H-08 caps (MaxSearchesPerMinute, etc.)
+  - [ ] **CRITICAL**: Consume work budget (H-02) before any operation
+- [ ] Add domain check:
+  - [ ] MUST throw if domain != Music
+  - [ ] Compile-time or runtime assertion
+- [ ] Add tests:
+  - [ ] Soulseek caps enforced
+  - [ ] Work budget consumed
+  - [ ] Non-music domain throws
+
+**Soulseek Backend**: Music only, heavily gated
+
+#### T-V2-P4-03: MeshDHT Backend (Stub) 📋
+**Status**: 📋 Planned  
+**Priority**: 🟢 LOW (future)  
+**Dependencies**: T-V2-P1-01  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 5.1
+
+- [ ] Implement `MeshDhtContentBackend : IContentBackend`:
+  - [ ] Stub implementation (returns empty for now)
+  - [ ] TODO: Integrate with mesh service fabric
+- [ ] Add tests:
+  - [ ] Backend exists and can be instantiated
+
+**Mesh Backend**: Future multi-source swarm
+
+---
+
+### V2-P5: Integration & Work Budget
+
+#### T-V2-P5-01: Wire Planner into Resolver 📋
+**Status**: 📋 Planned  
+**Priority**: 🔴 HIGH  
+**Dependencies**: T-V2-P2-02, T-V2-P4-01, T-V2-P4-02  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 9.3
+
+- [ ] Implement `IResolver` interface:
+  - [ ] `ProcessNextIntentAsync()` - picks pending intent, creates plan, executes
+  - [ ] `ExecutePlanAsync(plan)` - runs plan steps, fetches content
+- [ ] Integrate with work budget (H-02):
+  - [ ] Each backend operation consumes budget
+  - [ ] Resolver stops when budget exhausted
+- [ ] Add tests:
+  - [ ] Resolver processes intents in priority order
+  - [ ] Stops when budget exhausted
+  - [ ] Updates intent status correctly
+
+**Resolver**: Execution engine for plans
+
+#### T-V2-P5-02: HTTP API Endpoints 📋
+**Status**: 📋 Planned  
+**Priority**: 🟡 MEDIUM  
+**Dependencies**: T-V2-P5-01  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 8.2
+
+- [ ] Add HTTP endpoints:
+  - [ ] `GET /virtual/releases/{releaseId}` - catalogue browsing
+  - [ ] `GET /virtual/releases/{releaseId}/missing` - gap analysis
+  - [ ] `POST /virtual/intents/releases/{releaseId}` - enqueue intent
+  - [ ] `GET /virtual/intents/releases` - list queue
+  - [ ] `POST /virtual/plan/releases/{releaseId}/execute` - trigger resolver (admin-only)
+- [ ] Enforce gateway auth/CSRF (H-01)
+- [ ] Add tests:
+  - [ ] Endpoints work
+  - [ ] Auth required
+
+**API**: HTTP access to VirtualSoulfind
+
+---
+
+### V2-P6: Advanced Features (Future)
+
+#### T-V2-P6-01: Library Reconciliation 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: V2-P5  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 9.4
+
+- [ ] Implement gap analysis:
+  - [ ] Find missing tracks for partial releases
+  - [ ] Suggest upgrades (low quality → better)
+- [ ] Add tests
+
+**Reconciliation**: Find gaps and upgrade opportunities
+
+#### T-V2-P6-02: Smart Prioritization 📋
+**Status**: 📋 Planned (future)  
+**Priority**: 🟢 LOW  
+**Dependencies**: V2-P5  
+**Design Doc**: `docs/virtualsoulfind-v2-design.md` § 16.3
+
+- [ ] Implement priority scoring:
+  - [ ] Local library gaps
+  - [ ] User preferences
+  - [ ] Catalogue metadata
+- [ ] Add tests
+
+**Smart Priority**: What's most worth fetching?
+
+---
+
+**V2 Summary**: 
+- **V2-P1**: 4 tasks (Data model & stores)
+- **V2-P2**: 3 tasks (Intent queue & planner)
+- **V2-P3**: 3 tasks (Match & verification)
+- **V2-P4**: 3 tasks (Backend implementations)
+- **V2-P5**: 2 tasks (Integration)
+- **V2-P6**: 2 tasks (Advanced features)
+- **Total**: 17 core tasks (vs 100+ original estimate - scoped down to MVP)
 
 ---
 
