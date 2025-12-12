@@ -1,0 +1,87 @@
+// <copyright file="ContentDomain.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU Affero General Public License as published
+//     by the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//     GNU Affero General Public License for more details.
+//
+//     You should have received a copy of the GNU Affero General Public License
+//     along with this program.  If not, see https://www.gnu.org/licenses/.
+// </copyright>
+
+namespace slskd.VirtualSoulfind.Core
+{
+    /// <summary>
+    ///     Represents a content domain supported by VirtualSoulfind.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         VirtualSoulfind supports multiple content domains, each with domain-specific
+    ///         matching logic, metadata, and backend selection rules.
+    ///     </para>
+    ///     <para>
+    ///         <b>Music Domain</b> is the primary and fully supported domain, backed by:
+    ///         - MusicBrainz for metadata
+    ///         - Soulseek for peer-to-peer acquisition
+    ///         - Mesh/DHT for distributed discovery
+    ///         - Local library for owned content
+    ///     </para>
+    ///     <para>
+    ///         <b>GenericFile Domain</b> supports arbitrary files without specific metadata,
+    ///         using hash-based matching. Soulseek is NOT available for this domain.
+    ///     </para>
+    ///     <para>
+    ///         Future domains (Movies, TV, Books, etc.) will have their own metadata providers
+    ///         and matching logic.
+    ///     </para>
+    /// </remarks>
+    public enum ContentDomain
+    {
+        /// <summary>
+        ///     Music domain (albums, tracks, artists).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         Primary and fully supported domain with:
+        ///         - MBID-based matching (MusicBrainz)
+        ///         - Duration, bitrate, codec matching
+        ///         - Soulseek backend support
+        ///         - Mesh/DHT discovery
+        ///     </para>
+        ///     <para>
+        ///         Works correspond to Albums/Releases.
+        ///         Items correspond to Tracks/Recordings.
+        ///     </para>
+        /// </remarks>
+        Music = 0,
+
+        /// <summary>
+        ///     Generic file domain (arbitrary files).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         Supports arbitrary files without specific metadata:
+        ///         - SHA256 hash-based matching
+        ///         - File size matching
+        ///         - NO Soulseek backend (mesh/DHT/torrent/local only)
+        ///     </para>
+        ///     <para>
+        ///         Works and Items are both generic file entries.
+        ///     </para>
+        /// </remarks>
+        GenericFile = 1,
+
+        // Future domains:
+        // Movie = 2,
+        // Tv = 3,
+        // Book = 4,
+        // Game = 5,
+        // Software = 6,
+    }
+}
