@@ -1,0 +1,266 @@
+name: Build on Tag
+
+# Trigger: push tag matching build-dev-* or build-main-*
+# Example: git tag build-dev-0.24.1.dev.20251213 && git push origin build-dev-0.24.1.dev.20251213
+
+on:
+  push:
+    tags:
+      - 'build-dev-*'
+      - 'build-main-*'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8'
+
+jobs:
+  parse:
+    name: Parse Tag
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.parse.outputs.channel }}
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Parse Tag
+        id: parse
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "Tag: $TAG"
+          
+          # Extract channel and version from tag
+          # Format: build-<channel>-<version>
+          if [[ "$TAG" =~ ^build-(dev|main)-(.+)$ ]]; then
+            CHANNEL="${BASH_REMATCH[1]}"
+            VERSION="${BASH_REMATCH[2]}"
+          else
+            echo "::error::Invalid tag format. Expected: build-<channel>-<version>"
+            exit 1
+          fi
+          
+          echo "Channel: $CHANNEL"
+          echo "Version: $VERSION"
+          
+          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build
+    needs: parse
+    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: dotnet --version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
+
+      - name: Build Frontend
+        working-directory: src/web
+        run: |
+          npm ci
+          DISABLE_ESLINT_PLUGIN=true npm run build
+
+      - name: Upload Web Content
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-content
+          path: src/web/build
+          retention-days: 7
+
+  publish:
+    name: Publish ${{ matrix.runtime }}
+    needs: [parse, build]
+    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        runtime:
+          - linux-x64
+          - linux-musl-x64
+          - linux-arm64
+          - osx-x64
+          - osx-arm64
+          - win-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: dotnet --version
+
+      - name: Download Web Content
+        uses: actions/download-artifact@v4
+        with:
+          name: web-content
+          path: src/slskd/wwwroot
+
+      - name: Build ${{ matrix.runtime }}
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-${{ matrix.runtime }} \
+            --self-contained true \
+            -r ${{ matrix.runtime }} \
+            /p:Version=${{ needs.parse.outputs.version }}
+
+      - name: Create Archive
+        run: |
+          cd publish-${{ matrix.runtime }}
+          if [[ "${{ matrix.runtime }}" == win-* ]]; then
+            zip -r ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip .
+          else
+            tar czf ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.tar.gz .
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}
+          path: |
+            slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.tar.gz
+            slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip
+          if-no-files-found: ignore
+          retention-days: 30
+
+  release-dev:
+    name: Create Dev Release
+    needs: [parse, publish]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: slskdn-dev-*
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release
+          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
+          find artifacts -name "*.zip" -exec cp {} release/ \;
+          ls -lh release/
+
+      - name: Create/Update Dev Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "🧪 Dev Build ${{ needs.parse.outputs.version }}"
+          body: |
+            ## Development Build ${{ needs.parse.outputs.version }}
+            
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            
+            ### ⚠️ Experimental Features
+            - 🔒 Enhanced security (Ed25519 identity, TLS pinning, signed descriptors)
+            - 🔀 Multi-source swarm downloads
+            - 🌐 DHT mesh network
+            - 🔗 BitTorrent DHT rendezvous
+            
+            ### Installation
+            **Package Managers:**
+            - Arch: `yay -S slskdn-dev`
+            - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn-dev && sudo dnf install slskdn-dev`
+            - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn-dev`
+            - Docker: `docker pull ghcr.io/snapetech/slskdn:dev`
+            
+            **Direct Download:** Extract the archive for your platform and run the binary.
+          prerelease: true
+          files: release/*
+
+      - name: Trigger Package Workflows
+        if: success()
+        run: |
+          echo "✅ Dev release created"
+          echo "📦 Trigger AUR/COPR/PPA workflows here if needed"
+          # gh workflow run package-aur-dev.yml -f version=${{ needs.parse.outputs.version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-main:
+    name: Create Main Release
+    needs: [parse, publish]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: slskdn-main-*
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release
+          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
+          find artifacts -name "*.zip" -exec cp {} release/ \;
+          ls -lh release/
+
+      - name: Create Main Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.parse.outputs.version }}
+          name: "Release ${{ needs.parse.outputs.version }}"
+          body: |
+            ## Release ${{ needs.parse.outputs.version }}
+            
+            **Full changelog:** [View all changes](https://github.com/${{ github.repository }}/compare/previous...${{ needs.parse.outputs.version }})
+            
+            ### Installation
+            **Package Managers:**
+            - Arch: `yay -S slskdn`
+            - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn && sudo dnf install slskdn`
+            - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn`
+            - Docker: `docker pull ghcr.io/snapetech/slskdn:latest`
+            
+            **Direct Download:** Extract the archive for your platform and run the binary.
+          prerelease: false
+          files: release/*
+
+      - name: Trigger Package Workflows
+        if: success()
+        run: |
+          echo "Triggering package builds for ${{ needs.parse.outputs.version }}..."
+          gh workflow run release-linux.yml -f tag=${{ needs.parse.outputs.version }} || true
+          gh workflow run release-copr.yml -f tag=${{ needs.parse.outputs.version }} || true
+          gh workflow run release-ppa.yml -f tag=${{ needs.parse.outputs.version }} || true
+          gh workflow run release-packages.yml -f tag=${{ needs.parse.outputs.version }} || true
+          echo "✅ Package workflows triggered"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
