@@ -2,6 +2,7 @@ using System.Text;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Dht;
 using slskd.VirtualSoulfind.ShadowIndex;
 
 namespace slskd.MediaCore;
@@ -18,13 +19,13 @@ public class DescriptorPublisher : IDescriptorPublisher
 {
     private readonly ILogger<DescriptorPublisher> logger;
     private readonly IDescriptorValidator validator;
-    private readonly IDhtClient dht;
+    private readonly IMeshDhtClient dht;
     private readonly MediaCoreOptions options;
 
     public DescriptorPublisher(
         ILogger<DescriptorPublisher> logger,
         IDescriptorValidator validator,
-        IDhtClient dht,
+        IMeshDhtClient dht,
         IOptions<MediaCoreOptions> options)
     {
         this.logger = logger;
@@ -41,17 +42,15 @@ public class DescriptorPublisher : IDescriptorPublisher
             return false;
         }
 
-        var payload = MessagePackSerializer.Serialize(descriptor);
-        var keyBytes = KeyBytes(descriptor.ContentId);
+        var key = $"mesh:content:{descriptor.ContentId}";
 
         // TTL capped by options (minutes)
         var ttlSeconds = Math.Min(options.MaxTtlMinutes, 60) * 60;
 
         try
         {
-            await dht.PutAsync(keyBytes, payload, ttlSeconds, ct);
-            logger.LogInformation("[MediaCore] Published descriptor {ContentId} (ttl={Ttl}s, size={Size} bytes)",
-                descriptor.ContentId, ttlSeconds, payload.Length);
+            await dht.PutAsync(key, descriptor, ttlSeconds, ct);
+            logger.LogInformation("[MediaCore] Published descriptor {ContentId} (ttl={Ttl}s)", descriptor.ContentId, ttlSeconds);
             return true;
         }
         catch (Exception ex)
@@ -60,7 +59,4 @@ public class DescriptorPublisher : IDescriptorPublisher
             return false;
         }
     }
-
-    private static byte[] KeyBytes(string key) =>
-        System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(key));
 }

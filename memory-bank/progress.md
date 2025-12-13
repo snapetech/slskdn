@@ -7,6 +7,30 @@
 
 ## 2025-12-13
 
+### T-1307: Relay Fallback for Symmetric NAT (Gap Task - P2)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **Relay Fallback Integration**: Enhanced HolePunchMeshService with automatic relay fallback when hole punching fails
+  - **Peer Descriptor Marking**: Automatically marks peers with RelayRequired=true when direct connection attempts fail
+  - **NatTraversalService Integration**: Leverages existing relay infrastructure for fallback connectivity
+  - **Session-Based Failure Tracking**: Tracks hole punch failures per session with comprehensive error handling
+  - **Relay Endpoint Management**: Includes relay endpoints in connection attempts for symmetric NAT scenarios
+  - **DHT Descriptor Updates**: Updates peer descriptors in DHT to indicate relay requirements
+  - **Graceful Degradation**: Seamless fallback from direct P2P to relay-based communication
+  - **Comprehensive Logging**: Detailed logging of hole punch failures and relay fallback success/failure
+- **Technical Notes**:
+  - **Failure Detection**: Monitors hole punch attempts and triggers relay fallback on repeated failures
+  - **Peer State Management**: Maintains per-peer relay requirement state with automatic DHT updates
+  - **Endpoint Prioritization**: Attempts direct UDP connections first, falls back to relay endpoints
+  - **Relay Server Integration**: Uses configured relay endpoints from MeshOptions for fallback connectivity
+  - **Performance Optimization**: Minimizes relay usage by preferring direct connections when possible
+  - **Network Resilience**: Ensures connectivity even through restrictive symmetric NAT configurations
+- **NAT Traversal Strategy**:
+  - **Primary**: Direct UDP hole punching for cone NATs
+  - **Secondary**: Port prediction for symmetric NATs with limited success
+  - **Fallback**: Relay servers for guaranteed connectivity through any NAT type
+  - **Adaptive**: Learns from connection failures to optimize future attempts
+
 ### T-1306: UDP Hole Punching (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

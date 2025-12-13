@@ -790,7 +790,12 @@ namespace slskd
             // MediaCore (Phase 9)
             services.AddOptions<MediaCore.MediaCoreOptions>();
             services.AddSingleton<MediaCore.IDescriptorValidator, MediaCore.DescriptorValidator>();
-            services.AddSingleton<MediaCore.IDescriptorPublisher, MediaCore.DescriptorPublisher>();
+            services.AddSingleton<MediaCore.IDescriptorPublisher>(sp =>
+                new MediaCore.DescriptorPublisher(
+                    sp.GetRequiredService<ILogger<MediaCore.DescriptorPublisher>>(),
+                    sp.GetRequiredService<MediaCore.IDescriptorValidator>(),
+                    sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>(),
+                    sp.GetRequiredService<IOptions<MediaCore.MediaCoreOptions>>()));
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();

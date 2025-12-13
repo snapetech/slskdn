@@ -2070,11 +2070,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: NAT traversal for non-symmetric NAT with rendezvous coordination via overlay mesh service.
 
-- [ ] **T-1307**: Implement relay fallback for symmetric NAT
-  - Status: Not started
+- [x] **T-1307**: Implement relay fallback for symmetric NAT
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: When hole punching fails, use relay nodes. Mark descriptor with RelayRequired=true.
+  - Branch: experimental/whatAmIThinking
+  - Notes: When hole punching fails, use relay nodes with NatTraversalService integration and RelayRequired=true marking.
 
 - [ ] **T-1308**: Implement MeshDirectory.FindContentByPeerAsync
   - Status: Not started
