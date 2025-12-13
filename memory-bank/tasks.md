@@ -2156,11 +2156,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Replaced Jaccard placeholder with perceptual hash-based cross-codec matching using ChromaPrint/pHash algorithms.
 
-- [ ] **T-1325**: Implement metadata portability layer
-  - Status: Not started
+- [x] **T-1325**: Implement metadata portability layer
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Export/import metadata between sources. Handle conflicts and merging.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented export/import with conflict resolution, merging strategies, and WebGUI tools.
 
 - [ ] **T-1326**: Implement content descriptor publishing
   - Status: Not started

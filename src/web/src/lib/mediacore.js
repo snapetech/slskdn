@@ -438,3 +438,114 @@ export const getMergeStrategies = async () => {
 
   return response.json();
 };
+
+/**
+ * Publish a content descriptor.
+ */
+export const publishContentDescriptor = async (descriptor, forceUpdate = false) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'publish')}/descriptor`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ descriptor, forceUpdate }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish descriptor: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Publish multiple content descriptors in batch.
+ */
+export const publishContentDescriptorsBatch = async (descriptors) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'publish')}/batch`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ descriptors }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish batch: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update a published content descriptor.
+ */
+export const updateContentDescriptor = async (contentId, updates) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'publish')}/descriptor/${encodeURIComponent(contentId)}`, {
+    method: 'PUT',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ updates }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update descriptor: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Republish descriptors that are about to expire.
+ */
+export const republishExpiringDescriptors = async (contentIds = null) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'publish')}/republish`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contentIds }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to republish descriptors: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Unpublish a content descriptor.
+ */
+export const unpublishContentDescriptor = async (contentId) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'publish')}/descriptor/${encodeURIComponent(contentId)}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to unpublish descriptor: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get content descriptor publishing statistics.
+ */
+export const getPublishingStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'publish')}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get publishing stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};

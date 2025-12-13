@@ -33,6 +33,34 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1325: Metadata Portability Layer (Phase 9 Gap - P2)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **MetadataPortability Service**: Comprehensive export/import service with conflict resolution
+  - **Package Format**: Structured metadata packages with versioning, checksums, and source info
+  - **Conflict Resolution Strategies**: Skip, Merge, Overwrite, KeepExisting with intelligent defaults
+  - **Metadata Merging**: Multiple merge strategies (PreferNewer, Prioritize, CombineAll)
+  - **IPLD Link Support**: Export/import of content relationship graphs
+  - **Conflict Analysis**: Pre-import analysis of potential conflicts and resolution recommendations
+  - **Dry-Run Mode**: Safe import testing without making actual changes
+  - **RESTful API**: Complete portability endpoints with detailed operation results
+  - **WebGUI Integration**: Interactive export/import tools with conflict analysis
+  - **Package Validation**: Integrity checking and format validation
+- **Technical Notes**:
+  - **Portable Format**: JSON-based packages with metadata about source, timestamp, and contents
+  - **Conflict Detection**: Intelligent identification of metadata conflicts and resolution options
+  - **Merge Intelligence**: Context-aware merging of metadata from multiple sources
+  - **Error Handling**: Comprehensive error reporting and partial failure handling
+  - **Performance**: Efficient batch operations with progress tracking
+  - **Extensibility**: Support for custom merge strategies and conflict resolvers
+  - **Security**: Package integrity verification with checksums
+- **Portability Operations**:
+  - **Export**: Extract metadata and relationships for specified ContentIDs
+  - **Import**: Load metadata packages with configurable conflict handling
+  - **Analyze**: Preview import conflicts without making changes
+  - **Merge**: Combine metadata from multiple sources with various strategies
+  - **Validate**: Verify package integrity and content consistency
+
 ### T-1324: Cross-Codec Fuzzy Matching (Phase 9 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

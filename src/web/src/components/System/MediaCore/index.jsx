@@ -91,6 +91,24 @@ const MediaCore = () => {
   const [exportingMetadata, setExportingMetadata] = useState(false);
   const [importingMetadata, setImportingMetadata] = useState(false);
   const [analyzingConflicts, setAnalyzingConflicts] = useState(false);
+  const [publishContentId, setPublishContentId] = useState('');
+  const [publishCodec, setPublishCodec] = useState('mp3');
+  const [publishSize, setPublishSize] = useState(1024);
+  const [batchContentIds, setBatchContentIds] = useState('');
+  const [updateTargetId, setUpdateTargetId] = useState('');
+  const [updateCodec, setUpdateCodec] = useState('');
+  const [updateSize, setUpdateSize] = useState('');
+  const [updateConfidence, setUpdateConfidence] = useState('');
+  const [publishResult, setPublishResult] = useState(null);
+  const [batchPublishResult, setBatchPublishResult] = useState(null);
+  const [updateResult, setUpdateResult] = useState(null);
+  const [republishResult, setRepublishResult] = useState(null);
+  const [publishingStats, setPublishingStats] = useState(null);
+  const [publishingDescriptor, setPublishingDescriptor] = useState(false);
+  const [publishingBatch, setPublishingBatch] = useState(false);
+  const [updatingDescriptor, setUpdatingDescriptor] = useState(false);
+  const [republishing, setRepublishing] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -413,6 +431,105 @@ const MediaCore = () => {
       setConflictAnalysis({ error: err.message });
     } finally {
       setAnalyzingConflicts(false);
+    }
+  };
+
+  const handlePublishDescriptor = async () => {
+    if (!publishContentId.trim()) return;
+
+    try {
+      setPublishingDescriptor(true);
+      setPublishResult(null);
+
+      const descriptor = {
+        contentId: publishContentId.trim(),
+        sizeBytes: parseInt(publishSize),
+        codec: publishCodec.trim(),
+        confidence: 0.8
+      };
+
+      const result = await mediacore.publishContentDescriptor(descriptor);
+      setPublishResult(result);
+    } catch (err) {
+      setPublishResult({ error: err.message });
+    } finally {
+      setPublishingDescriptor(false);
+    }
+  };
+
+  const handlePublishBatch = async () => {
+    const contentIds = batchContentIds.split('\n').map(id => id.trim()).filter(id => id);
+    if (!contentIds.length) return;
+
+    try {
+      setPublishingBatch(true);
+      setBatchPublishResult(null);
+
+      // Create mock descriptors for each ContentID
+      const descriptors = contentIds.map(contentId => ({
+        contentId,
+        sizeBytes: 1024 * 1024, // 1MB mock
+        codec: 'mock',
+        confidence: 0.8
+      }));
+
+      const result = await mediacore.publishContentDescriptorsBatch(descriptors);
+      setBatchPublishResult(result);
+    } catch (err) {
+      setBatchPublishResult({ error: err.message });
+    } finally {
+      setPublishingBatch(false);
+    }
+  };
+
+  const handleUpdateDescriptor = async () => {
+    if (!updateTargetId.trim()) return;
+
+    try {
+      setUpdatingDescriptor(true);
+      setUpdateResult(null);
+
+      const updates = {};
+      if (updateCodec.trim()) updates.newCodec = updateCodec.trim();
+      if (updateSize.trim()) updates.newSizeBytes = parseInt(updateSize);
+      if (updateConfidence.trim()) updates.newConfidence = parseFloat(updateConfidence);
+
+      if (Object.keys(updates).length === 0) {
+        throw new Error('At least one update field is required');
+      }
+
+      const result = await mediacore.updateContentDescriptor(updateTargetId.trim(), updates);
+      setUpdateResult(result);
+    } catch (err) {
+      setUpdateResult({ error: err.message });
+    } finally {
+      setUpdatingDescriptor(false);
+    }
+  };
+
+  const handleRepublishExpiring = async () => {
+    try {
+      setRepublishing(true);
+      setRepublishResult(null);
+      const result = await mediacore.republishExpiringDescriptors();
+      setRepublishResult(result);
+    } catch (err) {
+      setRepublishResult({ error: err.message });
+    } finally {
+      setRepublishing(false);
+    }
+  };
+
+  const handleLoadPublishingStats = async () => {
+    try {
+      setLoadingStats(true);
+      setPublishingStats(null);
+      const result = await mediacore.getPublishingStats();
+      setPublishingStats(result);
+    } catch (err) {
+      setPublishingStats({ error: err.message });
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -1596,6 +1713,303 @@ const MediaCore = () => {
                             ))}
                           </List>
                         </details>
+                      )}
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Content Descriptor Publishing */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="cloud upload" />
+                Publish Content Descriptor
+              </Card.Header>
+              <Card.Description>
+                Publish a content descriptor to the DHT with versioning support
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>ContentID</label>
+                  <Input
+                    placeholder="content:audio:track:mb-12345"
+                    value={publishContentId}
+                    onChange={(e) => setPublishContentId(e.target.value)}
+                  />
+                </Form.Field>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Codec</label>
+                    <Input
+                      placeholder="mp3, flac, etc."
+                      value={publishCodec}
+                      onChange={(e) => setPublishCodec(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Size (bytes)</label>
+                    <Input
+                      type="number"
+                      value={publishSize}
+                      onChange={(e) => setPublishSize(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Button
+                  primary
+                  loading={publishingDescriptor}
+                  disabled={!publishContentId.trim() || publishingDescriptor}
+                  onClick={handlePublishDescriptor}
+                >
+                  Publish Descriptor
+                </Button>
+              </Form>
+
+              {publishResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {publishResult.error ? (
+                    <Message error>
+                      <p>{publishResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Published Successfully</Message.Header>
+                      <p>
+                        <strong>ContentID:</strong> {publishResult.contentId}<br />
+                        <strong>Version:</strong> {publishResult.version}<br />
+                        <strong>TTL:</strong> {publishResult.ttl?.totalMinutes} minutes<br />
+                        <strong>Was Updated:</strong> {publishResult.wasUpdated ? 'Yes' : 'No'}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Batch Publishing */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="list" />
+                Batch Publish Descriptors
+              </Card.Header>
+              <Card.Description>
+                Publish multiple content descriptors simultaneously
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>ContentIDs (one per line)</label>
+                  <TextArea
+                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
+                    value={batchContentIds}
+                    onChange={(e) => setBatchContentIds(e.target.value)}
+                    rows={6}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={publishingBatch}
+                  disabled={!batchContentIds.trim() || publishingBatch}
+                  onClick={handlePublishBatch}
+                >
+                  Publish Batch
+                </Button>
+              </Form>
+
+              {batchPublishResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {batchPublishResult.error ? (
+                    <Message error>
+                      <p>{batchPublishResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>Batch Publish Results</Message.Header>
+                      <p>
+                        <strong>Total Requested:</strong> {batchPublishResult.totalRequested}<br />
+                        <strong>Successfully Published:</strong> {batchPublishResult.successfullyPublished}<br />
+                        <strong>Failed:</strong> {batchPublishResult.failedToPublish}<br />
+                        <strong>Skipped:</strong> {batchPublishResult.skipped}<br />
+                        <strong>Duration:</strong> {batchPublishResult.totalDuration?.totalSeconds.toFixed(2)}s
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Descriptor Updates */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="edit" />
+                Update Descriptor
+              </Card.Header>
+              <Card.Description>
+                Update metadata for an existing published descriptor
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>Target ContentID</label>
+                  <Input
+                    placeholder="ContentID to update"
+                    value={updateTargetId}
+                    onChange={(e) => setUpdateTargetId(e.target.value)}
+                  />
+                </Form.Field>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>New Codec</label>
+                    <Input
+                      placeholder="Leave empty to keep current"
+                      value={updateCodec}
+                      onChange={(e) => setUpdateCodec(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>New Size (bytes)</label>
+                    <Input
+                      placeholder="Leave empty to keep current"
+                      value={updateSize}
+                      onChange={(e) => setUpdateSize(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Form.Field>
+                  <label>New Confidence (0.0-1.0)</label>
+                  <Input
+                    placeholder="Leave empty to keep current"
+                    value={updateConfidence}
+                    onChange={(e) => setUpdateConfidence(e.target.value)}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={updatingDescriptor}
+                  disabled={!updateTargetId.trim() || updatingDescriptor}
+                  onClick={handleUpdateDescriptor}
+                >
+                  Update Descriptor
+                </Button>
+              </Form>
+
+              {updateResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {updateResult.error ? (
+                    <Message error>
+                      <p>{updateResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Update Successful</Message.Header>
+                      <p>
+                        <strong>ContentID:</strong> {updateResult.contentId}<br />
+                        <strong>Version:</strong> {updateResult.previousVersion} → {updateResult.newVersion}<br />
+                        <strong>Updates Applied:</strong> {updateResult.appliedUpdates?.join(', ') || 'none'}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Publishing Management */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="cogs" />
+                Publishing Management
+              </Card.Header>
+              <Card.Description>
+                Manage published descriptors and monitor publishing status
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Button.Group fluid>
+                <Button
+                  loading={republishing}
+                  disabled={republishing}
+                  onClick={handleRepublishExpiring}
+                >
+                  Republish Expiring
+                </Button>
+                <Button
+                  loading={loadingStats}
+                  disabled={loadingStats}
+                  onClick={handleLoadPublishingStats}
+                >
+                  Load Stats
+                </Button>
+              </Button.Group>
+
+              {/* Republish Results */}
+              {republishResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {republishResult.error ? (
+                    <Message error>
+                      <p>{republishResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>Republish Results</Message.Header>
+                      <p>
+                        <strong>Checked:</strong> {republishResult.totalChecked}<br />
+                        <strong>Republished:</strong> {republishResult.republished}<br />
+                        <strong>Failed:</strong> {republishResult.failed}<br />
+                        <strong>Still Valid:</strong> {republishResult.stillValid}<br />
+                        <strong>Duration:</strong> {republishResult.duration?.totalSeconds.toFixed(2)}s
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+
+              {/* Publishing Stats */}
+              {publishingStats && (
+                <div style={{ marginTop: '1em' }}>
+                  {publishingStats.error ? (
+                    <Message error>
+                      <p>{publishingStats.error}</p>
+                    </Message>
+                  ) : (
+                    <Message>
+                      <Message.Header>Publishing Statistics</Message.Header>
+                      <p>
+                        <strong>Total Published:</strong> {publishingStats.totalPublishedDescriptors}<br />
+                        <strong>Active Publications:</strong> {publishingStats.activePublications}<br />
+                        <strong>Expiring Soon:</strong> {publishingStats.expiringSoon}<br />
+                        <strong>Average TTL:</strong> {publishingStats.averageTtlHours?.toFixed(1)} hours<br />
+                        <strong>Total Storage:</strong> {(publishingStats.totalStorageBytes / 1024 / 1024)?.toFixed(1)} MB
+                      </p>
+                      {publishingStats.publicationsByDomain && Object.keys(publishingStats.publicationsByDomain).length > 0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>By Domain:</strong>
+                          {Object.entries(publishingStats.publicationsByDomain).map(([domain, count]) => (
+                            <Label key={domain} size="tiny" style={{ margin: '0.1em' }}>
+                              {domain}: {count}
+                            </Label>
+                          ))}
+                        </div>
                       )}
                     </Message>
                   )}
