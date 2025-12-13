@@ -23,6 +23,10 @@ All package publishing channels have been added to `build-on-tag.yml` for **BOTH
 - ✅ **PPA** - `ppa:keefshape/slskdn` (slskdn package, source-only)
 - ✅ **Docker** - `ghcr.io/snapetech/slskdn:latest`
 - ✅ **Chocolatey** - Stable release channel (binary)
+- ✅ **Nix** - Updates `flake.nix` stable sources
+- ✅ **Winget** - Updates `slskdn` manifests (manual PR to winget-pkgs required)
+- ✅ **Snap** - Stable channel
+- ✅ **Homebrew** - `snapetech/slskdn/slskdn`
 
 ### Critical Fixes from Old Workflow Patterns
 
