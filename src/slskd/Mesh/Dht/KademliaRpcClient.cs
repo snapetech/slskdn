@@ -134,6 +134,42 @@ public class KademliaRpcClient
     }
 
     /// <summary>
+    /// Store a key-value pair on the appropriate nodes in the DHT.
+    /// Implements the STORE operation by finding the k closest nodes and storing on them.
+    /// </summary>
+    public async Task<bool> StoreAsync(byte[] key, byte[] value, int ttlSeconds = 3600, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Find the k closest nodes to the key
+            var closestNodes = await FindNodeAsync(key, cancellationToken);
+            if (!closestNodes.Any())
+            {
+                _logger.LogWarning("[Kademlia] No nodes found for storing key {KeyHex}", Convert.ToHexString(key));
+                return false;
+            }
+
+            // Store on the closest nodes (typically all k nodes)
+            var storeTasks = closestNodes.Select(node => StoreOnNodeAsync(node, key, value, ttlSeconds, cancellationToken));
+            var results = await Task.WhenAll(storeTasks);
+
+            var successCount = results.Count(r => r);
+            var success = successCount > 0;
+
+            _logger.LogDebug(
+                "[Kademlia] STORE for key {KeyHex} completed: {SuccessCount}/{TotalCount} nodes accepted",
+                Convert.ToHexString(key), successCount, closestNodes.Count);
+
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Kademlia] Error in StoreAsync for key {KeyHex}", Convert.ToHexString(key));
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Send PING to a specific node to check if it's alive.
     /// </summary>
     public async Task<bool> PingAsync(KNode node, CancellationToken cancellationToken = default)
@@ -222,6 +258,47 @@ public class KademliaRpcClient
         }
 
         return null;
+    }
+
+    private async Task<bool> StoreOnNodeAsync(KNode node, byte[] key, byte[] value, int ttlSeconds, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var request = new StoreRequest
+            {
+                Key = key,
+                Value = value,
+                RequesterId = _routingTable.GetSelfId(),
+                TtlSeconds = ttlSeconds
+            };
+
+            var call = new ServiceCall
+            {
+                ServiceName = "dht",
+                Method = "Store",
+                Payload = JsonSerializer.SerializeToUtf8Bytes(request)
+            };
+
+            var reply = await _meshClient.CallAsync(node.Address, call, cancellationToken);
+
+            if (reply.IsSuccess)
+            {
+                var response = JsonSerializer.Deserialize<StoreResponse>(reply.Payload);
+                return response?.Stored ?? false;
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "[Kademlia] STORE to {Address} failed: {Error}",
+                    node.Address, reply.ErrorMessage);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[Kademlia] STORE to {Address} threw exception", node.Address);
+            return false;
+        }
     }
 
     /// <summary>

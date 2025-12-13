@@ -25,12 +25,20 @@ public class InMemoryDhtClient : IDhtClient
         selfId = RandomNodeId();
         routing = new KademliaRoutingTable(selfId);
         maxReplicas = 20; // align with k
+
+        // RpcClient will be set later to avoid circular dependency
+        RpcClient = null!;
     }
 
     /// <summary>
     /// Gets the count of nodes in the routing table (for metrics).
     /// </summary>
     public int GetNodeCount() => routing.Count;
+
+    /// <summary>
+    /// Gets the Kademlia RPC client for advanced DHT operations.
+    /// </summary>
+    public KademliaRpcClient RpcClient { get; private set; }
 
     /// <summary>
     /// Gets routing table statistics.

@@ -883,7 +883,11 @@ namespace slskd
             services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
             // DHT: use in-memory Kademlia-style implementation for now
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, Mesh.Dht.InMemoryDhtClient>();
-            services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
+            services.AddSingleton<Mesh.Dht.IMeshDhtClient>(sp =>
+                new Mesh.Dht.MeshDhtClient(
+                    sp.GetRequiredService<ILogger<Mesh.Dht.MeshDhtClient>>(),
+                    sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>(),
+                    sp.GetService<Mesh.Dht.DhtService>()));
             services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
             services.AddSingleton<Mesh.IMeshDirectory, Mesh.Dht.ContentDirectory>();
             services.AddSingleton<Mesh.IMeshAdvanced>(sp => new Mesh.MeshAdvanced(
@@ -897,9 +901,10 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
             services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
-            // DHT Mesh Service for Kademlia RPC operations
-            services.AddSingleton<Mesh.ServiceFabric.Services.DhtMeshService>();
+            // DHT services for Kademlia operations
             services.AddSingleton<Mesh.Dht.KademliaRpcClient>();
+            services.AddSingleton<Mesh.ServiceFabric.Services.DhtMeshService>();
+            services.AddSingleton<Mesh.Dht.DhtService>();
             // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();

@@ -60,6 +60,7 @@ public class DhtMeshService : IMeshService
             {
                 "FindNode" => await HandleFindNodeAsync(call, context, cancellationToken),
                 "FindValue" => await HandleFindValueAsync(call, context, cancellationToken),
+                "Store" => await HandleStoreAsync(call, context, cancellationToken),
                 "Ping" => await HandlePingAsync(call, context, cancellationToken),
                 _ => new ServiceReply
                 {
@@ -241,6 +242,68 @@ public class DhtMeshService : IMeshService
     }
 
     /// <summary>
+    /// Handle STORE RPC: Cache a key-value pair locally.
+    /// </summary>
+    private async Task<ServiceReply> HandleStoreAsync(
+        ServiceCall call,
+        MeshServiceContext context,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var request = JsonSerializer.Deserialize<StoreRequest>(call.Payload);
+            if (request?.Key == null || request.Value == null)
+            {
+                return new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Invalid Store request: key and value required",
+                    Payload = Array.Empty<byte>()
+                };
+            }
+
+            // Store the key-value pair with TTL
+            var ttlSeconds = request.TtlSeconds ?? 3600; // Default 1 hour
+            await _dhtClient.PutAsync(request.Key, request.Value, ttlSeconds, cancellationToken);
+
+            // Update routing table with the storing peer
+            await _routingTable.TouchAsync(request.RequesterId, context.RemotePeerId);
+
+            var response = new StoreResponse
+            {
+                Key = request.Key,
+                Stored = true,
+                TtlSeconds = ttlSeconds
+            };
+
+            var payload = JsonSerializer.SerializeToUtf8Bytes(response);
+
+            _logger.LogDebug(
+                "[DHT] Stored value for key {KeyHex} with TTL {TTL}s from peer {PeerId}",
+                Convert.ToHexString(request.Key), ttlSeconds, context.RemotePeerId);
+
+            return new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.OK,
+                Payload = payload
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[DHT] Error in Store");
+            return new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.UnknownError,
+                ErrorMessage = $"Store error: {ex.Message}",
+                Payload = Array.Empty<byte>()
+            };
+        }
+    }
+
+    /// <summary>
     /// Handle PING RPC: Simple liveness check.
     /// </summary>
     private Task<ServiceReply> HandlePingAsync(
@@ -309,6 +372,27 @@ public record FindValueResponse
     public bool Found { get; init; }
     public byte[]? Value { get; init; }
     public DhtNodeInfo[]? ClosestNodes { get; init; }
+}
+
+/// <summary>
+/// Request DTO for STORE RPC.
+/// </summary>
+public record StoreRequest
+{
+    public required byte[] Key { get; init; }
+    public required byte[] Value { get; init; }
+    public required byte[] RequesterId { get; init; }
+    public int? TtlSeconds { get; init; }
+}
+
+/// <summary>
+/// Response DTO for STORE RPC.
+/// </summary>
+public record StoreResponse
+{
+    public required byte[] Key { get; init; }
+    public bool Stored { get; init; }
+    public int TtlSeconds { get; init; }
 }
 
 /// <summary>
