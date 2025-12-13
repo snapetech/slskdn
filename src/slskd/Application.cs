@@ -527,6 +527,18 @@ namespace slskd
                     {
                         Log.Warning("DhtMeshService not available for registration");
                     }
+
+                    // Register hole punch mesh service for NAT traversal
+                    var holePunchService = ServiceProvider.GetService<Mesh.ServiceFabric.Services.HolePunchMeshService>();
+                    if (holePunchService != null)
+                    {
+                        router.RegisterService(holePunchService);
+                        Log.Information("Registered hole punch mesh service for NAT traversal");
+                    }
+                    else
+                    {
+                        Log.Warning("HolePunchMeshService not available for registration");
+                    }
                 }
                 else
                 {

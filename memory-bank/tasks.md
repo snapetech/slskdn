@@ -2058,11 +2058,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Store key-value pairs on closest k nodes with Ed25519 signature verification and timestamp validation.
 
-- [ ] **T-1305**: Implement peer descriptor refresh cycle
-  - Status: Not started
+- [x] **T-1305**: Implement peer descriptor refresh cycle
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Periodic republishing of own descriptor. TTL/2 refresh interval. Handle IP changes.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Periodic republishing of own descriptor with TTL/2 refresh interval and IP change detection.
 
 - [ ] **T-1306**: Implement UDP hole punching
   - Status: Not started

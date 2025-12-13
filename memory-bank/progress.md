@@ -7,6 +7,30 @@
 
 ## 2025-12-13
 
+### T-1305: Peer Descriptor Refresh Cycle (Gap Task - P2)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **PeerDescriptorRefreshService Enhancement**: Added IP change detection with network interface monitoring
+  - **Automatic IP Detection**: Detects IPv4/IPv6 addresses from active network interfaces when configured endpoints unavailable
+  - **Configurable Refresh Intervals**: TTL/2 periodic refresh (default 30 minutes) with configurable intervals
+  - **IP Change Monitoring**: Polls network interfaces every 5 minutes for address changes, triggers immediate refresh
+  - **MeshOptions Integration**: Added PeerDescriptorRefreshOptions for configuration (intervals, TTL, enable/disable)
+  - **Endpoint Detection**: Automatically discovers network endpoints (ip:2234, ip:2235) for common Soulseek ports
+  - **IPv4/IPv6 Support**: Handles both IPv4 and IPv6 addresses with proper formatting ([ipv6]:port)
+  - **Duplicate Prevention**: Removes duplicate endpoints when combining configured and detected addresses
+  - **Comprehensive Logging**: Detailed logging for refresh triggers, IP changes, and endpoint detection
+- **Technical Notes**:
+  - **TTL/2 Algorithm**: Refreshes descriptors at half their TTL to prevent expiration gaps
+  - **Network Interface Filtering**: Only monitors UP interfaces, excludes loopback and link-local addresses
+  - **Responsive Polling**: Checks for changes every minute for quick IP change response
+  - **Backward Compatibility**: Works with existing configured endpoints, enhances with detection
+  - **Configuration Options**: All intervals and behaviors configurable via MeshOptions
+- **Network Adaptation Features**:
+  - **Dynamic IP Handling**: Automatically updates peer descriptors when IP addresses change
+  - **Multi-Interface Support**: Discovers endpoints across all active network interfaces
+  - **Port Flexibility**: Adds common Soulseek ports (2234, 2235) to detected IP addresses
+  - **Relay Integration**: Combines detected endpoints with configured relay endpoints
+
 ### T-1304: STORE Kademlia RPC with Signature Verification (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

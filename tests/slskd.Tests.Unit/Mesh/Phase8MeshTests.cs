@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using Moq;
 using System.Linq;
@@ -70,7 +71,7 @@ public class Phase8MeshTests
 
         // First attempt fails hole punch
         hp.Setup(x => x.TryPunchAsync(It.IsAny<IPEndPoint>(), It.IsAny<IPEndPoint>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(new UdpHolePunchResult(false, null));
+          .ReturnsAsync(new UdpHolePunchResult(false, null, TimeSpan.Zero));
 
         // Relay succeeds
         relay.Setup(x => x.RelayAsync(It.IsAny<byte[]>(), It.IsAny<IPEndPoint>(), It.IsAny<CancellationToken>()))
