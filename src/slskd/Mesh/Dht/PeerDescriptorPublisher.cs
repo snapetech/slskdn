@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -37,18 +39,107 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     public async Task PublishSelfAsync(CancellationToken ct = default)
     {
         var nat = await natDetector.DetectAsync(ct);
+
+        // Start with configured endpoints
+        var endpoints = new List<string>(options.SelfEndpoints);
+
+        // If no configured endpoints, try to detect actual network interfaces
+        if (!endpoints.Any())
+        {
+            endpoints.AddRange(DetectNetworkEndpoints());
+            logger.LogInformation("[MeshDHT] No configured endpoints, detected {Count} network interfaces", endpoints.Count);
+        }
+        else
+        {
+            // Supplement configured endpoints with detected ones if they differ
+            var detectedEndpoints = DetectNetworkEndpoints();
+            foreach (var detected in detectedEndpoints)
+            {
+                if (!endpoints.Contains(detected))
+                {
+                    endpoints.Add(detected);
+                    logger.LogDebug("[MeshDHT] Added detected endpoint: {Endpoint}", detected);
+                }
+            }
+        }
+
+        // Add relay endpoints
+        if (options.RelayEndpoints != null)
+        {
+            endpoints.AddRange(options.RelayEndpoints);
+        }
+
         var descriptor = new MeshPeerDescriptor
         {
             PeerId = options.SelfPeerId,
-            Endpoints = options.SelfEndpoints
-                .Concat(options.RelayEndpoints ?? new List<string>())
-                .ToList(),
+            Endpoints = endpoints.Distinct().ToList(), // Remove duplicates
             NatType = nat.ToString().ToLowerInvariant(),
             RelayRequired = nat == NatType.Symmetric
         };
 
         var key = $"mesh:peer:{descriptor.PeerId}";
-        await dht.PutAsync(key, descriptor, ttlSeconds: 3600, ct: ct);
+        var ttlSeconds = options.PeerDescriptorRefresh.DescriptorTtlSeconds;
+        await dht.PutAsync(key, descriptor, ttlSeconds: ttlSeconds, ct: ct);
         logger.LogInformation("[MeshDHT] Published self descriptor {PeerId} endpoints={Count} nat={Nat}", descriptor.PeerId, descriptor.Endpoints.Count, descriptor.NatType);
+    }
+
+    /// <summary>
+    /// Detects available network endpoints from active network interfaces.
+    /// Returns endpoints in the format "ip:port" for common ports.
+    /// </summary>
+    private IEnumerable<string> DetectNetworkEndpoints()
+    {
+        var endpoints = new List<string>();
+
+        try
+        {
+            // Get all active network interfaces
+            var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                            ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+
+            foreach (var ni in networkInterfaces)
+            {
+                var ipProperties = ni.GetIPProperties();
+
+                // Get IPv4 addresses
+                foreach (var unicast in ipProperties.UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        var ip = unicast.Address;
+                        if (!IPAddress.IsLoopback(ip) && ip.ToString() != "0.0.0.0")
+                        {
+                            // Add common Soulseek ports
+                            endpoints.Add($"{ip}:2234"); // Default Soulseek port
+                            endpoints.Add($"{ip}:2235"); // Alternative port
+                        }
+                    }
+                }
+
+                // Get IPv6 addresses (global scope only)
+                foreach (var unicast in ipProperties.UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                    {
+                        var ip = unicast.Address;
+                        if (!IPAddress.IsLoopback(ip) &&
+                            ip.ToString() != "::" &&
+                            !ip.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase)) // Skip link-local
+                        {
+                            // Add IPv6 endpoints with brackets
+                            endpoints.Add($"[{ip}]:2234");
+                            endpoints.Add($"[{ip}]:2235");
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[MeshDHT] Failed to detect network endpoints");
+        }
+
+        return endpoints;
     }
 }

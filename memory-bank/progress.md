@@ -7,6 +7,30 @@
 
 ## 2025-12-13
 
+### T-1304: STORE Kademlia RPC with Signature Verification (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **Cryptographic Security**: Implemented Ed25519 signature verification for all STORE operations
+  - **Signed Messages**: Created DhtStoreMessage with proper signing/verification using IMeshMessageSigner
+  - **Timestamp Validation**: 5-minute window prevents replay attacks on store operations
+  - **Request Enhancement**: Extended StoreRequest with public key, signature, and timestamp fields
+  - **Verification Logic**: Server-side signature verification before accepting any stored content
+  - **Error Handling**: Comprehensive error responses for signature failures and invalid requests
+  - **Security Logging**: Detailed logging of signature verification failures for monitoring
+  - **TTL Enforcement**: Server-side validation of TTL ranges (1 minute to 24 hours)
+- **Technical Notes**:
+  - **Ed25519 Signatures**: Uses NSec cryptography library for high-performance Ed25519 operations
+  - **Canonical Signing**: Signs structured data to prevent signature malleability attacks
+  - **Timestamp Bounds**: Prevents both future timestamps and excessively old signatures
+  - **Key Validation**: Verifies public key and signature lengths before cryptographic operations
+  - **Performance**: Minimal overhead for signature verification on each store request
+  - **Non-Repudiation**: Signed operations provide cryptographic proof of origin
+- **Security Features**:
+  - **Signature Verification**: Prevents unauthorized content storage
+  - **Replay Attack Prevention**: Timestamp windows block replayed store requests
+  - **Content Integrity**: Signed messages ensure content hasn't been tampered with
+  - **Origin Authentication**: Public key verification proves request origin
+
 ### T-1303: FIND_VALUE Kademlia RPC (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
