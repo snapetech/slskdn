@@ -41,6 +41,31 @@
 
 ## 2025-12-13
 
+### T-001: Persistent Room/Chat Tabs Implementation
+
+**Completed T-001 persistent room/chat tabs** - High priority UI improvement enabling multiple concurrent room conversations.
+
+- **Created RoomSession.jsx**: New component encapsulating individual room chat functionality (messages, users, input, context menus)
+- **Converted Rooms.jsx to functional component**: Migrated from class component to React hooks pattern
+- **Implemented tabbed interface**: Added Semantic UI Tab component with localStorage persistence (survives browser refreshes)
+- **Added tab management**: Create new tabs, close tabs, switch between active room conversations
+- **Maintained all existing functionality**: Room joining/leaving, search dropdown, context menus (Reply/User Profile/Browse)
+- **Preserved styling**: Room history, user lists, message formatting remain consistent
+- **Added persistence**: Tabs stored in localStorage as 'slskd-room-tabs' following Browse component pattern
+
+**Technical Details**:
+- 602 lines added, 392 lines modified across 2 files
+- Created RoomSession component with 340+ lines of encapsulated room logic
+- Converted complex class component to functional hooks (useState, useEffect, useCallback, useRef)
+- Maintained all existing API integrations and room management logic
+- Preserved real-time message polling and user list updates per tab
+
+**Impact**: Users can now maintain multiple active room conversations simultaneously in persistent tabs that survive browser sessions, significantly improving the chat experience similar to modern messaging applications.
+
+---
+
+## 2025-12-13
+
 ### T-823: Mesh-Only Search Implementation
 
 **Completed T-823 mesh-only search for disaster mode** - Core Phase 6 Virtual Soulfind Mesh capability now functional.

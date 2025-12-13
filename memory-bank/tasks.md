@@ -2422,12 +2422,13 @@
 
 ### High Priority
 
-- [ ] **T-001**: Persistent Room/Chat Tabs
-  - Status: Not started
+- [x] **T-001**: Persistent Room/Chat Tabs
+  - Status: Done
+  - Completed: 2025-12-13
   - Priority: High
-  - Branch: TBD
+  - Branch: experimental/whatAmIThinking
   - Related: `TODO.md`, Browse tabs implementation
-  - Notes: Implement tabbed interface like Browse currently has. Reuse `Browse.jsx`/`BrowseSession.jsx` patterns.
+  - Notes: Implement tabbed interface like Browse currently has. Reuse `Browse.jsx`/`BrowseSession.jsx` patterns. Added RoomSession component and converted Rooms to functional component with tabs.
 
 - [ ] **T-002**: Scheduled Rate Limits
   - Status: Not started
