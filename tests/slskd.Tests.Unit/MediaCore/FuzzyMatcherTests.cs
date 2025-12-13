@@ -7,6 +7,7 @@ namespace slskd.Tests.Unit.MediaCore;
 using slskd.MediaCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Threading.Tasks;
 using Xunit;
 
 public class FuzzyMatcherTests
@@ -14,11 +15,13 @@ public class FuzzyMatcherTests
     private readonly FuzzyMatcher matcher;
     private readonly Mock<IPerceptualHasher> perceptualHasherMock;
     private readonly Mock<ILogger<FuzzyMatcher>> loggerMock;
+    private readonly Mock<IContentIdRegistry> _registryMock;
 
     public FuzzyMatcherTests()
     {
         perceptualHasherMock = new Mock<IPerceptualHasher>();
         loggerMock = new Mock<ILogger<FuzzyMatcher>>();
+        _registryMock = new Mock<IContentIdRegistry>();
         matcher = new FuzzyMatcher(perceptualHasherMock.Object, loggerMock.Object);
     }
 
@@ -120,5 +123,74 @@ public class FuzzyMatcherTests
     {
         var score = matcher.ScorePhonetic("", "");
         Assert.Equal(1.0, score);
+    }
+
+    [Fact]
+    public async Task ScorePerceptualAsync_SameDomainContent_ReturnsSimilarityScore()
+    {
+        // Arrange
+        var contentIdA = "content:audio:track:mb-12345";
+        var contentIdB = "content:audio:track:mb-67890";
+
+        _registryMock.Setup(r => r.IsRegisteredAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(true);
+
+        // Act
+        var score = await matcher.ScorePerceptualAsync(contentIdA, contentIdB, _registryMock.Object);
+
+        // Assert
+        Assert.InRange(score, 0.0, 1.0);
+    }
+
+    [Fact]
+    public async Task ScorePerceptualAsync_DifferentDomainContent_ReturnsZero()
+    {
+        // Arrange
+        var contentIdA = "content:audio:track:mb-12345";
+        var contentIdB = "content:video:movie:imdb-tt0111161";
+
+        // Act
+        var score = await matcher.ScorePerceptualAsync(contentIdA, contentIdB, _registryMock.Object);
+
+        // Assert
+        Assert.Equal(0.0, score);
+    }
+
+    [Fact]
+    public async Task FindSimilarContentAsync_WithPerceptualMatches_ReturnsResults()
+    {
+        // Arrange
+        var targetContentId = "content:audio:track:mb-12345";
+        var candidates = new[]
+        {
+            "content:audio:track:mb-67890",
+            "content:video:movie:imdb-tt0111161"
+        };
+
+        _registryMock.Setup(r => r.IsRegisteredAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(true);
+
+        // Act
+        var results = await matcher.FindSimilarContentAsync(
+            targetContentId, candidates, _registryMock.Object, minConfidence: 0.5);
+
+        // Assert
+        Assert.NotNull(results);
+        // Should return at least one result (the audio track match)
+        Assert.NotEmpty(results);
+    }
+
+    [Fact]
+    public void ComputeTextSimilarity_ReturnsCombinedScore()
+    {
+        // Arrange
+        var contentIdA = "content:audio:track:mb-12345";
+        var contentIdB = "content:audio:track:mb-12346";
+
+        // Act
+        var score = matcher.Score(contentIdA, "", contentIdB, "");
+
+        // Assert - should use identifier portion for comparison
+        Assert.InRange(score, 0.0, 1.0);
     }
 }

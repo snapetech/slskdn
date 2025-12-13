@@ -33,6 +33,35 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1327: Descriptor Query/Retrieval (Phase 9 Gap - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **Retrieval Service**: IDescriptorRetriever with DHT querying, caching, and verification
+  - **Signature Verification**: Cryptographic signature validation with timestamp checking
+  - **Freshness Validation**: TTL-based staleness detection with configurable thresholds
+  - **Intelligent Caching**: In-memory cache with expiration, statistics, and cleanup
+  - **Batch Retrieval**: Concurrent processing of multiple ContentID queries
+  - **Domain Queries**: Content discovery by domain and type with result limiting
+  - **RESTful API**: Complete retrieval endpoints with detailed response metadata
+  - **WebGUI Integration**: Interactive retrieval tools with verification and statistics
+  - **Performance Monitoring**: Cache hit ratios, retrieval times, and domain statistics
+  - **Cache Management**: TTL-based expiration and manual cache clearing capabilities
+- **Technical Notes**:
+  - **Verification Pipeline**: Multi-stage validation (signature, freshness, format)
+  - **Caching Strategy**: LRU-style expiration with configurable TTL
+  - **Concurrent Operations**: Semaphore-controlled batch processing for performance
+  - **Error Resilience**: Graceful handling of DHT failures and malformed responses
+  - **Statistics Tracking**: Comprehensive metrics for monitoring and optimization
+  - **Query Optimization**: Efficient domain filtering and result limiting
+  - **Security Validation**: Cryptographic signature checking and timestamp validation
+- **Retrieval Capabilities**:
+  - **Single Retrieval**: Individual ContentID lookup with cache bypass option
+  - **Batch Operations**: Multi-ContentID retrieval with aggregated results
+  - **Domain Discovery**: Content exploration by domain (audio/video/image) and type
+  - **Verification Tools**: Signature and freshness validation with detailed reports
+  - **Cache Intelligence**: Hit/miss tracking with performance statistics
+  - **Freshness Checking**: Configurable staleness detection and warnings
+
 ### T-1326: Content Descriptor Publishing (Phase 9 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

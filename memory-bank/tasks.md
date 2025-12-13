@@ -2168,11 +2168,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented signed descriptor publishing to DHT with versioning, updates, and management.
 
-- [ ] **T-1327**: Implement descriptor query/retrieval
-  - Status: Not started
+- [x] **T-1327**: Implement descriptor query/retrieval
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Query DHT for descriptors by ContentId. Verify signatures, check freshness.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented DHT querying with signature verification, freshness checking, and caching.
 
 - [ ] **T-1328**: Add MediaCore unit tests
   - Status: Not started
