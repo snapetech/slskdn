@@ -3,6 +3,7 @@ import * as autoReplaceLibrary from '../../lib/autoReplace';
 import * as transfersLibrary from '../../lib/transfers';
 import { LoaderSegment, PlaceholderSegment } from '../Shared';
 import TransferGroup from './TransferGroup';
+import TransfersTicker from './TransfersTicker';
 import TransfersHeader from './TransfersHeader';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -306,6 +307,10 @@ const Transfers = ({ direction, server }) => {
         removing={removing}
         retrying={retrying}
         server={server}
+        transfers={transfersWithQueue}
+      />
+      <TransfersTicker
+        direction={direction}
         transfers={transfersWithQueue}
       />
       {transfersWithQueue.length === 0 ? (

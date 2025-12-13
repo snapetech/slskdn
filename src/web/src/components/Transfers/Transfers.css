@@ -67,3 +67,27 @@
 .auto-replace-toggle label {
   font-weight: 500 !important;
 }
+
+.transfers-ticker {
+  display: flex !important;
+  align-items: center;
+  padding: 10px 14px !important;
+  margin-bottom: 10px !important;
+}
+
+.transfers-ticker-icon {
+  padding-right: 10px;
+}
+
+.transfers-ticker-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.transfers-ticker-top {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  flex-wrap: wrap;
+}

@@ -1561,7 +1561,7 @@
 #### Phase 12A: Privacy Layer — Traffic Analysis Protection
 
 - [ ] **T-1200**: Define AdversarialOptions configuration model
-  - Status: Not started
+  - Status: Complete
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Create strongly-typed options for all Phase 12 features (padding, timing, anonymity, transport, onion, relay, bridges, deniability). Wire into IOptions<T> and appsettings.yml.
@@ -1579,7 +1579,7 @@
   - Notes: React settings panel skeleton: Settings → Privacy & Security. Preset selector (Standard/Enhanced/Maximum), expandable sections.
 
 - [ ] **T-1210**: Implement BucketPadder (message padding)
-  - Status: Not started
+  - Status: Complete
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Pad messages to fixed bucket sizes (512, 1024, 2048, 4096, 8192, 16384 bytes). Use random fill bytes (not zeros) to prevent compression attacks. IMessagePadder interface.
@@ -2514,7 +2514,7 @@
   - Notes: Icons in search results for users in your groups
 
 - [ ] **T-005**: Traffic Ticker
-  - Status: Not started
+  - Status: Complete
   - Priority: Medium
   - Related: slskd discussion #547
   - Notes: Real-time upload/download activity feed in UI
@@ -2522,13 +2522,13 @@
 ### Low Priority
 
 - [ ] **T-006**: Create Chat Rooms from UI
-  - Status: Not started
+  - Status: Blocked (needs protocol support)
   - Priority: Low
   - Related: slskd #1258
-  - Notes: Create public/private rooms from web interface
+  - Notes: Create public/private rooms from web interface; blocked pending research on Soulseek room creation support and backend API.
 
 - [ ] **T-007**: Predictable Search URLs
-  - Status: Not started
+  - Status: Complete
   - Priority: Low
   - Related: slskd #1170
   - Notes: Bookmarkable search URLs for browser integration

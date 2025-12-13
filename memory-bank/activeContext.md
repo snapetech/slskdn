@@ -15,7 +15,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Phase 12S hardening plus UI polish (chat/room tab persistence), download queue polling, and search group indicators
+- **Current Task**: Phase 12S hardening plus UI polish (chat/room tab persistence), download queue polling, search group indicators, traffic ticker, predictable search URLs, adversarial config model, and privacy padding
 - **Branch**: `experimental/brainz` (Phase 1, 2-Extended, 7) → `experimental/virtual-soulfind` (Phase 6)
 - **Environment**: Local dev
 - **Last Activity**: Added mesh sync security documentation (T-1439), consensus gate, and PoP integration (including responder using local shares); implemented persistent tabs for chat and rooms (T-001). Tests blocked by socket permissions in this environment and not run by request.
@@ -58,6 +58,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 2. Extend privacy layer tasks in Phase 12A (AdversarialOptions model, padding/jitter) when ready to resume core Phase 12 work.
 3. Monitor chat/room tab persistence UX and align with Browse tab patterns if further polish is needed.
 4. Validate group badges in search results against user-defined and built-in groups once more user data is available.
+5. Observe traffic ticker accuracy against backend speeds when real transfers are running.
+6. T-006 is blocked pending Soulseek room creation research; unblock when protocol/back-end support is clarified.
+7. Confirm predictable search URLs (`?q=`) behave across sessions and when searches are cleared.
+8. Wire new AdversarialOptions into Phase 12 features when implementing privacy/anonymity layers.
+9. Integrate IMessagePadder into overlay messaging when privacy layer work (T-1214) begins.
 
 ---
 

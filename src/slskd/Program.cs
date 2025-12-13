@@ -589,6 +589,7 @@ namespace slskd
             // as with options, the monitor should be used for services with Singleton lifetime, snapshots for everything else
             // IManagedState should be used where state is being mutated and accessed in the same context
             services.AddManagedState<State>();
+            services.AddSingleton<slskd.Privacy.IMessagePadder, slskd.Privacy.MessagePadder>();
 
             // add IHttpClientFactory
             // use through 'using var http = HttpClientFactory.CreateClient()' wherever HTTP calls will be made

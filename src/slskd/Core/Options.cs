@@ -369,6 +369,12 @@ namespace slskd
         public Signals.SignalSystemOptions SignalSystem { get; init; } = new Signals.SignalSystemOptions();
 
         /// <summary>
+        ///     Gets adversarial resilience configuration (privacy/anonymity/obfuscation).
+        /// </summary>
+        [Validate]
+        public AdversarialOptions Adversarial { get; init; } = new AdversarialOptions();
+
+        /// <summary>
         ///     Handles top-level validation that doesn't fit anywhere else.
         /// </summary>
         /// <param name="validationContext"></param>
@@ -531,6 +537,417 @@ namespace slskd
             [EnvironmentVariable("NO_SQLITE_POOLING")]
             [Description("disable SQLite pooling")]
             public bool NoSqlitePooling { get; init; } = false;
+        }
+
+        /// <summary>
+        ///     Adversarial resilience configuration (privacy, anonymity, obfuscation).
+        /// </summary>
+        public class AdversarialOptions : IValidatableObject
+        {
+            private static readonly string[] AllowedPresets = new[] { "Standard", "Enhanced", "Maximum" };
+
+            /// <summary>
+            ///     Gets the preset profile for quick configuration (Standard, Enhanced, Maximum).
+            /// </summary>
+            [EnvironmentVariable("ADV_PRESET")]
+            [Description("adversarial preset (Standard|Enhanced|Maximum)")]
+            public string Preset { get; init; } = "Standard";
+
+            /// <summary>
+            ///     Gets privacy layer settings (padding, jitter, batching, cover traffic).
+            /// </summary>
+            [Validate]
+            public PrivacyOptions Privacy { get; init; } = new PrivacyOptions();
+
+            /// <summary>
+            ///     Gets anonymity transport settings (Tor/I2P/Relay).
+            /// </summary>
+            [Validate]
+            public AnonymityOptions Anonymity { get; init; } = new AnonymityOptions();
+
+            /// <summary>
+            ///     Gets obfuscation transport preferences (WebSocket/HTTP/obfs4/etc.).
+            /// </summary>
+            [Validate]
+            public ObfuscationOptions Obfuscation { get; init; } = new ObfuscationOptions();
+
+            /// <summary>
+            ///     Gets onion routing options for mesh circuits.
+            /// </summary>
+            [Validate]
+            public OnionRoutingOptions Onion { get; init; } = new OnionRoutingOptions();
+
+            /// <summary>
+            ///     Gets bridge discovery/configuration options.
+            /// </summary>
+            [Validate]
+            public BridgeOptions Bridges { get; init; } = new BridgeOptions();
+
+            /// <summary>
+            ///     Gets deniability options.
+            /// </summary>
+            [Validate]
+            public DeniabilityOptions Deniability { get; init; } = new DeniabilityOptions();
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (!AllowedPresets.Contains(Preset, StringComparer.OrdinalIgnoreCase))
+                {
+                    results.Add(new ValidationResult(
+                        $"Preset must be one of: {string.Join(", ", AllowedPresets)}",
+                        new[] { nameof(Preset) }));
+                }
+
+                results.AddRange(Privacy.Validate(validationContext));
+                results.AddRange(Anonymity.Validate(validationContext));
+                results.AddRange(Obfuscation.Validate(validationContext));
+                results.AddRange(Onion.Validate(validationContext));
+                results.AddRange(Bridges.Validate(validationContext));
+                results.AddRange(Deniability.Validate(validationContext));
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        ///     Privacy layer settings (padding, jitter, batching, cover traffic).
+        /// </summary>
+        public class PrivacyOptions : IValidatableObject
+        {
+            /// <summary>
+            ///     Gets a value indicating whether message padding is enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_PRIVACY_PADDING_ENABLED")]
+            [Description("enable padding of outbound overlay messages")]
+            public bool EnablePadding { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the target padding bucket size in bytes (0 = no padding).
+            /// </summary>
+            [EnvironmentVariable("ADV_PRIVACY_PADDING_BUCKET_BYTES")]
+            [Description("bucket size (bytes) used for padding; 0 disables padding")]
+            public int PaddingBucketBytes { get; init; } = 0;
+
+            /// <summary>
+            ///     Gets the maximum random jitter (milliseconds) added to message timing.
+            /// </summary>
+            [EnvironmentVariable("ADV_PRIVACY_JITTER_MS")]
+            [Description("max random jitter (ms) applied to outbound messages")]
+            public int MaxJitterMilliseconds { get; init; } = 0;
+
+            /// <summary>
+            ///     Gets the batching window (milliseconds) before sending grouped messages.
+            /// </summary>
+            [EnvironmentVariable("ADV_PRIVACY_BATCH_WINDOW_MS")]
+            [Description("hold outbound messages for batching (ms); 0 disables batching")]
+            public int BatchWindowMilliseconds { get; init; } = 0;
+
+            /// <summary>
+            ///     Gets a value indicating whether cover traffic is emitted when idle.
+            /// </summary>
+            [EnvironmentVariable("ADV_PRIVACY_COVER_ENABLED")]
+            [Description("emit cover traffic when idle")]
+            public bool EnableCoverTraffic { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the interval (seconds) between cover traffic messages when enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_PRIVACY_COVER_INTERVAL_SECONDS")]
+            [Description("interval (seconds) between cover traffic messages")]
+            public int CoverTrafficIntervalSeconds { get; init; } = 30;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (PaddingBucketBytes < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "PaddingBucketBytes must be zero or positive",
+                        new[] { nameof(PaddingBucketBytes) }));
+                }
+
+                if (MaxJitterMilliseconds < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "MaxJitterMilliseconds must be zero or positive",
+                        new[] { nameof(MaxJitterMilliseconds) }));
+                }
+
+                if (BatchWindowMilliseconds < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "BatchWindowMilliseconds must be zero or positive",
+                        new[] { nameof(BatchWindowMilliseconds) }));
+                }
+
+                if (CoverTrafficIntervalSeconds < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "CoverTrafficIntervalSeconds must be zero or positive",
+                        new[] { nameof(CoverTrafficIntervalSeconds) }));
+                }
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        ///     Anonymity transport settings (Direct/Tor/I2P/Relay).
+        /// </summary>
+        public class AnonymityOptions : IValidatableObject
+        {
+            private static readonly string[] AllowedModes = new[] { "Direct", "Tor", "I2P", "Relay" };
+
+            /// <summary>
+            ///     Gets the active anonymity mode (Direct, Tor, I2P, Relay).
+            /// </summary>
+            [EnvironmentVariable("ADV_ANON_MODE")]
+            [Description("anonymity mode (Direct|Tor|I2P|Relay)")]
+            public string Mode { get; init; } = "Direct";
+
+            /// <summary>
+            ///     Gets the Tor SOCKS endpoint when using Tor (host:port).
+            /// </summary>
+            [EnvironmentVariable("ADV_ANON_TOR_SOCKS")]
+            [Description("Tor SOCKS endpoint host:port")]
+            public string TorSocksEndpoint { get; init; } = "127.0.0.1:9050";
+
+            /// <summary>
+            ///     Gets a value indicating whether Tor stream isolation is enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_ANON_TOR_STREAM_ISOLATION")]
+            [Description("use stream isolation for Tor connections")]
+            public bool TorStreamIsolation { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the I2P SAM endpoint when using I2P (host:port).
+            /// </summary>
+            [EnvironmentVariable("ADV_ANON_I2P_SAM")]
+            [Description("I2P SAM endpoint host:port")]
+            public string I2pSamEndpoint { get; init; } = "127.0.0.1:7656";
+
+            /// <summary>
+            ///     Gets a value indicating whether direct fallback is allowed when anonymity endpoints are unavailable.
+            /// </summary>
+            [EnvironmentVariable("ADV_ANON_ALLOW_DIRECT_FALLBACK")]
+            [Description("allow direct connections if anonymity endpoints are unavailable")]
+            public bool AllowDirectFallback { get; init; } = true;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (!AllowedModes.Contains(Mode, StringComparer.OrdinalIgnoreCase))
+                {
+                    results.Add(new ValidationResult(
+                        $"Mode must be one of: {string.Join(", ", AllowedModes)}",
+                        new[] { nameof(Mode) }));
+                }
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        ///     Obfuscation transport preferences (evasion/anti-DPI).
+        /// </summary>
+        public class ObfuscationOptions : IValidatableObject
+        {
+            /// <summary>
+            ///     Gets the preferred obfuscated transport (e.g., WebSocket, HTTP, obfs4, Meek).
+            /// </summary>
+            [EnvironmentVariable("ADV_OBFUSCATION_PRIMARY")]
+            [Description("preferred obfuscated transport (WebSocket|HTTP|obfs4|Meek)")]
+            public string PreferredTransport { get; init; } = "QUIC";
+
+            /// <summary>
+            ///     Gets the fallback chain of transports to attempt.
+            /// </summary>
+            [EnvironmentVariable("ADV_OBFUSCATION_FALLBACKS")]
+            [Description("comma-separated fallback transports")]
+            public string[] FallbackTransports { get; init; } = new[] { "WebSocket", "HTTP" };
+
+            /// <summary>
+            ///     Gets a value indicating whether domain fronting should be attempted when supported.
+            /// </summary>
+            [EnvironmentVariable("ADV_OBFUSCATION_DOMAIN_FRONTING")]
+            [Description("enable domain fronting when supported")]
+            public bool EnableDomainFronting { get; init; } = false;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (FallbackTransports == null)
+                {
+                    results.Add(new ValidationResult(
+                        "FallbackTransports must not be null",
+                        new[] { nameof(FallbackTransports) }));
+                }
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        ///     Onion routing options for mesh circuits.
+        /// </summary>
+        public class OnionRoutingOptions : IValidatableObject
+        {
+            /// <summary>
+            ///     Gets a value indicating whether onion routing is enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_ONION_ENABLED")]
+            [Description("enable onion routing within mesh")]
+            public bool Enabled { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the desired circuit length (number of hops).
+            /// </summary>
+            [EnvironmentVariable("ADV_ONION_CIRCUIT_HOPS")]
+            [Description("desired onion circuit length (hops)")]
+            public int CircuitHops { get; init; } = 3;
+
+            /// <summary>
+            ///     Gets the circuit rotation interval in minutes.
+            /// </summary>
+            [EnvironmentVariable("ADV_ONION_ROTATION_MINUTES")]
+            [Description("rotate onion circuits after N minutes")]
+            public int RotationMinutes { get; init; } = 10;
+
+            /// <summary>
+            ///     Gets a value indicating whether relay volunteering is enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_ONION_RELAY_ENABLED")]
+            [Description("allow this node to serve as a relay")]
+            public bool EnableRelay { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the maximum relay bandwidth in kilobytes per second.
+            /// </summary>
+            [EnvironmentVariable("ADV_ONION_RELAY_MAX_KBPS")]
+            [Description("maximum relay bandwidth (KB/s)")]
+            public int RelayMaxKbps { get; init; } = 0;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (CircuitHops < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "CircuitHops must be zero or positive",
+                        new[] { nameof(CircuitHops) }));
+                }
+
+                if (RotationMinutes < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "RotationMinutes must be zero or positive",
+                        new[] { nameof(RotationMinutes) }));
+                }
+
+                if (RelayMaxKbps < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "RelayMaxKbps must be zero or positive",
+                        new[] { nameof(RelayMaxKbps) }));
+                }
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        ///     Bridge configuration (censorship resistance).
+        /// </summary>
+        public class BridgeOptions : IValidatableObject
+        {
+            /// <summary>
+            ///     Gets a value indicating whether bridge discovery is enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_BRIDGE_ENABLED")]
+            [Description("enable bridge discovery/configuration")]
+            public bool Enabled { get; init; } = false;
+
+            /// <summary>
+            ///     Gets static bridge lines (comma-separated host:port entries).
+            /// </summary>
+            [EnvironmentVariable("ADV_BRIDGE_STATIC")]
+            [Description("comma-separated static bridge lines (host:port)")]
+            public string[] StaticBridges { get; init; } = Array.Empty<string>();
+
+            /// <summary>
+            ///     Gets a value indicating whether domain fronting should be attempted for bridges.
+            /// </summary>
+            [EnvironmentVariable("ADV_BRIDGE_DOMAIN_FRONTING")]
+            [Description("attempt domain fronting for bridges")]
+            public bool EnableDomainFronting { get; init; } = false;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (StaticBridges == null)
+                {
+                    results.Add(new ValidationResult(
+                        "StaticBridges must not be null",
+                        new[] { nameof(StaticBridges) }));
+                }
+
+                return results;
+            }
+        }
+
+        /// <summary>
+        ///     Deniability options (decoy pods/volumes).
+        /// </summary>
+        public class DeniabilityOptions : IValidatableObject
+        {
+            /// <summary>
+            ///     Gets a value indicating whether deniable storage is enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_DENIABILITY_STORAGE_ENABLED")]
+            [Description("enable deniable storage")]
+            public bool EnableDeniableStorage { get; init; } = false;
+
+            /// <summary>
+            ///     Gets a value indicating whether decoy pods are enabled.
+            /// </summary>
+            [EnvironmentVariable("ADV_DENIABILITY_DECOY_PODS_ENABLED")]
+            [Description("enable decoy pod participation")]
+            public bool EnableDecoyPods { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the maximum number of decoy pods to join.
+            /// </summary>
+            [EnvironmentVariable("ADV_DENIABILITY_MAX_DECOY_PODS")]
+            [Description("maximum number of decoy pods to join")]
+            public int MaxDecoyPods { get; init; } = 3;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (MaxDecoyPods < 0)
+                {
+                    results.Add(new ValidationResult(
+                        "MaxDecoyPods must be zero or positive",
+                        new[] { nameof(MaxDecoyPods) }));
+                }
+
+                return results;
+            }
         }
 
         /// <summary>

@@ -29,7 +29,9 @@ const SearchListRow = ({ onRemove, onStop, search }) => {
         <SearchStatusIcon state={search.state} />
       </Table.Cell>
       <Table.Cell>
-        <Link to={`${match.url}/${search.id}`}>{search.searchText}</Link>
+        <Link to={`${match.url}/${search.id}?q=${encodeURIComponent(search.searchText)}`}>
+          {search.searchText}
+        </Link>
       </Table.Cell>
       <Table.Cell>{search.fileCount}</Table.Cell>
       <Table.Cell>

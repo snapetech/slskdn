@@ -114,3 +114,8 @@
 - Completed T-001 persistent room/chat tabs by adding localStorage-backed tab ordering for chat and room views; tab selection now survives refresh and follows joined conversations/rooms. Tests not run per user instruction.
 - Completed T-003 download queue position polling: transfers UI now polls queued download positions periodically and displays place-in-queue alongside status. Tests not run per user instruction.
 - Completed T-004 visual group indicators: backend now annotates search responses with user group, and search results display a grouped badge with tooltip when a user is in a non-default group. Tests not run per user instruction.
+- Completed T-005 traffic ticker: transfers page now shows a live ticker with active/queued counts, aggregate speeds, and top active transfers. Tests not run per user instruction.
+- Marked T-006 (Create Chat Rooms from UI) as blocked: repository lacks a room creation API or Soulseek client call; needs protocol research before implementing UI/backend.
+- Completed T-007 predictable search URLs: search pages accept `?q=` param to auto-create/navigate searches; detail links include query text for bookmarking and sharing. Tests not run per user instruction.
+- Completed T-1200 AdversarialOptions config model: added typed Phase 12 adversarial settings (privacy, anonymity, obfuscation, onion routing, bridges, deniability) with validation hooks in `Options` so future privacy features have structured configuration. Tests not run per user instruction.
+- Completed T-1210 BucketPadder: added IMessagePadder and MessagePadder with configurable bucket sizes and random fill bytes; registered in DI for future overlay integration. Tests not run per user instruction.

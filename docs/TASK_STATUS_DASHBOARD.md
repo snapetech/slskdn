@@ -1,8 +1,8 @@
 # slskdn Task Status Dashboard
 
-**Last Updated**: December 11, 2025 18:30 UTC (Phase 12S security updates)  
+**Last Updated**: December 11, 2025 19:30 UTC (UI/transfer polish)  
 **Branch**: experimental/brainz  
-**Total Tasks**: 397 (includes all phases + audit gaps + database poisoning protection)
+**Total Tasks**: 377 (source of truth: memory-bank/tasks.md)
 
 **Recent Completions**:
 - ✅ **Test Coverage Sprint** (Dec 10): 99/107 new tests passing (92% success rate)
@@ -14,6 +14,7 @@
 - ✅ Perceptual hashing for audio similarity
 - ✅ Pod affinity scoring system
 - ✅ Stub comment cleanup + audit consolidation
+- ✅ Persistent chat/room tabs + download queue position polling + search group badges + transfer traffic ticker
 
 ---
 
@@ -33,7 +34,7 @@ Phase 10: ███████████████████░  97% (  3
 Phase 11: ████████████████████ 100% (  22/22  tasks complete) [SecurityCore] ✅
 Phase 12: █░░░░░░░░░░░░░░░░░░░   9% (  10/116 tasks complete) [Privacy Features]
 
-Overall: ████████░░░░░░░░░░░░  60% (238/397 tasks complete)
+Overall: █████████░░░░░░░░░░░  64% (242/377 tasks complete)
 
 Test Coverage: 543/591 tests passing (92%)
 ```

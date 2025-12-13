@@ -151,6 +151,47 @@ namespace slskd.Search
         private IHubContext<SearchHub> SearchHub { get; set; }
         private slskd.Mesh.MeshSearchBridgeService MeshSearchBridge { get; }
 
+        private async Task<Dictionary<string, string>> ResolveGroupsAsync(
+            IEnumerable<Soulseek.SearchResponse> responses,
+            CancellationToken cancellationToken)
+        {
+            var groups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (Users == null)
+            {
+                return groups;
+            }
+
+            var usernames = responses
+                .Select(r => r.Username)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var tasks = usernames.Select(async username =>
+            {
+                try
+                {
+                    var group = await Users.GetOrFetchGroupAsync(username).ConfigureAwait(false);
+                    return (username, group ?? Application.DefaultGroup);
+                }
+                catch
+                {
+                    return (username, Application.DefaultGroup);
+                }
+            });
+
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+            foreach (var (username, group) in results)
+            {
+                if (!groups.ContainsKey(username))
+                {
+                    groups[username] = group ?? Application.DefaultGroup;
+                }
+            }
+
+            return groups;
+        }
+
         /// <summary>
         ///     Deletes the specified search.
         /// </summary>
@@ -401,13 +442,7 @@ namespace slskd.Search
                             }
                         }
                         
-                        var responseGroups = responses
-                            .Select(r => r.Username)
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
-                            .ToDictionary(
-                                username => username,
-                                username => Users?.GetGroup(username) ?? Application.DefaultGroup,
-                                StringComparer.OrdinalIgnoreCase);
+                        var responseGroups = await ResolveGroupsAsync(responses, cancellationTokenSource.Token).ConfigureAwait(false);
 
                         search.Responses = responses.Select(r =>
                                 Response.FromSoulseekSearchResponse(
