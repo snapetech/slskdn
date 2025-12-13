@@ -39,6 +39,7 @@ namespace slskd
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.DataProtection;
     using Microsoft.AspNetCore.Diagnostics;
+    using Microsoft.AspNetCore.Diagnostics.HealthChecks;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
     using Microsoft.EntityFrameworkCore;
@@ -70,6 +71,7 @@ namespace slskd
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
     using slskd.Integrations.Webhooks;
+    using slskd.Mesh;
     using slskd.Messaging;
     using slskd.Relay;
     using slskd.Search;
@@ -1267,7 +1269,8 @@ namespace slskd
                 });
 
             services.AddHealthChecks()
-                .AddSecurityHealthCheck();
+                .AddSecurityHealthCheck()
+                .AddMeshHealthCheck();
 
             services.AddApiVersioning(options =>
                 {
@@ -1396,6 +1399,10 @@ namespace slskd
 
                 endpoints.MapControllers();
                 endpoints.MapHealthChecks("/health");
+                endpoints.MapHealthChecks("/health/mesh", new HealthCheckOptions
+                {
+                    Predicate = check => check.Tags.Contains("mesh")
+                });
 
                 if (OptionsAtStartup.Metrics.Enabled)
                 {
