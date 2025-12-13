@@ -136,6 +136,12 @@ public static partial class MessageValidator
             return ValidationResult.Fail($"Invalid version: {message.Version} (expected {MinVersion}-{MaxVersion})");
         }
         
+        // CRITICAL: MeshPeerId is REQUIRED for identity binding
+        if (string.IsNullOrEmpty(message.MeshPeerId))
+        {
+            return ValidationResult.Fail("MeshPeerId is required");
+        }
+        
         // Username validation - CRITICAL for security
         var usernameResult = ValidateUsername(message.Username);
         if (!usernameResult.IsValid)
@@ -167,6 +173,40 @@ public static partial class MessageValidator
             if (!nonceResult.IsValid)
             {
                 return nonceResult;
+            }
+        }
+        
+        // SECURITY: If PublicKey and Signature are provided, they must be valid format
+        // (Actual cryptographic verification happens separately after fetching peer descriptor)
+        if (message.PublicKey is not null)
+        {
+            try
+            {
+                var pubKeyBytes = Convert.FromBase64String(message.PublicKey);
+                if (pubKeyBytes.Length != 32) // Ed25519 public keys are 32 bytes
+                {
+                    return ValidationResult.Fail($"PublicKey wrong length: {pubKeyBytes.Length} != 32");
+                }
+            }
+            catch
+            {
+                return ValidationResult.Fail("PublicKey is not valid base64");
+            }
+        }
+        
+        if (message.Signature is not null)
+        {
+            try
+            {
+                var sigBytes = Convert.FromBase64String(message.Signature);
+                if (sigBytes.Length != 64) // Ed25519 signatures are 64 bytes
+                {
+                    return ValidationResult.Fail($"Signature wrong length: {sigBytes.Length} != 64");
+                }
+            }
+            catch
+            {
+                return ValidationResult.Fail("Signature is not valid base64");
             }
         }
         

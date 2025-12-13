@@ -151,14 +151,15 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         // Check blocklist
         if (_blocklist.IsBlocked(endpoint.Address))
         {
-            _logger.LogDebug("Endpoint {Endpoint} is blocked", endpoint);
+            _logger.LogInformation("Skipping blocked endpoint {Endpoint}", endpoint);
             return null;
         }
         
         // Limit concurrent attempts
         if (_pendingConnections >= MaxConcurrentAttempts)
         {
-            _logger.LogDebug("Too many pending connections, skipping {Endpoint}", endpoint);
+            _logger.LogInformation("Too many pending connections ({Pending}/{Max}), skipping {Endpoint}", 
+                _pendingConnections, MaxConcurrentAttempts, endpoint);
             return null;
         }
         
@@ -166,7 +167,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         
         try
         {
-            _logger.LogDebug("Connecting to mesh peer at {Endpoint}", endpoint);
+            _logger.LogInformation("Connecting to mesh peer at {Endpoint} (pending={Pending})", endpoint, _pendingConnections);
             
             // Get our certificate
             var clientCert = _certificateManager.GetOrCreateServerCertificate();
@@ -253,7 +254,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "Handshake failed with {Endpoint}", endpoint);
+                _logger.LogWarning(ex, "Handshake failed with {Endpoint}", endpoint);
                 _rateLimiter.RecordViolation(endpoint.Address);
                 await connection.DisposeAsync();
                 Interlocked.Increment(ref _failedConnections);
@@ -262,7 +263,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to connect to {Endpoint}", endpoint);
+            _logger.LogWarning(ex, "Failed to connect to {Endpoint}", endpoint);
             Interlocked.Increment(ref _failedConnections);
             return null;
         }
