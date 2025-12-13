@@ -2,16 +2,23 @@
 
 ## Status: Ready for Testing ✅
 
-All package publishing channels have been added to `build-on-tag.yml`.
+All package publishing channels have been added to `build-on-tag.yml` for **BOTH dev and main** channels.
 
 ## What Was Added
 
-### Package Channels (All Configured)
-- ✅ **AUR** (Arch User Repository) - `slskdn-dev`
-- ✅ **COPR** (Fedora/RHEL) - `slskdn/slskdn-dev`
-- ✅ **PPA** (Ubuntu/Debian) - `ppa:keefshape/slskdn`
-- ✅ **Docker** - `ghcr.io/snapetech/slskdn:dev`
-- ✅ **Chocolatey** (Windows) - Pre-release channel
+### Dev Channel (`build-dev-*` tags)
+- ✅ **AUR** - `slskdn-dev`
+- ✅ **COPR** - `slskdn/slskdn-dev`
+- ✅ **PPA** - `ppa:keefshape/slskdn` (slskdn-dev package)
+- ✅ **Docker** - `ghcr.io/snapetech/slskdn:dev-latest`
+- ✅ **Chocolatey** - Pre-release channel
+
+### Main Channel (`build-main-*` tags)
+- ✅ **AUR** - `slskdn`
+- ✅ **COPR** - `slskdn/slskdn`
+- ✅ **PPA** - `ppa:keefshape/slskdn` (slskdn package)
+- ✅ **Docker** - `ghcr.io/snapetech/slskdn:latest`
+- ✅ **Chocolatey** - Stable release channel
 
 ### Critical Fixes from Old Workflow Patterns
 
@@ -79,6 +86,16 @@ git tag "build-dev-${VERSION}"
 git push origin "build-dev-${VERSION}"
 ```
 
+### Trigger Main Build (Stable Release)
+```bash
+# Set version (semantic versioning)
+VERSION="0.25.0"
+
+# Create and push tag
+git tag "build-main-${VERSION}"
+git push origin "build-main-${VERSION}"
+```
+
 ### What Happens
 1. **Parse** - Extracts channel (`dev`) and version
 2. **Build** - Frontend (npm) + uploads web-content artifact
@@ -109,6 +126,7 @@ git push origin "build-dev-${VERSION}"
 
 ## Installation Commands (After Publishing)
 
+### Dev Channel
 ```bash
 # Arch Linux (AUR)
 yay -S slskdn-dev
@@ -127,6 +145,27 @@ docker pull ghcr.io/snapetech/slskdn:dev-latest
 
 # Windows (Chocolatey)
 choco install slskdn --pre
+```
+
+### Main Channel (Stable)
+```bash
+# Arch Linux (AUR)
+yay -S slskdn
+
+# Fedora/RHEL (COPR)
+sudo dnf copr enable slskdn/slskdn
+sudo dnf install slskdn
+
+# Ubuntu/Debian (PPA)
+sudo add-apt-repository ppa:keefshape/slskdn
+sudo apt update
+sudo apt install slskdn
+
+# Docker
+docker pull ghcr.io/snapetech/slskdn:latest
+
+# Windows (Chocolatey)
+choco install slskdn
 ```
 
 ## Next Steps
