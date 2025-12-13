@@ -793,3 +793,108 @@ export const resetMediaCoreStats = async () => {
 
   return response.json();
 };
+
+// PodCore DHT Publishing API functions
+const podBaseUrl = baseUrl.replace('contentid', 'podcore/dht');
+
+/**
+ * Publish pod metadata to DHT.
+ */
+export const publishPod = async (pod) => {
+  const response = await fetch(`${podBaseUrl}/publish`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ pod }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update existing pod metadata in DHT.
+ */
+export const updatePod = async (pod) => {
+  const response = await fetch(`${podBaseUrl}/update`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ pod }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Unpublish pod metadata from DHT.
+ */
+export const unpublishPod = async (podId) => {
+  const response = await fetch(`${podBaseUrl}/unpublish/${encodeURIComponent(podId)}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to unpublish pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get published pod metadata from DHT.
+ */
+export const getPublishedPodMetadata = async (podId) => {
+  const response = await fetch(`${podBaseUrl}/metadata/${encodeURIComponent(podId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get pod metadata: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Refresh published pod metadata.
+ */
+export const refreshPod = async (podId) => {
+  const response = await fetch(`${podBaseUrl}/refresh/${encodeURIComponent(podId)}`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to refresh pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get pod publishing statistics.
+ */
+export const getPodPublishingStats = async () => {
+  const response = await fetch(`${podBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get publishing stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};

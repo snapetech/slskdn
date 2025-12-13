@@ -2192,11 +2192,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: ContentID-based swarm grouping with fuzzy matching for intelligent peer selection and download optimization.
 
-- [ ] **T-1331**: Add MediaCore stats/dashboard
-  - Status: Not started
+- [x] **T-1331**: Add MediaCore stats/dashboard
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Show content registry stats, descriptor cache hit rate, fuzzy match accuracy.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Comprehensive MediaCore monitoring dashboard with real-time metrics, system health, and performance analytics.
 
 #### Phase 10 Gap: PodCore Implementation (24 tasks)
 

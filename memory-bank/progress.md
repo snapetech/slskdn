@@ -33,6 +33,33 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1331: MediaCore Stats/Dashboard (Phase 9 Gap - P2)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **MediaCoreStatsService**: Comprehensive statistics aggregation and monitoring service
+  - **RESTful API Endpoints**: Complete API for all MediaCore statistics (/api/v0/mediacore/stats/*)
+  - **WebGUI Dashboard**: Interactive statistics dashboard with real-time metrics display
+  - **Performance Monitoring**: Cache hit rates, retrieval times, algorithm accuracy tracking
+  - **System Health**: Memory usage, CPU metrics, thread counts, and GC statistics
+  - **Domain Analytics**: Content distribution by domain and type with usage patterns
+  - **Algorithm Metrics**: Fuzzy matching success rates, perceptual hashing performance, IPLD traversal times
+  - **Publishing Analytics**: Publication success rates, domain distribution, error tracking
+  - **Portability Monitoring**: Export/import success rates, conflict resolution statistics
+  - **Real-Time Updates**: Live statistics updates with configurable refresh intervals
+  - **Statistics Reset**: Administrative controls for resetting all metrics counters
+  - **Extensible Framework**: Plugin architecture for adding new MediaCore component monitoring
+- **Technical Notes**:
+  - **Concurrent Statistics**: Thread-safe counters and metrics collection
+  - **Performance Optimized**: Efficient aggregation algorithms for large datasets
+  - **Memory Efficient**: Bounded statistics storage with automatic cleanup
+  - **API Scalability**: Paginated responses and filtered queries for large deployments
+  - **Visualization Ready**: Structured data format optimized for dashboard consumption
+  - **Historical Tracking**: Timestamped metrics for trend analysis and performance monitoring
+  - **Error Resilience**: Graceful handling of missing data and component failures
+  - **Configurable Metrics**: Extensible statistics framework for future MediaCore components
+  - **Real-Time Monitoring**: Live system health indicators and performance alerts
+  - **Administrative Controls**: Reset functionality for maintenance and testing scenarios
+
 ### T-1330: MediaCore with Swarm Scheduler (Phase 9 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

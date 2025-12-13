@@ -808,6 +808,9 @@ namespace slskd
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IMediaCoreStatsService, MediaCore.MediaCoreStatsService>();
 
+            // PodCore services
+            services.AddSingleton<PodCore.IPodDhtPublisher, PodCore.PodDhtPublisher>();
+
             // MultiSource MediaCore integration
             services.AddSingleton<IMediaCoreSwarmIntelligence, MediaCoreSwarmIntelligence>();
             services.AddSingleton<IMediaCoreSwarmService, MediaCoreSwarmService>();

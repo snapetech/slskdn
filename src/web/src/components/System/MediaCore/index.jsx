@@ -124,6 +124,19 @@ const MediaCore = () => {
   const [loadingPerceptualStats, setLoadingPerceptualStats] = useState(false);
   const [loadingPortabilityStats, setLoadingPortabilityStats] = useState(false);
   const [loadingPublishingStats, setLoadingPublishingStats] = useState(false);
+
+  // PodCore DHT states
+  const [podToPublish, setPodToPublish] = useState('');
+  const [publishingPod, setPublishingPod] = useState(false);
+  const [podPublishingResult, setPodPublishingResult] = useState(null);
+  const [podMetadataToRetrieve, setPodMetadataToRetrieve] = useState('');
+  const [retrievingPodMetadata, setRetrievingPodMetadata] = useState(false);
+  const [podMetadataResult, setPodMetadataResult] = useState(null);
+  const [podToUnpublish, setPodToUnpublish] = useState('');
+  const [unpublishingPod, setUnpublishingPod] = useState(false);
+  const [podUnpublishResult, setPodUnpublishResult] = useState(null);
+  const [podPublishingStats, setPodPublishingStats] = useState(null);
+  const [loadingPodStats, setLoadingPodStats] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -786,6 +799,81 @@ const MediaCore = () => {
       alert('MediaCore statistics have been reset');
     } catch (err) {
       alert(`Failed to reset stats: ${err.message}`);
+    }
+  };
+
+  // PodCore handlers
+  const handlePublishPod = async () => {
+    if (!podToPublish.trim()) {
+      alert('Please enter pod JSON data');
+      return;
+    }
+
+    try {
+      setPublishingPod(true);
+      setPodPublishingResult(null);
+      const pod = JSON.parse(podToPublish);
+      const result = await mediacore.publishPod(pod);
+      setPodPublishingResult(result);
+      setPodToPublish('');
+    } catch (err) {
+      setPodPublishingResult({ error: err.message });
+    } finally {
+      setPublishingPod(false);
+    }
+  };
+
+  const handleRetrievePodMetadata = async () => {
+    if (!podMetadataToRetrieve.trim()) {
+      alert('Please enter a pod ID');
+      return;
+    }
+
+    try {
+      setRetrievingPodMetadata(true);
+      setPodMetadataResult(null);
+      const result = await mediacore.getPublishedPodMetadata(podMetadataToRetrieve);
+      setPodMetadataResult(result);
+    } catch (err) {
+      setPodMetadataResult({ error: err.message });
+    } finally {
+      setRetrievingPodMetadata(false);
+    }
+  };
+
+  const handleUnpublishPod = async () => {
+    if (!podToUnpublish.trim()) {
+      alert('Please enter a pod ID');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to unpublish pod "${podToUnpublish}"?`)) {
+      return;
+    }
+
+    try {
+      setUnpublishingPod(true);
+      setPodUnpublishResult(null);
+      const result = await mediacore.unpublishPod(podToUnpublish);
+      setPodUnpublishResult(result);
+      setPodToUnpublish('');
+    } catch (err) {
+      setPodUnpublishResult({ error: err.message });
+    } finally {
+      setUnpublishingPod(false);
+    }
+  };
+
+  const handleLoadPodPublishingStats = async () => {
+    try {
+      setLoadingPodStats(true);
+      setPodPublishingStats(null);
+      const result = await mediacore.getPodPublishingStats();
+      setPodPublishingStats(result);
+    } catch (err) {
+      setPodPublishingStats({ error: err.message });
+    } finally {
+      setLoadingPodStats(false);
     }
   };
 
@@ -3036,6 +3124,196 @@ const MediaCore = () => {
               {contentPublishingStats?.error && (
                 <Message error style={{ marginTop: '1em' }}>
                   <p>{contentPublishingStats.error}</p>
+                </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* PodCore DHT Publishing */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="broadcast" />
+                PodCore DHT Publishing
+              </Card.Header>
+              <Card.Description>
+                Publish and manage pod metadata on the decentralized DHT for discovery
+              </Card.Description>
+            </Card.Content>
+
+            {/* Publish Pod */}
+            <Card.Content>
+              <Header size="small">Publish Pod to DHT</Header>
+              <Form>
+                <Form.TextArea
+                  label="Pod JSON"
+                  placeholder='{"id": {"value": "pod:artist:mb:daft-punk-hash"}, "displayName": "Daft Punk Fans", "visibility": "Listed", "focusType": "ContentId", "focusContentId": {"domain": "audio", "type": "artist", "id": "daft-punk-hash"}, "tags": ["electronic", "french-house"], "createdAt": "2024-01-01T00:00:00Z", "createdBy": "alice", "metadata": {"description": "A community for Daft Punk fans", "memberCount": 150}}'
+                  value={podToPublish}
+                  onChange={(e) => setPodToPublish(e.target.value)}
+                  rows={6}
+                />
+                <Button
+                  primary
+                  loading={publishingPod}
+                  disabled={publishingPod || !podToPublish.trim()}
+                  onClick={handlePublishPod}
+                >
+                  Publish Pod
+                </Button>
+              </Form>
+
+              {podPublishingResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {podPublishingResult.error ? (
+                    <Message error>
+                      <p>Failed to publish pod: {podPublishingResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Pod Published Successfully</Message.Header>
+                      <p>
+                        <strong>Pod ID:</strong> {podPublishingResult.podId?.value || podPublishingResult.podId}<br />
+                        <strong>DHT Key:</strong> {podPublishingResult.dhtKey}<br />
+                        <strong>Published:</strong> {new Date(podPublishingResult.publishedAt).toLocaleString()}<br />
+                        <strong>Expires:</strong> {new Date(podPublishingResult.expiresAt).toLocaleString()}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Retrieve Pod Metadata */}
+                  <Header size="small">Retrieve Pod Metadata</Header>
+                  <Form>
+                    <Form.Input
+                      label="Pod ID"
+                      placeholder="pod:artist:mb:daft-punk-hash"
+                      value={podMetadataToRetrieve}
+                      onChange={(e) => setPodMetadataToRetrieve(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      loading={retrievingPodMetadata}
+                      disabled={retrievingPodMetadata || !podMetadataToRetrieve.trim()}
+                      onClick={handleRetrievePodMetadata}
+                    >
+                      Retrieve Metadata
+                    </Button>
+                  </Form>
+
+                  {podMetadataResult && (
+                    <div style={{ marginTop: '1em' }}>
+                      {podMetadataResult.error ? (
+                        <Message error>
+                          <p>Failed to retrieve metadata: {podMetadataResult.error}</p>
+                        </Message>
+                      ) : podMetadataResult.found ? (
+                        <Message success>
+                          <Message.Header>Pod Metadata Retrieved</Message.Header>
+                          <p>
+                            <strong>Pod ID:</strong> {podMetadataResult.podId?.value || podMetadataResult.podId}<br />
+                            <strong>Signature Valid:</strong> {podMetadataResult.isValidSignature ? 'Yes' : 'No'}<br />
+                            <strong>Retrieved:</strong> {new Date(podMetadataResult.retrievedAt).toLocaleString()}<br />
+                            <strong>Expires:</strong> {new Date(podMetadataResult.expiresAt).toLocaleString()}<br />
+                            <strong>Display Name:</strong> {podMetadataResult.publishedPod?.displayName}<br />
+                            <strong>Members:</strong> {podMetadataResult.publishedPod?.metadata?.memberCount || 'Unknown'}
+                          </p>
+                        </Message>
+                      ) : (
+                        <Message warning>
+                          <p>Pod not found in DHT</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Unpublish Pod */}
+                  <Header size="small">Unpublish Pod from DHT</Header>
+                  <Form>
+                    <Form.Input
+                      label="Pod ID"
+                      placeholder="pod:artist:mb:daft-punk-hash"
+                      value={podToUnpublish}
+                      onChange={(e) => setPodToUnpublish(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      color="red"
+                      loading={unpublishingPod}
+                      disabled={unpublishingPod || !podToUnpublish.trim()}
+                      onClick={handleUnpublishPod}
+                    >
+                      Unpublish Pod
+                    </Button>
+                  </Form>
+
+                  {podUnpublishResult && (
+                    <div style={{ marginTop: '1em' }}>
+                      {podUnpublishResult.error ? (
+                        <Message error>
+                          <p>Failed to unpublish pod: {podUnpublishResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success>
+                          <p>Pod unpublished successfully from DHT</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+
+            {/* Pod Publishing Statistics */}
+            <Card.Content>
+              <Button.Group fluid>
+                <Button
+                  primary
+                  loading={loadingPodStats}
+                  disabled={loadingPodStats}
+                  onClick={handleLoadPodPublishingStats}
+                >
+                  Load Pod Publishing Stats
+                </Button>
+              </Button.Group>
+
+              {podPublishingStats && !podPublishingStats.error && (
+                <div style={{ marginTop: '1em' }}>
+                  <Message>
+                    <Message.Header>Pod Publishing Statistics</Message.Header>
+                    <p>
+                      <strong>Total Published:</strong> {podPublishingStats.totalPublished}<br />
+                      <strong>Active Publications:</strong> {podPublishingStats.activePublications}<br />
+                      <strong>Expired Publications:</strong> {podPublishingStats.expiredPublications}<br />
+                      <strong>Failed Publications:</strong> {podPublishingStats.failedPublications}<br />
+                      <strong>Avg Publish Time:</strong> {podPublishingStats.averagePublishTime ? `${podPublishingStats.averagePublishTime.totalMilliseconds.toFixed(0)}ms` : 'N/A'}<br />
+                      <strong>Last Operation:</strong> {podPublishingStats.lastPublishOperation ? new Date(podPublishingStats.lastPublishOperation).toLocaleString() : 'Never'}
+                    </p>
+                    {podPublishingStats.publicationsByVisibility && Object.keys(podPublishingStats.publicationsByVisibility).length > 0 && (
+                      <div style={{ marginTop: '0.5em' }}>
+                        <strong>Publications by Visibility:</strong>
+                        {Object.entries(podPublishingStats.publicationsByVisibility).map(([visibility, count]) => (
+                          <Label key={visibility} size="tiny" style={{ margin: '0.1em' }}>
+                            {visibility}: {count}
+                          </Label>
+                        ))}
+                      </div>
+                    )}
+                  </Message>
+                </div>
+              )}
+
+              {podPublishingStats?.error && (
+                <Message error style={{ marginTop: '1em' }}>
+                  <p>Failed to load pod publishing stats: {podPublishingStats.error}</p>
                 </Message>
               )}
             </Card.Content>
