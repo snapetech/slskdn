@@ -46,22 +46,18 @@ jobs:
   build:
     name: Build
     needs: parse
-    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Verify .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
-        run: dotnet --version
+          cache: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -86,7 +82,7 @@ jobs:
   publish:
     name: Publish ${{ matrix.runtime }}
     needs: [parse, build]
-    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         runtime:
@@ -102,15 +98,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Verify .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
-        run: dotnet --version
+          cache: true
 
       - name: Download Web Content
         uses: actions/download-artifact@v4
