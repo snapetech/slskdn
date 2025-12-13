@@ -120,12 +120,17 @@ jobs:
 
       - name: Build ${{ matrix.runtime }}
         run: |
+          # Convert version back to hyphen format for .NET
+          # Dots are for package managers, hyphens for NuGet
+          DOTNET_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/\.dev\./-dev-/')
+          echo "Building with version: $DOTNET_VERSION"
+          
           dotnet publish src/slskd/slskd.csproj \
             -c Release \
             -o publish-${{ matrix.runtime }} \
             --self-contained true \
             -r ${{ matrix.runtime }} \
-            /p:Version=${{ needs.parse.outputs.version }}
+            /p:Version="$DOTNET_VERSION"
 
       - name: Create Archive
         run: |
