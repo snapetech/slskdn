@@ -1,13 +1,14 @@
 name: Build on Tag
 
+# DISABLED: Manual trigger only until fully tested
 # Trigger: push tag matching build-dev-* or build-main-*
 # Example: git tag build-dev-0.24.1.dev.20251213 && git push origin build-dev-0.24.1.dev.20251213
 
 on:
-  push:
-    tags:
-      - 'build-dev-*'
-      - 'build-main-*'
+  # push:
+  #   tags:
+  #     - 'build-dev-*'
+  #     - 'build-main-*'
   workflow_dispatch:
 
 env:
@@ -127,20 +128,13 @@ jobs:
       - name: Create Archive
         run: |
           cd publish-${{ matrix.runtime }}
-          if [[ "${{ matrix.runtime }}" == win-* ]]; then
-            zip -r ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip .
-          else
-            tar czf ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.tar.gz .
-          fi
+          zip -r ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}
-          path: |
-            slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.tar.gz
-            slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip
-          if-no-files-found: ignore
+          path: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip
           retention-days: 30
 
   release-dev:
@@ -163,7 +157,6 @@ jobs:
       - name: Prepare Release Assets
         run: |
           mkdir -p release
-          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
           find artifacts -name "*.zip" -exec cp {} release/ \;
           ls -lh release/
 
@@ -230,7 +223,7 @@ jobs:
           # Download from the release we just created
           gh release download "${{ github.ref_name }}" \
             --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-linux-x64.tar.gz"
+            --pattern "slskdn-dev-linux-x64.zip"
 
       - name: Setup SSH for AUR
         env:
@@ -316,6 +309,306 @@ jobs:
           
           echo "✅ Pushed to AUR: slskdn-dev"
 
+  copr-dev:
+    name: Publish to COPR (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
+
+      - name: Setup RPM Build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip rpm
+          pip3 install copr-cli
+          mkdir -p ~/rpmbuild/{SOURCES,SPECS,SRPMS}
+
+      - name: Prepare Sources
+        run: |
+          # Copy the built zip to SOURCES
+          cp slskdn-dev-linux-x64.zip ~/rpmbuild/SOURCES/
+          
+          # Copy supporting files
+          cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
+
+      - name: Update Spec File
+        run: |
+          # Use the dev spec template
+          cp packaging/rpm/slskdn-dev.spec ~/rpmbuild/SPECS/
+          
+          # Convert version for RPM (replace ALL hyphens with dots)
+          # 0.24.1-dev-20251209-203936 → 0.24.1.dev.20251209.203936
+          RPM_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          
+          # Update version
+          sed -i "s/^Version:.*/Version:        ${RPM_VERSION}/" ~/rpmbuild/SPECS/slskdn-dev.spec
+          
+          cat ~/rpmbuild/SPECS/slskdn-dev.spec | head -30
+
+      - name: Configure COPR
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
+            echo "COPR credentials not configured. Skipping."
+            exit 0
+          fi
+          mkdir -p ~/.config
+          cat > ~/.config/copr << EOF
+          [copr-cli]
+          login = ${COPR_LOGIN}
+          username = slskdn
+          token = ${COPR_TOKEN}
+          copr_url = https://copr.fedorainfracloud.org
+          EOF
+
+      - name: Build SRPM
+        run: |
+          rpmbuild -bs ~/rpmbuild/SPECS/slskdn-dev.spec --define "_topdir $HOME/rpmbuild"
+          
+          SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
+          echo "Built SRPM: $SRPM"
+          rpm -qpl "$SRPM" | head -20
+          echo "SRPM_PATH=$SRPM" >> $GITHUB_ENV
+
+      - name: Upload to COPR
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
+            echo "Skipping COPR upload - credentials not configured"
+            exit 0
+          fi
+          
+          echo "Uploading SRPM to COPR: $SRPM_PATH"
+          # Upload to slskdn-dev project (separate from stable)
+          copr-cli build slskdn/slskdn-dev "$SRPM_PATH" --nowait
+          echo "✅ Uploaded to COPR: slskdn-dev"
+
+  ppa-dev:
+    name: Publish to PPA (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
+          unzip slskdn-dev-linux-x64.zip -d publish-linux-x64
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper dput gnupg build-essential
+
+      - name: Import GPG Key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "GPG_PRIVATE_KEY secret not set. Skipping PPA upload."
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          # Trust the key
+          KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 "^pub" | tail -1 | awk '{print $1}')
+          echo "$KEY_ID:6:" | gpg --import-ownertrust
+
+      - name: Prepare Source Structure
+        run: |
+          VERSION="${{ needs.parse.outputs.version }}"
+          
+          # Create proper directory structure for debian packaging
+          mkdir -p slskdn-dev-${VERSION}/usr/lib/slskd
+          mkdir -p slskdn-dev-${VERSION}/lib/systemd/system
+          mkdir -p slskdn-dev-${VERSION}/etc/slskd
+          mkdir -p slskdn-dev-${VERSION}/usr/lib/sysusers.d
+          
+          # Copy binary files from our build
+          cp -r publish-linux-x64/* slskdn-dev-${VERSION}/usr/lib/slskd/
+          
+          # Copy service files from packaging
+          cp packaging/aur/slskd.service slskdn-dev-${VERSION}/lib/systemd/system/
+          cp packaging/aur/slskd.yml slskdn-dev-${VERSION}/etc/slskd/
+          cp packaging/aur/slskd.sysusers slskdn-dev-${VERSION}/usr/lib/sysusers.d/slskd.conf
+
+      - name: Prepare Source Package
+        run: |
+          VERSION="${{ needs.parse.outputs.version }}"
+          # Convert version for Debian (replace ALL hyphens with dots)
+          DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')
+          
+          # Create tarball for orig source
+          tar -czvf slskdn-dev_${DEB_VERSION}.orig.tar.gz slskdn-dev-${VERSION}
+          
+          # Copy and modify debian directory for -dev package
+          cp -r packaging/debian slskdn-dev-${VERSION}/
+          
+          # Update control file for slskdn-dev package
+          cd slskdn-dev-${VERSION}
+          sed -i 's/^Source: slskdn$/Source: slskdn-dev/' debian/control
+          sed -i 's/^Package: slskdn$/Package: slskdn-dev/' debian/control
+          sed -i 's/^Conflicts: slskd$/Conflicts: slskd, slskdn/' debian/control
+          sed -i 's/^Replaces: slskd$/Replaces: slskd, slskdn/' debian/control
+          sed -i 's/^Description:.*/Description: 🔋 DEV: The batteries included, ***EXPERIMENTAL*** fork of slskd. Feature-rich, including multi-source downloads, DHT mesh sync, swarm mode \& more/' debian/control
+          
+          # Use timestamp-based PPA revision
+          PPA_REV=$(date +%Y%m%d%H%M)
+          
+          # Update changelog for slskdn-dev (use DEB_VERSION with dots)
+          cat > debian/changelog << EOF
+          slskdn-dev (${DEB_VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
+
+            * Development build from experimental/multi-source-swarm
+            * Multi-source swarm downloads
+            * DHT mesh network
+            * BitTorrent DHT rendezvous
+
+           -- slskdn <slskdn@proton.me>  $(date -R)
+          EOF
+
+      - name: Build Source Package
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then exit 0; fi
+          
+          VERSION="${{ needs.parse.outputs.version }}"
+          cd slskdn-dev-${VERSION}
+          debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
+
+      - name: Configure dput
+        run: |
+          cat > ~/.dput.cf << 'EOF'
+          [slskdn-ppa]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~keefshape/ubuntu/slskdn/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          EOF
+
+      - name: Upload to PPA
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
+            exit 0
+          fi
+          ls -la *.changes || true
+          CHANGES_FILE=$(find . -name "slskdn-dev*.changes" -type f | head -1)
+          echo "Found changes file: $CHANGES_FILE"
+          dput slskdn-ppa "$CHANGES_FILE"
+          echo "✅ Uploaded to PPA: slskdn-dev"
+
+  docker-dev:
+    name: Build and Push Docker (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Dev Image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ needs.parse.outputs.version }}
+          tags: |
+            ghcr.io/snapetech/slskdn:dev-${{ needs.parse.outputs.version }}
+            ghcr.io/snapetech/slskdn:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "✅ Published Docker images:"
+          echo "  - ghcr.io/snapetech/slskdn:dev-${{ needs.parse.outputs.version }}"
+          echo "  - ghcr.io/snapetech/slskdn:dev-latest"
+
+  chocolatey-dev:
+    name: Publish to Chocolatey (Dev/Pre)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-dev-win-x64.zip"
+
+      - name: Pack and Push
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        if: "${{ env.CHOCO_API_KEY != '' }}"
+        run: |
+          $Version = "${{ needs.parse.outputs.version }}"
+          $Url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
+          $Checksum = (Get-FileHash slskdn-dev-win-x64.zip -Algorithm SHA256).Hash
+          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          cd packaging/chocolatey
+          choco pack
+          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          Write-Host "✅ Published to Chocolatey: slskdn-dev"
+        shell: pwsh
+
   release-main:
     name: Create Main Release
     needs: [parse, publish]
@@ -336,7 +629,6 @@ jobs:
       - name: Prepare Release Assets
         run: |
           mkdir -p release
-          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
           find artifacts -name "*.zip" -exec cp {} release/ \;
           ls -lh release/
 
