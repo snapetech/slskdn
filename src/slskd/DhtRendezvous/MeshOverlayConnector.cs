@@ -72,8 +72,11 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         IEnumerable<IPEndPoint> candidates,
         CancellationToken cancellationToken = default)
     {
+        var candidateList = candidates.ToList();
+        _logger.LogInformation("[MeshConnector] ConnectToCandidatesAsync called with {Count} candidates", candidateList.Count);
+        
         var successCount = 0;
-        var shuffled = candidates.ToList();
+        var shuffled = candidateList;
         
         // SECURITY: Use cryptographic RNG for peer selection to prevent prediction attacks
         for (var i = shuffled.Count - 1; i > 0; i--)
@@ -86,28 +89,33 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         {
             if (cancellationToken.IsCancellationRequested)
             {
+                _logger.LogInformation("[MeshConnector] Cancellation requested, stopping");
                 break;
             }
             
             // Stop if we have enough neighbors
             if (_registry.Count >= MeshNeighborRegistry.MaxNeighbors)
             {
-                _logger.LogDebug("Registry at max capacity, stopping connection attempts");
+                _logger.LogInformation("[MeshConnector] Registry at max capacity ({Count}/{Max}), stopping connection attempts", 
+                    _registry.Count, MeshNeighborRegistry.MaxNeighbors);
                 break;
             }
             
             // Skip if already connected
             if (_registry.IsConnectedTo(endpoint))
             {
+                _logger.LogInformation("[MeshConnector] Already connected to {Endpoint}, skipping", endpoint);
                 continue;
             }
             
             // Skip blocked endpoints
             if (_blocklist.IsBlocked(endpoint.Address))
             {
+                _logger.LogWarning("[MeshConnector] Endpoint {Endpoint} is blocked, skipping", endpoint);
                 continue;
             }
             
+            _logger.LogInformation("[MeshConnector] Attempting connection to {Endpoint}", endpoint);
             var connection = await ConnectToEndpointAsync(endpoint, cancellationToken);
             if (connection is not null)
             {
@@ -115,6 +123,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             }
         }
         
+        _logger.LogInformation("[MeshConnector] ConnectToCandidatesAsync completed: {Success} successful", successCount);
         return successCount;
     }
     
