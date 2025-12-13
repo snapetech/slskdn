@@ -317,7 +317,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                     throw new SecurityException($"Invalid handshake signature from {hello.MeshPeerId}");
                 }
                 
-                _logger.LogDebug("✓ Verified handshake signature from {MeshPeerId}", hello.MeshPeerId);
+                System.Diagnostics.Debug.WriteLine($"✓ Verified handshake signature from {hello.MeshPeerId}");
             }
             catch (Exception ex) when (ex is not SecurityException)
             {
@@ -326,7 +326,8 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         }
         else
         {
-            _logger.LogWarning("⚠ Accepting handshake from {MeshPeerId} without signature verification", hello.MeshPeerId ?? "unknown");
+            // No signature provided - backward compatibility mode
+            System.Diagnostics.Debug.WriteLine($"⚠ Accepting handshake from {hello.MeshPeerId ?? "unknown"} without signature verification");
         }
         
         // Send ACK
@@ -499,9 +500,20 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)
     {
+        if (certificate is null)
+        {
+            return false; // No certificate provided - reject
+        }
+        
         // We accept self-signed certificates and use certificate pinning (TOFU)
         // The pin check is done at a higher level after connection is established
-        return true;
+        // TODO P0: Fetch peer's MeshPeerDescriptor from DHT and verify SPKI pin HERE
+        
+        // Log for debugging (helps detect MITM attempts)
+        var cert2 = new X509Certificate2(certificate);
+        System.Diagnostics.Debug.WriteLine($"[TOFU] Accepting cert: {cert2.Thumbprint}, SSL errors: {sslPolicyErrors}");
+        
+        return true; // SECURITY: Currently accepting all certs (TOFU mode)
     }
     
     private static bool ValidateClientCertificate(
