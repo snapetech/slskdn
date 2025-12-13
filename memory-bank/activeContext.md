@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: T-007 Predictable Search URLs - ✅ **COMPLETED**
-- **Branch**: `experimental/whatAmIThinking` (T-823 + T-001 + T-002 + T-003 + T-004 + T-005 + T-006 + T-007 implementations)
+- **Current Task**: T-1300 STUN NAT Detection - ✅ **COMPLETED**
+- **Branch**: `experimental/whatAmIThinking` (T-823 + T-001 + T-002 + T-003 + T-004 + T-005 + T-006 + T-007 + T-1300 implementations)
 - **Environment**: Local dev
-- **Last Activity**: Completed T-007 bookmarkable search URLs with query parameters
+- **Last Activity**: Completed T-1300 real STUN NAT detection replacing Unknown stub
 
 ---
 

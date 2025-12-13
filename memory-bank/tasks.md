@@ -2028,11 +2028,11 @@
 
 #### Phase 8 Gap: MeshCore Implementation (16 tasks)
 
-- [ ] **T-1300**: Implement real STUN NAT detection
-  - Status: Not started
+- [x] **T-1300**: Implement real STUN NAT detection
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Replace stub that returns Unknown. Use STUN protocol to detect NAT type (Full Cone, Restricted, Port Restricted, Symmetric).
+  - Branch: experimental/whatAmIThinking
+  - Notes: Replace stub that returns Unknown. Use STUN protocol to detect NAT type (Direct, Restricted, Symmetric). Added API endpoint, logging, and proper async integration.
 
 - [ ] **T-1301**: Implement k-bucket routing table
   - Status: Not started

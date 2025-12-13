@@ -7,6 +7,23 @@
 
 ## 2025-12-13
 
+### T-1300: STUN NAT Detection (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Modified `MeshStatsCollector.GetStatsAsync()` to actually perform NAT detection instead of returning cached Unknown
+  - Added `POST /api/v0/mesh/nat/detect` API endpoint for manual NAT detection requests
+  - Enhanced `StunNatDetector` with comprehensive debug logging for troubleshooting
+  - Confirmed existing `PeerDescriptorPublisher` already calls `DetectAsync()` for mesh publishing
+  - Updated `MeshController` and `MeshAdvancedImpl` to handle async NAT detection calls
+  - STUN implementation was already complete but never invoked - now properly integrated
+- **Technical Notes**:
+  - Uses Google's public STUN servers (stun.l.google.com:19302, stun1.l.google.com:19302)
+  - Implements RFC 5389 STUN binding requests with XOR-MAPPED-ADDRESS parsing
+  - Detects NAT types: Direct (no NAT), Restricted (port/address restricted), Symmetric (port changes)
+  - Performs multi-probe strategy: same server different ports, different servers
+  - Added proper error handling and timeout management
+  - NAT detection results cached and reused until next detection request
+
 ### T-007: Predictable Search URLs (Low Priority)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

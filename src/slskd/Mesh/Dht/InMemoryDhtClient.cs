@@ -32,6 +32,11 @@ public class InMemoryDhtClient : IDhtClient
     /// </summary>
     public int GetNodeCount() => routing.Count;
 
+    /// <summary>
+    /// Gets routing table statistics.
+    /// </summary>
+    public RoutingTableStats GetRoutingTableStats() => routing.GetStats();
+
     public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
@@ -99,9 +104,18 @@ public class InMemoryDhtClient : IDhtClient
     /// <summary>
     /// Add a known peer to the routing table (best effort).
     /// </summary>
+    public async Task AddNodeAsync(byte[] nodeId, string address)
+    {
+        await routing.TouchAsync(nodeId, address);
+    }
+
+    /// <summary>
+    /// Synchronous version for backward compatibility.
+    /// </summary>
     public void AddNode(byte[] nodeId, string address)
     {
-        routing.Touch(nodeId, address);
+        var task = AddNodeAsync(nodeId, address);
+        task.GetAwaiter().GetResult();
     }
 
     /// <summary>
