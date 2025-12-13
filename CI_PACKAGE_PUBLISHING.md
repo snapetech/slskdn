@@ -14,11 +14,11 @@ All package publishing channels have been added to `build-on-tag.yml` for **BOTH
 - ✅ **Chocolatey** - Pre-release channel
 
 ### Main Channel (`build-main-*` tags)
-- ✅ **AUR** - `slskdn`
-- ✅ **COPR** - `slskdn/slskdn`
-- ✅ **PPA** - `ppa:keefshape/slskdn` (slskdn package)
+- ✅ **AUR** - `slskdn` (source) + `slskdn-bin` (binary)
+- ✅ **COPR** - `slskdn/slskdn` (binary via SRPM)
+- ✅ **PPA** - `ppa:keefshape/slskdn` (slskdn package, source-only)
 - ✅ **Docker** - `ghcr.io/snapetech/slskdn:latest`
-- ✅ **Chocolatey** - Stable release channel
+- ✅ **Chocolatey** - Stable release channel (binary)
 
 ### Critical Fixes from Old Workflow Patterns
 
@@ -149,8 +149,11 @@ choco install slskdn --pre
 
 ### Main Channel (Stable)
 ```bash
-# Arch Linux (AUR)
+# Arch Linux (AUR - source build)
 yay -S slskdn
+
+# Arch Linux (AUR - binary)
+yay -S slskdn-bin
 
 # Fedora/RHEL (COPR)
 sudo dnf copr enable slskdn/slskdn
@@ -180,11 +183,13 @@ choco install slskdn
 
 | Feature | Dev Channel | Main Channel |
 |---------|-------------|--------------|
-| Package names | `slskdn-dev` | `slskdn` |
+| Package names | `slskdn-dev` | `slskdn`, `slskdn-bin` (AUR) |
+| AUR packages | 1 (binary only) | 2 (source + binary) |
 | Docker tags | `dev-latest`, `dev-VERSION` | `latest`, `VERSION` |
 | COPR project | `slskdn/slskdn-dev` | `slskdn/slskdn` |
 | Release type | Pre-release | Stable release |
 | Trigger | `build-dev-*` tags | `build-main-*` tags |
+| Source available | Binary only | Source + Binary (AUR) |
 
 ## Gotchas Documented
 
