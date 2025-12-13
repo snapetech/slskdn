@@ -2162,11 +2162,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented export/import with conflict resolution, merging strategies, and WebGUI tools.
 
-- [ ] **T-1326**: Implement content descriptor publishing
-  - Status: Not started
+- [x] **T-1326**: Implement content descriptor publishing
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Publish signed descriptors to DHT. Handle updates and versioning.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented signed descriptor publishing to DHT with versioning, updates, and management.
 
 - [ ] **T-1327**: Implement descriptor query/retrieval
   - Status: Not started

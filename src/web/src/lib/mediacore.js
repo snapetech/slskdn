@@ -549,3 +549,111 @@ export const getPublishingStats = async () => {
 
   return response.json();
 };
+
+/**
+ * Retrieve a content descriptor by ContentID.
+ */
+export const retrieveContentDescriptor = async (contentId, bypassCache = false) => {
+  const params = bypassCache ? new URLSearchParams({ bypassCache: 'true' }) : '';
+  const response = await fetch(`${baseUrl.replace('contentid', 'retrieve')}/descriptor/${encodeURIComponent(contentId)}${params ? '?' + params : ''}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { found: false, contentId };
+    }
+    throw new Error(`Failed to retrieve descriptor: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Retrieve multiple content descriptors in batch.
+ */
+export const retrieveContentDescriptorsBatch = async (contentIds) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'retrieve')}/batch`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contentIds }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to retrieve batch: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Query descriptors by domain and type.
+ */
+export const queryDescriptorsByDomain = async (domain, type = null, maxResults = 50) => {
+  const params = new URLSearchParams({ maxResults: maxResults.toString() });
+  if (type) params.set('type', type);
+
+  const response = await fetch(`${baseUrl.replace('contentid', 'retrieve')}/query/domain/${encodeURIComponent(domain)}?${params}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to query domain: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Verify a content descriptor's signature and freshness.
+ */
+export const verifyContentDescriptor = async (descriptor, retrievedAt = null) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'retrieve')}/verify`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ descriptor, retrievedAt }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify descriptor: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get descriptor retrieval statistics.
+ */
+export const getRetrievalStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'retrieve')}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get retrieval stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Clear the descriptor retrieval cache.
+ */
+export const clearRetrievalCache = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'retrieve')}/cache/clear`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to clear cache: ${response.statusText}`);
+  }
+
+  return response.json();
+};

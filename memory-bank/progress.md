@@ -33,6 +33,35 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1326: Content Descriptor Publishing (Phase 9 Gap - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **Advanced Publishing Service**: IContentDescriptorPublisher with versioning, batch operations, and lifecycle management
+  - **Version Control**: Timestamp-based version generation with content hash validation
+  - **Batch Publishing**: Concurrent descriptor publishing with success/failure tracking
+  - **Update Management**: Incremental descriptor updates with change tracking
+  - **TTL Management**: Configurable time-to-live with automatic expiration handling
+  - **Republishing System**: Automatic renewal of expiring publications
+  - **Statistics Dashboard**: Publishing metrics with domain breakdown and storage tracking
+  - **RESTful API**: Complete publishing endpoints with detailed operation results
+  - **WebGUI Integration**: Interactive publishing tools with real-time status updates
+  - **Signature Management**: Automatic cryptographic signing of published descriptors
+- **Technical Notes**:
+  - **Versioning Algorithm**: Timestamp + content hash for deterministic version generation
+  - **Concurrent Operations**: Semaphore-limited batch publishing for performance
+  - **Expiration Tracking**: Time-based lifecycle management with proactive renewal
+  - **Force Updates**: Optional bypass of version validation for critical updates
+  - **Publication Registry**: In-memory tracking of active publications (persistence ready)
+  - **Error Handling**: Comprehensive error reporting with partial failure support
+  - **Metrics Collection**: Real-time statistics for monitoring and optimization
+- **Publishing Capabilities**:
+  - **Single Publishing**: Individual descriptor publishing with version control
+  - **Batch Operations**: Multi-descriptor publishing with concurrency control
+  - **Update Operations**: Incremental metadata updates with change tracking
+  - **Republishing**: Automatic renewal of expiring DHT entries
+  - **Unpublishing**: Graceful removal from DHT (TTL-based expiration)
+  - **Statistics**: Comprehensive publishing metrics and health monitoring
+
 ### T-1325: Metadata Portability Layer (Phase 9 Gap - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

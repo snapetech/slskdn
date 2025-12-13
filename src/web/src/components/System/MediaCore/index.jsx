@@ -91,6 +91,23 @@ const MediaCore = () => {
   const [exportingMetadata, setExportingMetadata] = useState(false);
   const [importingMetadata, setImportingMetadata] = useState(false);
   const [analyzingConflicts, setAnalyzingConflicts] = useState(false);
+  const [retrievalResult, setRetrievalResult] = useState(null);
+  const [batchRetrievalResult, setBatchRetrievalResult] = useState(null);
+  const [queryResult, setQueryResult] = useState(null);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [retrievalStats, setRetrievalStats] = useState(null);
+  const [retrieveContentId, setRetrieveContentId] = useState('');
+  const [batchRetrieveContentIds, setBatchRetrieveContentIds] = useState('');
+  const [queryDomain, setQueryDomain] = useState('audio');
+  const [queryType, setQueryType] = useState('');
+  const [queryMaxResults, setQueryMaxResults] = useState(50);
+  const [verifyDescriptor, setVerifyDescriptor] = useState('');
+  const [bypassCache, setBypassCache] = useState(false);
+  const [retrievingDescriptor, setRetrievingDescriptor] = useState(false);
+  const [retrievingBatch, setRetrievingBatch] = useState(false);
+  const [queryingDescriptors, setQueryingDescriptors] = useState(false);
+  const [verifyingDescriptor, setVerifyingDescriptor] = useState(false);
+  const [loadingRetrievalStats, setLoadingRetrievalStats] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -530,6 +547,103 @@ const MediaCore = () => {
       setPublishingStats({ error: err.message });
     } finally {
       setLoadingStats(false);
+    }
+  };
+
+  const handleRetrieveDescriptor = async () => {
+    if (!retrieveContentId.trim()) return;
+
+    try {
+      setRetrievingDescriptor(true);
+      setRetrievalResult(null);
+      const result = await mediacore.retrieveContentDescriptor(retrieveContentId.trim(), bypassCache);
+      setRetrievalResult(result);
+    } catch (err) {
+      setRetrievalResult({ error: err.message });
+    } finally {
+      setRetrievingDescriptor(false);
+    }
+  };
+
+  const handleRetrieveBatch = async () => {
+    const contentIds = batchRetrieveContentIds.split('\n').map(id => id.trim()).filter(id => id);
+    if (!contentIds.length) return;
+
+    try {
+      setRetrievingBatch(true);
+      setBatchRetrievalResult(null);
+      const result = await mediacore.retrieveContentDescriptorsBatch(contentIds);
+      setBatchRetrievalResult(result);
+    } catch (err) {
+      setBatchRetrievalResult({ error: err.message });
+    } finally {
+      setRetrievingBatch(false);
+    }
+  };
+
+  const handleQueryDescriptors = async () => {
+    if (!queryDomain.trim()) return;
+
+    try {
+      setQueryingDescriptors(true);
+      setQueryResult(null);
+      const result = await mediacore.queryDescriptorsByDomain(
+        queryDomain.trim(),
+        queryType.trim() || null,
+        parseInt(queryMaxResults)
+      );
+      setQueryResult(result);
+    } catch (err) {
+      setQueryResult({ error: err.message });
+    } finally {
+      setQueryingDescriptors(false);
+    }
+  };
+
+  const handleVerifyDescriptor = async () => {
+    if (!verifyDescriptor.trim()) return;
+
+    try {
+      setVerifyingDescriptor(true);
+      setVerificationResult(null);
+
+      let descriptor;
+      try {
+        descriptor = JSON.parse(verifyDescriptor.trim());
+      } catch (parseErr) {
+        throw new Error('Invalid JSON format for descriptor');
+      }
+
+      const result = await mediacore.verifyContentDescriptor(descriptor);
+      setVerificationResult(result);
+    } catch (err) {
+      setVerificationResult({ error: err.message });
+    } finally {
+      setVerifyingDescriptor(false);
+    }
+  };
+
+  const handleLoadRetrievalStats = async () => {
+    try {
+      setLoadingRetrievalStats(true);
+      setRetrievalStats(null);
+      const result = await mediacore.getRetrievalStats();
+      setRetrievalStats(result);
+    } catch (err) {
+      setRetrievalStats({ error: err.message });
+    } finally {
+      setLoadingRetrievalStats(false);
+    }
+  };
+
+  const handleClearRetrievalCache = async () => {
+    try {
+      const result = await mediacore.clearRetrievalCache();
+      // Reload stats to reflect changes
+      await handleLoadRetrievalStats();
+      alert(`Cache cleared: ${result.entriesCleared} entries, ${result.bytesFreed} bytes freed`);
+    } catch (err) {
+      alert(`Failed to clear cache: ${err.message}`);
     }
   };
 
@@ -2011,6 +2125,343 @@ const MediaCore = () => {
                           ))}
                         </div>
                       )}
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Descriptor Retrieval */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="search" />
+                Retrieve Content Descriptor
+              </Card.Header>
+              <Card.Description>
+                Retrieve content descriptors from the DHT by ContentID
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>ContentID</label>
+                  <Input
+                    placeholder="content:audio:track:mb-12345"
+                    value={retrieveContentId}
+                    onChange={(e) => setRetrieveContentId(e.target.value)}
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Checkbox
+                    label="Bypass cache (force fresh retrieval)"
+                    checked={bypassCache}
+                    onChange={(e, { checked }) => setBypassCache(checked)}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={retrievingDescriptor}
+                  disabled={!retrieveContentId.trim() || retrievingDescriptor}
+                  onClick={handleRetrieveDescriptor}
+                >
+                  Retrieve Descriptor
+                </Button>
+              </Form>
+
+              {retrievalResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {retrievalResult.error ? (
+                    <Message error>
+                      <p>{retrievalResult.error}</p>
+                    </Message>
+                  ) : !retrievalResult.found ? (
+                    <Message warning>
+                      <p>Content descriptor not found for: {retrievalResult.contentId || retrieveContentId}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Descriptor Retrieved</Message.Header>
+                      <p>
+                        <strong>ContentID:</strong> {retrievalResult.descriptor?.contentId}<br />
+                        <strong>From Cache:</strong> {retrievalResult.fromCache ? 'Yes' : 'No'}<br />
+                        <strong>Retrieved:</strong> {new Date(retrievalResult.retrievedAt).toLocaleString()}<br />
+                        <strong>Duration:</strong> {retrievalResult.retrievalDuration?.totalMilliseconds.toFixed(0)}ms<br />
+                        <strong>Verified:</strong> {retrievalResult.verification?.isValid ? 'Yes' : 'No'}
+                        {retrievalResult.verification?.warnings?.length > 0 && (
+                          <span> (with warnings)</span>
+                        )}
+                      </p>
+                      <details>
+                        <summary>View Descriptor JSON</summary>
+                        <pre style={{ fontSize: '0.8em', maxHeight: '200px', overflow: 'auto' }}>
+                          {JSON.stringify(retrievalResult.descriptor, null, 2)}
+                        </pre>
+                      </details>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Batch Retrieval */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="list alternate" />
+                Batch Descriptor Retrieval
+              </Card.Header>
+              <Card.Description>
+                Retrieve multiple content descriptors simultaneously
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>ContentIDs (one per line)</label>
+                  <TextArea
+                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
+                    value={batchRetrieveContentIds}
+                    onChange={(e) => setBatchRetrieveContentIds(e.target.value)}
+                    rows={6}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={retrievingBatch}
+                  disabled={!batchRetrieveContentIds.trim() || retrievingBatch}
+                  onClick={handleRetrieveBatch}
+                >
+                  Retrieve Batch
+                </Button>
+              </Form>
+
+              {batchRetrievalResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {batchRetrievalResult.error ? (
+                    <Message error>
+                      <p>{batchRetrievalResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>Batch Retrieval Results</Message.Header>
+                      <p>
+                        <strong>Requested:</strong> {batchRetrievalResult.requested}<br />
+                        <strong>Found:</strong> {batchRetrievalResult.found}<br />
+                        <strong>Failed:</strong> {batchRetrievalResult.failed}<br />
+                        <strong>Duration:</strong> {batchRetrievalResult.totalDuration?.totalSeconds.toFixed(2)}s
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Domain Query */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="filter" />
+                Query by Domain
+              </Card.Header>
+              <Card.Description>
+                Query content descriptors by domain and optional type
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Domain</label>
+                    <Dropdown
+                      selection
+                      options={[
+                        { key: 'audio', text: 'Audio', value: 'audio' },
+                        { key: 'video', text: 'Video', value: 'video' },
+                        { key: 'image', text: 'Image', value: 'image' },
+                        { key: 'text', text: 'Text', value: 'text' },
+                        { key: 'application', text: 'Application', value: 'application' }
+                      ]}
+                      value={queryDomain}
+                      onChange={(e, { value }) => setQueryDomain(value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Type (optional)</label>
+                    <Input
+                      placeholder="track, album, movie, etc."
+                      value={queryType}
+                      onChange={(e) => setQueryType(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Max Results</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={queryMaxResults}
+                      onChange={(e) => setQueryMaxResults(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Button
+                  primary
+                  loading={queryingDescriptors}
+                  disabled={!queryDomain.trim() || queryingDescriptors}
+                  onClick={handleQueryDescriptors}
+                >
+                  Query Domain
+                </Button>
+              </Form>
+
+              {queryResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {queryResult.error ? (
+                    <Message error>
+                      <p>{queryResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message>
+                      <Message.Header>Query Results</Message.Header>
+                      <p>
+                        <strong>Domain:</strong> {queryResult.domain}
+                        {queryResult.type && <span> | <strong>Type:</strong> {queryResult.type}</span>}<br />
+                        <strong>Found:</strong> {queryResult.totalFound}<br />
+                        <strong>Query Time:</strong> {queryResult.queryDuration?.totalMilliseconds.toFixed(0)}ms<br />
+                        <strong>Has More:</strong> {queryResult.hasMoreResults ? 'Yes' : 'No'}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Descriptor Verification */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="shield" />
+                Descriptor Verification
+              </Card.Header>
+              <Card.Description>
+                Verify descriptor signature and freshness
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>Descriptor JSON</label>
+                  <TextArea
+                    placeholder="Paste descriptor JSON to verify..."
+                    value={verifyDescriptor}
+                    onChange={(e) => setVerifyDescriptor(e.target.value)}
+                    rows={8}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={verifyingDescriptor}
+                  disabled={!verifyDescriptor.trim() || verifyingDescriptor}
+                  onClick={handleVerifyDescriptor}
+                >
+                  Verify Descriptor
+                </Button>
+              </Form>
+
+              {verificationResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {verificationResult.error ? (
+                    <Message error>
+                      <p>{verificationResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success={verificationResult.isValid} warning={!verificationResult.isValid}>
+                      <Message.Header>
+                        Verification Result: {verificationResult.isValid ? 'Valid' : 'Invalid'}
+                      </Message.Header>
+                      <p>
+                        <strong>Signature Valid:</strong> {verificationResult.signatureValid ? 'Yes' : 'No'}<br />
+                        <strong>Freshness Valid:</strong> {verificationResult.freshnessValid ? 'Yes' : 'No'}<br />
+                        <strong>Age:</strong> {verificationResult.age?.totalMinutes.toFixed(1)} minutes
+                      </p>
+                      {verificationResult.warnings?.length > 0 && (
+                        <div>
+                          <strong>Warnings:</strong>
+                          <List bulleted>
+                            {verificationResult.warnings.map((warning, index) => (
+                              <List.Item key={index}>{warning}</List.Item>
+                            ))}
+                          </List>
+                        </div>
+                      )}
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Retrieval Management */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="chart line" />
+                Retrieval Management
+              </Card.Header>
+              <Card.Description>
+                Monitor retrieval performance and manage cache
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Button.Group fluid>
+                <Button
+                  loading={loadingRetrievalStats}
+                  disabled={loadingRetrievalStats}
+                  onClick={handleLoadRetrievalStats}
+                >
+                  Load Stats
+                </Button>
+                <Button
+                  onClick={handleClearRetrievalCache}
+                >
+                  Clear Cache
+                </Button>
+              </Button.Group>
+
+              {/* Retrieval Stats */}
+              {retrievalStats && (
+                <div style={{ marginTop: '1em' }}>
+                  {retrievalStats.error ? (
+                    <Message error>
+                      <p>{retrievalStats.error}</p>
+                    </Message>
+                  ) : (
+                    <Message>
+                      <Message.Header>Retrieval Statistics</Message.Header>
+                      <p>
+                        <strong>Total Retrievals:</strong> {retrievalStats.totalRetrievals}<br />
+                        <strong>Cache Hits:</strong> {retrievalStats.cacheHits}<br />
+                        <strong>Cache Misses:</strong> {retrievalStats.cacheMisses}<br />
+                        <strong>Hit Ratio:</strong> {(retrievalStats.cacheHitRatio * 100).toFixed(1)}%<br />
+                        <strong>Avg Retrieval Time:</strong> {retrievalStats.averageRetrievalTime?.totalMilliseconds.toFixed(0)}ms<br />
+                        <strong>Active Cache Entries:</strong> {retrievalStats.activeCacheEntries}<br />
+                        <strong>Cache Size:</strong> {(retrievalStats.cacheSizeBytes / 1024).toFixed(1)} KB
+                      </p>
                     </Message>
                   )}
                 </div>
