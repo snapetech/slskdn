@@ -3,6 +3,7 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using slskd.Mesh;
 using slskd.Mesh.Dht;
 using slskd.Mesh.ServiceFabric;
 using slskd.VirtualSoulfind.ShadowIndex;
@@ -24,15 +25,18 @@ public class DhtMeshService : IMeshService
     private readonly ILogger<DhtMeshService> _logger;
     private readonly KademliaRoutingTable _routingTable;
     private readonly IDhtClient _dhtClient;
+    private readonly IMeshMessageSigner _messageSigner;
 
     public DhtMeshService(
         ILogger<DhtMeshService> logger,
         KademliaRoutingTable routingTable,
-        IDhtClient dhtClient)
+        IDhtClient dhtClient,
+        IMeshMessageSigner messageSigner)
     {
         _logger = logger;
         _routingTable = routingTable;
         _dhtClient = dhtClient;
+        _messageSigner = messageSigner;
     }
 
     public string ServiceName => "dht";
@@ -242,7 +246,7 @@ public class DhtMeshService : IMeshService
     }
 
     /// <summary>
-    /// Handle STORE RPC: Cache a key-value pair locally.
+    /// Handle STORE RPC: Cache a key-value pair locally with signature verification.
     /// </summary>
     private async Task<ServiceReply> HandleStoreAsync(
         ServiceCall call,
@@ -252,19 +256,43 @@ public class DhtMeshService : IMeshService
         try
         {
             var request = JsonSerializer.Deserialize<StoreRequest>(call.Payload);
-            if (request?.Key == null || request.Value == null)
+            if (request?.Key == null || request.Value == null || request.PublicKeyBase64 == null || request.SignatureBase64 == null)
             {
                 return new ServiceReply
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid Store request: key and value required",
+                    ErrorMessage = "Invalid Store request: key, value, public key, and signature required",
                     Payload = Array.Empty<byte>()
                 };
             }
 
+            // Verify signature before storing
+            if (!VerifyStoreSignature(request))
+            {
+                _logger.LogWarning(
+                    "[DHT] Store request signature verification failed for key {KeyHex} from peer {PeerId}",
+                    Convert.ToHexString(request.Key), context.RemotePeerId);
+
+                var errorResponse = new StoreResponse
+                {
+                    Key = request.Key,
+                    Stored = false,
+                    TtlSeconds = 0,
+                    ErrorMessage = "Signature verification failed"
+                };
+
+                return new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.Unauthorized,
+                    ErrorMessage = "Store request signature verification failed",
+                    Payload = JsonSerializer.SerializeToUtf8Bytes(errorResponse)
+                };
+            }
+
             // Store the key-value pair with TTL
-            var ttlSeconds = request.TtlSeconds ?? 3600; // Default 1 hour
+            var ttlSeconds = Math.Clamp(request.TtlSeconds ?? 3600, 60, 3600 * 24); // 1m to 24h
             await _dhtClient.PutAsync(request.Key, request.Value, ttlSeconds, cancellationToken);
 
             // Update routing table with the storing peer
@@ -280,7 +308,7 @@ public class DhtMeshService : IMeshService
             var payload = JsonSerializer.SerializeToUtf8Bytes(response);
 
             _logger.LogDebug(
-                "[DHT] Stored value for key {KeyHex} with TTL {TTL}s from peer {PeerId}",
+                "[DHT] Stored signed value for key {KeyHex} with TTL {TTL}s from peer {PeerId}",
                 Convert.ToHexString(request.Key), ttlSeconds, context.RemotePeerId);
 
             return new ServiceReply
@@ -300,6 +328,34 @@ public class DhtMeshService : IMeshService
                 ErrorMessage = $"Store error: {ex.Message}",
                 Payload = Array.Empty<byte>()
             };
+        }
+    }
+
+    /// <summary>
+    /// Verify the signature on a STORE request.
+    /// </summary>
+    private bool VerifyStoreSignature(StoreRequest request)
+    {
+        try
+        {
+            // Create DhtStoreMessage from request and verify signature
+            var storeMessage = new DhtStoreMessage
+            {
+                Key = request.Key,
+                Value = request.Value,
+                RequesterId = request.RequesterId,
+                TtlSeconds = request.TtlSeconds ?? 3600,
+                PublicKeyBase64 = request.PublicKeyBase64,
+                SignatureBase64 = request.SignatureBase64,
+                TimestampUnixMs = request.TimestampUnixMs
+            };
+
+            return storeMessage.VerifySignature();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[DHT] Error verifying store signature");
+            return false;
         }
     }
 
@@ -375,7 +431,7 @@ public record FindValueResponse
 }
 
 /// <summary>
-/// Request DTO for STORE RPC.
+/// Request DTO for STORE RPC with signature verification.
 /// </summary>
 public record StoreRequest
 {
@@ -383,6 +439,9 @@ public record StoreRequest
     public required byte[] Value { get; init; }
     public required byte[] RequesterId { get; init; }
     public int? TtlSeconds { get; init; }
+    public required string PublicKeyBase64 { get; init; }
+    public required string SignatureBase64 { get; init; }
+    public long TimestampUnixMs { get; init; }
 }
 
 /// <summary>
@@ -393,6 +452,7 @@ public record StoreResponse
     public required byte[] Key { get; init; }
     public bool Stored { get; init; }
     public int TtlSeconds { get; init; }
+    public string? ErrorMessage { get; init; }
 }
 
 /// <summary>
@@ -420,3 +480,4 @@ public record DhtNodeInfo
     public required string Address { get; init; }
     public required DateTimeOffset LastSeen { get; init; }
 }
+

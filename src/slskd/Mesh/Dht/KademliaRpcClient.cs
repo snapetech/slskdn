@@ -3,9 +3,12 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using slskd.Mesh;
+using slskd.Mesh.Messages;
 using slskd.Mesh.ServiceFabric;
 using slskd.Mesh.ServiceFabric.Services;
 using slskd.VirtualSoulfind.ShadowIndex;
+using NSec.Cryptography;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -137,20 +140,20 @@ public class KademliaRpcClient
     /// Store a key-value pair on the appropriate nodes in the DHT.
     /// Implements the STORE operation by finding the k closest nodes and storing on them.
     /// </summary>
-    public async Task<bool> StoreAsync(byte[] key, byte[] value, int ttlSeconds = 3600, CancellationToken cancellationToken = default)
+    public async Task<bool> StoreAsync(DhtStoreMessage signedMessage, CancellationToken cancellationToken = default)
     {
         try
         {
             // Find the k closest nodes to the key
-            var closestNodes = await FindNodeAsync(key, cancellationToken);
+            var closestNodes = await FindNodeAsync(signedMessage.Key, cancellationToken);
             if (!closestNodes.Any())
             {
-                _logger.LogWarning("[Kademlia] No nodes found for storing key {KeyHex}", Convert.ToHexString(key));
+                _logger.LogWarning("[Kademlia] No nodes found for storing key {KeyHex}", Convert.ToHexString(signedMessage.Key));
                 return false;
             }
 
             // Store on the closest nodes (typically all k nodes)
-            var storeTasks = closestNodes.Select(node => StoreOnNodeAsync(node, key, value, ttlSeconds, cancellationToken));
+            var storeTasks = closestNodes.Select(node => StoreOnNodeAsync(node, signedMessage, cancellationToken));
             var results = await Task.WhenAll(storeTasks);
 
             var successCount = results.Count(r => r);
@@ -158,13 +161,13 @@ public class KademliaRpcClient
 
             _logger.LogDebug(
                 "[Kademlia] STORE for key {KeyHex} completed: {SuccessCount}/{TotalCount} nodes accepted",
-                Convert.ToHexString(key), successCount, closestNodes.Count);
+                Convert.ToHexString(signedMessage.Key), successCount, closestNodes.Count);
 
             return success;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[Kademlia] Error in StoreAsync for key {KeyHex}", Convert.ToHexString(key));
+            _logger.LogError(ex, "[Kademlia] Error in StoreAsync for key {KeyHex}", Convert.ToHexString(signedMessage.Key));
             return false;
         }
     }
@@ -260,16 +263,19 @@ public class KademliaRpcClient
         return null;
     }
 
-    private async Task<bool> StoreOnNodeAsync(KNode node, byte[] key, byte[] value, int ttlSeconds, CancellationToken cancellationToken)
+    private async Task<bool> StoreOnNodeAsync(KNode node, DhtStoreMessage signedMessage, CancellationToken cancellationToken)
     {
         try
         {
             var request = new StoreRequest
             {
-                Key = key,
-                Value = value,
-                RequesterId = _routingTable.GetSelfId(),
-                TtlSeconds = ttlSeconds
+                Key = signedMessage.Key,
+                Value = signedMessage.Value,
+                RequesterId = signedMessage.RequesterId,
+                TtlSeconds = signedMessage.TtlSeconds,
+                PublicKeyBase64 = signedMessage.PublicKeyBase64!,
+                SignatureBase64 = signedMessage.SignatureBase64!,
+                TimestampUnixMs = signedMessage.TimestampUnixMs
             };
 
             var call = new ServiceCall
@@ -315,6 +321,104 @@ public record FindValueResult
     public bool Found { get; init; }
     public byte[]? Value { get; init; }
     public IReadOnlyList<KNode> ClosestNodes { get; init; } = Array.Empty<KNode>();
+}
+
+/// <summary>
+/// Signed message for DHT store operations.
+/// </summary>
+public class DhtStoreMessage
+{
+    public byte[] Key { get; set; } = Array.Empty<byte>();
+    public byte[] Value { get; set; } = Array.Empty<byte>();
+    public byte[] RequesterId { get; set; } = Array.Empty<byte>();
+    public int TtlSeconds { get; set; }
+    public string? PublicKeyBase64 { get; set; }
+    public string? SignatureBase64 { get; set; }
+    public long TimestampUnixMs { get; set; }
+
+    /// <summary>
+    /// Create a signed store message.
+    /// </summary>
+    public static DhtStoreMessage CreateSigned(byte[] key, byte[] value, byte[] requesterId, int ttlSeconds, IMeshMessageSigner signer)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        var message = new DhtStoreMessage
+        {
+            Key = key,
+            Value = value,
+            RequesterId = requesterId,
+            TtlSeconds = ttlSeconds,
+            TimestampUnixMs = timestamp
+        };
+
+        // Create a temporary mesh message for signing
+        var meshMessage = new MeshAckMessage();
+
+        // Use reflection to set the required fields for signing
+        var typeProperty = meshMessage.GetType().GetProperty("Type");
+        var payloadProperty = meshMessage.GetType().GetProperty("Payload");
+        var timestampProperty = meshMessage.GetType().GetProperty("TimestampUnixMs");
+
+        typeProperty?.SetValue(meshMessage, "dht-store");
+        payloadProperty?.SetValue(meshMessage, System.Text.Json.JsonSerializer.Serialize(message));
+        timestampProperty?.SetValue(meshMessage, timestamp);
+
+        var signedMeshMessage = signer.SignMessage(meshMessage);
+
+        message.PublicKeyBase64 = signedMeshMessage.PublicKey;
+        message.SignatureBase64 = signedMeshMessage.Signature;
+
+        return message;
+    }
+
+    /// <summary>
+    /// Convert to canonical string for verification.
+    /// </summary>
+    public string ToCanonicalString()
+    {
+        return $"{Convert.ToHexString(Key)}:{Convert.ToHexString(Value)}:{Convert.ToHexString(RequesterId)}:{TtlSeconds}:{TimestampUnixMs}";
+    }
+
+    /// <summary>
+    /// Verify the signature on this message.
+    /// </summary>
+    public bool VerifySignature()
+    {
+        if (string.IsNullOrEmpty(PublicKeyBase64) || string.IsNullOrEmpty(SignatureBase64))
+            return false;
+
+        try
+        {
+            // Check timestamp is not too old (within 5 minutes)
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var age = now - TimestampUnixMs;
+            if (age < 0 || age > 5 * 60 * 1000) // 5 minutes
+                return false;
+
+            // Decode signature and public key
+            var signatureBytes = Convert.FromBase64String(SignatureBase64);
+            if (signatureBytes.Length != 64) return false;
+
+            var publicKeyBytes = Convert.FromBase64String(PublicKeyBase64);
+            if (publicKeyBytes.Length != 32) return false;
+
+            // Import public key
+            var publicKey = PublicKey.Import(SignatureAlgorithm.Ed25519, publicKeyBytes, KeyBlobFormat.RawPublicKey);
+
+            // Create signable payload (same format as MeshMessageSigner)
+            var canonicalData = ToCanonicalString();
+            var signablePayload = $"dht-store|{TimestampUnixMs}|{System.Text.Json.JsonSerializer.Serialize(this)}";
+            var payloadBytes = System.Text.Encoding.UTF8.GetBytes(signablePayload);
+
+            // Verify signature
+            return SignatureAlgorithm.Ed25519.Verify(publicKey, payloadBytes, signatureBytes);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 
 /// <summary>

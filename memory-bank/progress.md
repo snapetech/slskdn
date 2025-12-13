@@ -7,6 +7,31 @@
 
 ## 2025-12-13
 
+### T-1303: FIND_VALUE Kademlia RPC (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **STORE RPC**: Added distributed key-value caching with configurable TTL (default 1 hour)
+  - **Enhanced FIND_VALUE**: Iterative resolution with local caching of discovered values
+  - **DhtService**: High-level coordinator for DHT operations (store, find, routing)
+  - **Replication Strategy**: STORE operation replicates values to k=20 closest nodes
+  - **Automatic Caching**: Found values cached locally to improve subsequent lookups
+  - **TTL Management**: Proper time-to-live handling for cached content
+  - **MeshDhtClient Integration**: Updated to use distributed lookups when DhtService available
+  - **Backward Compatibility**: Falls back to local-only operations when distributed DHT unavailable
+- **Technical Notes**:
+  - STORE operation: Store locally first, then replicate to k closest nodes via RPC
+  - FIND_VALUE flow: Check local → Iterative node lookup → Return value or closest nodes
+  - Local caching prevents redundant network lookups for popular content
+  - TTL ensures stale data doesn't accumulate in the distributed cache
+  - Error handling: Graceful degradation when individual nodes are unreachable
+  - Performance: Parallel STORE operations to multiple nodes for fast replication
+- **DHT Architecture**:
+  - **DhtService**: Main API for DHT operations
+  - **KademliaRpcClient**: Handles network RPC communication
+  - **KademliaRoutingTable**: Maintains peer routing information
+  - **IDhtClient**: Local key-value storage (InMemoryDhtClient)
+  - **DhtMeshService**: RPC server handling incoming DHT requests
+
 ### T-1302: FIND_NODE Kademlia RPC (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

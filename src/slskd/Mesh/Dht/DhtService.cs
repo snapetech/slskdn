@@ -3,9 +3,11 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using slskd.Mesh;
 using slskd.Mesh.ServiceFabric;
 using slskd.VirtualSoulfind.ShadowIndex;
 using System;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,31 +23,37 @@ public class DhtService
     private readonly KademliaRoutingTable _routingTable;
     private readonly IDhtClient _dhtClient;
     private readonly KademliaRpcClient _rpcClient;
+    private readonly IMeshMessageSigner _messageSigner;
 
     public DhtService(
         ILogger<DhtService> logger,
         KademliaRoutingTable routingTable,
         IDhtClient dhtClient,
-        KademliaRpcClient rpcClient)
+        KademliaRpcClient rpcClient,
+        IMeshMessageSigner messageSigner)
     {
         _logger = logger;
         _routingTable = routingTable;
         _dhtClient = dhtClient;
         _rpcClient = rpcClient;
+        _messageSigner = messageSigner;
     }
 
     /// <summary>
-    /// Store a key-value pair in the DHT.
+    /// Store a key-value pair in the DHT with signature verification.
     /// </summary>
     public async Task<bool> StoreAsync(byte[] key, byte[] value, int ttlSeconds = 3600, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("[DHT] Storing key {KeyHex} with TTL {TTL}s", Convert.ToHexString(key), ttlSeconds);
+        _logger.LogDebug("[DHT] Storing signed key {KeyHex} with TTL {TTL}s", Convert.ToHexString(key), ttlSeconds);
+
+        // Create signed message for the store operation
+        var signedMessage = DhtStoreMessage.CreateSigned(key, value, _routingTable.GetSelfId(), ttlSeconds, _messageSigner);
 
         // Store locally first
         await _dhtClient.PutAsync(key, value, ttlSeconds, cancellationToken);
 
-        // Then store on k closest nodes
-        return await _rpcClient.StoreAsync(key, value, ttlSeconds, cancellationToken);
+        // Then store on k closest nodes with signature verification
+        return await _rpcClient.StoreAsync(signedMessage, cancellationToken);
     }
 
     /// <summary>
@@ -122,3 +130,4 @@ public record DhtLookupResult
     public byte[]? Value { get; init; }
     public IReadOnlyList<KNode> ClosestNodes { get; init; } = Array.Empty<KNode>();
 }
+
