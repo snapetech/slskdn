@@ -163,7 +163,7 @@ public class DhtRendezvousController : ControllerBase
             Server = new ServerStatsResponse
             {
                 IsListening = serverStats.IsListening,
-                ListenPort = serverStats.ListenPort,
+                ListenPort = serverStats.ListenPort ?? 0,
                 ActiveConnections = serverStats.ActiveConnections,
                 TotalConnectionsAccepted = serverStats.TotalConnectionsAccepted,
                 TotalConnectionsRejected = serverStats.TotalConnectionsRejected,
