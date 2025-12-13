@@ -1,10 +1,9 @@
 import { activeRoomKey } from '../../config';
 import * as rooms from '../../lib/rooms';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
-import RoomMenu from './RoomMenu';
-import RoomUserList from './RoomUserList';
-import React, { Component, createRef } from 'react';
-import { withRouter } from 'react-router-dom';
+import RoomSession from './RoomSession';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -14,429 +13,297 @@ import {
   Input,
   List,
   Loader,
+  Menu,
   Portal,
   Ref,
   Segment,
+  Tab,
 } from 'semantic-ui-react';
 
-const initialState = {
-  active: '',
-  availableRooms: [],
-  contextMenu: {
-    message: null,
-    open: false,
-    x: 0,
-    y: 0,
-  },
-  intervals: {
-    messages: undefined,
-    rooms: undefined,
-  },
-  joined: [],
-  loading: false,
-  room: {
-    messages: [],
-    users: [],
-  },
-  roomSearchLoading: false,
+let tabCounter = 0;
+
+// Load tabs from localStorage
+const loadTabsFromStorage = () => {
+  try {
+    const saved = localStorage.getItem('slskd-room-tabs');
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Restore tabCounter to avoid key collisions
+      tabCounter = parsed.tabCounter || 0;
+      return parsed.tabs || [];
+    }
+  } catch {
+    // ignore
+  }
+
+  return [];
 };
 
-class Rooms extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = initialState;
-  }
-
-  componentDidMount() {
-    this.setState(
-      {
-        active: sessionStorage.getItem(activeRoomKey) || '',
-        intervals: {
-          messages: window.setInterval(this.fetchActiveRoom, 1_000),
-          rooms: window.setInterval(this.fetchJoinedRooms, 500),
-        },
-      },
-      async () => {
-        await this.fetchJoinedRooms();
-        await this.fetchAvailableRooms();
-        this.selectRoom(this.state.active || this.getFirstRoom());
-        document.addEventListener('click', this.handleCloseContextMenu);
-      },
+// Save tabs to localStorage
+const saveTabsToStorage = (tabsToSave) => {
+  try {
+    localStorage.setItem(
+      'slskd-room-tabs',
+      JSON.stringify({ tabCounter, tabs: tabsToSave }),
     );
+  } catch {
+    // ignore
   }
+};
 
-  componentWillUnmount() {
-    const { messages: messagesInterval, rooms: roomsInterval } =
-      this.state.intervals;
+const Rooms = () => {
+  const history = useHistory();
+  const [tabs, setTabs] = useState(() => loadTabsFromStorage());
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [joinedRooms, setJoinedRooms] = useState([]);
+  const [roomSearchLoading, setRoomSearchLoading] = useState(false);
+  const closeTabRef = useRef(null);
+  const updateTabRef = useRef(null);
 
-    clearInterval(roomsInterval);
-    clearInterval(messagesInterval);
+  const closeTab = useCallback((tabKey) => {
+    setTabs((previous) => {
+      const newTabs = previous.filter((t) => t.key !== tabKey);
+      setActiveIndex((currentIndex) =>
+        currentIndex >= newTabs.length
+          ? Math.max(0, newTabs.length - 1)
+          : currentIndex,
+      );
+      return newTabs;
+    });
+  }, []);
 
-    document.removeEventListener('click', this.handleCloseContextMenu);
+  const updateTabLabel = useCallback((tabKey, newRoomName) => {
+    setTabs((previous) =>
+      previous.map((t) =>
+        t.key === tabKey
+          ? { ...t, label: newRoomName, roomName: newRoomName }
+          : t,
+      ),
+    );
+  }, []);
 
-    this.setState({ intervals: initialState.intervals });
-  }
+  closeTabRef.current = closeTab;
+  updateTabRef.current = updateTabLabel;
 
-  fetchAvailableRooms = async () => {
-    this.setState({ roomSearchLoading: true });
+  const createTab = useCallback((roomName = '') => {
+    tabCounter += 1;
+    const tabKey = `room-tab-${tabCounter}`;
+    return {
+      key: tabKey,
+      label: roomName || 'New Room Tab',
+      roomName,
+    };
+  }, []);
+
+  // Create initial tab on mount
+  useEffect(() => {
+    if (tabs.length === 0) {
+      setTabs([createTab()]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-create tab if all closed, and reset counter to keep numbers reasonable
+  useEffect(() => {
+    if (tabs.length === 0) {
+      tabCounter = 0; // Reset counter when starting fresh
+      setTabs([createTab()]);
+    }
+  }, [tabs.length, createTab]);
+
+  // Save tabs to localStorage whenever they change
+  useEffect(() => {
+    if (tabs.length > 0) {
+      saveTabsToStorage(tabs);
+    }
+  }, [tabs]);
+
+  // Fetch joined rooms on mount
+  useEffect(() => {
+    const fetchJoinedRooms = async () => {
+      try {
+        const joined = await rooms.getJoined();
+        setJoinedRooms(joined || []);
+      } catch (error) {
+        console.error('Failed to fetch joined rooms:', error);
+      }
+    };
+
+    fetchJoinedRooms();
+  }, []);
+
+  const fetchAvailableRooms = async () => {
+    setRoomSearchLoading(true);
     try {
       const available = await rooms.getAvailable();
-      this.setState({ availableRooms: available || [] });
+      setAvailableRooms(available || []);
     } catch {
-      this.setState({ availableRooms: [] });
+      setAvailableRooms([]);
     } finally {
-      this.setState({ roomSearchLoading: false });
+      setRoomSearchLoading(false);
     }
   };
 
-  listRef = createRef();
+  const joinRoom = async (roomName) => {
+    try {
+      await rooms.join({ roomName });
 
-  messageRef = undefined;
+      // Refresh joined rooms
+      const joined = await rooms.getJoined();
+      setJoinedRooms(joined || []);
 
-  getFirstRoom = () => {
-    return this.state.joined.length > 0 ? this.state.joined[0] : '';
-  };
+      // Check if we already have a tab for this room
+      const existingTabIndex = tabs.findIndex((t) => t.roomName === roomName);
 
-  fetchJoinedRooms = async () => {
-    const joined = await rooms.getJoined();
-    this.setState(
-      {
-        joined,
-      },
-      () => {
-        if (!this.state.joined.includes(this.state.active)) {
-          this.selectRoom(this.getFirstRoom());
-        }
-      },
-    );
-  };
-
-  fetchActiveRoom = async () => {
-    const { active } = this.state;
-
-    if (active.length === 0) return;
-
-    const messages = await rooms.getMessages({ roomName: active });
-    const users = await rooms.getUsers({ roomName: active });
-
-    this.setState({
-      room: {
-        messages,
-        users,
-      },
-    });
-  };
-
-  selectRoom = async (roomName) => {
-    this.setState(
-      {
-        active: roomName,
-        loading: true,
-        room: initialState.room,
-      },
-      async () => {
-        const { active } = this.state;
-
-        sessionStorage.setItem(activeRoomKey, active);
-
-        await this.fetchActiveRoom();
-        this.setState({ loading: false }, () => {
-          try {
-            this.listRef.current.lastChild.scrollIntoView();
-          } catch {
-            // no-op
-          }
+      if (existingTabIndex === -1) {
+        // Create new tab for this room
+        setTabs((previous) => {
+          const newTabs = [...previous, createTab(roomName)];
+          setActiveIndex(newTabs.length - 1);
+          return newTabs;
         });
-      },
-    );
-  };
-
-  joinRoom = async (roomName) => {
-    await rooms.join({ roomName });
-    await this.fetchJoinedRooms();
-    this.selectRoom(roomName);
-  };
-
-  leaveRoom = async (roomName) => {
-    await rooms.leave({ roomName });
-    await this.fetchJoinedRooms();
-    this.selectRoom(this.getFirstRoom());
-  };
-
-  validInput = () =>
-    (this.state.active || '').length > 0 &&
-    (
-      (this.messageRef &&
-        this.messageRef.current &&
-        this.messageRef.current.value) ||
-      ''
-    ).length > 0;
-
-  focusInput = () => {
-    this.messageRef.current.focus();
-  };
-
-  formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp);
-    const dtfUS = new Intl.DateTimeFormat('en', {
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      month: 'numeric',
-    });
-
-    return dtfUS.format(date);
-  };
-
-  sendMessage = async () => {
-    const { active } = this.state;
-    const message = this.messageRef.current.value;
-
-    if (!this.validInput()) {
-      return;
+      } else {
+        // Switch to existing tab
+        setActiveIndex(existingTabIndex);
+      }
+    } catch (error) {
+      console.error('Failed to join room:', error);
     }
-
-    await rooms.sendMessage({ message, roomName: active });
-    this.messageRef.current.value = '';
   };
 
-  handleContextMenu = (clickEvent, message) => {
-    clickEvent.preventDefault();
-    this.setState({
-      contextMenu: {
-        message,
-        open: true,
-        x: clickEvent.pageX,
-        y: clickEvent.pageY,
-      },
+  const leaveRoom = async (roomName) => {
+    try {
+      await rooms.leave({ roomName });
+
+      // Refresh joined rooms
+      const joined = await rooms.getJoined();
+      setJoinedRooms(joined || []);
+
+      // Close the tab for this room
+      const tabToClose = tabs.find((t) => t.roomName === roomName);
+      if (tabToClose) {
+        closeTabRef.current?.(tabToClose.key);
+      }
+    } catch (error) {
+      console.error('Failed to leave room:', error);
+    }
+  };
+
+  const handleAddTab = () => {
+    setTabs((previous) => {
+      const newTabs = [...previous, createTab()];
+      setActiveIndex(newTabs.length - 1);
+      return newTabs;
     });
   };
 
-  handleCloseContextMenu = () => {
-    this.setState((previousState) => ({
-      contextMenu: {
-        ...previousState.contextMenu,
-        open: false,
-      },
-    }));
-  };
+  const handleUserProfile = useCallback((username) => {
+    history.push('/users', { user: username });
+  }, [history]);
 
-  handleReply = () => {
-    this.messageRef.current.value = `[${this.state.contextMenu.message.username}] ${this.state.contextMenu.message.message} --> `;
-    this.focusInput();
-  };
+  const handleBrowseShares = useCallback((username) => {
+    history.push('/browse', { user: username });
+  }, [history]);
 
-  handleUserProfile = () => {
-    this.props.history.push('/users', {
-      user: this.state.contextMenu.message.username,
-    });
-  };
+  const roomOptions = availableRooms.map((r) => ({
+    description: r.isPrivate ? 'Private' : '',
+    key: r.name,
+    text: `${r.name} (${r.userCount} users)`,
+    value: r.name,
+  }));
 
-  handleBrowseShares = () => {
-    this.props.history.push('/browse', {
-      user: this.state.contextMenu.message.username,
-    });
-  };
-
-  renderContextMenu() {
-    const { contextMenu } = this.state;
-    return (
-      <Portal open={contextMenu.open}>
-        <div
-          className="ui vertical buttons popup-menu"
-          style={{
-            left: contextMenu.x,
-            maxHeight: `calc(100vh - ${contextMenu.y}px)`,
-            top: contextMenu.y,
-          }}
-        >
-          <Button
-            className="ui compact button popup-option"
-            onClick={this.handleReply}
-          >
-            Reply
-          </Button>
-          <Button
-            className="ui compact button popup-option"
-            onClick={this.handleUserProfile}
-          >
-            User Profile
-          </Button>
-          <Button
-            className="ui compact button popup-option"
-            onClick={this.handleBrowseShares}
-          >
-            Browse Shares
-          </Button>
-        </div>
-      </Portal>
-    );
-  }
-
-  render() {
-    const {
-      active = [],
-      availableRooms = [],
-      joined = [],
-      loading,
-      room,
-      roomSearchLoading,
-    } = this.state;
-
-    const roomOptions = availableRooms.map((r) => ({
-      description: r.isPrivate ? 'Private' : '',
-      key: r.name,
-      text: `${r.name} (${r.userCount} users)`,
-      value: r.name,
-    }));
-
-    return (
-      <div className="rooms">
-        <Segment
-          className="rooms-segment"
-          raised
-        >
-          <div className="rooms-segment-icon">
-            <Icon
-              name="comments"
-              size="big"
-            />
-          </div>
-          <Dropdown
-            className="rooms-input"
-            clearable
-            fluid
-            loading={roomSearchLoading}
-            onChange={(_, { value }) => {
-              if (value) {
-                this.joinRoom(value);
-              }
+  const panes = tabs.map((tab) => ({
+    menuItem: (
+      <Menu.Item key={tab.key}>
+        <Icon name={tab.roomName ? 'comments' : 'search'} />
+        {tab.label}
+        {tabs.length > 1 && (
+          <Icon
+            name="close"
+            onClick={(event) => {
+              event.stopPropagation();
+              closeTabRef.current?.(tab.key);
             }}
-            onOpen={() => this.fetchAvailableRooms()}
-            options={roomOptions}
-            placeholder="Search rooms..."
-            search
-            selection
-          />
-        </Segment>
-        {joined.length > 0 && (
-          <RoomMenu
-            active={active}
-            joined={joined}
-            onRoomChange={(name) => this.selectRoom(name)}
+            style={{ marginLeft: '8px', opacity: 0.7 }}
           />
         )}
-        {active?.length === 0 ? (
-          <PlaceholderSegment
-            caption="No rooms to display"
-            icon="comments"
-          />
-        ) : (
-          <Card
-            className="room-active-card"
-            raised
-          >
-            <Card.Content onClick={() => this.focusInput()}>
-              <Card.Header>
-                <Icon
-                  color="green"
-                  name="circle"
-                />
-                {active}
-                <Icon
-                  className="close-button"
-                  color="red"
-                  link
-                  name="close"
-                  onClick={() => this.leaveRoom(active)}
-                />
-              </Card.Header>
-              <div className="room">
-                {loading ? (
-                  <Dimmer
-                    active
-                    inverted
-                  >
-                    <Loader inverted />
-                  </Dimmer>
-                ) : (
-                  <>
-                    <Segment.Group>
-                      <Segment className="room-history">
-                        <Ref innerRef={this.listRef}>
-                          <List>
-                            {room.messages.map((message) => (
-                              <div
-                                key={`${message.timestamp}+${message.message}`}
-                                onContextMenu={(clickEvent) =>
-                                  this.handleContextMenu(clickEvent, message)
-                                }
-                              >
-                                <List.Content
-                                  className={`room-message ${message.self ? 'room-message-self' : ''}`}
-                                >
-                                  <span className="room-message-time">
-                                    {this.formatTimestamp(message.timestamp)}
-                                  </span>
-                                  <span className="room-message-name">
-                                    {message.username}:{' '}
-                                  </span>
-                                  <span className="room-message-message">
-                                    {message.message}
-                                  </span>
-                                </List.Content>
-                              </div>
-                            ))}
-                            <List.Content id="room-history-scroll-anchor" />
-                          </List>
-                        </Ref>
-                      </Segment>
-                      <Segment className="room-input">
-                        <Input
-                          action={{
-                            className: 'room-message-button',
-                            disabled: !this.validInput(),
-                            icon: (
-                              <Icon
-                                color="green"
-                                name="send"
-                              />
-                            ),
-                            onClick: this.sendMessage,
-                          }}
-                          fluid
-                          input={
-                            <input
-                              autoComplete="off"
-                              data-lpignore="true"
-                              id="room-message-input"
-                              type="text"
-                            />
-                          }
-                          onKeyUp={(event) =>
-                            event.key === 'Enter' ? this.sendMessage() : ''
-                          }
-                          ref={(input) =>
-                            (this.messageRef = input && input.inputRef)
-                          }
-                          transparent
-                        />
-                      </Segment>
-                    </Segment.Group>
-                    <Segment className="room-users">
-                      <RoomUserList users={room.users} />
-                    </Segment>
-                  </>
-                )}
-              </div>
-            </Card.Content>
-          </Card>
-        )}
-        {this.renderContextMenu()}
-      </div>
-    );
-  }
-}
+      </Menu.Item>
+    ),
+    render: () => (
+      <Tab.Pane
+        attached={false}
+        key={tab.key}
+        style={{ border: 'none', boxShadow: 'none' }}
+      >
+        <RoomSession
+          key={tab.key}
+          roomName={tab.roomName}
+          onLeaveRoom={leaveRoom}
+          onUserProfile={handleUserProfile}
+          onBrowseShares={handleBrowseShares}
+        />
+      </Tab.Pane>
+    ),
+  }));
 
-export default withRouter(Rooms);
+  return (
+    <div className="rooms">
+      <Segment
+        className="rooms-segment"
+        raised
+      >
+        <div className="rooms-segment-icon">
+          <Icon
+            name="comments"
+            size="big"
+          />
+        </div>
+        <Dropdown
+          className="rooms-input"
+          clearable
+          fluid
+          loading={roomSearchLoading}
+          onChange={(_, { value }) => {
+            if (value) {
+              joinRoom(value);
+            }
+          }}
+          onOpen={() => fetchAvailableRooms()}
+          options={roomOptions}
+          placeholder="Search rooms..."
+          search
+          selection
+        />
+      </Segment>
+      <Tab
+        activeIndex={activeIndex}
+        menu={{
+          attached: false,
+          inverted: true,
+          secondary: true,
+          tabular: false,
+        }}
+        onTabChange={(event, { activeIndex: newIndex }) =>
+          setActiveIndex(newIndex)
+        }
+        panes={[
+          ...panes,
+          {
+            menuItem: (
+              <Menu.Item
+                key="add-tab"
+                onClick={handleAddTab}
+              >
+                <Icon name="plus" />
+              </Menu.Item>
+            ),
+            render: () => null,
+          },
+        ]}
+      />
+    </div>
+  );
+};
+
+export default Rooms;
