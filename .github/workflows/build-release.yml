@@ -1,0 +1,369 @@
+name: Tag-Based Build
+
+# ONLY triggers on explicit build-* tags
+on:
+  push:
+    tags:
+      - 'build-*'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Release channel (dev or main)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - main
+      version:
+        description: 'Version (e.g., 0.24.1.dev.20251213 or 0.24.2)'
+        required: true
+        type: string
+      targets:
+        description: 'Build targets'
+        required: true
+        type: choice
+        options:
+          - binaries
+          - aur
+          - all
+
+env:
+  DOTNET_VERSION: '8'
+  NODE_VERSION: '20'
+
+jobs:
+  parse:
+    name: Parse Build Tag
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.parse.outputs.channel }}
+      version: ${{ steps.parse.outputs.version }}
+      targets: ${{ steps.parse.outputs.targets }}
+    steps:
+      - name: Parse tag or manual inputs
+        id: parse
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            CHANNEL="${{ inputs.channel }}"
+            VERSION="${{ inputs.version }}"
+            TARGETS="${{ inputs.targets }}"
+          else
+            TAG="${{ github.ref_name }}"
+            echo "🏷️ Tag: $TAG"
+            
+            # Format: build-<channel>-<version>-<targets>
+            # Example: build-dev-0.24.1.dev.20251213-aur
+            if [[ ! "$TAG" =~ ^build-([^-]+)-(.+)-([^-]+)$ ]]; then
+              echo "::error::Invalid tag format"
+              echo "Expected: build-dev-0.24.1.dev.20251213-aur"
+              exit 1
+            fi
+            
+            CHANNEL="${BASH_REMATCH[1]}"
+            VERSION="${BASH_REMATCH[2]}"
+            TARGETS="${BASH_REMATCH[3]}"
+          fi
+          
+          # Validate channel
+          if [[ "$CHANNEL" != "main" && "$CHANNEL" != "dev" ]]; then
+            echo "::error::Channel must be 'main' or 'dev', got: $CHANNEL"
+            exit 1
+          fi
+          
+          # Validate targets
+          if [[ ! "$TARGETS" =~ ^(binaries|aur|all)$ ]]; then
+            echo "::error::Targets must be 'binaries', 'aur', or 'all', got: $TARGETS"
+            exit 1
+          fi
+          
+          echo "✅ Parsed:"
+          echo "   Channel: $CHANNEL"
+          echo "   Version: $VERSION"
+          echo "   Targets: $TARGETS"
+          
+          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "targets=$TARGETS" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build Binaries
+    needs: parse
+    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    outputs:
+      short_sha: ${{ steps.info.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: dotnet --version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
+
+      - name: Set build info
+        id: info
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "📦 Building ${{ needs.parse.outputs.version }} ($SHORT_SHA)"
+
+      - name: Build Frontend
+        working-directory: src/web
+        run: |
+          npm ci
+          DISABLE_ESLINT_PLUGIN=true npm run build
+
+      - name: Build Backend (Linux x64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-linux-x64 \
+            --self-contained true \
+            -r linux-x64 \
+            /p:Version=${{ needs.parse.outputs.version }}
+
+      - name: Build Backend (Windows x64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-win-x64 \
+            --self-contained true \
+            -r win-x64 \
+            /p:Version=${{ needs.parse.outputs.version }}
+
+      - name: Build Backend (macOS x64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-osx-x64 \
+            --self-contained true \
+            -r osx-x64 \
+            /p:Version=${{ needs.parse.outputs.version }}
+
+      - name: Build Backend (macOS ARM64)
+        run: |
+          dotnet publish src/slskd/slskd.csproj \
+            -c Release \
+            -o publish-osx-arm64 \
+            --self-contained true \
+            -r osx-arm64 \
+            /p:Version=${{ needs.parse.outputs.version }}
+
+      - name: Copy Web Assets
+        run: |
+          cp -r src/web/build/* publish-linux-x64/wwwroot/
+          cp -r src/web/build/* publish-win-x64/wwwroot/
+          cp -r src/web/build/* publish-osx-x64/wwwroot/
+          cp -r src/web/build/* publish-osx-arm64/wwwroot/
+
+      - name: Create Archives
+        run: |
+          cd publish-linux-x64 && zip -r ../slskdn-${{ needs.parse.outputs.channel }}-linux-x64.zip . && cd ..
+          cd publish-win-x64 && zip -r ../slskdn-${{ needs.parse.outputs.channel }}-win-x64.zip . && cd ..
+          cd publish-osx-x64 && zip -r ../slskdn-${{ needs.parse.outputs.channel }}-osx-x64.zip . && cd ..
+          cd publish-osx-arm64 && zip -r ../slskdn-${{ needs.parse.outputs.channel }}-osx-arm64.zip . && cd ..
+          ls -lh slskdn-${{ needs.parse.outputs.channel }}-*.zip
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: slskdn-${{ needs.parse.outputs.channel }}-all-platforms
+          path: slskdn-${{ needs.parse.outputs.channel }}-*.zip
+          retention-days: 30
+
+  release:
+    name: Create/Update Release
+    needs: [parse, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: slskdn-${{ needs.parse.outputs.channel }}-all-platforms
+
+      - name: Create or Update Dev Release
+        if: needs.parse.outputs.channel == 'dev'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev
+          name: "🧪 Development Build"
+          body: |
+            ## Development Build ${{ needs.parse.outputs.version }}
+            
+            **Branch:** experimental/multi-source-swarm
+            **Commit:** ${{ needs.build.outputs.short_sha }}
+            **Built:** ${{ github.event.head_commit.timestamp }}
+            
+            ### ⚠️ Experimental Features
+            - 🔒 **Enhanced Security**: Ed25519 identity keys, TLS certificate pinning, signed descriptors
+            - 🛡️ **Anti-Rollback**: Descriptor sequence tracking, replay protection
+            - 📊 **Rate Limiting**: IP and PeerId-based DoS protection
+            - 🔀 **Multi-source swarm downloads**
+            - 🌐 **DHT mesh network** with content verification
+            
+            ### Downloads
+            - **Linux x64**: `slskdn-dev-linux-x64.zip`
+            - **Windows x64**: `slskdn-dev-win-x64.zip`
+            - **macOS x64** (Intel): `slskdn-dev-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdn-dev-osx-arm64.zip`
+            
+            ### Install (Package Managers)
+            ```bash
+            # Arch Linux (AUR)
+            yay -S slskdn-dev
+            
+            # Fedora/RHEL (COPR) - coming soon
+            sudo dnf copr enable slskdn/slskdn-dev
+            sudo dnf install slskdn-dev
+            ```
+          prerelease: true
+          files: slskdn-${{ needs.parse.outputs.channel }}-*.zip
+
+      - name: Create Main Release
+        if: needs.parse.outputs.channel == 'main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.parse.outputs.version }}
+          name: "slskdN v${{ needs.parse.outputs.version }}"
+          body: |
+            ## slskdN v${{ needs.parse.outputs.version }}
+            
+            **Commit:** ${{ needs.build.outputs.short_sha }}
+            
+            ### Downloads
+            - **Linux x64**: `slskdn-main-linux-x64.zip`
+            - **Windows x64**: `slskdn-main-win-x64.zip`
+            - **macOS x64** (Intel): `slskdn-main-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdn-main-osx-arm64.zip`
+          prerelease: false
+          files: slskdn-${{ needs.parse.outputs.channel }}-*.zip
+
+  aur:
+    name: Publish to AUR
+    needs: [parse, build, release]
+    if: needs.parse.outputs.targets == 'aur' || needs.parse.outputs.targets == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download from the release we just created/updated
+          RELEASE_TAG="${{ needs.parse.outputs.channel == 'dev' && 'dev' || needs.parse.outputs.version }}"
+          gh release download "$RELEASE_TAG" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-${{ needs.parse.outputs.channel }}-linux-x64.zip"
+
+      - name: Setup SSH for AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ AUR_SSH_KEY not configured, skipping AUR publish"
+            exit 0
+          fi
+          
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          
+          cat >> ~/.ssh/config << EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+          EOF
+          
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+      - name: Clone AUR Package
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          PKG_NAME="slskdn${{ needs.parse.outputs.channel == 'dev' && '-dev' || '' }}"
+          git clone ssh://aur@aur.archlinux.org/${PKG_NAME}.git aur-pkg || {
+            mkdir -p aur-pkg
+            cd aur-pkg
+            git init
+            git remote add origin ssh://aur@aur.archlinux.org/${PKG_NAME}.git
+          }
+
+      - name: Update PKGBUILD
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          cd aur-pkg
+          
+          # Copy the appropriate PKGBUILD template
+          if [ "${{ needs.parse.outputs.channel }}" == "dev" ]; then
+            cp ../packaging/aur/PKGBUILD-dev PKGBUILD
+          else
+            cp ../packaging/aur/PKGBUILD PKGBUILD
+          fi
+          cp ../packaging/aur/slskd.install slskd.install
+          
+          # Convert version for Arch (replace ALL hyphens with dots)
+          ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          
+          # Update version and commit (keep sha256sums=('SKIP' ...) for dev builds)
+          sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          sed -i "s/^_commit=.*/_commit=${{ needs.build.outputs.short_sha }}/" PKGBUILD
+          
+          # Generate .SRCINFO
+          docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
+            pacman -Sy --noconfirm pacman-contrib
+            useradd -m builder
+            chown -R builder:builder /pkg
+            su builder -c 'makepkg --printsrcinfo' > .SRCINFO
+          "
+          
+          sudo chown -R $(id -u):$(id -g) .
+          
+          echo "📝 Updated PKGBUILD:"
+          cat PKGBUILD | head -30
+
+      - name: Push to AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ Skipping AUR push - credentials not configured"
+            exit 0
+          fi
+          
+          cd aur-pkg
+          git config user.name "slskdn CI"
+          git config user.email "slskdn@proton.me"
+          git add PKGBUILD .SRCINFO slskd.install
+          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
+          git push origin master || git push --set-upstream origin master
+          
+          echo "✅ Pushed to AUR"
+
