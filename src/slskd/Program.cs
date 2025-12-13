@@ -798,6 +798,7 @@ namespace slskd
                     sp.GetRequiredService<MediaCore.IDescriptorValidator>(),
                     sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>(),
                     sp.GetRequiredService<IOptions<MediaCore.MediaCoreOptions>>()));
+            services.AddSingleton<MediaCore.IContentIdRegistry, MediaCore.ContentIdRegistry>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();

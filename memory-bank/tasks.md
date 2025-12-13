@@ -2118,11 +2118,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Multi-node integration tests for DHT convergence, content discovery, NAT traversal, peer churn, and network partitioning.
 
-- [ ] **T-1315**: Add mesh WebGUI status panel
-  - Status: Not started
+- [x] **T-1315**: Add mesh WebGUI status panel
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Dashboard showing peer count, routing table health, recent DHT operations.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Comprehensive dashboard showing peer count, routing table health, DHT operations, and network health metrics.
 
 #### Phase 9 Gap: MediaCore Implementation (12 tasks)
 
