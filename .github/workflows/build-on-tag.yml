@@ -815,6 +815,51 @@ jobs:
           Write-Host "📝 To publish to Winget, submit a PR to microsoft/winget-pkgs manually"
         shell: pwsh
 
+  snap-dev:
+    name: Publish to Snap (Dev/Edge)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: experimental/multi-source-swarm
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.zip"
+
+      - name: Build and Push
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        run: |
+          unzip slskdn-dev-linux-x64.zip -d slskdn_dist
+          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
+          sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
+          sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
+          
+          sudo snap install snapcraft --classic
+          
+          cd packaging/snap
+          snapcraft --destructive-mode
+          
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+          snapcraft upload --release=edge *.snap
+          
+          echo "✅ Published to Snap (edge channel)"
+
+      - name: Skip if no credentials
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
+        run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured, skipping Snap publish"
+
   release-main:
     name: Create Main Release
     needs: [parse, publish]
