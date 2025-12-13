@@ -28,16 +28,19 @@ public class PeerPinCache : IPeerPinCache
     private readonly ILogger<PeerPinCache> logger;
     private readonly IMeshDhtClient dhtClient;
     private readonly IDescriptorSigner descriptorSigner;
+    private readonly IPeerEndpointRegistry endpointRegistry;
     private readonly ConcurrentDictionary<string, CachedDescriptor> cache = new();
 
     public PeerPinCache(
         ILogger<PeerPinCache> logger,
         IMeshDhtClient dhtClient,
-        IDescriptorSigner descriptorSigner)
+        IDescriptorSigner descriptorSigner,
+        IPeerEndpointRegistry endpointRegistry)
     {
         this.logger = logger;
         this.dhtClient = dhtClient;
         this.descriptorSigner = descriptorSigner;
+        this.endpointRegistry = endpointRegistry;
     }
 
     public async Task<string?> GetExpectedControlSpkiAsync(IPEndPoint endpoint, CancellationToken ct = default)
@@ -54,23 +57,55 @@ public class PeerPinCache : IPeerPinCache
 
     private async Task<MeshPeerDescriptor?> GetDescriptorForEndpointAsync(IPEndPoint endpoint, CancellationToken ct)
     {
-        var endpointKey = endpoint.ToString();
+        // Try to resolve PeerId from endpoint registry
+        var peerId = endpointRegistry.GetPeerId(endpoint);
+        if (peerId == null)
+        {
+            logger.LogDebug("[PeerPinCache] No PeerId mapping for {Endpoint}, cannot fetch descriptor", endpoint);
+            return null;
+        }
 
         // Check cache first
-        if (cache.TryGetValue(endpointKey, out var cached) &&
+        if (cache.TryGetValue(peerId, out var cached) &&
             cached.ExpiresAt > DateTimeOffset.UtcNow)
         {
             return cached.Descriptor;
         }
 
-        // TODO: Implement reverse lookup from endpoint to PeerId
-        // For now, we'll need to scan DHT or maintain a registry
-        // This is a limitation - we need the PeerId to fetch the descriptor
+        // Fetch from DHT
+        try
+        {
+            var key = $"mesh:peer:{peerId}";
+            var descriptor = await dhtClient.GetAsync<MeshPeerDescriptor>(key, ct);
 
-        logger.LogWarning("[PeerPinCache] Cannot fetch descriptor for {Endpoint} - reverse lookup not implemented",
-            endpoint);
+            if (descriptor == null)
+            {
+                logger.LogWarning("[PeerPinCache] No descriptor found in DHT for PeerId={PeerId}", peerId);
+                return null;
+            }
 
-        return null;
+            // Verify signature and PeerId derivation
+            if (!descriptorSigner.Verify(descriptor))
+            {
+                logger.LogWarning("[PeerPinCache] Invalid descriptor signature for PeerId={PeerId}", peerId);
+                return null;
+            }
+
+            // Cache for 5 minutes
+            cache[peerId] = new CachedDescriptor
+            {
+                Descriptor = descriptor,
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5),
+            };
+
+            logger.LogDebug("[PeerPinCache] Cached descriptor for PeerId={PeerId}", peerId);
+            return descriptor;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[PeerPinCache] Failed to fetch descriptor for PeerId={PeerId}", peerId);
+            return null;
+        }
     }
 
     private class CachedDescriptor

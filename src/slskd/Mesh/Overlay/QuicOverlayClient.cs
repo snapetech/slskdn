@@ -21,17 +21,20 @@ public class QuicOverlayClient : IOverlayClient
     private readonly ILogger<QuicOverlayClient> logger;
     private readonly OverlayOptions options;
     private readonly Security.IPeerPinCache peerPinCache;
+    private readonly Security.ITofuPinStore tofuPinStore;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> connections = new();
 
     public QuicOverlayClient(
         ILogger<QuicOverlayClient> logger,
         IOptions<OverlayOptions> options,
         IControlSigner signer,
-        Security.IPeerPinCache peerPinCache)
+        Security.IPeerPinCache peerPinCache,
+        Security.ITofuPinStore tofuPinStore)
     {
         this.logger = logger;
         this.options = options.Value;
         this.peerPinCache = peerPinCache;
+        this.tofuPinStore = tofuPinStore;
     }
 
     /// <summary>
@@ -119,27 +122,46 @@ public class QuicOverlayClient : IOverlayClient
                             return false;
                         }
 
-                        // Get expected SPKI pin from descriptor
+                        var actualSpki = Security.CertificatePins.ComputeSpkiSha256Base64(cert);
+
+                        // Try descriptor-based pinning first
                         var expectedSpki = peerPinCache.GetExpectedControlSpkiAsync(endpoint, ct).GetAwaiter().GetResult();
 
-                        if (expectedSpki == null)
+                        if (expectedSpki != null)
                         {
-                            // TOFU fallback - no descriptor available yet
-                            logger.LogWarning("[Overlay-QUIC] No descriptor for {Endpoint}, accepting on first use (TOFU)", endpoint);
-                            // TODO: Store pin for future validation
+                            // Descriptor available - strict validation
+                            if (actualSpki != expectedSpki)
+                            {
+                                logger.LogError("[Overlay-QUIC] SPKI mismatch for {Endpoint}: expected {Expected}, got {Actual}",
+                                    endpoint, expectedSpki, actualSpki);
+                                return false;
+                            }
+
+                            logger.LogDebug("[Overlay-QUIC] Descriptor-based pinning validated for {Endpoint}", endpoint);
                             return true;
                         }
 
-                        // Verify SPKI pin matches
-                        var actualSpki = Security.CertificatePins.ComputeSpkiSha256Base64(cert);
-                        if (actualSpki != expectedSpki)
+                        // Fallback to TOFU
+                        var (existingPin, recordedAt) = tofuPinStore.GetPin(endpoint, Security.TofuPinType.Control);
+
+                        if (existingPin != null)
                         {
-                            logger.LogError("[Overlay-QUIC] SPKI mismatch for {Endpoint}: expected {Expected}, got {Actual}",
-                                endpoint, expectedSpki, actualSpki);
-                            return false;
+                            // We've seen this endpoint before - enforce pin
+                            if (actualSpki != existingPin)
+                            {
+                                logger.LogError("[Overlay-QUIC] TOFU pin violation for {Endpoint}: recorded {Recorded} on {Date}, got {Actual}",
+                                    endpoint, existingPin, recordedAt, actualSpki);
+                                return false;
+                            }
+
+                            logger.LogDebug("[Overlay-QUIC] TOFU pin validated for {Endpoint}", endpoint);
+                            return true;
                         }
 
-                        logger.LogDebug("[Overlay-QUIC] Certificate pinning validated for {Endpoint}", endpoint);
+                        // First connection - record pin and accept
+                        tofuPinStore.RecordPin(endpoint, actualSpki, Security.TofuPinType.Control);
+                        logger.LogWarning("[Overlay-QUIC] No descriptor for {Endpoint}, recording TOFU pin: {Pin}",
+                            endpoint, actualSpki);
                         return true;
                     }
                 }

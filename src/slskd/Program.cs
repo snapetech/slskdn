@@ -893,6 +893,7 @@ namespace slskd
             services.AddSingleton<Mesh.MeshStatsCollector>();
             services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
             services.AddHostedService<Mesh.Dht.PeerDescriptorRefreshService>();
+            services.AddHostedService<Mesh.Dht.PeerDescriptorWatcher>(); // Populates endpoint registry
             services.AddSingleton<Mesh.Dht.IContentPeerPublisher, Mesh.Dht.ContentPeerPublisher>();
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
@@ -905,6 +906,12 @@ namespace slskd
             
             // Security: Descriptor signing and verification
             services.AddSingleton<Mesh.Security.IDescriptorSigner, Mesh.Security.DescriptorSigner>();
+            
+            // Security: Peer endpoint registry for reverse lookup
+            services.AddSingleton<Mesh.Security.IPeerEndpointRegistry, Mesh.Security.PeerEndpointRegistry>();
+            
+            // Security: TOFU pin store for trust-on-first-use fallback
+            services.AddSingleton<Mesh.Security.ITofuPinStore, Mesh.Security.TofuPinStore>();
             
             // Security: Peer pin cache for SPKI pinning
             services.AddSingleton<Mesh.Security.IPeerPinCache, Mesh.Security.PeerPinCache>();
