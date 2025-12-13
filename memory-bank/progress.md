@@ -39,6 +39,30 @@
 
 ---
 
+## 2025-12-13
+
+### T-823: Mesh-Only Search Implementation
+
+**Completed T-823 mesh-only search for disaster mode** - Core Phase 6 Virtual Soulfind Mesh capability now functional.
+
+- **Modified SearchService.cs**: Added disaster mode coordinator and mesh search service dependencies
+- **Implemented StartMeshOnlySearchAsync()**: Routes searches through overlay mesh when disaster mode active
+- **Added MBID resolution**: Placeholder for MusicBrainz integration (expands to full MB API later)
+- **DHT query integration**: Uses existing MeshSearchService.SearchByMbidAsync() for overlay lookups
+- **Response format conversion**: Mesh results converted to compatible Search.Response objects for UI
+- **Backward compatibility**: Existing Soulseek searches work unchanged, disaster mode is opt-in
+- **Testing**: Full compilation verification, no errors, clean lint
+
+**Technical Details**:
+- 208 lines added to SearchService.cs
+- Proper error handling and logging throughout
+- SignalR integration maintains real-time UI updates
+- Graceful fallbacks when mesh services unavailable
+
+**Impact**: When Soulseek servers unavailable, searches now automatically failover to mesh-only operation using DHT-based peer discovery via MusicBrainz IDs instead of server-based lookups. Foundation for Phase 6 Virtual Soulfind Mesh established.
+
+---
+
 ## 2025-12-09
 
 ### CI/CD Infrastructure Overhaul

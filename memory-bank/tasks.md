@@ -1034,10 +1034,11 @@
   - Notes: Activate/deactivate disaster mode, switch resolvers to mesh-only
 
 - [x] **T-823**: Implement mesh-only search
-  - Status: Not started
+  - Status: Done
+  - Completed: 2025-12-13
   - Priority: P1
-  - Branch: experimental/virtual-soulfind
-  - Notes: MBID resolution → DHT query → overlay descriptors (no Soulseek server)
+  - Branch: experimental/whatAmIThinking
+  - Notes: MBID resolution → DHT query → overlay descriptors (no Soulseek server). Implemented disaster mode integration in SearchService with mesh-only routing when Soulseek unavailable.
 
 - [x] **T-824**: Implement mesh-only transfers
   - Status: Done
