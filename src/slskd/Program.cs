@@ -922,6 +922,17 @@ namespace slskd
             // Security: Replay cache for anti-replay attack protection
             services.AddSingleton<Mesh.Security.IReplayCache, Mesh.Security.ReplayCache>();
             
+            // Security: Anti-rollback tracking for descriptor sequence numbers
+            services.AddSingleton<Mesh.Security.IDescriptorSeqTracker>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<Mesh.Security.DescriptorSeqTracker>>();
+                var path = Path.Combine(Program.DataDirectory, "mesh-descriptor-seq.json");
+                return new Mesh.Security.DescriptorSeqTracker(logger, path);
+            });
+            
+            // Security: Rate limiter for DoS protection
+            services.AddSingleton<Mesh.Security.IMeshRateLimiter, Mesh.Security.MeshRateLimiter>();
+            
             // KeyStore for Ed25519 control signing keys (CAN rotate, subordinate to identity)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();

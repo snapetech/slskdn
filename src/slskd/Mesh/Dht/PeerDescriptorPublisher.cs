@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -28,6 +29,8 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     private readonly Overlay.DataOverlayOptions dataOverlayOptions;
     private readonly Overlay.IKeyStore controlKeyStore;
 
+    private ulong nextSeq = 1; // Monotonically increasing per publish
+
     public PeerDescriptorPublisher(
         ILogger<PeerDescriptorPublisher> logger,
         IMeshDhtClient dht,
@@ -48,11 +51,15 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         this.overlayOptions = overlayOptions.Value;
         this.dataOverlayOptions = dataOverlayOptions.Value;
         this.controlKeyStore = controlKeyStore;
+
+        // Initialize nextSeq from current time (ensures uniqueness across restarts)
+        nextSeq = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
     public async Task PublishSelfAsync(CancellationToken ct = default)
     {
         var nat = await natDetector.DetectAsync(ct);
+        var now = DateTimeOffset.UtcNow;
 
         // Load TLS certificates to get SPKI pins
         var controlCert = Security.PersistentCertificate.LoadOrCreate(
@@ -67,9 +74,35 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             "CN=mesh-overlay-data",
             5);
 
-        // Get control signing keys (current + overlap keys for rotation)
-        var signingKeys = controlKeyStore.VerificationPublicKeys
-            .Select(k => Convert.ToBase64String(k))
+        // Build TLS pin lists (current cert only for now; add previous on rotation)
+        var controlPins = new List<TlsPin>
+        {
+            new TlsPin
+            {
+                SpkiSha256 = Security.CertificatePins.ComputeSpkiSha256Base64(controlCert),
+                ValidFromUnixMs = now.ToUnixTimeMilliseconds(),
+                ValidToUnixMs = now.AddYears(5).ToUnixTimeMilliseconds(),
+            },
+        };
+
+        var dataPins = new List<TlsPin>
+        {
+            new TlsPin
+            {
+                SpkiSha256 = Security.CertificatePins.ComputeSpkiSha256Base64(dataCert),
+                ValidFromUnixMs = now.ToUnixTimeMilliseconds(),
+                ValidToUnixMs = now.AddYears(5).ToUnixTimeMilliseconds(),
+            },
+        };
+
+        // Build control signing key list (current + overlap keys for rotation)
+        var controlKeys = controlKeyStore.VerificationPublicKeys
+            .Select(k => new ControlSigningKey
+            {
+                PublicKey = Convert.ToBase64String(k),
+                ValidFromUnixMs = now.ToUnixTimeMilliseconds(),
+                ValidToUnixMs = now.AddYears(1).ToUnixTimeMilliseconds(), // 1 year validity per key
+            })
             .ToList();
 
         var descriptor = new MeshPeerDescriptor
@@ -80,11 +113,15 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
                 .ToList(),
             NatType = nat.ToString().ToLowerInvariant(),
             RelayRequired = nat == NatType.Symmetric,
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            TimestampUnixMs = now.ToUnixTimeMilliseconds(),
             IdentityPublicKey = Convert.ToBase64String(identityKeyStore.PublicKey),
-            TlsControlSpkiSha256 = Security.CertificatePins.ComputeSpkiSha256Base64(controlCert),
-            TlsDataSpkiSha256 = Security.CertificatePins.ComputeSpkiSha256Base64(dataCert),
-            ControlSigningPublicKeys = signingKeys,
+            TlsControlPins = controlPins,
+            TlsDataPins = dataPins,
+            ControlSigningKeys = controlKeys,
+            SchemaVersion = 1,
+            IssuedAtUnixMs = now.ToUnixTimeMilliseconds(),
+            ExpiresAtUnixMs = now.AddDays(7).ToUnixTimeMilliseconds(),
+            DescriptorSeq = nextSeq++, // Increment sequence number
         };
 
         // Sign the descriptor with identity key
@@ -92,7 +129,12 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
 
         var key = $"mesh:peer:{descriptor.PeerId}";
         await dht.PutAsync(key, descriptor, ttlSeconds: 3600, ct: ct);
-        logger.LogInformation("[MeshDHT] Published signed descriptor {PeerId} endpoints={Count} nat={Nat}",
-            descriptor.PeerId, descriptor.Endpoints.Count, descriptor.NatType);
+        logger.LogInformation(
+            "[MeshDHT] Published signed descriptor {PeerId} seq={Seq} endpoints={Count} nat={Nat} expires={Expires}",
+            descriptor.PeerId,
+            descriptor.DescriptorSeq,
+            descriptor.Endpoints.Count,
+            descriptor.NatType,
+            DateTimeOffset.FromUnixTimeMilliseconds(descriptor.ExpiresAtUnixMs));
     }
 }
