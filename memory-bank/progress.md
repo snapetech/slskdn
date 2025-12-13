@@ -33,6 +33,37 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1341: Signed Membership Records (Phase 10 Gap - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **IPodMembershipService Interface**: Comprehensive contract for pod membership management operations
+  - **PodMembershipService Implementation**: Full service with Ed25519 cryptographic signing for all membership operations
+  - **SignedMembershipRecord Structure**: Event-based membership records with PodId, PeerId, Role, Action, timestamp, and signature
+  - **DHT Key Format**: Standardized `pod:{PodId}:member:{PeerId}` keys for individual membership storage
+  - **Membership Lifecycle**: Complete CRUD operations (join, update, ban, unban, role changes, leave)
+  - **RESTful API Endpoints**: Full membership management API at `/api/v0/podcore/membership/*`
+  - **WebGUI Interface**: Interactive membership management dashboard with role controls and ban functionality
+  - **Role-Based Access Control**: Owner, moderator, and member role management with permissions
+  - **Ban/Unban System**: Membership banning with reason tracking and signature validation
+  - **Membership Verification**: Cryptographic verification of membership authenticity and validity
+  - **Statistics Tracking**: Comprehensive membership metrics (total, active, banned, expired, by role/pod)
+  - **Expiration Management**: 24-hour TTL with automatic cleanup of expired membership records
+  - **Signature Validation**: Ed25519 signature verification for all membership operations
+  - **Error Handling**: Robust error handling with detailed logging and user feedback
+  - **Concurrent Safety**: Thread-safe operations with atomic counters and statistics tracking
+  - **Integration Ready**: Seamless integration with existing PodCore pod and member management
+- **Technical Notes**:
+  - **Cryptographic Security**: Ed25519 signatures ensure membership record authenticity and prevent forgery
+  - **DHT Compatibility**: Uses IMeshDhtClient for decentralized membership record storage and retrieval
+  - **Event-Driven Design**: SignedMembershipRecord captures membership events (join, leave, ban) with full audit trail
+  - **Performance Optimized**: Efficient DHT operations with TTL-based expiration and cleanup
+  - **Scalability**: Supports large numbers of pods and members with distributed storage
+  - **Privacy Controls**: Membership records respect pod visibility settings and access controls
+  - **Audit Trail**: Complete history of membership changes with cryptographic proof
+  - **Real-Time Updates**: Immediate propagation of membership changes across the mesh network
+  - **Conflict Resolution**: Handles concurrent membership operations with proper validation
+  - **Resource Management**: Automatic cleanup of expired records to prevent storage bloat
+
 ### T-1340: Pod DHT Publishing (Phase 10 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

@@ -230,6 +230,7 @@ public interface IPodMessaging
 public class PodMessaging : IPodMessaging
 {
     private readonly IPodService podService;
+    private readonly IPodMembershipVerifier membershipVerifier;
     private readonly ISoulseekChatBridge chatBridge;
     private readonly Microsoft.Extensions.Logging.ILogger<PodMessaging> logger;
     private readonly Mesh.IMeshSyncService meshSync;
@@ -243,6 +244,7 @@ public class PodMessaging : IPodMessaging
 
     public PodMessaging(
         IPodService podService,
+        IPodMembershipVerifier membershipVerifier,
         ISoulseekChatBridge chatBridge,
         Microsoft.Extensions.Logging.ILogger<PodMessaging> logger,
         Mesh.IMeshSyncService meshSync = null,
@@ -250,6 +252,7 @@ public class PodMessaging : IPodMessaging
         Mesh.Overlay.IOverlayClient overlayClient = null)
     {
         this.podService = podService;
+        this.membershipVerifier = membershipVerifier;
         this.chatBridge = chatBridge;
         this.logger = logger;
         this.meshSync = meshSync;
@@ -311,22 +314,22 @@ public class PodMessaging : IPodMessaging
             return false;
         }
 
-        // 4. Membership verification
-        var members = await podService.GetMembersAsync(pod.PodId, ct);
-        var senderIsMember = members.Any(m => m.PeerId == message.SenderPeerId && !m.IsBanned);
-        if (!senderIsMember)
+        // 4. Comprehensive membership and message verification
+        var messageVerification = await membershipVerifier.VerifyMessageAsync(message, ct);
+        if (!messageVerification.IsValid)
         {
-            logger.LogWarning("[PodMessaging] Rejecting message from non-member {PeerId} in pod {PodId}",
-                message.SenderPeerId, pod.PodId);
+            var reasons = new List<string>();
+            if (!messageVerification.IsFromValidMember) reasons.Add("not a valid member");
+            if (!messageVerification.IsNotBanned) reasons.Add("banned");
+            if (!messageVerification.HasValidSignature) reasons.Add("invalid signature");
+
+            logger.LogWarning("[PodMessaging] Rejecting message {MessageId} from {PeerId}: {Reasons}",
+                message.MessageId, message.SenderPeerId, string.Join(", ", reasons));
             return false;
         }
 
-        // 5. Signature validation (Ed25519)
-        if (!await ValidateMessageSignatureAsync(message, pod.PodId, ct))
-        {
-            logger.LogWarning("[PodMessaging] Rejecting message {MessageId} with invalid signature", message.MessageId);
-            return false;
-        }
+        logger.LogDebug("[PodMessaging] Message {MessageId} passed verification (member: {IsMember}, not banned: {NotBanned}, signature: {SignatureValid})",
+            message.MessageId, messageVerification.IsFromValidMember, messageVerification.IsNotBanned, messageVerification.HasValidSignature);
 
         // 6. Store message
         var storageKey = $"{pod.PodId}:{message.ChannelId}";

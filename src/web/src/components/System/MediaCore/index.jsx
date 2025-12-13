@@ -156,6 +156,22 @@ const MediaCore = () => {
   const [roleChangeResult, setRoleChangeResult] = useState(null);
   const [membershipStats, setMembershipStats] = useState(null);
   const [loadingMembershipStats, setLoadingMembershipStats] = useState(false);
+
+  // Pod Membership Verification states
+  const [verifyPodId, setVerifyPodId] = useState('');
+  const [verifyPeerId, setVerifyPeerId] = useState('');
+  const [verifyingMembership, setVerifyingMembership] = useState(false);
+  const [membershipVerificationResult, setMembershipVerificationResult] = useState(null);
+  const [messageToVerify, setMessageToVerify] = useState('');
+  const [verifyingMessage, setVerifyingMessage] = useState(false);
+  const [messageVerificationResult, setMessageVerificationResult] = useState(null);
+  const [roleCheckPodId, setRoleCheckPodId] = useState('');
+  const [roleCheckPeerId, setRoleCheckPeerId] = useState('');
+  const [requiredRole, setRequiredRole] = useState('member');
+  const [checkingRole, setCheckingRole] = useState(false);
+  const [roleCheckResult, setRoleCheckResult] = useState(null);
+  const [verificationStats, setVerificationStats] = useState(null);
+  const [loadingVerificationStats, setLoadingVerificationStats] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1019,6 +1035,75 @@ const MediaCore = () => {
       await handleLoadMembershipStats();
     } catch (err) {
       alert(`Failed to cleanup: ${err.message}`);
+    }
+  };
+
+  // Pod Membership Verification handlers
+  const handleVerifyMembership = async () => {
+    if (!verifyPodId.trim() || !verifyPeerId.trim()) {
+      alert('Please enter both Pod ID and Peer ID');
+      return;
+    }
+
+    try {
+      setVerifyingMembership(true);
+      setMembershipVerificationResult(null);
+      const result = await mediacore.verifyPodMembership(verifyPodId, verifyPeerId);
+      setMembershipVerificationResult(result);
+    } catch (err) {
+      setMembershipVerificationResult({ error: err.message });
+    } finally {
+      setVerifyingMembership(false);
+    }
+  };
+
+  const handleVerifyMessage = async () => {
+    if (!messageToVerify.trim()) {
+      alert('Please enter a message JSON');
+      return;
+    }
+
+    try {
+      setVerifyingMessage(true);
+      setMessageVerificationResult(null);
+      const message = JSON.parse(messageToVerify);
+      const result = await mediacore.verifyPodMessage(message);
+      setMessageVerificationResult(result);
+    } catch (err) {
+      setMessageVerificationResult({ error: err.message });
+    } finally {
+      setVerifyingMessage(false);
+    }
+  };
+
+  const handleCheckRole = async () => {
+    if (!roleCheckPodId.trim() || !roleCheckPeerId.trim()) {
+      alert('Please enter both Pod ID and Peer ID');
+      return;
+    }
+
+    try {
+      setCheckingRole(true);
+      setRoleCheckResult(null);
+      const hasRole = await mediacore.checkPodRole(roleCheckPodId, roleCheckPeerId, requiredRole);
+      setRoleCheckResult({ hasRole });
+    } catch (err) {
+      setRoleCheckResult({ error: err.message });
+    } finally {
+      setCheckingRole(false);
+    }
+  };
+
+  const handleLoadVerificationStats = async () => {
+    try {
+      setLoadingVerificationStats(true);
+      setVerificationStats(null);
+      const result = await mediacore.getVerificationStats();
+      setVerificationStats(result);
+    } catch (err) {
+      setVerificationStats({ error: err.message });
+    } finally {
+      setLoadingVerificationStats(false);
     }
   };
 
@@ -3714,6 +3799,208 @@ const MediaCore = () => {
               {membershipStats?.error && (
                 <Message error style={{ marginTop: '1em' }}>
                   <p>Failed to load membership stats: {membershipStats.error}</p>
+                </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Membership Verification */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="shield" />
+                Pod Membership Verification
+              </Card.Header>
+              <Card.Description>
+                Verify membership status, message authenticity, and role permissions for pod security
+              </Card.Description>
+            </Card.Content>
+
+            {/* Membership Verification */}
+            <Card.Content>
+              <Header size="small">Verify Membership Status</Header>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Input
+                    label="Pod ID"
+                    placeholder="pod:artist:mb:daft-punk-hash"
+                    value={verifyPodId}
+                    onChange={(e) => setVerifyPodId(e.target.value)}
+                  />
+                  <Form.Input
+                    label="Peer ID"
+                    placeholder="alice"
+                    value={verifyPeerId}
+                    onChange={(e) => setVerifyPeerId(e.target.value)}
+                  />
+                </Form.Group>
+                <Button
+                  fluid
+                  loading={verifyingMembership}
+                  disabled={verifyingMembership || !verifyPodId.trim() || !verifyPeerId.trim()}
+                  onClick={handleVerifyMembership}
+                >
+                  Verify Membership
+                </Button>
+              </Form>
+
+              {membershipVerificationResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {membershipVerificationResult.error ? (
+                    <Message error>
+                      <p>Failed to verify membership: {membershipVerificationResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Membership Verification Result</Message.Header>
+                      <p>
+                        <strong>Valid Member:</strong> {membershipVerificationResult.isValidMember ? 'Yes' : 'No'}<br />
+                        <strong>Role:</strong> {membershipVerificationResult.role || 'None'}<br />
+                        <strong>Banned:</strong> {membershipVerificationResult.isBanned ? 'Yes' : 'No'}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Message Verification */}
+                  <Header size="small">Verify Message Authenticity</Header>
+                  <Form>
+                    <Form.TextArea
+                      label="Pod Message JSON"
+                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello everyone!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
+                      value={messageToVerify}
+                      onChange={(e) => setMessageToVerify(e.target.value)}
+                      rows={4}
+                    />
+                    <Button
+                      fluid
+                      loading={verifyingMessage}
+                      disabled={verifyingMessage || !messageToVerify.trim()}
+                      onClick={handleVerifyMessage}
+                    >
+                      Verify Message
+                    </Button>
+                  </Form>
+
+                  {messageVerificationResult && (
+                    <div style={{ marginTop: '1em' }}>
+                      {messageVerificationResult.error ? (
+                        <Message error>
+                          <p>Failed to verify message: {messageVerificationResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message info>
+                          <Message.Header>Message Verification Result</Message.Header>
+                          <p>
+                            <strong>Valid:</strong> {messageVerificationResult.isValid ? 'Yes' : 'No'}<br />
+                            <strong>From Valid Member:</strong> {messageVerificationResult.isFromValidMember ? 'Yes' : 'No'}<br />
+                            <strong>Not Banned:</strong> {messageVerificationResult.isNotBanned ? 'Yes' : 'No'}<br />
+                            <strong>Valid Signature:</strong> {messageVerificationResult.hasValidSignature ? 'Yes' : 'No'}
+                          </p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Role Checking */}
+                  <Header size="small">Check Role Permissions</Header>
+                  <Form>
+                    <Form.Group widths="equal">
+                      <Form.Input
+                        label="Pod ID"
+                        placeholder="pod:artist:mb:daft-punk-hash"
+                        value={roleCheckPodId}
+                        onChange={(e) => setRoleCheckPodId(e.target.value)}
+                      />
+                      <Form.Input
+                        label="Peer ID"
+                        placeholder="alice"
+                        value={roleCheckPeerId}
+                        onChange={(e) => setRoleCheckPeerId(e.target.value)}
+                      />
+                    </Form.Group>
+                    <Form.Select
+                      label="Required Role"
+                      options={[
+                        { key: 'member', text: 'Member', value: 'member' },
+                        { key: 'mod', text: 'Moderator', value: 'mod' },
+                        { key: 'owner', text: 'Owner', value: 'owner' }
+                      ]}
+                      value={requiredRole}
+                      onChange={(e, { value }) => setRequiredRole(value)}
+                    />
+                    <Button
+                      fluid
+                      loading={checkingRole}
+                      disabled={checkingRole || !roleCheckPodId.trim() || !roleCheckPeerId.trim()}
+                      onClick={handleCheckRole}
+                    >
+                      Check Role
+                    </Button>
+                  </Form>
+
+                  {roleCheckResult && (
+                    <div style={{ marginTop: '1em' }}>
+                      {roleCheckResult.error ? (
+                        <Message error>
+                          <p>Failed to check role: {roleCheckResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message>
+                          <Message.Header>Role Check Result</Message.Header>
+                          <p>
+                            <strong>Has Required Role ({requiredRole}):</strong> {roleCheckResult.hasRole ? 'Yes' : 'No'}
+                          </p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+
+            {/* Verification Statistics */}
+            <Card.Content>
+              <Button.Group fluid>
+                <Button
+                  primary
+                  loading={loadingVerificationStats}
+                  disabled={loadingVerificationStats}
+                  onClick={handleLoadVerificationStats}
+                >
+                  Load Verification Stats
+                </Button>
+              </Button.Group>
+
+              {verificationStats && !verificationStats.error && (
+                <div style={{ marginTop: '1em' }}>
+                  <Message>
+                    <Message.Header>Verification Statistics</Message.Header>
+                    <p>
+                      <strong>Total Verifications:</strong> {verificationStats.totalVerifications}<br />
+                      <strong>Successful:</strong> {verificationStats.successfulVerifications}<br />
+                      <strong>Failed Membership:</strong> {verificationStats.failedMembershipChecks}<br />
+                      <strong>Failed Signatures:</strong> {verificationStats.failedSignatureChecks}<br />
+                      <strong>Banned Rejections:</strong> {verificationStats.bannedMemberRejections}<br />
+                      <strong>Avg Time:</strong> {verificationStats.averageVerificationTimeMs.toFixed(2)}ms<br />
+                      <strong>Last Verification:</strong> {verificationStats.lastVerification ? new Date(verificationStats.lastVerification).toLocaleString() : 'Never'}
+                    </p>
+                  </Message>
+                </div>
+              )}
+
+              {verificationStats?.error && (
+                <Message error style={{ marginTop: '1em' }}>
+                  <p>Failed to load verification stats: {verificationStats.error}</p>
                 </Message>
               )}
             </Card.Content>

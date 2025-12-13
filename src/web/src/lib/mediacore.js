@@ -1074,3 +1074,72 @@ export const cleanupExpiredMemberships = async () => {
 
   return response.json();
 };
+
+// Pod Membership Verification API functions
+const verificationBaseUrl = baseUrl.replace('contentid', 'podcore/verification');
+
+/**
+ * Verify membership in a pod.
+ */
+export const verifyPodMembership = async (podId, peerId) => {
+  const response = await fetch(`${verificationBaseUrl}/membership/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify membership: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Verify a pod message authenticity.
+ */
+export const verifyPodMessage = async (message) => {
+  const response = await fetch(`${verificationBaseUrl}/message`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(message),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify message: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Check if a peer has a required role in a pod.
+ */
+export const checkPodRole = async (podId, peerId, requiredRole) => {
+  const response = await fetch(`${verificationBaseUrl}/role/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/${encodeURIComponent(requiredRole)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to check role: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  return result.hasRole; // Assuming API returns { hasRole: boolean }
+};
+
+/**
+ * Get membership verification statistics.
+ */
+export const getVerificationStats = async () => {
+  const response = await fetch(`${verificationBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get verification stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};

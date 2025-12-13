@@ -2206,11 +2206,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete PodCore DHT publishing infrastructure with cryptographic signing and expiration management.
 
-- [ ] **T-1341**: Implement signed membership records
-  - Status: Not started
+- [x] **T-1341**: Implement signed membership records
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: PodMembershipRecord with Ed25519 signatures. Published to DHT.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete PodCore membership management with Ed25519 signed records published to DHT.
 
 - [ ] **T-1342**: Implement membership verification
   - Status: Not started
