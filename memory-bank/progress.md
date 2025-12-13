@@ -1,7 +1,25 @@
 # Progress Log
 
-> Chronological log of development activity.  
+> Chronological log of development activity.
 > AI agents should append here after completing significant work.
+
+---
+
+## 2025-12-13
+
+### T-003: Download Queue Position Polling (Medium Priority)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Modified `src/web/src/components/Transfers/Transfers.jsx` to automatically poll queue positions for all queued downloads
+  - Added logic to filter queued downloads and fetch their positions in parallel during the regular 1-second polling cycle
+  - Queue positions now update automatically without requiring manual refresh clicks
+  - Maintains backward compatibility with existing manual refresh functionality
+  - Uses `Promise.allSettled()` to prevent one failed queue position fetch from blocking others
+- **Technical Notes**:
+  - Leveraged existing `transfersLibrary.getPlaceInQueue()` API function
+  - Updated local state immediately with fetched queue positions for responsive UI
+  - Added error handling to silently fail individual fetches without spamming console
+  - Direction check ensures only downloads are polled (uploads don't have queue positions)
 
 ---
 

@@ -251,5 +251,24 @@ namespace slskd.Users.API
                 return NotFound(ex.Message);
             }
         }
+
+        /// <summary>
+        ///     Retrieves the group for the specified <paramref name="username"/>.
+        /// </summary>
+        /// <param name="username">The username of the user.</param>
+        /// <returns></returns>
+        [HttpGet("{username}/group")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(string), 200)]
+        public IActionResult Group([FromRoute, Required] string username)
+        {
+            if (Program.IsRelayAgent)
+            {
+                return Forbid();
+            }
+
+            var group = Users.GetGroup(username);
+            return Ok(group);
+        }
     }
 }

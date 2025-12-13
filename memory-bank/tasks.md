@@ -2440,11 +2440,12 @@
 
 ### Medium Priority
 
-- [ ] **T-003**: Download Queue Position Polling
-  - Status: Not started
+- [x] **T-003**: Download Queue Position Polling
+  - Status: Completed (2025-12-13)
   - Priority: Medium
   - Related: slskd #921
   - Notes: Auto-refresh queue positions for queued files
+  - Implementation: Added automatic queue position polling in Transfers.jsx that fetches positions for all queued downloads every 1 second
 
 - [ ] **T-004**: Visual Group Indicators
   - Status: Not started

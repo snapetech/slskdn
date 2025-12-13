@@ -1,5 +1,5 @@
 import * as transfers from '../../lib/transfers';
-import { getDirectoryContents } from '../../lib/users';
+import { getDirectoryContents, getGroup } from '../../lib/users';
 import { formatBytes, getDirectoryName } from '../../lib/util';
 import FileList from '../Shared/FileList';
 import UserCard from '../Shared/UserCard';
@@ -34,6 +34,22 @@ const getBadgeColor = (downloadStats) => {
   return 'grey';
 };
 
+const getGroupIndicator = (group) => {
+  switch (group) {
+    case 'privileged':
+      return { icon: 'star', color: 'yellow', tooltip: 'Privileged User' };
+    case 'leechers':
+      return { icon: 'exclamation triangle', color: 'orange', tooltip: 'Leecher (Low shares)' };
+    case 'blacklisted':
+      return { icon: 'ban', color: 'red', tooltip: 'Blacklisted User' };
+    default:
+      // For user-defined groups or default group, show a generic user icon
+      return group && group !== 'default'
+        ? { icon: 'user', color: 'blue', tooltip: `Group: ${group}` }
+        : null;
+  }
+};
+
 const getSelectedFiles = (tree) => {
   return Object.keys(tree)
     .reduce((list, dict) => list.concat(tree[dict]), [])
@@ -54,7 +70,13 @@ class Response extends Component {
       fetchingDirectoryContents: false,
       isFolded: this.props.isInitiallyFolded,
       tree: buildTree(this.props.response),
+      userGroup: null,
+      userGroupLoading: false,
     };
+  }
+
+  componentDidMount() {
+    this.fetchUserGroup();
   }
 
   componentDidUpdate(previousProps) {
@@ -68,7 +90,25 @@ class Response extends Component {
     if (this.props.isInitiallyFolded !== previousProps.isInitiallyFolded) {
       this.setState({ isFolded: this.props.isInitiallyFolded });
     }
+
+    if (this.props.response.username !== previousProps.response.username) {
+      this.fetchUserGroup();
+    }
   }
+
+  fetchUserGroup = async () => {
+    const { username } = this.props.response;
+
+    this.setState({ userGroupLoading: true });
+
+    try {
+      const response = await getGroup({ username });
+      this.setState({ userGroup: response.data, userGroupLoading: false });
+    } catch (error) {
+      console.debug('Failed to fetch user group for', username, error);
+      this.setState({ userGroup: null, userGroupLoading: false });
+    }
+  };
 
   handleFileSelectionChange = (file, state) => {
     file.selected = state;
@@ -241,6 +281,8 @@ class Response extends Component {
       fetchingDirectoryContents,
       isFolded,
       tree,
+      userGroup,
+      userGroupLoading,
     } = this.state;
 
     const selectedFiles = getSelectedFiles(tree);
@@ -275,6 +317,23 @@ class Response extends Component {
                 {response.username}
               </UserCard>
             </Link>
+            {!userGroupLoading && userGroup && (() => {
+              const indicator = getGroupIndicator(userGroup);
+              return indicator ? (
+                <Popup
+                  content={indicator.tooltip}
+                  position="top center"
+                  trigger={
+                    <Icon
+                      name={indicator.icon}
+                      color={indicator.color}
+                      size="small"
+                      style={{ marginLeft: '4px' }}
+                    />
+                  }
+                />
+              ) : null;
+            })()}
             {downloadStats && (
               <Popup
                 content={`${downloadStats.successfulDownloads} successful, ${downloadStats.failedDownloads} failed downloads from this user`}
