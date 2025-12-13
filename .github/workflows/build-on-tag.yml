@@ -174,23 +174,37 @@ jobs:
           body: |
             ## Development Build ${{ needs.parse.outputs.version }}
             
-            **Branch:** ${{ github.ref_name }}
             **Commit:** ${{ github.sha }}
+            **Built:** ${{ github.event.head_commit.timestamp }}
             
             ### ⚠️ Experimental Features
-            - 🔒 Enhanced security (Ed25519 identity, TLS pinning, signed descriptors)
             - 🔀 Multi-source swarm downloads
-            - 🌐 DHT mesh network
-            - 🔗 BitTorrent DHT rendezvous
+            - 🌐 DHT mesh network with content verification
+            - 🔗 BitTorrent DHT rendezvous for peer discovery
+            - 🔒 TLS-secured mesh connections
+            - 📊 Distributed hash database with mesh sync
+            
+            ### Changes in this build
+            See commit ${{ github.sha }} for details.
+            
+            ### Downloads
+            - **Linux x64**: `slskdn-dev-linux-x64.zip`
+            - **Linux ARM64**: `slskdn-dev-linux-arm64.zip`
+            - **Linux musl x64**: `slskdn-dev-linux-musl-x64.zip`
+            - **Windows x64**: `slskdn-dev-win-x64.zip`
+            - **macOS x64** (Intel): `slskdn-dev-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdn-dev-osx-arm64.zip`
             
             ### Installation
-            **Package Managers:**
+            **Package Managers** (recommended):
             - Arch: `yay -S slskdn-dev`
             - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn-dev && sudo dnf install slskdn-dev`
             - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn-dev`
-            - Docker: `docker pull ghcr.io/snapetech/slskdn:dev`
+            - Docker: `docker pull ghcr.io/snapetech/slskdn:dev-latest`
+            - Windows: `choco install slskdn --pre`
+            - macOS: `brew install snapetech/slskdn/slskdn-dev`
             
-            **Direct Download:** Extract the archive for your platform and run the binary.
+            **Direct Download**: Extract the zip for your platform and run the binary
           prerelease: true
           files: release/*
 
@@ -645,20 +659,79 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.parse.outputs.version }}
-          name: "Release ${{ needs.parse.outputs.version }}"
+          name: "🔋 slskdN ${{ needs.parse.outputs.version }} - The Batteries-Included Fork"
           body: |
-            ## Release ${{ needs.parse.outputs.version }}
+            ## 🔋 slskdN ${{ needs.parse.outputs.version }} - The Batteries-Included Fork
             
-            **Full changelog:** [View all changes](https://github.com/${{ github.repository }}/compare/previous...${{ needs.parse.outputs.version }})
+            **Based on**: slskd 0.24.1  
+            **Status**: Stable Production Release
             
-            ### Installation
-            **Package Managers:**
-            - Arch: `yay -S slskdn` or `yay -S slskdn-bin`
-            - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn && sudo dnf install slskdn`
-            - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn`
-            - Docker: `docker pull ghcr.io/snapetech/slskdn:latest`
+            ---
             
-            **Direct Download:** Extract the archive for your platform and run the binary.
+            ## 🆚 Features vs Upstream slskd
+            
+            ### Core Improvements
+            - ✅ **Auto-Replace Stuck Downloads** — Downloads timing out? We'll find you another, automatically
+            - ✅ **Wishlist / Background Search** — Save searches that run whilst you're having tea  
+            - ✅ **Multiple Download Destinations** — Route files to the proper folders
+            - ✅ **Clear All Searches** — One click, sorted
+            - ✅ **Smart Search Ranking** — Best sources float to the top
+            - ✅ **User History Badges** — Know who's been reliable
+            - ✅ **Max File Size Filter** — Skip the bloated ones
+            - ✅ **Delete Files on Remove** — Tidy up properly
+            
+            ### UI Enhancements  
+            - ✅ **Tabbed User Browsing** — Multiple users, proper tabs
+            - ✅ **Folder Checkboxes** — Select what you want, sensibly
+            - ✅ **Configurable Search Results** — 25, 50, 100 per page
+            - ✅ **PWA Support** — Runs on your phone, like an app
+            
+            ### Notifications & Integration
+            - ✅ **Push Notifications** — Pushbullet, Ntfy, Pushover support
+            - ✅ **Download Complete Alerts** — Know when it's done
+            - ✅ **User Notes** — Remember why you blocked them
+            
+            ---
+            
+            ## 📦 Installation
+            
+            ```bash
+            # Arch Linux (AUR)
+            yay -S slskdn
+            # or for binary package:
+            yay -S slskdn-bin
+            
+            # Fedora/RHEL (COPR)
+            sudo dnf copr enable slskdn/slskdn
+            sudo dnf install slskdn
+            
+            # Ubuntu/Debian (PPA)
+            sudo add-apt-repository ppa:keefshape/slskdn
+            sudo apt update
+            sudo apt install slskdn
+            
+            # Docker
+            docker pull ghcr.io/snapetech/slskdn:latest
+            
+            # Windows (Chocolatey)
+            choco install slskdn
+            
+            # macOS (Homebrew)
+            brew install snapetech/slskdn/slskdn
+            ```
+            
+            **Direct Download:** Extract the zip for your platform and run the binary.
+            
+            ---
+            
+            ## 📥 Downloads
+            
+            - **Linux x64**: `slskdN-${{ needs.parse.outputs.version }}-linux-x64.zip`
+            - **Linux ARM64**: `slskdN-${{ needs.parse.outputs.version }}-linux-arm64.zip`
+            - **Linux musl x64**: `slskdN-${{ needs.parse.outputs.version }}-linux-musl-x64.zip`
+            - **Windows x64**: `slskdN-${{ needs.parse.outputs.version }}-win-x64.zip`
+            - **macOS x64** (Intel): `slskdN-${{ needs.parse.outputs.version }}-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdN-${{ needs.parse.outputs.version }}-osx-arm64.zip`
           prerelease: false
           files: release/*
 
