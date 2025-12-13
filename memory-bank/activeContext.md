@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None - T-001 persistent room tabs implementation completed
-- **Branch**: `experimental/whatAmIThinking` (T-823 + T-001 implementations)
+- **Current Task**: None - T-002 scheduled rate limits implementation completed
+- **Branch**: `experimental/whatAmIThinking` (T-823 + T-001 + T-002 implementations)
 - **Environment**: Local dev
-- **Last Activity**: Completed T-001 persistent room/chat tabs implementation and committed to branch
+- **Last Activity**: Completed T-002 scheduled rate limits implementation and committed to branch
 
 ---
 
@@ -54,13 +54,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - None currently
 
 ### Next Steps
-1. **T-823 & T-001 COMPLETED** - Core Virtual Soulfind Mesh search and persistent UI improvements delivered
-2. **Immediate Priority**: T-002 (Scheduled Rate Limits) - High priority user feature request
-3. **Phase 6 Continuation**: T-850 to T-860 (Phase 6X) - Legacy client compatibility bridge when ready
-4. **Alternative Path**: Continue Phase 2 implementation (T-404 onwards) for advanced codec fingerprinting
-5. **Testing**: Implement Phase 7 testing infrastructure in parallel (T-900 to T-915)
-6. **Branch Strategy**: Phase 6 features should move to `experimental/virtual-soulfind` branch
-7. **Implementation Timeline**:
+1. **T-823, T-001 & T-002 COMPLETED** - All immediate high-priority features delivered (mesh search, chat tabs, scheduled limits)
+2. **Immediate Priority**: Continue Phase 2 implementation (T-404 onwards) for advanced codec fingerprinting and quality analysis
+3. **Alternative Path**: Medium priority tasks (T-003: Download Queue Position Polling, T-004: Visual Group Indicators)
+4. **Packaging**: High priority packaging tasks available (T-010 to T-013: NAS/docker packaging)
+5. **Phase 6 Continuation**: T-850 to T-860 (Phase 6X) - Legacy client compatibility bridge when ready
+6. **Testing**: Implement Phase 7 testing infrastructure in parallel (T-900 to T-915)
+7. **Branch Strategy**: Phase 6 features should move to `experimental/virtual-soulfind` branch
+8. **Implementation Timeline**:
    - Phase 2 + 2-Extended: ~8-10 weeks (T-404+)
    - Phase 6 + 6X: ~20-26 weeks (T-823+)
    - Phase 7: Parallel with features (4-6 weeks)

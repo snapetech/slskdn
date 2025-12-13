@@ -2430,12 +2430,13 @@
   - Related: `TODO.md`, Browse tabs implementation
   - Notes: Implement tabbed interface like Browse currently has. Reuse `Browse.jsx`/`BrowseSession.jsx` patterns. Added RoomSession component and converted Rooms to functional component with tabs.
 
-- [ ] **T-002**: Scheduled Rate Limits
-  - Status: Not started
+- [x] **T-002**: Scheduled Rate Limits
+  - Status: Done
+  - Completed: 2025-12-13
   - Priority: High
-  - Branch: TBD
+  - Branch: experimental/whatAmIThinking
   - Related: slskd #985
-  - Notes: Day/night upload/download speed schedules like qBittorrent
+  - Notes: Day/night upload/download speed schedules like qBittorrent. Implemented ScheduledRateLimitService, configuration options, and UploadGovernor integration.
 
 ### Medium Priority
 

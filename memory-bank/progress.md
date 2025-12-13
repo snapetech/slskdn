@@ -86,6 +86,32 @@
 
 **Impact**: When Soulseek servers unavailable, searches now automatically failover to mesh-only operation using DHT-based peer discovery via MusicBrainz IDs instead of server-based lookups. Foundation for Phase 6 Virtual Soulfind Mesh established.
 
+### T-002: Scheduled Rate Limits Implementation
+
+**Completed T-002 scheduled rate limits** - High priority feature enabling qBittorrent-style day/night speed schedules.
+
+- **Added ScheduledSpeedLimitOptions**: New configuration class with enabled flag, night start/end hours, and separate upload/download night limits
+- **Implemented ScheduledRateLimitService**: Time-aware service that determines effective speed limits based on current hour and configured schedule
+- **Modified UploadGovernor**: Updated to use scheduled limits when enabled, integrating with existing token bucket system
+- **Added DI registration**: IScheduledRateLimitService registered as singleton in Program.cs
+- **Configuration support**: Full options validation and environment variable support for all new settings
+
+**Technical Details**:
+- 183 lines added across 5 files (Options.cs, ScheduledRateLimitService.cs, UploadGovernor.cs, UploadService.cs, Program.cs)
+- Created ScheduledRateLimitService.cs (110+ lines) with time-based logic and proper hour wrapping
+- Modified UploadGovernor to accept optional IScheduledRateLimitService injection
+- Maintains backward compatibility - when disabled, behaves exactly as before
+- Supports flexible night periods (can wrap around midnight, e.g., 22:00-06:00)
+
+**Configuration Options**:
+- `scheduled-limits-enabled`: Enable/disable feature (default: false)
+- `night-start-hour`: Hour when night period begins (default: 22)
+- `night-end-hour`: Hour when night period ends (default: 6)
+- `night-upload-speed-limit`: Upload limit during night (default: 100 KiB/s)
+- `night-download-speed-limit`: Download limit during night (default: 200 KiB/s)
+
+**Impact**: Users can now automatically reduce bandwidth usage during night hours, similar to qBittorrent's scheduler, helping manage ISP data caps and reduce noise/light from running transfers while sleeping.
+
 ---
 
 ## 2025-12-09
