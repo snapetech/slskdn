@@ -172,6 +172,31 @@ const MediaCore = () => {
   const [roleCheckResult, setRoleCheckResult] = useState(null);
   const [verificationStats, setVerificationStats] = useState(null);
   const [loadingVerificationStats, setLoadingVerificationStats] = useState(false);
+
+  // Pod Discovery states
+  const [podToRegister, setPodToRegister] = useState('');
+  const [registeringPod, setRegisteringPod] = useState(false);
+  const [podRegistrationResult, setPodRegistrationResult] = useState(null);
+  const [podToUnregister, setPodToUnregister] = useState('');
+  const [unregisteringPod, setUnregisteringPod] = useState(false);
+  const [podUnregistrationResult, setPodUnregistrationResult] = useState(null);
+  const [discoverByName, setDiscoverByName] = useState('');
+  const [discoveringByName, setDiscoveringByName] = useState(false);
+  const [nameDiscoveryResult, setNameDiscoveryResult] = useState(null);
+  const [discoverByTag, setDiscoverByTag] = useState('');
+  const [discoveringByTag, setDiscoveringByTag] = useState(false);
+  const [tagDiscoveryResult, setTagDiscoveryResult] = useState(null);
+  const [discoverTags, setDiscoverTags] = useState('');
+  const [discoveringByTags, setDiscoveringByTags] = useState(false);
+  const [tagsDiscoveryResult, setTagsDiscoveryResult] = useState(null);
+  const [discoverLimit, setDiscoverLimit] = useState(50);
+  const [discoveringAll, setDiscoveringAll] = useState(false);
+  const [allDiscoveryResult, setAllDiscoveryResult] = useState(null);
+  const [discoverByContent, setDiscoverByContent] = useState('');
+  const [discoveringByContent, setDiscoveringByContent] = useState(false);
+  const [contentDiscoveryResult, setContentDiscoveryResult] = useState(null);
+  const [discoveryStats, setDiscoveryStats] = useState(null);
+  const [loadingDiscoveryStats, setLoadingDiscoveryStats] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1104,6 +1129,156 @@ const MediaCore = () => {
       setVerificationStats({ error: err.message });
     } finally {
       setLoadingVerificationStats(false);
+    }
+  };
+
+  // Pod Discovery handlers
+  const handleRegisterPodForDiscovery = async () => {
+    if (!podToRegister.trim()) {
+      alert('Please enter pod JSON data');
+      return;
+    }
+
+    try {
+      setRegisteringPod(true);
+      setPodRegistrationResult(null);
+      const pod = JSON.parse(podToRegister);
+      const result = await mediacore.registerPodForDiscovery(pod);
+      setPodRegistrationResult(result);
+      setPodToRegister('');
+    } catch (err) {
+      setPodRegistrationResult({ error: err.message });
+    } finally {
+      setRegisteringPod(false);
+    }
+  };
+
+  const handleUnregisterPodFromDiscovery = async () => {
+    if (!podToUnregister.trim()) {
+      alert('Please enter a pod ID');
+      return;
+    }
+
+    try {
+      setUnregisteringPod(true);
+      setPodUnregistrationResult(null);
+      const result = await mediacore.unregisterPodFromDiscovery(podToUnregister);
+      setPodUnregistrationResult(result);
+      setPodToUnregister('');
+    } catch (err) {
+      setPodUnregistrationResult({ error: err.message });
+    } finally {
+      setUnregisteringPod(false);
+    }
+  };
+
+  const handleDiscoverByName = async () => {
+    if (!discoverByName.trim()) {
+      alert('Please enter a pod name');
+      return;
+    }
+
+    try {
+      setDiscoveringByName(true);
+      setNameDiscoveryResult(null);
+      const result = await mediacore.discoverPodsByName(discoverByName);
+      setNameDiscoveryResult(result);
+    } catch (err) {
+      setNameDiscoveryResult({ error: err.message });
+    } finally {
+      setDiscoveringByName(false);
+    }
+  };
+
+  const handleDiscoverByTag = async () => {
+    if (!discoverByTag.trim()) {
+      alert('Please enter a tag');
+      return;
+    }
+
+    try {
+      setDiscoveringByTag(true);
+      setTagDiscoveryResult(null);
+      const result = await mediacore.discoverPodsByTag(discoverByTag);
+      setTagDiscoveryResult(result);
+    } catch (err) {
+      setTagDiscoveryResult({ error: err.message });
+    } finally {
+      setDiscoveringByTag(false);
+    }
+  };
+
+  const handleDiscoverByTags = async () => {
+    if (!discoverTags.trim()) {
+      alert('Please enter tags (comma-separated)');
+      return;
+    }
+
+    try {
+      setDiscoveringByTags(true);
+      setTagsDiscoveryResult(null);
+      const tagList = discoverTags.split(',').map(t => t.trim()).filter(t => t);
+      const result = await mediacore.discoverPodsByTags(tagList);
+      setTagsDiscoveryResult(result);
+    } catch (err) {
+      setTagsDiscoveryResult({ error: err.message });
+    } finally {
+      setDiscoveringByTags(false);
+    }
+  };
+
+  const handleDiscoverAll = async () => {
+    try {
+      setDiscoveringAll(true);
+      setAllDiscoveryResult(null);
+      const result = await mediacore.discoverAllPods(discoverLimit);
+      setAllDiscoveryResult(result);
+    } catch (err) {
+      setAllDiscoveryResult({ error: err.message });
+    } finally {
+      setDiscoveringAll(false);
+    }
+  };
+
+  const handleDiscoverByContent = async () => {
+    if (!discoverByContent.trim()) {
+      alert('Please enter a content ID');
+      return;
+    }
+
+    try {
+      setDiscoveringByContent(true);
+      setContentDiscoveryResult(null);
+      const result = await mediacore.discoverPodsByContent(discoverByContent);
+      setContentDiscoveryResult(result);
+    } catch (err) {
+      setContentDiscoveryResult({ error: err.message });
+    } finally {
+      setDiscoveringByContent(false);
+    }
+  };
+
+  const handleLoadDiscoveryStats = async () => {
+    try {
+      setLoadingDiscoveryStats(true);
+      setDiscoveryStats(null);
+      const result = await mediacore.getPodDiscoveryStats();
+      setDiscoveryStats(result);
+    } catch (err) {
+      setDiscoveryStats({ error: err.message });
+    } finally {
+      setLoadingDiscoveryStats(false);
+    }
+  };
+
+  const handleRefreshDiscovery = async () => {
+    try {
+      const result = await mediacore.refreshPodDiscovery();
+      alert(`Discovery refresh completed: ${result.entriesRefreshed} refreshed, ${result.entriesExpired} expired`);
+      // Reload stats to reflect changes
+      await handleLoadDiscoveryStats();
+    } catch (err) {
+      alert(`Failed to refresh discovery: ${err.message}`);
     }
   };
 
@@ -4003,6 +4178,317 @@ const MediaCore = () => {
                   <p>Failed to load verification stats: {verificationStats.error}</p>
                 </Message>
               )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Discovery */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="search" />
+                Pod Discovery
+              </Card.Header>
+              <Card.Description>
+                Discover pods via DHT using name slugs, tags, and content associations
+              </Card.Description>
+            </Card.Content>
+
+            {/* Pod Registration */}
+            <Card.Content>
+              <Header size="small">Register Pod for Discovery</Header>
+              <Form>
+                <Form.TextArea
+                  label="Pod JSON (must have Visibility: Listed)"
+                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "name": "Daft Punk Fans", "visibility": "Listed", "focusContentId": "content:audio:artist:daft-punk", "tags": ["electronic", "french-house"]}'
+                  value={podToRegister}
+                  onChange={(e) => setPodToRegister(e.target.value)}
+                  rows={3}
+                />
+                <Button
+                  primary
+                  loading={registeringPod}
+                  disabled={registeringPod || !podToRegister.trim()}
+                  onClick={handleRegisterPodForDiscovery}
+                >
+                  Register Pod
+                </Button>
+              </Form>
+
+              {podRegistrationResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {podRegistrationResult.error ? (
+                    <Message error>
+                      <p>Failed to register pod: {podRegistrationResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Pod Registered for Discovery</Message.Header>
+                      <p>
+                        <strong>Pod ID:</strong> {podRegistrationResult.podId}<br />
+                        <strong>Discovery Keys:</strong> {podRegistrationResult.discoveryKeys?.join(', ')}<br />
+                        <strong>Registered:</strong> {new Date(podRegistrationResult.registeredAt).toLocaleString()}<br />
+                        <strong>Expires:</strong> {new Date(podRegistrationResult.expiresAt).toLocaleString()}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Header size="small">Unregister Pod from Discovery</Header>
+              <Form>
+                <Form.Input
+                  label="Pod ID"
+                  placeholder="pod:artist:mb:daft-punk-hash"
+                  value={podToUnregister}
+                  onChange={(e) => setPodToUnregister(e.target.value)}
+                />
+                <Button
+                  color="red"
+                  loading={unregisteringPod}
+                  disabled={unregisteringPod || !podToUnregister.trim()}
+                  onClick={handleUnregisterPodFromDiscovery}
+                >
+                  Unregister Pod
+                </Button>
+              </Form>
+
+              {podUnregistrationResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {podUnregistrationResult.error ? (
+                    <Message error>
+                      <p>Failed to unregister pod: {podUnregistrationResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <p>Pod unregistered from discovery successfully</p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={4}>
+                  {/* Discover by Name */}
+                  <Header size="small">By Name</Header>
+                  <Form>
+                    <Form.Input
+                      placeholder="daft-punk-fans"
+                      value={discoverByName}
+                      onChange={(e) => setDiscoverByName(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      loading={discoveringByName}
+                      disabled={discoveringByName || !discoverByName.trim()}
+                      onClick={handleDiscoverByName}
+                    >
+                      Discover
+                    </Button>
+                  </Form>
+
+                  {nameDiscoveryResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {nameDiscoveryResult.error ? (
+                        <Message error size="tiny">
+                          <p>{nameDiscoveryResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Found {nameDiscoveryResult.totalFound} pods</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={4}>
+                  {/* Discover by Tag */}
+                  <Header size="small">By Tag</Header>
+                  <Form>
+                    <Form.Input
+                      placeholder="electronic"
+                      value={discoverByTag}
+                      onChange={(e) => setDiscoverByTag(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      loading={discoveringByTag}
+                      disabled={discoveringByTag || !discoverByTag.trim()}
+                      onClick={handleDiscoverByTag}
+                    >
+                      Discover
+                    </Button>
+                  </Form>
+
+                  {tagDiscoveryResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {tagDiscoveryResult.error ? (
+                        <Message error size="tiny">
+                          <p>{tagDiscoveryResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Found {tagDiscoveryResult.totalFound} pods</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={4}>
+                  {/* Discover by Tags */}
+                  <Header size="small">By Tags (AND)</Header>
+                  <Form>
+                    <Form.Input
+                      placeholder="electronic,french-house"
+                      value={discoverTags}
+                      onChange={(e) => setDiscoverTags(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      loading={discoveringByTags}
+                      disabled={discoveringByTags || !discoverTags.trim()}
+                      onClick={handleDiscoverByTags}
+                    >
+                      Discover
+                    </Button>
+                  </Form>
+
+                  {tagsDiscoveryResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {tagsDiscoveryResult.error ? (
+                        <Message error size="tiny">
+                          <p>{tagsDiscoveryResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Found {tagsDiscoveryResult.totalFound} pods</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={4}>
+                  {/* Discover All */}
+                  <Header size="small">All Pods</Header>
+                  <Form>
+                    <Form.Input
+                      label="Limit"
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={discoverLimit}
+                      onChange={(e) => setDiscoverLimit(parseInt(e.target.value) || 50)}
+                    />
+                    <Button
+                      fluid
+                      loading={discoveringAll}
+                      disabled={discoveringAll}
+                      onClick={handleDiscoverAll}
+                    >
+                      Discover
+                    </Button>
+                  </Form>
+
+                  {allDiscoveryResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {allDiscoveryResult.error ? (
+                        <Message error size="tiny">
+                          <p>{allDiscoveryResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Found {allDiscoveryResult.totalFound} pods</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Discover by Content */}
+                  <Header size="small">By Content ID</Header>
+                  <Form>
+                    <Form.Input
+                      placeholder="content:audio:artist:daft-punk"
+                      value={discoverByContent}
+                      onChange={(e) => setDiscoverByContent(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      loading={discoveringByContent}
+                      disabled={discoveringByContent || !discoverByContent.trim()}
+                      onClick={handleDiscoverByContent}
+                    >
+                      Discover
+                    </Button>
+                  </Form>
+
+                  {contentDiscoveryResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {contentDiscoveryResult.error ? (
+                        <Message error size="tiny">
+                          <p>{contentDiscoveryResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Found {contentDiscoveryResult.totalFound} pods</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Discovery Stats */}
+                  <Header size="small">Discovery Statistics</Header>
+                  <Button.Group fluid>
+                    <Button
+                      loading={loadingDiscoveryStats}
+                      disabled={loadingDiscoveryStats}
+                      onClick={handleLoadDiscoveryStats}
+                    >
+                      Load Stats
+                    </Button>
+                    <Button
+                      color="blue"
+                      onClick={handleRefreshDiscovery}
+                    >
+                      Refresh
+                    </Button>
+                  </Button.Group>
+
+                  {discoveryStats && !discoveryStats.error && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      <Message size="tiny">
+                        <p>
+                          <strong>Registered Pods:</strong> {discoveryStats.totalRegisteredPods}<br />
+                          <strong>Active Entries:</strong> {discoveryStats.activeDiscoveryEntries}<br />
+                          <strong>Expired Entries:</strong> {discoveryStats.expiredEntries}<br />
+                          <strong>Avg Search Time:</strong> {discoveryStats.averageDiscoveryTime?.totalMilliseconds.toFixed(0)}ms
+                        </p>
+                      </Message>
+                    </div>
+                  )}
+
+                  {discoveryStats?.error && (
+                    <Message error size="tiny" style={{ marginTop: '0.5em' }}>
+                      <p>{discoveryStats.error}</p>
+                    </Message>
+                  )}
+                </Grid.Column>
+              </Grid>
             </Card.Content>
           </Card>
         </Grid.Column>

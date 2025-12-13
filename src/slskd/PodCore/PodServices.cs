@@ -331,6 +331,9 @@ public class PodMessaging : IPodMessaging
         logger.LogDebug("[PodMessaging] Message {MessageId} passed verification (member: {IsMember}, not banned: {NotBanned}, signature: {SignatureValid})",
             message.MessageId, messageVerification.IsFromValidMember, messageVerification.IsNotBanned, messageVerification.HasValidSignature);
 
+        // 5. Get pod members for routing
+        var members = await podService.GetMembersAsync(pod.PodId, ct);
+
         // 6. Store message
         var storageKey = $"{pod.PodId}:{message.ChannelId}";
         lock (storageLock)

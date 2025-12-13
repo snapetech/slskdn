@@ -156,6 +156,29 @@ public record MembershipStats(
     DateTimeOffset LastOperation);
 
 /// <summary>
+/// Result of pod discovery search.
+/// </summary>
+public record PodDiscoveryResult(
+    IReadOnlyList<PodMetadata> Pods,
+    string SearchType,
+    string SearchTerm,
+    int TotalFound,
+    DateTimeOffset SearchedAt,
+    string? ErrorMessage = null);
+
+/// <summary>
+/// Pod discovery statistics.
+/// </summary>
+public record PodDiscoveryStats(
+    int TotalRegisteredPods,
+    int ActiveDiscoveryEntries,
+    int ExpiredEntries,
+    IReadOnlyDictionary<string, int> RegistrationsByTag,
+    IReadOnlyDictionary<string, int> SearchesByType,
+    DateTimeOffset LastDiscoveryOperation,
+    TimeSpan AverageDiscoveryTime);
+
+/// <summary>
 /// Result of membership cleanup operation.
 /// </summary>
 public record MembershipCleanupResult(

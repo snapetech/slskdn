@@ -1075,6 +1075,172 @@ export const cleanupExpiredMemberships = async () => {
   return response.json();
 };
 
+// Pod Discovery API functions
+const discoveryBaseUrl = baseUrl.replace('contentid', 'podcore/discovery');
+
+/**
+ * Register a pod for discovery.
+ */
+export const registerPodForDiscovery = async (pod) => {
+  const response = await fetch(`${discoveryBaseUrl}/register`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(pod),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to register pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Unregister a pod from discovery.
+ */
+export const unregisterPodFromDiscovery = async (podId) => {
+  const response = await fetch(`${discoveryBaseUrl}/unregister/${encodeURIComponent(podId)}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to unregister pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update pod discovery information.
+ */
+export const updatePodDiscovery = async (pod) => {
+  const response = await fetch(`${discoveryBaseUrl}/update`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(pod),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update pod discovery: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Discover pods by name.
+ */
+export const discoverPodsByName = async (name) => {
+  const response = await fetch(`${discoveryBaseUrl}/name/${encodeURIComponent(name)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to discover pods by name: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Discover pods by tag.
+ */
+export const discoverPodsByTag = async (tag) => {
+  const response = await fetch(`${discoveryBaseUrl}/tag/${encodeURIComponent(tag)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to discover pods by tag: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Discover pods by multiple tags.
+ */
+export const discoverPodsByTags = async (tags) => {
+  const tagsParam = tags.join(',');
+  const response = await fetch(`${discoveryBaseUrl}/tags/${encodeURIComponent(tagsParam)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to discover pods by tags: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Discover all pods.
+ */
+export const discoverAllPods = async (limit = 50) => {
+  const response = await fetch(`${discoveryBaseUrl}/all?limit=${limit}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to discover all pods: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Discover pods by content ID.
+ */
+export const discoverPodsByContent = async (contentId) => {
+  const response = await fetch(`${discoveryBaseUrl}/content/${encodeURIComponent(contentId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to discover pods by content: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get pod discovery statistics.
+ */
+export const getPodDiscoveryStats = async () => {
+  const response = await fetch(`${discoveryBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get discovery stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Refresh pod discovery entries.
+ */
+export const refreshPodDiscovery = async () => {
+  const response = await fetch(`${discoveryBaseUrl}/refresh`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to refresh discovery: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 // Pod Membership Verification API functions
 const verificationBaseUrl = baseUrl.replace('contentid', 'podcore/verification');
 

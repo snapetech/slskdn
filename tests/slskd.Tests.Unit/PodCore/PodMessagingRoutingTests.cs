@@ -19,6 +19,7 @@ using Xunit;
 public class PodMessagingRoutingTests
 {
     private readonly Mock<IPodService> mockPodService;
+    private readonly Mock<IPodMembershipVerifier> mockMembershipVerifier;
     private readonly Mock<ISoulseekChatBridge> mockChatBridge;
     private readonly Mock<ILogger<PodMessaging>> mockLogger;
     private readonly Mock<IMeshSyncService> mockMeshSync;
@@ -34,9 +35,11 @@ public class PodMessagingRoutingTests
         mockMeshSync = new Mock<IMeshSyncService>();
         mockSoulseekClient = new Mock<ISoulseekClient>();
         mockOverlayClient = new Mock<IOverlayClient>();
+        mockMembershipVerifier = new Mock<IPodMembershipVerifier>();
 
         podMessaging = new PodMessaging(
             mockPodService.Object,
+            mockMembershipVerifier.Object,
             mockChatBridge.Object,
             mockLogger.Object,
             mockMeshSync.Object,
