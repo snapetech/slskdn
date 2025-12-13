@@ -32,9 +32,12 @@ public class StunNatDetector : INatDetector
     {
         if (!options.EnableStun || options.StunServers.Count == 0)
         {
+            logger.LogDebug("[NAT] STUN disabled or no servers configured");
             lastDetectedType = NatType.Unknown;
             return NatType.Unknown;
         }
+
+        logger.LogDebug("[NAT] Starting STUN detection with servers: {Servers}", string.Join(", ", options.StunServers));
 
         // Strategy:
         // 1) Probe primary STUN server to get mapping1
@@ -50,30 +53,42 @@ public class StunNatDetector : INatDetector
 
         try
         {
+            logger.LogDebug("[NAT] Probing primary STUN server: {Server}", servers[0]);
             var mapping1 = await ProbeServer(servers[0], ct);
             if (mapping1 == null)
             {
+                logger.LogDebug("[NAT] Primary server probe failed");
                 lastDetectedType = NatType.Unknown;
                 return NatType.Unknown;
             }
 
+            logger.LogDebug("[NAT] Primary probe result: local={Local}, mapped={Mapped}, direct={Direct}",
+                mapping1.LocalEndPoint, mapping1.MappedEndPoint, mapping1.IsDirect);
+
             if (mapping1.IsDirect)
             {
+                logger.LogDebug("[NAT] Detected direct connection (no NAT)");
                 lastDetectedType = NatType.Direct;
                 return NatType.Direct;
             }
 
             // Second probe to same server with a new local socket
+            logger.LogDebug("[NAT] Probing same server with new local port");
             var mapping2 = await ProbeServer(servers[0], ct, forceNewLocal: true);
             if (mapping2 == null)
             {
+                logger.LogDebug("[NAT] Secondary probe failed");
                 lastDetectedType = NatType.Unknown;
                 return NatType.Unknown;
             }
 
+            logger.LogDebug("[NAT] Secondary probe result: local={Local}, mapped={Mapped}",
+                mapping2.LocalEndPoint, mapping2.MappedEndPoint);
+
             if (mapping1.MappedEndPoint.Address.ToString() != mapping2.MappedEndPoint.Address.ToString() ||
                 mapping1.MappedEndPoint.Port != mapping2.MappedEndPoint.Port)
             {
+                logger.LogDebug("[NAT] Detected symmetric NAT (mapping changes with local port)");
                 lastDetectedType = NatType.Symmetric;
                 return NatType.Symmetric;
             }
@@ -81,22 +96,29 @@ public class StunNatDetector : INatDetector
             // Optional third probe to a different server to detect destination-dependent mapping
             if (servers.Length > 1)
             {
+                logger.LogDebug("[NAT] Probing secondary STUN server: {Server}", servers[1]);
                 var mapping3 = await ProbeServer(servers[1], ct, forceNewLocal: true);
                 if (mapping3 == null)
                 {
+                    logger.LogDebug("[NAT] Tertiary probe failed, falling back to restricted");
                     lastDetectedType = NatType.Restricted;
                     return NatType.Restricted; // fall back to restricted
                 }
 
+                logger.LogDebug("[NAT] Tertiary probe result: local={Local}, mapped={Mapped}",
+                    mapping3.LocalEndPoint, mapping3.MappedEndPoint);
+
                 if (mapping1.MappedEndPoint.Address.ToString() != mapping3.MappedEndPoint.Address.ToString() ||
                     mapping1.MappedEndPoint.Port != mapping3.MappedEndPoint.Port)
                 {
+                    logger.LogDebug("[NAT] Detected symmetric NAT (mapping changes with destination)");
                     lastDetectedType = NatType.Symmetric;
                     return NatType.Symmetric;
                 }
             }
 
             // Mapping is stable but differs from local -> Restricted (covers full/port-restricted cone)
+            logger.LogDebug("[NAT] Detected restricted NAT (stable mapping, differs from local)");
             lastDetectedType = NatType.Restricted;
             return NatType.Restricted;
         }

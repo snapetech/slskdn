@@ -7,6 +7,21 @@
 
 ## 2025-12-13
 
+### T-007: Predictable Search URLs (Low Priority)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Added support for bookmarkable search URLs using query parameters
+  - URLs like `/searches?q=search+term` automatically create and execute searches
+  - Modified search creation to use predictable query-based navigation instead of UUIDs
+  - Updated SearchListRow links to use query parameter format for bookmarkability
+  - Added URL parameter parsing in Searches component to handle bookmarked URLs
+  - Maintained backward compatibility with existing UUID-based search navigation
+- **Technical Notes**:
+  - Searches still use UUIDs internally for backend identification
+  - Query parameters are URL-encoded for proper handling of special characters
+  - URL cleanup removes query parameters after search creation to avoid duplicate searches
+  - Seamless integration with existing search functionality and UI
+
 ### T-006: Create Chat Rooms from UI (Low Priority)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

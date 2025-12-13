@@ -37,15 +37,15 @@ public class MeshAdvanced : IMeshAdvanced
         return Task.FromResult<IReadOnlyList<MeshRouteDiagnostics>>(diag);
     }
 
-    public Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct = default)
+    public async Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct = default)
     {
         // Get real stats from collector
-        var stats = statsCollector.GetStats();
+        var stats = await statsCollector.GetStatsAsync();
         logger.LogDebug(
             "[MeshAdvanced] Transport stats: DHT={DhtNodes}, Overlay={OverlayConns}, NAT={NatType}",
             stats.ActiveDhtSessions,
             stats.ActiveOverlaySessions,
             stats.DetectedNatType);
-        return Task.FromResult(stats);
+        return stats;
     }
 }

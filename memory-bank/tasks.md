@@ -2470,11 +2470,12 @@
   - Notes: Create public/private rooms from web interface
   - Implementation: Added RoomCreateModal with public/private options, integrated into Rooms component
 
-- [ ] **T-007**: Predictable Search URLs
-  - Status: Not started
+- [x] **T-007**: Predictable Search URLs
+  - Status: Completed (2025-12-13)
   - Priority: Low
   - Related: slskd #1170
   - Notes: Bookmarkable search URLs for browser integration
+  - Implementation: Added query parameter support for /searches?q=search+term URLs with automatic search creation
 
 ---
 

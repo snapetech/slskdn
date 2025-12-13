@@ -33,7 +33,7 @@ public class MeshStatsCollector
     /// <summary>
     /// Gets current mesh transport statistics.
     /// </summary>
-    public MeshTransportStats GetStats()
+        public async Task<MeshTransportStats> GetStatsAsync()
     {
         try
         {
@@ -79,16 +79,26 @@ public class MeshStatsCollector
                 }
             }
 
-            // NAT type
+            // NAT type - perform detection if not already known
             if (natDetector.Value is StunNatDetector stunDetector)
             {
                 try
                 {
-                    natType = stunDetector.LastDetectedType;
+                    // If we don't have a cached result, perform detection
+                    if (stunDetector.LastDetectedType == NatType.Unknown)
+                    {
+                        logger.LogDebug("Performing NAT detection for mesh stats");
+                        natType = await stunDetector.DetectAsync();
+                    }
+                    else
+                    {
+                        natType = stunDetector.LastDetectedType;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug(ex, "Failed to get NAT type");
+                    logger.LogDebug(ex, "Failed to detect NAT type");
+                    natType = NatType.Unknown;
                 }
             }
 
