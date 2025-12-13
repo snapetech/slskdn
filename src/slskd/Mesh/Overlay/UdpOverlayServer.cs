@@ -21,6 +21,7 @@ public class UdpOverlayServer : BackgroundService
     private readonly IControlDispatcher dispatcher;
     private readonly IPeerEndpointRegistry endpointRegistry;
     private readonly IPeerPinCache pinCache;
+    private readonly IMeshRateLimiter rateLimiter;
     private UdpClient? udp;
 
     public UdpOverlayServer(
@@ -28,13 +29,15 @@ public class UdpOverlayServer : BackgroundService
         IOptions<OverlayOptions> options,
         IControlDispatcher dispatcher,
         IPeerEndpointRegistry endpointRegistry,
-        IPeerPinCache pinCache)
+        IPeerPinCache pinCache,
+        IMeshRateLimiter rateLimiter)
     {
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
         this.endpointRegistry = endpointRegistry;
         this.pinCache = pinCache;
+        this.rateLimiter = rateLimiter;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -67,14 +70,17 @@ public class UdpOverlayServer : BackgroundService
                     continue;
                 }
 
-                ControlEnvelope envelope;
-                try
+                // Pre-auth rate limiting by IP
+                if (!rateLimiter.AllowPreAuth(result.RemoteEndPoint.Address))
                 {
-                    envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(result.Buffer);
+                    logger.LogWarning("[Overlay-UDP] Pre-auth rate limit exceeded for {Endpoint}", result.RemoteEndPoint);
+                    continue;
                 }
-                catch (Exception ex)
+
+                // Safe deserialization with size validation
+                if (!Security.MeshSizeLimits.TryDeserializeControlEnvelope(result.Buffer, logger, out var envelope))
                 {
-                    logger.LogWarning(ex, "[Overlay] Failed to decode envelope");
+                    logger.LogWarning("[Overlay-UDP] Failed to deserialize envelope from {Endpoint}", result.RemoteEndPoint);
                     continue;
                 }
 
@@ -86,9 +92,16 @@ public class UdpOverlayServer : BackgroundService
                     continue;
                 }
 
+                // Post-auth rate limiting by PeerId
+                if (!rateLimiter.AllowPostAuth(peerId))
+                {
+                    logger.LogWarning("[Overlay-UDP] Post-auth rate limit exceeded for {PeerId}", peerId);
+                    continue;
+                }
+
                 var descriptor = pinCache.GetDescriptor(peerId);
-                var allowedKeys = descriptor?.ControlSigningPublicKeys
-                    ?.Select(k => Convert.FromBase64String(k))
+                var allowedKeys = descriptor?.ControlSigningKeys
+                    ?.Select(k => Convert.FromBase64String(k.PublicKey))
                     .ToList()
                     ?? new List<byte[]>();
 
@@ -106,7 +119,7 @@ public class UdpOverlayServer : BackgroundService
                     AllowedControlSigningKeys = allowedKeys,
                 };
 
-                await dispatcher.HandleAsync(envelope, peerContext, stoppingToken);
+                await dispatcher.HandleAsync(envelope!, peerContext, stoppingToken);
             }
             catch (OperationCanceledException)
             {

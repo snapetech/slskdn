@@ -26,6 +26,7 @@ public class QuicOverlayServer : BackgroundService
     private readonly IControlDispatcher dispatcher;
     private readonly IPeerEndpointRegistry endpointRegistry;
     private readonly IPeerPinCache pinCache;
+    private readonly IMeshRateLimiter rateLimiter;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
 
     public QuicOverlayServer(
@@ -33,13 +34,15 @@ public class QuicOverlayServer : BackgroundService
         IOptions<OverlayOptions> options,
         IControlDispatcher dispatcher,
         IPeerEndpointRegistry endpointRegistry,
-        IPeerPinCache pinCache)
+        IPeerPinCache pinCache,
+        IMeshRateLimiter rateLimiter)
     {
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
         this.endpointRegistry = endpointRegistry;
         this.pinCache = pinCache;
+        this.rateLimiter = rateLimiter;
     }
 
     /// <summary>
@@ -187,8 +190,21 @@ public class QuicOverlayServer : BackgroundService
                     return;
                 }
 
-                var envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(buffer.AsMemory(0, totalRead));
-                logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
+                // Pre-auth rate limiting by IP
+                if (!rateLimiter.AllowPreAuth(remoteEndPoint.Address))
+                {
+                    logger.LogWarning("[Overlay-QUIC] Pre-auth rate limit exceeded for {Endpoint}", remoteEndPoint);
+                    return;
+                }
+
+                // Safe deserialization with size validation
+                if (!Security.MeshSizeLimits.TryDeserializeControlEnvelope(buffer.AsMemory(0, totalRead).ToArray(), logger, out var envelope))
+                {
+                    logger.LogWarning("[Overlay-QUIC] Failed to deserialize envelope from {Endpoint}", remoteEndPoint);
+                    return;
+                }
+
+                logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope!.Type, remoteEndPoint);
 
                 // Resolve peer context
                 var peerId = endpointRegistry.GetPeerId(remoteEndPoint);
@@ -198,9 +214,16 @@ public class QuicOverlayServer : BackgroundService
                     return;
                 }
 
+                // Post-auth rate limiting by PeerId
+                if (!rateLimiter.AllowPostAuth(peerId))
+                {
+                    logger.LogWarning("[Overlay-QUIC] Post-auth rate limit exceeded for {PeerId}", peerId);
+                    return;
+                }
+
                 var descriptor = pinCache.GetDescriptor(peerId);
-                var allowedKeys = descriptor?.ControlSigningPublicKeys
-                    ?.Select(k => Convert.FromBase64String(k))
+                var allowedKeys = descriptor?.ControlSigningKeys
+                    ?.Select(k => Convert.FromBase64String(k.PublicKey))
                     .ToList()
                     ?? new List<byte[]>();
 

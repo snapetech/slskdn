@@ -7,6 +7,7 @@ namespace slskd.Mesh.Security;
 
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,12 +16,13 @@ using slskd.Mesh.Dht;
 
 /// <summary>
 /// Caches expected SPKI pins for mesh peers.
-/// Fetches descriptors from DHT on demand.
+/// Fetches descriptors from DHT on demand with anti-rollback protection.
 /// </summary>
 public interface IPeerPinCache
 {
     Task<string?> GetExpectedControlSpkiAsync(IPEndPoint endpoint, CancellationToken ct = default);
     Task<string?> GetExpectedDataSpkiAsync(IPEndPoint endpoint, CancellationToken ct = default);
+    MeshPeerDescriptor? GetDescriptor(string peerId);
 }
 
 public class PeerPinCache : IPeerPinCache
@@ -29,30 +31,43 @@ public class PeerPinCache : IPeerPinCache
     private readonly IMeshDhtClient dhtClient;
     private readonly IDescriptorSigner descriptorSigner;
     private readonly IPeerEndpointRegistry endpointRegistry;
+    private readonly IDescriptorSeqTracker seqTracker;
     private readonly ConcurrentDictionary<string, CachedDescriptor> cache = new();
 
     public PeerPinCache(
         ILogger<PeerPinCache> logger,
         IMeshDhtClient dhtClient,
         IDescriptorSigner descriptorSigner,
-        IPeerEndpointRegistry endpointRegistry)
+        IPeerEndpointRegistry endpointRegistry,
+        IDescriptorSeqTracker seqTracker)
     {
         this.logger = logger;
         this.dhtClient = dhtClient;
         this.descriptorSigner = descriptorSigner;
         this.endpointRegistry = endpointRegistry;
+        this.seqTracker = seqTracker;
     }
 
     public async Task<string?> GetExpectedControlSpkiAsync(IPEndPoint endpoint, CancellationToken ct = default)
     {
         var descriptor = await GetDescriptorForEndpointAsync(endpoint, ct);
-        return descriptor?.TlsControlSpkiSha256;
+        return descriptor?.TlsControlPins?.FirstOrDefault()?.SpkiSha256;
     }
 
     public async Task<string?> GetExpectedDataSpkiAsync(IPEndPoint endpoint, CancellationToken ct = default)
     {
         var descriptor = await GetDescriptorForEndpointAsync(endpoint, ct);
-        return descriptor?.TlsDataSpkiSha256;
+        return descriptor?.TlsDataPins?.FirstOrDefault()?.SpkiSha256;
+    }
+
+    public MeshPeerDescriptor? GetDescriptor(string peerId)
+    {
+        if (cache.TryGetValue(peerId, out var cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
+        {
+            return cached.Descriptor;
+        }
+
+        return null;
     }
 
     private async Task<MeshPeerDescriptor?> GetDescriptorForEndpointAsync(IPEndPoint endpoint, CancellationToken ct)
@@ -91,6 +106,14 @@ public class PeerPinCache : IPeerPinCache
                 return null;
             }
 
+            // Anti-rollback: check sequence number
+            if (!seqTracker.ValidateAndUpdate(peerId, descriptor.DescriptorSeq))
+            {
+                logger.LogWarning("[PeerPinCache] Descriptor rollback attack detected for PeerId={PeerId}, seq={Seq}",
+                    peerId, descriptor.DescriptorSeq);
+                return null;
+            }
+
             // Cache for 5 minutes
             cache[peerId] = new CachedDescriptor
             {
@@ -98,7 +121,8 @@ public class PeerPinCache : IPeerPinCache
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5),
             };
 
-            logger.LogDebug("[PeerPinCache] Cached descriptor for PeerId={PeerId}", peerId);
+            logger.LogDebug("[PeerPinCache] Cached descriptor for PeerId={PeerId} seq={Seq}",
+                peerId, descriptor.DescriptorSeq);
             return descriptor;
         }
         catch (Exception ex)
