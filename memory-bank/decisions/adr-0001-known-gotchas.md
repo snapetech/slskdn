@@ -1364,7 +1364,25 @@ grep -l "using Soulseek" src/slskd/**/*.cs | xargs grep -l "Directory\.Exists\|D
 ### delegating-logger-sourcecontext-missing
 - **What**: Delegating logger throws "The given key 'SourceContext' was not present in the dictionary" error
 - **When**: Observed during Hash DB search logging: `Hash DB search for '"Lullaby"' returned 0 results in 0ms`
-- **Why**: Delegating logger configuration expects SourceContext key but it's missing from log event properties
-- **Fix**: Investigate delegating logger setup, ensure SourceContext is properly populated or make it optional
-- **Files**: Likely in logging configuration (Program.cs, appsettings, or HashDbService logging calls)
-- **Priority**: Medium (doesn't break functionality, but clutters logs with errors)
+- **Why**: Delegating logger configuration expected SourceContext key but didn't check if it existed first
+- **Fix**: Added safe access check in Program.cs: `if (logEvent.Properties.ContainsKey("SourceContext"))`
+- **Files**: `src/slskd/Program.cs` (delegating logger setup)
+- **Priority**: FIXED (commit 2e281357)
+
+---
+
+### security-test-coverage
+- **What**: Added comprehensive unit tests for new security features (P0/P1 fixes)
+- **When**: 2025-12-13, after implementing handshake verification, replay protection, and timestamp validation
+- **Coverage**:
+  - ReplayCacheTests (18 tests): Replay detection, LRU eviction, TTL expiration, per-peer isolation, thread safety
+  - MessageValidatorTests (24 tests): Timestamp validation, input validation, constant-time comparison, edge cases
+- **Skipped**: MeshNeighborRegistryTests and LocalMeshIdentityServiceTests (complex mocking, references methods from whatAmIThinking branch)
+- **Dependencies**: Added FluentAssertions 6.12.0 to test project, disabled DescriptorSignerTests (references features not on multi-source-swarm)
+- **Results**: 42 passing, 1 skipped (timing-sensitive TTL test with 1-minute cleanup cycle)
+- **Files**: 
+  - `tests/slskd.Tests.Unit/DhtRendezvous/Security/ReplayCacheTests.cs`
+  - `tests/slskd.Tests.Unit/DhtRendezvous/Security/MessageValidatorTests.cs`
+  - `tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj`
+- **Priority**: DONE (commit 2e281357)
+
