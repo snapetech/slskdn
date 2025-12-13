@@ -55,8 +55,12 @@ public class QuicOverlayServer : BackgroundService
 
         try
         {
-            // Generate self-signed certificate for QUIC/TLS
-            var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic");
+            // Load or create persistent certificate for QUIC/TLS
+            var certificate = Security.PersistentCertificate.LoadOrCreate(
+                options.TlsCertPath,
+                options.TlsCertPassword,
+                "CN=mesh-overlay-control",
+                validityYears: 5);
 
             var listenerOptions = new QuicListenerOptions
             {

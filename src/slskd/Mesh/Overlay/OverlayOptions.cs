@@ -16,7 +16,19 @@ public class OverlayOptions
 
     /// <summary>Rotate key after N days (0 = never).</summary>
     public int RotateDays { get; set; } = 30;
+
+    /// <summary>Path to persist the control plane TLS certificate (PFX).</summary>
+    public string TlsCertPath { get; set; } = "mesh-overlay-control.pfx";
+
+    /// <summary>Password for the control plane TLS certificate (optional).</summary>
+    public string? TlsCertPassword { get; set; }
 }
+
+
+
+
+
+
 
 
 

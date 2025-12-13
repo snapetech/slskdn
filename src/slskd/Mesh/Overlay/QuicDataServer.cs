@@ -45,8 +45,12 @@ public class QuicDataServer : BackgroundService
 
         try
         {
-            // Generate self-signed certificate for QUIC/TLS
-            var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic-data");
+            // Load or create persistent certificate for QUIC/TLS data plane
+            var certificate = Security.PersistentCertificate.LoadOrCreate(
+                options.TlsCertPath,
+                options.TlsCertPassword,
+                "CN=mesh-overlay-data",
+                validityYears: 5);
 
             var listenerOptions = new QuicListenerOptions
             {

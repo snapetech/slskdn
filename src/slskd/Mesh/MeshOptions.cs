@@ -26,9 +26,10 @@ public class MeshOptions
     public List<string> BootstrapNodes { get; set; } = new();
 
     /// <summary>
-    /// Our peer identifier (pseudonymous).
+    /// Our peer identifier (computed from identity key at startup).
+    /// Do NOT set this in config - it will be overridden by the computed value.
     /// </summary>
-    public string SelfPeerId { get; set; } = "peer:mesh:self";
+    public string SelfPeerId { get; set; } = string.Empty; // Populated by bootstrap service
 
     /// <summary>
     /// Endpoints we advertise (e.g., udp://host:port, quic://host:port).

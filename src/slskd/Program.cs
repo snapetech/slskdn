@@ -897,7 +897,19 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
             services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
-            // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
+            
+            // Security: Identity key store (stable Ed25519 identity, NEVER rotates)
+            services.AddSingleton<Mesh.Security.IIdentityKeyStore>(sp =>
+                new Mesh.Security.FileIdentityKeyStore(
+                    sp.GetRequiredService<ILogger<Mesh.Security.FileIdentityKeyStore>>()));
+            
+            // Security: Descriptor signing and verification
+            services.AddSingleton<Mesh.Security.IDescriptorSigner, Mesh.Security.DescriptorSigner>();
+            
+            // Security: Peer pin cache for SPKI pinning
+            services.AddSingleton<Mesh.Security.IPeerPinCache, Mesh.Security.PeerPinCache>();
+            
+            // KeyStore for Ed25519 control signing keys (CAN rotate, subordinate to identity)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();
             services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
