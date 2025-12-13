@@ -909,6 +909,7 @@ namespace slskd
             // Hole punching services for NAT traversal
             services.AddSingleton<Mesh.ServiceFabric.Services.HolePunchMeshService>();
             services.AddSingleton<Mesh.Nat.IHolePunchCoordinator, Mesh.Nat.HolePunchCoordinator>();
+            services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
             // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();

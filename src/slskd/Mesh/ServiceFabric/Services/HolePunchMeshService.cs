@@ -159,7 +159,7 @@ public class HolePunchMeshService : IMeshService
 
                     var payload = JsonSerializer.SerializeToUtf8Bytes(response);
 
-                    _logger.LogInformation(
+                    _logger.LogDebug(
                         "[HolePunch] Initiated hole punch session {SessionId} between {Initiator} and {Target}",
                         sessionId, context.RemotePeerId, request.TargetPeerId);
 
@@ -264,7 +264,7 @@ public class HolePunchMeshService : IMeshService
 
             var payload = JsonSerializer.SerializeToUtf8Bytes(response);
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "[HolePunch] Completed hole punch session {SessionId} for peers {Initiator} <-> {Target}",
                 request.SessionId, request.InitiatorPeerId, context.RemotePeerId);
 
@@ -301,7 +301,7 @@ public class HolePunchMeshService : IMeshService
             var request = JsonSerializer.Deserialize<HolePunchCancelRequest>(call.Payload);
             if (request?.SessionId != null && _activeSessions.TryRemove(request.SessionId, out _))
             {
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "[HolePunch] Cancelled hole punch session {SessionId} by {PeerId}",
                     request.SessionId, context.RemotePeerId);
             }
@@ -355,7 +355,7 @@ public class HolePunchMeshService : IMeshService
 
                         if (result.Success)
                         {
-                            _logger.LogInformation(
+                            _logger.LogDebug(
                                 "[HolePunch] Hole punch successful: {Local} <-> {Remote}",
                                 result.LocalEndpoint, targetEndpoint);
                         }

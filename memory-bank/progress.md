@@ -7,6 +7,31 @@
 
 ## 2025-12-13
 
+### T-1306: UDP Hole Punching (Gap Task - P2)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **HolePunchMeshService**: Mesh service providing rendezvous coordination for NAT traversal
+  - **Enhanced UdpHolePuncher**: NAT-aware hole punching with port prediction for symmetric NATs
+  - **HolePunchCoordinator**: Client-side API for requesting coordinated hole punching
+  - **Session Management**: State tracking for multi-peer hole punch coordination
+  - **Mesh Overlay Integration**: Uses DHT mesh services for peer discovery and coordination
+  - **NAT Type Awareness**: Different strategies for different NAT combinations
+  - **Port Prediction**: Attempts adjacent ports for symmetric NAT traversal
+  - **Timeout Management**: Configurable timeouts and retry logic for reliability
+- **Technical Notes**:
+  - **Rendezvous Protocol**: Three-phase process (Request → Confirm → Punch) via mesh overlay
+  - **Symmetric NAT Support**: Port prediction algorithm tries adjacent ports for mapping consistency
+  - **Concurrent Punching**: Parallel attempts from multiple endpoints for success probability
+  - **Session Tracking**: Unique session IDs prevent coordination conflicts
+  - **Acknowledgment Protocol**: Bidirectional confirmation ensures both peers attempt punching
+  - **Fallback Mechanisms**: Graceful degradation when hole punching fails
+- **NAT Traversal Capabilities**:
+  - **Full Cone NAT**: Direct punching works reliably
+  - **Restricted Cone NAT**: Endpoint-dependent filtering handled
+  - **Port Restricted NAT**: Port-specific restrictions managed
+  - **Symmetric NAT**: Port prediction increases success probability
+  - **Multiple Endpoints**: Supports punching across multiple network interfaces
+
 ### T-1305: Peer Descriptor Refresh Cycle (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

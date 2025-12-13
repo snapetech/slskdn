@@ -15,6 +15,7 @@ namespace slskd.Mesh.Dht;
 public interface IPeerDescriptorPublisher
 {
     Task PublishSelfAsync(CancellationToken ct = default);
+    Task MarkPeerRequiresRelayAsync(string peerId, CancellationToken ct = default);
 }
 
 public class PeerDescriptorPublisher : IPeerDescriptorPublisher
@@ -23,6 +24,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     private readonly IMeshDhtClient dht;
     private readonly MeshOptions options;
     private readonly INatDetector natDetector;
+    private readonly Mesh.ServiceFabric.Services.HolePunchMeshService? holePunchService;
 
     public PeerDescriptorPublisher(
         ILogger<PeerDescriptorPublisher> logger,
@@ -34,6 +36,47 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         this.dht = dht;
         this.options = options.Value;
         this.natDetector = natDetector;
+    }
+
+    /// <summary>
+    /// Mark a peer as requiring relay due to hole punching failures.
+    /// </summary>
+    public async Task MarkPeerRequiresRelayAsync(string peerId, CancellationToken ct = default)
+    {
+        try
+        {
+            // Get the current peer descriptor
+            var key = $"mesh:peer:{peerId}";
+            var descriptor = await dht.GetAsync<MeshPeerDescriptor>(key, ct);
+
+            if (descriptor != null)
+            {
+                // Mark as requiring relay
+                var updatedDescriptor = new MeshPeerDescriptor
+                {
+                    PeerId = descriptor.PeerId,
+                    Endpoints = descriptor.Endpoints,
+                    NatType = descriptor.NatType,
+                    RelayRequired = true, // Mark as requiring relay
+                    TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                await dht.PutAsync(key, updatedDescriptor, ttlSeconds: 3600, ct: ct);
+
+                logger.LogInformation(
+                    "[MeshDHT] Marked peer {PeerId} as requiring relay due to hole punching failures",
+                    peerId);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "[MeshDHT] Cannot mark peer {PeerId} as requiring relay - descriptor not found",
+                    peerId);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[MeshDHT] Failed to mark peer {PeerId} as requiring relay", peerId);
+        }
     }
 
     public async Task PublishSelfAsync(CancellationToken ct = default)

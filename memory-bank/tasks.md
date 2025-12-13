@@ -2064,11 +2064,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Periodic republishing of own descriptor with TTL/2 refresh interval and IP change detection.
 
-- [ ] **T-1306**: Implement UDP hole punching
-  - Status: Not started
+- [x] **T-1306**: Implement UDP hole punching
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: NAT traversal for non-symmetric NAT. Rendezvous coordination via overlay.
+  - Branch: experimental/whatAmIThinking
+  - Notes: NAT traversal for non-symmetric NAT with rendezvous coordination via overlay mesh service.
 
 - [ ] **T-1307**: Implement relay fallback for symmetric NAT
   - Status: Not started
