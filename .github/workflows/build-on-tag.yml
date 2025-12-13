@@ -860,6 +860,72 @@ jobs:
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured, skipping Snap publish"
 
+  homebrew-dev:
+    name: Update Homebrew Tap (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-*.zip"
+
+      - name: Update Tap
+        env:
+          GH_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        if: ${{ env.GH_TOKEN != '' }}
+        run: |
+          SHA_MAC_X64=$(sha256sum slskdn-dev-osx-x64.zip | cut -d' ' -f1)
+          SHA_MAC_ARM=$(sha256sum slskdn-dev-osx-arm64.zip | cut -d' ' -f1)
+          SHA_LINUX=$(sha256sum slskdn-dev-linux-x64.zip | cut -d' ' -f1)
+          VERSION="${{ needs.parse.outputs.version }}"
+          TAG="${{ github.ref_name }}"
+          
+          git clone https://x-access-token:${GH_TOKEN}@github.com/snapetech/homebrew-slskdn.git tap
+          cd tap
+          cat > Formula/slskdn-dev.rb <<EOF
+          class SlskdnDev < Formula
+            desc "Batteries-included Soulseek web client (Development Build)"
+            homepage "https://github.com/snapetech/slskdn"
+            license "AGPL-3.0-or-later"
+            version "${VERSION}"
+            url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-dev-linux-x64.zip"
+            sha256 "${SHA_LINUX}"
+            on_macos do
+              on_arm do
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-dev-osx-arm64.zip"
+                sha256 "${SHA_MAC_ARM}"
+              end
+              on_intel do
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-dev-osx-x64.zip"
+                sha256 "${SHA_MAC_X64}"
+              end
+            end
+            on_linux do
+              url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-dev-linux-x64.zip"
+              sha256 "${SHA_LINUX}"
+            end
+            conflicts_with "slskdn", because: "both install slskdn binary"
+            def install
+              libexec.install Dir["*"]
+              (bin/"slskdn-dev").write_exec_script libexec/"slskd"
+            end
+          end
+          EOF
+          git config user.name "slskdn CI" && git config user.email "slskdn@proton.me"
+          git add Formula/slskdn-dev.rb
+          git commit -m "Update slskdn-dev to $VERSION" || echo "No changes"
+          git push
+          echo "✅ Updated Homebrew tap"
+
+      - name: Skip if no credentials
+        if: ${{ env.GH_TOKEN == '' }}
+        run: echo "⚠️ TAP_GITHUB_TOKEN not configured, skipping Homebrew tap update"
+
   release-main:
     name: Create Main Release
     needs: [parse, publish]
