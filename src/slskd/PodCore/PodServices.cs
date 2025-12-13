@@ -232,6 +232,7 @@ public class PodMessaging : IPodMessaging
     private readonly IPodService podService;
     private readonly IPodMembershipVerifier membershipVerifier;
     private readonly IPodMessageRouter messageRouter;
+    private readonly IMessageSigner messageSigner;
     private readonly ISoulseekChatBridge chatBridge;
     private readonly Microsoft.Extensions.Logging.ILogger<PodMessaging> logger;
     private readonly Mesh.IMeshSyncService meshSync;
@@ -247,6 +248,7 @@ public class PodMessaging : IPodMessaging
         IPodService podService,
         IPodMembershipVerifier membershipVerifier,
         IPodMessageRouter messageRouter,
+        IMessageSigner messageSigner,
         ISoulseekChatBridge chatBridge,
         Microsoft.Extensions.Logging.ILogger<PodMessaging> logger,
         Mesh.IMeshSyncService meshSync = null,
@@ -256,6 +258,7 @@ public class PodMessaging : IPodMessaging
         this.podService = podService;
         this.membershipVerifier = membershipVerifier;
         this.messageRouter = messageRouter;
+        this.messageSigner = messageSigner;
         this.chatBridge = chatBridge;
         this.logger = logger;
         this.meshSync = meshSync;
@@ -334,7 +337,17 @@ public class PodMessaging : IPodMessaging
         logger.LogDebug("[PodMessaging] Message {MessageId} passed verification (member: {IsMember}, not banned: {NotBanned}, signature: {SignatureValid})",
             message.MessageId, messageVerification.IsFromValidMember, messageVerification.IsNotBanned, messageVerification.HasValidSignature);
 
-        // 5. Get pod members for routing
+        // 5. Verify message signature
+        var signatureValid = await messageSigner.VerifyMessageAsync(message, ct);
+        if (!signatureValid)
+        {
+            logger.LogWarning("[PodMessaging] Rejecting message {MessageId} with invalid signature", message.MessageId);
+            return false;
+        }
+
+        logger.LogDebug("[PodMessaging] Message {MessageId} signature verified", message.MessageId);
+
+        // 6. Get pod members for routing
         var members = await podService.GetMembersAsync(pod.PodId, ct);
 
         // 6. Store message

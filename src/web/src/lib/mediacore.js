@@ -1491,6 +1491,80 @@ export const cleanupSeenMessages = async () => {
   return response.json();
 };
 
+// Pod Message Signing API functions
+const signingBaseUrl = baseUrl.replace('contentid', 'podcore/signing');
+
+/**
+ * Sign a pod message.
+ */
+export const signPodMessage = async (message, privateKey) => {
+  const response = await fetch(`${signingBaseUrl}/sign`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message, privateKey }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to sign message: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Verify a pod message signature.
+ */
+export const verifyPodMessageSignature = async (message) => {
+  const response = await fetch(`${signingBaseUrl}/verify`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(message),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify message signature: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Generate a new key pair for message signing.
+ */
+export const generateMessageKeyPair = async () => {
+  const response = await fetch(`${signingBaseUrl}/generate-keypair`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate key pair: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get message signing statistics.
+ */
+export const getMessageSigningStats = async () => {
+  const response = await fetch(`${signingBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get signing stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 // Pod Membership Verification API functions
 const verificationBaseUrl = baseUrl.replace('contentid', 'podcore/verification');
 

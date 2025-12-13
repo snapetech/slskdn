@@ -16,6 +16,7 @@ public class PodMembershipVerifier : IPodMembershipVerifier
 {
     private readonly ILogger<PodMembershipVerifier> _logger;
     private readonly IPodMembershipService _membershipService;
+    private readonly IMessageSigner _messageSigner;
 
     // Statistics tracking
     private int _totalVerifications;
@@ -28,10 +29,12 @@ public class PodMembershipVerifier : IPodMembershipVerifier
 
     public PodMembershipVerifier(
         ILogger<PodMembershipVerifier> logger,
-        IPodMembershipService membershipService)
+        IPodMembershipService membershipService,
+        IMessageSigner messageSigner)
     {
         _logger = logger;
         _membershipService = membershipService;
+        _messageSigner = messageSigner;
     }
 
     /// <inheritdoc/>
@@ -202,15 +205,16 @@ public class PodMembershipVerifier : IPodMembershipVerifier
     }
 
     // Helper methods
-    private Task<bool> VerifyMessageSignatureAsync(PodMessage message, CancellationToken cancellationToken)
+    private async Task<bool> VerifyMessageSignatureAsync(PodMessage message, CancellationToken cancellationToken)
     {
-        // TODO: Implement proper message signature verification
-        // For now, assume signature is valid if present
-        var hasSignature = !string.IsNullOrEmpty(message.Signature);
-        if (!hasSignature)
+        try
         {
-            _logger.LogWarning("[PodMembershipVerifier] Message {MessageId} has no signature", message.MessageId);
+            return await _messageSigner.VerifyMessageAsync(message, cancellationToken);
         }
-        return Task.FromResult(hasSignature);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[PodMembershipVerifier] Error verifying message signature for {MessageId}", message.MessageId);
+            return false;
+        }
     }
 }

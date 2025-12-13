@@ -2230,11 +2230,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete signed pod join/leave system with role-based approvals and DHT membership publishing.
 
-- [ ] **T-1345**: Implement decentralized message routing
-  - Status: Not started
+- [x] **T-1345**: Implement decentralized message routing
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Route messages via overlay to pod members. Fanout with deduplication.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete overlay-based message routing with fanout, deduplication, and comprehensive monitoring.
 
 - [ ] **T-1346**: Implement message signature verification
   - Status: Not started

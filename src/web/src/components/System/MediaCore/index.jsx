@@ -229,6 +229,19 @@ const MediaCore = () => {
   const [checkPodId, setCheckPodId] = useState('');
   const [checkingMessageSeen, setCheckingMessageSeen] = useState(false);
   const [messageSeenResult, setMessageSeenResult] = useState(null);
+
+  // Pod Message Signing states
+  const [messageToSign, setMessageToSign] = useState('');
+  const [privateKeyForSigning, setPrivateKeyForSigning] = useState('');
+  const [signingMessage, setSigningMessage] = useState(false);
+  const [signedMessageResult, setSignedMessageResult] = useState(null);
+  const [messageToVerify, setMessageToVerify] = useState('');
+  const [verifyingSignature, setVerifyingSignature] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [generatingKeyPair, setGeneratingKeyPair] = useState(false);
+  const [generatedKeyPair, setGeneratedKeyPair] = useState(null);
+  const [signingStats, setSigningStats] = useState(null);
+  const [loadingSigningStats, setLoadingSigningStats] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1517,6 +1530,72 @@ const MediaCore = () => {
       await handleLoadRoutingStats();
     } catch (err) {
       alert(`Failed to cleanup: ${err.message}`);
+    }
+  };
+
+  // Pod Message Signing handlers
+  const handleSignMessage = async () => {
+    if (!messageToSign.trim() || !privateKeyForSigning.trim()) {
+      alert('Please enter message JSON and private key');
+      return;
+    }
+
+    try {
+      setSigningMessage(true);
+      setSignedMessageResult(null);
+      const message = JSON.parse(messageToSign);
+      const result = await mediacore.signPodMessage(message, privateKeyForSigning);
+      setSignedMessageResult(result);
+      setMessageToSign('');
+    } catch (err) {
+      setSignedMessageResult({ error: err.message });
+    } finally {
+      setSigningMessage(false);
+    }
+  };
+
+  const handleVerifySignature = async () => {
+    if (!messageToVerify.trim()) {
+      alert('Please enter message JSON to verify');
+      return;
+    }
+
+    try {
+      setVerifyingSignature(true);
+      setVerificationResult(null);
+      const message = JSON.parse(messageToVerify);
+      const result = await mediacore.verifyPodMessageSignature(message);
+      setVerificationResult(result);
+    } catch (err) {
+      setVerificationResult({ error: err.message });
+    } finally {
+      setVerifyingSignature(false);
+    }
+  };
+
+  const handleGenerateKeyPair = async () => {
+    try {
+      setGeneratingKeyPair(true);
+      setGeneratedKeyPair(null);
+      const result = await mediacore.generateMessageKeyPair();
+      setGeneratedKeyPair(result);
+    } catch (err) {
+      setGeneratedKeyPair({ error: err.message });
+    } finally {
+      setGeneratingKeyPair(false);
+    }
+  };
+
+  const handleLoadSigningStats = async () => {
+    try {
+      setLoadingSigningStats(true);
+      setSigningStats(null);
+      const result = await mediacore.getMessageSigningStats();
+      setSigningStats(result);
+    } catch (err) {
+      setSigningStats({ error: err.message });
+    } finally {
+      setLoadingSigningStats(false);
     }
   };
 
@@ -5140,6 +5219,176 @@ const MediaCore = () => {
                   <p>Failed to load routing stats: {routingStats.error}</p>
                 </Message>
               )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Message Signing */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="key" />
+                Pod Message Signing
+              </Card.Header>
+              <Card.Description>
+                Cryptographic signing and verification of pod messages for authenticity and integrity
+              </Card.Description>
+            </Card.Content>
+
+            {/* Message Signing */}
+            <Card.Content>
+              <Header size="small">Sign Pod Message</Header>
+              <Form>
+                <Form.TextArea
+                  label="Pod Message JSON"
+                  placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789}'
+                  value={messageToSign}
+                  onChange={(e) => setMessageToSign(e.target.value)}
+                  rows={3}
+                />
+                <Form.Input
+                  label="Private Key"
+                  type="password"
+                  placeholder="base64-encoded private key"
+                  value={privateKeyForSigning}
+                  onChange={(e) => setPrivateKeyForSigning(e.target.value)}
+                />
+                <Button
+                  primary
+                  loading={signingMessage}
+                  disabled={signingMessage || !messageToSign.trim() || !privateKeyForSigning.trim()}
+                  onClick={handleSignMessage}
+                >
+                  Sign Message
+                </Button>
+              </Form>
+
+              {signedMessageResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {signedMessageResult.error ? (
+                    <Message error>
+                      <p>Failed to sign message: {signedMessageResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Message Signed Successfully</Message.Header>
+                      <p>
+                        <strong>Message ID:</strong> {signedMessageResult.messageId}<br />
+                        <strong>Channel:</strong> {signedMessageResult.channelId}<br />
+                        <strong>Signature:</strong> {signedMessageResult.signature?.substring(0, 50)}...
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Signature Verification */}
+                  <Header size="small">Verify Message Signature</Header>
+                  <Form>
+                    <Form.TextArea
+                      label="Pod Message JSON (with signature)"
+                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
+                      value={messageToVerify}
+                      onChange={(e) => setMessageToVerify(e.target.value)}
+                      rows={4}
+                    />
+                    <Button
+                      fluid
+                      loading={verifyingSignature}
+                      disabled={verifyingSignature || !messageToVerify.trim()}
+                      onClick={handleVerifySignature}
+                    >
+                      Verify Signature
+                    </Button>
+                  </Form>
+
+                  {verificationResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {verificationResult.error ? (
+                        <Message error size="tiny">
+                          <p>{verificationResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message size="tiny">
+                          <p>Message {verificationResult.messageId}: Signature is {verificationResult.isValid ? 'VALID' : 'INVALID'}</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Key Pair Generation */}
+                  <Header size="small">Generate Key Pair</Header>
+                  <Form>
+                    <Button
+                      fluid
+                      loading={generatingKeyPair}
+                      disabled={generatingKeyPair}
+                      onClick={handleGenerateKeyPair}
+                    >
+                      Generate New Key Pair
+                    </Button>
+                  </Form>
+
+                  {generatedKeyPair && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {generatedKeyPair.error ? (
+                        <Message error size="tiny">
+                          <p>{generatedKeyPair.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <Message.Header>Key Pair Generated</Message.Header>
+                          <p>
+                            <strong>Public Key:</strong> {generatedKeyPair.publicKey?.substring(0, 30)}...<br />
+                            <strong>Private Key:</strong> {generatedKeyPair.privateKey?.substring(0, 30)}...<br />
+                            <em>⚠️ Keep private key secure!</em>
+                          </p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Signing Statistics */}
+                  <Header size="small" style={{ marginTop: '1em' }}>Signing Statistics</Header>
+                  <Button.Group fluid>
+                    <Button
+                      loading={loadingSigningStats}
+                      disabled={loadingSigningStats}
+                      onClick={handleLoadSigningStats}
+                    >
+                      Load Stats
+                    </Button>
+                  </Button.Group>
+
+                  {signingStats && !signingStats.error && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      <Message size="tiny">
+                        <p>
+                          <strong>Signatures Created:</strong> {signingStats.totalSignaturesCreated}<br />
+                          <strong>Signatures Verified:</strong> {signingStats.totalSignaturesVerified}<br />
+                          <strong>Successful:</strong> {signingStats.successfulVerifications}<br />
+                          <strong>Failed:</strong> {signingStats.failedVerifications}<br />
+                          <strong>Avg Sign Time:</strong> {signingStats.averageSigningTimeMs.toFixed(2)}ms<br />
+                          <strong>Avg Verify Time:</strong> {signingStats.averageVerificationTimeMs.toFixed(2)}ms
+                        </p>
+                      </Message>
+                    </div>
+                  )}
+
+                  {signingStats?.error && (
+                    <Message error size="tiny" style={{ marginTop: '0.5em' }}>
+                      <p>{signingStats.error}</p>
+                    </Message>
+                  )}
+                </Grid.Column>
+              </Grid>
             </Card.Content>
           </Card>
         </Grid.Column>
