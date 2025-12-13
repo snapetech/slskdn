@@ -1,14 +1,13 @@
 name: Build on Tag
 
-# DISABLED: Manual trigger only until fully tested
 # Trigger: push tag matching build-dev-* or build-main-*
 # Example: git tag build-dev-0.24.1.dev.20251213 && git push origin build-dev-0.24.1.dev.20251213
 
 on:
-  # push:
-  #   tags:
-  #     - 'build-dev-*'
-  #     - 'build-main-*'
+  push:
+    tags:
+      - 'build-dev-*'
+      - 'build-main-*'
   workflow_dispatch:
 
 env:
