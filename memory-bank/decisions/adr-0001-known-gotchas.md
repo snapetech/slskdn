@@ -1360,3 +1360,11 @@ grep -l "using Soulseek" src/slskd/**/*.cs | xargs grep -l "Directory\.Exists\|D
 
 *Last updated: 2025-12-09*
 
+
+### delegating-logger-sourcecontext-missing
+- **What**: Delegating logger throws "The given key 'SourceContext' was not present in the dictionary" error
+- **When**: Observed during Hash DB search logging: `Hash DB search for '"Lullaby"' returned 0 results in 0ms`
+- **Why**: Delegating logger configuration expects SourceContext key but it's missing from log event properties
+- **Fix**: Investigate delegating logger setup, ensure SourceContext is properly populated or make it optional
+- **Files**: Likely in logging configuration (Program.cs, appsettings, or HashDbService logging calls)
+- **Priority**: Medium (doesn't break functionality, but clutters logs with errors)
