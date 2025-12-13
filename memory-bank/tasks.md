@@ -2454,11 +2454,12 @@
   - Notes: Icons in search results for users in your groups
   - Implementation: Added visual indicators (star, triangle, ban icons) next to usernames in search results based on group membership
 
-- [ ] **T-005**: Traffic Ticker
-  - Status: Not started
+- [x] **T-005**: Traffic Ticker
+  - Status: Completed (2025-12-13)
   - Priority: Medium
   - Related: slskd discussion #547
   - Notes: Real-time upload/download activity feed in UI
+  - Implementation: Added TransfersHub SignalR hub, TransferActivity model, TrafficTicker component with live feed on transfers pages
 
 ### Low Priority
 

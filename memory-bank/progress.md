@@ -7,6 +7,24 @@
 
 ## 2025-12-13
 
+### T-005: Traffic Ticker (Medium Priority)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Added `TransfersHub` SignalR hub with `TransferActivity` model for real-time broadcasting
+  - Modified `Application.cs` to wire transfer state change events to broadcast activity
+  - Created `TrafficTicker` React component with live activity feed and expandable list
+  - Added transfers hub connection factory and integrated into downloads/uploads pages
+  - Implemented visual indicators: download/upload icons, completion status colors, connection status
+  - Added hover tooltips with detailed activity information and timestamps
+  - Maintains last 50 activities with automatic cleanup
+- **Technical Notes**:
+  - Leveraged existing SignalR infrastructure (similar to LogsHub pattern)
+  - Transfer state changes broadcast via `Client_TransferStateChanged` event handler
+  - Frontend uses `Promise.allSettled()` for graceful error handling
+  - Activity feed shows real-time progress for active transfers and completion notifications
+  - Connection status indicator shows hub connectivity state
+  - Expandable list shows 10 items by default, expandable to show all 50
+
 ### T-004: Visual Group Indicators (Medium Priority)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

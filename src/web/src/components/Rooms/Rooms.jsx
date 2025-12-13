@@ -1,6 +1,7 @@
 import { activeRoomKey } from '../../config';
 import * as rooms from '../../lib/rooms';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import RoomCreateModal from './RoomCreateModal';
 import RoomSession from './RoomSession';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
@@ -190,6 +191,12 @@ const Rooms = () => {
     }
   };
 
+  const createRoom = async (roomName, isPrivate) => {
+    // For now, private room creation isn't directly supported by Soulseek protocol
+    // We just attempt to join the room, which may create it if it doesn't exist
+    await joinRoom(roomName);
+  };
+
   const handleAddTab = () => {
     setTabs((previous) => {
       const newTabs = [...previous, createTab()];
@@ -259,22 +266,27 @@ const Rooms = () => {
             size="big"
           />
         </div>
-        <Dropdown
-          className="rooms-input"
-          clearable
-          fluid
-          loading={roomSearchLoading}
-          onChange={(_, { value }) => {
-            if (value) {
-              joinRoom(value);
-            }
-          }}
-          onOpen={() => fetchAvailableRooms()}
-          options={roomOptions}
-          placeholder="Search rooms..."
-          search
-          selection
-        />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Dropdown
+              className="rooms-input"
+              clearable
+              fluid
+              loading={roomSearchLoading}
+              onChange={(_, { value }) => {
+                if (value) {
+                  joinRoom(value);
+                }
+              }}
+              onOpen={() => fetchAvailableRooms()}
+              options={roomOptions}
+              placeholder="Search existing rooms..."
+              search
+              selection
+            />
+            <RoomCreateModal onCreateRoom={createRoom} />
+          </div>
+        </div>
       </Segment>
       <Tab
         activeIndex={activeIndex}
