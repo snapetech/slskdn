@@ -2200,11 +2200,11 @@
 
 #### Phase 10 Gap: PodCore Implementation (24 tasks)
 
-- [ ] **T-1340**: Implement Pod DHT publishing
-  - Status: Not started
+- [x] **T-1340**: Implement Pod DHT publishing
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Publish pod metadata to DHT key pod:<PodId>:meta. Sign with owner key.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete PodCore DHT publishing infrastructure with cryptographic signing and expiration management.
 
 - [ ] **T-1341**: Implement signed membership records
   - Status: Not started

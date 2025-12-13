@@ -137,6 +137,25 @@ const MediaCore = () => {
   const [podUnpublishResult, setPodUnpublishResult] = useState(null);
   const [podPublishingStats, setPodPublishingStats] = useState(null);
   const [loadingPodStats, setLoadingPodStats] = useState(false);
+
+  // Pod Membership states
+  const [membershipRecord, setMembershipRecord] = useState('');
+  const [publishingMembership, setPublishingMembership] = useState(false);
+  const [membershipPublishResult, setMembershipPublishResult] = useState(null);
+  const [membershipPodId, setMembershipPodId] = useState('');
+  const [membershipPeerId, setMembershipPeerId] = useState('');
+  const [gettingMembership, setGettingMembership] = useState(false);
+  const [membershipResult, setMembershipResult] = useState(null);
+  const [verifyingMembership, setVerifyingMembership] = useState(false);
+  const [membershipVerification, setMembershipVerification] = useState(null);
+  const [banningMember, setBanningMember] = useState(false);
+  const [banReason, setBanReason] = useState('');
+  const [banResult, setBanResult] = useState(null);
+  const [changingRole, setChangingRole] = useState(false);
+  const [newRole, setNewRole] = useState('member');
+  const [roleChangeResult, setRoleChangeResult] = useState(null);
+  const [membershipStats, setMembershipStats] = useState(null);
+  const [loadingMembershipStats, setLoadingMembershipStats] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -874,6 +893,132 @@ const MediaCore = () => {
       setPodPublishingStats({ error: err.message });
     } finally {
       setLoadingPodStats(false);
+    }
+  };
+
+  // Pod Membership handlers
+  const handlePublishMembership = async () => {
+    if (!membershipRecord.trim()) {
+      alert('Please enter membership record JSON data');
+      return;
+    }
+
+    try {
+      setPublishingMembership(true);
+      setMembershipPublishResult(null);
+      const record = JSON.parse(membershipRecord);
+      const result = await mediacore.publishMembership(record);
+      setMembershipPublishResult(result);
+      setMembershipRecord('');
+    } catch (err) {
+      setMembershipPublishResult({ error: err.message });
+    } finally {
+      setPublishingMembership(false);
+    }
+  };
+
+  const handleGetMembership = async () => {
+    if (!membershipPodId.trim() || !membershipPeerId.trim()) {
+      alert('Please enter both Pod ID and Peer ID');
+      return;
+    }
+
+    try {
+      setGettingMembership(true);
+      setMembershipResult(null);
+      const result = await mediacore.getMembership(membershipPodId, membershipPeerId);
+      setMembershipResult(result);
+    } catch (err) {
+      setMembershipResult({ error: err.message });
+    } finally {
+      setGettingMembership(false);
+    }
+  };
+
+  const handleVerifyMembership = async () => {
+    if (!membershipPodId.trim() || !membershipPeerId.trim()) {
+      alert('Please enter both Pod ID and Peer ID');
+      return;
+    }
+
+    try {
+      setVerifyingMembership(true);
+      setMembershipVerification(null);
+      const result = await mediacore.verifyMembership(membershipPodId, membershipPeerId);
+      setMembershipVerification(result);
+    } catch (err) {
+      setMembershipVerification({ error: err.message });
+    } finally {
+      setVerifyingMembership(false);
+    }
+  };
+
+  const handleBanMember = async () => {
+    if (!membershipPodId.trim() || !membershipPeerId.trim()) {
+      alert('Please enter both Pod ID and Peer ID');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to ban member "${membershipPeerId}" from pod "${membershipPodId}"?`)) {
+      return;
+    }
+
+    try {
+      setBanningMember(true);
+      setBanResult(null);
+      const result = await mediacore.banMember(membershipPodId, membershipPeerId, banReason || null);
+      setBanResult(result);
+      setBanReason('');
+    } catch (err) {
+      setBanResult({ error: err.message });
+    } finally {
+      setBanningMember(false);
+    }
+  };
+
+  const handleChangeRole = async () => {
+    if (!membershipPodId.trim() || !membershipPeerId.trim()) {
+      alert('Please enter both Pod ID and Peer ID');
+      return;
+    }
+
+    try {
+      setChangingRole(true);
+      setRoleChangeResult(null);
+      const result = await mediacore.changeMemberRole(membershipPodId, membershipPeerId, newRole);
+      setRoleChangeResult(result);
+    } catch (err) {
+      setRoleChangeResult({ error: err.message });
+    } finally {
+      setChangingRole(false);
+    }
+  };
+
+  const handleLoadMembershipStats = async () => {
+    try {
+      setLoadingMembershipStats(true);
+      setMembershipStats(null);
+      const result = await mediacore.getMembershipStats();
+      setMembershipStats(result);
+    } catch (err) {
+      setMembershipStats({ error: err.message });
+    } finally {
+      setLoadingMembershipStats(false);
+    }
+  };
+
+  const handleCleanupMemberships = async () => {
+    if (!confirm('Are you sure you want to cleanup expired membership records?')) {
+      return;
+    }
+
+    try {
+      const result = await mediacore.cleanupExpiredMemberships();
+      alert(`Cleanup completed: ${result.recordsCleaned} records cleaned, ${result.errorsEncountered} errors`);
+      // Reload stats to reflect changes
+      await handleLoadMembershipStats();
+    } catch (err) {
+      alert(`Failed to cleanup: ${err.message}`);
     }
   };
 
@@ -3314,6 +3459,261 @@ const MediaCore = () => {
               {podPublishingStats?.error && (
                 <Message error style={{ marginTop: '1em' }}>
                   <p>Failed to load pod publishing stats: {podPublishingStats.error}</p>
+                </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Membership Management */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="users" />
+                Pod Membership Management
+              </Card.Header>
+              <Card.Description>
+                Manage signed membership records in DHT with role-based access control
+              </Card.Description>
+            </Card.Content>
+
+            {/* Publish Membership */}
+            <Card.Content>
+              <Header size="small">Publish Membership Record</Header>
+              <Form>
+                <Form.TextArea
+                  label="Membership Record JSON"
+                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "role": "member", "isBanned": false, "publicKey": "base64-ed25519-key", "joinedAt": "2024-01-01T00:00:00Z"}'
+                  value={membershipRecord}
+                  onChange={(e) => setMembershipRecord(e.target.value)}
+                  rows={4}
+                />
+                <Button
+                  primary
+                  loading={publishingMembership}
+                  disabled={publishingMembership || !membershipRecord.trim()}
+                  onClick={handlePublishMembership}
+                >
+                  Publish Membership
+                </Button>
+              </Form>
+
+              {membershipPublishResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {membershipPublishResult.error ? (
+                    <Message error>
+                      <p>Failed to publish membership: {membershipPublishResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Membership Published Successfully</Message.Header>
+                      <p>
+                        <strong>Pod ID:</strong> {membershipPublishResult.podId}<br />
+                        <strong>Peer ID:</strong> {membershipPublishResult.peerId}<br />
+                        <strong>DHT Key:</strong> {membershipPublishResult.dhtKey}<br />
+                        <strong>Published:</strong> {new Date(membershipPublishResult.publishedAt).toLocaleString()}<br />
+                        <strong>Expires:</strong> {new Date(membershipPublishResult.expiresAt).toLocaleString()}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Get Membership */}
+                  <Header size="small">Get Membership Record</Header>
+                  <Form>
+                    <Form.Input
+                      label="Pod ID"
+                      placeholder="pod:artist:mb:daft-punk-hash"
+                      value={membershipPodId}
+                      onChange={(e) => setMembershipPodId(e.target.value)}
+                    />
+                    <Form.Input
+                      label="Peer ID"
+                      placeholder="alice"
+                      value={membershipPeerId}
+                      onChange={(e) => setMembershipPeerId(e.target.value)}
+                    />
+                    <Button.Group fluid>
+                      <Button
+                        loading={gettingMembership}
+                        disabled={gettingMembership || !membershipPodId.trim() || !membershipPeerId.trim()}
+                        onClick={handleGetMembership}
+                      >
+                        Get Membership
+                      </Button>
+                      <Button
+                        loading={verifyingMembership}
+                        disabled={verifyingMembership || !membershipPodId.trim() || !membershipPeerId.trim()}
+                        onClick={handleVerifyMembership}
+                      >
+                        Verify Membership
+                      </Button>
+                    </Button.Group>
+                  </Form>
+
+                  {/* Membership Results */}
+                  {membershipResult && (
+                    <div style={{ marginTop: '1em' }}>
+                      {membershipResult.error ? (
+                        <Message error>
+                          <p>Failed to get membership: {membershipResult.error}</p>
+                        </Message>
+                      ) : membershipResult.found ? (
+                        <Message success>
+                          <Message.Header>Membership Found</Message.Header>
+                          <p>
+                            <strong>Pod ID:</strong> {membershipResult.podId}<br />
+                            <strong>Peer ID:</strong> {membershipResult.peerId}<br />
+                            <strong>Role:</strong> {membershipResult.signedRecord?.membership?.role}<br />
+                            <strong>Banned:</strong> {membershipResult.signedRecord?.membership?.isBanned ? 'Yes' : 'No'}<br />
+                            <strong>Signature Valid:</strong> {membershipResult.isValidSignature ? 'Yes' : 'No'}<br />
+                            <strong>Joined:</strong> {membershipResult.signedRecord?.membership?.joinedAt ? new Date(membershipResult.signedRecord.membership.joinedAt).toLocaleString() : 'Unknown'}
+                          </p>
+                        </Message>
+                      ) : (
+                        <Message warning>
+                          <p>Membership not found in DHT</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Verification Results */}
+                  {membershipVerification && (
+                    <div style={{ marginTop: '1em' }}>
+                      {membershipVerification.error ? (
+                        <Message error>
+                          <p>Failed to verify membership: {membershipVerification.error}</p>
+                        </Message>
+                      ) : (
+                        <Message info>
+                          <Message.Header>Membership Verification</Message.Header>
+                          <p>
+                            <strong>Valid Member:</strong> {membershipVerification.isValidMember ? 'Yes' : 'No'}<br />
+                            <strong>Role:</strong> {membershipVerification.role || 'None'}<br />
+                            <strong>Banned:</strong> {membershipVerification.isBanned ? 'Yes' : 'No'}
+                          </p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Member Management */}
+                  <Header size="small">Member Management</Header>
+
+                  {/* Ban Member */}
+                  <Form style={{ marginBottom: '1em' }}>
+                    <Form.Input
+                      label="Ban Reason (optional)"
+                      placeholder="Violation of community rules"
+                      value={banReason}
+                      onChange={(e) => setBanReason(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      color="red"
+                      loading={banningMember}
+                      disabled={banningMember || !membershipPodId.trim() || !membershipPeerId.trim()}
+                      onClick={handleBanMember}
+                    >
+                      Ban Member
+                    </Button>
+                  </Form>
+
+                  {/* Change Role */}
+                  <Form>
+                    <Form.Select
+                      label="New Role"
+                      options={[
+                        { key: 'member', text: 'Member', value: 'member' },
+                        { key: 'mod', text: 'Moderator', value: 'mod' },
+                        { key: 'owner', text: 'Owner', value: 'owner' }
+                      ]}
+                      value={newRole}
+                      onChange={(e, { value }) => setNewRole(value)}
+                    />
+                    <Button
+                      fluid
+                      color="blue"
+                      loading={changingRole}
+                      disabled={changingRole || !membershipPodId.trim() || !membershipPeerId.trim()}
+                      onClick={handleChangeRole}
+                    >
+                      Change Role
+                    </Button>
+                  </Form>
+
+                  {/* Management Results */}
+                  {banResult && (
+                    <Message success style={{ marginTop: '1em' }}>
+                      <p>Member banned successfully</p>
+                    </Message>
+                  )}
+
+                  {roleChangeResult && (
+                    <Message success style={{ marginTop: '1em' }}>
+                      <p>Member role changed successfully</p>
+                    </Message>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+
+            {/* Membership Statistics */}
+            <Card.Content>
+              <Button.Group fluid>
+                <Button
+                  primary
+                  loading={loadingMembershipStats}
+                  disabled={loadingMembershipStats}
+                  onClick={handleLoadMembershipStats}
+                >
+                  Load Membership Stats
+                </Button>
+                <Button
+                  color="orange"
+                  onClick={handleCleanupMemberships}
+                >
+                  Cleanup Expired
+                </Button>
+              </Button.Group>
+
+              {membershipStats && !membershipStats.error && (
+                <div style={{ marginTop: '1em' }}>
+                  <Message>
+                    <Message.Header>Membership Statistics</Message.Header>
+                    <p>
+                      <strong>Total Memberships:</strong> {membershipStats.totalMemberships}<br />
+                      <strong>Active Memberships:</strong> {membershipStats.activeMemberships}<br />
+                      <strong>Banned Memberships:</strong> {membershipStats.bannedMemberships}<br />
+                      <strong>Expired Memberships:</strong> {membershipStats.expiredMemberships}<br />
+                      <strong>Last Operation:</strong> {membershipStats.lastOperation ? new Date(membershipStats.lastOperation).toLocaleString() : 'Never'}
+                    </p>
+                    {membershipStats.membershipsByRole && Object.keys(membershipStats.membershipsByRole).length > 0 && (
+                      <div style={{ marginTop: '0.5em' }}>
+                        <strong>Memberships by Role:</strong>
+                        {Object.entries(membershipStats.membershipsByRole).map(([role, count]) => (
+                          <Label key={role} size="tiny" style={{ margin: '0.1em' }}>
+                            {role}: {count}
+                          </Label>
+                        ))}
+                      </div>
+                    )}
+                  </Message>
+                </div>
+              )}
+
+              {membershipStats?.error && (
+                <Message error style={{ marginTop: '1em' }}>
+                  <p>Failed to load membership stats: {membershipStats.error}</p>
                 </Message>
               )}
             </Card.Content>

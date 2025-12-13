@@ -810,6 +810,7 @@ namespace slskd
 
             // PodCore services
             services.AddSingleton<PodCore.IPodDhtPublisher, PodCore.PodDhtPublisher>();
+            services.AddSingleton<PodCore.IPodMembershipService, PodCore.PodMembershipService>();
 
             // MultiSource MediaCore integration
             services.AddSingleton<IMediaCoreSwarmIntelligence, MediaCoreSwarmIntelligence>();

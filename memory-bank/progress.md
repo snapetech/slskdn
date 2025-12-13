@@ -33,6 +33,36 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1340: Pod DHT Publishing (Phase 10 Gap - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **IPodDhtPublisher Interface**: Comprehensive contract for pod metadata publishing operations
+  - **PodDhtPublisher Service**: Full implementation with Ed25519 cryptographic signing using IControlSigner
+  - **DHT Key Format**: Standardized `pod:{PodId}:meta` keys for consistent metadata storage
+  - **Publication Lifecycle**: Complete CRUD operations (Create, Read, Update, Delete) for pod metadata
+  - **Expiration Management**: 24-hour TTL with automatic refresh and expiration tracking
+  - **RESTful API Endpoints**: Full API suite at `/api/v0/podcore/dht/*` for all DHT operations
+  - **WebGUI Interface**: Interactive pod publishing dashboard with real-time status updates
+  - **Statistics Tracking**: Comprehensive metrics for publication success, failures, and domain analytics
+  - **Signature Verification**: Cryptographic validation of pod metadata authenticity
+  - **Visibility Analytics**: Publication statistics by pod visibility (Private/Unlisted/Listed)
+  - **Domain Analytics**: Content-focused pod publishing trends by domain (audio, video, etc.)
+  - **Refresh Automation**: Intelligent republishing of expiring pod metadata
+  - **Extensible Framework**: Plugin architecture for future pod DHT enhancements
+  - **Error Resilience**: Graceful handling of DHT network failures and signature validation errors
+  - **Performance Monitoring**: Real-time tracking of publish times and success rates
+  - **Security Integration**: Leverages existing Mesh control-plane signing infrastructure
+- **Technical Notes**:
+  - **Cryptographic Security**: Ed25519 signatures ensure pod metadata authenticity and integrity
+  - **DHT Compatibility**: Uses IMeshDhtClient for seamless integration with existing DHT infrastructure
+  - **Thread Safety**: Concurrent statistics tracking with atomic operations
+  - **Memory Efficiency**: Bounded local tracking with automatic cleanup of expired publications
+  - **API Scalability**: Efficient JSON serialization optimized for network transmission
+  - **Error Handling**: Comprehensive error reporting with actionable failure diagnostics
+  - **Monitoring Ready**: Structured metrics for integration with existing monitoring systems
+  - **Backward Compatible**: Designed to work with existing PodCore data models and infrastructure
+  - **Future Extensible**: Clean separation of concerns for adding advanced pod features
+
 ### T-1331: MediaCore Stats/Dashboard (Phase 9 Gap - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

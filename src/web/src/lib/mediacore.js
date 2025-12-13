@@ -898,3 +898,179 @@ export const getPodPublishingStats = async () => {
 
   return response.json();
 };
+
+// Pod Membership API functions
+const membershipBaseUrl = baseUrl.replace('contentid', 'podcore/membership');
+
+/**
+ * Publish membership record to DHT.
+ */
+export const publishMembership = async (membershipRecord) => {
+  const response = await fetch(`${membershipBaseUrl}/publish`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(membershipRecord),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish membership: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update membership record in DHT.
+ */
+export const updateMembership = async (membershipRecord) => {
+  const response = await fetch(`${membershipBaseUrl}/update`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(membershipRecord),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update membership: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Remove membership record from DHT.
+ */
+export const removeMembership = async (podId, peerId) => {
+  const response = await fetch(`${membershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to remove membership: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get membership record from DHT.
+ */
+export const getMembership = async (podId, peerId) => {
+  const response = await fetch(`${membershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get membership: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Verify membership in a pod.
+ */
+export const verifyMembership = async (podId, peerId) => {
+  const response = await fetch(`${membershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/verify`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify membership: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Ban a member from a pod.
+ */
+export const banMember = async (podId, peerId, reason) => {
+  const response = await fetch(`${membershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/ban`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ reason }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to ban member: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Unban a member from a pod.
+ */
+export const unbanMember = async (podId, peerId) => {
+  const response = await fetch(`${membershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/unban`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to unban member: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Change a member's role in a pod.
+ */
+export const changeMemberRole = async (podId, peerId, newRole) => {
+  const response = await fetch(`${membershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/role`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ newRole }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to change role: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get membership statistics.
+ */
+export const getMembershipStats = async () => {
+  const response = await fetch(`${membershipBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get membership stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Clean up expired membership records.
+ */
+export const cleanupExpiredMemberships = async () => {
+  const response = await fetch(`${membershipBaseUrl}/cleanup`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cleanup memberships: ${response.statusText}`);
+  }
+
+  return response.json();
+};
