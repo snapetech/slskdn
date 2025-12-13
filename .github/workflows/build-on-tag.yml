@@ -662,7 +662,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   aur-main:
-    name: Publish to AUR (Main)
+    name: Publish to AUR (Main - Source & Binary)
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: ubuntu-latest
@@ -682,7 +682,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Download from the release we just created
+          # Download binary for slskdn-bin package
           gh release download "${{ needs.parse.outputs.version }}" \
             --repo ${{ github.repository }} \
             --pattern "slskdn-main-linux-x64.zip"
@@ -708,37 +708,40 @@ jobs:
           
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
 
-      - name: Clone AUR Package
+      # Publish slskdn (source package)
+      - name: Clone AUR Package (Source)
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg || {
-            mkdir -p aur-pkg
-            cd aur-pkg
+          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg-source || {
+            mkdir -p aur-pkg-source
+            cd aur-pkg-source
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn.git
           }
 
-      - name: Update PKGBUILD
+      - name: Update PKGBUILD (Source)
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          cd aur-pkg
+          cd aur-pkg-source
           
-          # Copy the main PKGBUILD template
+          # Copy the main source PKGBUILD template
           cp ../packaging/aur/PKGBUILD PKGBUILD
           cp ../packaging/aur/slskd.install slskd.install
+          cp ../packaging/aur/slskd.service slskd.service
+          cp ../packaging/aur/slskd.yml slskd.yml
+          cp ../packaging/aur/slskd.sysusers slskd.sysusers
           
-          # Version for main is typically semantic (no conversion needed unless hyphens exist)
+          # Version for main (convert dots if needed, e.g. 0.25.0)
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
           
-          # Update version and commit
+          # Update version
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
-          sed -i "s/^_commit=.*/_commit=${{ steps.info.outputs.short_sha }}/" PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
@@ -750,26 +753,86 @@ jobs:
           
           sudo chown -R $(id -u):$(id -g) .
           
-          echo "📝 Updated PKGBUILD:"
+          echo "📝 Updated PKGBUILD (source):"
           cat PKGBUILD | head -30
 
-      - name: Push to AUR
+      - name: Push to AUR (Source)
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
-          if [ -z "$AUR_SSH_KEY" ]; then
-            echo "⚠️ Skipping AUR push - credentials not configured"
-            exit 0
-          fi
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          cd aur-pkg
+          cd aur-pkg-source
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
-          git add PKGBUILD .SRCINFO slskd.install
+          git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
           git push origin master || git push --set-upstream origin master
           
-          echo "✅ Pushed to AUR: slskdn"
+          echo "✅ Pushed to AUR: slskdn (source)"
+
+      # Publish slskdn-bin (binary package)
+      - name: Clone AUR Package (Binary)
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin || {
+            mkdir -p aur-pkg-bin
+            cd aur-pkg-bin
+            git init
+            git remote add origin ssh://aur@aur.archlinux.org/slskdn-bin.git
+          }
+
+      - name: Update PKGBUILD (Binary)
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          cd aur-pkg-bin
+          
+          # Copy the binary PKGBUILD template
+          cp ../packaging/aur/PKGBUILD-bin PKGBUILD
+          cp ../packaging/aur/slskd.install slskd.install
+          cp ../packaging/aur/slskd.service slskd.service
+          cp ../packaging/aur/slskd.yml slskd.yml
+          cp ../packaging/aur/slskd.sysusers slskd.sysusers
+          
+          # Version for main
+          ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          
+          # Update version
+          sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          
+          # Generate .SRCINFO
+          docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
+            pacman -Sy --noconfirm pacman-contrib
+            useradd -m builder
+            chown -R builder:builder /pkg
+            su builder -c 'makepkg --printsrcinfo' > .SRCINFO
+          "
+          
+          sudo chown -R $(id -u):$(id -g) .
+          
+          echo "📝 Updated PKGBUILD (binary):"
+          cat PKGBUILD | head -30
+
+      - name: Push to AUR (Binary)
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          cd aur-pkg-bin
+          git config user.name "slskdn CI"
+          git config user.email "slskdn@proton.me"
+          git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
+          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
+          git push origin master || git push --set-upstream origin master
+          
+          echo "✅ Pushed to AUR: slskdn-bin (binary)"
 
   copr-main:
     name: Publish to COPR (Main)
