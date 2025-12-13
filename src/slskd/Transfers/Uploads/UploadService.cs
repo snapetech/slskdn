@@ -159,7 +159,8 @@ namespace slskd.Transfers.Uploads
             IShareService shareService,
             IRelayService relayService,
             IDbContextFactory<TransfersDbContext> contextFactory,
-            EventBus eventBus)
+            EventBus eventBus,
+            IScheduledRateLimitService scheduledRateLimitService = null)
         {
             Files = fileService;
             Users = userService;
@@ -170,7 +171,7 @@ namespace slskd.Transfers.Uploads
             OptionsMonitor = optionsMonitor;
             EventBus = eventBus;
 
-            Governor = new UploadGovernor(userService, optionsMonitor);
+            Governor = new UploadGovernor(userService, optionsMonitor, scheduledRateLimitService);
             Queue = new UploadQueue(userService, optionsMonitor);
         }
 

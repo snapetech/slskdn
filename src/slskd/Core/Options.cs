@@ -998,6 +998,12 @@ namespace slskd
                 [Description("the total upload speed limit")]
                 [Range(1, int.MaxValue)]
                 public int SpeedLimit { get; init; } = int.MaxValue;
+
+                /// <summary>
+                ///     Gets the scheduled upload speed limits.
+                /// </summary>
+                [Validate]
+                public ScheduledSpeedLimitOptions ScheduledLimits { get; init; } = new();
             }
 
             /// <summary>
@@ -1023,6 +1029,12 @@ namespace slskd
                 [Description("the total download speed limit")]
                 [Range(1, int.MaxValue)]
                 public int SpeedLimit { get; init; } = int.MaxValue;
+
+                /// <summary>
+                ///     Gets the scheduled download speed limits.
+                /// </summary>
+                [Validate]
+                public ScheduledSpeedLimitOptions ScheduledLimits { get; init; } = new();
 
                 /// <summary>
                 ///     Gets a value indicating whether auto-replace for stuck downloads is enabled.
@@ -3017,6 +3029,56 @@ namespace slskd
                     }
                 }
             }
+        }
+
+        /// <summary>
+        ///     Scheduled speed limit options for day/night schedules.
+        /// </summary>
+        public class ScheduledSpeedLimitOptions
+        {
+            /// <summary>
+            ///     Gets a value indicating whether scheduled speed limits are enabled.
+            /// </summary>
+            [Argument(default, "scheduled-limits-enabled")]
+            [EnvironmentVariable("SCHEDULED_LIMITS_ENABLED")]
+            [Description("enable scheduled speed limits (day/night)")]
+            public bool Enabled { get; init; } = false;
+
+            /// <summary>
+            ///     Gets the start hour for "night" period (when lower speed limits apply).
+            /// </summary>
+            [Argument(default, "night-start-hour")]
+            [EnvironmentVariable("NIGHT_START_HOUR")]
+            [Description("hour when night period starts (0-23)")]
+            [Range(0, 23)]
+            public int NightStartHour { get; init; } = 22;
+
+            /// <summary>
+            ///     Gets the end hour for "night" period (when lower speed limits apply).
+            /// </summary>
+            [Argument(default, "night-end-hour")]
+            [EnvironmentVariable("NIGHT_END_HOUR")]
+            [Description("hour when night period ends (0-23)")]
+            [Range(0, 23)]
+            public int NightEndHour { get; init; } = 6;
+
+            /// <summary>
+            ///     Gets the upload speed limit during night hours, in kibibytes.
+            /// </summary>
+            [Argument(default, "night-upload-speed-limit")]
+            [EnvironmentVariable("NIGHT_UPLOAD_SPEED_LIMIT")]
+            [Description("upload speed limit during night hours")]
+            [Range(1, int.MaxValue)]
+            public int NightUploadSpeedLimit { get; init; } = 100;
+
+            /// <summary>
+            ///     Gets the download speed limit during night hours, in kibibytes.
+            /// </summary>
+            [Argument(default, "night-download-speed-limit")]
+            [EnvironmentVariable("NIGHT_DOWNLOAD_SPEED_LIMIT")]
+            [Description("download speed limit during night hours")]
+            [Range(1, int.MaxValue)]
+            public int NightDownloadSpeedLimit { get; init; } = 200;
         }
     }
 }

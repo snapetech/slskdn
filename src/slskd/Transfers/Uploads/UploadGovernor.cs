@@ -63,11 +63,14 @@ namespace slskd.Transfers
         /// </summary>
         /// <param name="userService">The UserService instance to use.</param>
         /// <param name="optionsMonitor">The OptionsMonitor instance to use.</param>
+        /// <param name="scheduledRateLimitService">The scheduled rate limit service to use.</param>
         public UploadGovernor(
             IUserService userService,
-            IOptionsMonitor<Options> optionsMonitor)
+            IOptionsMonitor<Options> optionsMonitor,
+            IScheduledRateLimitService scheduledRateLimitService = null)
         {
             Users = userService;
+            ScheduledRateLimitService = scheduledRateLimitService;
 
             OptionsMonitor = optionsMonitor;
             OptionsMonitor.OnChange(Configure);
@@ -80,6 +83,7 @@ namespace slskd.Transfers
         private int LastGlobalSpeedLimit { get; set; }
         private Dictionary<string, ITokenBucket> TokenBuckets { get; set; } = new Dictionary<string, ITokenBucket>();
         private IUserService Users { get; }
+        private IScheduledRateLimitService ScheduledRateLimitService { get; }
 
         /// <summary>
         ///     Asynchronously obtains a grant of <paramref name="requestedBytes"/> for the requesting <paramref name="username"/>.
@@ -141,7 +145,10 @@ namespace slskd.Transfers
 
             var optionsHash = Compute.Sha1Hash(options.Groups.ToJson());
 
-            if (optionsHash == LastOptionsHash && options.Global.Upload.SpeedLimit == LastGlobalSpeedLimit)
+            // Get the effective global upload speed limit (considering scheduled limits)
+            var effectiveGlobalUploadSpeedLimit = ScheduledRateLimitService?.GetEffectiveUploadSpeedLimit() ?? options.Global.Upload.SpeedLimit;
+
+            if (optionsHash == LastOptionsHash && effectiveGlobalUploadSpeedLimit == LastGlobalSpeedLimit)
             {
                 return;
             }
@@ -153,7 +160,7 @@ namespace slskd.Transfers
             // also, so transfers in progress will briefly exceed the intended speeds.
             var tokenBuckets = new Dictionary<string, ITokenBucket>()
             {
-                { Application.PrivilegedGroup, CreateBucket(speedInKiB: options.Global.Upload.SpeedLimit) },
+                { Application.PrivilegedGroup, CreateBucket(speedInKiB: effectiveGlobalUploadSpeedLimit) },
                 { Application.DefaultGroup, CreateBucket(speedInKiB: options.Groups.Default.Upload.SpeedLimit) },
                 { Application.LeecherGroup, CreateBucket(speedInKiB: options.Groups.Leechers.Upload.SpeedLimit) },
             };
@@ -165,7 +172,7 @@ namespace slskd.Transfers
 
             TokenBuckets = tokenBuckets;
 
-            LastGlobalSpeedLimit = options.Global.Upload.SpeedLimit;
+            LastGlobalSpeedLimit = effectiveGlobalUploadSpeedLimit;
             LastOptionsHash = optionsHash;
         }
     }
