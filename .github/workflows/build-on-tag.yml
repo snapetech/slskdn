@@ -656,12 +656,412 @@ jobs:
       - name: Trigger Package Workflows
         if: success()
         run: |
-          echo "Triggering package builds for ${{ needs.parse.outputs.version }}..."
-          gh workflow run release-linux.yml -f tag=${{ needs.parse.outputs.version }} || true
-          gh workflow run release-copr.yml -f tag=${{ needs.parse.outputs.version }} || true
-          gh workflow run release-ppa.yml -f tag=${{ needs.parse.outputs.version }} || true
-          gh workflow run release-packages.yml -f tag=${{ needs.parse.outputs.version }} || true
-          echo "✅ Package workflows triggered"
+          echo "✅ Main release created: ${{ needs.parse.outputs.version }}"
+          echo "📦 Package publishing jobs will run below..."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  aur-main:
+    name: Publish to AUR (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.info.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get commit info
+        id: info
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download from the release we just created
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-linux-x64.zip"
+
+      - name: Setup SSH for AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ AUR_SSH_KEY not configured, skipping AUR publish"
+            exit 0
+          fi
+          
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          
+          cat >> ~/.ssh/config << EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+          EOF
+          
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+      - name: Clone AUR Package
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg || {
+            mkdir -p aur-pkg
+            cd aur-pkg
+            git init
+            git remote add origin ssh://aur@aur.archlinux.org/slskdn.git
+          }
+
+      - name: Update PKGBUILD
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          cd aur-pkg
+          
+          # Copy the main PKGBUILD template
+          cp ../packaging/aur/PKGBUILD PKGBUILD
+          cp ../packaging/aur/slskd.install slskd.install
+          
+          # Version for main is typically semantic (no conversion needed unless hyphens exist)
+          ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          
+          # Update version and commit
+          sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          sed -i "s/^_commit=.*/_commit=${{ steps.info.outputs.short_sha }}/" PKGBUILD
+          
+          # Generate .SRCINFO
+          docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
+            pacman -Sy --noconfirm pacman-contrib
+            useradd -m builder
+            chown -R builder:builder /pkg
+            su builder -c 'makepkg --printsrcinfo' > .SRCINFO
+          "
+          
+          sudo chown -R $(id -u):$(id -g) .
+          
+          echo "📝 Updated PKGBUILD:"
+          cat PKGBUILD | head -30
+
+      - name: Push to AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ Skipping AUR push - credentials not configured"
+            exit 0
+          fi
+          
+          cd aur-pkg
+          git config user.name "slskdn CI"
+          git config user.email "slskdn@proton.me"
+          git add PKGBUILD .SRCINFO slskd.install
+          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
+          git push origin master || git push --set-upstream origin master
+          
+          echo "✅ Pushed to AUR: slskdn"
+
+  copr-main:
+    name: Publish to COPR (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-linux-x64.zip"
+
+      - name: Setup RPM Build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip rpm
+          pip3 install copr-cli
+          mkdir -p ~/rpmbuild/{SOURCES,SPECS,SRPMS}
+
+      - name: Prepare Sources
+        run: |
+          # Copy the built zip to SOURCES
+          cp slskdn-main-linux-x64.zip ~/rpmbuild/SOURCES/
+          
+          # Copy supporting files
+          cp packaging/aur/slskd.service ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.yml ~/rpmbuild/SOURCES/
+          cp packaging/aur/slskd.sysusers ~/rpmbuild/SOURCES/slskd.conf
+
+      - name: Update Spec File
+        run: |
+          # Use the main spec template
+          cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
+          
+          # Convert version for RPM (replace ALL hyphens with dots)
+          RPM_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          
+          # Update version
+          sed -i "s/^Version:.*/Version:        ${RPM_VERSION}/" ~/rpmbuild/SPECS/slskdn.spec
+          
+          cat ~/rpmbuild/SPECS/slskdn.spec | head -30
+
+      - name: Configure COPR
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
+            echo "COPR credentials not configured. Skipping."
+            exit 0
+          fi
+          mkdir -p ~/.config
+          cat > ~/.config/copr << EOF
+          [copr-cli]
+          login = ${COPR_LOGIN}
+          username = slskdn
+          token = ${COPR_TOKEN}
+          copr_url = https://copr.fedorainfracloud.org
+          EOF
+
+      - name: Build SRPM
+        run: |
+          rpmbuild -bs ~/rpmbuild/SPECS/slskdn.spec --define "_topdir $HOME/rpmbuild"
+          
+          SRPM=$(find ~/rpmbuild/SRPMS -name "*.src.rpm" | head -1)
+          echo "Built SRPM: $SRPM"
+          rpm -qpl "$SRPM" | head -20
+          echo "SRPM_PATH=$SRPM" >> $GITHUB_ENV
+
+      - name: Upload to COPR
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
+            echo "Skipping COPR upload - credentials not configured"
+            exit 0
+          fi
+          
+          echo "Uploading SRPM to COPR: $SRPM_PATH"
+          # Upload to slskdn stable project
+          copr-cli build slskdn/slskdn "$SRPM_PATH" --nowait
+          echo "✅ Uploaded to COPR: slskdn"
+
+  ppa-main:
+    name: Publish to PPA (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-linux-x64.zip"
+          unzip slskdn-main-linux-x64.zip -d publish-linux-x64
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper dput gnupg build-essential
+
+      - name: Import GPG Key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "GPG_PRIVATE_KEY secret not set. Skipping PPA upload."
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          # Trust the key
+          KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 "^pub" | tail -1 | awk '{print $1}')
+          echo "$KEY_ID:6:" | gpg --import-ownertrust
+
+      - name: Prepare Source Structure
+        run: |
+          VERSION="${{ needs.parse.outputs.version }}"
+          
+          # Create proper directory structure for debian packaging
+          mkdir -p slskdn-${VERSION}/usr/lib/slskd
+          mkdir -p slskdn-${VERSION}/lib/systemd/system
+          mkdir -p slskdn-${VERSION}/etc/slskd
+          mkdir -p slskdn-${VERSION}/usr/lib/sysusers.d
+          
+          # Copy binary files from our build
+          cp -r publish-linux-x64/* slskdn-${VERSION}/usr/lib/slskd/
+          
+          # Copy service files from packaging
+          cp packaging/aur/slskd.service slskdn-${VERSION}/lib/systemd/system/
+          cp packaging/aur/slskd.yml slskdn-${VERSION}/etc/slskd/
+          cp packaging/aur/slskd.sysusers slskdn-${VERSION}/usr/lib/sysusers.d/slskd.conf
+
+      - name: Prepare Source Package
+        run: |
+          VERSION="${{ needs.parse.outputs.version }}"
+          # Convert version for Debian (replace ALL hyphens with dots)
+          DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')
+          
+          # Create tarball for orig source
+          tar -czvf slskdn_${DEB_VERSION}.orig.tar.gz slskdn-${VERSION}
+          
+          # Copy debian directory for stable package
+          cp -r packaging/debian slskdn-${VERSION}/
+          
+          # Update control file for slskdn stable package
+          cd slskdn-${VERSION}
+          
+          # Use timestamp-based PPA revision
+          PPA_REV=$(date +%Y%m%d%H%M)
+          
+          # Update changelog for slskdn stable (use DEB_VERSION with dots)
+          cat > debian/changelog << EOF
+          slskdn (${DEB_VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
+
+            * Stable release
+            * Multi-source swarm downloads
+            * DHT mesh network
+            * Enhanced security features
+
+           -- slskdn <slskdn@proton.me>  $(date -R)
+          EOF
+
+      - name: Build Source Package
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then exit 0; fi
+          
+          VERSION="${{ needs.parse.outputs.version }}"
+          cd slskdn-${VERSION}
+          debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
+
+      - name: Configure dput
+        run: |
+          cat > ~/.dput.cf << 'EOF'
+          [slskdn-ppa]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~keefshape/ubuntu/slskdn/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          EOF
+
+      - name: Upload to PPA
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
+            exit 0
+          fi
+          ls -la *.changes || true
+          CHANGES_FILE=$(find . -name "slskdn_*.changes" -type f | head -1)
+          echo "Found changes file: $CHANGES_FILE"
+          dput slskdn-ppa "$CHANGES_FILE"
+          echo "✅ Uploaded to PPA: slskdn"
+
+  docker-main:
+    name: Build and Push Docker (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-linux-x64.zip"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Main Image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ needs.parse.outputs.version }}
+          tags: |
+            ghcr.io/snapetech/slskdn:${{ needs.parse.outputs.version }}
+            ghcr.io/snapetech/slskdn:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "✅ Published Docker images:"
+          echo "  - ghcr.io/snapetech/slskdn:${{ needs.parse.outputs.version }}"
+          echo "  - ghcr.io/snapetech/slskdn:latest"
+
+  chocolatey-main:
+    name: Publish to Chocolatey (Stable)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-main-win-x64.zip"
+
+      - name: Pack and Push
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        if: "${{ env.CHOCO_API_KEY != '' }}"
+        run: |
+          $Version = "${{ needs.parse.outputs.version }}"
+          $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
+          $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
+          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          cd packaging/chocolatey
+          choco pack
+          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          Write-Host "✅ Published to Chocolatey: slskdn"
+        shell: pwsh
 
