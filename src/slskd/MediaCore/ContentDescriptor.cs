@@ -29,3 +29,17 @@ public class ContentDescriptor
     public DescriptorSignature? Signature { get; set; }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

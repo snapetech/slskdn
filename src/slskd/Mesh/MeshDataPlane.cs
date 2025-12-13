@@ -182,3 +182,17 @@ public sealed class MeshChunkResponseMessage
     public string? Error { get; set; }
     public byte[]? Data { get; set; }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

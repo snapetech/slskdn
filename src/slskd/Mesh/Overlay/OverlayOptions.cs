@@ -18,3 +18,17 @@ public class OverlayOptions
     public int RotateDays { get; set; } = 30;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -47,6 +47,7 @@ namespace slskd.Tests.Unit.Mesh
         private readonly PeerReputation peerReputation;
         private readonly Mock<ILogger<MeshSyncService>> mockLogger;
         private readonly MeshSyncService meshSyncService;
+        private readonly Mock<IProofOfPossessionService> mockProofOfPossession;
 
         public MeshSyncSecurityTests()
         {
@@ -54,6 +55,7 @@ namespace slskd.Tests.Unit.Mesh
             mockCapabilities = new Mock<ICapabilityService>();
             mockSoulseekClient = new Mock<ISoulseekClient>();
             mockMessageSigner = new Mock<IMeshMessageSigner>();
+            mockProofOfPossession = new Mock<IProofOfPossessionService>();
             peerReputation = new PeerReputation(Mock.Of<ILogger<PeerReputation>>());
             mockLogger = new Mock<ILogger<MeshSyncService>>();
 
@@ -75,12 +77,21 @@ namespace slskd.Tests.Unit.Mesh
             var dbStats = new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 };
             mockHashDb.Setup(h => h.GetStats()).Returns(dbStats);
 
+            // Default PoP allows verification
+            mockProofOfPossession.Setup(p => p.VerifyAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<MeshHashEntry>(),
+                    It.IsAny<Func<MeshChallengeRequestMessage, Task<MeshChallengeResponseMessage?>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
             meshSyncService = new MeshSyncService(
                 mockHashDb.Object,
                 mockCapabilities.Object,
                 mockSoulseekClient.Object,
                 mockMessageSigner.Object,
-                peerReputation);
+                peerReputation,
+                mockProofOfPossession.Object);
         }
 
         #region Signature Verification Tests (T-1430)
@@ -207,6 +218,8 @@ namespace slskd.Tests.Unit.Mesh
             mockHashDb.Reset();
             mockHashDb.Setup(h => h.CurrentSeqId).Returns(100);
             mockHashDb.Setup(h => h.GetStats()).Returns(new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 });
+            mockHashDb.Setup(h => h.GetPeersByHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { "peer-x", "peer-y" });
             mockHashDb.Setup(h => h.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<HashDbEntry>());
             mockHashDb.Setup(h => h.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>()))
@@ -234,6 +247,8 @@ namespace slskd.Tests.Unit.Mesh
             var mockHashDbForNullTest = new Mock<IHashDbService>();
             mockHashDbForNullTest.Setup(h => h.CurrentSeqId).Returns(100);
             mockHashDbForNullTest.Setup(h => h.GetStats()).Returns(new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 });
+            mockHashDbForNullTest.Setup(h => h.GetPeersByHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { "peer-x", "peer-y" });
             mockHashDbForNullTest.Setup(h => h.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<HashDbEntry>());
             mockHashDbForNullTest.Setup(h => h.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>()))
@@ -253,7 +268,8 @@ namespace slskd.Tests.Unit.Mesh
                 mockCapabilities.Object,
                 mockSoulseekClient.Object,
                 mockMessageSigner.Object,
-                peerReputation: null);
+                peerReputation: null,
+                proofOfPossession: mockProofOfPossession.Object);
 
             var entries = new List<MeshHashEntry>
             {
@@ -484,7 +500,70 @@ namespace slskd.Tests.Unit.Mesh
             Assert.True(stats.QuarantinedPeers > 0);
         }
 
+        [Fact]
+        public async Task MergeEntriesAsync_RejectsWhenConsensusMissing()
+        {
+            // Arrange fresh service to avoid cached consensus
+            var consensusHashDb = new Mock<IHashDbService>();
+            consensusHashDb.Setup(h => h.CurrentSeqId).Returns(100);
+            consensusHashDb.Setup(h => h.GetStats()).Returns(new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 });
+            consensusHashDb.Setup(h => h.GetPeersByHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<string>());
+            consensusHashDb.Setup(h => h.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<HashDbEntry>());
+            consensusHashDb.Setup(h => h.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(0);
+            consensusHashDb.Setup(h => h.UpdatePeerLastSeqSeenAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var proof = new Mock<IProofOfPossessionService>();
+            proof.Setup(p => p.VerifyAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<MeshHashEntry>(),
+                    It.IsAny<Func<MeshChallengeRequestMessage, Task<MeshChallengeResponseMessage?>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var service = new MeshSyncService(
+                consensusHashDb.Object,
+                mockCapabilities.Object,
+                mockSoulseekClient.Object,
+                mockMessageSigner.Object,
+                peerReputation,
+                proof.Object);
+
+            mockMessageSigner.Setup(s => s.VerifyMessage(It.IsAny<MeshMessage>())).Returns(true);
+
+            var entries = new List<MeshHashEntry>
+            {
+                new MeshHashEntry
+                {
+                    FlacKey = "0123456789abcdef",
+                    ByteHash = new string('c', 64),
+                    Size = 1024,
+                    SeqId = 1,
+                },
+            };
+
+            // Act
+            var merged = await service.MergeEntriesAsync("peer-consensus", entries);
+
+            // Assert
+            Assert.Equal(0, merged);
+            Assert.True(service.Stats.RejectedMessages > 0);
+        }
+
         #endregion
     }
 }
+
+
+
+
+
+
+
+
+
+
 

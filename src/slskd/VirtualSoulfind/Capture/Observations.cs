@@ -43,3 +43,17 @@ public class TransferObservation
     public bool Success { get; set; }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

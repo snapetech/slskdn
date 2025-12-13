@@ -186,3 +186,17 @@ public class SignedMembershipRecord
     public string Signature { get; set; } = string.Empty; // Base64 Ed25519 signature
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

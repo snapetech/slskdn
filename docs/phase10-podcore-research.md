@@ -63,3 +63,17 @@
 - Implement SoulseekChatBridge stub with readonly/mirror modes and identity mapping.
 - Add UI stubs/hooks for pod list/detail, chat, and collection-vs-pod dashboard.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -192,6 +192,11 @@ namespace slskd.HashDb
         /// </summary>
         Task<List<string>> GetCodecProfilesForRecordingAsync(string recordingId, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        ///     Gets a FLAC inventory entry by hash key if known.
+        /// </summary>
+        Task<FlacInventoryEntry?> GetFlacInventoryByHashAsync(string flacKey, CancellationToken cancellationToken = default);
+
         // ========== MusicBrainz Release Graph Cache ==========
 
         /// <summary>
@@ -392,5 +397,4 @@ namespace slskd.HashDb
         public long DatabaseSizeBytes { get; set; }
     }
 }
-
 

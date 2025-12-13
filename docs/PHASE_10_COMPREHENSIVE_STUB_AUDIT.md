@@ -427,3 +427,17 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
 *Audit completed: December 10, 2025*
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

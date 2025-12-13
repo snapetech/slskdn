@@ -9,3 +9,17 @@ public interface IShadowIndexBuilder
     Task<ShadowIndexShard?> BuildShardAsync(string recordingId, CancellationToken ct = default);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

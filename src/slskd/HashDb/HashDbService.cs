@@ -1088,6 +1088,23 @@ namespace slskd.HashDb
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        /// <inheritdoc/>
+        public async Task<FlacInventoryEntry?> GetFlacInventoryByHashAsync(string flacKey, CancellationToken cancellationToken = default)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM FlacInventory WHERE flac_key = @flac_key LIMIT 1";
+            cmd.Parameters.AddWithValue("@flac_key", flacKey);
+
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                return ReadFlacEntry(reader);
+            }
+
+            return null;
+        }
+
         // ========== Hash Database ==========
 
         /// <inheritdoc/>
@@ -3145,5 +3162,4 @@ namespace slskd.HashDb
         }
     }
 }
-
 

@@ -100,3 +100,17 @@ public class ShadowIndexOptions
     public int CacheTTLMinutes { get; set; } = 10;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

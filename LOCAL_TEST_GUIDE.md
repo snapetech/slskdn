@@ -145,3 +145,17 @@ cd /home/keith/Documents/Code/slskdn && dotnet build src/slskd/slskd.csproj
    - Logs show correct handling of both types
 
 **READY TO TEST!** 🚀
+
+
+
+
+
+
+
+
+
+
+
+
+
+

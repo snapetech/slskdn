@@ -16,11 +16,29 @@ import {
   Segment,
 } from 'semantic-ui-react';
 
+const loadChatTabs = () => {
+  try {
+    const saved = localStorage.getItem('slskd-chat-tabs');
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveChatTabs = (tabs) => {
+  try {
+    localStorage.setItem('slskd-chat-tabs', JSON.stringify(tabs));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 const initialState = {
   active: '',
   conversations: {},
   interval: undefined,
   loading: false,
+  tabOrder: loadChatTabs(),
 };
 
 class Chat extends Component {
@@ -99,6 +117,7 @@ class Chat extends Component {
       if (!this.state.conversations[this.state.active]) {
         this.selectConversation(this.getFirstConversation());
       }
+      this.updateTabOrder(conversations);
     });
   };
 
@@ -154,10 +173,19 @@ class Chat extends Component {
   };
 
   selectConversation = (username) => {
+    const nextTabOrder = username
+      ? this.state.tabOrder.includes(username)
+        ? this.state.tabOrder
+        : [...this.state.tabOrder, username]
+      : this.state.tabOrder;
+
+    saveChatTabs(nextTabOrder);
+
     this.setState(
       {
         active: username,
         loading: true,
+        tabOrder: nextTabOrder,
       },
       async () => {
         const { active, conversations } = this.state;
@@ -172,7 +200,7 @@ class Chat extends Component {
                 : {
                     ...conversations,
                     [active]: await chat.get({ username: active }),
-                  },
+              },
             loading: false,
           },
           () => {
@@ -181,6 +209,7 @@ class Chat extends Component {
             } catch {
               // no-op
             }
+            this.updateTabOrder(this.state.conversations);
           },
         );
       },
@@ -195,7 +224,25 @@ class Chat extends Component {
   deleteConversation = async (username) => {
     await chat.remove({ username });
     await this.fetchConversations();
-    this.selectConversation(this.getFirstConversation());
+    this.setState(
+      (previous) => {
+        const tabOrder = previous.tabOrder.filter((name) => name !== username);
+        saveChatTabs(tabOrder);
+        return { tabOrder };
+      },
+      () => this.selectConversation(this.getFirstConversation()),
+    );
+  };
+
+  updateTabOrder = (conversations) => {
+    const names = Object.keys(conversations);
+    const filteredOrder = this.state.tabOrder.filter((name) =>
+      names.includes(name),
+    );
+    const missing = names.filter((name) => !filteredOrder.includes(name));
+    const tabOrder = [...filteredOrder, ...missing];
+    saveChatTabs(tabOrder);
+    this.setState({ tabOrder });
   };
 
   render() {
@@ -207,7 +254,11 @@ class Chat extends Component {
     } = this.state;
     const messages = conversations[active]?.messages || [];
     const { user } = this.props.state;
-    const conversationNames = Object.keys(conversations);
+    const orderedNames = this.state.tabOrder.filter(
+      (name) => name in conversations,
+    );
+    const conversationNames =
+      orderedNames.length > 0 ? orderedNames : Object.keys(conversations);
 
     return (
       <div className="chats">
@@ -250,6 +301,7 @@ class Chat extends Component {
           <ChatMenu
             active={active}
             conversations={conversations}
+            tabOrder={conversationNames}
             onConversationChange={(name) => this.selectConversation(name)}
           />
         )}

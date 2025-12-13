@@ -385,3 +385,17 @@ dotnet test tests/slskd.Tests.Unit/Mesh/MeshDataPlaneSecurityTests.cs
 ---
 
 **All security-critical code paths now have comprehensive test coverage!** 🚀
+
+
+
+
+
+
+
+
+
+
+
+
+
+

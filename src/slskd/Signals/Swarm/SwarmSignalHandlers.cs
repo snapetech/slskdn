@@ -315,3 +315,17 @@ public interface IBitTorrentBackend
     Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken cancellationToken = default);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

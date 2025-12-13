@@ -400,3 +400,17 @@ These tasks address critical security gaps in mesh sync that allow malicious cli
 - `src/slskd/Mesh/MeshSyncService.cs` - Current implementation
 - `src/slskd/Common/Security/PeerReputation.cs` - Reputation system
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

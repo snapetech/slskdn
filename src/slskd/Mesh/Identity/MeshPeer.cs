@@ -53,3 +53,17 @@ public sealed record MeshPeer
     /// </summary>
     public string DisplayName => HasSoulseekIdentity ? SoulseekUsername! : $"peer-{Id.ToShortString()}";
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -76,3 +76,17 @@ public sealed class HashDbSearchResult
     /// <summary>Channels (if known).</summary>
     public int? Channels { get; init; }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

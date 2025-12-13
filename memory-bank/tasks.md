@@ -2020,6 +2020,70 @@
 
 ---
 
+### Phase 12S: Database Poisoning Protection
+
+- [x] **T-1430**: Add Ed25519 signature verification to mesh sync messages
+  - Status: Complete
+  - Priority: P0
+  - Branch: experimental/brainz
+  - Notes: Mesh messages are signed/verified; invalid signatures are rejected and counted.
+
+- [x] **T-1431**: Integrate PeerReputation checks into MeshSyncService.MergeEntriesAsync
+  - Status: Complete
+  - Priority: P0
+  - Branch: experimental/brainz
+  - Notes: Untrusted peers are blocked; violations recorded.
+
+- [x] **T-1432**: Implement rate limiting for peers sending invalid mesh sync data
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Sliding window limits invalid entries/messages; violations tracked.
+
+- [x] **T-1433**: Add automatic quarantine for peers with high invalid entry rates
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: 3 rate-limit violations trigger 30-minute quarantine with metrics.
+
+- [x] **T-1434**: Implement proof-of-possession challenges for hash entries
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Challenge protocol added; responder path wired to share lookup to return proof chunks.
+
+- [x] **T-1435**: Add cross-peer hash validation (consensus requirement)
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Consensus gate (>=3 peers) implemented with cached peer lookups for corroboration.
+
+- [x] **T-1436**: Add mesh sync security metrics and monitoring
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Security metrics exposed via /api/v0/mesh/stats.
+
+- [x] **T-1437**: Create mesh sync security unit tests
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Unit coverage for signatures, reputation, rate limits, quarantine, metrics.
+
+- [x] **T-1438**: Create mesh sync security integration tests
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Integration coverage for signed hellos, signature rejection, invalid entry floods, message rate limits.
+
+- [x] **T-1439**: Document mesh sync security model and threat mitigation
+  - Status: Complete
+  - Priority: P1
+  - Branch: experimental/brainz
+  - Notes: Security model, defenses, monitoring, limitations documented in docs/security/mesh-sync-security.md.
+
+---
+
 ### Phase 8-11 Gap Tasks (AUDIT FINDINGS)
 
 > **Audit Report**: `docs/PHASE_8_11_AUDIT_REPORT.md`  
@@ -2421,12 +2485,12 @@
 
 ### High Priority
 
-- [ ] **T-001**: Persistent Room/Chat Tabs
-  - Status: Not started
+- [x] **T-001**: Persistent Room/Chat Tabs
+  - Status: Complete
   - Priority: High
   - Branch: TBD
   - Related: `TODO.md`, Browse tabs implementation
-  - Notes: Implement tabbed interface like Browse currently has. Reuse `Browse.jsx`/`BrowseSession.jsx` patterns.
+  - Notes: Added persistent tab ordering for chat and rooms using localStorage; tab selection survives refresh and tracks joined chats/rooms.
 
 - [ ] **T-002**: Scheduled Rate Limits
   - Status: Not started
@@ -2437,14 +2501,14 @@
 
 ### Medium Priority
 
-- [ ] **T-003**: Download Queue Position Polling
-  - Status: Not started
+- [x] **T-003**: Download Queue Position Polling
+  - Status: Complete
   - Priority: Medium
   - Related: slskd #921
-  - Notes: Auto-refresh queue positions for queued files
+  - Notes: Added periodic queue position polling for queued downloads and surfaced positions in the transfers UI.
 
 - [ ] **T-004**: Visual Group Indicators
-  - Status: Not started
+  - Status: Complete
   - Priority: Medium
   - Related: slskd #745
   - Notes: Icons in search results for users in your groups
@@ -2601,4 +2665,3 @@
 ---
 
 *Last updated: December 10, 2025*
-

@@ -284,3 +284,17 @@ public class PodAffinityScorerTests
         return messages;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -65,3 +65,17 @@ public class SignalChannelOptions
     public bool RequireActiveSession { get; set; } = false;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

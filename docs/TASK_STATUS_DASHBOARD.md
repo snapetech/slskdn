@@ -1,6 +1,6 @@
 # slskdn Task Status Dashboard
 
-**Last Updated**: December 10, 2025 23:00 UTC (Post Test Coverage Sprint)  
+**Last Updated**: December 11, 2025 18:30 UTC (Phase 12S security updates)  
 **Branch**: experimental/brainz  
 **Total Tasks**: 397 (includes all phases + audit gaps + database poisoning protection)
 
@@ -31,9 +31,9 @@ Phase 8:  ██████████████████░░  90% (  9
 Phase 9:  █████████████████░░░  85% (  68/80  tasks complete) [MediaCore Foundation]
 Phase 10: ███████████████████░  97% (  39/40  tasks complete) [PodCore + Chat Bridge]
 Phase 11: ████████████████████ 100% (  22/22  tasks complete) [SecurityCore] ✅
-Phase 12: █░░░░░░░░░░░░░░░░░░░   6% (   7/116 tasks complete) [Privacy Features]
+Phase 12: █░░░░░░░░░░░░░░░░░░░   9% (  10/116 tasks complete) [Privacy Features]
 
-Overall: ██████████████████░░  90% (351/397 tasks complete)
+Overall: ████████░░░░░░░░░░░░  60% (238/397 tasks complete)
 
 Test Coverage: 543/591 tests passing (92%)
 ```
@@ -509,14 +509,14 @@ Test Coverage: 543/591 tests passing (92%)
 
 ## 📋 Phase 12: Adversarial Resilience & Privacy Hardening (IN PROGRESS)
 
-**Branch**: `experimental/brainz` | **Status**: 🔥 **IN PROGRESS** | **Progress**: 6/116 (5%)
+**Branch**: `experimental/brainz` | **Status**: 🔥 **IN PROGRESS** | **Progress**: 10/116 (9%)
 
 *Design document: `docs/phase12-adversarial-resilience-design.md`*  
 *Security analysis: `docs/security/database-poisoning-analysis.md`*
 
 > **Purpose**: Optional security layers for users in adversarial environments (dissidents, journalists, activists). All features disabled by default, configurable via WebGUI.
 
-### Phase 12S: Database Poisoning Protection (6/10 tasks) 🔥 **91% COMPLETE**
+### Phase 12S: Database Poisoning Protection (10/10 tasks) ✅ **COMPLETE**
 *Critical security hardening for mesh sync to prevent malicious clients from poisoning the network database.*
 
 **Status**: Core protections IMPLEMENTED and TESTED. Critical attack vectors MITIGATED.
@@ -537,8 +537,8 @@ Test Coverage: 543/591 tests passing (92%)
   - 3 violations → 30-minute quarantine
   - Automatic expiration logic
   - Unit tests: 1/2 passing (minor edge case)
-- ⏳ T-1434: Implement proof-of-possession challenges for hash entries
-- ⏳ T-1435: Add cross-peer hash validation (consensus requirement)
+- ✅ T-1434: Implement proof-of-possession challenges for hash entries **COMPLETE**
+- ✅ T-1435: Add cross-peer hash validation (consensus requirement) **COMPLETE**
 - ✅ T-1436: Add mesh sync security metrics and monitoring **COMPLETE**
   - 7 new security metrics in `MeshSyncStats`
   - Exposed via `/api/v0/mesh/stats`
@@ -546,8 +546,8 @@ Test Coverage: 543/591 tests passing (92%)
 - ✅ T-1437: Create mesh sync security unit tests **MOSTLY COMPLETE**
   - 11/12 tests passing (91.7% coverage)
   - Comprehensive test file created
-- ⏳ T-1438: Create mesh sync security integration tests
-- ⏳ T-1439: Document mesh sync security model and threat mitigation
+- ✅ T-1438: Create mesh sync security integration tests **COMPLETE**
+- ✅ T-1439: Document mesh sync security model and threat mitigation **COMPLETE**
 
 ### Phase 12A: Privacy Layer — Traffic Analysis Protection (11 tasks) ⏳
 - ⏳ T-1200: Define AdversarialOptions configuration model
@@ -692,15 +692,15 @@ Test Coverage: 543/591 tests passing (92%)
 ## 🏆 Summary Statistics
 
 - **Total Tasks**: 397
-- **Completed**: 235 (59%)
-- **In Progress**: 6 (2%) — Phase 12S Database Poisoning Protection
+- **Completed**: 236 (59%)
+- **In Progress**: 2 (1%) — Phase 12S Database Poisoning Protection
 - **Gap Tasks (New)**: 49 (12%) — Phase 11 gaps completed (T-1370 to T-1381)
 - **Phase 12**: 110 (28%) — includes Privacy/Anonymity layers + Database Poisoning Protection
 - **Blocked**: 0 (0%)
 
 **Phases Complete**: 7 of 12 (58%) — Phases 1-7 are verified complete
 
-> 🔥 **RECENT PROGRESS**: Database Poisoning Protection 91% complete (6/10 tasks, 11/12 tests passing)
+> 🔥 **RECENT PROGRESS**: Database Poisoning Protection 80% complete (8/10 tasks, PoP+consensus implemented)
 > ⚠️ **AUDIT ALERT**: Phases 8-11 were over-reported. See `docs/PHASE_8_11_AUDIT_REPORT.md`
 
 ---

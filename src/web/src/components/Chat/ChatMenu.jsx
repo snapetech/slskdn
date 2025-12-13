@@ -2,8 +2,11 @@ import './Chat.css';
 import React from 'react';
 import { Icon, Label, Menu } from 'semantic-ui-react';
 
-const ChatMenu = ({ active, conversations, onConversationChange }) => {
-  const names = Object.keys(conversations);
+const ChatMenu = ({ active, conversations, onConversationChange, tabOrder }) => {
+  const names =
+    tabOrder && tabOrder.length > 0
+      ? tabOrder
+      : Object.keys(conversations);
   const isActive = (name) => active === name;
 
   return (

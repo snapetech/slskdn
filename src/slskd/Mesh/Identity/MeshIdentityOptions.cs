@@ -34,3 +34,17 @@ public sealed class MeshIdentityOptions
     /// </summary>
     public int PeerRetentionSeconds { get; set; } = 30 * 24 * 60 * 60; // 30 days
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -105,3 +105,12 @@
 | Version check crash | ✅ Fixed | Suppress noisy warning |
 | ObjectDisposedException on shutdown | ✅ Fixed | Graceful shutdown |
 
+
+### 2025-12-11
+- Completed T-1439 mesh sync security documentation (`docs/security/mesh-sync-security.md`) covering threat model, defense stack, PoP + consensus gates, monitoring, and limitations.
+- Updated `memory-bank/tasks.md` to add Phase 12S task block with current statuses.
+- Tests not run here: `dotnet test` hit socket permission errors in this environment; rerun when listener permissions are available.
+- Implemented proof-of-possession challenge responder using local shares (via `IShareService.ResolveFileAsync`) and added consensus gate enforcement in `MeshSyncService`.
+- Completed T-001 persistent room/chat tabs by adding localStorage-backed tab ordering for chat and room views; tab selection now survives refresh and follows joined conversations/rooms. Tests not run per user instruction.
+- Completed T-003 download queue position polling: transfers UI now polls queued download positions periodically and displays place-in-queue alongside status. Tests not run per user instruction.
+- Completed T-004 visual group indicators: backend now annotates search responses with user group, and search results display a grouped badge with tooltip when a user is in a non-default group. Tests not run per user instruction.

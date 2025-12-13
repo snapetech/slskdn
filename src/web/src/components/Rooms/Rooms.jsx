@@ -19,6 +19,23 @@ import {
   Segment,
 } from 'semantic-ui-react';
 
+const loadRoomTabs = () => {
+  try {
+    const saved = localStorage.getItem('slskd-room-tabs');
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveRoomTabs = (tabs) => {
+  try {
+    localStorage.setItem('slskd-room-tabs', JSON.stringify(tabs));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 const initialState = {
   active: '',
   availableRooms: [],
@@ -39,6 +56,7 @@ const initialState = {
     users: [],
   },
   roomSearchLoading: false,
+  tabOrder: loadRoomTabs(),
 };
 
 class Rooms extends Component {
@@ -108,6 +126,7 @@ class Rooms extends Component {
         if (!this.state.joined.includes(this.state.active)) {
           this.selectRoom(this.getFirstRoom());
         }
+        this.updateTabOrder(joined);
       },
     );
   };
@@ -129,11 +148,20 @@ class Rooms extends Component {
   };
 
   selectRoom = async (roomName) => {
+    const nextTabOrder = roomName
+      ? this.state.tabOrder.includes(roomName)
+        ? this.state.tabOrder
+        : [...this.state.tabOrder, roomName]
+      : this.state.tabOrder;
+
+    saveRoomTabs(nextTabOrder);
+
     this.setState(
       {
         active: roomName,
         loading: true,
         room: initialState.room,
+        tabOrder: nextTabOrder,
       },
       async () => {
         const { active } = this.state;
@@ -161,7 +189,14 @@ class Rooms extends Component {
   leaveRoom = async (roomName) => {
     await rooms.leave({ roomName });
     await this.fetchJoinedRooms();
-    this.selectRoom(this.getFirstRoom());
+    this.setState(
+      (previous) => {
+        const tabOrder = previous.tabOrder.filter((room) => room !== roomName);
+        saveRoomTabs(tabOrder);
+        return { tabOrder };
+      },
+      () => this.selectRoom(this.getFirstRoom()),
+    );
   };
 
   validInput = () =>
@@ -239,6 +274,18 @@ class Rooms extends Component {
     });
   };
 
+  updateTabOrder = (joinedRooms) => {
+    const filteredOrder = this.state.tabOrder.filter((room) =>
+      joinedRooms.includes(room),
+    );
+    const missing = joinedRooms.filter(
+      (room) => !filteredOrder.includes(room),
+    );
+    const tabOrder = [...filteredOrder, ...missing];
+    saveRoomTabs(tabOrder);
+    this.setState({ tabOrder });
+  };
+
   renderContextMenu() {
     const { contextMenu } = this.state;
     return (
@@ -282,6 +329,7 @@ class Rooms extends Component {
       loading,
       room,
       roomSearchLoading,
+      tabOrder,
     } = this.state;
 
     const roomOptions = availableRooms.map((r) => ({
@@ -324,6 +372,7 @@ class Rooms extends Component {
           <RoomMenu
             active={active}
             joined={joined}
+            tabOrder={tabOrder}
             onRoomChange={(name) => this.selectRoom(name)}
           />
         )}

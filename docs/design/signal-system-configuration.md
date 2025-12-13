@@ -151,3 +151,17 @@ await serviceProvider.InitializeSignalSystemAsync(localPeerId, cancellationToken
 - [Signal System Design](signal-request-bt-fallback.md) - End-to-end signal example
 - [Phase 12 Design](../phase12-adversarial-resilience-design.md#8-signal-system-for-multi-channel-communication) - Signal system architecture
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

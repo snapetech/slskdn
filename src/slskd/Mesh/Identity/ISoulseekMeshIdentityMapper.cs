@@ -38,3 +38,17 @@ public interface ISoulseekMeshIdentityMapper
     /// <returns>The Soulseek username if mapped, otherwise null.</returns>
     Task<string?> TryGetSoulseekUsernameAsync(MeshPeerId meshPeerId, CancellationToken ct = default);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

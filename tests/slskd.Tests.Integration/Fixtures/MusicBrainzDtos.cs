@@ -69,3 +69,17 @@ public class MbSearchResults<T>
     public List<T> Results { get; set; } = new();
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

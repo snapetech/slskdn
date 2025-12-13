@@ -962,6 +962,7 @@ namespace slskd
 
 
             // Mesh services (Hash database synchronization)
+            services.AddSingleton<Mesh.IProofOfPossessionService, Mesh.ProofOfPossessionService>();
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
             
             // Mesh overlay sync adapter (bridges mesh sync to overlay connections)

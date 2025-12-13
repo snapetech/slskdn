@@ -479,3 +479,17 @@ This example establishes a repeatable pattern:
 
 Copy this structure for any future signals (e.g. `Swarm.JobCancel`, `Pod.MembershipUpdate`, `Pod.VariantOpinionUpdate`), keeping the same multi-channel, dedup, and optional ack pattern.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

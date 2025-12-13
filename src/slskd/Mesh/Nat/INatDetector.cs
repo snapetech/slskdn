@@ -15,3 +15,17 @@ public interface INatDetector
 {
     Task<NatType> DetectAsync(CancellationToken ct = default);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

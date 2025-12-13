@@ -30,6 +30,7 @@ namespace slskd.Search
     using Microsoft.EntityFrameworkCore;
     using Serilog;
     using slskd.Search.API;
+    using slskd.Users;
     using Soulseek;
     using SearchOptions = Soulseek.SearchOptions;
     using SearchQuery = Soulseek.SearchQuery;
@@ -125,6 +126,7 @@ namespace slskd.Search
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
             IDbContextFactory<SearchDbContext> contextFactory,
+            IUserService userService,
             slskd.Events.EventBus eventBus = null,
             slskd.Mesh.MeshSearchBridgeService meshSearchBridge = null)
         {
@@ -132,6 +134,7 @@ namespace slskd.Search
             OptionsMonitor = optionsMonitor;
             Client = soulseekClient;
             ContextFactory = contextFactory;
+            Users = userService;
             EventBus = eventBus;
             MeshSearchBridge = meshSearchBridge;
         }
@@ -142,6 +145,7 @@ namespace slskd.Search
         private ISoulseekClient Client { get; }
         private IDbContextFactory<SearchDbContext> ContextFactory { get; }
         private slskd.Events.EventBus EventBus { get; }
+        private IUserService Users { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<Application>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IHubContext<SearchHub> SearchHub { get; set; }
@@ -397,7 +401,21 @@ namespace slskd.Search
                             }
                         }
                         
-                        search.Responses = responses.Select(r => Response.FromSoulseekSearchResponse(r));
+                        var responseGroups = responses
+                            .Select(r => r.Username)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToDictionary(
+                                username => username,
+                                username => Users?.GetGroup(username) ?? Application.DefaultGroup,
+                                StringComparer.OrdinalIgnoreCase);
+
+                        search.Responses = responses.Select(r =>
+                                Response.FromSoulseekSearchResponse(
+                                    r,
+                                    responseGroups.TryGetValue(r.Username, out var group)
+                                        ? group
+                                        : Application.DefaultGroup))
+                            .ToList();
 
                         Update(search);
 

@@ -108,3 +108,17 @@ public class DisasterModeOptions
     public bool EnableGracefulDegradation { get; set; } = true;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

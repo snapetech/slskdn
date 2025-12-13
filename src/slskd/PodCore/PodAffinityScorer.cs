@@ -216,3 +216,17 @@ public class PodAffinityScorer : IPodAffinityScorer
         };
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

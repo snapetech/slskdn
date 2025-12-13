@@ -60,3 +60,17 @@ public class ShadowIndexDescriptorSource : IContentDescriptorSource
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

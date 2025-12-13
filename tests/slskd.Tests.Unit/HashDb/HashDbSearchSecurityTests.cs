@@ -147,3 +147,17 @@ public class HashDbSearchSecurityTests : IDisposable
         Assert.Empty(result3);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

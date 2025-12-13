@@ -66,3 +66,17 @@ public interface IMeshPeerRegistry
     /// </summary>
     Task<int> GetCountAsync(CancellationToken ct = default);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

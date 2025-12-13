@@ -10,3 +10,17 @@ public static class Ulid
     public static string NewUlid() => Guid.NewGuid().ToString("N");
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -167,3 +167,17 @@ public class SlskdnSignalMessage
     public TimeSpan Ttl { get; set; }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -22,6 +22,7 @@ namespace slskd.Mesh
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.IO;
     using System.Text;
     using System.Text.Json;
     using System.Text.RegularExpressions;
@@ -34,6 +35,7 @@ namespace slskd.Mesh
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh.Messages;
+    using slskd.Shares;
     using Soulseek;
 
     /// <summary>
@@ -49,6 +51,16 @@ namespace slskd.Mesh
 
         /// <summary>Maximum peers to sync with per cycle.</summary>
         public const int MaxPeersPerCycle = 5;
+        
+        /// <summary>
+        ///     Minimum number of peers that must agree on a hash before acceptance (T-1435).
+        /// </summary>
+        private const int ConsensusRequiredPeers = 3;
+
+        /// <summary>
+        ///     Duration to cache consensus decisions per hash (minutes).
+        /// </summary>
+        private const int ConsensusCacheMinutes = 60;
 
         /// <summary>
         ///     Maximum invalid entries allowed per time window (T-1432).
@@ -81,14 +93,18 @@ namespace slskd.Mesh
         private readonly ISoulseekClient soulseekClient;
         private readonly IMeshMessageSigner messageSigner;
         private readonly Common.Security.PeerReputation? peerReputation;
+        private readonly IProofOfPossessionService? proofOfPossession;
+        private readonly IShareService? shareService;
         private readonly ILogger log = Log.ForContext<MeshSyncService>();
 
         private readonly ConcurrentDictionary<string, MeshPeerState> peerStates = new(StringComparer.OrdinalIgnoreCase);
         private readonly MeshSyncStats stats = new();
         private readonly SemaphoreSlim syncLock = new(1, 1);
+        private readonly ConcurrentDictionary<string, DateTime> consensusCache = new(StringComparer.OrdinalIgnoreCase);
         
         // Pending requests: requestId -> TaskCompletionSource
         private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>> pendingRequests = new();
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshChallengeResponseMessage>> pendingChallenges = new();
         private const string MeshMessagePrefix = "MESH:";
 
         /// <summary>
@@ -100,6 +116,8 @@ namespace slskd.Mesh
             ISoulseekClient soulseekClient,
             IMeshMessageSigner messageSigner,
             Common.Security.PeerReputation? peerReputation = null,
+            IProofOfPossessionService? proofOfPossession = null,
+            IShareService? shareService = null,
             IManagedState<State> appState = null)
         {
             this.hashDb = hashDb;
@@ -107,6 +125,8 @@ namespace slskd.Mesh
             this.soulseekClient = soulseekClient;
             this.messageSigner = messageSigner;
             this.peerReputation = peerReputation;
+            this.proofOfPossession = proofOfPossession;
+            this.shareService = shareService;
             this.appState = appState;
             
             // Subscribe to private messages for mesh protocol
@@ -157,7 +177,7 @@ namespace slskd.Mesh
                     log.Warning(ex, "[MESH] Failed to deserialize RESPKEY message from {Peer}", e.Username);
                 }
             }
-            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO")
+            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO" || messageType == "CHAL" || messageType == "CHALRESP")
             {
                 // Handle incoming requests by routing to HandleMessageAsync
                 _ = Task.Run(async () =>
@@ -170,6 +190,8 @@ namespace slskd.Mesh
                             "REQDELTA" => JsonSerializer.Deserialize<MeshReqDeltaMessage>(payload),
                             "PUSHDELTA" => JsonSerializer.Deserialize<MeshPushDeltaMessage>(payload),
                             "HELLO" => JsonSerializer.Deserialize<MeshHelloMessage>(payload),
+                            "CHAL" => JsonSerializer.Deserialize<MeshChallengeRequestMessage>(payload),
+                            "CHALRESP" => JsonSerializer.Deserialize<MeshChallengeResponseMessage>(payload),
                             _ => null,
                         };
                         
@@ -212,6 +234,8 @@ namespace slskd.Mesh
                     MeshMessageType.PushDelta => "PUSHDELTA",
                     MeshMessageType.Hello => "HELLO",
                     MeshMessageType.Ack => "ACK",
+                    MeshMessageType.ChallengeRequest => "CHAL",
+                    MeshMessageType.ChallengeResponse => "CHALRESP",
                     _ => "UNKNOWN",
                 };
                 
@@ -405,6 +429,8 @@ namespace slskd.Mesh
                 MeshMessageType.ReqDelta => await HandleReqDeltaAsync(fromUser, (MeshReqDeltaMessage)message, cancellationToken),
                 MeshMessageType.PushDelta => await HandlePushDeltaAsync(fromUser, (MeshPushDeltaMessage)message, cancellationToken),
                 MeshMessageType.ReqKey => await HandleReqKeyAsync(fromUser, (MeshReqKeyMessage)message, cancellationToken),
+                MeshMessageType.ChallengeRequest => await HandleChallengeRequestAsync(fromUser, (MeshChallengeRequestMessage)message, cancellationToken),
+                MeshMessageType.ChallengeResponse => await HandleChallengeResponseAsync((MeshChallengeResponseMessage)message),
                 _ => null,
             };
         }
@@ -467,6 +493,43 @@ namespace slskd.Mesh
                     if (hello.ClientVersion?.Length > 64)
                     {
                         return ValidationResult.Fail("ClientVersion too long");
+                    }
+                    break;
+
+                case MeshChallengeRequestMessage challenge:
+                    var flacValidation = MessageValidator.ValidateFlacKey(challenge.FlacKey);
+                    if (!flacValidation.IsValid)
+                    {
+                        return flacValidation;
+                    }
+                    var hashValidation = MessageValidator.ValidateSha256Hash(challenge.ByteHash);
+                    if (!hashValidation.IsValid)
+                    {
+                        return hashValidation;
+                    }
+                    if (challenge.Offset < 0)
+                    {
+                        return ValidationResult.Fail($"Invalid challenge offset: {challenge.Offset}");
+                    }
+                    if (challenge.Length <= 0 || challenge.Length > 32768)
+                    {
+                        return ValidationResult.Fail($"Invalid challenge length: {challenge.Length}");
+                    }
+                    if (string.IsNullOrWhiteSpace(challenge.ChallengeId) || challenge.ChallengeId.Length > 128)
+                    {
+                        return ValidationResult.Fail("Invalid challenge id");
+                    }
+                    break;
+
+                case MeshChallengeResponseMessage response:
+                    if (string.IsNullOrWhiteSpace(response.ChallengeId) || response.ChallengeId.Length > 128)
+                    {
+                        return ValidationResult.Fail("Invalid challenge id");
+                    }
+                    var responseKeyValidation = MessageValidator.ValidateFlacKey(response.FlacKey);
+                    if (!responseKeyValidation.IsValid)
+                    {
+                        return responseKeyValidation;
                     }
                     break;
             }
@@ -745,6 +808,14 @@ namespace slskd.Mesh
 
             foreach (var entry in entryList)
             {
+                // Skip if we already have this entry locally
+                var existing = await hashDb.LookupHashAsync(entry.FlacKey, cancellationToken);
+                if (existing != null)
+                {
+                    validatedEntries.Add(existing);
+                    continue;
+                }
+
                 // Validate FLAC key
                 var keyValidation = MessageValidator.ValidateFlacKey(entry.FlacKey);
                 if (!keyValidation.IsValid)
@@ -776,6 +847,34 @@ namespace slskd.Mesh
                 if (entry.SeqId < 0)
                 {
                     log.Debug("[MESH] Skipping entry with negative SeqId from {Peer}: {SeqId}", fromUser, entry.SeqId);
+                    skipped++;
+                    continue;
+                }
+
+                // Proof-of-possession challenge for new entries (T-1434)
+                if (proofOfPossession != null)
+                {
+                    var proved = await proofOfPossession.VerifyAsync(
+                        fromUser,
+                        entry,
+                        challenge => SendProofChallengeAsync(fromUser, challenge, cancellationToken),
+                        cancellationToken);
+
+                    if (!proved)
+                    {
+                        log.Warning("[MESH][POP] Rejecting entry {FlacKey} from {Peer} - proof-of-possession failed", entry.FlacKey, fromUser);
+                        stats.RejectedMessages++;
+                        skipped++;
+                        continue;
+                    }
+                }
+
+                // Consensus check across peers (T-1435)
+                var hasConsensus = await EnsureConsensusAsync(entry, fromUser, cancellationToken);
+                if (!hasConsensus)
+                {
+                    log.Warning("[MESH][CONSENSUS] Rejecting entry {FlacKey} from {Peer} - insufficient peer consensus", entry.FlacKey, fromUser);
+                    stats.RejectedMessages++;
                     skipped++;
                     continue;
                 }
@@ -914,6 +1013,182 @@ namespace slskd.Mesh
                     }
                     : null,
             };
+        }
+
+        private async Task<MeshMessage> HandleChallengeRequestAsync(string fromUser, MeshChallengeRequestMessage request, CancellationToken cancellationToken)
+        {
+            // Serve proof from local shares if possible
+            try
+            {
+                var entry = await hashDb.GetFlacInventoryByHashAsync(request.FlacKey, cancellationToken);
+                if (entry == null)
+                {
+                    log.Warning("[MESH][POP] No inventory entry for {FlacKey}; cannot respond to challenge from {Peer}", request.FlacKey, fromUser);
+                    return ChallengeFailure(request, "Not found");
+                }
+
+                // Ensure this file belongs to our local host
+                var currentState = appState?.CurrentValue;
+                var localUsername = currentState?.User?.Username ?? Program.LocalHostName;
+                if (!string.Equals(entry.PeerId, localUsername, StringComparison.OrdinalIgnoreCase))
+                {
+                    log.Warning("[MESH][POP] Inventory entry for {FlacKey} is not local ({PeerId}); cannot respond to challenge from {Peer}", request.FlacKey, entry.PeerId, fromUser);
+                    return ChallengeFailure(request, "Not local");
+                }
+
+                if (shareService == null)
+                {
+                    log.Warning("[MESH][POP] Share service unavailable; cannot respond to challenge for {FlacKey}", request.FlacKey);
+                    return ChallengeFailure(request, "Share service unavailable");
+                }
+
+                var (_, localPath, size) = await shareService.ResolveFileAsync(entry.Path);
+                if (size < request.Length || request.Offset < 0 || request.Offset > size - request.Length)
+                {
+                    log.Warning("[MESH][POP] Invalid range for challenge on {FlacKey}: offset={Offset}, length={Length}, size={Size}", request.FlacKey, request.Offset, request.Length, size);
+                    return ChallengeFailure(request, "Invalid range");
+                }
+
+                var data = await ReadChunkAsync(localPath, request.Offset, request.Length, cancellationToken);
+                return new MeshChallengeResponseMessage
+                {
+                    ChallengeId = request.ChallengeId,
+                    FlacKey = request.FlacKey,
+                    Success = true,
+                    Data = data,
+                };
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[MESH][POP] Failed to respond to challenge for {FlacKey} from {Peer}", request.FlacKey, fromUser);
+                return ChallengeFailure(request, "Error");
+            }
+        }
+
+        private Task<MeshMessage> HandleChallengeResponseAsync(MeshChallengeResponseMessage response)
+        {
+            if (pendingChallenges.TryRemove(response.ChallengeId, out var tcs))
+            {
+                tcs.TrySetResult(response);
+            }
+
+            return Task.FromResult<MeshMessage>(null);
+        }
+
+        private static MeshChallengeResponseMessage ChallengeFailure(MeshChallengeRequestMessage request, string error)
+        {
+            return new MeshChallengeResponseMessage
+            {
+                ChallengeId = request.ChallengeId,
+                FlacKey = request.FlacKey,
+                Success = false,
+                Error = error,
+                Data = Array.Empty<byte>(),
+            };
+        }
+
+        private static async Task<byte[]> ReadChunkAsync(string path, long offset, int length, CancellationToken cancellationToken)
+        {
+            await using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: length,
+                useAsync: true);
+
+            stream.Seek(offset, SeekOrigin.Begin);
+            var buffer = new byte[length];
+            var read = 0;
+            while (read < length)
+            {
+                var chunk = await stream.ReadAsync(buffer.AsMemory(read, length - read), cancellationToken);
+                if (chunk == 0)
+                {
+                    break;
+                }
+
+                read += chunk;
+            }
+
+            if (read != length)
+            {
+                throw new IOException($"Short read: expected {length}, got {read}");
+            }
+
+            return buffer;
+        }
+
+        private async Task<MeshChallengeResponseMessage?> SendProofChallengeAsync(
+            string peer,
+            MeshChallengeRequestMessage challenge,
+            CancellationToken cancellationToken)
+        {
+            if (soulseekClient == null)
+            {
+                log.Warning("[MESH][POP] Cannot send proof challenge - Soulseek client unavailable");
+                return null;
+            }
+
+            var tcs = new TaskCompletionSource<MeshChallengeResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            pendingChallenges[challenge.ChallengeId] = tcs;
+
+            await SendMeshMessageAsync(peer, challenge);
+
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+
+            try
+            {
+                await using var _ = linkedCts.Token.Register(() => tcs.TrySetCanceled(linkedCts.Token));
+                return await tcs.Task;
+            }
+            catch (OperationCanceledException)
+            {
+                log.Warning("[MESH][POP] Challenge {ChallengeId} to {Peer} timed out", challenge.ChallengeId, peer);
+                pendingChallenges.TryRemove(challenge.ChallengeId, out _);
+                return null;
+            }
+        }
+
+        /// <summary>
+        ///     Requires consensus from multiple peers before accepting a new hash entry (T-1435).
+        /// </summary>
+        private async Task<bool> EnsureConsensusAsync(MeshHashEntry entry, string fromUser, CancellationToken cancellationToken)
+        {
+            var cacheKey = $"{entry.FlacKey}:{entry.ByteHash}";
+            if (consensusCache.TryGetValue(cacheKey, out var expires) && expires > DateTime.UtcNow)
+            {
+                return true;
+            }
+
+            // Query peers known to have this hash from inventory/backfill data.
+            IEnumerable<string> peersWithHash = Array.Empty<string>();
+            try
+            {
+                peersWithHash = await hashDb.GetPeersByHashAsync(entry.FlacKey, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[MESH][CONSENSUS] Failed to query peers for hash {FlacKey}", entry.FlacKey);
+            }
+
+            var agreeingPeers = peersWithHash
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Where(p => !string.Equals(p, fromUser, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(ConsensusRequiredPeers)
+                .ToList();
+
+            var totalAgree = 1 + agreeingPeers.Count; // include sender as 1 vote
+
+            if (totalAgree >= ConsensusRequiredPeers)
+            {
+                consensusCache[cacheKey] = DateTime.UtcNow.AddMinutes(ConsensusCacheMinutes);
+                return true;
+            }
+
+            return false;
         }
 
         private MeshPeerState GetOrCreatePeerState(string username)
@@ -1132,5 +1407,3 @@ namespace slskd.Mesh
         }
     }
 }
-
-

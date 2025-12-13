@@ -2,8 +2,11 @@ import './Rooms.css';
 import React from 'react';
 import { Icon, Menu } from 'semantic-ui-react';
 
-const RoomMenu = ({ active, joined, onRoomChange }) => {
-  const names = [...joined];
+const RoomMenu = ({ active, joined, onRoomChange, tabOrder }) => {
+  const names =
+    tabOrder && tabOrder.length > 0
+      ? tabOrder.filter((room) => joined.includes(room))
+      : [...joined];
   const isActive = (name) => active === name;
 
   return (

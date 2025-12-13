@@ -74,3 +74,17 @@ public class RoomsCompatibilityController : ControllerBase
 
 public record JoinRoomRequest(string? Room);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

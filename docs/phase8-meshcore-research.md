@@ -65,3 +65,17 @@ Scope: T-1032..T-1038
 - Integrate MeshTransportService preference with DHT vs overlay selection.
 - Add NAT detection utility and descriptor flagging.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -238,3 +238,17 @@ internal sealed class MeshSearchResult
     public required int QueueLength { get; init; }
     public required IReadOnlyCollection<Soulseek.File> Files { get; init; }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -24,6 +24,7 @@ namespace slskd.Search
     {
         public int FileCount { get; init; }
         public ICollection<File> Files { get; init; } = new List<File>();
+        public string Group { get; init; }
         public bool HasFreeUploadSlot { get; init; }
         public int LockedFileCount { get; init; }
         public ICollection<File> LockedFiles { get; init; } = new List<File>();
@@ -32,12 +33,15 @@ namespace slskd.Search
         public int UploadSpeed { get; init; }
         public string Username { get; init; }
 
-        public static Response FromSoulseekSearchResponse(Soulseek.SearchResponse searchResponse)
+        public static Response FromSoulseekSearchResponse(
+            Soulseek.SearchResponse searchResponse,
+            string group = null)
         {
             return new Response()
             {
                 FileCount = searchResponse.FileCount,
                 Files = searchResponse.Files.Select(file => File.FromSoulseekFile(file)).ToList(),
+                Group = group,
                 HasFreeUploadSlot = searchResponse.HasFreeUploadSlot,
                 LockedFileCount = searchResponse.LockedFileCount,
                 LockedFiles = searchResponse.LockedFiles.Select(file => File.FromSoulseekFile(file)).ToList(),

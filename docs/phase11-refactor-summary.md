@@ -27,3 +27,17 @@ Scope: T-1050..T-1090
 - Keep code hygiene continuous: remove dead code when touching modules; normalize naming; move narrative comments to docs.
 - If future config sections are added, ensure corresponding `IOptions<T>` bindings are configured in appsettings.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

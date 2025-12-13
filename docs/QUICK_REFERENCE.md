@@ -231,3 +231,17 @@ curl http://localhost:5030/api/v0/dht/mesh/peers | jq '.[] | select(.username !=
 ---
 
 *Quick Reference - slskdn December 2025 Release*
+
+
+
+
+
+
+
+
+
+
+
+
+
+

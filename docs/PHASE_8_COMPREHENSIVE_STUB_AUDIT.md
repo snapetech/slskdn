@@ -343,3 +343,17 @@ ClientId = "slskdn", // TODO: Get actual username
 
 *Audit completed: December 10, 2025*
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

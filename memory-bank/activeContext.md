@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Extended planning with Phase 2-Extended (codec-specific fingerprinting) and Phase 7 (testing strategy)
+- **Current Task**: Phase 12S hardening plus UI polish (chat/room tab persistence), download queue polling, and search group indicators
 - **Branch**: `experimental/brainz` (Phase 1, 2-Extended, 7) → `experimental/virtual-soulfind` (Phase 6)
 - **Environment**: Local dev
-- **Last Activity**: Added Phase 2-Extended (T-420 to T-430) and Phase 7 (T-900 to T-915) specifications
+- **Last Activity**: Added mesh sync security documentation (T-1439), consensus gate, and PoP integration (including responder using local shares); implemented persistent tabs for chat and rooms (T-001). Tests blocked by socket permissions in this environment and not run by request.
 
 ---
 
@@ -54,19 +54,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - None currently
 
 ### Next Steps
-1. Continue Codex implementation of Phase 2 tasks (T-404 onwards)
-2. Phase 2-Extended (T-420 to T-430) provides deep codec-specific quality analysis
-3. Phase 7 (T-900 to T-915) can be implemented in parallel with features as needed
-4. **Phase 6X (T-850 to T-860) is OPTIONAL but RECOMMENDED** - compatibility bridge is the killer feature
-5. Follow implementation order in phase docs
-6. All tasks (T-300 to T-915) are fully specified - no additional planning needed
-7. Estimated implementation time:
-   - Phase 1: Complete
-   - Phase 2 + 2-Extended: ~8-10 weeks
-   - Phase 3-5: ~18-24 weeks
-   - Phase 6 + 6X: ~20-26 weeks
-   - Phase 7: Parallel with features (4-6 weeks)
-   - **Total: ~50-66 weeks for complete implementation**
+1. Continue Phase 12S validation once test environment permits (re-run `dotnet test` when socket/listener permissions allow).
+2. Extend privacy layer tasks in Phase 12A (AdversarialOptions model, padding/jitter) when ready to resume core Phase 12 work.
+3. Monitor chat/room tab persistence UX and align with Browse tab patterns if further polish is needed.
+4. Validate group badges in search results against user-defined and built-in groups once more user data is available.
 
 ---
 
@@ -94,4 +85,3 @@ dotnet test
 # Build release
 ./bin/build
 ```
-

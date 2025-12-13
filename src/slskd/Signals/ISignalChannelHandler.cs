@@ -29,3 +29,17 @@ public interface ISignalChannelHandler
     Task StartReceivingAsync(Func<Signal, CancellationToken, Task> onSignalReceived, CancellationToken cancellationToken = default);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

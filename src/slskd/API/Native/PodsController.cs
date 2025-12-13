@@ -354,3 +354,17 @@ public record BanMemberRequest(string PeerId);
 public record SendMessageRequest(string Body, string SenderPeerId, string? Signature = null);
 public record BindRoomRequest(string RoomName, string? Mode = null);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

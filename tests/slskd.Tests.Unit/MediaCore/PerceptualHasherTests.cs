@@ -185,3 +185,17 @@ public class PerceptualHasherTests
         return samples;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

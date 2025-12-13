@@ -246,6 +246,22 @@ class Response extends Component {
     const selectedFiles = getSelectedFiles(tree);
     const selectedSize = getSelectedSize(selectedFiles);
     const badgeColor = getBadgeColor(downloadStats);
+    const group = response.group;
+    const groupColor = (() => {
+      switch ((group || '').toLowerCase()) {
+        case 'privileged':
+          return 'blue';
+        case 'blacklisted':
+          return 'red';
+        case 'leecher':
+          return 'orange';
+        case '':
+        case 'default':
+          return null;
+        default:
+          return 'teal';
+      }
+    })();
 
     return (
       <Card
@@ -320,6 +336,22 @@ class Response extends Component {
                     size="tiny"
                     style={{ marginLeft: '4px' }}
                   />
+                }
+              />
+            )}
+            {groupColor && (
+              <Popup
+                content={`This user is in your '${group}' group.`}
+                position="top center"
+                trigger={
+                  <Label
+                    color={groupColor}
+                    size="tiny"
+                    style={{ marginLeft: '4px' }}
+                  >
+                    <Icon name="users" />
+                    {group}
+                  </Label>
                 }
               />
             )}

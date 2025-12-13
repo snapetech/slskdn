@@ -42,6 +42,12 @@ namespace slskd.Mesh.Messages
 
         /// <summary>Acknowledge receipt of entries.</summary>
         Ack = 6,
+
+        /// <summary>Proof-of-possession challenge request.</summary>
+        ChallengeRequest = 7,
+
+        /// <summary>Proof-of-possession challenge response.</summary>
+        ChallengeResponse = 8,
     }
 
     /// <summary>
@@ -81,6 +87,64 @@ namespace slskd.Mesh.Messages
         /// </summary>
         [JsonPropertyName("timestamp_ms")]
         public long TimestampUnixMs { get; set; }
+    }
+
+    /// <summary>
+    ///     Proof-of-possession challenge request (T-1434).
+    /// </summary>
+    public class MeshChallengeRequestMessage : MeshMessage
+    {
+        /// <inheritdoc/>
+        public override MeshMessageType Type => MeshMessageType.ChallengeRequest;
+
+        /// <summary>Gets or sets the challenge identifier.</summary>
+        [JsonPropertyName("challenge_id")]
+        public string ChallengeId { get; set; }
+
+        /// <summary>Gets or sets the FLAC key being challenged.</summary>
+        [JsonPropertyName("flac_key")]
+        public string FlacKey { get; set; }
+
+        /// <summary>Gets or sets the claimed byte hash (first 32KB) for verification.</summary>
+        [JsonPropertyName("byte_hash")]
+        public string ByteHash { get; set; }
+
+        /// <summary>Gets or sets the byte offset for the challenge.</summary>
+        [JsonPropertyName("offset")]
+        public long Offset { get; set; }
+
+        /// <summary>Gets or sets the length of the challenge chunk.</summary>
+        [JsonPropertyName("length")]
+        public int Length { get; set; }
+    }
+
+    /// <summary>
+    ///     Proof-of-possession challenge response (T-1434).
+    /// </summary>
+    public class MeshChallengeResponseMessage : MeshMessage
+    {
+        /// <inheritdoc/>
+        public override MeshMessageType Type => MeshMessageType.ChallengeResponse;
+
+        /// <summary>Gets or sets the challenge identifier.</summary>
+        [JsonPropertyName("challenge_id")]
+        public string ChallengeId { get; set; }
+
+        /// <summary>Gets or sets the FLAC key being proven.</summary>
+        [JsonPropertyName("flac_key")]
+        public string FlacKey { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether the proof succeeded.</summary>
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        /// <summary>Gets or sets an error message if proof failed.</summary>
+        [JsonPropertyName("error")]
+        public string Error { get; set; }
+
+        /// <summary>Gets or sets the challenge chunk data (base64 encoded in JSON).</summary>
+        [JsonPropertyName("data")]
+        public byte[] Data { get; set; }
     }
 
     /// <summary>
@@ -263,5 +327,4 @@ namespace slskd.Mesh.Messages
         public int? MetaFlags { get; set; }
     }
 }
-
 

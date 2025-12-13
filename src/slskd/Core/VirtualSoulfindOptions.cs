@@ -116,3 +116,17 @@ public class ScenesOptions
     public int AnnouncementRefreshMinutes { get; set; } = 15;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

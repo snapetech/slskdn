@@ -170,3 +170,17 @@ public enum SlskdnSignalKind
     SignalEnvelope = 1
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
