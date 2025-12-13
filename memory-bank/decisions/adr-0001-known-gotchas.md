@@ -1424,6 +1424,70 @@ git push origin HEAD:experimental/multi-source-swarm
 
 ---
 
+### 24. Docker/Chocolatey Build Version Format Mismatch
+
+**The Problem**: Docker and Chocolatey builds fail with "not a valid version string" when using dotted dev versions (e.g., `0.24.1.dev.20251213.173034`) because they invoke .NET builds internally, which require hyphenated versions.
+
+**Root Cause**: The CI workflow converts dev versions from hyphenated (`0.24.1-dev-20251213-173034`) to dotted format (`0.24.1.dev.20251213.173034`) for **package managers** (AUR, RPM, DEB, PPA), but Docker and Chocolatey need to **build** the .NET project, not just package it. .NET/NuGet requires hyphenated versions.
+
+**Error Messages**:
+```
+# Docker:
+error : '0.24.1.dev.20251213.173034' is not a valid version string. (Parameter 'value')
+
+# Chocolatey:
+CHCU0001: '0.24.1.dev.20251213.173034' is not a valid version string in the package nuspec file.
+```
+
+**Why This Breaks**:
+1. `parse` job converts version: `0.24.1-dev-20251213-173034` → `0.24.1.dev.20251213.173034`
+2. Docker job passes dotted version to `docker build --build-arg VERSION=...`
+3. Dockerfile runs `dotnet publish` with dotted version
+4. .NET rejects dotted version (needs hyphens)
+5. Chocolatey job uses dotted version in `.nuspec` file
+6. Chocolatey/NuGet rejects dotted version (needs hyphens)
+
+**The Fix**:
+Convert version **back** to hyphenated format before building:
+
+```yaml
+# Docker job:
+- name: Convert Version for Docker Build
+  id: docker_version
+  run: |
+    DOTNET_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/\.dev\./-dev-/')
+    echo "dotnet_version=$DOTNET_VERSION" >> $GITHUB_OUTPUT
+
+- name: Build and push Dev Image
+  uses: docker/build-push-action@v6
+  with:
+    build-args: |
+      VERSION=${{ steps.docker_version.outputs.dotnet_version }}
+
+# Chocolatey job (PowerShell):
+$DottedVersion = "${{ needs.parse.outputs.version }}"
+$Version = $DottedVersion -replace '\.dev\.', '-dev-'
+```
+
+**Version Format Summary**:
+| Context | Format | Example | Why |
+|---------|--------|---------|-----|
+| Git tag | Hyphens | `0.24.1-dev-20251213-173034` | Natural format |
+| AUR/RPM/DEB | Dots | `0.24.1.dev.20251213.173034` | Package managers reject hyphens |
+| .NET/NuGet | Hyphens | `0.24.1-dev-20251213-173034` | SemVer requires hyphens for pre-release |
+| Docker tag | Dots OK | `dev-0.24.1.dev.20251213.173034` | Just a label, any format works |
+| Docker **build** | Hyphens | `0.24.1-dev-20251213-173034` | Invokes .NET, needs hyphens |
+
+**Prevention**:
+- When adding new build jobs, check if they **build** (need hyphens) or just **package** (need dots)
+- Jobs that invoke `dotnet publish/build` MUST convert dots back to hyphens
+- Jobs that only download pre-built binaries can use dots
+- Test with a dev version before merging new build jobs
+
+**Related**: See gotcha #14 "Version Format Conversion" for the initial conversion, and this gotcha for the reverse conversion needed by build jobs.
+
+---
+
 *Last updated: 2025-12-13*
 
 
