@@ -188,6 +188,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 var ack = await connection.PerformClientHandshakeAsync(
                     localMeshPeerId, 
                     LocalUsername,
+                    timestamp: timestamp,
                     publicKey: _localMeshIdentity.PublicKey,
                     signature: signature,
                     cancellationToken: cancellationToken);

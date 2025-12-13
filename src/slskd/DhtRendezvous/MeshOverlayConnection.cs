@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -221,6 +222,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public async Task<MeshHelloAckMessage> PerformClientHandshakeAsync(
         string meshPeerId,
         string? username = null,
+        long? timestamp = null,
         SoulseekPorts? ports = null,
         byte[]? publicKey = null,
         byte[]? signature = null,
@@ -238,6 +240,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             MeshPeerId = meshPeerId,
             PublicKey = publicKey != null ? Convert.ToBase64String(publicKey) : null,
             Signature = signature != null ? Convert.ToBase64String(signature) : null,
+            Timestamp = timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Username = username,
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
@@ -291,11 +294,39 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         var hello = await _framer.ReadMessageAsync<MeshHelloMessage>(handshakeCts.Token);
         LastActivity = DateTimeOffset.UtcNow;
         
-        // Validate
+        // Validate format
         var validation = MessageValidator.ValidateMeshHello(hello);
         if (!validation.IsValid)
         {
             throw new ProtocolViolationException($"Invalid HELLO: {validation.Error}");
+        }
+        
+        // SECURITY: Verify handshake signature if provided
+        if (hello.PublicKey is not null && hello.Signature is not null)
+        {
+            try
+            {
+                var pubKeyBytes = Convert.FromBase64String(hello.PublicKey);
+                var sigBytes = Convert.FromBase64String(hello.Signature);
+                
+                // Reconstruct the signed payload
+                var payload = BuildHandshakePayloadForVerification(hello.MeshPeerId, hello.Timestamp);
+                
+                if (!Mesh.Identity.LocalMeshIdentityService.Verify(payload, sigBytes, pubKeyBytes))
+                {
+                    throw new SecurityException($"Invalid handshake signature from {hello.MeshPeerId}");
+                }
+                
+                _logger.LogDebug("✓ Verified handshake signature from {MeshPeerId}", hello.MeshPeerId);
+            }
+            catch (Exception ex) when (ex is not SecurityException)
+            {
+                throw new SecurityException($"Failed to verify handshake signature: {ex.Message}", ex);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("⚠ Accepting handshake from {MeshPeerId} without signature verification", hello.MeshPeerId ?? "unknown");
         }
         
         // Send ACK
@@ -320,6 +351,22 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         State = ConnectionState.Active;
         
         return hello;
+    }
+    
+    /// <summary>
+    /// Builds the handshake payload for signature verification.
+    /// Must match the payload format used by the client when signing.
+    /// </summary>
+    private static byte[] BuildHandshakePayloadForVerification(string meshPeerId, long timestamp)
+    {
+        using var ms = new System.IO.MemoryStream();
+        using var writer = new System.IO.BinaryWriter(ms);
+        
+        writer.Write(meshPeerId);
+        writer.Write(string.Join(",", OverlayFeatures.All));
+        writer.Write(timestamp);
+        
+        return ms.ToArray();
     }
     
     /// <summary>

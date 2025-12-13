@@ -94,10 +94,17 @@ public sealed class MeshHelloMessage : OverlayMessage
     
     /// <summary>
     /// Ed25519 signature of the handshake (64 bytes, base64-encoded).
-    /// Signs: MeshPeerId + Features + Timestamp + Nonce
+    /// Signs: MeshPeerId + Features + Timestamp
     /// </summary>
     [JsonPropertyName("signature")]
     public string? Signature { get; set; }
+    
+    /// <summary>
+    /// Unix timestamp (seconds) when the handshake was created.
+    /// Used for replay protection and signature verification.
+    /// </summary>
+    [JsonPropertyName("timestamp")]
+    public long Timestamp { get; set; }
     
     /// <summary>
     /// Soulseek username (optional - may be null for mesh-only peers).
