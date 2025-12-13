@@ -7,35 +7,34 @@
 
 ## 2025-12-13
 
-### T-1309: Content-to-Peer Index for Swarm Scheduler (Gap Task - P1)
+### T-1310: MeshAdvanced Route Diagnostics (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
-  - **Share Scan Integration**: ContentPeerHintService integrated with ShareService scan completion
-  - **Automatic Content Indexing**: Content IDs extracted from shared files after scanning
-  - **Background Queue Processing**: Efficient DHT publishing via queued background processing
-  - **Advertisable Content Filtering**: Only content marked as advertisable is indexed
-  - **Content ID Deduplication**: Unique content IDs prevent redundant peer hint publishing
-  - **Comprehensive Logging**: Detailed tracking of content indexing operations
-  - **Fault Tolerance**: Exception handling for robust operation during share scanning
-  - **Repository Iteration**: Processes all share repositories for complete content coverage
+  - **Placeholder Replacement**: Replaced hardcoded TraceRoutesAsync with comprehensive route analysis
+  - **Enhanced Diagnostics Record**: Added HopLatenciesMs field to MeshRouteDiagnostics for timing data
+  - **Multi-Service Integration**: Combined IMeshDirectory, IMeshDhtClient, and INatTraversalService
+  - **DHT Lookup Analysis**: Measures and reports DHT peer discovery performance
+  - **NAT Traversal Detection**: Identifies when NAT traversal would be attempted
+  - **Transport Type Determination**: Analyzes optimal transport (direct-udp, hole-punch, relay-fallback)
+  - **Latency Measurement**: Provides realistic timing for routing hops and operations
+  - **Comprehensive Error Handling**: Graceful degradation with fallback diagnostics
 - **Technical Notes**:
-  - **Content Metadata Extraction**: Leverages existing content item associations in share database
-  - **Peer Hint Publishing**: Uses ContentPeerPublisher to store peer availability in DHT
-  - **Queue-Based Processing**: Non-blocking enqueue for efficient scan completion
-  - **Multi-Repository Support**: Handles multiple share repositories in distributed setups
-  - **Content Item Validation**: Checks isAdvertisable flag before publishing hints
-  - **Performance Optimization**: Deduplication prevents duplicate DHT operations
-  - **Integration Points**: Hooks into ShareService.ScanAsync completion workflow
-- **Content-to-Peer Index Flow**:
-  - **Share Scanning**: ShareService.ScanAsync completes successfully
-  - **Content Discovery**: Iterate through all shared files and extract content IDs
-  - **Filtering**: Only include advertisable content items with valid content IDs
-  - **Deduplication**: Collect unique content IDs across all repositories
-  - **Queue Publishing**: Enqueue content IDs for background peer hint publishing
-  - **DHT Storage**: ContentPeerHintService publishes peer availability hints
-  - **Index Population**: DHT stores content-to-peer mappings for swarm discovery
+  - **Route Tracing Algorithm**: DHT lookup → NAT analysis → Transport selection → Timing measurement
+  - **Performance Monitoring**: Detailed timing for each routing component
+  - **Transport Intelligence**: Considers NAT type, peer availability, and overlay status
+  - **Diagnostic Depth**: Multi-hop analysis with latency breakdown per segment
+  - **Fault Tolerance**: Continues operation even when individual components fail
+  - **Logging Integration**: Extensive debug logging for network diagnostics
+  - **API Compatibility**: Maintains existing IMeshAdvanced interface contract
+- **Route Diagnostics Flow**:
+  - **DHT Resolution**: Query peer descriptor and measure lookup latency
+  - **NAT Assessment**: Evaluate NAT type and traversal requirements
+  - **Transport Selection**: Determine optimal connection method based on network conditions
+  - **Latency Profiling**: Measure timing for each routing component
+  - **Result Aggregation**: Compile comprehensive routing diagnostics
+  - **Performance Reporting**: Log detailed metrics for network analysis
 
-### T-1308: MeshDirectory.FindContentByPeerAsync (Gap Task - P1)
+### T-1309: Content-to-Peer Index for Swarm Scheduler (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
   - **Content Advertisement Index**: Fixed DHT key format mismatch preventing content discovery

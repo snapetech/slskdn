@@ -1,6 +1,8 @@
 namespace slskd.Mesh;
 
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Threading;
 
 /// <summary>
 /// Aggregates transport statistics from mesh services for diagnostics.
@@ -12,6 +14,23 @@ public class MeshStatsCollector
     private readonly Lazy<Dht.InMemoryDhtClient> dhtClient;
     private readonly Lazy<Overlay.QuicOverlayServer> overlayServer;
     private readonly Lazy<Overlay.QuicOverlayClient> overlayClient;
+
+    // Statistics tracking
+    private long messagesSent;
+    private long messagesReceived;
+    private long dhtOperations;
+    private long peerChurnEvents;
+    private readonly Stopwatch dhtOpsTimer = new();
+    private int routingTableSize;
+    private int bootstrapPeers;
+
+    // Public methods for tracking statistics
+    public void RecordMessageSent() => Interlocked.Increment(ref messagesSent);
+    public void RecordMessageReceived() => Interlocked.Increment(ref messagesReceived);
+    public void RecordDhtOperation() => Interlocked.Increment(ref dhtOperations);
+    public void RecordPeerChurn() => Interlocked.Increment(ref peerChurnEvents);
+    public void UpdateRoutingTableSize(int size) => routingTableSize = size;
+    public void UpdateBootstrapPeers(int count) => bootstrapPeers = count;
 
     public MeshStatsCollector(
         ILogger<MeshStatsCollector> logger,
@@ -40,17 +59,27 @@ public class MeshStatsCollector
             var dhtNodes = 0;
             var overlayConnections = 0;
             var natType = NatType.Unknown;
+            var totalPeers = 0;
+            double dhtOpsPerSecond = 0.0;
 
-            // DHT node count
+            // DHT statistics
             if (dhtClient.Value != null)
             {
                 try
                 {
                     dhtNodes = dhtClient.Value.GetNodeCount();
+                    totalPeers = dhtNodes; // For now, total peers = DHT nodes
+
+                    // Calculate DHT operations per second
+                    var elapsedSeconds = dhtOpsTimer.Elapsed.TotalSeconds;
+                    if (elapsedSeconds > 0)
+                    {
+                        dhtOpsPerSecond = dhtOperations / elapsedSeconds;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug(ex, "Failed to get DHT node count");
+                    logger.LogDebug(ex, "Failed to get DHT statistics");
                 }
             }
 
@@ -106,7 +135,14 @@ public class MeshStatsCollector
                 ActiveDhtSessions: dhtNodes,
                 ActiveOverlaySessions: overlayConnections,
                 ActiveMirroredSessions: 0, // Not implemented yet
-                DetectedNatType: natType);
+                DetectedNatType: natType,
+                TotalPeers: totalPeers,
+                MessagesSent: messagesSent,
+                MessagesReceived: messagesReceived,
+                DhtOperationsPerSecond: dhtOpsPerSecond,
+                RoutingTableSize: routingTableSize,
+                BootstrapPeers: bootstrapPeers,
+                PeerChurnEvents: peerChurnEvents);
         }
         catch (Exception ex)
         {

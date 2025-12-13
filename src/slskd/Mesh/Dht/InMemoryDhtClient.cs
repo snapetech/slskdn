@@ -18,10 +18,12 @@ public class InMemoryDhtClient : IDhtClient
     private readonly ConcurrentDictionary<string, List<DhtValue>> store = new();
     private readonly byte[] selfId;
     private readonly int maxReplicas;
+    private readonly MeshStatsCollector? statsCollector;
 
-    public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, IOptions<MeshOptions> options)
+    public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, IOptions<MeshOptions> options, MeshStatsCollector? statsCollector = null)
     {
         this.logger = logger;
+        this.statsCollector = statsCollector;
         selfId = RandomNodeId();
         routing = new KademliaRoutingTable(selfId);
         maxReplicas = 20; // align with k
@@ -47,6 +49,9 @@ public class InMemoryDhtClient : IDhtClient
 
     public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct = default)
     {
+        statsCollector?.RecordDhtOperation();
+        statsCollector?.UpdateRoutingTableSize(routing.GetStats().TotalNodes);
+
         var now = DateTimeOffset.UtcNow;
         var expires = now.AddSeconds(Math.Clamp(ttlSeconds, 60, 3600));
         var keyHex = ToHex(key);
@@ -78,6 +83,7 @@ public class InMemoryDhtClient : IDhtClient
 
     public Task<byte[]?> GetAsync(byte[] key, CancellationToken ct = default)
     {
+        statsCollector?.RecordDhtOperation();
         var keyHex = ToHex(key);
         if (!store.TryGetValue(keyHex, out var list))
         {

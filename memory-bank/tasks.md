@@ -2088,11 +2088,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Integrated ContentPeerHintService with ShareService for automatic content-to-peer index population after share scans.
 
-- [ ] **T-1310**: Implement MeshAdvanced route diagnostics
-  - Status: Not started
+- [x] **T-1310**: Implement MeshAdvanced route diagnostics
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Replace placeholder. Return actual routing path, hop latencies, transport used.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Replaced TraceRoutesAsync placeholder with actual routing diagnostics including hop latencies and transport analysis.
 
 - [ ] **T-1311**: Implement mesh stats collection
   - Status: Not started

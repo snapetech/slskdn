@@ -887,7 +887,11 @@ namespace slskd
             services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
             services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
             // DHT: use in-memory Kademlia-style implementation for now
-            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, Mesh.Dht.InMemoryDhtClient>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient>(sp =>
+                new Mesh.Dht.InMemoryDhtClient(
+                    sp.GetRequiredService<ILogger<Mesh.Dht.InMemoryDhtClient>>(),
+                    sp.GetRequiredService<IOptions<Mesh.MeshOptions>>(),
+                    sp.GetRequiredService<Mesh.MeshStatsCollector>()));
             services.AddSingleton<Mesh.Dht.IMeshDhtClient>(sp =>
                 new Mesh.Dht.MeshDhtClient(
                     sp.GetRequiredService<ILogger<Mesh.Dht.MeshDhtClient>>(),

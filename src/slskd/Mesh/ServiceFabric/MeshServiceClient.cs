@@ -18,6 +18,7 @@ public class MeshServiceClient : IMeshServiceClient
     private readonly ILogger<MeshServiceClient> _logger;
     private readonly IMeshServiceDirectory _serviceDirectory;
     private readonly IControlSigner _signer;
+    private readonly MeshStatsCollector? _statsCollector;
     
     // TODO: Inject actual overlay sender when available
     // private readonly IOverlaySender _overlaySender;
@@ -36,11 +37,13 @@ public class MeshServiceClient : IMeshServiceClient
     public MeshServiceClient(
         ILogger<MeshServiceClient> logger,
         IMeshServiceDirectory serviceDirectory,
-        IControlSigner signer)
+        IControlSigner signer,
+        MeshStatsCollector? statsCollector = null)
     {
         _logger = logger;
         _serviceDirectory = serviceDirectory;
         _signer = signer;
+        _statsCollector = statsCollector;
     }
 
     public async Task<ServiceReply> CallAsync(
@@ -114,10 +117,13 @@ public class MeshServiceClient : IMeshServiceClient
             
             // Sign envelope
             _signer.Sign(envelope);
-            
+
+            // Track message sent
+            _statsCollector?.RecordMessageSent();
+
             // TODO: Send envelope to target peer via overlay
             // await _overlaySender.SendAsync(targetPeerId, envelope, cancellationToken);
-            
+
             _logger.LogDebug(
                 "[ServiceClient] Sent call to {PeerId}: {Service}.{Method} (id: {CorrelationId})",
                 targetPeerId, call.ServiceName, call.Method, call.CorrelationId);
@@ -237,6 +243,9 @@ public class MeshServiceClient : IMeshServiceClient
             _logger.LogWarning("[ServiceClient] Received null reply");
             return;
         }
+
+        // Track message received
+        _statsCollector?.RecordMessageReceived();
 
         // MEDIUM-3 FIX 4: Validate correlation ID to prevent injection
         if (string.IsNullOrWhiteSpace(reply.CorrelationId))
