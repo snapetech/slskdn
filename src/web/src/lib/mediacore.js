@@ -288,3 +288,63 @@ export const getSupportedHashAlgorithms = async () => {
 
   return response.json();
 };
+
+/**
+ * Compute perceptual similarity between two ContentIDs.
+ */
+export const computePerceptualSimilarity = async (contentIdA, contentIdB, threshold = 0.7) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'fuzzymatch')}/perceptual`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contentIdA, contentIdB, threshold }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to compute perceptual similarity: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Find similar content for a given ContentID.
+ */
+export const findSimilarContent = async (contentId, options = {}) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'fuzzymatch')}/find/${encodeURIComponent(contentId)}`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(options),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to find similar content: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Compute text-based similarity between two strings.
+ */
+export const computeTextSimilarity = async (textA, textB) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'fuzzymatch')}/text`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ textA, textB }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to compute text similarity: ${response.statusText}`);
+  }
+
+  return response.json();
+};

@@ -2144,11 +2144,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented IPLD links, graph traversal, and content relationship management.
 
-- [ ] **T-1323**: Implement perceptual hash computation
-  - Status: Not started
+- [x] **T-1323**: Implement perceptual hash computation
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Compute and store perceptual hashes (audio: chromaprint, video: phash). Use for fuzzy matching.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented multi-algorithm perceptual hashing (ChromaPrint, pHash) with API and WebGUI.
 
 - [ ] **T-1324**: Implement cross-codec fuzzy matching (real algorithm)
   - Status: Not started

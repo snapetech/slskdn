@@ -65,6 +65,20 @@ const MediaCore = () => {
   const [computingAudioHash, setComputingAudioHash] = useState(false);
   const [computingImageHash, setComputingImageHash] = useState(false);
   const [computingSimilarity, setComputingSimilarity] = useState(false);
+  const [perceptualContentIdA, setPerceptualContentIdA] = useState('');
+  const [perceptualContentIdB, setPerceptualContentIdB] = useState('');
+  const [perceptualThreshold, setPerceptualThreshold] = useState(0.7);
+  const [findSimilarContentId, setFindSimilarContentId] = useState('');
+  const [findSimilarMinConfidence, setFindSimilarMinConfidence] = useState(0.7);
+  const [findSimilarMaxResults, setFindSimilarMaxResults] = useState(10);
+  const [textSimilarityA, setTextSimilarityA] = useState('');
+  const [textSimilarityB, setTextSimilarityB] = useState('');
+  const [perceptualSimilarityResult, setPerceptualSimilarityResult] = useState(null);
+  const [findSimilarResult, setFindSimilarResult] = useState(null);
+  const [textSimilarityResult, setTextSimilarityResult] = useState(null);
+  const [computingPerceptualSimilarity, setComputingPerceptualSimilarity] = useState(false);
+  const [findingSimilarContent, setFindingSimilarContent] = useState(false);
+  const [computingTextSimilarity, setComputingTextSimilarity] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -273,6 +287,58 @@ const MediaCore = () => {
       setSimilarityResult({ error: err.message });
     } finally {
       setComputingSimilarity(false);
+    }
+  };
+
+  const handleComputePerceptualSimilarity = async () => {
+    if (!perceptualContentIdA.trim() || !perceptualContentIdB.trim()) return;
+
+    try {
+      setComputingPerceptualSimilarity(true);
+      setPerceptualSimilarityResult(null);
+      const result = await mediacore.computePerceptualSimilarity(
+        perceptualContentIdA.trim(),
+        perceptualContentIdB.trim(),
+        parseFloat(perceptualThreshold)
+      );
+      setPerceptualSimilarityResult(result);
+    } catch (err) {
+      setPerceptualSimilarityResult({ error: err.message });
+    } finally {
+      setComputingPerceptualSimilarity(false);
+    }
+  };
+
+  const handleFindSimilarContent = async () => {
+    if (!findSimilarContentId.trim()) return;
+
+    try {
+      setFindingSimilarContent(true);
+      setFindSimilarResult(null);
+      const result = await mediacore.findSimilarContent(findSimilarContentId.trim(), {
+        minConfidence: parseFloat(findSimilarMinConfidence),
+        maxResults: parseInt(findSimilarMaxResults)
+      });
+      setFindSimilarResult(result);
+    } catch (err) {
+      setFindSimilarResult({ error: err.message });
+    } finally {
+      setFindingSimilarContent(false);
+    }
+  };
+
+  const handleComputeTextSimilarity = async () => {
+    if (!textSimilarityA.trim() || !textSimilarityB.trim()) return;
+
+    try {
+      setComputingTextSimilarity(true);
+      setTextSimilarityResult(null);
+      const result = await mediacore.computeTextSimilarity(textSimilarityA.trim(), textSimilarityB.trim());
+      setTextSimilarityResult(result);
+    } catch (err) {
+      setTextSimilarityResult({ error: err.message });
+    } finally {
+      setComputingTextSimilarity(false);
     }
   };
 
@@ -1021,6 +1087,239 @@ const MediaCore = () => {
                         <strong>Hamming Distance:</strong> {similarityResult.hammingDistance} bits<br />
                         <strong>Similarity Score:</strong> {(similarityResult.similarity * 100).toFixed(1)}%<br />
                         <strong>Are Similar:</strong> {similarityResult.areSimilar ? 'Yes' : 'No'} (threshold: {(similarityResult.threshold * 100).toFixed(1)}%)
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Fuzzy Content Matching */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="magic" />
+                Fuzzy Content Matching
+              </Card.Header>
+              <Card.Description>
+                Find similar content using perceptual hashes and text analysis
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>Target ContentID</label>
+                  <Input
+                    placeholder="ContentID to find matches for"
+                    value={findSimilarContentId}
+                    onChange={(e) => setFindSimilarContentId(e.target.value)}
+                  />
+                </Form.Field>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Min Confidence</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={findSimilarMinConfidence}
+                      onChange={(e) => setFindSimilarMinConfidence(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Max Results</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={findSimilarMaxResults}
+                      onChange={(e) => setFindSimilarMaxResults(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Button
+                  primary
+                  loading={findingSimilarContent}
+                  disabled={!findSimilarContentId.trim() || findingSimilarContent}
+                  onClick={handleFindSimilarContent}
+                >
+                  Find Similar Content
+                </Button>
+              </Form>
+
+              {findSimilarResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {findSimilarResult.error ? (
+                    <Message error>
+                      <p>{findSimilarResult.error}</p>
+                    </Message>
+                  ) : (
+                    <div>
+                      <p><strong>Target:</strong> {findSimilarResult.targetContentId}</p>
+                      <p><strong>Searched {findSimilarResult.totalCandidates} candidates</strong></p>
+                      <p><strong>Found {findSimilarResult.matches?.length || 0} matches</strong></p>
+                      {findSimilarResult.matches?.length > 0 && (
+                        <List divided relaxed style={{ maxHeight: '200px', overflow: 'auto' }}>
+                          {findSimilarResult.matches.map((match, index) => (
+                            <List.Item key={index}>
+                              <List.Content>
+                                <List.Header style={{ fontSize: '0.9em' }}>
+                                  {match.candidateContentId}
+                                </List.Header>
+                                <List.Description>
+                                  Confidence: {(match.confidence * 100).toFixed(1)}% |
+                                  Reason: {match.reason}
+                                </List.Description>
+                              </List.Content>
+                            </List.Item>
+                          ))}
+                        </List>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Perceptual Similarity */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="chart bar" />
+                Perceptual Similarity
+              </Card.Header>
+              <Card.Description>
+                Compare perceptual similarity between two ContentIDs
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>ContentID A</label>
+                    <Input
+                      placeholder="First ContentID"
+                      value={perceptualContentIdA}
+                      onChange={(e) => setPerceptualContentIdA(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>ContentID B</label>
+                    <Input
+                      placeholder="Second ContentID"
+                      value={perceptualContentIdB}
+                      onChange={(e) => setPerceptualContentIdB(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Form.Field>
+                  <label>Similarity Threshold</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={perceptualThreshold}
+                    onChange={(e) => setPerceptualThreshold(e.target.value)}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={computingPerceptualSimilarity}
+                  disabled={!perceptualContentIdA.trim() || !perceptualContentIdB.trim() || computingPerceptualSimilarity}
+                  onClick={handleComputePerceptualSimilarity}
+                >
+                  Compute Similarity
+                </Button>
+              </Form>
+
+              {perceptualSimilarityResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {perceptualSimilarityResult.error ? (
+                    <Message error>
+                      <p>{perceptualSimilarityResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>Similarity Analysis</Message.Header>
+                      <p>
+                        <strong>Content A:</strong> {perceptualSimilarityResult.contentIdA}<br />
+                        <strong>Content B:</strong> {perceptualSimilarityResult.contentIdB}<br />
+                        <strong>Similarity:</strong> {(perceptualSimilarityResult.similarity * 100).toFixed(1)}%<br />
+                        <strong>Are Similar:</strong> {perceptualSimilarityResult.isSimilar ? 'Yes' : 'No'} (threshold: {(perceptualSimilarityResult.threshold * 100).toFixed(1)}%)
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Text Similarity */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="font" />
+                Text Similarity Analysis
+              </Card.Header>
+              <Card.Description>
+                Compare text strings using Levenshtein distance and phonetic matching
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Text A</label>
+                    <Input
+                      placeholder="First text string"
+                      value={textSimilarityA}
+                      onChange={(e) => setTextSimilarityA(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Text B</label>
+                    <Input
+                      placeholder="Second text string"
+                      value={textSimilarityB}
+                      onChange={(e) => setTextSimilarityB(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Button
+                  primary
+                  loading={computingTextSimilarity}
+                  disabled={!textSimilarityA.trim() || !textSimilarityB.trim() || computingTextSimilarity}
+                  onClick={handleComputeTextSimilarity}
+                >
+                  Analyze Text Similarity
+                </Button>
+              </Form>
+
+              {textSimilarityResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {textSimilarityResult.error ? (
+                    <Message error>
+                      <p>{textSimilarityResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Text Similarity Results</Message.Header>
+                      <p>
+                        <strong>Text A:</strong> "{textSimilarityResult.textA}"<br />
+                        <strong>Text B:</strong> "{textSimilarityResult.textB}"<br />
+                        <strong>Levenshtein Similarity:</strong> {(textSimilarityResult.levenshteinSimilarity * 100).toFixed(1)}%<br />
+                        <strong>Phonetic Similarity:</strong> {(textSimilarityResult.phoneticSimilarity * 100).toFixed(1)}%<br />
+                        <strong>Combined Similarity:</strong> {(textSimilarityResult.combinedSimilarity * 100).toFixed(1)}%
                       </p>
                     </Message>
                   )}

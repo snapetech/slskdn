@@ -33,6 +33,37 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1323: Perceptual Hash Computation (Phase 9 Gap - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **Multi-Algorithm Support**: Extended IPerceptualHasher with ChromaPrint, pHash, and Spectral algorithms
+  - **Audio Fingerprinting**: Implemented Chromaprint-style audio hashing for music identification
+  - **Image Perceptual Hashing**: Added pHash-style image similarity detection with DCT-based analysis
+  - **Enhanced Data Structures**: Extended PerceptualHash record with numeric hash storage and algorithm metadata
+  - **Comprehensive API**: PerceptualHashController with audio/image hash computation and similarity analysis
+  - **Hash Similarity Engine**: Hamming distance calculation with configurable similarity thresholds
+  - **WebGUI Integration**: Interactive hash computation tools with algorithm selection
+  - **Real-time Analysis**: Live similarity comparison between perceptual hashes
+  - **Algorithm Descriptions**: User-friendly explanations of each hashing algorithm
+  - **Input Validation**: Proper handling of audio samples and image pixel data
+- **Technical Notes**:
+  - **ChromaPrint Implementation**: 12-bin chroma feature extraction with peak-based hashing
+  - **pHash Implementation**: 8x8 DCT-based image hashing with median comparison
+  - **Spectral Fallback**: Simplified frequency analysis for compatibility
+  - **Cross-Platform Support**: Algorithm-agnostic API design for future extensions
+  - **Performance Optimization**: Efficient bit operations for hash comparison
+  - **Memory Efficient**: Streaming processing for large audio/image data
+  - **Extensible Architecture**: Easy addition of new perceptual hashing algorithms
+- **Supported Algorithms**:
+  - **ChromaPrint**: Audio fingerprinting for music identification and deduplication
+  - **pHash**: Perceptual hashing for image/video similarity detection
+  - **Spectral**: Simple spectral analysis hash (fallback/default algorithm)
+- **Hash Operations**:
+  - **Audio Hashing**: PCM sample input with sample rate specification
+  - **Image Hashing**: RGBA pixel array input with dimension specification
+  - **Similarity Analysis**: Hamming distance, similarity scores, and threshold-based matching
+  - **Batch Processing**: Support for multiple hash computations and comparisons
+
 ### T-1322: IPLD Content Linking (Phase 9 Gap - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

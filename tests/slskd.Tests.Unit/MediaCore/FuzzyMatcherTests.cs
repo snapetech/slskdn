@@ -1,11 +1,26 @@
+// <copyright file="FuzzyMatcherTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Tests.Unit.MediaCore;
 
 using slskd.MediaCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 public class FuzzyMatcherTests
 {
-    private readonly FuzzyMatcher matcher = new();
+    private readonly FuzzyMatcher matcher;
+    private readonly Mock<IPerceptualHasher> perceptualHasherMock;
+    private readonly Mock<ILogger<FuzzyMatcher>> loggerMock;
+
+    public FuzzyMatcherTests()
+    {
+        perceptualHasherMock = new Mock<IPerceptualHasher>();
+        loggerMock = new Mock<ILogger<FuzzyMatcher>>();
+        matcher = new FuzzyMatcher(perceptualHasherMock.Object, loggerMock.Object);
+    }
 
     [Theory]
     [InlineData("The Beatles", "Abbey Road", "The Beatles", "Abbey Road", 1.0)]
