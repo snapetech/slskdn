@@ -2150,11 +2150,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented multi-algorithm perceptual hashing (ChromaPrint, pHash) with API and WebGUI.
 
-- [ ] **T-1324**: Implement cross-codec fuzzy matching (real algorithm)
-  - Status: Not started
+- [x] **T-1324**: Implement cross-codec fuzzy matching (real algorithm)
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Replace Jaccard placeholder. Use perceptual hashes for cross-codec matching with confidence scores.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Replaced Jaccard placeholder with perceptual hash-based cross-codec matching using ChromaPrint/pHash algorithms.
 
 - [ ] **T-1325**: Implement metadata portability layer
   - Status: Not started

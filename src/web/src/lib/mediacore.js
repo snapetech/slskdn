@@ -348,3 +348,93 @@ export const computeTextSimilarity = async (textA, textB) => {
 
   return response.json();
 };
+
+/**
+ * Export metadata for specified ContentIDs.
+ */
+export const exportMetadata = async (contentIds, includeLinks = true) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/export`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contentIds, includeLinks }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to export metadata: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Import metadata from a package.
+ */
+export const importMetadata = async (package, conflictStrategy = 'Merge', dryRun = false) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/import`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ package, conflictStrategy, dryRun }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to import metadata: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Analyze conflicts in a metadata package.
+ */
+export const analyzeMetadataConflicts = async (package) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/analyze`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ package }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to analyze conflicts: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get supported conflict resolution strategies.
+ */
+export const getConflictStrategies = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/strategies`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get conflict strategies: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get supported merge strategies.
+ */
+export const getMergeStrategies = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/merge-strategies`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get merge strategies: ${response.statusText}`);
+  }
+
+  return response.json();
+};

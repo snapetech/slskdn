@@ -79,6 +79,18 @@ const MediaCore = () => {
   const [computingPerceptualSimilarity, setComputingPerceptualSimilarity] = useState(false);
   const [findingSimilarContent, setFindingSimilarContent] = useState(false);
   const [computingTextSimilarity, setComputingTextSimilarity] = useState(false);
+  const [exportContentIds, setExportContentIds] = useState('');
+  const [includeLinks, setIncludeLinks] = useState(true);
+  const [importPackage, setImportPackage] = useState('');
+  const [conflictStrategy, setConflictStrategy] = useState('Merge');
+  const [dryRun, setDryRun] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const [conflictAnalysis, setConflictAnalysis] = useState(null);
+  const [availableStrategies, setAvailableStrategies] = useState(null);
+  const [exportingMetadata, setExportingMetadata] = useState(false);
+  const [importingMetadata, setImportingMetadata] = useState(false);
+  const [analyzingConflicts, setAnalyzingConflicts] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -342,9 +354,81 @@ const MediaCore = () => {
     }
   };
 
+  const handleExportMetadata = async () => {
+    const contentIds = exportContentIds.split('\n').map(id => id.trim()).filter(id => id);
+    if (!contentIds.length) return;
+
+    try {
+      setExportingMetadata(true);
+      setExportResult(null);
+      const result = await mediacore.exportMetadata(contentIds, includeLinks);
+      setExportResult(result);
+    } catch (err) {
+      setExportResult({ error: err.message });
+    } finally {
+      setExportingMetadata(false);
+    }
+  };
+
+  const handleImportMetadata = async () => {
+    if (!importPackage.trim()) return;
+
+    try {
+      setImportingMetadata(true);
+      setImportResult(null);
+
+      let package;
+      try {
+        package = JSON.parse(importPackage.trim());
+      } catch (parseErr) {
+        throw new Error('Invalid JSON format for metadata package');
+      }
+
+      const result = await mediacore.importMetadata(package, conflictStrategy, dryRun);
+      setImportResult(result);
+    } catch (err) {
+      setImportResult({ error: err.message });
+    } finally {
+      setImportingMetadata(false);
+    }
+  };
+
+  const handleAnalyzeConflicts = async () => {
+    if (!importPackage.trim()) return;
+
+    try {
+      setAnalyzingConflicts(true);
+      setConflictAnalysis(null);
+
+      let package;
+      try {
+        package = JSON.parse(importPackage.trim());
+      } catch (parseErr) {
+        throw new Error('Invalid JSON format for metadata package');
+      }
+
+      const result = await mediacore.analyzeMetadataConflicts(package);
+      setConflictAnalysis(result);
+    } catch (err) {
+      setConflictAnalysis({ error: err.message });
+    } finally {
+      setAnalyzingConflicts(false);
+    }
+  };
+
   useEffect(() => {
     loadSupportedAlgorithms();
+    loadAvailableStrategies();
   }, []);
+
+  const loadAvailableStrategies = async () => {
+    try {
+      const result = await mediacore.getConflictStrategies();
+      setAvailableStrategies(result);
+    } catch (err) {
+      console.error('Failed to load conflict strategies:', err);
+    }
+  };
 
   if (loading && !stats) {
     return (
@@ -1321,6 +1405,198 @@ const MediaCore = () => {
                         <strong>Phonetic Similarity:</strong> {(textSimilarityResult.phoneticSimilarity * 100).toFixed(1)}%<br />
                         <strong>Combined Similarity:</strong> {(textSimilarityResult.combinedSimilarity * 100).toFixed(1)}%
                       </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Metadata Portability - Export */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="download" />
+                Export Metadata
+              </Card.Header>
+              <Card.Description>
+                Export metadata for ContentIDs to a portable package
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>ContentIDs (one per line)</label>
+                  <TextArea
+                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
+                    value={exportContentIds}
+                    onChange={(e) => setExportContentIds(e.target.value)}
+                    rows={4}
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Checkbox
+                    label="Include IPLD links"
+                    checked={includeLinks}
+                    onChange={(e, { checked }) => setIncludeLinks(checked)}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={exportingMetadata}
+                  disabled={!exportContentIds.trim() || exportingMetadata}
+                  onClick={handleExportMetadata}
+                >
+                  Export Metadata
+                </Button>
+              </Form>
+
+              {exportResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {exportResult.error ? (
+                    <Message error>
+                      <p>{exportResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Export Successful</Message.Header>
+                      <p>
+                        <strong>Version:</strong> {exportResult.version}<br />
+                        <strong>Entries:</strong> {exportResult.metadata?.totalEntries || 0}<br />
+                        <strong>Links:</strong> {exportResult.metadata?.totalLinks || 0}<br />
+                        <strong>Checksum:</strong> {exportResult.metadata?.checksum?.substring(0, 16)}...
+                      </p>
+                      <details>
+                        <summary>View Package JSON</summary>
+                        <pre style={{ fontSize: '0.8em', maxHeight: '200px', overflow: 'auto' }}>
+                          {JSON.stringify(exportResult, null, 2)}
+                        </pre>
+                      </details>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Metadata Portability - Import */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="upload" />
+                Import Metadata
+              </Card.Header>
+              <Card.Description>
+                Import metadata from a portable package with conflict resolution
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>Conflict Resolution Strategy</label>
+                  <Dropdown
+                    selection
+                    options={availableStrategies?.strategies?.map(s => ({
+                      key: s.strategy,
+                      text: s.name,
+                      value: s.strategy,
+                      description: s.description
+                    })) || []}
+                    value={conflictStrategy}
+                    onChange={(e, { value }) => setConflictStrategy(value)}
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Checkbox
+                    label="Dry run (preview changes without applying)"
+                    checked={dryRun}
+                    onChange={(e, { checked }) => setDryRun(checked)}
+                  />
+                </Form.Field>
+                <Button
+                  secondary
+                  loading={analyzingConflicts}
+                  disabled={!importPackage.trim() || analyzingConflicts}
+                  onClick={handleAnalyzeConflicts}
+                >
+                  Analyze Conflicts
+                </Button>
+                <Button
+                  primary
+                  loading={importingMetadata}
+                  disabled={!importPackage.trim() || importingMetadata}
+                  onClick={handleImportMetadata}
+                  style={{ marginLeft: '0.5em' }}
+                >
+                  Import Metadata
+                </Button>
+              </Form>
+
+              {/* Import Package Input */}
+              <Form style={{ marginTop: '1em' }}>
+                <Form.Field>
+                  <label>Metadata Package (JSON)</label>
+                  <TextArea
+                    placeholder="Paste exported metadata package JSON here..."
+                    value={importPackage}
+                    onChange={(e) => setImportPackage(e.target.value)}
+                    rows={6}
+                  />
+                </Form.Field>
+              </Form>
+
+              {/* Results */}
+              {conflictAnalysis && (
+                <div style={{ marginTop: '1em' }}>
+                  {conflictAnalysis.error ? (
+                    <Message error>
+                      <p>{conflictAnalysis.error}</p>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>Conflict Analysis</Message.Header>
+                      <p>
+                        <strong>Total Entries:</strong> {conflictAnalysis.totalEntries}<br />
+                        <strong>Conflicting:</strong> {conflictAnalysis.conflictingEntries}<br />
+                        <strong>Clean:</strong> {conflictAnalysis.cleanEntries}<br />
+                        <strong>Recommended Strategy:</strong> {Object.entries(conflictAnalysis.recommendedStrategies || {})
+                          .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Merge'}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+
+              {importResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {importResult.error ? (
+                    <Message error>
+                      <p>{importResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Import {importResult.success ? 'Successful' : 'Completed with Issues'}</Message.Header>
+                      <p>
+                        <strong>Processed:</strong> {importResult.entriesProcessed}<br />
+                        <strong>Imported:</strong> {importResult.entriesImported}<br />
+                        <strong>Skipped:</strong> {importResult.entriesSkipped}<br />
+                        <strong>Conflicts Resolved:</strong> {importResult.conflictsResolved}<br />
+                        <strong>Duration:</strong> {importResult.duration?.TotalSeconds.toFixed(2)}s
+                      </p>
+                      {importResult.errors?.length > 0 && (
+                        <details>
+                          <summary>Errors ({importResult.errors.length})</summary>
+                          <List bulleted>
+                            {importResult.errors.map((error, index) => (
+                              <List.Item key={index}>{error}</List.Item>
+                            ))}
+                          </List>
+                        </details>
+                      )}
                     </Message>
                   )}
                 </div>

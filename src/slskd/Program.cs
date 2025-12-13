@@ -801,6 +801,7 @@ namespace slskd
             services.AddSingleton<MediaCore.IContentIdRegistry, MediaCore.ContentIdRegistry>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IPerceptualHasher, MediaCore.PerceptualHasher>();
+            services.AddSingleton<MediaCore.IMetadataPortability, MediaCore.MetadataPortability>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
