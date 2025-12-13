@@ -2076,11 +2076,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: When hole punching fails, use relay nodes with NatTraversalService integration and RelayRequired=true marking.
 
-- [ ] **T-1308**: Implement MeshDirectory.FindContentByPeerAsync
-  - Status: Not started
+- [x] **T-1308**: Implement MeshDirectory.FindContentByPeerAsync
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Currently returns empty. Implement content advertisement index.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Fixed DHT key format mismatch between DescriptorPublisher and MeshDirectory lookups.
 
 - [ ] **T-1309**: Implement content → peer index
   - Status: Not started

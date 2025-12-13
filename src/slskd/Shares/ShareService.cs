@@ -16,6 +16,7 @@
 // </copyright>
 
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Dht;
 
 namespace slskd.Shares
 {
@@ -43,12 +44,14 @@ namespace slskd.Shares
         /// <param name="optionsMonitor"></param>
         /// <param name="moderationProvider">Moderation provider (T-MCP02).</param>
         /// <param name="scanner"></param>
+        /// <param name="contentPeerHintService">Content peer hint service for mesh indexing.</param>
         public ShareService(
             FileService fileService,
             IShareRepositoryFactory shareRepositoryFactory,
             IOptionsMonitor<Options> optionsMonitor,
             Common.Moderation.IModerationProvider moderationProvider,
-            IShareScanner scanner = null)
+            IShareScanner scanner = null,
+            IContentPeerHintService contentPeerHintService = null)
         {
             var options = optionsMonitor.CurrentValue;
 
@@ -67,6 +70,8 @@ namespace slskd.Shares
                 workerCount: options.Shares.Cache.Workers,
                 fileService: fileService,
                 moderationProvider: moderationProvider);
+
+            ContentPeerHintService = contentPeerHintService;
 
             Scanner.StateMonitor.OnChange(cacheState =>
             {
@@ -110,6 +115,7 @@ namespace slskd.Shares
 
         private IShareRepositoryFactory ShareRepositoryFactory { get; }
         private IShareScanner Scanner { get; }
+        private IContentPeerHintService ContentPeerHintService { get; }
         private SemaphoreSlim ScannerSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private string LastOptionsHash { get; set; }
         private IOptionsMonitor<Options> OptionsMonitor { get; }
@@ -383,6 +389,12 @@ namespace slskd.Shares
                 ComputeShareStatistics();
                 Log.Debug("Share statistics updated: {Shares}", Local.Host.Shares.ToJson());
 
+                // Publish content-to-peer hints for mesh indexing
+                if (ContentPeerHintService != null)
+                {
+                    await PublishContentPeerHintsAsync();
+                }
+
                 State.SetValue(state => state with
                 {
                     Directories = Hosts.SelectMany(host => host.Shares).Sum(share => share.Directories ?? 0),
@@ -403,6 +415,57 @@ namespace slskd.Shares
         public bool TryCancelScan()
         {
             return Scanner.TryCancelScan();
+        }
+
+        /// <summary>
+        /// Publishes content-to-peer hints for all shared content.
+        /// </summary>
+        private async Task PublishContentPeerHintsAsync()
+        {
+            if (ContentPeerHintService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                Log.Debug("Publishing content-to-peer hints for mesh indexing...");
+
+                var contentIds = new HashSet<string>();
+
+                // Collect all unique content IDs from shared files
+                foreach (var repository in AllRepositories)
+                {
+                    // Get all files from the repository
+                    var files = repository.ListFiles(includeFullPath: true);
+                    foreach (var file in files)
+                    {
+                        // Get content items associated with this file
+                        var contentItems = repository.ListContentItemsForFile(file.Filename);
+                        foreach (var (contentId, _, _, isAdvertisable, _) in contentItems)
+                        {
+                            if (isAdvertisable && !string.IsNullOrEmpty(contentId))
+                            {
+                                contentIds.Add(contentId);
+                            }
+                        }
+                    }
+                }
+
+                Log.Debug("Found {Count} unique content IDs to publish peer hints for", contentIds.Count);
+
+                // Enqueue each content ID for background publishing
+                foreach (var contentId in contentIds)
+                {
+                    ContentPeerHintService.Enqueue(contentId);
+                }
+
+                Log.Debug("Content-to-peer hint publishing queued for {Count} content items", contentIds.Count);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to publish content-to-peer hints: {Message}", ex.Message);
+            }
         }
 
         /// <summary>
