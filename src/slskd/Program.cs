@@ -898,7 +898,9 @@ namespace slskd
             services.AddSingleton<Mesh.IMeshAdvanced>(sp => new Mesh.MeshAdvanced(
                 sp.GetRequiredService<ILogger<Mesh.MeshAdvanced>>(),
                 sp.GetRequiredService<Mesh.IMeshDirectory>(),
-                sp.GetRequiredService<Mesh.MeshStatsCollector>()));
+                sp.GetRequiredService<Mesh.MeshStatsCollector>(),
+                sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>(),
+                sp.GetRequiredService<Mesh.Nat.INatTraversalService>()));
             services.AddSingleton<Mesh.MeshStatsCollector>();
             services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
             services.AddHostedService<Mesh.Dht.PeerDescriptorRefreshService>();

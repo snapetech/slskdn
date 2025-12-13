@@ -10,7 +10,12 @@ public interface IMeshAdvanced
     Task<MeshTransportStats> GetTransportStatsAsync(CancellationToken ct = default);
 }
 
-public record MeshRouteDiagnostics(string PeerId, string Transport, int Hops, bool NatTraversalAttempted);
+public record MeshRouteDiagnostics(
+    string PeerId,
+    string Transport,
+    int Hops,
+    bool NatTraversalAttempted,
+    IReadOnlyList<long>? HopLatenciesMs = null);
 
 public record MeshTransportStats(
     int ActiveDhtSessions, 

@@ -2082,11 +2082,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Fixed DHT key format mismatch between DescriptorPublisher and MeshDirectory lookups.
 
-- [ ] **T-1309**: Implement content → peer index
-  - Status: Not started
+- [x] **T-1309**: Implement content → peer index
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: DHT-backed index mapping ContentId to peer hints. Used by swarm scheduler.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Integrated ContentPeerHintService with ShareService for automatic content-to-peer index population after share scans.
 
 - [ ] **T-1310**: Implement MeshAdvanced route diagnostics
   - Status: Not started

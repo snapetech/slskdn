@@ -7,6 +7,34 @@
 
 ## 2025-12-13
 
+### T-1309: Content-to-Peer Index for Swarm Scheduler (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **Share Scan Integration**: ContentPeerHintService integrated with ShareService scan completion
+  - **Automatic Content Indexing**: Content IDs extracted from shared files after scanning
+  - **Background Queue Processing**: Efficient DHT publishing via queued background processing
+  - **Advertisable Content Filtering**: Only content marked as advertisable is indexed
+  - **Content ID Deduplication**: Unique content IDs prevent redundant peer hint publishing
+  - **Comprehensive Logging**: Detailed tracking of content indexing operations
+  - **Fault Tolerance**: Exception handling for robust operation during share scanning
+  - **Repository Iteration**: Processes all share repositories for complete content coverage
+- **Technical Notes**:
+  - **Content Metadata Extraction**: Leverages existing content item associations in share database
+  - **Peer Hint Publishing**: Uses ContentPeerPublisher to store peer availability in DHT
+  - **Queue-Based Processing**: Non-blocking enqueue for efficient scan completion
+  - **Multi-Repository Support**: Handles multiple share repositories in distributed setups
+  - **Content Item Validation**: Checks isAdvertisable flag before publishing hints
+  - **Performance Optimization**: Deduplication prevents duplicate DHT operations
+  - **Integration Points**: Hooks into ShareService.ScanAsync completion workflow
+- **Content-to-Peer Index Flow**:
+  - **Share Scanning**: ShareService.ScanAsync completes successfully
+  - **Content Discovery**: Iterate through all shared files and extract content IDs
+  - **Filtering**: Only include advertisable content items with valid content IDs
+  - **Deduplication**: Collect unique content IDs across all repositories
+  - **Queue Publishing**: Enqueue content IDs for background peer hint publishing
+  - **DHT Storage**: ContentPeerHintService publishes peer availability hints
+  - **Index Population**: DHT stores content-to-peer mappings for swarm discovery
+
 ### T-1308: MeshDirectory.FindContentByPeerAsync (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
