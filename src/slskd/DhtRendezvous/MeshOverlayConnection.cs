@@ -168,7 +168,9 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             // SECURITY: Post-handshake certificate pin validation
             if (pinStore != null && sslStream.RemoteCertificate != null)
             {
-                await connection.ValidateCertificatePinAsync(pinStore, logger);
+                // Use endpoint as identifier since we don't know username yet
+                var identifier = $"{endpoint.Address}:{endpoint.Port}";
+                connection.ValidateCertificatePin(pinStore, identifier, logger);
             }
             
             return connection;
@@ -220,7 +222,9 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             // SECURITY: Post-handshake certificate pin validation (if client sent cert)
             if (pinStore != null && sslStream.RemoteCertificate != null)
             {
-                await connection.ValidateCertificatePinAsync(pinStore, logger);
+                // Use IP as identifier since we don't know username yet
+                var identifier = remoteEndPoint.Address.ToString();
+                connection.ValidateCertificatePin(pinStore, identifier, logger);
             }
             
             return connection;
@@ -557,8 +561,9 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// <summary>
     /// Validates the certificate pin using TOFU (Trust-On-First-Use) model.
     /// </summary>
-    private async Task ValidateCertificatePinAsync(
+    private void ValidateCertificatePin(
         Security.CertificatePinStore pinStore,
+        string identifier,
         Microsoft.Extensions.Logging.ILogger? logger)
     {
         if (_sslStream.RemoteCertificate == null)
@@ -568,19 +573,22 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
 
         var cert = new X509Certificate2(_sslStream.RemoteCertificate);
         var currentThumbprint = cert.Thumbprint;
-        var endpointKey = $"{RemoteEndPoint.Address}:{RemoteEndPoint.Port}";
 
         // Check if we have a recorded pin
-        var recordedPin = await pinStore.GetPinAsync(endpointKey);
+        var pinResult = pinStore.CheckPin(identifier, currentThumbprint);
 
-        if (recordedPin != null)
+        switch (pinResult)
         {
-            // We've seen this endpoint before - verify the cert matches
-            if (recordedPin.Thumbprint != currentThumbprint)
-            {
-                var message = $"TOFU pin violation for {endpointKey}: " +
-                             $"recorded {recordedPin.Thumbprint} on {recordedPin.FirstSeen:yyyy-MM-dd}, " +
-                             $"got {currentThumbprint}";
+            case Security.PinCheckResult.Valid:
+                // Certificate matches recorded pin
+                pinStore.TouchPin(identifier);
+                logger?.LogDebug("[MeshOverlay] TOFU pin validated for {Identifier}", identifier);
+                break;
+
+            case Security.PinCheckResult.Mismatch:
+                // We've seen this identifier before with a different cert - TOFU violation!
+                var message = $"TOFU pin violation for {identifier}: " +
+                             $"expected pinned certificate, got {currentThumbprint}";
                 
                 logger?.Log(
                     LogLevel.Error,
@@ -588,21 +596,18 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                     "{Message}",
                     message);
                 throw new SecurityException(message);
-            }
 
-            logger?.LogDebug("[MeshOverlay] TOFU pin validated for {Endpoint}", endpointKey);
-        }
-        else
-        {
-            // First time seeing this endpoint - record the pin
-            await pinStore.RecordPinAsync(endpointKey, currentThumbprint);
-            
-            logger?.Log(
-                LogLevel.Information,
-                Security.SecurityEventIds.TofuFirstSeen,
-                "TOFU: First connection to {Endpoint}, pinning certificate {Thumbprint}",
-                endpointKey,
-                currentThumbprint);
+            case Security.PinCheckResult.NotPinned:
+                // First time seeing this identifier - record the pin
+                pinStore.SetPin(identifier, currentThumbprint);
+                
+                logger?.Log(
+                    LogLevel.Information,
+                    Security.SecurityEventIds.TofuFirstSeen,
+                    "TOFU: First connection to {Identifier}, pinning certificate {Thumbprint}",
+                    identifier,
+                    currentThumbprint);
+                break;
         }
     }
     
