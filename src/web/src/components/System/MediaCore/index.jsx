@@ -197,6 +197,23 @@ const MediaCore = () => {
   const [contentDiscoveryResult, setContentDiscoveryResult] = useState(null);
   const [discoveryStats, setDiscoveryStats] = useState(null);
   const [loadingDiscoveryStats, setLoadingDiscoveryStats] = useState(false);
+
+  // Pod Join/Leave states
+  const [joinRequestData, setJoinRequestData] = useState('');
+  const [requestingJoin, setRequestingJoin] = useState(false);
+  const [joinRequestResult, setJoinRequestResult] = useState(null);
+  const [acceptanceData, setAcceptanceData] = useState('');
+  const [acceptingJoin, setAcceptingJoin] = useState(false);
+  const [acceptanceResult, setAcceptanceResult] = useState(null);
+  const [leaveRequestData, setLeaveRequestData] = useState('');
+  const [requestingLeave, setRequestingLeave] = useState(false);
+  const [leaveRequestResult, setLeaveRequestResult] = useState(null);
+  const [acceptingLeave, setAcceptingLeave] = useState(false);
+  const [leaveAcceptanceResult, setLeaveAcceptanceResult] = useState(null);
+  const [pendingPodId, setPendingPodId] = useState('');
+  const [loadingPendingRequests, setLoadingPendingRequests] = useState(false);
+  const [pendingJoinRequests, setPendingJoinRequests] = useState(null);
+  const [pendingLeaveRequests, setPendingLeaveRequests] = useState(null);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1279,6 +1296,113 @@ const MediaCore = () => {
       await handleLoadDiscoveryStats();
     } catch (err) {
       alert(`Failed to refresh discovery: ${err.message}`);
+    }
+  };
+
+  // Pod Join/Leave handlers
+  const handleRequestJoin = async () => {
+    if (!joinRequestData.trim()) {
+      alert('Please enter join request JSON data');
+      return;
+    }
+
+    try {
+      setRequestingJoin(true);
+      setJoinRequestResult(null);
+      const joinRequest = JSON.parse(joinRequestData);
+      const result = await mediacore.requestPodJoin(joinRequest);
+      setJoinRequestResult(result);
+      setJoinRequestData('');
+    } catch (err) {
+      setJoinRequestResult({ error: err.message });
+    } finally {
+      setRequestingJoin(false);
+    }
+  };
+
+  const handleAcceptJoin = async () => {
+    if (!acceptanceData.trim()) {
+      alert('Please enter acceptance JSON data');
+      return;
+    }
+
+    try {
+      setAcceptingJoin(true);
+      setAcceptanceResult(null);
+      const acceptance = JSON.parse(acceptanceData);
+      const result = await mediacore.acceptPodJoin(acceptance);
+      setAcceptanceResult(result);
+      setAcceptanceData('');
+    } catch (err) {
+      setAcceptanceResult({ error: err.message });
+    } finally {
+      setAcceptingJoin(false);
+    }
+  };
+
+  const handleRequestLeave = async () => {
+    if (!leaveRequestData.trim()) {
+      alert('Please enter leave request JSON data');
+      return;
+    }
+
+    try {
+      setRequestingLeave(true);
+      setLeaveRequestResult(null);
+      const leaveRequest = JSON.parse(leaveRequestData);
+      const result = await mediacore.requestPodLeave(leaveRequest);
+      setLeaveRequestResult(result);
+      setLeaveRequestData('');
+    } catch (err) {
+      setLeaveRequestResult({ error: err.message });
+    } finally {
+      setRequestingLeave(false);
+    }
+  };
+
+  const handleAcceptLeave = async () => {
+    if (!acceptanceData.trim()) {
+      alert('Please enter leave acceptance JSON data');
+      return;
+    }
+
+    try {
+      setAcceptingLeave(true);
+      setLeaveAcceptanceResult(null);
+      const acceptance = JSON.parse(acceptanceData);
+      const result = await mediacore.acceptPodLeave(acceptance);
+      setLeaveAcceptanceResult(result);
+      setAcceptanceData('');
+    } catch (err) {
+      setLeaveAcceptanceResult({ error: err.message });
+    } finally {
+      setAcceptingLeave(false);
+    }
+  };
+
+  const handleLoadPendingRequests = async () => {
+    if (!pendingPodId.trim()) {
+      alert('Please enter a pod ID');
+      return;
+    }
+
+    try {
+      setLoadingPendingRequests(true);
+      setPendingJoinRequests(null);
+      setPendingLeaveRequests(null);
+
+      const [joinRequests, leaveRequests] = await Promise.all([
+        mediacore.getPendingJoinRequests(pendingPodId),
+        mediacore.getPendingLeaveRequests(pendingPodId)
+      ]);
+
+      setPendingJoinRequests(joinRequests);
+      setPendingLeaveRequests(leaveRequests);
+    } catch (err) {
+      setPendingJoinRequests({ error: err.message });
+      setPendingLeaveRequests({ error: err.message });
+    } finally {
+      setLoadingPendingRequests(false);
     }
   };
 
@@ -4485,6 +4609,219 @@ const MediaCore = () => {
                   {discoveryStats?.error && (
                     <Message error size="tiny" style={{ marginTop: '0.5em' }}>
                       <p>{discoveryStats.error}</p>
+                    </Message>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Join/Leave */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="user plus" />
+                Pod Join/Leave Operations
+              </Card.Header>
+              <Card.Description>
+                Manage signed pod membership operations with cryptographic verification and role-based approvals
+              </Card.Description>
+            </Card.Content>
+
+            {/* Join Request */}
+            <Card.Content>
+              <Header size="small">Request to Join Pod</Header>
+              <Form>
+                <Form.TextArea
+                  label="Join Request JSON (signed by requester)"
+                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "requestedRole": "member", "publicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Please let me join!"}'
+                  value={joinRequestData}
+                  onChange={(e) => setJoinRequestData(e.target.value)}
+                  rows={4}
+                />
+                <Button
+                  primary
+                  loading={requestingJoin}
+                  disabled={requestingJoin || !joinRequestData.trim()}
+                  onClick={handleRequestJoin}
+                >
+                  Submit Join Request
+                </Button>
+              </Form>
+
+              {joinRequestResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {joinRequestResult.error ? (
+                    <Message error>
+                      <p>Failed to submit join request: {joinRequestResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Join Request Submitted</Message.Header>
+                      <p>
+                        <strong>Pod ID:</strong> {joinRequestResult.podId}<br />
+                        <strong>Peer ID:</strong> {joinRequestResult.peerId}<br />
+                        <strong>Status:</strong> {joinRequestResult.success ? 'Pending approval' : 'Failed'}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Accept Join */}
+                  <Header size="small">Accept Join Request</Header>
+                  <Form>
+                    <Form.TextArea
+                      label="Acceptance JSON (signed by owner/mod)"
+                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "acceptedRole": "member", "acceptorPeerId": "bob", "acceptorPublicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Welcome!"}'
+                      value={acceptanceData}
+                      onChange={(e) => setAcceptanceData(e.target.value)}
+                      rows={4}
+                    />
+                    <Button
+                      positive
+                      loading={acceptingJoin}
+                      disabled={acceptingJoin || !acceptanceData.trim()}
+                      onClick={handleAcceptJoin}
+                    >
+                      Accept Join
+                    </Button>
+                  </Form>
+
+                  {acceptanceResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {acceptanceResult.error ? (
+                        <Message error size="tiny">
+                          <p>{acceptanceResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Join accepted successfully</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Leave Request */}
+                  <Header size="small">Request to Leave Pod</Header>
+                  <Form>
+                    <Form.TextArea
+                      label="Leave Request JSON (signed by member)"
+                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "publicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Goodbye!"}'
+                      value={leaveRequestData}
+                      onChange={(e) => setLeaveRequestData(e.target.value)}
+                      rows={4}
+                    />
+                    <Button
+                      loading={requestingLeave}
+                      disabled={requestingLeave || !leaveRequestData.trim()}
+                      onClick={handleRequestLeave}
+                    >
+                      Submit Leave Request
+                    </Button>
+                  </Form>
+
+                  {leaveRequestResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {leaveRequestResult.error ? (
+                        <Message error size="tiny">
+                          <p>{leaveRequestResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Leave request submitted</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Accept Leave */}
+                  <Header size="small">Accept Leave Request (Owner/Mod Only)</Header>
+                  <Form>
+                    <Form.TextArea
+                      label="Leave Acceptance JSON (signed by owner/mod)"
+                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "acceptorPeerId": "bob", "acceptorPublicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Farewell!"}'
+                      value={acceptanceData}
+                      onChange={(e) => setAcceptanceData(e.target.value)}
+                      rows={4}
+                    />
+                    <Button
+                      negative
+                      loading={acceptingLeave}
+                      disabled={acceptingLeave || !acceptanceData.trim()}
+                      onClick={handleAcceptLeave}
+                    >
+                      Accept Leave
+                    </Button>
+                  </Form>
+
+                  {leaveAcceptanceResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {leaveAcceptanceResult.error ? (
+                        <Message error size="tiny">
+                          <p>{leaveAcceptanceResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message success size="tiny">
+                          <p>Leave accepted successfully</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Pending Requests */}
+                  <Header size="small">View Pending Requests</Header>
+                  <Form>
+                    <Form.Input
+                      label="Pod ID"
+                      placeholder="pod:artist:mb:daft-punk-hash"
+                      value={pendingPodId}
+                      onChange={(e) => setPendingPodId(e.target.value)}
+                    />
+                    <Button
+                      loading={loadingPendingRequests}
+                      disabled={loadingPendingRequests || !pendingPodId.trim()}
+                      onClick={handleLoadPendingRequests}
+                    >
+                      Load Pending Requests
+                    </Button>
+                  </Form>
+
+                  {pendingJoinRequests && !pendingJoinRequests.error && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      <Message size="tiny">
+                        <strong>Join Requests:</strong> {pendingJoinRequests.pendingJoinRequests?.length || 0}
+                      </Message>
+                    </div>
+                  )}
+
+                  {pendingLeaveRequests && !pendingLeaveRequests.error && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      <Message size="tiny">
+                        <strong>Leave Requests:</strong> {pendingLeaveRequests.pendingLeaveRequests?.length || 0}
+                      </Message>
+                    </div>
+                  )}
+
+                  {(pendingJoinRequests?.error || pendingLeaveRequests?.error) && (
+                    <Message error size="tiny" style={{ marginTop: '0.5em' }}>
+                      <p>Failed to load pending requests</p>
                     </Message>
                   )}
                 </Grid.Column>

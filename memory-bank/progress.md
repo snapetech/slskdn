@@ -33,6 +33,43 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1343: Pod Discovery (DHT Keys) (Phase 10 Gap - P1)
+- **Status**: ✅ **COMPLETED** (2025-12-13)
+- **Implementation Details**:
+  - **IPodDiscoveryService Interface**: Comprehensive pod discovery contract with registration, search, and statistics
+  - **PodDiscoveryService**: DHT-backed discovery engine supporting multiple discovery keys and patterns
+  - **Discovery Key System**: Structured DHT keys for efficient pod indexing and search
+    - `pod:discover:all` - General pod index for browsing
+    - `pod:discover:name:<slug>` - Name-based pod discovery
+    - `pod:discover:tag:<tag>` - Tag-based pod categorization and search
+    - `pod:discover:content:<id>` - Content association discovery
+  - **PodMetadata System**: Lightweight pod metadata records for discovery results
+  - **RESTful Discovery API**: Complete API suite at `/api/v0/podcore/discovery/*`
+    - Registration and unregistration endpoints
+    - Multi-modal search capabilities (name, tag, tags, content, all)
+    - Discovery statistics and refresh operations
+  - **WebGUI Discovery Dashboard**: Interactive pod discovery interface with:
+    - Pod registration management
+    - Real-time search capabilities
+    - Discovery statistics monitoring
+    - Administrative controls and refresh operations
+  - **DHT Integration**: Seamless integration with existing PodDhtPublisher for metadata consistency
+  - **Search Optimization**: Efficient DHT lookups with local caching and result aggregation
+  - **Security Integration**: Discovery respects pod visibility settings (Listed vs Private)
+  - **Statistics & Monitoring**: Comprehensive discovery metrics and performance tracking
+  - **Automatic Refresh**: Background refresh system for discovery entry maintenance
+  - **Multi-Tag Search**: AND logic for complex pod queries combining multiple tags
+  - **Content-Based Discovery**: Find pods related to specific content (music, videos, etc.)
+  - **Scalable Architecture**: DHT-based distribution enables network-wide pod discovery
+  - **Privacy Controls**: Only listed pods are discoverable, respecting pod owner preferences
+  - **Audit Trail**: Complete logging of discovery operations and security events
+
+**DHT Discovery Keys Implemented**:
+- ✅ `pod:discover:all` - Browse all discoverable pods
+- ✅ `pod:discover:name:<slug>` - Find pods by name (URL-friendly slugs)
+- ✅ `pod:discover:tag:<tag>` - Find pods by individual tags
+- ✅ `pod:discover:content:<id>` - Find pods associated with specific content
+
 ### T-1342: Membership Verification (Phase 10 Gap - P1)
 - **Status**: ✅ **COMPLETED** (implementation ready, compilation fixes needed)
 - **Implementation Details**:

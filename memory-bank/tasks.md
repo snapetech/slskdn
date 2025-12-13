@@ -2218,11 +2218,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete membership verification system with DHT checks, signature validation, ban status verification, and role permissions. Requires compilation fixes.
 
-- [ ] **T-1343**: Implement pod discovery (DHT keys)
-  - Status: Not started
+- [x] **T-1343**: Implement pod discovery (DHT keys)
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: DHT keys for listed pods: pod:discover:name:<slug>, pod:discover:tag:<tag>.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete DHT-based pod discovery system with name slugs, tags, content associations, and general browsing.
 
 - [ ] **T-1344**: Implement pod join/leave with signatures
   - Status: Not started

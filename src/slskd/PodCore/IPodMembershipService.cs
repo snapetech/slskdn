@@ -185,3 +185,75 @@ public record MembershipCleanupResult(
     int RecordsCleaned,
     int ErrorsEncountered,
     DateTimeOffset CompletedAt);
+
+/// <summary>
+/// Service for handling signed pod join and leave operations.
+/// </summary>
+public interface IPodJoinLeaveService
+{
+    /// <summary>
+    /// Submits a signed join request to a pod.
+    /// </summary>
+    /// <param name="joinRequest">The signed join request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The join result.</returns>
+    Task<PodJoinResult> RequestJoinAsync(PodJoinRequest joinRequest, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Accepts or rejects a pending join request.
+    /// </summary>
+    /// <param name="acceptance">The signed acceptance (or rejection).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The acceptance result.</returns>
+    Task<PodMembershipOperationResult> ProcessJoinAcceptanceAsync(PodJoinAcceptance acceptance, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Submits a signed leave request from a pod.
+    /// </summary>
+    /// <param name="leaveRequest">The signed leave request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The leave result.</returns>
+    Task<PodLeaveResult> RequestLeaveAsync(PodLeaveRequest leaveRequest, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Accepts or processes a leave request.
+    /// </summary>
+    /// <param name="acceptance">The signed acceptance.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The acceptance result.</returns>
+    Task<PodMembershipOperationResult> ProcessLeaveAcceptanceAsync(PodLeaveAcceptance acceptance, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets pending join requests for a pod.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Pending join requests.</returns>
+    Task<IReadOnlyList<PodJoinRequest>> GetPendingJoinRequestsAsync(string podId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets pending leave requests for a pod.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Pending leave requests.</returns>
+    Task<IReadOnlyList<PodLeaveRequest>> GetPendingLeaveRequestsAsync(string podId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels a pending join request.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="peerId">The peer ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The cancellation result.</returns>
+    Task<bool> CancelJoinRequestAsync(string podId, string peerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels a pending leave request.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="peerId">The peer ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The cancellation result.</returns>
+    Task<bool> CancelLeaveRequestAsync(string podId, string peerId, CancellationToken cancellationToken = default);
+}

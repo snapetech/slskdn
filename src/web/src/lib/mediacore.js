@@ -1241,6 +1241,151 @@ export const refreshPodDiscovery = async () => {
   return response.json();
 };
 
+// Pod Join/Leave API functions
+const membershipBaseUrl = baseUrl.replace('contentid', 'podcore/membership');
+
+/**
+ * Submit a signed join request to a pod.
+ */
+export const requestPodJoin = async (joinRequest) => {
+  const response = await fetch(`${membershipBaseUrl}/join`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(joinRequest),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to request join: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Accept or reject a join request.
+ */
+export const acceptPodJoin = async (acceptance) => {
+  const response = await fetch(`${membershipBaseUrl}/join/accept`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(acceptance),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to accept join: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Submit a signed leave request from a pod.
+ */
+export const requestPodLeave = async (leaveRequest) => {
+  const response = await fetch(`${membershipBaseUrl}/leave`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(leaveRequest),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to request leave: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Accept a leave request.
+ */
+export const acceptPodLeave = async (acceptance) => {
+  const response = await fetch(`${membershipBaseUrl}/leave/accept`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(acceptance),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to accept leave: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get pending join requests for a pod.
+ */
+export const getPendingJoinRequests = async (podId) => {
+  const response = await fetch(`${membershipBaseUrl}/join/pending/${encodeURIComponent(podId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get pending join requests: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get pending leave requests for a pod.
+ */
+export const getPendingLeaveRequests = async (podId) => {
+  const response = await fetch(`${membershipBaseUrl}/leave/pending/${encodeURIComponent(podId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get pending leave requests: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Cancel a pending join request.
+ */
+export const cancelJoinRequest = async (podId, peerId) => {
+  const response = await fetch(`${membershipBaseUrl}/join/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cancel join request: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Cancel a pending leave request.
+ */
+export const cancelLeaveRequest = async (podId, peerId) => {
+  const response = await fetch(`${membershipBaseUrl}/leave/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cancel leave request: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 // Pod Membership Verification API functions
 const verificationBaseUrl = baseUrl.replace('contentid', 'podcore/verification');
 
