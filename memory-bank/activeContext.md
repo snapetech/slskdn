@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None active
-- **Branch**: `master`
+- **Current Task**: T-001: Persistent Room/Chat Tabs
+- **Branch**: `cursor/repository-status-and-agents-fc41` (will create feature branch)
 - **Environment**: Local dev
-- **Last Activity**: Repository setup for memory-bank system
+- **Last Activity**: Started implementing tabbed interface for Chat and Rooms
 
 ---
 
