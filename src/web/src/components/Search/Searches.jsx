@@ -9,7 +9,7 @@ import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
 import MusicBrainzLookup from './MusicBrainzLookup';
 import React, { useEffect, useRef, useState } from 'react';
-import { useHistory, useParams, useRouteMatch } from 'react-router-dom';
+import { useHistory, useLocation, useParams, useRouteMatch } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Button, Icon, Input, Segment } from 'semantic-ui-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,8 +26,8 @@ const Searches = ({ server } = {}) => {
 
   const inputRef = useRef();
 
-  const { id: searchId } = useParams();
   const history = useHistory();
+  const location = useLocation();
   const match = useRouteMatch();
 
   const onConnecting = () => {
@@ -128,7 +128,10 @@ const Searches = ({ server } = {}) => {
       setCreating(false);
 
       if (navigate) {
-        history.push(`${match.url.replace(`/${searchId}`, '')}/${id}`);
+        // Use predictable URL with query parameter instead of UUID
+        const baseUrl = match.url;
+        const encodedQuery = encodeURIComponent(searchText);
+        history.push(`${baseUrl}?q=${encodedQuery}`);
       }
     } catch (createError) {
       console.error(createError);
@@ -201,6 +204,20 @@ const Searches = ({ server } = {}) => {
   if (error) {
     return <ErrorSegment caption={error?.message ?? error} />;
   }
+
+  // Handle URL query parameters for predictable search URLs
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const queryParam = urlParams.get('q');
+
+    if (queryParam && !creating && !searchId) {
+      // Automatically create a search from the URL query parameter
+      create({ navigate: false, search: decodeURIComponent(queryParam) }).then(() => {
+        // Clear the query parameter from the URL after creating the search
+        history.replace({ search: '' });
+      });
+    }
+  }, [location.search, creating, searchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // if searchId is not null, there's an id in the route.
   // display the details for the search, if there is one

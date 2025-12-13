@@ -49,6 +49,7 @@ namespace slskd
     using slskd.Shares;
     using slskd.Telemetry;
     using slskd.Transfers;
+    using slskd.Transfers.API;
     using slskd.Users;
     using Soulseek;
     using Soulseek.Diagnostics;
@@ -1244,8 +1245,8 @@ namespace slskd
             Log.Information($"[{direction}] [{user}/{file}] {oldState} => {state}{(completed ? $" ({xfer.BytesTransferred}/{xfer.Size} = {xfer.PercentComplete}%) @ {xfer.AverageSpeed.SizeSuffix()}/s" : string.Empty)}");
 
             // Broadcast transfer activity to connected clients
-            var activity = Transfers.API.TransferActivity.FromTransferStateChange(xfer, oldState);
-            _ = Transfers.API.TransferHubExtensions.EmitTransferActivityAsync(TransfersHub, activity);
+            var activity = TransferActivity.FromTransferStateChange(xfer, oldState);
+            _ = TransferHubExtensions.EmitTransferActivityAsync(TransfersHub, activity);
 
             if (xfer.Direction == TransferDirection.Upload && xfer.State.HasFlag(TransferStates.Completed | TransferStates.Succeeded) && args.Transfer.AverageSpeed > 0)
             {

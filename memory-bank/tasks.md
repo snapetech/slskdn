@@ -2463,11 +2463,12 @@
 
 ### Low Priority
 
-- [ ] **T-006**: Create Chat Rooms from UI
-  - Status: Not started
+- [x] **T-006**: Create Chat Rooms from UI
+  - Status: Completed (2025-12-13)
   - Priority: Low
   - Related: slskd #1258
   - Notes: Create public/private rooms from web interface
+  - Implementation: Added RoomCreateModal with public/private options, integrated into Rooms component
 
 - [ ] **T-007**: Predictable Search URLs
   - Status: Not started

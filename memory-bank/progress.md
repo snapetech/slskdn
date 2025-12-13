@@ -7,6 +7,21 @@
 
 ## 2025-12-13
 
+### T-006: Create Chat Rooms from UI (Low Priority)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Created `RoomCreateModal` component with public/private room type selection
+  - Added room creation button to Rooms component header
+  - Implemented room creation by attempting to join non-existent rooms (server-dependent)
+  - Added form validation and error handling for room creation
+  - Included helpful UI notes about server permissions for private rooms
+- **Technical Notes**:
+  - Soulseek protocol doesn't have direct client-side room creation
+  - Room creation depends on server configuration and user permissions
+  - Private room creation requires server operator approval
+  - Leveraged existing `joinRoom` functionality for room creation attempts
+  - Added proper error handling and user feedback
+
 ### T-005: Traffic Ticker (Medium Priority)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
