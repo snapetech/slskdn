@@ -198,11 +198,123 @@ jobs:
       - name: Trigger Package Workflows
         if: success()
         run: |
-          echo "✅ Dev release created"
-          echo "📦 Trigger AUR/COPR/PPA workflows here if needed"
-          # gh workflow run package-aur-dev.yml -f version=${{ needs.parse.outputs.version }}
+          echo "✅ Dev release created: ${{ github.ref_name }}"
+          echo "📦 Triggering AUR/COPR/Docker builds..."
+          
+          # Trigger the old dev-release workflow which has all the packaging
+          gh workflow run dev-release.yml || echo "dev-release.yml trigger failed (expected if disabled)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  aur-dev:
+    name: Publish to AUR (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.info.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get commit info
+        id: info
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download from the release we just created
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-linux-x64.tar.gz"
+
+      - name: Setup SSH for AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ AUR_SSH_KEY not configured, skipping AUR publish"
+            exit 0
+          fi
+          
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          
+          cat >> ~/.ssh/config << EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+          EOF
+          
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+      - name: Clone AUR Package
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          git clone ssh://aur@aur.archlinux.org/slskdn-dev.git aur-pkg || {
+            mkdir -p aur-pkg
+            cd aur-pkg
+            git init
+            git remote add origin ssh://aur@aur.archlinux.org/slskdn-dev.git
+          }
+
+      - name: Update PKGBUILD
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          cd aur-pkg
+          
+          # Copy the dev PKGBUILD template
+          cp ../packaging/aur/PKGBUILD-dev PKGBUILD
+          cp ../packaging/aur/slskd.install slskd.install
+          
+          # Convert version for Arch (replace ALL hyphens with dots)
+          ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          
+          # Update version and commit
+          sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          sed -i "s/^_commit=.*/_commit=${{ steps.info.outputs.short_sha }}/" PKGBUILD
+          
+          # Generate .SRCINFO
+          docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
+            pacman -Sy --noconfirm pacman-contrib
+            useradd -m builder
+            chown -R builder:builder /pkg
+            su builder -c 'makepkg --printsrcinfo' > .SRCINFO
+          "
+          
+          sudo chown -R $(id -u):$(id -g) .
+          
+          echo "📝 Updated PKGBUILD:"
+          cat PKGBUILD | head -30
+
+      - name: Push to AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "⚠️ Skipping AUR push - credentials not configured"
+            exit 0
+          fi
+          
+          cd aur-pkg
+          git config user.name "slskdn CI"
+          git config user.email "slskdn@proton.me"
+          git add PKGBUILD .SRCINFO slskd.install
+          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
+          git push origin master || git push --set-upstream origin master
+          
+          echo "✅ Pushed to AUR: slskdn-dev"
 
   release-main:
     name: Create Main Release
