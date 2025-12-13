@@ -2100,11 +2100,11 @@
   - Branch: experimental/brainz
   - Notes: Replace hardcoded values. Track real peer count, messages sent/received, DHT ops/sec.
 
-- [ ] **T-1312**: Add mesh health monitoring
-  - Status: Not started
+- [x] **T-1312**: Add mesh health monitoring
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Health check endpoint. Monitor routing table health, bootstrap connectivity, peer churn.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Health check endpoint monitoring routing table health, bootstrap connectivity, peer churn with /health/mesh endpoint.
 
 - [ ] **T-1313**: Add mesh unit tests
   - Status: Not started

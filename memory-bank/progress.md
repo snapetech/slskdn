@@ -7,34 +7,35 @@
 
 ## 2025-12-13
 
-### T-1310: MeshAdvanced Route Diagnostics (Gap Task - P2)
+### T-1312: Mesh Health Monitoring (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
-  - **Placeholder Replacement**: Replaced hardcoded TraceRoutesAsync with comprehensive route analysis
-  - **Enhanced Diagnostics Record**: Added HopLatenciesMs field to MeshRouteDiagnostics for timing data
-  - **Multi-Service Integration**: Combined IMeshDirectory, IMeshDhtClient, and INatTraversalService
-  - **DHT Lookup Analysis**: Measures and reports DHT peer discovery performance
-  - **NAT Traversal Detection**: Identifies when NAT traversal would be attempted
-  - **Transport Type Determination**: Analyzes optimal transport (direct-udp, hole-punch, relay-fallback)
-  - **Latency Measurement**: Provides realistic timing for routing hops and operations
-  - **Comprehensive Error Handling**: Graceful degradation with fallback diagnostics
+  - **ASP.NET Core Health Checks**: Implemented MeshHealthCheck with IHealthCheck interface
+  - **Dedicated Health Endpoint**: Added /health/mesh endpoint for mesh-specific monitoring
+  - **Comprehensive Health Assessment**: Monitors routing table health, peer connectivity, message flow, DHT performance
+  - **Real-time Statistics Integration**: Leverages MeshStatsCollector for live metrics
+  - **Structured Health Data**: Provides detailed JSON response with all mesh statistics
+  - **Health Status Classification**: Healthy/Degraded/Unhealthy status based on key indicators
+  - **Extension Method Pattern**: Follows ASP.NET Core health check extension pattern
+  - **Comprehensive Logging**: Detailed health check results and failure diagnostics
 - **Technical Notes**:
-  - **Route Tracing Algorithm**: DHT lookup → NAT analysis → Transport selection → Timing measurement
-  - **Performance Monitoring**: Detailed timing for each routing component
-  - **Transport Intelligence**: Considers NAT type, peer availability, and overlay status
-  - **Diagnostic Depth**: Multi-hop analysis with latency breakdown per segment
-  - **Fault Tolerance**: Continues operation even when individual components fail
-  - **Logging Integration**: Extensive debug logging for network diagnostics
-  - **API Compatibility**: Maintains existing IMeshAdvanced interface contract
-- **Route Diagnostics Flow**:
-  - **DHT Resolution**: Query peer descriptor and measure lookup latency
-  - **NAT Assessment**: Evaluate NAT type and traversal requirements
-  - **Transport Selection**: Determine optimal connection method based on network conditions
-  - **Latency Profiling**: Measure timing for each routing component
-  - **Result Aggregation**: Compile comprehensive routing diagnostics
-  - **Performance Reporting**: Log detailed metrics for network analysis
+  - **Health Check Criteria**: Routing table size > 0, peer connectivity > 0, message flow active
+  - **Performance Metrics**: DHT operations/sec, message counts, peer churn tracking
+  - **Fault Tolerance**: Graceful handling of collection failures with appropriate status
+  - **Monitoring Integration**: Compatible with Prometheus, Application Insights, etc.
+  - **Configuration Flexibility**: Tagged health checks for selective monitoring
+  - **API Compatibility**: Standard ASP.NET Core health check response format
+  - **Resource Efficiency**: Lightweight checks with minimal performance impact
+- **Health Monitoring Scope**:
+  - **Routing Table Health**: Validates DHT routing table population and connectivity
+  - **Peer Connectivity**: Monitors active peer connections and discovery
+  - **Message Flow**: Tracks sent/received messages for network activity
+  - **DHT Performance**: Measures operations per second and response times
+  - **NAT Status**: Monitors NAT traversal capability and current type
+  - **Bootstrap Connectivity**: Tracks bootstrap peer availability and reachability
+  - **Churn Analysis**: Monitors peer join/leave events for network stability
 
-### T-1309: Content-to-Peer Index for Swarm Scheduler (Gap Task - P1)
+### T-1310: MeshAdvanced Route Diagnostics (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
   - **Content Advertisement Index**: Fixed DHT key format mismatch preventing content discovery
