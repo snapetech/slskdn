@@ -24,12 +24,18 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     private readonly ConcurrentDictionary<string, MeshOverlayConnection> _connectionsByMeshPeerId = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, MeshOverlayConnection> _connectionsByUsername = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<IPEndPoint, MeshOverlayConnection> _connectionsByEndpoint = new();
+    private readonly ConcurrentDictionary<IPAddress, int> _connectionCountsByAddress = new();
     private readonly SemaphoreSlim _registrationLock = new(1, 1);
     
     /// <summary>
     /// Maximum number of mesh neighbors.
     /// </summary>
     public const int MaxNeighbors = 10;
+    
+    /// <summary>
+    /// Maximum connections from a single IP address.
+    /// </summary>
+    public const int MaxConnectionsPerAddress = 3;
     
     /// <summary>
     /// Minimum number of neighbors before triggering discovery.
@@ -110,9 +116,23 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                 return false;
             }
             
+            // SECURITY: Check per-address connection limit
+            var address = connection.RemoteAddress;
+            _connectionCountsByAddress.TryGetValue(address, out var currentCount);
+            if (currentCount >= MaxConnectionsPerAddress)
+            {
+                _logger.LogWarning(
+                    "Rejecting connection from {Address}: already have {Count} connections (max: {Max})",
+                    address,
+                    currentCount,
+                    MaxConnectionsPerAddress);
+                return false;
+            }
+            
             // Register by mesh peer ID (primary key)
             _connectionsByMeshPeerId[connection.MeshPeerId] = connection;
             _connectionsByEndpoint[connection.RemoteEndPoint] = connection;
+            _connectionCountsByAddress[address] = currentCount + 1;
             
             // Also register by username if provided (optional alias)
             if (!string.IsNullOrEmpty(connection.Username))
@@ -169,6 +189,19 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             }
             
             removed |= _connectionsByEndpoint.TryRemove(connection.RemoteEndPoint, out _);
+            
+            // Decrement per-address count
+            var address = connection.RemoteAddress;
+            _connectionCountsByAddress.AddOrUpdate(
+                address,
+                0, // If missing, set to 0 (shouldn't happen)
+                (_, count) => Math.Max(0, count - 1)); // Decrement, but don't go negative
+            
+            // Clean up entry if count reaches 0
+            if (_connectionCountsByAddress.TryGetValue(address, out var newCount) && newCount == 0)
+            {
+                _connectionCountsByAddress.TryRemove(address, out _);
+            }
             
             if (removed)
             {

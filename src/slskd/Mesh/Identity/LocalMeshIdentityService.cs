@@ -181,6 +181,9 @@ public sealed class LocalMeshIdentityService
 
         _meshPeerId = MeshPeerId.FromPublicKey(_publicKey);
         
+        // SECURITY: Ensure permissions are correct on existing keys (in case they were created before this fix)
+        SetFilePermissions(_keyPath);
+        
         _logger.LogDebug("Loaded Ed25519 keypair from {Path}", _keyPath);
     }
 
@@ -200,11 +203,92 @@ public sealed class LocalMeshIdentityService
 
         _meshPeerId = MeshPeerId.FromPublicKey(_publicKey);
 
+        // Ensure parent directory exists with secure permissions
+        var parentDir = Path.GetDirectoryName(_keyPath);
+        if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
+        {
+            Directory.CreateDirectory(parentDir);
+            SetDirectoryPermissions(parentDir);
+        }
+
         // Save to file (private:public format)
         var keyData = $"{Convert.ToBase64String(privateKeyBytes)}:{Convert.ToBase64String(_publicKey)}";
         File.WriteAllText(_keyPath, keyData);
         
+        // SECURITY: Set restrictive file permissions (owner read/write only)
+        SetFilePermissions(_keyPath);
+        
         _logger.LogInformation("Generated and saved new Ed25519 keypair to {Path}", _keyPath);
+    }
+    
+    /// <summary>
+    /// Sets secure file permissions (0600 on Unix, restricted ACL on Windows).
+    /// </summary>
+    private void SetFilePermissions(string filePath)
+    {
+        try
+        {
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                // Unix: chmod 0600 (owner read/write only)
+                File.SetUnixFileMode(filePath, 
+                    System.IO.UnixFileMode.UserRead | System.IO.UnixFileMode.UserWrite);
+                _logger.LogDebug("Set file permissions to 0600 for {Path}", filePath);
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                // Windows: Remove all permissions, then add only current user
+                var fileInfo = new FileInfo(filePath);
+                var fileSecurity = fileInfo.GetAccessControl();
+                
+                // Disable inheritance
+                fileSecurity.SetAccessRuleProtection(true, false);
+                
+                // Remove all existing rules
+                foreach (System.Security.AccessControl.FileSystemAccessRule rule in fileSecurity.GetAccessRules(true, false, typeof(System.Security.Principal.NTAccount)))
+                {
+                    fileSecurity.RemoveAccessRule(rule);
+                }
+                
+                // Add rule for current user only
+                var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                var userRule = new System.Security.AccessControl.FileSystemAccessRule(
+                    identity.User!,
+                    System.Security.AccessControl.FileSystemRights.Read | System.Security.AccessControl.FileSystemRights.Write,
+                    System.Security.AccessControl.AccessControlType.Allow);
+                
+                fileSecurity.AddAccessRule(userRule);
+                fileInfo.SetAccessControl(fileSecurity);
+                _logger.LogDebug("Set Windows ACL for {Path} (current user only)", filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to set secure file permissions for {Path}", filePath);
+        }
+    }
+    
+    /// <summary>
+    /// Sets secure directory permissions (0700 on Unix).
+    /// </summary>
+    private void SetDirectoryPermissions(string dirPath)
+    {
+        try
+        {
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                // Unix: chmod 0700 (owner read/write/execute only)
+                File.SetUnixFileMode(dirPath,
+                    System.IO.UnixFileMode.UserRead | 
+                    System.IO.UnixFileMode.UserWrite | 
+                    System.IO.UnixFileMode.UserExecute);
+                _logger.LogDebug("Set directory permissions to 0700 for {Path}", dirPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to set secure directory permissions for {Path}", dirPath);
+        }
     }
 }
 
