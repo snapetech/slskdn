@@ -49,9 +49,15 @@ All package publishing channels have been added to `build-on-tag.yml` for **BOTH
    - Tags: `dev-VERSION` and `dev-latest`
 
 6. **Chocolatey**:
+   - **Dev channel**: Pushes with `--prerelease` flag (Chocolatey pre-release)
+   - **Main channel**: Pushes WITHOUT flag (Chocolatey stable)
    - Windows-only job
    - Downloads `.zip` (already correct format)
-   - Pushes to pre-release channel
+
+7. **Release Descriptions**:
+   - **Dev releases**: Match old format with experimental features, platform downloads, build timestamp
+   - **Main releases**: Match "🔋 Batteries-Included Fork" branding with full feature list
+   - Copied from old `dev-release.yml` workflow to maintain consistency
 
 ## Workflow Trigger
 
@@ -88,8 +94,9 @@ git push origin "build-dev-${VERSION}"
 
 ### Trigger Main Build (Stable Release)
 ```bash
-# Set version (semantic versioning)
-VERSION="0.25.0"
+# Set version (continue existing sequence)
+# Last was 0.24.1-slskdn.34, so next is:
+VERSION="0.24.1-slskdn.35"
 
 # Create and push tag
 git tag "build-main-${VERSION}"
