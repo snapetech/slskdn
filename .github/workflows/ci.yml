@@ -44,6 +44,9 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Lint Docs
+        run: ./bin/lint-docs
+
       - name: Web
         run: ./bin/build --web-only
 

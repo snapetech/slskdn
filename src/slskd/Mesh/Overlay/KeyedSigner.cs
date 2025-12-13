@@ -94,6 +94,6 @@ public class ControlSigner : IControlSigner
     }
 
     private static string BuildSignablePayload(ControlEnvelope env) =>
-        $"{env.Type}|{env.TimestampUnixMs}|{Convert.ToBase64String(env.Payload)}";
+        $"{env.Type}|{env.TimestampUnixMs}|{env.MessageId}|{Convert.ToBase64String(env.Payload)}";
 }
 

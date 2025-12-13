@@ -14,4 +14,6 @@ public class ControlEnvelope
     [Key(2)] public string PublicKey { get; set; } = string.Empty;
     [Key(3)] public string Signature { get; set; } = string.Empty;
     [Key(4)] public long TimestampUnixMs { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    [Key(5)] public string MessageId { get; set; } = Guid.NewGuid().ToString("N");
+    [Key(6)] public string? SignerKeyId { get; set; }
 }

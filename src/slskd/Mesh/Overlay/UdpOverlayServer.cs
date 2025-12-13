@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -6,6 +7,7 @@ using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Security;
 
 namespace slskd.Mesh.Overlay;
 
@@ -17,16 +19,22 @@ public class UdpOverlayServer : BackgroundService
     private readonly ILogger<UdpOverlayServer> logger;
     private readonly OverlayOptions options;
     private readonly IControlDispatcher dispatcher;
+    private readonly IPeerEndpointRegistry endpointRegistry;
+    private readonly IPeerPinCache pinCache;
     private UdpClient? udp;
 
     public UdpOverlayServer(
         ILogger<UdpOverlayServer> logger,
         IOptions<OverlayOptions> options,
-        IControlDispatcher dispatcher)
+        IControlDispatcher dispatcher,
+        IPeerEndpointRegistry endpointRegistry,
+        IPeerPinCache pinCache)
     {
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
+        this.endpointRegistry = endpointRegistry;
+        this.pinCache = pinCache;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -70,7 +78,35 @@ public class UdpOverlayServer : BackgroundService
                     continue;
                 }
 
-                await dispatcher.HandleAsync(envelope, stoppingToken);
+                // Resolve peer context
+                var peerId = endpointRegistry.GetPeerId(result.RemoteEndPoint);
+                if (peerId == null)
+                {
+                    logger.LogWarning("[Overlay-UDP] Cannot resolve PeerId for {Endpoint}, rejecting envelope", result.RemoteEndPoint);
+                    continue;
+                }
+
+                var descriptor = pinCache.GetDescriptor(peerId);
+                var allowedKeys = descriptor?.ControlSigningPublicKeys
+                    ?.Select(k => Convert.FromBase64String(k))
+                    .ToList()
+                    ?? new List<byte[]>();
+
+                if (allowedKeys.Count == 0)
+                {
+                    logger.LogWarning("[Overlay-UDP] No control signing keys for {PeerId}, rejecting envelope", peerId);
+                    continue;
+                }
+
+                var peerContext = new PeerContext
+                {
+                    PeerId = peerId,
+                    RemoteEndPoint = result.RemoteEndPoint,
+                    Transport = "udp",
+                    AllowedControlSigningKeys = allowedKeys,
+                };
+
+                await dispatcher.HandleAsync(envelope, peerContext, stoppingToken);
             }
             catch (OperationCanceledException)
             {

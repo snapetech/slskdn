@@ -263,8 +263,10 @@
 - [ ] Peer quality scoring
 
 ### Security Enhancements
-- [ ] Certificate pinning (TOFU) for overlay
-- [ ] Encrypted overlay connections with TLS 1.3
+- [x] Certificate pinning (TOFU + signed descriptors) for overlay - **COMPLETE** (2025-12-13)
+- [x] Encrypted overlay connections with TLS 1.3 - **COMPLETE** (QUIC + persistent certs)
+- [x] Peer-aware control envelope verification - **COMPLETE** (2025-12-13)
+- [x] Replay attack protection - **COMPLETE** (2025-12-13)
 - [ ] Forward secrecy for mesh messages
 - [ ] Security audit and penetration testing
 
@@ -342,6 +344,12 @@
 ---
 
 *Task List Last Updated: December 11, 2025*
+
+
+
+
+
+
 
 
 

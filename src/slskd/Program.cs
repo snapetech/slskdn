@@ -916,6 +916,12 @@ namespace slskd
             // Security: Peer pin cache for SPKI pinning
             services.AddSingleton<Mesh.Security.IPeerPinCache, Mesh.Security.PeerPinCache>();
             
+            // Security: Control envelope verification (peer-aware, not self-asserted)
+            services.AddSingleton<Mesh.Security.IControlVerification, Mesh.Security.ControlVerification>();
+            
+            // Security: Replay cache for anti-replay attack protection
+            services.AddSingleton<Mesh.Security.IReplayCache, Mesh.Security.ReplayCache>();
+            
             // KeyStore for Ed25519 control signing keys (CAN rotate, subordinate to identity)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();

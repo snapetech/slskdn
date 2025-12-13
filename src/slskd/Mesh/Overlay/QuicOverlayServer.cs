@@ -3,6 +3,7 @@
 namespace slskd.Mesh.Overlay;
 
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -13,6 +14,7 @@ using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Security;
 
 /// <summary>
 /// QUIC overlay server for control-plane messages (ControlEnvelope).
@@ -22,16 +24,22 @@ public class QuicOverlayServer : BackgroundService
     private readonly ILogger<QuicOverlayServer> logger;
     private readonly OverlayOptions options;
     private readonly IControlDispatcher dispatcher;
+    private readonly IPeerEndpointRegistry endpointRegistry;
+    private readonly IPeerPinCache pinCache;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
 
     public QuicOverlayServer(
         ILogger<QuicOverlayServer> logger,
         IOptions<OverlayOptions> options,
-        IControlDispatcher dispatcher)
+        IControlDispatcher dispatcher,
+        IPeerEndpointRegistry endpointRegistry,
+        IPeerPinCache pinCache)
     {
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
+        this.endpointRegistry = endpointRegistry;
+        this.pinCache = pinCache;
     }
 
     /// <summary>
@@ -182,10 +190,38 @@ public class QuicOverlayServer : BackgroundService
                 var envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(buffer.AsMemory(0, totalRead));
                 logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
 
-                var handled = await dispatcher.HandleAsync(envelope, ct);
+                // Resolve peer context
+                var peerId = endpointRegistry.GetPeerId(remoteEndPoint);
+                if (peerId == null)
+                {
+                    logger.LogWarning("[Overlay-QUIC] Cannot resolve PeerId for {Endpoint}, rejecting envelope", remoteEndPoint);
+                    return;
+                }
+
+                var descriptor = pinCache.GetDescriptor(peerId);
+                var allowedKeys = descriptor?.ControlSigningPublicKeys
+                    ?.Select(k => Convert.FromBase64String(k))
+                    .ToList()
+                    ?? new List<byte[]>();
+
+                if (allowedKeys.Count == 0)
+                {
+                    logger.LogWarning("[Overlay-QUIC] No control signing keys for {PeerId}, rejecting envelope", peerId);
+                    return;
+                }
+
+                var peerContext = new PeerContext
+                {
+                    PeerId = peerId,
+                    RemoteEndPoint = remoteEndPoint,
+                    Transport = "quic",
+                    AllowedControlSigningKeys = allowedKeys,
+                };
+
+                var handled = await dispatcher.HandleAsync(envelope, peerContext, ct);
                 if (!handled)
                 {
-                    logger.LogWarning("[Overlay-QUIC] Failed to handle envelope {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
+                    logger.LogWarning("[Overlay-QUIC] Failed to handle envelope {Type} from {PeerId}", envelope.Type, peerId);
                 }
             }
         }
