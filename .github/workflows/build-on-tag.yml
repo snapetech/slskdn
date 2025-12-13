@@ -602,8 +602,9 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
-          Write-Host "✅ Published to Chocolatey: slskdn-dev"
+          # Push to pre-release channel for dev builds
+          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
+          Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
   release-main:
@@ -1121,7 +1122,8 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
+          # Push to stable channel (no --prerelease flag)
           choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
-          Write-Host "✅ Published to Chocolatey: slskdn"
+          Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
