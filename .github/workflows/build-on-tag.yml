@@ -741,6 +741,80 @@ jobs:
             done
           fi
 
+  winget-dev:
+    name: Update Winget Manifests (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: experimental/multi-source-swarm
+          fetch-depth: 0
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-dev-win-x64.zip"
+          
+          if (Test-Path "slskdn-dev-win-x64.zip") {
+            Write-Host "✅ Downloaded slskdn-dev-win-x64.zip"
+            Get-Item slskdn-dev-win-x64.zip | Select-Object Name, Length
+          } else {
+            Write-Host "❌ Windows x64 build not found"
+            exit 0
+          }
+        shell: pwsh
+
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 "slskdn-dev-win-x64.zip").Hash
+          Write-Host "SHA256: $hash"
+          "win_x64_sha=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        shell: pwsh
+
+      - name: Update Winget Manifests
+        run: |
+          git fetch origin experimental/multi-source-swarm
+          git reset --hard origin/experimental/multi-source-swarm
+          
+          $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
+          $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
+          
+          bash packaging/scripts/update-winget-manifests.sh `
+            "${{ needs.parse.outputs.version }}" `
+            "$WIN_URL" `
+            "$WIN_SHA"
+          
+          Write-Host "📝 Updated Winget manifests:"
+          Get-Content packaging/winget/snapetech.slskdn-dev.installer.yaml
+        shell: pwsh
+
+      - name: Commit Winget Manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if (-not (git diff --quiet packaging/winget/)) {
+            git add packaging/winget/
+            git commit -m "chore(winget): update dev manifests to ${{ needs.parse.outputs.version }} [skip ci]"
+            git push origin HEAD:experimental/multi-source-swarm
+            Write-Host "✅ Winget manifests updated and pushed"
+          } else {
+            Write-Host "No changes to Winget manifests"
+          }
+        shell: pwsh
+
+      - name: Note about Winget PR
+        run: |
+          Write-Host "📝 To publish to Winget, submit a PR to microsoft/winget-pkgs manually"
+        shell: pwsh
+
   release-main:
     name: Create Main Release
     needs: [parse, publish]
