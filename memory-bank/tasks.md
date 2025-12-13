@@ -2180,11 +2180,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Comprehensive unit tests for ContentID, fuzzy matching, descriptor validation, perceptual hashing, IPLD mapping, and metadata portability.
 
-- [ ] **T-1329**: Add MediaCore integration tests
-  - Status: Not started
+- [x] **T-1329**: Add MediaCore integration tests
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: End-to-end tests with real audio files. Cross-codec matching accuracy.
+  - Branch: experimental/whatAmIThinking
+  - Notes: End-to-end integration tests with realistic audio data, cross-codec matching validation, and performance benchmarks.
 
 - [ ] **T-1330**: Integrate MediaCore with swarm scheduler
   - Status: Not started

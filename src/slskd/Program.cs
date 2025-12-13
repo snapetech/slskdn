@@ -80,6 +80,7 @@ namespace slskd
     using slskd.Telemetry;
     using slskd.Transfers;
     using slskd.Transfers.Downloads;
+    using slskd.Transfers.MultiSource;
     using slskd.Transfers.Uploads;
     using slskd.Users;
     using slskd.Common.Security;
@@ -804,6 +805,12 @@ namespace slskd
             services.AddSingleton<MediaCore.IMetadataPortability, MediaCore.MetadataPortability>();
             services.AddSingleton<MediaCore.IContentDescriptorPublisher, MediaCore.ContentDescriptorPublisher>();
             services.AddSingleton<MediaCore.IDescriptorRetriever, MediaCore.DescriptorRetriever>();
+            services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
+
+            // MultiSource MediaCore integration
+            services.AddSingleton<IMediaCoreSwarmIntelligence, MediaCoreSwarmIntelligence>();
+            services.AddSingleton<IMediaCoreSwarmService, MediaCoreSwarmService>();
+            services.AddSingleton<slskd.Transfers.MultiSource.Scheduling.IChunkScheduler, slskd.Transfers.MultiSource.Scheduling.MediaCoreChunkScheduler>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();

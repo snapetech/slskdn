@@ -67,6 +67,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     private readonly IAcoustIdClient acoustIdClient;
     private readonly IAutoTaggingService autoTaggingService;
     private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
+    private readonly IMediaCoreSwarmService? _mediaCoreSwarmService;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MultiSourceDownloadService"/> class.
@@ -86,7 +87,8 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             IAcoustIdClient acoustIdClient = null,
             IAutoTaggingService autoTaggingService = null,
             IOptionsMonitor<slskdOptions> optionsMonitor = null,
-            ICanonicalStatsService canonicalStatsService = null)
+            ICanonicalStatsService canonicalStatsService = null,
+            IMediaCoreSwarmService mediaCoreSwarmService = null)
     {
         _logger = logger;
         _client = soulseekClient;
@@ -98,16 +100,76 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             this.autoTaggingService = autoTaggingService;
             this.optionsMonitor = optionsMonitor;
             this.canonicalStatsService = canonicalStatsService;
+            _mediaCoreSwarmService = mediaCoreSwarmService;
     }
 
     /// <inheritdoc/>
     public ConcurrentDictionary<Guid, MultiSourceDownloadStatus> ActiveDownloads { get; } = new();
+
+    private static bool IsContentVariantMatch(string filename, long fileSize, ContentVariantsResult contentVariants)
+    {
+        // Check if this file could be a variant of the known content
+        foreach (var variant in contentVariants.Variants)
+        {
+            // Check filename similarity (simplified - could use more sophisticated matching)
+            var filenameSimilarity = CalculateFilenameSimilarity(IOPath.GetFileName(filename), variant.Filename);
+
+            // Check size compatibility (allow some variance for different encodings)
+            var sizeSimilarity = fileSize > 0 && variant.Descriptor?.SizeBytes > 0
+                ? 1.0 - Math.Abs(fileSize - variant.Descriptor.SizeBytes.Value) / (double)Math.Max(fileSize, variant.Descriptor.SizeBytes.Value)
+                : 0.5;
+
+            // Consider it a match if both filename and size are reasonably similar
+            if (filenameSimilarity > 0.7 && sizeSimilarity > 0.8)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static double CalculateFilenameSimilarity(string filename1, string filename2)
+    {
+        // Simple similarity based on common substrings
+        // In practice, this could use Levenshtein distance or other similarity metrics
+        var commonChars = filename1.Intersect(filename2).Count();
+        var maxLength = Math.Max(filename1.Length, filename2.Length);
+
+        return maxLength > 0 ? commonChars / (double)maxLength : 0.0;
+    }
 
     /// <inheritdoc/>
     public async Task<List<VerifiedSource>> SelectCanonicalSourcesAsync(
         ContentVerificationResult verificationResult,
         CancellationToken cancellationToken = default)
     {
+        // Use MediaCore swarm intelligence if available
+        if (_mediaCoreSwarmService != null)
+        {
+            try
+            {
+                // Group sources by ContentID using MediaCore
+                var swarmGrouping = await _mediaCoreSwarmService.GroupSourcesByContentIdAsync(
+                    verificationResult, cancellationToken);
+
+                // Select optimal peers using swarm intelligence
+                var peerSelection = await _mediaCoreSwarmService.SelectOptimalPeersAsync(
+                    swarmGrouping, maxPeers: 5, cancellationToken);
+
+                _logger.LogInformation(
+                    "[MediaCore] Selected {PeerCount} optimal peers using {Strategy} strategy",
+                    peerSelection.SelectedPeers.Count, peerSelection.Strategy);
+
+                return peerSelection.SelectedPeers.Select(p => p.Source).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[MediaCore] Swarm intelligence failed, falling back to legacy selection");
+            }
+        }
+
+        // Fallback to original logic
         var semanticSources = verificationResult.BestSemanticSources.ToList();
         var bestSources = verificationResult.BestSources.ToList();
 
@@ -179,6 +241,28 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
 
         _logger.LogInformation("Searching for alternative sources: {SearchTerm}", searchTerm);
 
+        // Use MediaCore to discover content variants if available
+        ContentVariantsResult contentVariants = null;
+        if (_mediaCoreSwarmService != null)
+        {
+            try
+            {
+                contentVariants = await _mediaCoreSwarmService.DiscoverContentVariantsAsync(
+                    filename, fileSize, cancellationToken);
+
+                if (contentVariants.Variants.Any())
+                {
+                    _logger.LogInformation(
+                        "[MediaCore] Discovered {VariantCount} content variants for {Filename}",
+                        contentVariants.Variants.Count, filename);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[MediaCore] Failed to discover content variants for {Filename}", filename);
+            }
+        }
+
         // Search for the file
         var searchResults = new List<SearchResponse>();
         var searchOptions = new SearchOptions(
@@ -213,12 +297,25 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             foreach (var file in response.Files)
             {
                 var responseFilename = IOPath.GetFileName(file.Filename);
-                if (responseFilename.Equals(originalFilename, StringComparison.OrdinalIgnoreCase) &&
-                    file.Size == fileSize)
+                var isExactMatch = responseFilename.Equals(originalFilename, StringComparison.OrdinalIgnoreCase) &&
+                                 file.Size == fileSize;
+
+                // If MediaCore is available, also check for content variant matches
+                var isVariantMatch = false;
+                if (!isExactMatch && contentVariants != null && _mediaCoreSwarmService != null)
+                {
+                    isVariantMatch = IsContentVariantMatch(file.Filename, file.Size, contentVariants);
+                }
+
+                if (isExactMatch || isVariantMatch)
                 {
                     if (!candidates.Contains(response.Username))
                     {
                         candidates.Add(response.Username);
+                        _logger.LogDebug(
+                            "[MediaCore] Added candidate {Username} for {Filename} ({MatchType})",
+                            response.Username, responseFilename,
+                            isExactMatch ? "exact" : "variant");
                     }
                 }
             }
