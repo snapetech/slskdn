@@ -130,3 +130,86 @@ export const validateContentId = async (contentId) => {
 
   return response.json();
 };
+
+/**
+ * Traverse the content graph following a specific link type.
+ */
+export const traverseContentGraph = async (startContentId, linkName, maxDepth = 3) => {
+  const params = new URLSearchParams({ linkName, maxDepth: maxDepth.toString() });
+  const response = await fetch(`${baseUrl.replace('contentid', 'ipld')}/traverse/${encodeURIComponent(startContentId)}?${params}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to traverse content graph: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get the content graph for a specific ContentID.
+ */
+export const getContentGraph = async (contentId, maxDepth = 2) => {
+  const params = new URLSearchParams({ maxDepth: maxDepth.toString() });
+  const response = await fetch(`${baseUrl.replace('contentid', 'ipld')}/graph/${encodeURIComponent(contentId)}?${params}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get content graph: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Find all content that links to the specified ContentID.
+ */
+export const findInboundLinks = async (targetContentId, linkName = null) => {
+  const params = linkName ? new URLSearchParams({ linkName }) : '';
+  const response = await fetch(`${baseUrl.replace('contentid', 'ipld')}/inbound/${encodeURIComponent(targetContentId)}${params ? '?' + params : ''}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to find inbound links: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Validate IPLD links in the registry.
+ */
+export const validateIpldLinks = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'ipld')}/validate`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to validate IPLD links: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Add IPLD links to a content descriptor.
+ */
+export const addIpldLinks = async (contentId, links) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'ipld')}/links/${encodeURIComponent(contentId)}`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ links }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to add IPLD links: ${response.statusText}`);
+  }
+
+  return response.json();
+};

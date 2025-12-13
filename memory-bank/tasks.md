@@ -2132,11 +2132,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented IContentIdRegistry with thread-safe mapping of external IDs to internal ContentIDs, REST API, and WebGUI.
 
-- [ ] **T-1321**: Implement multi-domain content addressing
-  - Status: Not started
+- [x] **T-1321**: Implement multi-domain content addressing
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: ContentId format: content:<domain>:<type>:<id>. Support audio/video/other domains.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented content:domain:type:id format with parser, domain-specific queries, validation, and WebGUI examples.
 
 - [ ] **T-1322**: Implement IPLD content linking
   - Status: Not started

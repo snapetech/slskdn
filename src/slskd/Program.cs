@@ -800,6 +800,7 @@ namespace slskd
                     sp.GetRequiredService<IOptions<MediaCore.MediaCoreOptions>>()));
             services.AddSingleton<MediaCore.IContentIdRegistry, MediaCore.ContentIdRegistry>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
+            services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
 

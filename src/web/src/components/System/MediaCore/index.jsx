@@ -34,10 +34,20 @@ const MediaCore = () => {
   const [resolvedContent, setResolvedContent] = useState(null);
   const [validatedContent, setValidatedContent] = useState(null);
   const [domainResults, setDomainResults] = useState(null);
+  const [traversalResults, setTraversalResults] = useState(null);
+  const [graphResults, setGraphResults] = useState(null);
+  const [inboundResults, setInboundResults] = useState(null);
+  const [traverseContentId, setTraverseContentId] = useState('');
+  const [traverseLinkName, setTraverseLinkName] = useState('');
+  const [graphContentId, setGraphContentId] = useState('');
+  const [inboundTargetId, setInboundTargetId] = useState('');
   const [registering, setRegistering] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [searchingDomain, setSearchingDomain] = useState(false);
+  const [traversing, setTraversing] = useState(false);
+  const [gettingGraph, setGettingGraph] = useState(false);
+  const [findingInbound, setFindingInbound] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -131,6 +141,51 @@ const MediaCore = () => {
     if (example) {
       setExternalId(example.external);
       setContentId(example.content);
+    }
+  };
+
+  const handleTraverse = async () => {
+    if (!traverseContentId.trim() || !traverseLinkName.trim()) return;
+
+    try {
+      setTraversing(true);
+      setTraversalResults(null);
+      const result = await mediacore.traverseContentGraph(traverseContentId.trim(), traverseLinkName.trim());
+      setTraversalResults(result);
+    } catch (err) {
+      setTraversalResults({ error: err.message });
+    } finally {
+      setTraversing(false);
+    }
+  };
+
+  const handleGetGraph = async () => {
+    if (!graphContentId.trim()) return;
+
+    try {
+      setGettingGraph(true);
+      setGraphResults(null);
+      const result = await mediacore.getContentGraph(graphContentId.trim());
+      setGraphResults(result);
+    } catch (err) {
+      setGraphResults({ error: err.message });
+    } finally {
+      setGettingGraph(false);
+    }
+  };
+
+  const handleFindInbound = async () => {
+    if (!inboundTargetId.trim()) return;
+
+    try {
+      setFindingInbound(true);
+      setInboundResults(null);
+      const result = await mediacore.findInboundLinks(inboundTargetId.trim());
+      setInboundResults(result);
+    } catch (err) {
+      setInboundResults({ error: err.message });
+    } finally {
+      setFindingInbound(false);
     }
   };
 
@@ -443,6 +498,218 @@ const MediaCore = () => {
               )}
             </div>
           </Segment>
+        </Grid.Column>
+
+        {/* IPLD Graph Traversal */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="sitemap" />
+                IPLD Graph Traversal
+              </Card.Header>
+              <Card.Description>
+                Traverse content relationships following specific link types
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Start ContentID</label>
+                    <Input
+                      placeholder="e.g., content:audio:track:mb-12345"
+                      value={traverseContentId}
+                      onChange={(e) => setTraverseContentId(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Link Type</label>
+                    <Input
+                      placeholder="e.g., album, artist, artwork"
+                      value={traverseLinkName}
+                      onChange={(e) => setTraverseLinkName(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Button
+                  primary
+                  loading={traversing}
+                  disabled={!traverseContentId.trim() || !traverseLinkName.trim() || traversing}
+                  onClick={handleTraverse}
+                >
+                  Traverse Graph
+                </Button>
+              </Form>
+
+              {traversalResults && (
+                <div style={{ marginTop: '1em' }}>
+                  {traversalResults.error ? (
+                    <Message error>
+                      <p>{traversalResults.error}</p>
+                    </Message>
+                  ) : (
+                    <div>
+                      <p><strong>Traversal completed:</strong> {traversalResults.completedTraversal ? 'Yes' : 'No'}</p>
+                      <p><strong>Visited {traversalResults.visitedNodes?.length || 0} nodes</strong></p>
+                      {traversalResults.visitedNodes?.length > 0 && (
+                        <List divided relaxed style={{ maxHeight: '150px', overflow: 'auto' }}>
+                          {traversalResults.visitedNodes.map((node, index) => (
+                            <List.Item key={index}>
+                              <List.Content>
+                                <List.Header>{node.contentId}</List.Header>
+                                <List.Description>
+                                  {node.outgoingLinks?.length || 0} outgoing links
+                                </List.Description>
+                              </List.Content>
+                            </List.Item>
+                          ))}
+                        </List>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Content Graph */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="share alternate" />
+                Content Graph
+              </Card.Header>
+              <Card.Description>
+                Get the complete relationship graph for a ContentID
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>ContentID</label>
+                  <Input
+                    placeholder="Enter ContentID to get its graph"
+                    value={graphContentId}
+                    onChange={(e) => setGraphContentId(e.target.value)}
+                    action={
+                      <Button
+                        primary
+                        loading={gettingGraph}
+                        disabled={!graphContentId.trim() || gettingGraph}
+                        onClick={handleGetGraph}
+                      >
+                        Get Graph
+                      </Button>
+                    }
+                  />
+                </Form.Field>
+              </Form>
+
+              {graphResults && (
+                <div style={{ marginTop: '1em' }}>
+                  {graphResults.error ? (
+                    <Message error>
+                      <p>{graphResults.error}</p>
+                    </Message>
+                  ) : (
+                    <div>
+                      <p><strong>Root:</strong> {graphResults.rootContentId}</p>
+                      <p><strong>Nodes:</strong> {graphResults.nodes?.length || 0}</p>
+                      <p><strong>Paths:</strong> {graphResults.paths?.length || 0}</p>
+                      {graphResults.nodes?.length > 0 && (
+                        <List divided relaxed style={{ maxHeight: '150px', overflow: 'auto' }}>
+                          {graphResults.nodes.slice(0, 5).map((node, index) => (
+                            <List.Item key={index}>
+                              <List.Content>
+                                <List.Header style={{ fontSize: '0.9em' }}>
+                                  {node.contentId}
+                                </List.Header>
+                                <List.Description style={{ fontSize: '0.8em' }}>
+                                  {node.outgoingLinks?.length || 0} outgoing, {node.incomingLinks?.length || 0} incoming
+                                </List.Description>
+                              </List.Content>
+                            </List.Item>
+                          ))}
+                          {graphResults.nodes.length > 5 && (
+                            <List.Item>
+                              <List.Content>
+                                <em>... and {graphResults.nodes.length - 5} more nodes</em>
+                              </List.Content>
+                            </List.Item>
+                          )}
+                        </List>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Inbound Links */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="arrow left" />
+                Inbound Links
+              </Card.Header>
+              <Card.Description>
+                Find all content that links to a specific ContentID
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Field>
+                  <label>Target ContentID</label>
+                  <Input
+                    placeholder="Find content that links to this ID"
+                    value={inboundTargetId}
+                    onChange={(e) => setInboundTargetId(e.target.value)}
+                    action={
+                      <Button
+                        primary
+                        loading={findingInbound}
+                        disabled={!inboundTargetId.trim() || findingInbound}
+                        onClick={handleFindInbound}
+                      >
+                        Find Links
+                      </Button>
+                    }
+                  />
+                </Form.Field>
+              </Form>
+
+              {inboundResults && (
+                <div style={{ marginTop: '1em' }}>
+                  {inboundResults.error ? (
+                    <Message error>
+                      <p>{inboundResults.error}</p>
+                    </Message>
+                  ) : (
+                    <div>
+                      <p><strong>Found {inboundResults.inboundLinks?.length || 0} inbound links</strong></p>
+                      {inboundResults.inboundLinks?.length > 0 && (
+                        <List divided relaxed style={{ maxHeight: '150px', overflow: 'auto' }}>
+                          {inboundResults.inboundLinks.map((link, index) => (
+                            <List.Item key={index}>
+                              <List.Content>
+                                <code style={{ fontSize: '0.9em' }}>{link}</code>
+                              </List.Content>
+                            </List.Item>
+                          ))}
+                        </List>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
         </Grid.Column>
       </Grid>
     </div>
