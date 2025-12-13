@@ -1358,7 +1358,73 @@ grep -l "using Soulseek" src/slskd/**/*.cs | xargs grep -l "Directory\.Exists\|D
 
 ---
 
-*Last updated: 2025-12-09*
+### 23. Git Branch/Tag Name Conflict Breaking CI Pushes
+
+**The Problem**: CI workflow fails with "dst refspec experimental/multi-source-swarm matches more than one" when trying to push updates to the branch.
+
+**Root Cause**: Both a **branch** and a **tag** exist with the same name `experimental/multi-source-swarm`. Git cannot disambiguate which ref to push to when using `git push origin HEAD:experimental/multi-source-swarm`.
+
+**Error Message**:
+```
+error: dst refspec experimental/multi-source-swarm matches more than one
+error: failed to push some refs to 'https://github.com/snapetech/slskdn'
+```
+
+**Why This Happens**:
+1. Old workflow or manual operation created a tag named `experimental/multi-source-swarm`
+2. A branch with the same name already exists
+3. Git refs show both:
+   - `refs/heads/experimental/multi-source-swarm` (branch)
+   - `refs/tags/experimental/multi-source-swarm` (tag)
+4. When CI tries to push, Git doesn't know which ref to update
+5. **This causes ALL builds to fail silently** - builds appear to succeed but the push step fails
+
+**Impact**:
+- **Critical**: Blocks all package publishing (AUR, COPR, PPA, Docker, etc.)
+- Builds run successfully but no artifacts are published
+- Users see "no new build" even though CI shows green checkmarks
+- Very difficult to diagnose - error is buried in logs of optional jobs
+
+**The Fix**:
+```bash
+# Delete the conflicting tag locally and remotely
+git tag -d experimental/multi-source-swarm
+git push origin :refs/tags/experimental/multi-source-swarm
+
+# Future builds will now succeed
+```
+
+**Prevention**:
+- **NEVER** create tags with branch names
+- **NEVER** create branches with tag patterns (e.g., `build-*`, `dev-*`, `main-*`)
+- Use distinct namespaces: branches = feature/fix/experimental, tags = version/build markers
+- Check for conflicts before creating tags: `git show-ref | grep <name>`
+- If you see ambiguous ref errors, immediately check: `git show-ref | grep <name>`
+
+**Quick Diagnosis**:
+```bash
+# Check if a name exists as both branch and tag:
+git show-ref | grep "experimental/multi-source-swarm"
+
+# Should show ONLY ONE of:
+refs/heads/experimental/multi-source-swarm  # ✅ Branch only (good)
+refs/tags/experimental/multi-source-swarm   # ✅ Tag only (good)
+
+# If you see BOTH lines → CONFLICT (delete the tag)
+```
+
+**Related**: This is why build workflows should use explicit ref types:
+```yaml
+# GOOD - explicit ref type
+git push origin refs/heads/experimental/multi-source-swarm
+
+# BAD - ambiguous
+git push origin HEAD:experimental/multi-source-swarm
+```
+
+---
+
+*Last updated: 2025-12-13*
 
 
 ### delegating-logger-sourcecontext-missing
