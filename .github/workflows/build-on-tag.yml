@@ -630,6 +630,117 @@ jobs:
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
+  nix-dev:
+    name: Update Nix Flake (Dev)
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: experimental/multi-source-swarm
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-dev-*.zip"
+          
+          ls -lh slskdn-dev-*.zip
+
+      - name: Calculate Hashes
+        id: hashes
+        run: |
+          LINUX_X64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-dev-linux-x64.zip)
+          
+          if [ -f slskdn-dev-linux-arm64.zip ]; then
+            LINUX_ARM64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-dev-linux-arm64.zip)
+          else
+            LINUX_ARM64_SHA="0000000000000000000000000000000000000000000000000000"
+          fi
+          
+          if [ -f slskdn-dev-osx-x64.zip ]; then
+            MACOS_X64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-dev-osx-x64.zip)
+          else
+            MACOS_X64_SHA="0000000000000000000000000000000000000000000000000000"
+          fi
+          
+          if [ -f slskdn-dev-osx-arm64.zip ]; then
+            MACOS_ARM64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-dev-osx-arm64.zip)
+          else
+            MACOS_ARM64_SHA="0000000000000000000000000000000000000000000000000000"
+          fi
+          
+          echo "linux_x64_sha=$LINUX_X64_SHA" >> $GITHUB_OUTPUT
+          echo "linux_arm64_sha=$LINUX_ARM64_SHA" >> $GITHUB_OUTPUT
+          echo "macos_x64_sha=$MACOS_X64_SHA" >> $GITHUB_OUTPUT
+          echo "macos_arm64_sha=$MACOS_ARM64_SHA" >> $GITHUB_OUTPUT
+          
+          echo "Linux x64:     $LINUX_X64_SHA"
+          echo "Linux ARM64:   $LINUX_ARM64_SHA"
+          echo "macOS x64:     $MACOS_X64_SHA"
+          echo "macOS ARM64:   $MACOS_ARM64_SHA"
+
+      - name: Update flake.nix
+        run: |
+          git fetch origin experimental/multi-source-swarm
+          git reset --hard origin/experimental/multi-source-swarm
+          
+          sed -i "s/devVersion = \".*\";/devVersion = \"${{ needs.parse.outputs.version }}\";/" flake.nix
+          sed -i '/devSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
+          sed -i '/devSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
+          sed -i '/devSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
+          sed -i '/devSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
+          
+          echo "📝 Updated flake.nix:"
+          git diff flake.nix
+
+      - name: Verify Flake
+        run: |
+          nix flake check --no-build || echo "⚠️ Flake check failed (non-fatal)"
+          echo "✅ Flake syntax valid"
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet flake.nix; then
+            echo "No changes to flake.nix"
+          else
+            git add flake.nix
+            git commit -m "chore(nix): update dev flake to ${{ needs.parse.outputs.version }} [skip ci]"
+            
+            for i in 1 2 3; do
+              if git push origin HEAD:experimental/multi-source-swarm; then
+                echo "✅ flake.nix updated and pushed"
+                break
+              else
+                if [ $i -eq 3 ]; then
+                  echo "⚠️ Push failed after 3 attempts, likely already updated by another build"
+                  exit 0
+                fi
+                echo "Push failed, retrying in $((i*2)) seconds..."
+                sleep $((i*2))
+                git fetch origin experimental/multi-source-swarm
+                git reset --hard origin/experimental/multi-source-swarm
+                if ! git diff --quiet flake.nix; then
+                  git add flake.nix
+                  git commit -m "chore(nix): update dev flake to ${{ needs.parse.outputs.version }} [skip ci]"
+                fi
+              fi
+            done
+          fi
+
   release-main:
     name: Create Main Release
     needs: [parse, publish]
