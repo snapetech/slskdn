@@ -84,8 +84,9 @@ public record PodMessageRoutingStats(
     long SuccessfulRoutingCount,
     long FailedRoutingCount,
     double AverageRoutingTimeMs,
-    int ActiveSeenMessages,
-    int ExpiredSeenMessages,
+    long ActiveDeduplicationItems,
+    double BloomFilterFillRatio,
+    double EstimatedFalsePositiveRate,
     DateTimeOffset LastRoutingOperation,
     IReadOnlyDictionary<string, long> RoutingStatsByPod);
 

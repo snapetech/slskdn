@@ -5206,8 +5206,9 @@ const MediaCore = () => {
                       <strong>Successful Routes:</strong> {routingStats.successfulRoutingCount}<br />
                       <strong>Failed Routes:</strong> {routingStats.failedRoutingCount}<br />
                       <strong>Avg Routing Time:</strong> {routingStats.averageRoutingTimeMs.toFixed(2)}ms<br />
-                      <strong>Active Seen Messages:</strong> {routingStats.activeSeenMessages}<br />
-                      <strong>Expired Seen Messages:</strong> {routingStats.expiredSeenMessages}<br />
+                      <strong>Deduplication Items:</strong> {routingStats.activeDeduplicationItems}<br />
+                      <strong>Bloom Filter Fill:</strong> {(routingStats.bloomFilterFillRatio * 100).toFixed(1)}%<br />
+                      <strong>Est. False Positive:</strong> {(routingStats.estimatedFalsePositiveRate * 100).toFixed(4)}%<br />
                       <strong>Last Operation:</strong> {routingStats.lastRoutingOperation ? new Date(routingStats.lastRoutingOperation).toLocaleString() : 'Never'}
                     </p>
                   </Message>

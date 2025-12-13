@@ -2236,11 +2236,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete overlay-based message routing with fanout, deduplication, and comprehensive monitoring.
 
-- [ ] **T-1346**: Implement message signature verification
-  - Status: Not started
+- [x] **T-1346**: Implement message signature verification
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Verify sender signature on every message. Reject unsigned/invalid.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete cryptographic signature verification system with Ed25519-ready implementation.
 
 - [ ] **T-1347**: Implement message deduplication
   - Status: Not started

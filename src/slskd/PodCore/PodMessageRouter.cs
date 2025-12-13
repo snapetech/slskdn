@@ -24,8 +24,8 @@ public class PodMessageRouter : IPodMessageRouter
     private readonly IPodService _podService;
     private readonly IOverlayClient _overlayClient;
 
-    // Deduplication tracking - messageId -> (podId -> seenTimestamp)
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DateTimeOffset>> _seenMessages = new();
+    // Time-windowed Bloom filter for efficient deduplication
+    private readonly TimeWindowedBloomFilter _deduplicationFilter;
 
     // Routing statistics
     private long _totalMessagesRouted;
@@ -35,6 +35,7 @@ public class PodMessageRouter : IPodMessageRouter
     private long _totalRoutingTimeMs;
     private readonly ConcurrentDictionary<string, long> _routingStatsByPod = new();
     private DateTimeOffset _lastRoutingOperation = DateTimeOffset.MinValue;
+
 
     // Cleanup configuration
     private static readonly TimeSpan SeenMessageExpiration = TimeSpan.FromHours(24);
@@ -48,6 +49,10 @@ public class PodMessageRouter : IPodMessageRouter
         _logger = logger;
         _podService = podService;
         _overlayClient = overlayClient;
+
+        // Initialize time-windowed Bloom filter for efficient deduplication
+        // 24-hour windows, expected 10,000 messages per window, 1% false positive rate
+        _deduplicationFilter = new TimeWindowedBloomFilter(10_000, TimeSpan.FromHours(24), 0.01);
     }
 
     /// <inheritdoc/>
@@ -76,7 +81,7 @@ public class PodMessageRouter : IPodMessageRouter
 
             var podId = channelParts[0];
 
-            // Check for duplicate routing
+            // Check for duplicate routing using Bloom filter
             if (IsMessageSeen(message.MessageId, podId))
             {
                 _logger.LogDebug("[PodMessageRouter] Skipping duplicate message {MessageId} for pod {PodId}", message.MessageId, podId);
@@ -220,7 +225,8 @@ public class PodMessageRouter : IPodMessageRouter
             ? (double)_totalRoutingTimeMs / _totalMessagesRouted
             : 0.0;
 
-        var activeSeenMessages = _seenMessages.Sum(kvp => kvp.Value.Count);
+        // Get Bloom filter statistics
+        var (deduplicationItems, fillRatio, estimatedFalsePositiveRate) = _deduplicationFilter.GetStats();
 
         return new PodMessageRoutingStats(
             TotalMessagesRouted: _totalMessagesRouted,
@@ -228,8 +234,9 @@ public class PodMessageRouter : IPodMessageRouter
             SuccessfulRoutingCount: _successfulRoutingCount,
             FailedRoutingCount: _failedRoutingCount,
             AverageRoutingTimeMs: averageRoutingTime,
-            ActiveSeenMessages: activeSeenMessages,
-            ExpiredSeenMessages: 0, // Would track this in a more sophisticated implementation
+            ActiveDeduplicationItems: deduplicationItems,
+            BloomFilterFillRatio: fillRatio,
+            EstimatedFalsePositiveRate: estimatedFalsePositiveRate,
             LastRoutingOperation: _lastRoutingOperation,
             RoutingStatsByPod: _routingStatsByPod.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
     }
@@ -237,8 +244,8 @@ public class PodMessageRouter : IPodMessageRouter
     /// <inheritdoc/>
     public bool RegisterMessageSeen(string messageId, string podId)
     {
-        var podMessages = _seenMessages.GetOrAdd(messageId, _ => new ConcurrentDictionary<string, DateTimeOffset>());
-        var wasAdded = podMessages.TryAdd(podId, DateTimeOffset.UtcNow);
+        var deduplicationKey = $"{messageId}:{podId}";
+        var wasAdded = _deduplicationFilter.Add(deduplicationKey);
 
         if (wasAdded)
         {
@@ -251,85 +258,30 @@ public class PodMessageRouter : IPodMessageRouter
     /// <inheritdoc/>
     public bool IsMessageSeen(string messageId, string podId)
     {
-        if (_seenMessages.TryGetValue(messageId, out var podMessages))
-        {
-            return podMessages.ContainsKey(podId);
-        }
-        return false;
+        var deduplicationKey = $"{messageId}:{podId}";
+        return _deduplicationFilter.Contains(deduplicationKey);
     }
 
     /// <inheritdoc/>
     public async Task<PodMessageCleanupResult> CleanupSeenMessagesAsync(CancellationToken cancellationToken = default)
     {
         var startTime = DateTimeOffset.UtcNow;
-        var cleaned = 0;
-        var retained = 0;
-        var now = DateTimeOffset.UtcNow;
 
-        // Clean up expired messages
-        var expiredMessageIds = new List<string>();
-        foreach (var (messageId, podMessages) in _seenMessages)
-        {
-            var expiredPods = new List<string>();
-            foreach (var (podId, seenTime) in podMessages)
-            {
-                if (now - seenTime > SeenMessageExpiration)
-                {
-                    expiredPods.Add(podId);
-                }
-            }
-
-            foreach (var podId in expiredPods)
-            {
-                podMessages.TryRemove(podId, out _);
-                cleaned++;
-            }
-
-            if (podMessages.IsEmpty)
-            {
-                expiredMessageIds.Add(messageId);
-            }
-            else
-            {
-                retained += podMessages.Count;
-            }
-        }
-
-        // Remove empty message entries
-        foreach (var messageId in expiredMessageIds)
-        {
-            _seenMessages.TryRemove(messageId, out _);
-        }
-
-        // Enforce maximum per-pod limits (simplified - would be more sophisticated in production)
-        foreach (var podMessages in _seenMessages.Values)
-        {
-            if (podMessages.Count > MaxSeenMessagesPerPod)
-            {
-                var toRemove = podMessages.Count - MaxSeenMessagesPerPod;
-                var oldestEntries = podMessages
-                    .OrderBy(kvp => kvp.Value)
-                    .Take(toRemove)
-                    .Select(kvp => kvp.Key)
-                    .ToList();
-
-                foreach (var podId in oldestEntries)
-                {
-                    podMessages.TryRemove(podId, out _);
-                    cleaned++;
-                }
-            }
-        }
+        // Force cleanup of the time-windowed Bloom filter
+        _deduplicationFilter.ForceCleanup();
 
         var duration = DateTimeOffset.UtcNow - startTime;
 
+        // Get current filter stats
+        var (itemCount, fillRatio, estimatedFalsePositiveRate) = _deduplicationFilter.GetStats();
+
         _logger.LogDebug(
-            "[PodMessageRouter] Cleanup completed: {Cleaned} messages cleaned, {Retained} retained ({Duration}ms)",
-            cleaned, retained, duration.TotalMilliseconds);
+            "[PodMessageRouter] Bloom filter cleanup completed in {Duration}ms. Stats: {Items} items, {FillRatio:P2} fill ratio, {FPRate:P4} estimated false positive rate",
+            duration.TotalMilliseconds, itemCount, fillRatio, estimatedFalsePositiveRate);
 
         return new PodMessageCleanupResult(
-            MessagesCleaned: cleaned,
-            MessagesRetained: retained,
+            MessagesCleaned: 0, // Time-windowed filter handles cleanup automatically
+            MessagesRetained: (int)itemCount,
             CleanupDuration: duration,
             CompletedAt: DateTimeOffset.UtcNow);
     }
