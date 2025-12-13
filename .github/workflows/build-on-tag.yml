@@ -101,7 +101,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          cache: true
 
       - name: Download Web Content
         uses: actions/download-artifact@v4
