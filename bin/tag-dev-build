@@ -12,21 +12,23 @@ else
     BASE_VERSION="0.24.1"
 fi
 
-# Get current Unix timestamp (UTC)
+# Get current Unix timestamp (UTC) and prefix with '9' to ensure it's
+# lexicographically greater than YYYYMMDD timestamps (which start with '202X')
 EPOCH=$(date -u +%s)
+PREFIXED_EPOCH="9${EPOCH}"
 
 # Convert to human-readable for display
 HUMAN_DATE=$(date -u -d "@${EPOCH}" "+%Y-%m-%d %H:%M:%S UTC")
 
 # Construct the new version and tag
-VERSION="${BASE_VERSION}.dev.${EPOCH}"
+VERSION="${BASE_VERSION}.dev.${PREFIXED_EPOCH}"
 TAG="build-dev-${VERSION}"
 
 echo "Creating new dev build tag:"
 echo "  Tag:       $TAG"
 echo "  Version:   $VERSION"
 echo "  Timestamp: $HUMAN_DATE"
-echo "  Epoch:     $EPOCH"
+echo "  Epoch:     $EPOCH (prefixed: $PREFIXED_EPOCH)"
 echo ""
 
 # Confirm

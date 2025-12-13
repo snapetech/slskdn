@@ -16,14 +16,14 @@
 **Trigger tag (manual):**
 ```bash
 EPOCH=$(date -u +%s)
-VERSION="0.24.1.dev.${EPOCH}"
+VERSION="0.24.1.dev.9${EPOCH}"  # Prefix '9' for lexicographic sorting
 git tag "build-dev-${VERSION}"
 git push origin "build-dev-${VERSION}"
 ```
 
-**Example:** `build-dev-0.24.1.dev.1734132417` (Unix epoch timestamp)
+**Example:** `build-dev-0.24.1.dev.91734132417` (prefixed Unix epoch)
 
-**Why epoch?** Monotonically increasing, no string comparison issues, timezone-agnostic, sortable.
+**Why prefix '9'?** Ensures `"9..."` > `"202X..."` in string comparison (pacman/dpkg)
 
 **Release tag:** Same as trigger (no dual tag)
 
@@ -81,16 +81,16 @@ git push origin "build-main-${VERSION}"
 ### Dev Release Format
 
 ```
-0.24.1.dev.1734132417
+0.24.1.dev.91734132417
 │ │  │     │
-│ │  │     └─ Unix epoch timestamp (seconds since 1970-01-01 00:00:00 UTC)
+│ │  │     └─ Prefixed Unix epoch (9 + seconds since 1970-01-01)
 │ │  └─────── Fork patch
 │ └────────── Fork minor
 └───────────── Fork major
 ```
 
-**Epoch timestamp** is monotonically increasing, timezone-agnostic, and sorts correctly.
-**Human-readable:** `date -d @1734132417` → `Sat Dec 13 23:40:17 UTC 2025`
+**Prefixed epoch** ('9' + timestamp) ensures lexicographic sorting works correctly.
+**Human-readable:** Strip '9' prefix: `date -d @1734132417` → `Sat Dec 13 23:40:17 UTC 2025`
 
 ---
 
@@ -124,13 +124,13 @@ git tag --sort=-version:refname | grep "^0\." | head -1
 
 ### Trigger next dev build
 ```bash
-./bin/tag-dev-build  # Recommended - uses current epoch
+./bin/tag-dev-build  # Recommended - uses prefixed epoch
 ```
 
 **Or manually:**
 ```bash
 EPOCH=$(date -u +%s)
-VERSION="0.24.1.dev.${EPOCH}"
+VERSION="0.24.1.dev.9${EPOCH}"
 git tag "build-dev-${VERSION}" && git push origin "build-dev-${VERSION}"
 ```
 
@@ -148,14 +148,14 @@ git tag "build-main-${VERSION}" && git push origin "build-main-${VERSION}"
 ## Where Tags Appear
 
 ### GitHub Releases Page
-- **Dev:** `build-dev-0.24.1.dev.1734132417` (prerelease)
+- **Dev:** `build-dev-0.24.1.dev.91734132417` (prerelease)
 - **Main:** `0.24.1-slskdn.35` (release) ← traditional format
 
 ### Git Tag List
 ```bash
 git tag | tail -5
-build-dev-0.24.1.dev.1734131200
-build-dev-0.24.1.dev.1734132417
+build-dev-0.24.1.dev.91734131200
+build-dev-0.24.1.dev.91734132417
 build-main-0.24.1-slskdn.35
 0.24.1-slskdn.35
 ```
