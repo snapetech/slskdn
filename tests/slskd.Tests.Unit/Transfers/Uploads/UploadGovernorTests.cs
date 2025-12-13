@@ -5,8 +5,10 @@
     using System.Threading.Tasks;
     using AutoFixture.Xunit2;
     using Moq;
+    using slskd;
     using slskd.Transfers;
     using slskd.Users;
+    using AppOptions = slskd.Options;
     using Soulseek;
     using Xunit;
 
@@ -28,7 +30,7 @@
         [Theory, AutoData]
         public void Instantiates_With_User_Defined_Buckets(string group1, string group2)
         {
-            var options = new Options()
+            var options = new AppOptions()
             {
                 Groups = new Options.GroupsOptions()
                 {
@@ -199,7 +201,7 @@
             [Theory, AutoData]
             public void Reconfigures_Buckets_When_Options_Change(string group)
             {
-                var options = new Options()
+                var options = new AppOptions()
                 {
                     Groups = new Options.GroupsOptions()
                     {
@@ -230,12 +232,113 @@
             }
         }
 
-        private static (UploadGovernor governor, Mocks mocks) GetFixture(Options options = null)
+        public class ScheduledRateLimits
+        {
+            [Fact]
+            public void Uses_Scheduled_Limits_When_Enabled()
+            {
+                // Arrange
+                var options = new AppOptions()
+                {
+                Global = new slskd.Options.GlobalOptions()
+                {
+                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                        {
+                            SpeedLimit = 1000, // High day limit
+                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                            {
+                                Enabled = true,
+                                NightStartHour = 22,
+                                NightEndHour = 6,
+                                NightUploadSpeedLimit = 100 // Low night limit
+                            }
+                        }
+                    }
+                };
+
+                var scheduledServiceMock = new Mock<IScheduledRateLimitService>();
+                scheduledServiceMock.Setup(s => s.GetEffectiveUploadSpeedLimit()).Returns(100); // Night limit
+
+                var (governor, _) = GetFixture(options, scheduledServiceMock.Object);
+
+                // Act - trigger reconfiguration
+                var buckets = governor.GetProperty<Dictionary<string, ITokenBucket>>("TokenBuckets");
+
+                // Assert - should use the scheduled night limit
+                var privilegedBucket = buckets[Application.PrivilegedGroup];
+                // The bucket capacity should be based on the scheduled limit (100 KiB/s)
+                var expectedCapacity = 100 * 1024 / 10; // 100 KiB/s / 10ms intervals
+                Assert.Equal(expectedCapacity, privilegedBucket.GetProperty<int>("Capacity"));
+            }
+
+            [Fact]
+            public void Uses_Regular_Limits_When_Scheduled_Disabled()
+            {
+                // Arrange
+                var options = new AppOptions()
+                {
+                Global = new slskd.Options.GlobalOptions()
+                {
+                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                        {
+                            SpeedLimit = 500, // Regular limit
+                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                            {
+                                Enabled = false, // Disabled
+                                NightUploadSpeedLimit = 100
+                            }
+                        }
+                    }
+                };
+
+                var scheduledServiceMock = new Mock<IScheduledRateLimitService>();
+                scheduledServiceMock.Setup(s => s.GetEffectiveUploadSpeedLimit()).Returns(500); // Should use regular limit
+
+                var (governor, _) = GetFixture(options, scheduledServiceMock.Object);
+
+                // Act - trigger reconfiguration
+                var buckets = governor.GetProperty<Dictionary<string, ITokenBucket>>("TokenBuckets");
+
+                // Assert - should use the regular limit, not scheduled
+                var privilegedBucket = buckets[Application.PrivilegedGroup];
+                var expectedCapacity = 500 * 1024 / 10; // 500 KiB/s / 10ms intervals
+                Assert.Equal(expectedCapacity, privilegedBucket.GetProperty<int>("Capacity"));
+            }
+
+            [Fact]
+            public void Handles_Null_Scheduled_Service()
+            {
+                // Arrange - null scheduled service (backward compatibility)
+                var options = new AppOptions()
+                {
+                Global = new slskd.Options.GlobalOptions()
+                {
+                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                        {
+                            SpeedLimit = 300
+                        }
+                    }
+                };
+
+                var (governor, _) = GetFixture(options, null);
+
+                // Act - trigger reconfiguration
+                var buckets = governor.GetProperty<Dictionary<string, ITokenBucket>>("TokenBuckets");
+
+                // Assert - should use regular limit
+                var privilegedBucket = buckets[Application.PrivilegedGroup];
+                var expectedCapacity = 300 * 1024 / 10; // 300 KiB/s / 10ms intervals
+                Assert.Equal(expectedCapacity, privilegedBucket.GetProperty<int>("Capacity"));
+            }
+        }
+
+        private static (UploadGovernor governor, Mocks mocks) GetFixture(Options options = null, IScheduledRateLimitService scheduledRateLimitService = null)
         {
             var mocks = new Mocks(options);
             var governor = new UploadGovernor(
                 mocks.UserService.Object,
-                mocks.OptionsMonitor);
+                mocks.OptionsMonitor,
+                scheduledRateLimitService);
 
             return (governor, mocks);
         }

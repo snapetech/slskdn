@@ -24,6 +24,40 @@ const Transfers = ({ direction, server }) => {
     try {
       const response = await transfersLibrary.getAll({ direction });
       setTransfers(response);
+
+      // Automatically fetch queue positions for queued downloads
+      if (direction === 'download') {
+        const queuedDownloads = response
+          .flatMap(user => user.directories.flatMap(dir => dir.files))
+          .filter(file => file.state && file.state.includes('Queued'));
+
+        // Update queue positions in parallel
+        const queuePositionPromises = queuedDownloads.map(async (file) => {
+          try {
+            const queueResponse = await transfersLibrary.getPlaceInQueue({
+              id: file.id,
+              username: file.username
+            });
+
+            // Find and update the transfer in the response data
+            response.forEach(user => {
+              user.directories.forEach(dir => {
+                const transfer = dir.files.find(f => f.id === file.id && f.username === file.username);
+                if (transfer) {
+                  transfer.placeInQueue = queueResponse.data;
+                }
+              });
+            });
+          } catch (error) {
+            // Silently fail individual queue position fetches to avoid spam
+            console.debug('Failed to fetch queue position for', file.filename, error);
+          }
+        });
+
+        await Promise.allSettled(queuePositionPromises);
+        // Update state with the fresh queue positions
+        setTransfers([...response]);
+      }
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data ?? error?.message ?? error);
