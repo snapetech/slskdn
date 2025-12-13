@@ -18,9 +18,9 @@ public class MessagePadder : IMessagePadder
     private static readonly int[] DefaultBuckets = new[] { 512, 1024, 2048, 4096, 8192, 16384 };
 
     private readonly ILogger<MessagePadder> logger;
-    private readonly IOptionsMonitor<Options> optionsMonitor;
+    private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
 
-    public MessagePadder(ILogger<MessagePadder> logger, IOptionsMonitor<Options> optionsMonitor)
+    public MessagePadder(ILogger<MessagePadder> logger, IOptionsMonitor<slskd.Options> optionsMonitor)
     {
         this.logger = logger;
         this.optionsMonitor = optionsMonitor;
