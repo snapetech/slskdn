@@ -576,13 +576,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Convert Version for Docker Build
+        id: docker_version
+        run: |
+          # Docker build needs hyphenated version for .NET
+          DOTNET_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/\.dev\./-dev-/')
+          echo "dotnet_version=$DOTNET_VERSION" >> $GITHUB_OUTPUT
+          echo "Building Docker with version: $DOTNET_VERSION"
+
       - name: Build and push Dev Image
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
-            VERSION=${{ needs.parse.outputs.version }}
+            VERSION=${{ steps.docker_version.outputs.dotnet_version }}
           tags: |
             ghcr.io/snapetech/slskdn:dev-${{ needs.parse.outputs.version }}
             ghcr.io/snapetech/slskdn:dev-latest
@@ -617,7 +625,11 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
-          $Version = "${{ needs.parse.outputs.version }}"
+          # Chocolatey/NuGet requires hyphenated version
+          $DottedVersion = "${{ needs.parse.outputs.version }}"
+          $Version = $DottedVersion -replace '\.dev\.', '-dev-'
+          Write-Host "Using version: $Version (converted from $DottedVersion)"
+          
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-dev-win-x64.zip -Algorithm SHA256).Hash
           (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
