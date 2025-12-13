@@ -57,7 +57,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          cache: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
