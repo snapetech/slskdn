@@ -12,10 +12,10 @@ All package publishing channels have been added to `build-on-tag.yml` for **BOTH
 - ✅ **PPA** - `ppa:keefshape/slskdn` (slskdn-dev package)
 - ✅ **Docker** - `ghcr.io/snapetech/slskdn:dev-latest`
 - ✅ **Chocolatey** - Pre-release channel
-- ❌ **Nix** - TODO: Add nix-dev job
-- ❌ **Winget** - TODO: Add winget-dev job  
-- ❌ **Snap** - TODO: Add snap-dev job
-- ❌ **Homebrew** - TODO: Add homebrew-dev job
+- ✅ **Nix** - Updates `flake.nix` devSources
+- ✅ **Winget** - Updates manifests (manual PR to winget-pkgs required)
+- ✅ **Snap** - Edge channel
+- ✅ **Homebrew** - `snapetech/slskdn/slskdn-dev`
 
 ### Main Channel (`build-main-*` tags)
 - ✅ **AUR** - `slskdn` (source) + `slskdn-bin` (binary)
