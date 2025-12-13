@@ -33,6 +33,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private readonly OverlayRateLimiter _rateLimiter;
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
+    private readonly Security.ReplayCache _replayCache;
     private readonly IMeshSyncService _meshSyncService;
     private readonly DhtRendezvousOptions _dhtOptions;
     private readonly Mesh.Identity.LocalMeshIdentityService _localMeshIdentity;
@@ -59,6 +60,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         OverlayRateLimiter rateLimiter,
         OverlayBlocklist blocklist,
         MeshNeighborRegistry registry,
+        Security.ReplayCache replayCache,
         IMeshSyncService meshSyncService,
         DhtRendezvousOptions dhtOptions,
         Mesh.Identity.LocalMeshIdentityService localMeshIdentity,
@@ -71,6 +73,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _rateLimiter = rateLimiter;
         _blocklist = blocklist;
         _registry = registry;
+        _replayCache = replayCache;
         _meshSyncService = meshSyncService;
         _dhtOptions = dhtOptions;
         _localMeshIdentity = localMeshIdentity;
@@ -229,6 +232,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     LocalUsername,
                     publicKey: _localMeshIdentity.PublicKey,
                     signature: signature,
+                    replayCache: _replayCache,
                     cancellationToken: cancellationToken);
                 
                 // Check if username is blocked (if provided)

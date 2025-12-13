@@ -964,6 +964,7 @@ namespace slskd
             services.AddSingleton<OverlayRateLimiter>();
             services.AddSingleton<OverlayBlocklist>();
             services.AddSingleton<MeshNeighborRegistry>();
+            services.AddSingleton<DhtRendezvous.Security.ReplayCache>();
             services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();
             services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
 

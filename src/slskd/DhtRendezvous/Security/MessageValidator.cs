@@ -44,6 +44,11 @@ public static partial class MessageValidator
     public const int MaxReasonLength = 256;
     
     /// <summary>
+    /// Maximum allowed timestamp skew (both past and future).
+    /// </summary>
+    public static readonly TimeSpan MaxTimestampSkew = TimeSpan.FromMinutes(5);
+    
+    /// <summary>
     /// Valid protocol versions (for forward compatibility).
     /// </summary>
     public const int MinVersion = 1;
@@ -140,6 +145,13 @@ public static partial class MessageValidator
         if (string.IsNullOrEmpty(message.MeshPeerId))
         {
             return ValidationResult.Fail("MeshPeerId is required");
+        }
+        
+        // Timestamp validation (CRITICAL for replay protection)
+        var timestampResult = ValidateTimestamp(message.Timestamp);
+        if (!timestampResult.IsValid)
+        {
+            return timestampResult;
         }
         
         // Username validation - CRITICAL for security
@@ -334,7 +346,28 @@ public static partial class MessageValidator
     }
     
     /// <summary>
-    /// Validates a Soulseek username.
+    /// Validates a timestamp is within acceptable skew.
+    /// SECURITY: Prevents replay attacks with stale/future-dated messages.
+    /// </summary>
+    /// <param name="timestampUnixSeconds">Unix timestamp (seconds) to validate.</param>
+    /// <returns>Validation result.</returns>
+    public static ValidationResult ValidateTimestamp(long timestampUnixSeconds)
+    {
+        var messageTime = DateTimeOffset.FromUnixTimeSeconds(timestampUnixSeconds);
+        var now = DateTimeOffset.UtcNow;
+        var skew = now - messageTime;
+        
+        if (Math.Abs(skew.TotalSeconds) > MaxTimestampSkew.TotalSeconds)
+        {
+            return ValidationResult.Fail(
+                $"Timestamp too old or in future: {skew.TotalMinutes:F1} minutes (max: {MaxTimestampSkew.TotalMinutes} minutes)");
+        }
+        
+        return ValidationResult.Success;
+    }
+    
+    /// <summary>
+    /// Validates a username.
     /// </summary>
     public static ValidationResult ValidateUsername(string? username)
     {

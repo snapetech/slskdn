@@ -285,6 +285,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         SoulseekPorts? ports = null,
         byte[]? publicKey = null,
         byte[]? signature = null,
+        Security.ReplayCache? replayCache = null,
         CancellationToken cancellationToken = default)
     {
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -299,6 +300,18 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         if (!validation.IsValid)
         {
             throw new ProtocolViolationException($"Invalid HELLO: {validation.Error}");
+        }
+        
+        // SECURITY: Check for replay attacks (nonce reuse)
+        if (replayCache != null && hello.Nonce != null)
+        {
+            // Use RemoteAddress as peer identifier (before we know MeshPeerId)
+            var peerIdentifier = hello.MeshPeerId ?? RemoteAddress.ToString();
+            
+            if (replayCache.IsReplay(peerIdentifier, hello.Nonce))
+            {
+                throw new SecurityException($"Replay attack detected: nonce '{hello.Nonce}' already seen from {peerIdentifier}");
+            }
         }
         
         // SECURITY: Verify handshake signature if provided
