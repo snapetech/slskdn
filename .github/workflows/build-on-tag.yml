@@ -1507,3 +1507,263 @@ jobs:
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
+  nix-main:
+    name: Update Nix Flake (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-*.zip"
+          
+          ls -lh slskdn-main-*.zip
+
+      - name: Calculate Hashes
+        id: hashes
+        run: |
+          LINUX_X64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-linux-x64.zip)
+          
+          if [ -f slskdn-main-linux-arm64.zip ]; then
+            LINUX_ARM64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-linux-arm64.zip)
+          else
+            LINUX_ARM64_SHA="0000000000000000000000000000000000000000000000000000"
+          fi
+          
+          if [ -f slskdn-main-osx-x64.zip ]; then
+            MACOS_X64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-osx-x64.zip)
+          else
+            MACOS_X64_SHA="0000000000000000000000000000000000000000000000000000"
+          fi
+          
+          if [ -f slskdn-main-osx-arm64.zip ]; then
+            MACOS_ARM64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-osx-arm64.zip)
+          else
+            MACOS_ARM64_SHA="0000000000000000000000000000000000000000000000000000"
+          fi
+          
+          echo "linux_x64_sha=$LINUX_X64_SHA" >> $GITHUB_OUTPUT
+          echo "linux_arm64_sha=$LINUX_ARM64_SHA" >> $GITHUB_OUTPUT
+          echo "macos_x64_sha=$MACOS_X64_SHA" >> $GITHUB_OUTPUT
+          echo "macos_arm64_sha=$MACOS_ARM64_SHA" >> $GITHUB_OUTPUT
+
+      - name: Update flake.nix
+        run: |
+          git fetch origin master
+          git reset --hard origin/master
+          
+          sed -i "s/version = \".*\";/version = \"${{ needs.parse.outputs.version }}\";/" flake.nix
+          sed -i '/sources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
+          sed -i '/sources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
+          sed -i '/sources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
+          sed -i '/sources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
+          
+          echo "📝 Updated flake.nix"
+
+      - name: Verify Flake
+        run: |
+          nix flake check --no-build || echo "⚠️ Flake check failed (non-fatal)"
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet flake.nix; then
+            echo "No changes to flake.nix"
+          else
+            git add flake.nix
+            git commit -m "chore(nix): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
+            git push origin HEAD:master
+            echo "✅ flake.nix updated"
+          fi
+
+  winget-main:
+    name: Update Winget Manifests (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-main-win-x64.zip"
+        shell: pwsh
+
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 "slskdn-main-win-x64.zip").Hash
+          "win_x64_sha=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        shell: pwsh
+
+      - name: Update Winget Manifests
+        run: |
+          git fetch origin master
+          git reset --hard origin/master
+          
+          $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
+          $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
+          $VERSION = "${{ needs.parse.outputs.version }}"
+          
+          # Update or create main manifests
+          if (-not (Test-Path "packaging/winget/snapetech.slskdn.installer.yaml")) {
+            Copy-Item "packaging/winget/snapetech.slskdn-dev.installer.yaml" "packaging/winget/snapetech.slskdn.installer.yaml"
+            Copy-Item "packaging/winget/snapetech.slskdn-dev.yaml" "packaging/winget/snapetech.slskdn.yaml"
+            Copy-Item "packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml" "packaging/winget/snapetech.slskdn.locale.en-US.yaml"
+          }
+          
+          (Get-Content "packaging/winget/snapetech.slskdn.installer.yaml") -replace 'PackageVersion:.*', "PackageVersion: $VERSION" -replace 'InstallerUrl:.*', "InstallerUrl: $WIN_URL" -replace 'InstallerSha256:.*', "InstallerSha256: $WIN_SHA" | Set-Content "packaging/winget/snapetech.slskdn.installer.yaml"
+          (Get-Content "packaging/winget/snapetech.slskdn.yaml") -replace 'PackageVersion:.*', "PackageVersion: $VERSION" | Set-Content "packaging/winget/snapetech.slskdn.yaml"
+          
+          Write-Host "📝 Updated Winget manifests"
+        shell: pwsh
+
+      - name: Commit Winget Manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if (-not (git diff --quiet packaging/winget/)) {
+            git add packaging/winget/
+            git commit -m "chore(winget): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
+            git push origin HEAD:master
+            Write-Host "✅ Winget manifests updated"
+          }
+        shell: pwsh
+
+  snap-main:
+    name: Publish to Snap (Main/Stable)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-linux-x64.zip"
+
+      - name: Build and Push
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        run: |
+          unzip slskdn-main-linux-x64.zip -d slskdn_dist
+          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
+          sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
+          sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
+          
+          sudo snap install snapcraft --classic
+          
+          cd packaging/snap
+          snapcraft --destructive-mode
+          
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+          snapcraft upload --release=stable *.snap
+          
+          echo "✅ Published to Snap (stable channel)"
+
+      - name: Skip if no credentials
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
+        run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured"
+
+  homebrew-main:
+    name: Update Homebrew Tap (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.parse.outputs.version }}" \
+            --repo ${{ github.repository }} \
+            --pattern "slskdn-main-*.zip"
+
+      - name: Update Tap
+        env:
+          GH_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        if: ${{ env.GH_TOKEN != '' }}
+        run: |
+          SHA_MAC_X64=$(sha256sum slskdn-main-osx-x64.zip | cut -d' ' -f1)
+          SHA_MAC_ARM=$(sha256sum slskdn-main-osx-arm64.zip | cut -d' ' -f1)
+          SHA_LINUX=$(sha256sum slskdn-main-linux-x64.zip | cut -d' ' -f1)
+          VERSION="${{ needs.parse.outputs.version }}"
+          TAG="${{ needs.parse.outputs.version }}"
+          
+          git clone https://x-access-token:${GH_TOKEN}@github.com/snapetech/homebrew-slskdn.git tap
+          cd tap
+          cat > Formula/slskdn.rb <<EOF
+          class Slskdn < Formula
+            desc "Batteries-included Soulseek web client"
+            homepage "https://github.com/snapetech/slskdn"
+            license "AGPL-3.0-or-later"
+            version "${VERSION}"
+            url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-linux-x64.zip"
+            sha256 "${SHA_LINUX}"
+            on_macos do
+              on_arm do
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-osx-arm64.zip"
+                sha256 "${SHA_MAC_ARM}"
+              end
+              on_intel do
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-osx-x64.zip"
+                sha256 "${SHA_MAC_X64}"
+              end
+            end
+            on_linux do
+              url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-linux-x64.zip"
+              sha256 "${SHA_LINUX}"
+            end
+            conflicts_with "slskdn-dev", because: "both install slskdn binary"
+            def install
+              libexec.install Dir["*"]
+              (bin/"slskdn").write_exec_script libexec/"slskd"
+            end
+          end
+          EOF
+          git config user.name "slskdn CI" && git config user.email "slskdn@proton.me"
+          git add Formula/slskdn.rb
+          git commit -m "Update slskdn to $VERSION" || echo "No changes"
+          git push
+          echo "✅ Updated Homebrew tap"
+
+      - name: Skip if no credentials
+        if: ${{ env.GH_TOKEN == '' }}
+        run: echo "⚠️ TAP_GITHUB_TOKEN not configured"
+
