@@ -2224,11 +2224,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete DHT-based pod discovery system with name slugs, tags, content associations, and general browsing.
 
-- [ ] **T-1344**: Implement pod join/leave with signatures
-  - Status: Not started
+- [x] **T-1344**: Implement pod join/leave with signatures
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Sign join requests. Owner/mod signs acceptance. Publish membership record.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete signed pod join/leave system with role-based approvals and DHT membership publishing.
 
 - [ ] **T-1345**: Implement decentralized message routing
   - Status: Not started

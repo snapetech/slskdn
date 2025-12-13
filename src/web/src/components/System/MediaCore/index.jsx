@@ -214,6 +214,21 @@ const MediaCore = () => {
   const [loadingPendingRequests, setLoadingPendingRequests] = useState(false);
   const [pendingJoinRequests, setPendingJoinRequests] = useState(null);
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState(null);
+
+  // Pod Message Routing states
+  const [routeMessageData, setRouteMessageData] = useState('');
+  const [routingMessage, setRoutingMessage] = useState(false);
+  const [routingResult, setRoutingResult] = useState(null);
+  const [routeToPeersMessage, setRouteToPeersMessage] = useState('');
+  const [routeToPeersIds, setRouteToPeersIds] = useState('');
+  const [routingToPeers, setRoutingToPeers] = useState(false);
+  const [routingToPeersResult, setRoutingToPeersResult] = useState(null);
+  const [routingStats, setRoutingStats] = useState(null);
+  const [loadingRoutingStats, setLoadingRoutingStats] = useState(false);
+  const [checkMessageId, setCheckMessageId] = useState('');
+  const [checkPodId, setCheckPodId] = useState('');
+  const [checkingMessageSeen, setCheckingMessageSeen] = useState(false);
+  const [messageSeenResult, setMessageSeenResult] = useState(null);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1403,6 +1418,105 @@ const MediaCore = () => {
       setPendingLeaveRequests({ error: err.message });
     } finally {
       setLoadingPendingRequests(false);
+    }
+  };
+
+  // Pod Message Routing handlers
+  const handleRouteMessage = async () => {
+    if (!routeMessageData.trim()) {
+      alert('Please enter message JSON data');
+      return;
+    }
+
+    try {
+      setRoutingMessage(true);
+      setRoutingResult(null);
+      const message = JSON.parse(routeMessageData);
+      const result = await mediacore.routePodMessage(message);
+      setRoutingResult(result);
+      setRouteMessageData('');
+    } catch (err) {
+      setRoutingResult({ error: err.message });
+    } finally {
+      setRoutingMessage(false);
+    }
+  };
+
+  const handleRouteMessageToPeers = async () => {
+    if (!routeToPeersMessage.trim() || !routeToPeersIds.trim()) {
+      alert('Please enter message JSON and target peer IDs');
+      return;
+    }
+
+    try {
+      setRoutingToPeers(true);
+      setRoutingToPeersResult(null);
+      const message = JSON.parse(routeToPeersMessage);
+      const targetPeerIds = routeToPeersIds.split(',').map(id => id.trim()).filter(id => id);
+      const result = await mediacore.routePodMessageToPeers(message, targetPeerIds);
+      setRoutingToPeersResult(result);
+      setRouteToPeersMessage('');
+      setRouteToPeersIds('');
+    } catch (err) {
+      setRoutingToPeersResult({ error: err.message });
+    } finally {
+      setRoutingToPeers(false);
+    }
+  };
+
+  const handleLoadRoutingStats = async () => {
+    try {
+      setLoadingRoutingStats(true);
+      setRoutingStats(null);
+      const result = await mediacore.getPodMessageRoutingStats();
+      setRoutingStats(result);
+    } catch (err) {
+      setRoutingStats({ error: err.message });
+    } finally {
+      setLoadingRoutingStats(false);
+    }
+  };
+
+  const handleCheckMessageSeen = async () => {
+    if (!checkMessageId.trim() || !checkPodId.trim()) {
+      alert('Please enter both message ID and pod ID');
+      return;
+    }
+
+    try {
+      setCheckingMessageSeen(true);
+      setMessageSeenResult(null);
+      const result = await mediacore.checkMessageSeen(checkMessageId, checkPodId);
+      setMessageSeenResult(result);
+    } catch (err) {
+      setMessageSeenResult({ error: err.message });
+    } finally {
+      setCheckingMessageSeen(false);
+    }
+  };
+
+  const handleRegisterMessageSeen = async () => {
+    if (!checkMessageId.trim() || !checkPodId.trim()) {
+      alert('Please enter both message ID and pod ID');
+      return;
+    }
+
+    try {
+      const result = await mediacore.registerMessageSeen(checkMessageId, checkPodId);
+      alert(`Message registered as seen: ${result.wasNewlyRegistered ? 'New' : 'Already known'}`);
+    } catch (err) {
+      alert(`Failed to register message: ${err.message}`);
+    }
+  };
+
+  const handleCleanupSeenMessages = async () => {
+    try {
+      const result = await mediacore.cleanupSeenMessages();
+      alert(`Cleanup completed: ${result.messagesCleaned} messages cleaned, ${result.messagesRetained} retained`);
+      // Reload stats to reflect changes
+      await handleLoadRoutingStats();
+    } catch (err) {
+      alert(`Failed to cleanup: ${err.message}`);
     }
   };
 
@@ -4826,6 +4940,206 @@ const MediaCore = () => {
                   )}
                 </Grid.Column>
               </Grid>
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Message Routing */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="send" />
+                Pod Message Routing
+              </Card.Header>
+              <Card.Description>
+                Decentralized message routing via overlay network with fanout and deduplication for reliable pod communication
+              </Card.Description>
+            </Card.Content>
+
+            {/* Manual Message Routing */}
+            <Card.Content>
+              <Header size="small">Manual Message Routing</Header>
+              <Form>
+                <Form.TextArea
+                  label="Pod Message JSON"
+                  placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
+                  value={routeMessageData}
+                  onChange={(e) => setRouteMessageData(e.target.value)}
+                  rows={4}
+                />
+                <Button
+                  primary
+                  loading={routingMessage}
+                  disabled={routingMessage || !routeMessageData.trim()}
+                  onClick={handleRouteMessage}
+                >
+                  Route Message
+                </Button>
+              </Form>
+
+              {routingResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {routingResult.error ? (
+                    <Message error>
+                      <p>Failed to route message: {routingResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Message Routed Successfully</Message.Header>
+                      <p>
+                        <strong>Message ID:</strong> {routingResult.messageId}<br />
+                        <strong>Pod ID:</strong> {routingResult.podId}<br />
+                        <strong>Target Peers:</strong> {routingResult.targetPeerCount}<br />
+                        <strong>Successfully Routed:</strong> {routingResult.successfullyRoutedCount}<br />
+                        <strong>Failed:</strong> {routingResult.failedRoutingCount}<br />
+                        <strong>Duration:</strong> {routingResult.routingDuration?.totalMilliseconds?.toFixed(0)}ms
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+
+            <Card.Content>
+              <Grid>
+                <Grid.Column width={8}>
+                  {/* Route to Specific Peers */}
+                  <Header size="small">Route to Specific Peers</Header>
+                  <Form>
+                    <Form.TextArea
+                      label="Pod Message JSON"
+                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Direct message", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
+                      value={routeToPeersMessage}
+                      onChange={(e) => setRouteToPeersMessage(e.target.value)}
+                      rows={3}
+                    />
+                    <Form.Input
+                      label="Target Peer IDs (comma-separated)"
+                      placeholder="bob,charlie,diana"
+                      value={routeToPeersIds}
+                      onChange={(e) => setRouteToPeersIds(e.target.value)}
+                    />
+                    <Button
+                      fluid
+                      loading={routingToPeers}
+                      disabled={routingToPeers || !routeToPeersMessage.trim() || !routeToPeersIds.trim()}
+                      onClick={handleRouteMessageToPeers}
+                    >
+                      Route to Peers
+                    </Button>
+                  </Form>
+
+                  {routingToPeersResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {routingToPeersResult.error ? (
+                        <Message error size="tiny">
+                          <p>{routingToPeersResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message info size="tiny">
+                          <p>Routed to {routingToPeersResult.successfullyRoutedCount}/{routingToPeersResult.targetPeerCount} peers</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+
+                <Grid.Column width={8}>
+                  {/* Message Deduplication */}
+                  <Header size="small">Message Deduplication</Header>
+                  <Form>
+                    <Form.Group widths="equal">
+                      <Form.Input
+                        label="Message ID"
+                        placeholder="msg123"
+                        value={checkMessageId}
+                        onChange={(e) => setCheckMessageId(e.target.value)}
+                      />
+                      <Form.Input
+                        label="Pod ID"
+                        placeholder="pod:artist:mb:daft-punk-hash"
+                        value={checkPodId}
+                        onChange={(e) => setCheckPodId(e.target.value)}
+                      />
+                    </Form.Group>
+                    <Button.Group fluid>
+                      <Button
+                        loading={checkingMessageSeen}
+                        disabled={checkingMessageSeen || !checkMessageId.trim() || !checkPodId.trim()}
+                        onClick={handleCheckMessageSeen}
+                      >
+                        Check Seen
+                      </Button>
+                      <Button
+                        color="blue"
+                        onClick={handleRegisterMessageSeen}
+                        disabled={!checkMessageId.trim() || !checkPodId.trim()}
+                      >
+                        Mark Seen
+                      </Button>
+                    </Button.Group>
+                  </Form>
+
+                  {messageSeenResult && (
+                    <div style={{ marginTop: '0.5em' }}>
+                      {messageSeenResult.error ? (
+                        <Message error size="tiny">
+                          <p>{messageSeenResult.error}</p>
+                        </Message>
+                      ) : (
+                        <Message size="tiny">
+                          <p>Message {messageSeenResult.isSeen ? 'has been' : 'has not been'} seen in pod {messageSeenResult.podId}</p>
+                        </Message>
+                      )}
+                    </div>
+                  )}
+                </Grid.Column>
+              </Grid>
+            </Card.Content>
+
+            {/* Routing Statistics */}
+            <Card.Content>
+              <Button.Group fluid>
+                <Button
+                  primary
+                  loading={loadingRoutingStats}
+                  disabled={loadingRoutingStats}
+                  onClick={handleLoadRoutingStats}
+                >
+                  Load Routing Stats
+                </Button>
+                <Button
+                  color="red"
+                  onClick={handleCleanupSeenMessages}
+                >
+                  Cleanup Seen Messages
+                </Button>
+              </Button.Group>
+
+              {routingStats && !routingStats.error && (
+                <div style={{ marginTop: '1em' }}>
+                  <Message>
+                    <Message.Header>Message Routing Statistics</Message.Header>
+                    <p>
+                      <strong>Total Messages Routed:</strong> {routingStats.totalMessagesRouted}<br />
+                      <strong>Total Routing Attempts:</strong> {routingStats.totalRoutingAttempts}<br />
+                      <strong>Successful Routes:</strong> {routingStats.successfulRoutingCount}<br />
+                      <strong>Failed Routes:</strong> {routingStats.failedRoutingCount}<br />
+                      <strong>Avg Routing Time:</strong> {routingStats.averageRoutingTimeMs.toFixed(2)}ms<br />
+                      <strong>Active Seen Messages:</strong> {routingStats.activeSeenMessages}<br />
+                      <strong>Expired Seen Messages:</strong> {routingStats.expiredSeenMessages}<br />
+                      <strong>Last Operation:</strong> {routingStats.lastRoutingOperation ? new Date(routingStats.lastRoutingOperation).toLocaleString() : 'Never'}
+                    </p>
+                  </Message>
+                </div>
+              )}
+
+              {routingStats?.error && (
+                <Message error style={{ marginTop: '1em' }}>
+                  <p>Failed to load routing stats: {routingStats.error}</p>
+                </Message>
+              )}
             </Card.Content>
           </Card>
         </Grid.Column>

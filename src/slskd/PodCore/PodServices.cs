@@ -231,6 +231,7 @@ public class PodMessaging : IPodMessaging
 {
     private readonly IPodService podService;
     private readonly IPodMembershipVerifier membershipVerifier;
+    private readonly IPodMessageRouter messageRouter;
     private readonly ISoulseekChatBridge chatBridge;
     private readonly Microsoft.Extensions.Logging.ILogger<PodMessaging> logger;
     private readonly Mesh.IMeshSyncService meshSync;
@@ -245,6 +246,7 @@ public class PodMessaging : IPodMessaging
     public PodMessaging(
         IPodService podService,
         IPodMembershipVerifier membershipVerifier,
+        IPodMessageRouter messageRouter,
         ISoulseekChatBridge chatBridge,
         Microsoft.Extensions.Logging.ILogger<PodMessaging> logger,
         Mesh.IMeshSyncService meshSync = null,
@@ -253,6 +255,7 @@ public class PodMessaging : IPodMessaging
     {
         this.podService = podService;
         this.membershipVerifier = membershipVerifier;
+        this.messageRouter = messageRouter;
         this.chatBridge = chatBridge;
         this.logger = logger;
         this.meshSync = meshSync;
@@ -359,8 +362,8 @@ public class PodMessaging : IPodMessaging
         // 7. Forward to Soulseek room if channel is bound (mirror mode)
         _ = chatBridge.ForwardPodToSoulseekAsync(message.ChannelId, message);
 
-        // 8. Route message to pod members via mesh transport (decentralized routing)
-        _ = RouteMessageToMembersAsync(message, pod.PodId, members, ct);
+        // 8. Route message to pod members via decentralized overlay network
+        _ = messageRouter.RouteMessageAsync(message, ct);
 
         return true;
     }

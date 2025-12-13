@@ -33,6 +33,33 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1344: Pod Join/Leave with Signatures (Phase 10 Gap - P1)
+- **Status**: ✅ **COMPLETED** (2025-12-13)
+- **Implementation Details**:
+  - **Signed Join/Leave Data Models**: Comprehensive request and acceptance record structures with cryptographic signatures
+  - **IPodJoinLeaveService Interface**: Contract for managing signed membership operations with role-based approvals
+  - **PodJoinLeaveService Implementation**: Full-featured service handling the complete membership lifecycle
+  - **Role-Based Approval Workflows**: Hierarchical permission system (owner > mod > member) for join/leave approvals
+  - **RESTful Membership API**: Complete API suite at `/api/v0/podcore/membership/*` for all membership operations
+  - **Cryptographic Request Processing**: Signature verification for all join/leave requests and acceptances
+  - **Pending Request Management**: In-memory storage and retrieval of pending membership operations
+  - **DHT Membership Publishing**: Automatic publication of signed membership records to the distributed hash table
+  - **Frontend Membership Dashboard**: Interactive UI for submitting and managing signed membership operations
+  - **Comprehensive Result Types**: Detailed operation results with success/failure states and error reporting
+  - **Security Integration**: Deep integration with existing PodMembershipVerifier for access control
+  - **Request Cancellation**: Ability to cancel pending join/leave requests before processing
+  - **Audit Trail**: Complete logging of all membership operations and approval decisions
+  - **Error Handling**: Robust error handling with detailed error messages and operation rollback
+  - **State Management**: Proper state transitions for membership operations (pending → approved/rejected)
+  - **Privacy Controls**: Member-only operations respect pod visibility and access controls
+
+**Membership Operation Flow**:
+- **Join Requests**: Requester signs → Owner/Mod reviews → Owner/Mod signs acceptance → Member added + DHT published
+- **Leave Requests**: Member signs → Owner/Mod reviews (if owner/mod) → Owner/Mod signs acceptance → Member removed + DHT updated
+- **Immediate Processing**: Regular members can leave immediately, owners/mods require approval
+- **Signature Verification**: All operations require valid Ed25519 signatures from appropriate parties
+- **Role Enforcement**: Strict role hierarchy prevents unauthorized membership modifications
+
 ### T-1343: Pod Discovery (DHT Keys) (Phase 10 Gap - P1)
 - **Status**: ✅ **COMPLETED** (2025-12-13)
 - **Implementation Details**:

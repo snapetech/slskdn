@@ -1386,6 +1386,111 @@ export const cancelLeaveRequest = async (podId, peerId) => {
   return response.json();
 };
 
+// Pod Message Routing API functions
+const routingBaseUrl = baseUrl.replace('contentid', 'podcore/routing');
+
+/**
+ * Manually route a pod message through the overlay network.
+ */
+export const routePodMessage = async (message) => {
+  const response = await fetch(`${routingBaseUrl}/route`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(message),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to route message: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Route a pod message to specific peers.
+ */
+export const routePodMessageToPeers = async (message, targetPeerIds) => {
+  const response = await fetch(`${routingBaseUrl}/route-to-peers`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message, targetPeerIds }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to route message to peers: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get pod message routing statistics.
+ */
+export const getPodMessageRoutingStats = async () => {
+  const response = await fetch(`${routingBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get routing stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Check if a message has been seen for deduplication.
+ */
+export const checkMessageSeen = async (messageId, podId) => {
+  const response = await fetch(`${routingBaseUrl}/seen/${encodeURIComponent(messageId)}/${encodeURIComponent(podId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to check message seen status: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Register a message as seen for deduplication.
+ */
+export const registerMessageSeen = async (messageId, podId) => {
+  const response = await fetch(`${routingBaseUrl}/seen/${encodeURIComponent(messageId)}/${encodeURIComponent(podId)}`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to register message as seen: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Clean up old seen message entries.
+ */
+export const cleanupSeenMessages = async () => {
+  const response = await fetch(`${routingBaseUrl}/cleanup`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cleanup seen messages: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 // Pod Membership Verification API functions
 const verificationBaseUrl = baseUrl.replace('contentid', 'podcore/verification');
 

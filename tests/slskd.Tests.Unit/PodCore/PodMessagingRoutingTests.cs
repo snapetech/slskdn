@@ -20,6 +20,7 @@ public class PodMessagingRoutingTests
 {
     private readonly Mock<IPodService> mockPodService;
     private readonly Mock<IPodMembershipVerifier> mockMembershipVerifier;
+    private readonly Mock<IPodMessageRouter> mockMessageRouter;
     private readonly Mock<ISoulseekChatBridge> mockChatBridge;
     private readonly Mock<ILogger<PodMessaging>> mockLogger;
     private readonly Mock<IMeshSyncService> mockMeshSync;
@@ -36,10 +37,12 @@ public class PodMessagingRoutingTests
         mockSoulseekClient = new Mock<ISoulseekClient>();
         mockOverlayClient = new Mock<IOverlayClient>();
         mockMembershipVerifier = new Mock<IPodMembershipVerifier>();
+        mockMessageRouter = new Mock<IPodMessageRouter>();
 
         podMessaging = new PodMessaging(
             mockPodService.Object,
             mockMembershipVerifier.Object,
+            mockMessageRouter.Object,
             mockChatBridge.Object,
             mockLogger.Object,
             mockMeshSync.Object,

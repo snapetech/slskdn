@@ -814,6 +814,7 @@ namespace slskd
             services.AddSingleton<PodCore.IPodMembershipVerifier, PodCore.PodMembershipVerifier>();
             services.AddSingleton<PodCore.IPodDiscoveryService, PodCore.PodDiscoveryService>();
             services.AddSingleton<PodCore.IPodJoinLeaveService, PodCore.PodJoinLeaveService>();
+            services.AddSingleton<PodCore.IPodMessageRouter, PodCore.PodMessageRouter>();
 
             // MultiSource MediaCore integration
             services.AddSingleton<IMediaCoreSwarmIntelligence, MediaCoreSwarmIntelligence>();
