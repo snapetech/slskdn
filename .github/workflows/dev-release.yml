@@ -1,10 +1,11 @@
 name: Dev Release (AUR + COPR)
 
+# DISABLED: Only manual workflow_dispatch until new tag-based system ready
 # Build and push -dev packages only when explicitly tagged
 on:
-  push:
-    tags:
-      - 'dev-*'
+  # push:
+  #   tags:
+  #     - 'dev-*'
   workflow_dispatch:
     inputs:
       force_build:

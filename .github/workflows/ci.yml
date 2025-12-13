@@ -1,12 +1,13 @@
 name: CI
 on:
-  push:
-    branches: [ master ]
-    tags: 
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-slskdn.[0-9]+"
-  pull_request:
-    branches: [ master ]
+  # DISABLED: Only manual workflow_dispatch until new tag-based system ready
+  # push:
+  #   branches: [ master ]
+  #   tags: 
+  #     - "[0-9]+.[0-9]+.[0-9]+"
+  #     - "[0-9]+.[0-9]+.[0-9]+-slskdn.[0-9]+"
+  # pull_request:
+  #   branches: [ master ]
   workflow_dispatch:
 
 env:
