@@ -8,7 +8,7 @@ public record ContentHash(string Algorithm, string Hex);
 /// <summary>
 /// Perceptual hash entry (optional).
 /// </summary>
-public record PerceptualHash(string Algorithm, string Hex);
+public record PerceptualHash(string Algorithm, string Hex, ulong? NumericHash = null);
 
 /// <summary>
 /// Signature envelope for descriptors.

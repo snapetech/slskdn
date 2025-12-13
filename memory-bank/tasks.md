@@ -2138,11 +2138,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented content:domain:type:id format with parser, domain-specific queries, validation, and WebGUI examples.
 
-- [ ] **T-1322**: Implement IPLD content linking
-  - Status: Not started
+- [x] **T-1322**: Implement IPLD content linking
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Link content descriptors using IPLD. Enable content graph traversal.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented IPLD links, graph traversal, and content relationship management.
 
 - [ ] **T-1323**: Implement perceptual hash computation
   - Status: Not started

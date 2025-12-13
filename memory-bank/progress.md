@@ -33,6 +33,32 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1322: IPLD Content Linking (Phase 9 Gap - P2)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **IPLD Link Structures**: Created IpldLink record and IpldLinkCollection for content relationships
+  - **ContentDescriptor Extensions**: Added IPLD links support with helper methods for link management
+  - **Graph Traversal Engine**: Implemented IIpldMapper with depth-limited graph traversal and path tracking
+  - **Relationship Detection**: Added automatic relationship detection for audio/video content hierarchies
+  - **RESTful API**: Comprehensive IPLD endpoints for traversal, graphs, inbound links, and validation
+  - **WebGUI Integration**: Interactive graph visualization with traversal controls and link discovery
+  - **Standard Link Names**: Defined common IPLD link types (parent, children, album, artist, artwork)
+  - **Content Graph Structures**: Created graph nodes, paths, and traversal result models
+  - **Inbound Link Discovery**: Reverse link lookup to find content referencing specific ContentIDs
+- **Technical Notes**:
+  - **IPLD Compatibility**: Designed for future IPFS/dag-cbor integration with JSON serialization
+  - **Depth-Limited Traversal**: Configurable max depth (1-10) to prevent infinite loops and performance issues
+  - **Bidirectional Linking**: Support for both outgoing and incoming link discovery
+  - **Relationship Intelligence**: Automatic link generation based on content type patterns
+  - **Graph Visualization**: Frontend components for exploring content relationship graphs
+  - **Validation Framework**: Link consistency checking and broken link detection
+  - **Extensible Design**: Easy addition of new link types and relationship patterns
+- **Content Relationships Supported**:
+  - **Audio Content**: track ↔ album ↔ artist (with automatic link generation)
+  - **Video Content**: movie → artwork, series → episodes
+  - **Generic Relationships**: parent/child, metadata, sources, references hierarchies
+  - **Custom Links**: Extensible link naming for domain-specific relationships
+
 ### T-1321: Multi-Domain Content Addressing (Phase 9 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

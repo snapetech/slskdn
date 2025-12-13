@@ -213,3 +213,78 @@ export const addIpldLinks = async (contentId, links) => {
 
   return response.json();
 };
+
+/**
+ * Compute perceptual hash for audio data.
+ */
+export const computeAudioHash = async (samples, sampleRate, algorithm = 'ChromaPrint') => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'perceptualhash')}/audio`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ samples, sampleRate, algorithm }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to compute audio hash: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Compute perceptual hash for image data.
+ */
+export const computeImageHash = async (pixels, width, height, algorithm = 'PHash') => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'perceptualhash')}/image`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ pixels, width, height, algorithm }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to compute image hash: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Compute similarity between two perceptual hashes.
+ */
+export const computeHashSimilarity = async (hashA, hashB, threshold = 0.8) => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'perceptualhash')}/similarity`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ hashA, hashB, threshold }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to compute hash similarity: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get supported perceptual hash algorithms.
+ */
+export const getSupportedHashAlgorithms = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'perceptualhash')}/algorithms`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get hash algorithms: ${response.statusText}`);
+  }
+
+  return response.json();
+};

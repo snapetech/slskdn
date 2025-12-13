@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Form, Grid, Header, Icon, Input, Label, List, Loader, Message, Segment, Statistic } from 'semantic-ui-react';
+import { Button, Card, Dropdown, Form, Grid, Header, Icon, Input, Label, List, Loader, Message, Segment, Statistic, TextArea } from 'semantic-ui-react';
 import * as mediacore from '../../../lib/mediacore';
 
 // Predefined examples for different domains
@@ -48,6 +48,23 @@ const MediaCore = () => {
   const [traversing, setTraversing] = useState(false);
   const [gettingGraph, setGettingGraph] = useState(false);
   const [findingInbound, setFindingInbound] = useState(false);
+  const [audioSamples, setAudioSamples] = useState('');
+  const [sampleRate, setSampleRate] = useState(44100);
+  const [audioAlgorithm, setAudioAlgorithm] = useState('ChromaPrint');
+  const [imagePixels, setImagePixels] = useState('');
+  const [imageWidth, setImageWidth] = useState(100);
+  const [imageHeight, setImageHeight] = useState(100);
+  const [imageAlgorithm, setImageAlgorithm] = useState('PHash');
+  const [hashA, setHashA] = useState('');
+  const [hashB, setHashB] = useState('');
+  const [similarityThreshold, setSimilarityThreshold] = useState(0.8);
+  const [audioHashResult, setAudioHashResult] = useState(null);
+  const [imageHashResult, setImageHashResult] = useState(null);
+  const [similarityResult, setSimilarityResult] = useState(null);
+  const [supportedAlgorithms, setSupportedAlgorithms] = useState(null);
+  const [computingAudioHash, setComputingAudioHash] = useState(false);
+  const [computingImageHash, setComputingImageHash] = useState(false);
+  const [computingSimilarity, setComputingSimilarity] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -188,6 +205,80 @@ const MediaCore = () => {
       setFindingInbound(false);
     }
   };
+
+  const loadSupportedAlgorithms = async () => {
+    try {
+      const result = await mediacore.getSupportedHashAlgorithms();
+      setSupportedAlgorithms(result);
+    } catch (err) {
+      console.error('Failed to load hash algorithms:', err);
+    }
+  };
+
+  const handleComputeAudioHash = async () => {
+    if (!audioSamples.trim()) return;
+
+    try {
+      setComputingAudioHash(true);
+      setAudioHashResult(null);
+
+      // Parse comma-separated float values
+      const samples = audioSamples.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+
+      if (samples.length === 0) {
+        throw new Error('No valid audio samples provided');
+      }
+
+      const result = await mediacore.computeAudioHash(samples, parseInt(sampleRate), audioAlgorithm);
+      setAudioHashResult(result);
+    } catch (err) {
+      setAudioHashResult({ error: err.message });
+    } finally {
+      setComputingAudioHash(false);
+    }
+  };
+
+  const handleComputeImageHash = async () => {
+    if (!imagePixels.trim()) return;
+
+    try {
+      setComputingImageHash(true);
+      setImageHashResult(null);
+
+      // Parse comma-separated byte values (0-255)
+      const pixels = imagePixels.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 0 && n <= 255);
+
+      if (pixels.length === 0) {
+        throw new Error('No valid pixel data provided');
+      }
+
+      const result = await mediacore.computeImageHash(pixels, parseInt(imageWidth), parseInt(imageHeight), imageAlgorithm);
+      setImageHashResult(result);
+    } catch (err) {
+      setImageHashResult({ error: err.message });
+    } finally {
+      setComputingImageHash(false);
+    }
+  };
+
+  const handleComputeSimilarity = async () => {
+    if (!hashA.trim() || !hashB.trim()) return;
+
+    try {
+      setComputingSimilarity(true);
+      setSimilarityResult(null);
+      const result = await mediacore.computeHashSimilarity(hashA.trim(), hashB.trim(), parseFloat(similarityThreshold));
+      setSimilarityResult(result);
+    } catch (err) {
+      setSimilarityResult({ error: err.message });
+    } finally {
+      setComputingSimilarity(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSupportedAlgorithms();
+  }, []);
 
   if (loading && !stats) {
     return (
@@ -711,6 +802,257 @@ const MediaCore = () => {
             </Card.Content>
           </Card>
         </Grid.Column>
+
+        {/* Perceptual Hash - Audio */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="sound" />
+                Audio Perceptual Hash
+              </Card.Header>
+              <Card.Description>
+                Compute perceptual hash for audio similarity detection
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Algorithm</label>
+                    <Dropdown
+                      selection
+                      options={supportedAlgorithms?.algorithms?.map(alg => ({ key: alg, text: alg, value: alg })) || []}
+                      value={audioAlgorithm}
+                      onChange={(e, { value }) => setAudioAlgorithm(value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Sample Rate (Hz)</label>
+                    <Input
+                      type="number"
+                      value={sampleRate}
+                      onChange={(e) => setSampleRate(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Form.Field>
+                  <label>Audio Samples (comma-separated floats)</label>
+                  <TextArea
+                    placeholder="0.1, -0.2, 0.3, ... (normalized -1.0 to 1.0)"
+                    value={audioSamples}
+                    onChange={(e) => setAudioSamples(e.target.value)}
+                    rows={3}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={computingAudioHash}
+                  disabled={!audioSamples.trim() || computingAudioHash}
+                  onClick={handleComputeAudioHash}
+                >
+                  Compute Audio Hash
+                </Button>
+              </Form>
+
+              {audioHashResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {audioHashResult.error ? (
+                    <Message error>
+                      <p>{audioHashResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Audio Hash Computed</Message.Header>
+                      <p>
+                        <strong>Algorithm:</strong> {audioHashResult.algorithm}<br />
+                        <strong>Hex Hash:</strong> {audioHashResult.hex}<br />
+                        <strong>Sample Count:</strong> {audioSamples.split(',').filter(s => s.trim()).length}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Perceptual Hash - Image */}
+        <Grid.Column width={8}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="image" />
+                Image Perceptual Hash
+              </Card.Header>
+              <Card.Description>
+                Compute perceptual hash for image similarity detection
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Algorithm</label>
+                    <Dropdown
+                      selection
+                      options={supportedAlgorithms?.algorithms?.filter(alg => alg !== 'ChromaPrint').map(alg => ({ key: alg, text: alg, value: alg })) || []}
+                      value={imageAlgorithm}
+                      onChange={(e, { value }) => setImageAlgorithm(value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Dimensions</label>
+                    <Input
+                      placeholder="Width x Height"
+                      value={`${imageWidth}x${imageHeight}`}
+                      onChange={(e) => {
+                        const [w, h] = e.target.value.split('x').map(s => parseInt(s.trim()));
+                        if (!isNaN(w)) setImageWidth(w);
+                        if (!isNaN(h)) setImageHeight(h);
+                      }}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Form.Field>
+                  <label>Pixel Data (comma-separated bytes 0-255)</label>
+                  <TextArea
+                    placeholder="255, 128, 64, ... (RGBA pixel data)"
+                    value={imagePixels}
+                    onChange={(e) => setImagePixels(e.target.value)}
+                    rows={3}
+                  />
+                </Form.Field>
+                <Button
+                  primary
+                  loading={computingImageHash}
+                  disabled={!imagePixels.trim() || computingImageHash}
+                  onClick={handleComputeImageHash}
+                >
+                  Compute Image Hash
+                </Button>
+              </Form>
+
+              {imageHashResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {imageHashResult.error ? (
+                    <Message error>
+                      <p>{imageHashResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message success>
+                      <Message.Header>Image Hash Computed</Message.Header>
+                      <p>
+                        <strong>Algorithm:</strong> {imageHashResult.algorithm}<br />
+                        <strong>Hex Hash:</strong> {imageHashResult.hex}<br />
+                        <strong>Dimensions:</strong> {imageWidth}x{imageHeight}
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Hash Similarity Analysis */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="balance scale" />
+                Hash Similarity Analysis
+              </Card.Header>
+              <Card.Description>
+                Compare perceptual hashes to determine content similarity
+              </Card.Description>
+            </Card.Content>
+            <Card.Content>
+              <Form>
+                <Form.Group widths="equal">
+                  <Form.Field>
+                    <label>Hash A (hex)</label>
+                    <Input
+                      placeholder="First hash value (hexadecimal)"
+                      value={hashA}
+                      onChange={(e) => setHashA(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Hash B (hex)</label>
+                    <Input
+                      placeholder="Second hash value (hexadecimal)"
+                      value={hashB}
+                      onChange={(e) => setHashB(e.target.value)}
+                    />
+                  </Form.Field>
+                  <Form.Field>
+                    <label>Similarity Threshold</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={similarityThreshold}
+                      onChange={(e) => setSimilarityThreshold(e.target.value)}
+                    />
+                  </Form.Field>
+                </Form.Group>
+                <Button
+                  primary
+                  loading={computingSimilarity}
+                  disabled={!hashA.trim() || !hashB.trim() || computingSimilarity}
+                  onClick={handleComputeSimilarity}
+                >
+                  Analyze Similarity
+                </Button>
+              </Form>
+
+              {similarityResult && (
+                <div style={{ marginTop: '1em' }}>
+                  {similarityResult.error ? (
+                    <Message error>
+                      <p>{similarityResult.error}</p>
+                    </Message>
+                  ) : (
+                    <Message info>
+                      <Message.Header>Similarity Analysis Results</Message.Header>
+                      <p>
+                        <strong>Hamming Distance:</strong> {similarityResult.hammingDistance} bits<br />
+                        <strong>Similarity Score:</strong> {(similarityResult.similarity * 100).toFixed(1)}%<br />
+                        <strong>Are Similar:</strong> {similarityResult.areSimilar ? 'Yes' : 'No'} (threshold: {(similarityResult.threshold * 100).toFixed(1)}%)
+                      </p>
+                    </Message>
+                  )}
+                </div>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Supported Algorithms Info */}
+        {supportedAlgorithms && (
+          <Grid.Column width={16}>
+            <Segment>
+              <Header as="h3">
+                <Icon name="cogs" />
+                Supported Hash Algorithms
+              </Header>
+              <List divided relaxed>
+                {supportedAlgorithms.algorithms.map(alg => (
+                  <List.Item key={alg}>
+                    <List.Content>
+                      <List.Header>{alg}</List.Header>
+                      <List.Description>
+                        {supportedAlgorithms.descriptions[alg]}
+                      </List.Description>
+                    </List.Content>
+                  </List.Item>
+                ))}
+              </List>
+            </Segment>
+          </Grid.Column>
+        )}
       </Grid>
     </div>
   );
