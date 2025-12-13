@@ -22,6 +22,7 @@ import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
 import System from './System/System';
 import Transfers from './Transfers/Transfers';
+import TrafficTicker from './TrafficTicker/TrafficTicker';
 import Users from './Users/Users';
 import Wishlist from './Wishlist/Wishlist';
 import React, { Component } from 'react';
@@ -664,6 +665,7 @@ class App extends Component {
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
+                          <TrafficTicker />
                           <Transfers
                             {...props}
                             direction="upload"
@@ -677,6 +679,7 @@ class App extends Component {
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
+                          <TrafficTicker />
                           <Transfers
                             {...props}
                             direction="download"

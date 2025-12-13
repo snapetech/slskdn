@@ -2447,11 +2447,12 @@
   - Notes: Auto-refresh queue positions for queued files
   - Implementation: Added automatic queue position polling in Transfers.jsx that fetches positions for all queued downloads every 1 second
 
-- [ ] **T-004**: Visual Group Indicators
-  - Status: Not started
+- [x] **T-004**: Visual Group Indicators
+  - Status: Completed (2025-12-13)
   - Priority: Medium
   - Related: slskd #745
   - Notes: Icons in search results for users in your groups
+  - Implementation: Added visual indicators (star, triangle, ban icons) next to usernames in search results based on group membership
 
 - [ ] **T-005**: Traffic Ticker
   - Status: Not started

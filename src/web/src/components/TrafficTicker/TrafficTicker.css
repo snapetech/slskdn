@@ -1,0 +1,80 @@
+.traffic-ticker {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  margin: 10px 0;
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.traffic-ticker-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  padding: 8px 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.traffic-ticker-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 350px;
+}
+
+.traffic-ticker-empty {
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.traffic-activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.traffic-activity-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.traffic-activity-text:hover {
+  text-decoration: underline;
+}
+
+.traffic-ticker-toggle {
+  padding: 8px 12px;
+  border-top: 1px solid #e9ecef;
+  background: #ffffff;
+  text-align: center;
+}
+
+.traffic-ticker-toggle-button {
+  background: none;
+  border: 1px solid #007bff;
+  color: #007bff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.traffic-ticker-toggle-button:hover {
+  background: #007bff;
+  color: white;
+}

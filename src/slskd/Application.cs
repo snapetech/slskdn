@@ -101,6 +101,7 @@ namespace slskd
             IRelayService relayService,
             IHubContext<ApplicationHub> applicationHub,
             IHubContext<LogsHub> logHub,
+            IHubContext<Transfers.API.TransfersHub> transfersHub,
             Events.EventBus eventBus)
         {
             Console.CancelKeyPress += (_, args) =>
@@ -165,6 +166,7 @@ namespace slskd
             Relay.StateMonitor.OnChange(relayState => State.SetValue(state => state with { Relay = relayState.Current }));
 
             LogHub = logHub;
+            TransfersHub = transfersHub;
             Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
 
             EventBus = eventBus;
@@ -231,6 +233,7 @@ namespace slskd
         private ITransferService Transfers { get; init; }
         private IHubContext<ApplicationHub> ApplicationHub { get; set; }
         private IHubContext<LogsHub> LogHub { get; set; }
+        private IHubContext<Transfers.API.TransfersHub> TransfersHub { get; set; }
         private Events.EventBus EventBus { get; set; }
         private IUserService Users { get; set; }
         private IShareService Shares { get; set; }
@@ -1239,6 +1242,10 @@ namespace slskd
             var completed = xfer.State.HasFlag(TransferStates.Completed);
 
             Log.Information($"[{direction}] [{user}/{file}] {oldState} => {state}{(completed ? $" ({xfer.BytesTransferred}/{xfer.Size} = {xfer.PercentComplete}%) @ {xfer.AverageSpeed.SizeSuffix()}/s" : string.Empty)}");
+
+            // Broadcast transfer activity to connected clients
+            var activity = Transfers.API.TransferActivity.FromTransferStateChange(xfer, oldState);
+            _ = Transfers.API.TransferHubExtensions.EmitTransferActivityAsync(TransfersHub, activity);
 
             if (xfer.Direction == TransferDirection.Upload && xfer.State.HasFlag(TransferStates.Completed | TransferStates.Succeeded) && args.Transfer.AverageSpeed > 0)
             {

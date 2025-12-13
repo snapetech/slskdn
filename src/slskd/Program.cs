@@ -1366,6 +1366,7 @@ namespace slskd
             {
                 endpoints.MapHub<ApplicationHub>("/hub/application");
                 endpoints.MapHub<LogsHub>("/hub/logs");
+                endpoints.MapHub<Transfers.API.TransfersHub>("/hub/transfers");
                 endpoints.MapHub<SearchHub>("/hub/search");
                 endpoints.MapHub<RelayHub>("/hub/relay");
 

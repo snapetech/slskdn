@@ -7,6 +7,23 @@
 
 ## 2025-12-13
 
+### T-004: Visual Group Indicators (Medium Priority)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Added `GET /api/users/{username}/group` API endpoint to retrieve user group membership
+  - Created `getGroup()` function in frontend `users.js` library
+  - Modified `Response.jsx` component to fetch and display group indicators next to usernames
+  - Implemented visual indicators: ⭐ (yellow star) for privileged users, ⚠️ (orange triangle) for leechers, 🚫 (red ban) for blacklisted users
+  - Added 👤 (blue user icon) for custom user-defined groups
+  - Included helpful tooltips explaining each group type
+  - Indicators only appear for non-default groups to avoid UI clutter
+- **Technical Notes**:
+  - Leveraged existing `UserService.GetGroup()` method for group determination
+  - Added async group fetching in `componentDidMount` and `componentDidUpdate`
+  - Used Semantic UI React `Icon` and `Popup` components for consistent styling
+  - Graceful error handling prevents failed group fetches from breaking UI
+  - Group indicators positioned next to username with appropriate spacing and colors
+
 ### T-003: Download Queue Position Polling (Medium Priority)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
