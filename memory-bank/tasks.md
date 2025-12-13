@@ -2034,11 +2034,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Replace stub that returns Unknown. Use STUN protocol to detect NAT type (Direct, Restricted, Symmetric). Added API endpoint, logging, and proper async integration.
 
-- [ ] **T-1301**: Implement k-bucket routing table
-  - Status: Not started
+- [x] **T-1301**: Implement k-bucket routing table
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Kademlia-style k-bucket structure with k=20. XOR distance metric, bucket splitting, node eviction.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Kademlia-style k-bucket structure with k=20. XOR distance metric, bucket splitting, node eviction. Complete implementation with ping-before-evict.
 
 - [ ] **T-1302**: Implement FIND_NODE Kademlia RPC
   - Status: Not started

@@ -897,6 +897,9 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
             services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
+            // DHT Mesh Service for Kademlia RPC operations
+            services.AddSingleton<Mesh.ServiceFabric.Services.DhtMeshService>();
+            services.AddSingleton<Mesh.Dht.KademliaRpcClient>();
             // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();

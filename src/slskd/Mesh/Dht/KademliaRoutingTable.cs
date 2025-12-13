@@ -42,6 +42,11 @@ public class KademliaRoutingTable
     public int BucketCount => buckets.Count;
 
     /// <summary>
+    /// Gets the local node's ID.
+    /// </summary>
+    public byte[] GetSelfId() => selfId;
+
+    /// <summary>
     /// Gets statistics about the routing table.
     /// </summary>
     public RoutingTableStats GetStats()

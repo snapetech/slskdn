@@ -7,6 +7,29 @@
 
 ## 2025-12-13
 
+### T-1301: Kademlia k-bucket Routing Table (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - Complete rewrite of `KademliaRoutingTable` with proper Kademlia DHT specification compliance
+  - **k-bucket Structure**: Implemented k=20 bucket size with dynamic bucket splitting
+  - **XOR Distance Metric**: Proper BigInteger-based XOR distance calculation for 160-bit node IDs
+  - **Bucket Splitting**: Automatic bucket subdivision when local node "owns" the bucket and it becomes full
+  - **Node Eviction**: LRU (least recently used) eviction with ping-before-evict algorithm
+  - **Bucket Index Calculation**: Fixed implementation using longest common prefix method
+  - **Async Operations**: Added `TouchAsync()` with proper ping-before-evict support
+  - **Statistics & Diagnostics**: Added `RoutingTableStats` and `GetAllNodes()` for monitoring
+- **Technical Notes**:
+  - Uses 160-bit SHA-1 style node IDs as specified in original Kademlia paper
+  - Bucket splitting only occurs when the bucket contains nodes within the local node's range
+  - Ping-before-evict prevents aggressive eviction of temporarily unreachable nodes
+  - Thread-safe implementation with proper locking for concurrent access
+  - Maintains backward compatibility with existing `InMemoryDhtClient` usage
+- **Key Algorithm Components**:
+  - `GetBucketIndex()`: Determines bucket placement based on XOR distance
+  - `CanSplitBucket()`: Checks if bucket splitting is allowed
+  - `SplitBucket()`: Redistributes nodes when bucket capacity is exceeded
+  - `TouchAsync()`: Main insertion method with eviction logic
+
 ### T-1300: STUN NAT Detection (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

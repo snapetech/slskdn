@@ -103,7 +103,8 @@ namespace slskd
             IHubContext<ApplicationHub> applicationHub,
             IHubContext<LogsHub> logHub,
             IHubContext<Transfers.API.TransfersHub> transfersHub,
-            Events.EventBus eventBus)
+            Events.EventBus eventBus,
+            IServiceProvider serviceProvider)
         {
             Console.CancelKeyPress += (_, args) =>
             {
@@ -171,6 +172,7 @@ namespace slskd
             Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
 
             EventBus = eventBus;
+            ServiceProvider = serviceProvider;
 
             Client = soulseekClient;
 
@@ -245,6 +247,7 @@ namespace slskd
         private IReadOnlyList<Guid> ActiveDownloadIdsAtPreviousShutdown { get; set; } = [];
         private Options.FlagsOptions Flags { get; set; }
         private IReadOnlyList<string> ExcludedSearchPhrases { get; set; } = [];
+        private IServiceProvider ServiceProvider { get; set; }
 
         public void CollectGarbage()
         {
@@ -500,6 +503,39 @@ namespace slskd
                 {
                     ConnectionWatchdog.Start();
                 }
+            }
+
+            // Register mesh services for DHT operations
+            await RegisterMeshServicesAsync(cancellationToken);
+        }
+
+        private async Task RegisterMeshServicesAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Register DHT mesh service for FIND_NODE, FIND_VALUE, and PING RPCs
+                var router = ServiceProvider.GetService<Mesh.ServiceFabric.MeshServiceRouter>();
+                if (router != null)
+                {
+                    var dhtService = ServiceProvider.GetService<Mesh.ServiceFabric.Services.DhtMeshService>();
+                    if (dhtService != null)
+                    {
+                        router.RegisterService(dhtService);
+                        Log.Information("Registered DHT mesh service for Kademlia RPC operations");
+                    }
+                    else
+                    {
+                        Log.Warning("DhtMeshService not available for registration");
+                    }
+                }
+                else
+                {
+                    Log.Warning("MeshServiceRouter not available for service registration");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to register mesh services");
             }
         }
 
