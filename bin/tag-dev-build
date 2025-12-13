@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Create a new dev build tag with epoch-based versioning
+# Format: build-dev-0.24.1.dev.EPOCH
+# where EPOCH is Unix timestamp (seconds since 1970-01-01)
+
+set -euo pipefail
+
+# Get base version from VERSION file or default
+if [ -f VERSION ]; then
+    BASE_VERSION=$(cat VERSION)
+else
+    BASE_VERSION="0.24.1"
+fi
+
+# Get current Unix timestamp (UTC)
+EPOCH=$(date -u +%s)
+
+# Convert to human-readable for display
+HUMAN_DATE=$(date -u -d "@${EPOCH}" "+%Y-%m-%d %H:%M:%S UTC")
+
+# Construct the new version and tag
+VERSION="${BASE_VERSION}.dev.${EPOCH}"
+TAG="build-dev-${VERSION}"
+
+echo "Creating new dev build tag:"
+echo "  Tag:       $TAG"
+echo "  Version:   $VERSION"
+echo "  Timestamp: $HUMAN_DATE"
+echo "  Epoch:     $EPOCH"
+echo ""
+
+# Confirm
+read -p "Push this tag to origin? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+fi
+
+# Create and push the tag
+git tag "$TAG"
+git push origin "$TAG"
+
+echo ""
+echo "✅ Tag created and pushed: $TAG"
+echo "   Monitor build: gh run watch"
+

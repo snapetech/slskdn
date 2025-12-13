@@ -8,14 +8,22 @@
 
 ### Dev Builds (Experimental)
 
-**Trigger tag:**
+**Trigger tag (recommended):**
 ```bash
-VERSION="0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)"
+./bin/tag-dev-build
+```
+
+**Trigger tag (manual):**
+```bash
+EPOCH=$(date -u +%s)
+VERSION="0.24.1.dev.${EPOCH}"
 git tag "build-dev-${VERSION}"
 git push origin "build-dev-${VERSION}"
 ```
 
-**Example:** `build-dev-0.24.1.dev.20251213.203634`
+**Example:** `build-dev-0.24.1.dev.1734132417` (Unix epoch timestamp)
+
+**Why epoch?** Monotonically increasing, no string comparison issues, timezone-agnostic, sortable.
 
 **Release tag:** Same as trigger (no dual tag)
 
@@ -73,16 +81,16 @@ git push origin "build-main-${VERSION}"
 ### Dev Release Format
 
 ```
-0.24.1.dev.20251213.203634
-│ │  │     │       │
-│ │  │     │       └─ HHMMSS (time)
-│ │  │     └───────── YYYYMMDD (date)
-│ │  └─────────────── Fork patch
-│ └────────────────── Fork minor
-└───────────────────── Fork major
+0.24.1.dev.1734132417
+│ │  │     │
+│ │  │     └─ Unix epoch timestamp (seconds since 1970-01-01 00:00:00 UTC)
+│ │  └─────── Fork patch
+│ └────────── Fork minor
+└───────────── Fork major
 ```
 
-**Automatically timestamped** - no manual incrementing needed.
+**Epoch timestamp** is monotonically increasing, timezone-agnostic, and sorts correctly.
+**Human-readable:** `date -d @1734132417` → `Sat Dec 13 23:40:17 UTC 2025`
 
 ---
 
@@ -116,7 +124,13 @@ git tag --sort=-version:refname | grep "^0\." | head -1
 
 ### Trigger next dev build
 ```bash
-VERSION="0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)"
+./bin/tag-dev-build  # Recommended - uses current epoch
+```
+
+**Or manually:**
+```bash
+EPOCH=$(date -u +%s)
+VERSION="0.24.1.dev.${EPOCH}"
 git tag "build-dev-${VERSION}" && git push origin "build-dev-${VERSION}"
 ```
 
@@ -134,13 +148,14 @@ git tag "build-main-${VERSION}" && git push origin "build-main-${VERSION}"
 ## Where Tags Appear
 
 ### GitHub Releases Page
-- **Dev:** `build-dev-0.24.1.dev.20251213.203634` (prerelease)
+- **Dev:** `build-dev-0.24.1.dev.1734132417` (prerelease)
 - **Main:** `0.24.1-slskdn.35` (release) ← traditional format
 
 ### Git Tag List
 ```bash
 git tag | tail -5
-build-dev-0.24.1.dev.20251213.203634
+build-dev-0.24.1.dev.1734131200
+build-dev-0.24.1.dev.1734132417
 build-main-0.24.1-slskdn.35
 0.24.1-slskdn.35
 ```
