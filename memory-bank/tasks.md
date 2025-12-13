@@ -2106,17 +2106,17 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Health check endpoint monitoring routing table health, bootstrap connectivity, peer churn with /health/mesh endpoint.
 
-- [ ] **T-1313**: Add mesh unit tests
-  - Status: Not started
+- [x] **T-1313**: Add mesh unit tests
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Tests for k-bucket, Kademlia RPCs, NAT detection, hole punching.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Comprehensive unit tests for k-bucket, Kademlia RPCs, NAT detection, hole punching, stats collection, and health monitoring.
 
-- [ ] **T-1314**: Add mesh integration tests
-  - Status: Not started
+- [x] **T-1314**: Add mesh integration tests
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Multi-node tests. DHT convergence, content discovery, NAT traversal.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Multi-node integration tests for DHT convergence, content discovery, NAT traversal, peer churn, and network partitioning.
 
 - [ ] **T-1315**: Add mesh WebGUI status panel
   - Status: Not started

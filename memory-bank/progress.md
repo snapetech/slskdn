@@ -7,6 +7,58 @@
 
 ## 2025-12-13
 
+### T-1313: Mesh Unit Tests (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **KademliaRoutingTable Tests**: Bucket splitting, ping-before-evict, XOR distance ordering
+  - **InMemoryDhtClient Tests**: PUT/GET operations, TTL expiration, replication factors
+  - **NAT Detection Tests**: StunNatDetector basic connectivity and type detection
+  - **Hole Punching Tests**: UdpHolePuncher network traversal capabilities
+  - **Statistics Collection Tests**: MeshStatsCollector real-time metric tracking
+  - **Health Check Tests**: MeshHealthCheck status assessment and data reporting
+  - **Directory Tests**: MeshDirectory peer and content discovery operations
+  - **Content Publishing Tests**: ContentPeerPublisher peer hint distribution
+- **Technical Notes**:
+  - **Test Coverage**: Comprehensive unit testing for all mesh networking primitives
+  - **Mock Integration**: Proper use of Moq for dependency isolation
+  - **Realistic Scenarios**: Tests based on actual network conditions and edge cases
+  - **Performance Validation**: Tests for timing, throughput, and resource usage
+  - **Error Handling**: Validation of fault tolerance and recovery mechanisms
+  - **State Verification**: Detailed assertions for internal state consistency
+  - **Isolation**: Each test independent with proper setup/teardown
+- **Test Categories**:
+  - **Routing**: Kademlia DHT routing table operations and maintenance
+  - **Storage**: Distributed hash table storage and retrieval semantics
+  - **Connectivity**: NAT traversal and hole punching mechanisms
+  - **Monitoring**: Statistics collection and health assessment
+  - **Discovery**: Peer and content discovery algorithms
+
+### T-1314: Mesh Integration Tests (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **DHT Convergence Tests**: Multi-node DHT network stabilization and data propagation
+  - **Content Discovery Tests**: Peer-to-peer content availability and retrieval
+  - **NAT Traversal Tests**: Symmetric NAT fallback and relay connectivity
+  - **Iterative Lookup Tests**: Kademlia FIND_NODE algorithm validation
+  - **Content Replication Tests**: Data redundancy across mesh nodes
+  - **Network Partition Tests**: Partition healing and data consistency
+  - **Peer Churn Tests**: Dynamic node join/leave and network stability
+  - **Bootstrap Process Tests**: Initial network joining and peer discovery
+- **Technical Notes**:
+  - **MeshSimulator Enhancement**: Advanced simulation framework for complex scenarios
+  - **Multi-Node Coordination**: Realistic peer interactions and network topology
+  - **Failure Simulation**: Configurable message drop rates and network partitions
+  - **Performance Benchmarking**: Latency and throughput measurements
+  - **Resilience Testing**: Fault injection and recovery validation
+  - **Scalability Assessment**: Performance under varying node counts
+  - **Consistency Verification**: Data integrity across distributed operations
+- **Integration Scenarios**:
+  - **Network Formation**: Bootstrap process and initial peer discovery
+  - **Data Distribution**: Content publishing and multi-peer availability
+  - **Connectivity Challenges**: NAT traversal and relay fallback mechanisms
+  - **Network Dynamics**: Peer churn, partitions, and self-healing
+  - **Load Distribution**: Content replication and access optimization
+
 ### T-1312: Mesh Health Monitoring (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
