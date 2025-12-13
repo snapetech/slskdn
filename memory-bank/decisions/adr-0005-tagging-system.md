@@ -32,7 +32,7 @@ build-<channel>-<version>
 - `slskdn-dev` package (PPA)
 - `ghcr.io/snapetech/slskdn:dev-latest` (Docker)
 - `ghcr.io/snapetech/slskdn:dev-VERSION` (Docker)
-- Chocolatey (pre-release)
+- Chocolatey (pre-release with `--prerelease` flag)
 
 **Usage:**
 ```bash
@@ -55,7 +55,7 @@ git push origin "build-dev-${VERSION}"
 - `slskdn` package (PPA)
 - `ghcr.io/snapetech/slskdn:latest` (Docker)
 - `ghcr.io/snapetech/slskdn:VERSION` (Docker)
-- Chocolatey (stable)
+- Chocolatey (stable release, no `--prerelease` flag)
 
 **Usage:**
 ```bash
