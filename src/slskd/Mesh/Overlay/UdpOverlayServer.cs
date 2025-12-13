@@ -48,14 +48,11 @@ public class UdpOverlayServer : BackgroundService
             return;
         }
 
-        udp = new UdpClient(new IPEndPoint(IPAddress.Any, options.ListenPort))
-        {
-            Client =
-            {
-                ReceiveBufferSize = options.ReceiveBufferBytes,
-                SendBufferSize = options.SendBufferBytes
-            }
-        };
+        udp = new UdpClient();
+        udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        udp.Client.Bind(new IPEndPoint(IPAddress.Any, options.ListenPort));
+        udp.Client.ReceiveBufferSize = options.ReceiveBufferBytes;
+        udp.Client.SendBufferSize = options.SendBufferBytes;
 
         logger.LogInformation("[Overlay] UDP listening on {Port}", options.ListenPort);
 
