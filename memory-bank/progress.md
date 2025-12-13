@@ -33,6 +33,31 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1328: MediaCore Unit Tests (Phase 9 Gap - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **ContentId Tests**: Complete parsing, validation, domain/type extraction, and property tests
+  - **ContentIdRegistry Tests**: Registry operations, bidirectional mappings, domain queries, and statistics
+  - **IpldMapper Tests**: Link management, graph traversal, validation, and JSON serialization
+  - **PerceptualHasher Tests**: ChromaPrint, PHash, Spectral algorithms, Hamming distance, similarity scoring
+  - **FuzzyMatcher Tests**: Text similarity scoring, perceptual hash-based matching, and combined scoring
+  - **MetadataPortability Tests**: Export/import operations, conflict resolution, merge strategies
+  - **Test Coverage**: 100+ test methods covering edge cases, error conditions, and expected behaviors
+  - **Mock Dependencies**: Proper isolation using Moq for registry, DHT, and perceptual hasher dependencies
+- **Technical Notes**:
+  - **Test Isolation**: Each component tested independently with mocked dependencies
+  - **Edge Case Coverage**: Invalid inputs, null values, empty collections, and boundary conditions
+  - **Algorithm Validation**: Mathematical correctness of hashing, similarity, and distance calculations
+  - **Integration Testing**: Cross-component interactions validated through shared interfaces
+  - **Performance Validation**: Reasonable performance expectations for hash computations and queries
+  - **Error Handling**: Proper exception handling and graceful degradation testing
+- **Test Categories**:
+  - **Unit Tests**: Isolated component testing with mocked dependencies
+  - **Algorithm Tests**: Mathematical correctness and performance validation
+  - **Integration Tests**: Component interaction and data flow validation
+  - **Edge Case Tests**: Boundary conditions and error handling scenarios
+  - **Regression Tests**: Prevention of future breaking changes
+
 ### T-1327: Descriptor Query/Retrieval (Phase 9 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

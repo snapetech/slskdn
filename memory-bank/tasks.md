@@ -2174,11 +2174,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented DHT querying with signature verification, freshness checking, and caching.
 
-- [ ] **T-1328**: Add MediaCore unit tests
-  - Status: Not started
+- [x] **T-1328**: Add MediaCore unit tests
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Tests for ContentID, fuzzy matching, descriptor validation, perceptual hashing.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Comprehensive unit tests for ContentID, fuzzy matching, descriptor validation, perceptual hashing, IPLD mapping, and metadata portability.
 
 - [ ] **T-1329**: Add MediaCore integration tests
   - Status: Not started
