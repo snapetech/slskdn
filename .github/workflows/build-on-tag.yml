@@ -1,7 +1,16 @@
 name: Build on Tag
 
 # Trigger: push tag matching build-dev-* or build-main-*
-# Example: git tag build-dev-0.24.1.dev.20251213 && git push origin build-dev-0.24.1.dev.20251213
+# 
+# Dev builds:   build-dev-0.24.1.dev.20251213.203634
+#               → Creates release under same tag
+# 
+# Main builds:  build-main-0.24.1-slskdn.35 (trigger)
+#               → Creates release under 0.24.1-slskdn.35 (backward compatible)
+#
+# Examples:
+#   git tag build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S) && git push origin $_
+#   git tag build-main-0.24.1-slskdn.35 && git push origin $_
 
 on:
   push:
@@ -630,6 +639,8 @@ jobs:
           find artifacts -name "*.zip" -exec cp {} release/ \;
           ls -lh release/
 
+      # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
+      # Build was triggered by build-main-VERSION tag, but release uses traditional format
       - name: Create Main Release
         uses: softprops/action-gh-release@v2
         with:
@@ -642,7 +653,7 @@ jobs:
             
             ### Installation
             **Package Managers:**
-            - Arch: `yay -S slskdn`
+            - Arch: `yay -S slskdn` or `yay -S slskdn-bin`
             - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn && sudo dnf install slskdn`
             - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn`
             - Docker: `docker pull ghcr.io/snapetech/slskdn:latest`

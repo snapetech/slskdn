@@ -45,8 +45,14 @@ git push origin "build-dev-${VERSION}"
 
 **Purpose:** Stable releases from main branch
 
-**Version Format:** Semantic versioning `MAJOR.MINOR.PATCH`
-- Example: `0.25.0`, `1.0.0`, `1.2.3`
+**Version Format:** `MAJOR.MINOR.PATCH-slskdn.BUILD`
+- Example: `0.24.1-slskdn.35`, `0.25.0-slskdn.1`
+- Matches existing release tag history
+
+**Trigger Tag:** `build-main-0.24.1-slskdn.35` (explicit build intent)  
+**Release Tag:** `0.24.1-slskdn.35` (backward compatible, matches history)
+
+The workflow creates the GitHub release under the traditional tag format (without `build-` prefix) to maintain backward compatibility with existing tags like `0.24.1-slskdn.34`.
 
 **Publishes to:**
 - `slskdn` (AUR - **source** build from GitHub tarball)
@@ -59,9 +65,11 @@ git push origin "build-dev-${VERSION}"
 
 **Usage:**
 ```bash
-VERSION="0.25.0"
+# Next increment from 0.24.1-slskdn.34
+VERSION="0.24.1-slskdn.35"
 git tag "build-main-${VERSION}"
 git push origin "build-main-${VERSION}"
+# Creates release under: 0.24.1-slskdn.35 (without build- prefix)
 ```
 
 ## Workflow Logic
@@ -69,9 +77,17 @@ git push origin "build-main-${VERSION}"
 The CI workflow (`build-on-tag.yml`) parses the tag:
 
 1. **Parse step** extracts `channel` and `version`
+   - `build-dev-0.24.1.dev.20251213` → channel=`dev`, version=`0.24.1.dev.20251213`
+   - `build-main-0.24.1-slskdn.35` → channel=`main`, version=`0.24.1-slskdn.35`
+
 2. **Build** runs for all channels (frontend + 6 platform binaries as `.zip`)
-3. **Release + Package jobs** use `if: needs.parse.outputs.channel == '<channel>'`
-4. Only matching channel jobs execute; others are skipped
+
+3. **Release creation:**
+   - **Dev:** Creates release under same tag (`build-dev-0.24.1.dev.20251213`)
+   - **Main:** Creates release under version tag (`0.24.1-slskdn.35`) for backward compatibility
+
+4. **Package jobs** use `if: needs.parse.outputs.channel == '<channel>'`
+5. Only matching channel jobs execute; others are skipped
 
 ### Channel Isolation
 
@@ -106,7 +122,15 @@ Examples:
 
 ### Why semantic versioning for main?
 
-**Industry standard** - Clear major/minor/patch semantics. Compatible with package manager expectations.
+**Backward compatibility** - Continues the existing `0.24.1-slskdn.BUILD` format. Matches the project's tag history where `.BUILD` increments with each release.
+
+### Dual tag system for main?
+
+**Explicit triggers + traditional releases:**
+- **Trigger tag** (`build-main-VERSION`) - Makes build intent explicit, prevents accidents
+- **Release tag** (`VERSION`) - Maintains backward compatibility, clean release history
+- Users see traditional tags (`0.24.1-slskdn.35`) in releases
+- Admins use explicit tags (`build-main-0.24.1-slskdn.35`) to trigger builds
 
 ### Why both source and binary for main AUR?
 
@@ -146,11 +170,13 @@ git push origin "build-dev-${VERSION}"
 ### Trigger Main Build
 
 ```bash
-# From main branch
-VERSION="0.25.0"
+# From master branch (note: it's "master" not "main")
+# Continue existing version sequence (last was 0.24.1-slskdn.34)
+VERSION="0.24.1-slskdn.35"
 git tag "build-main-${VERSION}"
 git push origin "build-main-${VERSION}"
 # Publishes to: slskdn, slskdn-bin, ghcr.io/snapetech/slskdn:latest, etc.
+# Release appears under: 0.24.1-slskdn.35 (traditional format)
 ```
 
 ## Related Files
