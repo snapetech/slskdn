@@ -85,3 +85,48 @@ export const getContentIdStats = async () => {
 
   return response.json();
 };
+
+/**
+ * Find all ContentIDs for a specific domain.
+ */
+export const findContentIdsByDomain = async (domain) => {
+  const response = await fetch(`${baseUrl}/domain/${encodeURIComponent(domain)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to find ContentIDs by domain: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Find all ContentIDs for a specific domain and type.
+ */
+export const findContentIdsByDomainAndType = async (domain, type) => {
+  const response = await fetch(`${baseUrl}/domain/${encodeURIComponent(domain)}/type/${encodeURIComponent(type)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to find ContentIDs by domain and type: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Validate a ContentID format.
+ */
+export const validateContentId = async (contentId) => {
+  const response = await fetch(`${baseUrl}/validate/${encodeURIComponent(contentId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to validate ContentID: ${response.statusText}`);
+  }
+
+  return response.json();
+};

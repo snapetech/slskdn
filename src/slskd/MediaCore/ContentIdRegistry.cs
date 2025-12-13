@@ -99,6 +99,51 @@ public class ContentIdRegistry : IContentIdRegistry
             MappingsByDomain: mappingsByDomain));
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<string>> FindByDomainAsync(string domain, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+            return Array.Empty<string>();
+
+        var results = new List<string>();
+        var normalizedDomain = domain.ToLowerInvariant();
+
+        foreach (var (externalId, contentId) in _externalToContent)
+        {
+            var parsedContentId = ContentIdParser.Parse(contentId);
+            if (parsedContentId != null && parsedContentId.Domain.Equals(normalizedDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                results.Add(contentId);
+            }
+        }
+
+        return await Task.FromResult(results.Distinct().ToArray());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<string>> FindByDomainAndTypeAsync(string domain, string type, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(type))
+            return Array.Empty<string>();
+
+        var results = new List<string>();
+        var normalizedDomain = domain.ToLowerInvariant();
+        var normalizedType = type.ToLowerInvariant();
+
+        foreach (var (externalId, contentId) in _externalToContent)
+        {
+            var parsedContentId = ContentIdParser.Parse(contentId);
+            if (parsedContentId != null &&
+                parsedContentId.Domain.Equals(normalizedDomain, StringComparison.OrdinalIgnoreCase) &&
+                parsedContentId.Type.Equals(normalizedType, StringComparison.OrdinalIgnoreCase))
+            {
+                results.Add(contentId);
+            }
+        }
+
+        return await Task.FromResult(results.Distinct().ToArray());
+    }
+
     /// <summary>
     /// Extract domain from external ID (e.g., "mb:recording:123" -> "mb").
     /// </summary>

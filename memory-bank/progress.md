@@ -33,34 +33,34 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
-### T-1315: Mesh WebGUI Status Panel (Gap Task - P2)
+### T-1320: ContentID Registry (Phase 9 Gap - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
-  - **React Component Creation**: Built comprehensive Mesh status dashboard component
-  - **Real-time Data Integration**: Connected to existing mesh statistics API endpoint
-  - **Auto-refresh Capability**: 30-second interval updates for live monitoring
-  - **Visual Health Indicators**: Color-coded status indicators (green/yellow/red)
-  - **Comprehensive Metrics Display**: Peer counts, routing table size, DHT operations, message flow
-  - **Network Configuration Display**: NAT type, connection types, bootstrap status
-  - **System Integration**: Added Mesh tab to System component with share alternate icon
-  - **Error Handling**: User-friendly error messages and loading states
-  - **Responsive Design**: Semantic UI components for mobile-friendly layout
+  - **Registry Interface**: Created IContentIdRegistry with comprehensive mapping operations
+  - **Thread-Safe Implementation**: ContentIdRegistry with concurrent dictionary for thread safety
+  - **External ID Support**: Maps MBID, IMDB, and other external identifiers to internal ContentIDs
+  - **Reverse Lookups**: Bidirectional mapping from ContentID to external IDs
+  - **RESTful API**: ContentIdController with register, resolve, exists, external IDs, and stats endpoints
+  - **WebGUI Integration**: Interactive MediaCore tab in System component
+  - **Real-time Statistics**: Domain breakdown and mapping counts
+  - **Error Handling**: Comprehensive validation and exception handling
 - **Technical Notes**:
-  - **API Integration**: Uses existing `/api/v0/mesh/transport` endpoint for statistics
-  - **Component Architecture**: Functional React component with hooks for state management
-  - **Performance Optimization**: Efficient re-renders and memory management
-  - **Accessibility**: Semantic HTML structure and ARIA compliance
-  - **Error Boundaries**: Graceful failure handling for network issues
-  - **Type Safety**: Proper prop validation and error handling
-- **Dashboard Features**:
-  - **Health Status Card**: Overall network health with status description
-  - **Statistics Overview**: Key metrics in statistic cards (peers, sessions, routing)
-  - **Connection Details**: Breakdown of DHT, overlay, and relay connections
-  - **Performance Metrics**: DHT ops/sec, message counts, churn events
-  - **Network Configuration**: NAT type and health indicator status
-  - **Real-time Updates**: Automatic refresh without user interaction
+  - **ContentID Format**: Standardizes on content:domain:type:id format for internal use
+  - **Domain Extraction**: Automatically categorizes mappings by external ID domain
+  - **Concurrent Operations**: Thread-safe operations for high-throughput scenarios
+  - **Memory Efficient**: In-memory implementation with cleanup capabilities
+  - **API Design**: RESTful endpoints with proper HTTP status codes and JSON responses
+  - **Frontend Integration**: React component with real-time form validation
+  - **Validation**: Input sanitization and business rule enforcement
+- **Registry Operations**:
+  - **Registration**: Map external identifiers to internal ContentIDs with validation
+  - **Resolution**: Lookup internal ContentID from external identifier
+  - **Existence Check**: Verify if external ID is registered without full resolution
+  - **Reverse Lookup**: Find all external IDs mapped to a specific ContentID
+  - **Statistics**: Domain-wise breakdown of total mappings and usage patterns
+  - **Bulk Operations**: Efficient batch processing for large content catalogs
 
-### T-1314: Mesh Integration Tests (Gap Task - P1)
+### T-1315: Mesh WebGUI Status Panel (Gap Task - P2)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:
   - **ASP.NET Core Health Checks**: Implemented MeshHealthCheck with IHealthCheck interface

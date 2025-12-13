@@ -162,6 +162,112 @@ public class ContentIdController : ControllerBase
             return StatusCode(500, new { error = "Failed to get registry statistics" });
         }
     }
+
+    /// <summary>
+    /// Find all ContentIDs for a specific domain.
+    /// </summary>
+    /// <param name="domain">The domain to search for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of ContentIDs in the specified domain.</returns>
+    [HttpGet("domain/{domain}")]
+    public async Task<IActionResult> FindByDomain(string domain, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+        {
+            return BadRequest("Domain is required");
+        }
+
+        try
+        {
+            var contentIds = await _registry.FindByDomainAsync(domain, cancellationToken);
+            return Ok(new { domain, contentIds });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ContentID] Failed to find ContentIDs by domain: {Domain}", domain);
+            return StatusCode(500, new { error = "Failed to find ContentIDs by domain" });
+        }
+    }
+
+    /// <summary>
+    /// Find all ContentIDs for a specific domain and type.
+    /// </summary>
+    /// <param name="domain">The domain to search for.</param>
+    /// <param name="type">The type within the domain.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of ContentIDs matching the domain and type.</returns>
+    [HttpGet("domain/{domain}/type/{type}")]
+    public async Task<IActionResult> FindByDomainAndType(string domain, string type, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+        {
+            return BadRequest("Domain is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return BadRequest("Type is required");
+        }
+
+        try
+        {
+            var contentIds = await _registry.FindByDomainAndTypeAsync(domain, type, cancellationToken);
+            return Ok(new { domain, type, contentIds });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ContentID] Failed to find ContentIDs by domain and type: {Domain}/{Type}", domain, type);
+            return StatusCode(500, new { error = "Failed to find ContentIDs by domain and type" });
+        }
+    }
+
+    /// <summary>
+    /// Validate a ContentID format.
+    /// </summary>
+    /// <param name="contentId">The ContentID to validate.</param>
+    /// <returns>Validation result with parsed components if valid.</returns>
+    [HttpGet("validate/{*contentId}")]
+    public IActionResult ValidateContentId(string contentId)
+    {
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return BadRequest("ContentID is required");
+        }
+
+        try
+        {
+            var parsed = ContentIdParser.Parse(contentId);
+            if (parsed == null)
+            {
+                return Ok(new
+                {
+                    contentId,
+                    isValid = false,
+                    error = "Invalid ContentID format. Expected: content:<domain>:<type>:<id>"
+                });
+            }
+
+            return Ok(new
+            {
+                contentId,
+                isValid = true,
+                domain = parsed.Domain,
+                type = parsed.Type,
+                id = parsed.Id,
+                fullId = parsed.FullId,
+                isAudio = parsed.IsAudio,
+                isVideo = parsed.IsVideo,
+                isImage = parsed.IsImage,
+                isText = parsed.IsText,
+                isApplication = parsed.IsApplication
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ContentID] Failed to validate ContentID: {ContentId}", contentId);
+            return StatusCode(500, new { error = "Failed to validate ContentID" });
+        }
+    }
 }
 
 /// <summary>

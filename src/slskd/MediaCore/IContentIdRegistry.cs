@@ -52,6 +52,23 @@ public interface IContentIdRegistry
     /// </summary>
     /// <returns>Registry statistics including total mappings and domains.</returns>
     Task<ContentIdRegistryStats> GetStatsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Find all ContentIDs for a specific domain.
+    /// </summary>
+    /// <param name="domain">The domain to search for (e.g., "audio", "video").</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of ContentIDs in the specified domain.</returns>
+    Task<IReadOnlyList<string>> FindByDomainAsync(string domain, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Find all ContentIDs for a specific domain and type.
+    /// </summary>
+    /// <param name="domain">The domain to search for.</param>
+    /// <param name="type">The type within the domain.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of ContentIDs matching the domain and type.</returns>
+    Task<IReadOnlyList<string>> FindByDomainAndTypeAsync(string domain, string type, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

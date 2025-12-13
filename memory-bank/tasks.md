@@ -2126,11 +2126,11 @@
 
 #### Phase 9 Gap: MediaCore Implementation (12 tasks)
 
-- [ ] **T-1320**: Implement ContentID registry
-  - Status: Not started
+- [x] **T-1320**: Implement ContentID registry
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Central registry for ContentID resolution. Map external IDs (MBID, IMDB, etc.) to internal ContentId.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented IContentIdRegistry with thread-safe mapping of external IDs to internal ContentIDs, REST API, and WebGUI.
 
 - [ ] **T-1321**: Implement multi-domain content addressing
   - Status: Not started
