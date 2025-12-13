@@ -52,7 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
-### 1. `return undefined` vs `return []` in Frontend API Calls
+### 1. AUR PKGBUILD Template Hardcoded Download URLs
+
+**The Bug**: AUR PKGBUILD templates that hardcode `/releases/download/dev/` install OLD binaries even after CI updates the version number.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-dev` - Downloads from `/releases/download/dev/`
+
+**Wrong**:
+```bash
+source=(
+    "slskdn-dev-${pkgver}-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip"
+)
+```
+
+**Correct**:
+```bash
+source=(
+    "slskdn-dev-${pkgver}-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/build-dev-${pkgver}/slskdn-dev-linux-x64.zip"
+)
+```
+
+**Why This Keeps Happening**: The `/dev/` tag is a legacy rolling release tag. New builds use version-specific tags like `build-dev-0.24.1.dev.20251213.203634`. When the CI updates `pkgver` but not the source URL, AUR downloads the old binary from `/dev/` instead of the new tag-specific release.
+
+**Impact**: Users install "updated" packages that contain old code. In this case, kspls0 was running Dec 12 code even after "installing" Dec 13 builds, causing DHT mesh overlay to not work.
+
+**Prevention**: Use `${pkgver}` in the download URL path, not hardcoded tag names.
+
+### 2. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
 
