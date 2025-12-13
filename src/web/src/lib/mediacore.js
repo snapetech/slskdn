@@ -657,3 +657,139 @@ export const clearRetrievalCache = async () => {
 
   return response.json();
 };
+
+/**
+ * Get MediaCore statistics dashboard.
+ */
+export const getMediaCoreDashboard = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/dashboard`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get dashboard: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get content registry statistics.
+ */
+export const getContentRegistryStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/registry`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get registry stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get descriptor statistics.
+ */
+export const getDescriptorStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/descriptors`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get descriptor stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get fuzzy matching statistics.
+ */
+export const getFuzzyMatchingStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/fuzzy`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get fuzzy matching stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get IPLD mapping statistics.
+ */
+export const getIpldMappingStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/ipld`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get IPLD mapping stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get perceptual hashing statistics.
+ */
+export const getPerceptualHashingStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/perceptual`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get perceptual hashing stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get metadata portability statistics.
+ */
+export const getMetadataPortabilityStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/portability`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get portability stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get content publishing statistics.
+ */
+export const getContentPublishingStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/publishing`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get publishing stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Reset all MediaCore statistics.
+ */
+export const resetMediaCoreStats = async () => {
+  const response = await fetch(`${baseUrl.replace('contentid', 'stats')}/reset`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to reset stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};

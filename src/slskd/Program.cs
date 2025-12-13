@@ -806,6 +806,7 @@ namespace slskd
             services.AddSingleton<MediaCore.IContentDescriptorPublisher, MediaCore.ContentDescriptorPublisher>();
             services.AddSingleton<MediaCore.IDescriptorRetriever, MediaCore.DescriptorRetriever>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
+            services.AddSingleton<MediaCore.IMediaCoreStatsService, MediaCore.MediaCoreStatsService>();
 
             // MultiSource MediaCore integration
             services.AddSingleton<IMediaCoreSwarmIntelligence, MediaCoreSwarmIntelligence>();

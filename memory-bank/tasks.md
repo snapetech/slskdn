@@ -2186,11 +2186,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: End-to-end integration tests with realistic audio data, cross-codec matching validation, and performance benchmarks.
 
-- [ ] **T-1330**: Integrate MediaCore with swarm scheduler
-  - Status: Not started
+- [x] **T-1330**: Integrate MediaCore with swarm scheduler
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Use ContentId for swarm grouping. Fuzzy matching for variant discovery.
+  - Branch: experimental/whatAmIThinking
+  - Notes: ContentID-based swarm grouping with fuzzy matching for intelligent peer selection and download optimization.
 
 - [ ] **T-1331**: Add MediaCore stats/dashboard
   - Status: Not started
