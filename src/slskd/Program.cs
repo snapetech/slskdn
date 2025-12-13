@@ -967,6 +967,9 @@ namespace slskd
             services.AddSingleton<DhtRendezvous.Security.ReplayCache>();
             services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();
             services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
+            
+            // P2-1: Certificate expiration monitoring
+            services.AddHostedService<DhtRendezvous.Security.CertificateExpirationMonitor>();
 
             services.AddSingleton<IDhtRendezvousService, DhtRendezvousService>();
             services.AddHostedService(p => (DhtRendezvousService)p.GetRequiredService<IDhtRendezvousService>());

@@ -128,6 +128,8 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public static async Task<MeshOverlayConnection> ConnectAsync(
         IPEndPoint endpoint,
         X509Certificate2 clientCertificate,
+        Security.CertificatePinStore? pinStore = null,
+        Microsoft.Extensions.Logging.ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         var tcpClient = new TcpClient();
@@ -144,7 +146,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             var sslStream = new SslStream(
                 tcpClient.GetStream(),
                 leaveInnerStreamOpen: false,
-                ValidateServerCertificate);
+                (sender, cert, chain, errors) => ValidateServerCertificate(cert, logger));
             
             using var tlsCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             tlsCts.CancelAfter(OverlayTimeouts.TlsHandshake);
@@ -153,7 +155,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             {
                 TargetHost = "slskdn-overlay",
                 ClientCertificates = new X509CertificateCollection { clientCertificate },
-                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13,
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
             }, tlsCts.Token);
             
@@ -162,6 +164,12 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                 State = ConnectionState.TlsEstablished,
                 CertificateThumbprint = sslStream.RemoteCertificate?.GetCertHashString(),
             };
+            
+            // SECURITY: Post-handshake certificate pin validation
+            if (pinStore != null && sslStream.RemoteCertificate != null)
+            {
+                await connection.ValidateCertificatePinAsync(pinStore, logger);
+            }
             
             return connection;
         }
@@ -178,6 +186,8 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public static async Task<MeshOverlayConnection> AcceptAsync(
         TcpClient tcpClient,
         X509Certificate2 serverCertificate,
+        Security.CertificatePinStore? pinStore = null,
+        Microsoft.Extensions.Logging.ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         var remoteEndPoint = (IPEndPoint)tcpClient.Client.RemoteEndPoint!;
@@ -188,7 +198,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             var sslStream = new SslStream(
                 tcpClient.GetStream(),
                 leaveInnerStreamOpen: false,
-                ValidateClientCertificate);
+                (sender, cert, chain, errors) => ValidateClientCertificate(cert, logger));
             
             using var tlsCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             tlsCts.CancelAfter(OverlayTimeouts.TlsHandshake);
@@ -197,7 +207,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             {
                 ServerCertificate = serverCertificate,
                 ClientCertificateRequired = false,
-                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13,
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
             }, tlsCts.Token);
             
@@ -206,6 +216,12 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                 State = ConnectionState.TlsEstablished,
                 CertificateThumbprint = sslStream.RemoteCertificate?.GetCertHashString(),
             };
+            
+            // SECURITY: Post-handshake certificate pin validation (if client sent cert)
+            if (pinStore != null && sslStream.RemoteCertificate != null)
+            {
+                await connection.ValidateCertificatePinAsync(pinStore, logger);
+            }
             
             return connection;
         }
@@ -286,6 +302,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         byte[]? publicKey = null,
         byte[]? signature = null,
         Security.ReplayCache? replayCache = null,
+        Microsoft.Extensions.Logging.ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -310,6 +327,12 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             
             if (replayCache.IsReplay(peerIdentifier, hello.Nonce))
             {
+                logger?.Log(
+                    LogLevel.Error,
+                    Security.SecurityEventIds.ReplayAttackDetected,
+                    "Replay attack detected: nonce '{Nonce}' already seen from {Peer}",
+                    hello.Nonce,
+                    peerIdentifier);
                 throw new SecurityException($"Replay attack detected: nonce '{hello.Nonce}' already seen from {peerIdentifier}");
             }
         }
@@ -322,15 +345,39 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                 var pubKeyBytes = Convert.FromBase64String(hello.PublicKey);
                 var sigBytes = Convert.FromBase64String(hello.Signature);
                 
+                // SECURITY P0-2: Verify PeerId matches the public key
+                var derivedPeerId = Mesh.Identity.MeshPeerId.FromPublicKey(pubKeyBytes);
+                if (derivedPeerId.ToString() != hello.MeshPeerId)
+                {
+                    logger?.Log(
+                        LogLevel.Error,
+                        Security.SecurityEventIds.HandshakePeerIdMismatch,
+                        "PeerId mismatch: peer claims '{Claimed}' but public key derives '{Derived}'",
+                        hello.MeshPeerId,
+                        derivedPeerId);
+                    throw new SecurityException(
+                        $"PeerId mismatch: peer claims '{hello.MeshPeerId}' but public key derives '{derivedPeerId}'. " +
+                        "This indicates an identity spoofing attempt.");
+                }
+                
                 // Reconstruct the signed payload
                 var payload = BuildHandshakePayloadForVerification(hello.MeshPeerId, hello.Timestamp);
                 
                 if (!Mesh.Identity.LocalMeshIdentityService.Verify(payload, sigBytes, pubKeyBytes))
                 {
+                    logger?.Log(
+                        LogLevel.Error,
+                        Security.SecurityEventIds.HandshakeSignatureInvalid,
+                        "Invalid handshake signature from {PeerId}",
+                        hello.MeshPeerId);
                     throw new SecurityException($"Invalid handshake signature from {hello.MeshPeerId}");
                 }
                 
-                System.Diagnostics.Debug.WriteLine($"✓ Verified handshake signature from {hello.MeshPeerId}");
+                logger?.Log(
+                    LogLevel.Debug,
+                    Security.SecurityEventIds.HandshakeSuccess,
+                    "✓ Verified handshake signature and PeerId binding from {PeerId}",
+                    hello.MeshPeerId);
             }
             catch (Exception ex) when (ex is not SecurityException)
             {
@@ -340,7 +387,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         else
         {
             // No signature provided - backward compatibility mode
-            System.Diagnostics.Debug.WriteLine($"⚠ Accepting handshake from {hello.MeshPeerId ?? "unknown"} without signature verification");
+            logger?.LogWarning("[MeshOverlay] ⚠ Accepting handshake from {PeerId} without signature verification (backward compatibility)", hello.MeshPeerId ?? "unknown");
         }
         
         // Send ACK
@@ -507,35 +554,87 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         }
     }
     
+    /// <summary>
+    /// Validates the certificate pin using TOFU (Trust-On-First-Use) model.
+    /// </summary>
+    private async Task ValidateCertificatePinAsync(
+        Security.CertificatePinStore pinStore,
+        Microsoft.Extensions.Logging.ILogger? logger)
+    {
+        if (_sslStream.RemoteCertificate == null)
+        {
+            throw new SecurityException("No remote certificate to validate");
+        }
+
+        var cert = new X509Certificate2(_sslStream.RemoteCertificate);
+        var currentThumbprint = cert.Thumbprint;
+        var endpointKey = $"{RemoteEndPoint.Address}:{RemoteEndPoint.Port}";
+
+        // Check if we have a recorded pin
+        var recordedPin = await pinStore.GetPinAsync(endpointKey);
+
+        if (recordedPin != null)
+        {
+            // We've seen this endpoint before - verify the cert matches
+            if (recordedPin.Thumbprint != currentThumbprint)
+            {
+                var message = $"TOFU pin violation for {endpointKey}: " +
+                             $"recorded {recordedPin.Thumbprint} on {recordedPin.FirstSeen:yyyy-MM-dd}, " +
+                             $"got {currentThumbprint}";
+                
+                logger?.Log(
+                    LogLevel.Error,
+                    Security.SecurityEventIds.CertificatePinViolation,
+                    "{Message}",
+                    message);
+                throw new SecurityException(message);
+            }
+
+            logger?.LogDebug("[MeshOverlay] TOFU pin validated for {Endpoint}", endpointKey);
+        }
+        else
+        {
+            // First time seeing this endpoint - record the pin
+            await pinStore.RecordPinAsync(endpointKey, currentThumbprint);
+            
+            logger?.Log(
+                LogLevel.Information,
+                Security.SecurityEventIds.TofuFirstSeen,
+                "TOFU: First connection to {Endpoint}, pinning certificate {Thumbprint}",
+                endpointKey,
+                currentThumbprint);
+        }
+    }
+    
     private static bool ValidateServerCertificate(
-        object sender,
         X509Certificate? certificate,
-        X509Chain? chain,
-        SslPolicyErrors sslPolicyErrors)
+        Microsoft.Extensions.Logging.ILogger? logger)
     {
         if (certificate is null)
         {
-            return false; // No certificate provided - reject
+            logger?.LogWarning("[MeshOverlay] Server presented no certificate - rejecting");
+            return false;
         }
         
-        // We accept self-signed certificates and use certificate pinning (TOFU)
-        // The pin check is done at a higher level after connection is established
-        // TODO P0: Fetch peer's MeshPeerDescriptor from DHT and verify SPKI pin HERE
-        
-        // Log for debugging (helps detect MITM attempts)
+        // We accept self-signed certificates
+        // Actual pin validation happens post-handshake in ValidateCertificatePinAsync
         var cert2 = new X509Certificate2(certificate);
-        System.Diagnostics.Debug.WriteLine($"[TOFU] Accepting cert: {cert2.Thumbprint}, SSL errors: {sslPolicyErrors}");
+        logger?.LogDebug("[MeshOverlay] Accepting server cert {Thumbprint} for post-handshake validation", cert2.Thumbprint);
         
-        return true; // SECURITY: Currently accepting all certs (TOFU mode)
+        return true;
     }
     
     private static bool ValidateClientCertificate(
-        object sender,
         X509Certificate? certificate,
-        X509Chain? chain,
-        SslPolicyErrors sslPolicyErrors)
+        Microsoft.Extensions.Logging.ILogger? logger)
     {
         // Client certificates are optional
+        if (certificate != null)
+        {
+            var cert2 = new X509Certificate2(certificate);
+            logger?.LogDebug("[MeshOverlay] Client presented cert {Thumbprint}", cert2.Thumbprint);
+        }
+        
         return true;
     }
     

@@ -181,8 +181,13 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             // Get our certificate
             var clientCert = _certificateManager.GetOrCreateServerCertificate();
             
-            // Connect with TLS
-            var connection = await MeshOverlayConnection.ConnectAsync(endpoint, clientCert, cancellationToken);
+            // Connect with TLS and certificate pin validation
+            var connection = await MeshOverlayConnection.ConnectAsync(
+                endpoint, 
+                clientCert, 
+                _pinStore,
+                _logger,
+                cancellationToken);
             
             try
             {

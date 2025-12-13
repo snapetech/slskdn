@@ -694,6 +694,27 @@ public sealed class DhtRendezvousOptions
     public bool EnableStun { get; set; } = true;
     
     /// <summary>
+    /// TLS version policy for mesh overlay connections.
+    /// P2-2: Allow TLS 1.2 as fallback for compatibility, prefer TLS 1.3.
+    /// Options: "Tls13Only", "Tls13Preferred" (default), "Tls12Minimum"
+    /// </summary>
+    public string TlsVersionPolicy { get; set; } = "Tls13Preferred";
+    
+    /// <summary>
+    /// Gets the SSL/TLS protocols to enable based on TlsVersionPolicy.
+    /// </summary>
+    public System.Security.Authentication.SslProtocols GetEnabledSslProtocols()
+    {
+        return TlsVersionPolicy switch
+        {
+            "Tls13Only" => System.Security.Authentication.SslProtocols.Tls13,
+            "Tls13Preferred" => System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
+            "Tls12Minimum" => System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
+            _ => System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12, // Default to Tls13Preferred
+        };
+    }
+    
+    /// <summary>
     /// Enable Soulseek username verification for overlay peers.
     /// Verifies that peers control the Soulseek account they claim by checking
     /// for a challenge token in their UserInfo description.

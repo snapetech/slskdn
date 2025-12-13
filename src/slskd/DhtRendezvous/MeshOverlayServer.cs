@@ -213,9 +213,14 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             
             _logger.LogDebug("Accepting connection from {Endpoint}", remoteEndPoint);
             
-            // Establish TLS and perform handshake
+            // Establish TLS with certificate pin validation
             var serverCert = _certificateManager.GetOrCreateServerCertificate();
-            var connection = await MeshOverlayConnection.AcceptAsync(tcpClient, serverCert, cancellationToken);
+            var connection = await MeshOverlayConnection.AcceptAsync(
+                tcpClient, 
+                serverCert, 
+                _pinStore,
+                _logger,
+                cancellationToken);
             
             try
             {
@@ -233,6 +238,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     publicKey: _localMeshIdentity.PublicKey,
                     signature: signature,
                     replayCache: _replayCache,
+                    logger: _logger,
                     cancellationToken: cancellationToken);
                 
                 // Check if username is blocked (if provided)
