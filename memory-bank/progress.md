@@ -7,6 +7,29 @@
 
 ## 2025-12-13
 
+### T-1302: FIND_NODE Kademlia RPC (Gap Task - P1)
+- **Status**: ✅ **COMPLETED**
+- **Implementation Details**:
+  - **DhtMeshService**: New mesh service implementing FIND_NODE, FIND_VALUE, and PING RPCs over ServiceCall/ServiceReply protocol
+  - **KademliaRpcClient**: Client implementing iterative lookup algorithm with alpha=3 parallel requests
+  - **FIND_NODE RPC**: Returns k=20 closest nodes to target ID based on XOR distance
+  - **FIND_VALUE RPC**: Checks local storage first, falls back to node lookup if not found
+  - **PING RPC**: Simple liveness check for ping-before-evict algorithm
+  - **Service Registration**: Automatic registration during Application startup via IServiceProvider injection
+  - **Protocol Integration**: Full integration with existing KademliaRoutingTable for node management
+- **Technical Notes**:
+  - Uses MessagePack-based ServiceCall/ServiceReply for RPC communication
+  - Iterative lookup prevents infinite loops with MaxIterations=20 safeguard
+  - Parallel requests (alpha=3) optimize lookup latency while respecting network limits
+  - Automatic routing table updates when processing requests from other peers
+  - Proper error handling and logging for all RPC operations
+  - Thread-safe implementation supporting concurrent lookups
+- **Kademlia Algorithm Compliance**:
+  - Iterative node lookup with closest-node-first selection
+  - Parallel querying of alpha nodes per iteration
+  - Termination when no closer nodes found or max iterations reached
+  - Routing table updates with every successful contact
+
 ### T-1301: Kademlia k-bucket Routing Table (Gap Task - P1)
 - **Status**: ✅ **COMPLETED**
 - **Implementation Details**:

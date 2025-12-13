@@ -2040,11 +2040,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Kademlia-style k-bucket structure with k=20. XOR distance metric, bucket splitting, node eviction. Complete implementation with ping-before-evict.
 
-- [ ] **T-1302**: Implement FIND_NODE Kademlia RPC
-  - Status: Not started
+- [x] **T-1302**: Implement FIND_NODE Kademlia RPC
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Query closest k nodes to a target ID. Iterative lookup algorithm.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Query closest k nodes to a target ID. Iterative lookup algorithm with alpha=3 parallel requests.
 
 - [ ] **T-1303**: Implement FIND_VALUE Kademlia RPC
   - Status: Not started
