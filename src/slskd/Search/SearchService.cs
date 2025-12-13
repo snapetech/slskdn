@@ -126,7 +126,9 @@ namespace slskd.Search
             ISoulseekClient soulseekClient,
             IDbContextFactory<SearchDbContext> contextFactory,
             slskd.Common.Security.ISoulseekSafetyLimiter safetyLimiter,
-            slskd.Events.EventBus eventBus = null)
+            slskd.Events.EventBus eventBus = null,
+            slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator = null,
+            slskd.VirtualSoulfind.DisasterMode.IMeshSearchService meshSearchService = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
@@ -134,6 +136,8 @@ namespace slskd.Search
             ContextFactory = contextFactory;
             SafetyLimiter = safetyLimiter;
             EventBus = eventBus;
+            DisasterModeCoordinator = disasterModeCoordinator;
+            MeshSearchService = meshSearchService;
         }
 
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; }
@@ -146,6 +150,8 @@ namespace slskd.Search
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private slskd.Common.Security.ISoulseekSafetyLimiter SafetyLimiter { get; }
         private IHubContext<SearchHub> SearchHub { get; set; }
+        private slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator DisasterModeCoordinator { get; }
+        private slskd.VirtualSoulfind.DisasterMode.IMeshSearchService MeshSearchService { get; }
 
         /// <summary>
         ///     Deletes the specified search.
@@ -256,8 +262,14 @@ namespace slskd.Search
             {
                 var message = $"Search rate limit exceeded. See Soulseek safety configuration.";
                 Log.Warning("[SAFETY] Search rejected for query='{Query}': {Message}", query.SearchText, message);
-                
+
                 throw new InvalidOperationException(message);
+            }
+
+            // T-823: Check if disaster mode is active - if so, route to mesh-only search
+            if (DisasterModeCoordinator?.IsDisasterModeActive == true)
+            {
+                return await StartMeshOnlySearchAsync(id, query, options);
             }
 
             var token = Client.GetNextToken();
@@ -522,6 +534,200 @@ namespace slskd.Search
                 Log.Error(ex, "Failed to delete all searches: {Message}", ex.Message);
                 throw;
             }
+        }
+
+        /// <summary>
+        ///     Performs a mesh-only search when disaster mode is active (T-823).
+        ///     Resolves query to MBIDs, queries DHT for overlay descriptors.
+        /// </summary>
+        /// <param name="id">A unique identifier for the search.</param>
+        /// <param name="query">The search query.</param>
+        /// <param name="options">Search options.</param>
+        /// <returns>The completed search with mesh-only results.</returns>
+        private async Task<Search> StartMeshOnlySearchAsync(Guid id, SearchQuery query, SearchOptions options = null)
+        {
+            Log.Information("[VSF-DISASTER-SEARCH] Starting mesh-only search for query: {Query} (id: {Id})", query.SearchText, id);
+
+            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationTokens.TryAdd(id, cancellationTokenSource);
+
+            // Initialize search record for mesh-only search
+            var search = new Search()
+            {
+                SearchText = query.SearchText,
+                Token = 0, // Mesh searches don't use Soulseek tokens
+                Id = id,
+                State = SearchStates.Requested,
+                StartedAt = DateTime.UtcNow,
+            };
+
+            bool searchCreated = false;
+            bool searchBroadcasted = false;
+
+            try
+            {
+                using var context = ContextFactory.CreateDbContext();
+                context.Add(search);
+                context.SaveChanges();
+
+                searchCreated = true;
+
+                await SearchHub.BroadcastCreateAsync(search);
+                searchBroadcasted = true;
+
+                // T-823: Mesh-only search implementation
+                // Step 1: Resolve query to MBIDs (MusicBrainz IDs)
+                var mbids = await ResolveQueryToMbidsAsync(query.SearchText, cancellationTokenSource.Token);
+
+                if (mbids.Count == 0)
+                {
+                    Log.Warning("[VSF-DISASTER-SEARCH] No MBIDs found for query: {Query}", query.SearchText);
+                    // Create empty search result
+                    search.State = SearchStates.Completed;
+                    search.EndedAt = DateTime.UtcNow;
+                    Update(search);
+                    await SearchHub.BroadcastUpdateAsync(search);
+                    return search;
+                }
+
+                Log.Debug("[VSF-DISASTER-SEARCH] Resolved {Count} MBIDs for query: {Query}", mbids.Count, query.SearchText);
+
+                // Step 2: Query mesh for each MBID and aggregate results
+                var meshResults = new List<slskd.VirtualSoulfind.DisasterMode.MeshPeerResult>();
+
+                foreach (var mbid in mbids.Take(5)) // Limit to 5 MBIDs to avoid flooding
+                {
+                    try
+                    {
+                        var mbidResult = await MeshSearchService.SearchByMbidAsync(mbid, cancellationTokenSource.Token);
+                        meshResults.AddRange(mbidResult.PeerResults);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "[VSF-DISASTER-SEARCH] Failed to search MBID {Mbid}", mbid);
+                    }
+                }
+
+                // Step 3: Convert mesh results to Search.Response format
+                var responses = ConvertMeshResultsToResponses(meshResults, query.SearchText);
+
+                // Update search record with results
+                search.State = SearchStates.Completed;
+                search.EndedAt = DateTime.UtcNow;
+                search.ResponseCount = responses.Count();
+                search.FileCount = responses.Sum(r => r.FileCount);
+                search.LockedFileCount = 0; // Mesh results don't have locked files
+
+                // Add responses to search
+                search.Responses = responses;
+
+                Update(search);
+                await SearchHub.BroadcastUpdateAsync(search);
+
+                Log.Information("[VSF-DISASTER-SEARCH] Mesh-only search completed: {PeerCount} peers, {FileCount} files (id: {Id})",
+                    meshResults.Count, search.FileCount, id);
+
+                return search;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[VSF-DISASTER-SEARCH] Mesh-only search failed for query: {Query} (id: {Id})", query.SearchText, id);
+
+                search.State = SearchStates.Completed;
+                search.EndedAt = DateTime.UtcNow;
+                Update(search);
+                await SearchHub.BroadcastUpdateAsync(search);
+
+                throw;
+            }
+            finally
+            {
+                CancellationTokens.TryRemove(id, out _);
+            }
+        }
+
+        /// <summary>
+        ///     Resolves a search query to MusicBrainz IDs for mesh search.
+        /// </summary>
+        /// <param name="query">The search query text.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>List of MBIDs to search for.</returns>
+        private async Task<List<string>> ResolveQueryToMbidsAsync(string query, CancellationToken ct)
+        {
+            // For now, implement simple query parsing to extract potential MBIDs
+            // In a full implementation, this would integrate with MusicBrainz API
+            var mbids = new List<string>();
+
+            // Check if query looks like an MBID
+            if (System.Text.RegularExpressions.Regex.IsMatch(query, @"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                mbids.Add(query.ToLowerInvariant());
+                return mbids;
+            }
+
+            // For text queries, we would normally query MusicBrainz API
+            // For this implementation, we'll use a simple heuristic or return empty
+            // In production, this should integrate with IMusicBrainzClient
+
+            Log.Debug("[VSF-DISASTER-SEARCH] Query '{Query}' is not an MBID - mesh search may return limited results", query);
+
+            // TODO: Integrate with MusicBrainz API for proper query resolution
+            // For now, return empty to indicate no MBIDs found
+            return mbids;
+        }
+
+        /// <summary>
+        ///     Converts mesh search results to Search.Response format for compatibility.
+        /// </summary>
+        /// <param name="meshResults">Mesh search results.</param>
+        /// <param name="originalQuery">The original search query.</param>
+        /// <returns>Collection of Response objects.</returns>
+        private IEnumerable<Response> ConvertMeshResultsToResponses(
+            List<slskd.VirtualSoulfind.DisasterMode.MeshPeerResult> meshResults,
+            string originalQuery)
+        {
+            var responses = new List<Response>();
+
+            foreach (var peerResult in meshResults)
+            {
+                var files = new List<File>();
+
+                foreach (var meshFile in peerResult.Files)
+                {
+                    var file = new File()
+                    {
+                        Code = 1, // Download code
+                        Filename = meshFile.Filename,
+                        Size = meshFile.Size,
+                        Extension = System.IO.Path.GetExtension(meshFile.Filename) ?? "",
+                        BitRate = 320, // Default bitrate
+                        Length = (int)(meshFile.Size / 320000), // Estimate duration in seconds
+                        IsLocked = false
+                    };
+
+                    files.Add(file);
+                }
+
+                if (files.Count > 0)
+                {
+                    var response = new Response()
+                    {
+                        Username = peerResult.PeerId,
+                        Token = 0, // Mesh searches don't use tokens
+                        HasFreeUploadSlot = true, // Assume available
+                        UploadSpeed = 1000000, // Default speed
+                        QueueLength = 0, // Assume no queue
+                        FileCount = files.Count,
+                        Files = files,
+                        LockedFileCount = 0,
+                        LockedFiles = new List<File>()
+                    };
+
+                    responses.Add(response);
+                }
+            }
+
+            return responses;
         }
     }
 }
