@@ -56,7 +56,7 @@ namespace slskd.SocialFederation
                 {
                     var federationOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<SocialFederationOptions>>();
                     var keyStore = sp.GetRequiredService<IActivityPubKeyStore>();
-                    var musicProvider = sp.GetService<ContentDomain.IMusicContentDomainProvider>();
+                    var musicProvider = sp.GetService<VirtualSoulfind.Core.Music.IMusicContentDomainProvider>();
                     var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MusicLibraryActor>>();
 
                     // Only create if we have a music provider

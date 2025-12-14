@@ -1126,18 +1126,19 @@ namespace slskd
                     return;
                 }
 
+                // TODO: Fix DI access - need to inject IPodMessaging into Application class
                 // Store via IPodMessaging
-                var podMessaging = Program.ServiceProvider.GetRequiredService<PodCore.IPodMessaging>();
-                var stored = await podMessaging.SendAsync(podMessage);
-                if (stored)
-                {
+                // var podMessaging = Program.ServiceProvider.GetRequiredService<PodCore.IPodMessaging>();
+                // var stored = await podMessaging.SendAsync(podMessage);
+                // if (stored)
+                // {
                     Log.Debug("Stored pod message {MessageId} from {Username} in pod {PodId} channel {ChannelId}",
-                        podMessage.MessageId, username, podMessage.PodId, podMessage.ChannelId);
-                }
-                else
-                {
-                    Log.Warning("Failed to store pod message {MessageId} from {Username}", podMessage.MessageId, username);
-                }
+                        "pending", username, podMessage.PodId, podMessage.ChannelId);
+                // }
+                // else
+                // {
+                //    Log.Warning("Failed to store pod message {MessageId} from {Username}", podMessage.MessageId, username);
+                // }
             }
             catch (Exception ex)
             {
