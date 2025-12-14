@@ -611,14 +611,14 @@ const MediaCore = () => {
       setImportingMetadata(true);
       setImportResult(null);
 
-      let package;
+      let packageData;
       try {
-        package = JSON.parse(importPackage.trim());
+        packageData = JSON.parse(importPackage.trim());
       } catch (parseErr) {
         throw new Error('Invalid JSON format for metadata package');
       }
 
-      const result = await mediacore.importMetadata(package, conflictStrategy, dryRun);
+      const result = await mediacore.importMetadata(packageData, conflictStrategy, dryRun);
       setImportResult(result);
     } catch (err) {
       setImportResult({ error: err.message });
