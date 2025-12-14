@@ -56,6 +56,8 @@ const SlskdnStatusBar = () => {
     meshPeers: 0,
     seqId: 0,
     verifiedBeacons: 0,
+    slskdnPeersNew: 0, // peers with version info
+    slskdnPeersOld: 0, // peers without version info
   });
   const [visible, setVisible] = useState(() => isStatusBarVisible());
 
@@ -75,6 +77,7 @@ const SlskdnStatusBar = () => {
         const backfill = data?.backfill || {};
         const swarmJobs = data?.swarmJobs || [];
         const dht = data?.dht || {};
+        const overlay = data?.overlay?.connector || {};
 
         setStats((previous) => ({
           ...previous,
@@ -95,6 +98,8 @@ const SlskdnStatusBar = () => {
             Number(hashDatabase.currentSeqId) || Number(mesh.localSeqId) || 0,
           verifiedBeacons:
             Number(dht.verifiedBeaconCount) || previous.verifiedBeacons,
+          slskdnPeersNew: Number(overlay.slskdnPeersWithVersion) || 0,
+          slskdnPeersOld: Number(overlay.slskdnPeersWithoutVersion) || 0,
         }));
       } catch (error) {
         // Silently handle errors - status bar is non-critical
@@ -131,6 +136,8 @@ const SlskdnStatusBar = () => {
     karma,
     meshPeers,
     seqId,
+    slskdnPeersNew,
+    slskdnPeersOld,
   } = stats;
 
   return (
@@ -142,8 +149,8 @@ const SlskdnStatusBar = () => {
             isBeacon === null
               ? 'Checking beacon status...'
               : isBeacon
-                ? `📡 BEACON! Broadcasting to ${dhtNodes} DHT nodes. Found ${discoveredPeers} peers.`
-                : `Not beacon-capable (behind NAT). Found ${discoveredPeers} peers.`
+                ? `📡 BEACON! Broadcasting to ${dhtNodes} DHT nodes. Found ${discoveredPeers} peers${slskdnPeersNew + slskdnPeersOld > 0 ? ` (${slskdnPeersNew + slskdnPeersOld} slskdn: ${slskdnPeersNew} new, ${slskdnPeersOld} old)` : ''}.`
+                : `Not beacon-capable (behind NAT). Found ${discoveredPeers} peers${slskdnPeersNew + slskdnPeersOld > 0 ? ` (${slskdnPeersNew + slskdnPeersOld} slskdn: ${slskdnPeersNew} new, ${slskdnPeersOld} old)` : ''}.`
           }
           to={`${urlBase}/system/network`}
         >
