@@ -378,6 +378,11 @@ public sealed class ObfuscatedTransportOptions
     public bool Enabled { get; set; } = false;
 
     /// <summary>
+    /// Gets or sets the obfuscated transport mode.
+    /// </summary>
+    public ObfuscatedTransportMode Mode { get; set; } = ObfuscatedTransportMode.Direct;
+
+    /// <summary>
     /// Gets or sets the primary transport to use.
     /// </summary>
     public ObfuscatedTransport PrimaryTransport { get; set; } = ObfuscatedTransport.Direct;
@@ -581,6 +586,11 @@ public sealed class MeekTransportOptions
     /// Gets or sets custom HTTP headers.
     /// </summary>
     public Dictionary<string, string>? CustomHeaders { get; set; }
+
+    /// <summary>
+    /// Gets or sets the User-Agent header for Meek requests.
+    /// </summary>
+    public string? UserAgent { get; set; }
 }
 
 /// <summary>

@@ -261,7 +261,7 @@ public class MeshCircuitBuilder : IDisposable
             {
                 // Connect to this peer using available transports
                 var (transport, stream) = await _transportSelector.SelectAndConnectAsync(
-                    hop.PeerAddress.Host,
+                    hop.PeerAddress.Address.ToString(),
                     hop.PeerAddress.Port,
                     circuitId, // Use circuit ID as isolation key
                     cancellationToken);

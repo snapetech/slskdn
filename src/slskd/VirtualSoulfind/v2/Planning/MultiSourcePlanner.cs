@@ -370,4 +370,30 @@ namespace slskd.VirtualSoulfind.v2.Planning
             };
         }
     }
+
+    /// <summary>
+    /// Represents a source candidate for multi-source downloads.
+    /// </summary>
+    public record SourceCandidate
+    {
+        /// <summary>
+        /// Gets the peer ID of the source.
+        /// </summary>
+        public string PeerId { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Gets the backend type for this source.
+        /// </summary>
+        public ContentBackendType Backend { get; init; }
+
+        /// <summary>
+        /// Gets the file path or resource identifier.
+        /// </summary>
+        public string ResourcePath { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Gets the quality score for this source (0-100).
+        /// </summary>
+        public int QualityScore { get; init; }
+    }
 }

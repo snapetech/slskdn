@@ -153,6 +153,16 @@ namespace slskd.VirtualSoulfind.Core.Music
         }
 
         /// <summary>
+        ///     Gets recently added music items.
+        /// </summary>
+        public Task<IReadOnlyList<MusicItem>> GetRecentItemsAsync(int count = 50, CancellationToken cancellationToken = default)
+        {
+            // TODO: Implement recent items retrieval from HashDb
+            // For now, return empty list to satisfy interface
+            return Task.FromResult<IReadOnlyList<MusicItem>>(Array.Empty<MusicItem>());
+        }
+
+        /// <summary>
         ///     Parses the year from a release date string (YYYY-MM-DD format).
         /// </summary>
         private static int? ParseYearFromReleaseDate(string? releaseDate)

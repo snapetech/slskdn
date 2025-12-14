@@ -61,5 +61,13 @@ namespace slskd.VirtualSoulfind.Core.Music
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The matched item, or null if no match found.</returns>
         Task<MusicItem?> TryMatchTrackByFingerprintAsync(string fingerprint, int durationSeconds, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Gets recently added music items.
+        /// </summary>
+        /// <param name="count">The maximum number of items to return.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A list of recent music items.</returns>
+        Task<IReadOnlyList<MusicItem>> GetRecentItemsAsync(int count = 50, CancellationToken cancellationToken = default);
     }
 }

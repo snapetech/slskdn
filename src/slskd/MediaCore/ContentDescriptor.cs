@@ -29,6 +29,11 @@ public class ContentDescriptor
     public DescriptorSignature? Signature { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this content is advertisable (can be shared publicly).
+    /// </summary>
+    public bool IsAdvertisable { get; set; } = true;
+
+    /// <summary>
     /// IPLD links to related content (parent, children, metadata, etc.).
     /// </summary>
     public IpldLinkCollection? Links { get; set; }
