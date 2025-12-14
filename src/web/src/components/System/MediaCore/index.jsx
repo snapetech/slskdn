@@ -634,14 +634,14 @@ const MediaCore = () => {
       setAnalyzingConflicts(true);
       setConflictAnalysis(null);
 
-      let package;
+      let packageData;
       try {
-        package = JSON.parse(importPackage.trim());
+        packageData = JSON.parse(importPackage.trim());
       } catch (parseErr) {
         throw new Error('Invalid JSON format for metadata package');
       }
 
-      const result = await mediacore.analyzeMetadataConflicts(package);
+      const result = await mediacore.analyzeMetadataConflicts(packageData);
       setConflictAnalysis(result);
     } catch (err) {
       setConflictAnalysis({ error: err.message });
