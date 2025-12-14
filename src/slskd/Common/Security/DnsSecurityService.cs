@@ -76,11 +76,11 @@ public class DnsSecurityService
         if (_dnsCache.TryGetValue(hostname, out var cachedEntry) && cachedEntry.Expires > DateTimeOffset.UtcNow)
         {
             // Validate cached IPs are still allowed
-            var allowedIPs = cachedEntry.IPs.Where(ipString =>
+            var validCachedIPs = cachedEntry.IPs.Where(ipString =>
                 IPAddress.TryParse(ipString, out var ip) &&
                 IsIpAllowedForTunneling(ip, allowPrivateRanges, allowPublicDestinations)).ToList();
 
-            if (allowedIPs.Count != cachedEntry.IPs.Count)
+            if (validCachedIPs.Count != cachedEntry.IPs.Count)
             {
                 _logger.LogWarning(
                     "[DnsSecurity] Cached DNS entry for {Hostname} contains disallowed IPs, re-resolving",
@@ -89,8 +89,8 @@ public class DnsSecurityService
             else
             {
                 _logger.LogDebug("[DnsSecurity] Using cached DNS resolution for {Hostname}: {SanitizedIPs}",
-                    hostname, string.Join(", ", allowedIPs.Select(ip => LoggingSanitizer.SanitizeIpAddress(ip))));
-                return DnsResolutionResult.Success(allowedIPs);
+                    hostname, string.Join(", ", validCachedIPs.Select(ip => LoggingSanitizer.SanitizeIpAddress(ip))));
+                return DnsResolutionResult.Success(validCachedIPs);
             }
         }
 
