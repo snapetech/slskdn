@@ -23,13 +23,16 @@ using Microsoft.Extensions.Logging;
 public class PodOpinionController : ControllerBase
 {
     private readonly IPodOpinionService _opinionService;
+    private readonly IPodOpinionAggregator _opinionAggregator;
     private readonly ILogger<PodOpinionController> _logger;
 
     public PodOpinionController(
         IPodOpinionService opinionService,
+        IPodOpinionAggregator opinionAggregator,
         ILogger<PodOpinionController> logger)
     {
         _opinionService = opinionService;
+        _opinionAggregator = opinionAggregator;
         _logger = logger;
     }
 
@@ -241,6 +244,156 @@ public class PodOpinionController : ControllerBase
         {
             _logger.LogError(ex, "Error refreshing opinions for pod {PodId}", podId);
             return StatusCode(500, "An error occurred while refreshing opinions");
+        }
+    }
+
+    /// <summary>
+    ///     Gets aggregated opinions with affinity weighting and consensus metrics.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="contentId">The content ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The aggregated opinions.</returns>
+    /// <response code="200">The aggregated opinions were retrieved.</response>
+    /// <response code="400">The request is malformed.</response>
+    /// <response code="500">An unexpected error occurred.</response>
+    [HttpGet("content/{contentId}/aggregated")]
+    [ProducesResponseType(typeof(AggregatedOpinions), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> GetAggregatedOpinions(
+        [FromRoute] string podId,
+        [FromRoute] string contentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(podId))
+        {
+            return BadRequest("Pod ID is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return BadRequest("Content ID is required");
+        }
+
+        try
+        {
+            var aggregated = await _opinionAggregator.GetAggregatedOpinionsAsync(podId, contentId, cancellationToken);
+            return Ok(aggregated);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting aggregated opinions for pod {PodId} content {ContentId}", podId, contentId);
+            return StatusCode(500, "An error occurred while getting aggregated opinions");
+        }
+    }
+
+    /// <summary>
+    ///     Gets member affinity scores for a pod.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The member affinity scores.</returns>
+    /// <response code="200">The affinity scores were retrieved.</response>
+    /// <response code="400">The request is malformed.</response>
+    /// <response code="500">An unexpected error occurred.</response>
+    [HttpGet("members/affinity")]
+    [ProducesResponseType(typeof(Dictionary<string, MemberAffinity>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> GetMemberAffinities(
+        [FromRoute] string podId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(podId))
+        {
+            return BadRequest("Pod ID is required");
+        }
+
+        try
+        {
+            var affinities = await _opinionAggregator.GetMemberAffinitiesAsync(podId, cancellationToken);
+            return Ok(affinities);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting member affinities for pod {PodId}", podId);
+            return StatusCode(500, "An error occurred while getting member affinities");
+        }
+    }
+
+    /// <summary>
+    ///     Gets consensus recommendations for content variants.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="contentId">The content ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The consensus recommendations.</returns>
+    /// <response code="200">The recommendations were retrieved.</response>
+    /// <response code="400">The request is malformed.</response>
+    /// <response code="500">An unexpected error occurred.</response>
+    [HttpGet("content/{contentId}/recommendations")]
+    [ProducesResponseType(typeof(IEnumerable<VariantRecommendation>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> GetConsensusRecommendations(
+        [FromRoute] string podId,
+        [FromRoute] string contentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(podId))
+        {
+            return BadRequest("Pod ID is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return BadRequest("Content ID is required");
+        }
+
+        try
+        {
+            var recommendations = await _opinionAggregator.GetConsensusRecommendationsAsync(podId, contentId, cancellationToken);
+            return Ok(recommendations);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting consensus recommendations for pod {PodId} content {ContentId}", podId, contentId);
+            return StatusCode(500, "An error occurred while getting consensus recommendations");
+        }
+    }
+
+    /// <summary>
+    ///     Updates member affinity scores based on recent activity.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The update result.</returns>
+    /// <response code="200">The affinities were updated.</response>
+    /// <response code="400">The request is malformed.</response>
+    /// <response code="500">An unexpected error occurred.</response>
+    [HttpPost("members/affinity/update")]
+    [ProducesResponseType(typeof(AffinityUpdateResult), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> UpdateMemberAffinities(
+        [FromRoute] string podId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(podId))
+        {
+            return BadRequest("Pod ID is required");
+        }
+
+        try
+        {
+            var result = await _opinionAggregator.UpdateMemberAffinitiesAsync(podId, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating member affinities for pod {PodId}", podId);
+            return StatusCode(500, "An error occurred while updating member affinities");
         }
     }
 }

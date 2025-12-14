@@ -1930,6 +1930,67 @@ export const refreshPodOpinions = async (podId) => {
 };
 
 /**
+ * Get aggregated opinions with affinity weighting.
+ */
+export const getAggregatedOpinions = async (podId, contentId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/aggregated`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get aggregated opinions: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get member affinity scores.
+ */
+export const getMemberAffinities = async (podId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/members/affinity`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get member affinities: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get consensus recommendations for content variants.
+ */
+export const getConsensusRecommendations = async (podId, contentId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/recommendations`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get consensus recommendations: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update member affinity scores.
+ */
+export const updateMemberAffinities = async (podId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/members/affinity/update`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update member affinities: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
  * Pod Channel API base URL
  */
 const channelBaseUrl = `${apiBaseUrl}/pods`;

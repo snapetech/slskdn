@@ -297,6 +297,15 @@ const MediaCore = () => {
   const [getOpinionsLoading, setGetOpinionsLoading] = useState(false);
   const [getStatsLoading, setGetStatsLoading] = useState(false);
   const [refreshOpinionsLoading, setRefreshOpinionsLoading] = useState(false);
+
+  // Pod Opinion Aggregation states
+  const [aggregatedOpinions, setAggregatedOpinions] = useState(null);
+  const [memberAffinities, setMemberAffinities] = useState({});
+  const [consensusRecommendations, setConsensusRecommendations] = useState([]);
+  const [getAggregatedLoading, setGetAggregatedLoading] = useState(false);
+  const [getAffinitiesLoading, setGetAffinitiesLoading] = useState(false);
+  const [getRecommendationsLoading, setGetRecommendationsLoading] = useState(false);
+  const [updateAffinitiesLoading, setUpdateAffinitiesLoading] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -2095,6 +2104,81 @@ const MediaCore = () => {
       toast.error(`Failed to refresh opinions: ${err.message}`);
     } finally {
       setRefreshOpinionsLoading(false);
+    }
+  };
+
+  // Pod Opinion Aggregation handlers
+  const handleGetAggregatedOpinions = async () => {
+    if (!opinionPodId.trim() || !opinionContentId.trim()) {
+      toast.error('Pod ID and Content ID are required');
+      return;
+    }
+
+    try {
+      setGetAggregatedLoading(true);
+      const aggregated = await mediacore.getAggregatedOpinions(opinionPodId.trim(), opinionContentId.trim());
+      setAggregatedOpinions(aggregated);
+    } catch (err) {
+      toast.error(`Failed to get aggregated opinions: ${err.message}`);
+      setAggregatedOpinions(null);
+    } finally {
+      setGetAggregatedLoading(false);
+    }
+  };
+
+  const handleGetMemberAffinities = async () => {
+    if (!opinionPodId.trim()) {
+      toast.error('Pod ID is required');
+      return;
+    }
+
+    try {
+      setGetAffinitiesLoading(true);
+      const affinities = await mediacore.getMemberAffinities(opinionPodId.trim());
+      setMemberAffinities(affinities);
+    } catch (err) {
+      toast.error(`Failed to get member affinities: ${err.message}`);
+      setMemberAffinities({});
+    } finally {
+      setGetAffinitiesLoading(false);
+    }
+  };
+
+  const handleGetConsensusRecommendations = async () => {
+    if (!opinionPodId.trim() || !opinionContentId.trim()) {
+      toast.error('Pod ID and Content ID are required');
+      return;
+    }
+
+    try {
+      setGetRecommendationsLoading(true);
+      const recommendations = await mediacore.getConsensusRecommendations(opinionPodId.trim(), opinionContentId.trim());
+      setConsensusRecommendations(recommendations);
+    } catch (err) {
+      toast.error(`Failed to get consensus recommendations: ${err.message}`);
+      setConsensusRecommendations([]);
+    } finally {
+      setGetRecommendationsLoading(false);
+    }
+  };
+
+  const handleUpdateMemberAffinities = async () => {
+    if (!opinionPodId.trim()) {
+      toast.error('Pod ID is required');
+      return;
+    }
+
+    try {
+      setUpdateAffinitiesLoading(true);
+      const result = await mediacore.updateMemberAffinities(opinionPodId.trim());
+      toast.success(`Updated affinities for ${result.membersUpdated} members`);
+
+      // Refresh affinities display
+      await handleGetMemberAffinities();
+    } catch (err) {
+      toast.error(`Failed to update member affinities: ${err.message}`);
+    } finally {
+      setUpdateAffinitiesLoading(false);
     }
   };
 
@@ -6366,6 +6450,135 @@ const MediaCore = () => {
               >
                 Publish Opinion
               </Button>
+            </Card.Content>
+
+            {/* Opinion Aggregation */}
+            <Card.Content>
+              <Header size="small">Opinion Aggregation & Consensus</Header>
+
+              <div style={{ marginBottom: '1em' }}>
+                <Button
+                  color="purple"
+                  onClick={() => handleGetAggregatedOpinions()}
+                  loading={getAggregatedLoading}
+                  disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  style={{ marginRight: '0.5em' }}
+                >
+                  Get Aggregated Opinions
+                </Button>
+
+                <Button
+                  color="blue"
+                  onClick={() => handleGetMemberAffinities()}
+                  loading={getAffinitiesLoading}
+                  disabled={!opinionPodId.trim()}
+                  style={{ marginRight: '0.5em' }}
+                >
+                  Get Member Affinities
+                </Button>
+
+                <Button
+                  color="teal"
+                  onClick={() => handleGetConsensusRecommendations()}
+                  loading={getRecommendationsLoading}
+                  disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  style={{ marginRight: '0.5em' }}
+                >
+                  Get Recommendations
+                </Button>
+
+                <Button
+                  color="orange"
+                  onClick={() => handleUpdateMemberAffinities()}
+                  loading={updateAffinitiesLoading}
+                  disabled={!opinionPodId.trim()}
+                >
+                  Update Affinities
+                </Button>
+              </div>
+
+              {/* Aggregated Opinions */}
+              {aggregatedOpinions && (
+                <div style={{ marginBottom: '1em' }}>
+                  <Header size="tiny">Aggregated Opinion Results</Header>
+                  <Message info>
+                    <strong>Weighted Average:</strong> {aggregatedOpinions.weightedAverageScore.toFixed(2)}/10<br />
+                    <strong>Unweighted Average:</strong> {aggregatedOpinions.unweightedAverageScore.toFixed(2)}/10<br />
+                    <strong>Consensus Strength:</strong> {(aggregatedOpinions.consensusStrength * 100).toFixed(1)}%<br />
+                    <strong>Total Opinions:</strong> {aggregatedOpinions.totalOpinions}<br />
+                    <strong>Unique Variants:</strong> {aggregatedOpinions.uniqueVariants}<br />
+                    <strong>Contributing Members:</strong> {aggregatedOpinions.contributingMembers}
+                  </Message>
+
+                  {/* Variant Breakdown */}
+                  {aggregatedOpinions.variantAggregates.length > 0 && (
+                    <div style={{ marginTop: '1em' }}>
+                      <Header size="tiny">Variant Analysis</Header>
+                      {aggregatedOpinions.variantAggregates.map((variant, idx) => (
+                        <Card key={idx} style={{ marginBottom: '0.5em' }}>
+                          <Card.Content style={{ padding: '0.5em' }}>
+                            <div>
+                              <strong>Variant:</strong> {variant.variantHash.substring(0, 8)}...<br />
+                              <strong>Weighted Score:</strong> {variant.weightedAverageScore.toFixed(2)}/10<br />
+                              <strong>Unweighted Score:</strong> {variant.unweightedAverageScore.toFixed(2)}/10<br />
+                              <strong>Opinions:</strong> {variant.opinionCount}<br />
+                              <strong>Agreement:</strong> {(1 - variant.scoreStandardDeviation / 5).toFixed(2)} (lower std dev = higher agreement)
+                            </div>
+                          </Card.Content>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Consensus Recommendations */}
+              {consensusRecommendations.length > 0 && (
+                <div style={{ marginBottom: '1em' }}>
+                  <Header size="tiny">Consensus Recommendations</Header>
+                  {consensusRecommendations.map((rec, idx) => (
+                    <Card key={idx} style={{
+                      marginBottom: '0.5em',
+                      borderLeft: rec.recommendation === 'StronglyRecommended' ? '5px solid #21ba45' :
+                                 rec.recommendation === 'Recommended' ? '5px solid #2185d0' :
+                                 rec.recommendation === 'Neutral' ? '5px solid #fbbd08' :
+                                 rec.recommendation === 'NotRecommended' ? '5px solid #f2711c' :
+                                 '5px solid #db2828'
+                    }}>
+                      <Card.Content style={{ padding: '0.5em' }}>
+                        <div>
+                          <strong>Variant:</strong> {rec.variantHash.substring(0, 8)}...<br />
+                          <strong>Recommendation:</strong> {rec.recommendation.replace(/([A-Z])/g, ' $1').trim()}<br />
+                          <strong>Consensus Score:</strong> {(rec.consensusScore * 100).toFixed(1)}%<br />
+                          <strong>Reasoning:</strong> {rec.reasoning}<br />
+                          <small><strong>Factors:</strong> {rec.supportingFactors.join(', ')}</small>
+                        </div>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Member Affinities */}
+              {Object.keys(memberAffinities).length > 0 && (
+                <div style={{ marginBottom: '1em' }}>
+                  <Header size="tiny">Member Affinities ({Object.keys(memberAffinities).length})</Header>
+                  {Object.entries(memberAffinities).map(([peerId, affinity], idx) => (
+                    <Card key={idx} style={{ marginBottom: '0.5em' }}>
+                      <Card.Content style={{ padding: '0.5em' }}>
+                        <div>
+                          <strong>Peer:</strong> {peerId.substring(0, 8)}...<br />
+                          <strong>Affinity Score:</strong> {(affinity.affinityScore * 100).toFixed(1)}%<br />
+                          <strong>Trust Score:</strong> {(affinity.trustScore * 100).toFixed(1)}%<br />
+                          <strong>Messages:</strong> {affinity.messageCount}<br />
+                          <strong>Opinions:</strong> {affinity.opinionCount}<br />
+                          <small>Last Activity: {new Date(affinity.lastActivity).toLocaleDateString()}</small>
+                        </div>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </Card.Content>
           </Card>
         </Grid.Column>

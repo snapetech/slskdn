@@ -940,6 +940,19 @@ namespace slskd
                     sp.GetRequiredService<ILogger<PodCore.PodOpinionService>>());
             });
 
+            // Pod opinion aggregator for weighted opinion analysis and consensus
+            services.AddScoped<PodCore.IPodOpinionAggregator>(sp =>
+            {
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var opinionService = sp.GetRequiredService<PodCore.IPodOpinionService>();
+                var messageStorage = sp.GetRequiredService<PodCore.IPodMessageStorage>();
+                return new PodCore.PodOpinionAggregator(
+                    podService,
+                    opinionService,
+                    messageStorage,
+                    sp.GetRequiredService<ILogger<PodCore.PodOpinionAggregator>>());
+            });
+
             // Background service for periodic pod metadata refresh
             services.AddHostedService<PodCore.PodPublisherBackgroundService>();
 

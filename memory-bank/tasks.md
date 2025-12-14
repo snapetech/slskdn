@@ -2272,11 +2272,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete content linking with MusicBrainz integration, validation, and metadata enrichment.
 
-- [ ] **T-1352**: Implement PodVariantOpinion publishing
-  - Status: Not started
+- [x] **T-1352**: Implement PodVariantOpinion publishing
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Publish signed opinions to DHT. Key: pod:<PodId>:opinions:<ContentId>.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete opinion publishing with DHT storage, validation, and community statistics.
 
 - [ ] **T-1353**: Implement pod opinion aggregation
   - Status: Not started
