@@ -1,3 +1,7 @@
+// <copyright file="SecurityEventLogger.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -233,4 +237,3 @@ public class SecurityEventLogger
             peerId, pattern, metricsStr);
     }
 }
-

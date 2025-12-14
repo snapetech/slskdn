@@ -1,3 +1,7 @@
+// <copyright file="V2Exceptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Error types for v2
 namespace slskd.VirtualSoulfind.v2
 {

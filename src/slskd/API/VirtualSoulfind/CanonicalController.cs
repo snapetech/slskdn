@@ -1,3 +1,7 @@
+// <copyright file="CanonicalController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.VirtualSoulfind;
 
 using Microsoft.AspNetCore.Authorization;
@@ -42,4 +46,3 @@ public class CanonicalController : ControllerBase
         });
     }
 }
-

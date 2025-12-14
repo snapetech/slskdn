@@ -1,3 +1,7 @@
+// <copyright file="PrivacyAudit.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.Integration;
 
 using slskd.VirtualSoulfind.Capture;
@@ -159,4 +163,3 @@ public class PrivacyAudit : IPrivacyAudit
         }
     }
 }
-

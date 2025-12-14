@@ -1,3 +1,7 @@
+// <copyright file="FlacAnalyzer.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Audio.Analyzers
 {
     using System;
@@ -134,5 +138,3 @@ namespace slskd.Audio.Analyzers
         public string AnalyzerVersion { get; set; }
     }
 }
-
-

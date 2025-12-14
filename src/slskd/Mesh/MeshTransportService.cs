@@ -1,3 +1,7 @@
+// <copyright file="MeshTransportService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using slskd.Common.Security;
@@ -104,4 +108,3 @@ public class MeshTransportService : IMeshTransportService
         return new MeshTransportDecision(basePreference, reason, anonymityTransport);
     }
 }
-

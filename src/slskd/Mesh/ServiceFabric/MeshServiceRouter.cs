@@ -1,3 +1,7 @@
+// <copyright file="MeshServiceRouter.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.Common.Security;
@@ -535,4 +539,3 @@ internal class ServiceHealthTracker
         }
     }
 }
-

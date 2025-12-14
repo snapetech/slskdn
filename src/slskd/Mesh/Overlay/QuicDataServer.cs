@@ -1,3 +1,7 @@
+// <copyright file="QuicDataServer.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 #pragma warning disable CA2252 // Preview features - QUIC APIs require preview features
 
 namespace slskd.Mesh.Overlay;

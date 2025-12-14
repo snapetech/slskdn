@@ -1,3 +1,7 @@
+// <copyright file="NatTraversalService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -106,4 +110,3 @@ public class NatTraversalService : INatTraversalService
         return true;
     }
 }
-

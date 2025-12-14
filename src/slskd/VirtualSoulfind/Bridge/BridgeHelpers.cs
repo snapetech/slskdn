@@ -1,3 +1,7 @@
+// <copyright file="BridgeHelpers.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.Bridge;
 
 using slskd.VirtualSoulfind.ShadowIndex;
@@ -183,4 +187,3 @@ public class RoomSceneMapper : IRoomSceneMapper
         return labelKeywords.Any(keyword => lower.Contains(keyword));
     }
 }
-

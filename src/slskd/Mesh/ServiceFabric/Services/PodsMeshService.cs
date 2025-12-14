@@ -1,3 +1,7 @@
+// <copyright file="PodsMeshService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.ServiceFabric;
@@ -310,4 +314,3 @@ public record GetMessagesRequest
     public string ChannelId { get; init; } = string.Empty;
     public long? SinceTimestamp { get; init; }
 }
-

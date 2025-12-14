@@ -1,3 +1,7 @@
+// <copyright file="MeshOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh;
 
 /// <summary>

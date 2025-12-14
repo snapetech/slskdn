@@ -1,3 +1,7 @@
+// <copyright file="KeyedSigner.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -96,4 +100,3 @@ public class ControlSigner : IControlSigner
     private static string BuildSignablePayload(ControlEnvelope env) =>
         $"{env.Type}|{env.TimestampUnixMs}|{Convert.ToBase64String(env.Payload)}";
 }
-

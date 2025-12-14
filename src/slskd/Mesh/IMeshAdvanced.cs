@@ -1,3 +1,7 @@
+// <copyright file="IMeshAdvanced.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh;
 
 /// <summary>
@@ -29,4 +33,3 @@ public record MeshTransportStats(
     int RoutingTableSize = 0,
     int BootstrapPeers = 0,
     long PeerChurnEvents = 0);
-

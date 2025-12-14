@@ -1,3 +1,7 @@
+// <copyright file="GoldStarClubService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.PodCore;
 
 using System;
@@ -268,4 +272,3 @@ public class GoldStarClubService : BackgroundService, IGoldStarClubService
         }
     }
 }
-

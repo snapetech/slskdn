@@ -1,3 +1,7 @@
+// <copyright file="MeshGatewayOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System.Collections.Generic;
 
 namespace slskd.Mesh.ServiceFabric;
@@ -131,4 +135,3 @@ public class MeshGatewayOptions
                address == "0.0.0.0"; // 0.0.0.0 is treated as localhost for validation purposes
     }
 }
-

@@ -1,3 +1,7 @@
+// <copyright file="MeshGatewayConfigValidator.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -141,4 +145,3 @@ public class MeshGatewayConfigValidator
                address == "0.0.0.0";
     }
 }
-

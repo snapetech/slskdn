@@ -1,3 +1,7 @@
+// <copyright file="LibraryCompatibilityController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Compatibility;
 
 using Microsoft.AspNetCore.Authorization;
@@ -41,4 +45,3 @@ public class LibraryCompatibilityController : ControllerBase
         return Ok(new { scan_id = scanId });
     }
 }
-

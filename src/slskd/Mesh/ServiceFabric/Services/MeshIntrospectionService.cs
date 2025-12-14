@@ -1,3 +1,7 @@
+// <copyright file="MeshIntrospectionService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.ServiceFabric;
 using System;
@@ -192,4 +196,3 @@ public class MeshIntrospectionService : IMeshService
         };
     }
 }
-

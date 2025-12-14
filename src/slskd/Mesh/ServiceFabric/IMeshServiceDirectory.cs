@@ -1,3 +1,7 @@
+// <copyright file="IMeshServiceDirectory.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,4 +33,3 @@ public interface IMeshServiceDirectory
         string serviceId,
         CancellationToken cancellationToken = default);
 }
-

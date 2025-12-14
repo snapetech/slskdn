@@ -1,3 +1,7 @@
+// <copyright file="PodDiscovery.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.PodCore;
 
 using System;
@@ -200,4 +204,3 @@ public class PodDiscovery : IPodDiscovery
         return $"{PodKeyPrefix}{podId}";
     }
 }
-

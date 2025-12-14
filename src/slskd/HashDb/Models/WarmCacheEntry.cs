@@ -1,3 +1,7 @@
+// <copyright file="WarmCacheEntry.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.HashDb.Models
 {
     public class WarmCacheEntry
@@ -13,5 +17,3 @@ namespace slskd.HashDb.Models
         public long LastAccessed { get; set; } // unix seconds
     }
 }
-
-

@@ -1,3 +1,7 @@
+// <copyright file="MeshServiceClient.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Overlay;
@@ -291,4 +295,3 @@ public sealed record ClientMetrics
     public int MaxConcurrentCallsPerPeer { get; init; }
     public int MaxTotalPendingCalls { get; init; }
 }
-

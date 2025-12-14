@@ -1,3 +1,7 @@
+// <copyright file="RoomsCompatibilityController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Compatibility;
 
 using Microsoft.AspNetCore.Authorization;
@@ -73,4 +77,3 @@ public class RoomsCompatibilityController : ControllerBase
 }
 
 public record JoinRoomRequest(string? Room);
-

@@ -1,3 +1,7 @@
+// <copyright file="SoulseekSafetyLimiter.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Common.Security;
 
 using System;
@@ -206,4 +210,3 @@ public record SoulseekSafetyMetrics
     /// </summary>
     public Dictionary<string, int> BrowsesBySource { get; init; } = new();
 }
-

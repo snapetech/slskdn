@@ -1,3 +1,7 @@
+// <copyright file="Policies.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Security;
 
 using System.Collections.Concurrent;

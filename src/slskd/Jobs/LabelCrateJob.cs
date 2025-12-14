@@ -1,3 +1,7 @@
+// <copyright file="LabelCrateJob.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Jobs
 {
     using System;
@@ -35,5 +39,3 @@ namespace slskd.Jobs
         public int Limit { get; set; } = 10;
     }
 }
-
-

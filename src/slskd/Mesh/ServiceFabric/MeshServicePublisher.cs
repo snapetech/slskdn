@@ -1,3 +1,7 @@
+// <copyright file="MeshServicePublisher.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -174,4 +178,3 @@ public class MeshServicePublisher : BackgroundService
         }
     }
 }
-

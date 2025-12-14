@@ -1,3 +1,7 @@
+// <copyright file="PlaybackController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.API
 {
     using System.Threading;
@@ -74,5 +78,3 @@ namespace slskd.Transfers.MultiSource.API
         }
     }
 }
-
-

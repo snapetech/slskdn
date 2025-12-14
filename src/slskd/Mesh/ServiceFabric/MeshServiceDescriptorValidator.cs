@@ -1,3 +1,7 @@
+// <copyright file="MeshServiceDescriptorValidator.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using System;
@@ -167,4 +171,3 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
         return true;
     }
 }
-

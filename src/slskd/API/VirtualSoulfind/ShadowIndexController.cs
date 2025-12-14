@@ -1,3 +1,7 @@
+// <copyright file="ShadowIndexController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.VirtualSoulfind;
 
 using Microsoft.AspNetCore.Authorization;
@@ -36,4 +40,3 @@ public class ShadowIndexController : ControllerBase
         });
     }
 }
-

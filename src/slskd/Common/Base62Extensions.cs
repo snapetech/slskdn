@@ -1,3 +1,7 @@
+// <copyright file="Base62Extensions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿/*
     The MIT License (MIT)
 

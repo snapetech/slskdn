@@ -1,3 +1,7 @@
+// <copyright file="UdpHolePuncher.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -241,4 +245,3 @@ internal class PunchStrategy
     public bool UsePortPrediction { get; set; } = false;
     public int DelayBetweenPackets { get; set; } = 100;
 }
-

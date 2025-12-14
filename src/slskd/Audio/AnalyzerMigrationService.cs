@@ -1,3 +1,7 @@
+// <copyright file="AnalyzerMigrationService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Audio
 {
     using System;
@@ -74,5 +78,3 @@ namespace slskd.Audio
         }
     }
 }
-
-

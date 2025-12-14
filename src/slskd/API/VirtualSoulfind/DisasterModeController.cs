@@ -1,3 +1,7 @@
+// <copyright file="DisasterModeController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.VirtualSoulfind;
 
 using Microsoft.AspNetCore.Authorization;
@@ -37,4 +41,3 @@ public class DisasterModeController : ControllerBase
         });
     }
 }
-

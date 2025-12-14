@@ -1,3 +1,7 @@
+// <copyright file="MeshGatewayCliHelper.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System;
 using System.Security.Cryptography;
 
@@ -77,4 +81,3 @@ public static class MeshGatewayCliHelper
         return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }
-

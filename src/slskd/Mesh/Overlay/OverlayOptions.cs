@@ -1,3 +1,7 @@
+// <copyright file="OverlayOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh.Overlay;
 
 /// <summary>
@@ -17,4 +21,3 @@ public class OverlayOptions
     /// <summary>Rotate key after N days (0 = never).</summary>
     public int RotateDays { get; set; } = 30;
 }
-

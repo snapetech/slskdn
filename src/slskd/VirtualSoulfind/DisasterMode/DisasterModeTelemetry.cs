@@ -1,3 +1,7 @@
+// <copyright file="DisasterModeTelemetry.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.DisasterMode;
 
 /// <summary>
@@ -158,4 +162,3 @@ public class DisasterModeTelemetryService : IDisasterModeTelemetry
         }
     }
 }
-

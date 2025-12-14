@@ -1,3 +1,7 @@
+// <copyright file="PlaybackDiagnostics.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.Playback
 {
     public class PlaybackDiagnostics
@@ -13,4 +17,3 @@ namespace slskd.Transfers.MultiSource.Playback
         public PriorityZone Priority { get; set; } = PriorityZone.Mid;
     }
 }
-

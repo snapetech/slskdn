@@ -1,3 +1,7 @@
+// <copyright file="KademliaRoutingTable.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System.Collections.Concurrent;
 using System.Numerics;
 
@@ -355,4 +359,3 @@ public record RoutingTableStats(
     int MaxBucketSize,
     int MinBucketSize
 );
-

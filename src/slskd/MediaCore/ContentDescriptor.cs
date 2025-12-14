@@ -1,3 +1,7 @@
+// <copyright file="ContentDescriptor.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.MediaCore;
 
 /// <summary>
@@ -80,4 +84,3 @@ public class ContentDescriptor
         return Links?.GetLinksByTarget(target) ?? Array.Empty<IpldLink>();
     }
 }
-

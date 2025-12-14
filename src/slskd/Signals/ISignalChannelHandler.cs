@@ -1,3 +1,7 @@
+// <copyright file="ISignalChannelHandler.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals;
 
 /// <summary>
@@ -28,4 +32,3 @@ public interface ISignalChannelHandler
     /// <returns>Task representing the async operation.</returns>
     Task StartReceivingAsync(Func<Signal, CancellationToken, Task> onSignalReceived, CancellationToken cancellationToken = default);
 }
-

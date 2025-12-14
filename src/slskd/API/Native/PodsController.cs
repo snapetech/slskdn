@@ -1,3 +1,7 @@
+// <copyright file="PodsController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Native;
 
 using Microsoft.AspNetCore.Authorization;
@@ -463,4 +467,3 @@ public record BanMemberRequest(string PeerId);
 public record SendMessageRequest(string Body, string SenderPeerId, string? Signature = null);
 public record BindRoomRequest(string RoomName, string? Mode = null);
 public record UpdatePodRequest(Pod Pod, string RequestingPeerId);
-

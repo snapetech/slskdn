@@ -1,3 +1,7 @@
+// <copyright file="JobManifest.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Jobs.Manifests
 {
     using System;
@@ -117,5 +121,3 @@ namespace slskd.Jobs.Manifests
         public DownloadConstraints Constraints { get; set; } = new();
     }
 }
-
-

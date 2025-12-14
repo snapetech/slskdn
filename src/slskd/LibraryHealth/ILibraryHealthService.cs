@@ -1,3 +1,7 @@
+// <copyright file="ILibraryHealthService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.LibraryHealth
 {
     using System.Collections.Generic;
@@ -19,5 +23,3 @@ namespace slskd.LibraryHealth
         Task<LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default);
     }
 }
-
-

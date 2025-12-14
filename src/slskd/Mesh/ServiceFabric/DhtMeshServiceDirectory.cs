@@ -1,3 +1,7 @@
+// <copyright file="DhtMeshServiceDirectory.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Dht;
@@ -329,4 +333,3 @@ public sealed record SuspiciousPeerInfo
     public int QueryCount { get; init; }
     public int UniqueServiceCount { get; init; }
 }
-

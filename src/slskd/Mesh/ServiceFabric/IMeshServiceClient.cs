@@ -1,3 +1,7 @@
+// <copyright file="IMeshServiceClient.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,4 +39,3 @@ public interface IMeshServiceClient
         ReadOnlyMemory<byte> payload,
         CancellationToken cancellationToken = default);
 }
-

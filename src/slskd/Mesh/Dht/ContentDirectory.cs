@@ -1,3 +1,7 @@
+// <copyright file="ContentDirectory.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.Logging;
 using slskd.MediaCore;
 using System.Linq;

@@ -1,3 +1,7 @@
+// <copyright file="ShardMerger.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 /// <summary>
@@ -75,4 +79,3 @@ public class ShardMerger : IShardMerger
         return Task.FromResult(merged);
     }
 }
-

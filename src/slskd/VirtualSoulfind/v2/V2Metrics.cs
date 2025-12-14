@@ -1,3 +1,7 @@
+// <copyright file="V2Metrics.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Metrics for v2
 namespace slskd.VirtualSoulfind.v2
 {

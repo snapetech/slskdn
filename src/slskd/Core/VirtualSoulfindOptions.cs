@@ -1,3 +1,7 @@
+// <copyright file="VirtualSoulfindOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Core;
 
 using slskd.VirtualSoulfind.ShadowIndex;
@@ -115,4 +119,3 @@ public class ScenesOptions
     /// </summary>
     public int AnnouncementRefreshMinutes { get; set; } = 15;
 }
-

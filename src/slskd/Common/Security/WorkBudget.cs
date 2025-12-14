@@ -1,3 +1,7 @@
+// <copyright file="WorkBudget.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System;
 using System.Collections.Concurrent;
 
@@ -327,4 +331,3 @@ public sealed record PeerWorkInfo
     public int ConsumedUnits { get; init; }
     public int RemainingUnits { get; init; }
 }
-

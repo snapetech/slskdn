@@ -1,3 +1,7 @@
+// <copyright file="ServiceCallReply.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 using System;
 
@@ -116,4 +120,3 @@ public static class ServiceStatusCodes
     /// </summary>
     public const int ServiceUnavailable = 10;
 }
-

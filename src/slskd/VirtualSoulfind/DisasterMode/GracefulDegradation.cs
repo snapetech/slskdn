@@ -1,3 +1,7 @@
+// <copyright file="GracefulDegradation.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.DisasterMode;
 
 /// <summary>
@@ -107,4 +111,3 @@ public class DisasterModeOptions
     /// </summary>
     public bool EnableGracefulDegradation { get; set; } = true;
 }
-

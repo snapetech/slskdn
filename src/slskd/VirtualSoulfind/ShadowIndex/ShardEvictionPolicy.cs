@@ -1,3 +1,7 @@
+// <copyright file="ShardEvictionPolicy.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 /// <summary>
@@ -84,4 +88,3 @@ public static class ShardEvictionPolicy
         return DefaultRecordingTTLSeconds;
     }
 }
-

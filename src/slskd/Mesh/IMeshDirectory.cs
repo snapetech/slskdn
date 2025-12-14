@@ -1,3 +1,7 @@
+// <copyright file="IMeshDirectory.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh;
 
 /// <summary>
@@ -19,4 +23,3 @@ public record MeshPeerDescriptor(string PeerId, string? Address = null, int? Por
 /// Descriptor for mesh content (ID, hashes, size).
 /// </summary>
 public record MeshContentDescriptor(string ContentId, string? Hash = null, long? SizeBytes = null, string? Codec = null);
-

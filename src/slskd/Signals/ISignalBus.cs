@@ -1,3 +1,7 @@
+// <copyright file="ISignalBus.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals;
 
 /// <summary>
@@ -44,4 +48,3 @@ public sealed class SignalBusStatistics
     public long DuplicateSignalsDropped { get; init; }
     public long ExpiredSignalsDropped { get; init; }
 }
-

@@ -1,3 +1,7 @@
+// <copyright file="CompatibilityController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Compatibility;
 
 using System.Reflection;
@@ -52,4 +56,3 @@ public class CompatibilityController : ControllerBase
         });
     }
 }
-

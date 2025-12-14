@@ -1,3 +1,7 @@
+// <copyright file="DedupeService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Audio
 {
     using System;
@@ -175,5 +179,3 @@ namespace slskd.Audio
         public List<DedupeVariant> Variants { get; set; }
     }
 }
-
-

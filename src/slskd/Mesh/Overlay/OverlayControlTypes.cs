@@ -1,3 +1,7 @@
+// <copyright file="OverlayControlTypes.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh.Overlay;
 
 public static class OverlayControlTypes
@@ -10,4 +14,3 @@ public static class OverlayControlTypes
     public const string ServiceCall = "service-call";
     public const string ServiceReply = "service-reply";
 }
-

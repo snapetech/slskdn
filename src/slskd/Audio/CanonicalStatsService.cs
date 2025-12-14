@@ -1,3 +1,7 @@
+// <copyright file="CanonicalStatsService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Audio
 {
     using System;

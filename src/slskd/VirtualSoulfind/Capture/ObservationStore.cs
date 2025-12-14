@@ -1,3 +1,7 @@
+// <copyright file="ObservationStore.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.Capture;
 
 /// <summary>
@@ -74,4 +78,3 @@ public class InMemoryObservationStore : IObservationStore
         return Task.CompletedTask;
     }
 }
-

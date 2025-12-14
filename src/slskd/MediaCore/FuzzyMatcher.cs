@@ -1,3 +1,7 @@
+// <copyright file="FuzzyMatcher.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.MediaCore;
 
 // <copyright file="FuzzyMatcher.cs" company="slskdN Team">
@@ -364,4 +368,3 @@ public class FuzzyMatcher : IFuzzyMatcher
         return (perceptualScore * perceptualWeight) + (textScore * textWeight);
     }
 }
-

@@ -1,3 +1,7 @@
+// <copyright file="VirtualSoulfindV2Options.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Configuration for v2
 namespace slskd.VirtualSoulfind.v2
 {

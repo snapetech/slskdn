@@ -1,3 +1,7 @@
+// <copyright file="WarmCacheService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.Caching
 {
     using System.Collections.Generic;
@@ -113,5 +117,3 @@ namespace slskd.Transfers.MultiSource.Caching
         }
     }
 }
-
-

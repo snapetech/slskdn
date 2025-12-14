@@ -1,3 +1,7 @@
+// <copyright file="DataOverlayOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh.Overlay;
 
 /// <summary>
@@ -12,4 +16,3 @@ public class DataOverlayOptions
     public int ReceiveBufferBytes { get; set; } = 512 * 1024;
     public int SendBufferBytes { get; set; } = 512 * 1024;
 }
-
