@@ -149,42 +149,6 @@ public class DirectQuicDialer : ITransportDialer
 
         return await QuicConnection.ConnectAsync(clientOptions, cancellationToken);
     }
-    {
-        if (!CanHandle(endpoint))
-        {
-            throw new ArgumentException("Endpoint not supported by this dialer", nameof(endpoint));
-        }
-
-        Interlocked.Increment(ref _statistics.TotalAttempts);
-
-        var startTime = DateTimeOffset.UtcNow;
-        var ipEndpoint = new IPEndPoint(IPAddress.Parse(endpoint.Host), endpoint.Port);
-
-        try
-        {
-            _logger.LogDebug("Establishing direct QUIC connection to {Endpoint}", ipEndpoint);
-
-            var connection = await CreateQuicConnectionAsync(ipEndpoint, certificatePins, cancellationToken);
-            var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, cancellationToken);
-
-            var connectionTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
-            _statistics.AverageConnectionTimeMs = (_statistics.AverageConnectionTimeMs * _statistics.SuccessfulConnections + connectionTime) / (_statistics.SuccessfulConnections + 1);
-
-            Interlocked.Increment(ref _statistics.SuccessfulConnections);
-            Interlocked.Increment(ref _statistics.ActiveConnections);
-
-            _logger.LogDebug("Direct QUIC connection established to {Endpoint}", ipEndpoint);
-            return new QuicStreamWrapper(stream, connection, () => Interlocked.Decrement(ref _statistics.ActiveConnections));
-        }
-        catch (Exception ex)
-        {
-            Interlocked.Increment(ref _statistics.FailedConnections);
-            _statistics.LastError = ex.Message;
-            _logger.LogWarning(ex, "Failed to establish direct QUIC connection to {Endpoint}", ipEndpoint);
-            throw;
-        }
-    }
-
     /// <summary>
     /// Checks if direct QUIC connectivity is available.
     /// </summary>
