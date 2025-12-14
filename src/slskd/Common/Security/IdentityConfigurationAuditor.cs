@@ -112,7 +112,7 @@ namespace slskd.Common.Security
             List<IdentityConfigurationViolation> violations,
             ILogger logger)
         {
-            var webUsername = webOptions.Auth.Username;
+            var webUsername = webOptions.Authentication.Username;
             if (!string.IsNullOrWhiteSpace(webUsername))
             {
                 // Web username should not match Soulseek or look like other identity types
@@ -142,7 +142,7 @@ namespace slskd.Common.Security
             List<IdentityConfigurationViolation> violations,
             ILogger logger)
         {
-            var metricsUsername = metricsOptions.Auth.Username;
+            var metricsUsername = metricsOptions.Authentication.Username;
             if (!string.IsNullOrWhiteSpace(metricsUsername))
             {
                 // Metrics username should not match other identities

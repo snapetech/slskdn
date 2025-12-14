@@ -30,6 +30,11 @@ namespace slskd.Common.Security.API
         public TimeSpan? Duration { get; set; }
 
         /// <summary>
+        /// Gets or sets the duration of the ban in minutes (for JSON API convenience).
+        /// </summary>
+        public int? DurationMinutes { get; set; }
+
+        /// <summary>
         /// Gets or sets whether the ban is permanent.
         /// </summary>
         public bool Permanent { get; set; } = false;
@@ -57,6 +62,11 @@ namespace slskd.Common.Security.API
         public TimeSpan? Duration { get; set; }
 
         /// <summary>
+        /// Gets or sets the duration of the ban in minutes (for JSON API convenience).
+        /// </summary>
+        public int? DurationMinutes { get; set; }
+
+        /// <summary>
         /// Gets or sets whether the ban is permanent.
         /// </summary>
         public bool Permanent { get; set; } = false;
@@ -78,6 +88,11 @@ namespace slskd.Common.Security.API
         /// </summary>
         [Required]
         public double Score { get; set; }
+
+        /// <summary>
+        /// Gets or sets the reason for the reputation change (for audit purposes).
+        /// </summary>
+        public string? Reason { get; set; }
     }
 
     /// <summary>
@@ -96,6 +111,11 @@ namespace slskd.Common.Security.API
         /// </summary>
         [Required]
         public int Tier { get; set; }
+
+        /// <summary>
+        /// Gets or sets the reason for the trust tier change (for audit purposes).
+        /// </summary>
+        public string? Reason { get; set; }
     }
 
     /// <summary>

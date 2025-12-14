@@ -114,9 +114,9 @@ public class SecurityController : ControllerBase
             return BadRequest("Invalid IP address");
         }
 
-        var duration = request.Duration.HasValue
-            ? TimeSpan.FromMinutes(request.Duration.Value)
-            : (TimeSpan?)null;
+        // Compute duration with precedence: Duration (TimeSpan) first, then DurationMinutes, then null
+        var duration = request.Duration 
+            ?? (request.DurationMinutes.HasValue ? TimeSpan.FromMinutes(request.DurationMinutes.Value) : null);
 
         _security?.ViolationTracker?.BanIp(ip, request.Reason ?? "Manual ban", duration, request.Permanent);
 
@@ -169,9 +169,9 @@ public class SecurityController : ControllerBase
             return BadRequest("Username is required");
         }
 
-        var duration = request.Duration.HasValue
-            ? TimeSpan.FromMinutes(request.Duration.Value)
-            : (TimeSpan?)null;
+        // Compute duration with precedence: Duration (TimeSpan) first, then DurationMinutes, then null
+        var duration = request.Duration 
+            ?? (request.DurationMinutes.HasValue ? TimeSpan.FromMinutes(request.DurationMinutes.Value) : null);
 
         _security?.ViolationTracker?.BanUsername(request.Username, request.Reason ?? "Manual ban", duration, request.Permanent);
 
