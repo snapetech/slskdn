@@ -26,7 +26,7 @@ const MediaCore = () => {
 
   // Form state
   const [externalId, setExternalId] = useState('');
-  const [contentId, setContentId] = useState('');
+  const [descriptorContentId, setDescriptorContentId] = useState('');
   const [resolveId, setResolveId] = useState('');
   const [validateContentIdInput, setValidateContentIdInput] = useState('');
   const [domain, setDomain] = useState('');
@@ -94,7 +94,7 @@ const MediaCore = () => {
   const [retrievalResult, setRetrievalResult] = useState(null);
   const [batchRetrievalResult, setBatchRetrievalResult] = useState(null);
   const [queryResult, setQueryResult] = useState(null);
-  const [verificationResult, setVerificationResult] = useState(null);
+  const [descriptorVerificationResult, setDescriptorVerificationResult] = useState(null);
   const [retrievalStats, setRetrievalStats] = useState(null);
   const [retrieveContentId, setRetrieveContentId] = useState('');
   const [batchRetrieveContentIds, setBatchRetrieveContentIds] = useState('');
@@ -146,7 +146,7 @@ const MediaCore = () => {
   const [membershipPeerId, setMembershipPeerId] = useState('');
   const [gettingMembership, setGettingMembership] = useState(false);
   const [membershipResult, setMembershipResult] = useState(null);
-  const [verifyingMembership, setVerifyingMembership] = useState(false);
+  const [verifyingMembershipStatus, setVerifyingMembershipStatus] = useState(false);
   const [membershipVerification, setMembershipVerification] = useState(null);
   const [banningMember, setBanningMember] = useState(false);
   const [banReason, setBanReason] = useState('');
@@ -162,7 +162,7 @@ const MediaCore = () => {
   const [verifyPeerId, setVerifyPeerId] = useState('');
   const [verifyingMembership, setVerifyingMembership] = useState(false);
   const [membershipVerificationResult, setMembershipVerificationResult] = useState(null);
-  const [messageToVerify, setMessageToVerify] = useState('');
+  const [membershipMessageToVerify, setMembershipMessageToVerify] = useState('');
   const [verifyingMessage, setVerifyingMessage] = useState(false);
   const [messageVerificationResult, setMessageVerificationResult] = useState(null);
   const [roleCheckPodId, setRoleCheckPodId] = useState('');
@@ -347,12 +347,13 @@ const MediaCore = () => {
   }, []);
 
   const handleRegister = async () => {
-    if (!externalId.trim() || !contentId.trim()) return;
+    if (!externalId.trim() || !descriptorContentId.trim()) return;
 
     try {
       setRegistering(true);
-      await mediacore.registerContentId(externalId.trim(), contentId.trim());
+      await mediacore.registerContentId(externalId.trim(), descriptorContentId.trim());
       setExternalId('');
+      setDescriptorContentId('');
       setContentId('');
 
       // Refresh stats
@@ -1192,7 +1193,7 @@ const MediaCore = () => {
   };
 
   const handleVerifyMessage = async () => {
-    if (!messageToVerify.trim()) {
+    if (!membershipMessageToVerify.trim()) {
       alert('Please enter a message JSON');
       return;
     }
@@ -1200,7 +1201,7 @@ const MediaCore = () => {
     try {
       setVerifyingMessage(true);
       setMessageVerificationResult(null);
-      const message = JSON.parse(messageToVerify);
+      const message = JSON.parse(membershipMessageToVerify);
       const result = await mediacore.verifyPodMessage(message);
       setMessageVerificationResult(result);
     } catch (err) {
@@ -2282,14 +2283,14 @@ const MediaCore = () => {
                   <label>Content ID</label>
                   <Input
                     placeholder="e.g., content:mb:recording:12345-6789-..."
-                    value={contentId}
-                    onChange={(e) => setContentId(e.target.value)}
+                    value={descriptorContentId}
+                    onChange={(e) => setDescriptorContentId(e.target.value)}
                   />
                 </Form.Field>
                 <Button
                   primary
                   loading={registering}
-                  disabled={!externalId.trim() || !contentId.trim() || registering}
+                  disabled={!externalId.trim() || !descriptorContentId.trim() || registering}
                   onClick={handleRegister}
                 >
                   Register Mapping
@@ -3916,27 +3917,27 @@ const MediaCore = () => {
                 </Button>
               </Form>
 
-              {verificationResult && (
+              {descriptorVerificationResult && (
                 <div style={{ marginTop: '1em' }}>
-                  {verificationResult.error ? (
+                  {descriptorVerificationResult.error ? (
                     <Message error>
-                      <p>{verificationResult.error}</p>
+                      <p>{descriptorVerificationResult.error}</p>
                     </Message>
                   ) : (
-                    <Message success={verificationResult.isValid} warning={!verificationResult.isValid}>
+                    <Message success={descriptorVerificationResult.isValid} warning={!descriptorVerificationResult.isValid}>
                       <Message.Header>
-                        Verification Result: {verificationResult.isValid ? 'Valid' : 'Invalid'}
+                        Verification Result: {descriptorVerificationResult.isValid ? 'Valid' : 'Invalid'}
                       </Message.Header>
                       <p>
-                        <strong>Signature Valid:</strong> {verificationResult.signatureValid ? 'Yes' : 'No'}<br />
-                        <strong>Freshness Valid:</strong> {verificationResult.freshnessValid ? 'Yes' : 'No'}<br />
-                        <strong>Age:</strong> {verificationResult.age?.totalMinutes.toFixed(1)} minutes
+                        <strong>Signature Valid:</strong> {descriptorVerificationResult.signatureValid ? 'Yes' : 'No'}<br />
+                        <strong>Freshness Valid:</strong> {descriptorVerificationResult.freshnessValid ? 'Yes' : 'No'}<br />
+                        <strong>Age:</strong> {descriptorVerificationResult.age?.totalMinutes.toFixed(1)} minutes
                       </p>
-                      {verificationResult.warnings?.length > 0 && (
+                      {descriptorVerificationResult.warnings?.length > 0 && (
                         <div>
                           <strong>Warnings:</strong>
                           <List bulleted>
-                            {verificationResult.warnings.map((warning, index) => (
+                            {descriptorVerificationResult.warnings.map((warning, index) => (
                               <List.Item key={index}>{warning}</List.Item>
                             ))}
                           </List>

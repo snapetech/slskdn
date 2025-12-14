@@ -183,6 +183,33 @@ private static readonly ILogger Log = Serilog.Log.ForContext<MyService>();
 
 ---
 
+### 7. Duplicate Variable Names in React Components
+
+**The Bug**: Large React components with multiple state sections can have duplicate variable names, causing "Identifier 'X' has already been declared" compilation errors.
+
+**Files Affected**:
+- `src/web/src/components/System/MediaCore/index.jsx` (main culprit)
+
+**Wrong**:
+```jsx
+// In one section:
+const [verificationResult, setVerificationResult] = useState(null);
+
+// Later in another section:
+const [verificationResult, setVerificationResult] = useState(null); // ❌ Duplicate declaration
+```
+
+**Correct**:
+```jsx
+// Use descriptive names for different purposes:
+const [descriptorVerificationResult, setDescriptorVerificationResult] = useState(null);
+const [signatureVerificationResult, setSignatureVerificationResult] = useState(null);
+```
+
+**Why This Keeps Happening**: MediaCore component has 50+ state variables across multiple sections. When adding new state variables, developers may not realize the name is already used elsewhere in the file. Always grep for variable names before adding new state.
+
+---
+
 ### 6. React 16 Compatibility
 
 **The Issue**: This project uses React 16.8.6. Don't use features from React 17+.
