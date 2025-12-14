@@ -267,7 +267,6 @@ We reject:
 
 ❌ Generic anonymization network (not Tor)  
 ❌ Exit node for arbitrary traffic (not a proxy service)  
-❌ Generic content distribution (Soulseek community-specific only)  
 ❌ Cryptocurrency/blockchain features (out of scope)
 
 ---
