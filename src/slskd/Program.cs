@@ -904,6 +904,19 @@ namespace slskd
                     sp.GetRequiredService<ILogger<PodCore.SqlitePodMessageStorage>>());
             });
 
+            // Pod message backfill service for synchronizing missed messages
+            services.AddScoped<PodCore.IPodMessageBackfill>(sp =>
+            {
+                var messageStorage = sp.GetRequiredService<PodCore.IPodMessageStorage>();
+                var messageRouter = sp.GetRequiredService<PodCore.IPodMessageRouter>();
+                var overlayClient = sp.GetRequiredService<Mesh.Overlay.IOverlayClient>();
+                return new PodCore.PodMessageBackfill(
+                    messageStorage,
+                    messageRouter,
+                    overlayClient,
+                    sp.GetRequiredService<ILogger<PodCore.PodMessageBackfill>>());
+            });
+
             // Background service for periodic pod metadata refresh
             services.AddHostedService<PodCore.PodPublisherBackgroundService>();
 

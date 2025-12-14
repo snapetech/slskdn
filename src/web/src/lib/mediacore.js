@@ -1751,3 +1751,94 @@ export const vacuumDatabase = async () => {
 
   return response.json();
 };
+
+/**
+ * Message Backfill API base URL
+ */
+const backfillBaseUrl = `${apiBaseUrl}/pods/backfill`;
+
+/**
+ * Sync backfill for a pod on rejoin.
+ */
+export const syncPodBackfill = async (podId, lastSeenTimestamps) => {
+  const response = await fetch(`${backfillBaseUrl}/${podId}/sync`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(lastSeenTimestamps),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to sync pod backfill: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get last seen timestamps for a pod.
+ */
+export const getLastSeenTimestamps = async (podId) => {
+  const response = await fetch(`${backfillBaseUrl}/${podId}/last-seen`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get last seen timestamps: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update last seen timestamp for a channel.
+ */
+export const updateLastSeenTimestamp = async (podId, channelId, timestamp) => {
+  const response = await fetch(`${backfillBaseUrl}/${podId}/${channelId}/last-seen`, {
+    method: 'PUT',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(timestamp),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update last seen timestamp: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get backfill statistics.
+ */
+export const getBackfillStats = async () => {
+  const response = await fetch(`${backfillBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get backfill stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Sync backfill for all pods.
+ */
+export const syncAllPodsBackfill = async () => {
+  const response = await fetch(`${backfillBaseUrl}/sync-all`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to sync all pods backfill: ${response.statusText}`);
+  }
+
+  return response.json();
+};

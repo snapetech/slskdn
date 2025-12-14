@@ -252,6 +252,13 @@ const MediaCore = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Pod Message Backfill states
+  const [backfillStats, setBackfillStats] = useState(null);
+  const [backfillStatsLoading, setBackfillStatsLoading] = useState(false);
+  const [syncBackfillLoading, setSyncBackfillLoading] = useState(false);
+  const [lastSeenTimestamps, setLastSeenTimestamps] = useState(null);
+  const [backfillPodId, setBackfillPodId] = useState('');
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1676,6 +1683,57 @@ const MediaCore = () => {
       toast.error(`Failed to search messages: ${err.message}`);
     } finally {
       setSearchLoading(false);
+    }
+  };
+
+  // Pod Message Backfill handlers
+  const handleGetBackfillStats = async () => {
+    try {
+      setBackfillStatsLoading(true);
+      setBackfillStats(null);
+      const result = await mediacore.getBackfillStats();
+      setBackfillStats(result);
+    } catch (err) {
+      setBackfillStats({ error: err.message });
+      toast.error(`Failed to get backfill stats: ${err.message}`);
+    } finally {
+      setBackfillStatsLoading(false);
+    }
+  };
+
+  const handleSyncPodBackfill = async () => {
+    if (!backfillPodId.trim()) {
+      toast.error('Pod ID is required for backfill sync');
+      return;
+    }
+
+    try {
+      setSyncBackfillLoading(true);
+      // Get current last seen timestamps
+      const timestamps = await mediacore.getLastSeenTimestamps(backfillPodId);
+      const result = await mediacore.syncPodBackfill(backfillPodId, timestamps);
+      toast.success(`Backfill sync completed: ${result.totalMessagesReceived} messages received`);
+      // Refresh stats
+      await handleGetBackfillStats();
+    } catch (err) {
+      toast.error(`Failed to sync pod backfill: ${err.message}`);
+    } finally {
+      setSyncBackfillLoading(false);
+    }
+  };
+
+  const handleGetLastSeenTimestamps = async () => {
+    if (!backfillPodId.trim()) {
+      toast.error('Pod ID is required');
+      return;
+    }
+
+    try {
+      const timestamps = await mediacore.getLastSeenTimestamps(backfillPodId);
+      setLastSeenTimestamps(timestamps);
+    } catch (err) {
+      toast.error(`Failed to get last seen timestamps: ${err.message}`);
+      setLastSeenTimestamps(null);
     }
   };
 
@@ -5427,6 +5485,97 @@ const MediaCore = () => {
               {searchResults && searchResults.length === 0 && searchQuery && (
                 <Message size="small" warning>
                   No messages found matching "{searchQuery}"
+                </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Message Backfill */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="sync" />
+                Pod Message Backfill
+              </Card.Header>
+              <Card.Description>
+                Synchronize missed messages when peers rejoin pods
+              </Card.Description>
+            </Card.Content>
+
+            {/* Message Backfill */}
+            <Card.Content>
+              <Header size="small">Backfill Management</Header>
+
+              <div style={{ marginBottom: '1em' }}>
+                <Button
+                  size="small"
+                  color="purple"
+                  onClick={() => handleGetBackfillStats()}
+                  loading={backfillStatsLoading}
+                >
+                  Get Backfill Stats
+                </Button>
+              </div>
+
+              {backfillStats && (
+                <Message size="small" style={{ marginBottom: '1em' }}>
+                  <Message.Header>Backfill Statistics</Message.Header>
+                  <p>
+                    <strong>Requests Sent:</strong> {backfillStats.totalBackfillRequestsSent?.toLocaleString() || 0}<br />
+                    <strong>Requests Received:</strong> {backfillStats.totalBackfillRequestsReceived?.toLocaleString() || 0}<br />
+                    <strong>Messages Backfilled:</strong> {backfillStats.totalMessagesBackfilled?.toLocaleString() || 0}<br />
+                    <strong>Data Transferred:</strong> {(backfillStats.totalBackfillBytesTransferred / (1024 * 1024)).toFixed(2)} MB<br />
+                    <strong>Avg Duration:</strong> {backfillStats.averageBackfillDurationMs?.toFixed(2) || 0}ms<br />
+                    <strong>Last Operation:</strong> {backfillStats.lastBackfillOperation ? new Date(backfillStats.lastBackfillOperation).toLocaleString() : 'Never'}
+                  </p>
+                </Message>
+              )}
+
+              <Header size="small">Pod Backfill Sync</Header>
+              <Input
+                placeholder="Pod ID for backfill sync"
+                value={backfillPodId}
+                onChange={(e) => setBackfillPodId(e.target.value)}
+                action={
+                  <>
+                    <Button
+                      color="blue"
+                      onClick={() => handleGetLastSeenTimestamps()}
+                      disabled={!backfillPodId.trim()}
+                    >
+                      Get Timestamps
+                    </Button>
+                    <Button
+                      color="green"
+                      onClick={() => handleSyncPodBackfill()}
+                      loading={syncBackfillLoading}
+                      disabled={!backfillPodId.trim()}
+                    >
+                      Sync Backfill
+                    </Button>
+                  </>
+                }
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              {lastSeenTimestamps && Object.keys(lastSeenTimestamps).length > 0 && (
+                <Message size="small">
+                  <Message.Header>Last Seen Timestamps for Pod {backfillPodId}</Message.Header>
+                  <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    {Object.entries(lastSeenTimestamps).map(([channelId, timestamp]) => (
+                      <div key={channelId} style={{ marginBottom: '0.25em' }}>
+                        <strong>{channelId}:</strong> {new Date(timestamp).toLocaleString()}
+                      </div>
+                    ))}
+                  </div>
+                </Message>
+              )}
+
+              {lastSeenTimestamps && Object.keys(lastSeenTimestamps).length === 0 && (
+                <Message size="small" info>
+                  No last seen timestamps recorded for pod {backfillPodId}
                 </Message>
               )}
             </Card.Content>

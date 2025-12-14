@@ -2248,11 +2248,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete Bloom filter-based deduplication system with time-windowed efficiency and probabilistic guarantees.
 
-- [ ] **T-1348**: Implement local message storage
-  - Status: Not started
+- [x] **T-1348**: Implement local message storage
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: SQLite storage for pod messages. Retention policy. Indexing for search.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete SQLite message storage with FTS search, retention policies, and management APIs.
 
 - [ ] **T-1349**: Implement message backfill protocol
   - Status: Not started
