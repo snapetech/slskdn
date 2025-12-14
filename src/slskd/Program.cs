@@ -964,6 +964,7 @@ namespace slskd
             // Typed options (Phase 11)
             services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
             services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
+            services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSection("Security:Adversarial"));
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
