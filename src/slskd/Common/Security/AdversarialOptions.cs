@@ -460,9 +460,28 @@ public sealed class WebSocketTransportOptions
     public bool UseWss { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets WebSocket sub-protocol.
+    /// </summary>
+    public string? SubProtocol { get; set; }
+
+    /// <summary>
     /// Gets or sets custom headers to send with WebSocket handshake.
     /// </summary>
-    public Dictionary<string, string> Headers { get; set; } = new();
+    public Dictionary<string, string>? CustomHeaders { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of pooled connections.
+    /// </summary>
+    public int MaxPooledConnections { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets custom headers to send with WebSocket handshake (legacy property name).
+    /// </summary>
+    public Dictionary<string, string> Headers
+    {
+        get => CustomHeaders ?? new();
+        set => CustomHeaders = value;
+    }
 }
 
 /// <summary>
@@ -474,6 +493,11 @@ public sealed class HttpTunnelTransportOptions
     /// Gets or sets whether HTTP tunnel transport is enabled.
     /// </summary>
     public bool Enabled { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets HTTP tunnel server URL.
+    /// </summary>
+    public string? ServerUrl { get; set; }
 
     /// <summary>
     /// Gets or sets HTTP proxy URL.
@@ -489,6 +513,16 @@ public sealed class HttpTunnelTransportOptions
     /// Gets or sets HTTP method to use (POST/GET/PUT).
     /// </summary>
     public string Method { get; set; } = "POST";
+
+    /// <summary>
+    /// Gets or sets custom HTTP headers.
+    /// </summary>
+    public Dictionary<string, string>? CustomHeaders { get; set; }
+
+    /// <summary>
+    /// Gets or sets the User-Agent header.
+    /// </summary>
+    public string? UserAgent { get; set; }
 }
 
 /// <summary>

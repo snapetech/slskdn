@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Buffers;
 using System.Collections.Concurrent;
+using WebSocketOptions = slskd.Common.Security.WebSocketTransportOptions;
 
 namespace slskd.Common.Security;
 
