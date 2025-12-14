@@ -381,3 +381,4 @@ public class MetadataPortability : IMetadataPortability
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
+

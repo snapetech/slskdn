@@ -39,3 +39,4 @@ namespace slskd.Transfers.API
         // Hub for broadcasting transfer activity events
     }
 }
+

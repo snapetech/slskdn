@@ -129,3 +129,4 @@ public record CacheOperationResult(
     int EntriesCleared,
     long BytesFreed,
     string? ErrorMessage = null);
+

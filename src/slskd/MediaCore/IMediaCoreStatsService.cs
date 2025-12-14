@@ -224,3 +224,4 @@ public record SystemResourceStats(
     int ThreadCount,
     long GcTotalMemoryBytes,
     IReadOnlyDictionary<int, int> GcCollectionsByGeneration);
+

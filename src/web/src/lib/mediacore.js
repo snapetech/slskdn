@@ -1633,3 +1633,121 @@ export const getVerificationStats = async () => {
 
   return response.json();
 };
+
+/**
+ * Message Storage API base URL
+ */
+const storageBaseUrl = `${apiBaseUrl}/pods/messages`;
+
+/**
+ * Search messages in a pod.
+ */
+export const searchMessages = async (podId, query, channelId = null, limit = 50) => {
+  const params = new URLSearchParams({ query });
+  if (channelId) params.append('channelId', channelId);
+  if (limit) params.append('limit', limit);
+
+  const response = await fetch(`${storageBaseUrl}/${podId}/search?${params}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to search messages: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get message storage statistics.
+ */
+export const getMessageStorageStats = async () => {
+  const response = await fetch(`${storageBaseUrl}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get message storage stats: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Clean up messages older than the specified timestamp.
+ */
+export const cleanupMessages = async (olderThan) => {
+  const response = await fetch(`${storageBaseUrl}/cleanup?olderThan=${olderThan}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cleanup messages: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Clean up messages in a specific channel older than the specified timestamp.
+ */
+export const cleanupChannelMessages = async (podId, channelId, olderThan) => {
+  const response = await fetch(`${storageBaseUrl}/${podId}/${channelId}/cleanup?olderThan=${olderThan}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to cleanup channel messages: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get message count for a pod and channel.
+ */
+export const getMessageCount = async (podId, channelId) => {
+  const response = await fetch(`${storageBaseUrl}/${podId}/${channelId}/count`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get message count: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Rebuild the full-text search index.
+ */
+export const rebuildSearchIndex = async () => {
+  const response = await fetch(`${storageBaseUrl}/rebuild-index`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to rebuild search index: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Vacuum the message storage database.
+ */
+export const vacuumDatabase = async () => {
+  const response = await fetch(`${storageBaseUrl}/vacuum`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to vacuum database: ${response.statusText}`);
+  }
+
+  return response.json();
+};

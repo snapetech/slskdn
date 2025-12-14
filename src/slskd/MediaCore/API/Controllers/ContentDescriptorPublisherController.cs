@@ -242,3 +242,4 @@ public record UpdateDescriptorRequest(DescriptorUpdates Updates);
 /// Republish request.
 /// </summary>
 public record RepublishRequest(IReadOnlyList<string>? ContentIds = null);
+

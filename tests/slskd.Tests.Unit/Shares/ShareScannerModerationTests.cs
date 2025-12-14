@@ -2,12 +2,14 @@ namespace slskd.Tests.Unit.Shares;
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using slskd.Common.Moderation;
 using slskd.Files;
 using slskd.Shares;
+using Soulseek;
 using Xunit;
 
 /// <summary>
@@ -104,33 +106,160 @@ public class ShareScannerModerationTests
 /// <summary>
 ///     Tests for share repository moderation filtering (T-MCP02).
 /// </summary>
-public class ShareRepositoryModerationTests
+public class ShareRepositoryModerationTests : IDisposable
 {
+    private readonly string _databasePath;
+    private readonly SqliteShareRepository _repository;
+
+    public ShareRepositoryModerationTests()
+    {
+        // Create a temporary database for testing
+        _databasePath = Path.Combine(Path.GetTempPath(), $"ShareRepositoryTest_{Guid.NewGuid()}.db");
+        _repository = new SqliteShareRepository($"Data Source={_databasePath}");
+        _repository.Create(discardExisting: true);
+    }
+
+    public void Dispose()
+    {
+        _repository?.Dispose();
+        if (System.IO.File.Exists(_databasePath))
+        {
+            System.IO.File.Delete(_databasePath);
+        }
+    }
+
     [Fact]
     public void InsertFile_AcceptsModerationParameters()
     {
-        // Verify that InsertFile signature supports moderation flags
-        // This is a compile-time verification test
-        
-        // The method should accept these parameters:
-        // - isBlocked: bool
-        // - isQuarantined: bool  
-        // - moderationReason: string
-        
-        // If this test compiles, the signature is correct
-        Assert.True(true);
+        // Arrange
+        var maskedFilename = @"test\file.mp3";
+        var originalFilename = "/tmp/file.mp3";
+        var touchedAt = DateTime.UtcNow;
+        var file = new Soulseek.File(1, "file.mp3", 1000, "extension");
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        // Act - Insert with moderation parameters
+        _repository.InsertFile(
+            maskedFilename: maskedFilename,
+            originalFilename: originalFilename,
+            touchedAt: touchedAt,
+            file: file,
+            timestamp: timestamp,
+            isBlocked: true,
+            isQuarantined: false,
+            moderationReason: "hash_blocklist");
+
+        // Assert - File was inserted (no exception thrown)
+        var files = _repository.ListFiles().ToList();
+        Assert.Single(files);
+        Assert.Equal("file.mp3", files[0].Filename);
     }
 
     [Fact]
     public void ListFiles_ShouldExcludeBlockedFiles()
     {
-        // T-MCP02: ListFiles query must include WHERE isBlocked = 0 AND isQuarantined = 0
-        // This ensures blocked/quarantined files never appear in shares
-        
-        // Actual test requires database, but the SQL query in SqliteShareRepository
-        // has been updated to filter these files out.
-        
-        Assert.True(true);  // Verified by code review
+        // Arrange - Insert both blocked and allowed files
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        // Insert allowed file
+        _repository.InsertFile(
+            maskedFilename: @"allowed\file.mp3",
+            originalFilename: "/tmp/allowed.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(1, "allowed.mp3", 1000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: false);
+
+        // Insert blocked file
+        _repository.InsertFile(
+            maskedFilename: @"blocked\file.mp3",
+            originalFilename: "/tmp/blocked.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(2, "blocked.mp3", 2000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: true,
+            isQuarantined: false,
+            moderationReason: "hash_blocklist");
+
+        // Insert quarantined file
+        _repository.InsertFile(
+            maskedFilename: @"quarantined\file.mp3",
+            originalFilename: "/tmp/quarantined.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(3, "quarantined.mp3", 3000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: true,
+            moderationReason: "legal_hold");
+
+        // Act - List files (should exclude blocked/quarantined)
+        var visibleFiles = _repository.ListFiles().ToList();
+
+        // Assert - Only the allowed file is visible
+        Assert.Single(visibleFiles);
+        Assert.Equal("allowed.mp3", visibleFiles[0].Filename);
+        Assert.Equal(1000, visibleFiles[0].Size);
+    }
+
+    [Fact]
+    public void ListFiles_ShouldExcludeQuarantinedFiles()
+    {
+        // Arrange - Insert both quarantined and allowed files
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        // Insert allowed file
+        _repository.InsertFile(
+            maskedFilename: @"allowed\file2.mp3",
+            originalFilename: "/tmp/allowed2.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(1, "allowed2.mp3", 1000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: false);
+
+        // Insert quarantined file
+        _repository.InsertFile(
+            maskedFilename: @"quarantined\file2.mp3",
+            originalFilename: "/tmp/quarantined2.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(2, "quarantined2.mp3", 2000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: true,
+            moderationReason: "legal_hold");
+
+        // Act - List files (should exclude quarantined)
+        var visibleFiles = _repository.ListFiles().ToList();
+
+        // Assert - Only the allowed file is visible
+        Assert.Single(visibleFiles);
+        Assert.Equal("allowed2.mp3", visibleFiles[0].Filename);
+    }
+
+    [Fact]
+    public void ListFiles_ShouldReturnCorrectFileObjects()
+    {
+        // Arrange - Insert a file
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        _repository.InsertFile(
+            maskedFilename: @"music\test.mp3",
+            originalFilename: "/tmp/test.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(1, "test.mp3", 1000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: false);
+
+        // Act - List files
+        var files = _repository.ListFiles().ToList();
+
+        // Assert - File object is correctly returned
+        Assert.Single(files);
+        Assert.IsType<Soulseek.File>(files[0]);
+        Assert.Equal("test.mp3", files[0].Filename);
+        Assert.Equal(1000, files[0].Size);
     }
 }
 

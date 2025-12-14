@@ -185,3 +185,4 @@ public record FindSimilarRequest(double? MinConfidence = null, int? MaxCandidate
 /// Text similarity request.
 /// </summary>
 public record TextSimilarityRequest(string TextA, string TextB);
+

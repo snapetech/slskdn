@@ -206,3 +206,4 @@ public record AddLinksRequest(IReadOnlyList<IpldLinkRequest> Links);
 /// IPLD link request model.
 /// </summary>
 public record IpldLinkRequest(string Name, string Target, string? LinkName = null);
+

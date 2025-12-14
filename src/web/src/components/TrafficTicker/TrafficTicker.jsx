@@ -144,3 +144,4 @@ const TrafficTicker = () => {
 };
 
 export default TrafficTicker;
+

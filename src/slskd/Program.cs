@@ -894,6 +894,16 @@ namespace slskd
                     sp.GetRequiredService<ILogger<PodCore.SqlitePodMessaging>>());
             });
 
+            // Pod message storage service with full-text search and retention policies
+            services.AddScoped<PodCore.IPodMessageStorage>(sp =>
+            {
+                var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
+                var dbContext = factory.CreateDbContext();
+                return new PodCore.SqlitePodMessageStorage(
+                    dbContext,
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodMessageStorage>>());
+            });
+
             // Background service for periodic pod metadata refresh
             services.AddHostedService<PodCore.PodPublisherBackgroundService>();
 

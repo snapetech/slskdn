@@ -219,3 +219,4 @@ public record MetadataImportRequest(
 /// Metadata conflict analysis request.
 /// </summary>
 public record MetadataAnalyzeRequest(MetadataPackage Package);
+

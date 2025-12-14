@@ -10,7 +10,7 @@ using slskd.VirtualSoulfind.Scenes;
 /// </summary>
 public class DisasterModeIntegrationTests
 {
-    [Fact]
+    [Fact(Skip = "TODO: Implement full disaster mode integration test harness - requires Soulseek server simulation, mesh infrastructure, and shadow index")]
     public async Task DisasterMode_FullWorkflow_ShouldSucceed()
     {
         // Arrange: Setup test environment
@@ -38,11 +38,11 @@ public class DisasterModeIntegrationTests
         // - Verify disaster mode deactivated
 
         // Assert
-        Assert.True(true); // Placeholder
+        Assert.Fail("Test not implemented - requires full integration test harness with Soulseek server simulation and mesh infrastructure");
         await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement shadow index integration test - requires DHT infrastructure and search result simulation")]
     public async Task ShadowIndex_CaptureAndPublish_ShouldSucceed()
     {
         // Arrange: Setup capture observer
@@ -56,11 +56,11 @@ public class DisasterModeIntegrationTests
 
         // Assert: Verify peer hints returned
 
-        Assert.True(true); // Placeholder
+        Assert.Fail("Test not implemented - requires DHT infrastructure and Soulseek search result simulation");
         await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement scenes integration test - requires DHT infrastructure and peer discovery simulation")]
     public async Task Scenes_JoinAndDiscover_ShouldSucceed()
     {
         // Arrange: Setup scene service
@@ -73,11 +73,11 @@ public class DisasterModeIntegrationTests
 
         // Assert: Verify scene membership
 
-        Assert.True(true); // Placeholder
+        Assert.Fail("Test not implemented - requires DHT infrastructure and peer discovery simulation");
         await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement privacy audit integration test - requires audit infrastructure and privacy verification")]
     public async Task PrivacyAudit_ShouldPass()
     {
         // Arrange: Setup privacy audit
@@ -89,11 +89,11 @@ public class DisasterModeIntegrationTests
         // - No path leaks in DHT
         // - DHT rate limiting active
 
-        Assert.True(true); // Placeholder
+        Assert.Fail("Test not implemented - requires privacy audit infrastructure and verification tools");
         await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement graceful degradation integration test - requires health monitor and operation mode switching")]
     public async Task GracefulDegradation_ShouldWorkCorrectly()
     {
         // Arrange: Setup health monitor
@@ -105,11 +105,11 @@ public class DisasterModeIntegrationTests
 
         // Assert: Verify correct operation mode at each health level
 
-        Assert.True(true); // Placeholder
+        Assert.Fail("Test not implemented - requires health monitor and operation mode switching infrastructure");
         await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement telemetry integration test - requires telemetry service and event tracking verification")]
     public async Task Telemetry_ShouldTrackAllEvents()
     {
         // Arrange: Setup telemetry service
@@ -125,7 +125,7 @@ public class DisasterModeIntegrationTests
         // - Search/transfer counts tracked
         // - Total disaster time calculated
 
-        Assert.True(true); // Placeholder
+        Assert.Fail("Test not implemented - requires telemetry service and event tracking verification");
         await Task.CompletedTask;
     }
 }

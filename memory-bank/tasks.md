@@ -2242,11 +2242,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete cryptographic signature verification system with Ed25519-ready implementation.
 
-- [ ] **T-1347**: Implement message deduplication
-  - Status: Not started
+- [x] **T-1347**: Implement message deduplication
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Track MessageId to prevent duplicates. Bloom filter for efficiency.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete Bloom filter-based deduplication system with time-windowed efficiency and probabilistic guarantees.
 
 - [ ] **T-1348**: Implement local message storage
   - Status: Not started

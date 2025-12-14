@@ -266,3 +266,4 @@ public class MetadataPortabilityTests
         Assert.Equal(priority, source.Priority);
     }
 }
+

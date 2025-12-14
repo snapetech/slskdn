@@ -229,3 +229,4 @@ public record BatchRetrievalRequest(IReadOnlyList<string> ContentIds);
 public record VerifyDescriptorRequest(
     ContentDescriptor Descriptor,
     DateTimeOffset? RetrievedAt = null);
+

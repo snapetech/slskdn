@@ -242,6 +242,16 @@ const MediaCore = () => {
   const [generatedKeyPair, setGeneratedKeyPair] = useState(null);
   const [signingStats, setSigningStats] = useState(null);
   const [loadingSigningStats, setLoadingSigningStats] = useState(false);
+
+  // Pod Message Storage states
+  const [storageStats, setStorageStats] = useState(null);
+  const [storageStatsLoading, setStorageStatsLoading] = useState(false);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [rebuildIndexLoading, setRebuildIndexLoading] = useState(false);
+  const [vacuumLoading, setVacuumLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1596,6 +1606,76 @@ const MediaCore = () => {
       setSigningStats({ error: err.message });
     } finally {
       setLoadingSigningStats(false);
+    }
+  };
+
+  // Pod Message Storage handlers
+  const handleGetStorageStats = async () => {
+    try {
+      setStorageStatsLoading(true);
+      setStorageStats(null);
+      const result = await mediacore.getMessageStorageStats();
+      setStorageStats(result);
+    } catch (err) {
+      setStorageStats({ error: err.message });
+      toast.error(`Failed to get storage stats: ${err.message}`);
+    } finally {
+      setStorageStatsLoading(false);
+    }
+  };
+
+  const handleCleanupMessages = async () => {
+    try {
+      setCleanupLoading(true);
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      const result = await mediacore.cleanupMessages(thirtyDaysAgo);
+      toast.success(`Cleaned up ${result} old messages`);
+      // Refresh stats after cleanup
+      await handleGetStorageStats();
+    } catch (err) {
+      toast.error(`Failed to cleanup messages: ${err.message}`);
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
+  const handleRebuildSearchIndex = async () => {
+    try {
+      setRebuildIndexLoading(true);
+      const result = await mediacore.rebuildSearchIndex();
+      toast.success(result ? 'Search index rebuilt successfully' : 'Search index rebuild failed');
+    } catch (err) {
+      toast.error(`Failed to rebuild search index: ${err.message}`);
+    } finally {
+      setRebuildIndexLoading(false);
+    }
+  };
+
+  const handleVacuumDatabase = async () => {
+    try {
+      setVacuumLoading(true);
+      const result = await mediacore.vacuumDatabase();
+      toast.success(result ? 'Database vacuum completed successfully' : 'Database vacuum failed');
+    } catch (err) {
+      toast.error(`Failed to vacuum database: ${err.message}`);
+    } finally {
+      setVacuumLoading(false);
+    }
+  };
+
+  const handleSearchMessages = async () => {
+    if (!searchQuery.trim()) return;
+
+    try {
+      setSearchLoading(true);
+      setSearchResults(null);
+      const result = await mediacore.searchMessages('all', searchQuery, null, 50); // Search all pods
+      setSearchResults(result);
+    } catch (err) {
+      setSearchResults([]);
+      toast.error(`Failed to search messages: ${err.message}`);
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -5212,12 +5292,141 @@ const MediaCore = () => {
                       <strong>Last Operation:</strong> {routingStats.lastRoutingOperation ? new Date(routingStats.lastRoutingOperation).toLocaleString() : 'Never'}
                     </p>
                   </Message>
+
+                  <Button
+                    size="tiny"
+                    color="blue"
+                    onClick={() => handleRebuildSearchIndex()}
+                    loading={rebuildIndexLoading}
+                  >
+                    Rebuild Search Index
+                  </Button>
+                  <Button
+                    size="tiny"
+                    color="orange"
+                    onClick={() => handleVacuumDatabase()}
+                    loading={vacuumLoading}
+                  >
+                    Vacuum Database
+                  </Button>
                 </div>
               )}
 
               {routingStats?.error && (
                 <Message error style={{ marginTop: '1em' }}>
                   <p>Failed to load routing stats: {routingStats.error}</p>
+                </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Message Storage */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="database" />
+                Pod Message Storage
+              </Card.Header>
+              <Card.Description>
+                SQLite-backed message storage with full-text search and retention policies
+              </Card.Description>
+            </Card.Content>
+
+            {/* Message Storage */}
+            <Card.Content>
+              <Header size="small">Storage Management</Header>
+
+              <div style={{ marginBottom: '1em' }}>
+                <Button
+                  size="small"
+                  color="teal"
+                  onClick={() => handleGetStorageStats()}
+                  loading={storageStatsLoading}
+                >
+                  Get Storage Stats
+                </Button>
+
+                <Button
+                  size="small"
+                  color="purple"
+                  onClick={() => handleCleanupMessages()}
+                  loading={cleanupLoading}
+                >
+                  Cleanup Old Messages (30 days)
+                </Button>
+
+                <Button
+                  size="small"
+                  color="blue"
+                  onClick={() => handleRebuildSearchIndex()}
+                  loading={rebuildIndexLoading}
+                >
+                  Rebuild Search Index
+                </Button>
+
+                <Button
+                  size="small"
+                  color="orange"
+                  onClick={() => handleVacuumDatabase()}
+                  loading={vacuumLoading}
+                >
+                  Vacuum Database
+                </Button>
+              </div>
+
+              {storageStats && (
+                <Message size="small" style={{ marginBottom: '1em' }}>
+                  <Message.Header>Message Storage Statistics</Message.Header>
+                  <p>
+                    <strong>Total Messages:</strong> {storageStats.totalMessages?.toLocaleString() || 0}<br />
+                    <strong>Estimated Size:</strong> {(storageStats.totalSizeBytes / (1024 * 1024)).toFixed(2)} MB<br />
+                    <strong>Oldest Message:</strong> {storageStats.oldestMessage ? new Date(storageStats.oldestMessage).toLocaleString() : 'None'}<br />
+                    <strong>Newest Message:</strong> {storageStats.newestMessage ? new Date(storageStats.newestMessage).toLocaleString() : 'None'}<br />
+                    <strong>Pods with Messages:</strong> {Object.keys(storageStats.messagesPerPod || {}).length}<br />
+                    <strong>Active Channels:</strong> {Object.keys(storageStats.messagesPerChannel || {}).length}
+                  </p>
+                </Message>
+              )}
+
+              <Header size="small">Message Search</Header>
+              <Input
+                placeholder="Search messages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                action={
+                  <Button
+                    color="green"
+                    onClick={() => handleSearchMessages()}
+                    loading={searchLoading}
+                    disabled={!searchQuery.trim()}
+                  >
+                    Search
+                  </Button>
+                }
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              {searchResults && searchResults.length > 0 && (
+                <Message size="small">
+                  <Message.Header>Search Results ({searchResults.length})</Message.Header>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {searchResults.map((msg, idx) => (
+                      <div key={idx} style={{ marginBottom: '0.5em', padding: '0.5em', border: '1px solid #ddd', borderRadius: '4px' }}>
+                        <small style={{ color: '#666' }}>
+                          {new Date(msg.timestampUnixMs).toLocaleString()} • {msg.senderPeerId} • {msg.channelId}
+                        </small>
+                        <div style={{ marginTop: '0.25em' }}>{msg.body}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Message>
+              )}
+
+              {searchResults && searchResults.length === 0 && searchQuery && (
+                <Message size="small" warning>
+                  No messages found matching "{searchQuery}"
                 </Message>
               )}
             </Card.Content>

@@ -371,3 +371,4 @@ public class MediaCorePerformanceTests
         return samples;
     }
 }
+

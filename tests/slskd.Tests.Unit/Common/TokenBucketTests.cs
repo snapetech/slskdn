@@ -148,11 +148,13 @@
         {
             using (var t = new TokenBucket(1, 10))
             {
-                await t.GetAsync(1);
+                // Deplete the bucket (capacity = 1, taking 1 token each time)
                 await t.GetAsync(1);
                 await t.GetAsync(1);
 
-                Assert.True(true);
+                // This third call should wait for bucket reset (every 10ms)
+                // If we reach this point without hanging indefinitely, the wait behavior works
+                await t.GetAsync(1);
             }
         }
 
