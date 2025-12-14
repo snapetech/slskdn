@@ -139,7 +139,7 @@ public class DhtRendezvousController : ControllerBase
                 ConnectedAt = p.ConnectedAt,
                 LastActivity = p.LastActivity,
                 CertificateThumbprint = p.CertificateThumbprint?[..16] + "...", // Truncate for display
-                Version = p.PeerVersion,
+                PeerVersion = p.PeerVersion,
             });
         
         return Ok(peers);
@@ -157,16 +157,16 @@ public class DhtRendezvousController : ControllerBase
         var blocklistStats = _blocklist.GetStats();
         
         // Get version stats from connected peers
-        var peers = _dhtService.GetMeshPeers();
-        var peersWithVersion = peers.Count(p => !string.IsNullOrEmpty(p.PeerVersion));
-        var peersWithoutVersion = peers.Count(p => string.IsNullOrEmpty(p.PeerVersion));
+        var connectedPeers = _dhtService.GetMeshPeers();
+        var slskdnPeersWithVersion = connectedPeers.Count(p => p.PeerVersion.HasValue);
+        var slskdnPeersWithoutVersion = connectedPeers.Count(p => !p.PeerVersion.HasValue);
         
         return Ok(new OverlayStatsResponse
         {
             Server = new ServerStatsResponse
             {
                 IsListening = serverStats.IsListening,
-                ListenPort = serverStats.ListenPort,
+                ListenPort = serverStats.ListenPort ?? 0,
                 ActiveConnections = serverStats.ActiveConnections,
                 TotalConnectionsAccepted = serverStats.TotalConnectionsAccepted,
                 TotalConnectionsRejected = serverStats.TotalConnectionsRejected,
@@ -178,9 +178,9 @@ public class DhtRendezvousController : ControllerBase
                 SuccessfulConnections = connectorStats.SuccessfulConnections,
                 FailedConnections = connectorStats.FailedConnections,
                 SuccessRate = connectorStats.SuccessRate,
-                TotalSlskdnPeers = peersWithVersion + peersWithoutVersion,
-                SlskdnPeersWithVersion = peersWithVersion,
-                SlskdnPeersWithoutVersion = peersWithoutVersion,
+                TotalSlskdnPeers = slskdnPeersWithVersion + slskdnPeersWithoutVersion,
+                SlskdnPeersWithVersion = slskdnPeersWithVersion,
+                SlskdnPeersWithoutVersion = slskdnPeersWithoutVersion,
             },
             RateLimiter = new RateLimiterStatsResponse
             {
@@ -350,7 +350,7 @@ public sealed class MeshPeerInfoResponse
     public DateTimeOffset ConnectedAt { get; init; }
     public DateTimeOffset LastActivity { get; init; }
     public string? CertificateThumbprint { get; init; }
-    public string? Version { get; init; }
+    public int? PeerVersion { get; init; }
 }
 
 public sealed class OverlayStatsResponse

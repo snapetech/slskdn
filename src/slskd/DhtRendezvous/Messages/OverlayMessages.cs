@@ -191,8 +191,8 @@ public sealed class MeshHelloAckMessage : OverlayMessage
     /// <summary>
     /// Client version string (e.g., "0.24.1-dev-91765670315").
     /// </summary>
-    [JsonPropertyName("version")]
-    public string? Version { get; set; }
+    [JsonPropertyName("client_version")]
+    public string? ClientVersion { get; set; }
 }
 
 /// <summary>

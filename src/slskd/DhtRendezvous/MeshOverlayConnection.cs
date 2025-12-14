@@ -70,7 +70,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// <summary>
     /// Version string of the remote peer (e.g., "0.24.1-dev-91765670315").
     /// </summary>
-    public string? PeerVersion { get; private set; }
+    public int? PeerVersion { get; private set; }
     
     /// <summary>
     /// Whether handshake has completed successfully.
@@ -296,7 +296,14 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         MeshPeerId = ack.MeshPeerId;
         Username = ack.Username;
         Features = ack.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
-        PeerVersion = ack.Version; // Store peer version
+        
+        // Store peer version - if ClientVersion field exists, it's a new build (version 1+)
+        // Old builds won't send this field, so PeerVersion will remain null
+        if (!string.IsNullOrEmpty(ack.ClientVersion))
+        {
+            PeerVersion = 1; // Any new build with the ClientVersion field
+        }
+        
         IsHandshakeComplete = true;
         State = ConnectionState.Active;
         
@@ -411,7 +418,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
             NonceEcho = hello.Nonce,
-            Version = Program.FullVersion,
+            ClientVersion = Program.FullVersion,
         };
         
         await _framer.WriteMessageAsync(ack, handshakeCts.Token);
@@ -420,7 +427,14 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         MeshPeerId = hello.MeshPeerId;
         Username = hello.Username;
         Features = hello.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
-        PeerVersion = hello.ClientVersion; // Store peer version
+        
+        // Store peer version - if ClientVersion field exists, it's a new build (version 1+)
+        // Old builds won't send this field, so PeerVersion will remain null
+        if (!string.IsNullOrEmpty(hello.ClientVersion))
+        {
+            PeerVersion = 1; // Any new build with the ClientVersion field
+        }
+        
         IsHandshakeComplete = true;
         State = ConnectionState.Active;
         

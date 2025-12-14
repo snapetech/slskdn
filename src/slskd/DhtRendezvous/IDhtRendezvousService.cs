@@ -108,6 +108,9 @@ public sealed class MeshPeerInfo
     
     /// <summary>Certificate thumbprint.</summary>
     public string? CertificateThumbprint { get; init; }
+    
+    /// <summary>Peer protocol version (if exchanged during handshake).</summary>
+    public int? PeerVersion { get; init; }
 }
 
 /// <summary>
