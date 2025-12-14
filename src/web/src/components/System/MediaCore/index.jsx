@@ -284,6 +284,19 @@ const MediaCore = () => {
   const [createPodLoading, setCreatePodLoading] = useState(false);
   const [newPodName, setNewPodName] = useState('');
   const [newPodVisibility, setNewPodVisibility] = useState('Unlisted');
+
+  // Pod Opinion Management states
+  const [opinionPodId, setOpinionPodId] = useState('');
+  const [opinionContentId, setOpinionContentId] = useState('');
+  const [opinionVariantHash, setOpinionVariantHash] = useState('');
+  const [opinionScore, setOpinionScore] = useState(5);
+  const [opinionNote, setOpinionNote] = useState('');
+  const [opinions, setOpinions] = useState([]);
+  const [opinionStatistics, setOpinionStatistics] = useState(null);
+  const [publishOpinionLoading, setPublishOpinionLoading] = useState(false);
+  const [getOpinionsLoading, setGetOpinionsLoading] = useState(false);
+  const [getStatsLoading, setGetStatsLoading] = useState(false);
+  const [refreshOpinionsLoading, setRefreshOpinionsLoading] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1982,6 +1995,107 @@ const MediaCore = () => {
     setContentId(contentItem.contentId);
     setContentSearchQuery('');
     setContentSearchResults([]);
+  };
+
+  // Pod Opinion Management handlers
+  const handlePublishOpinion = async () => {
+    if (!opinionPodId.trim() || !opinionContentId.trim() || !opinionVariantHash.trim()) {
+      toast.error('Pod ID, Content ID, and Variant Hash are required');
+      return;
+    }
+
+    if (opinionScore < 0 || opinionScore > 10) {
+      toast.error('Score must be between 0 and 10');
+      return;
+    }
+
+    try {
+      setPublishOpinionLoading(true);
+      const opinion = {
+        contentId: opinionContentId.trim(),
+        variantHash: opinionVariantHash.trim(),
+        score: opinionScore,
+        note: opinionNote.trim(),
+        senderPeerId: 'current-user', // TODO: Get from session
+      };
+
+      await mediacore.publishOpinion(opinionPodId.trim(), opinion);
+      toast.success('Opinion published successfully');
+
+      // Reset form
+      setOpinionContentId('');
+      setOpinionVariantHash('');
+      setOpinionScore(5);
+      setOpinionNote('');
+
+      // Refresh opinions if we're viewing them
+      if (opinionContentId) {
+        await handleGetOpinions();
+      }
+
+    } catch (err) {
+      toast.error(`Failed to publish opinion: ${err.message}`);
+    } finally {
+      setPublishOpinionLoading(false);
+    }
+  };
+
+  const handleGetOpinions = async () => {
+    if (!opinionPodId.trim() || !opinionContentId.trim()) {
+      toast.error('Pod ID and Content ID are required');
+      return;
+    }
+
+    try {
+      setGetOpinionsLoading(true);
+      const result = await mediacore.getContentOpinions(opinionPodId.trim(), opinionContentId.trim());
+      setOpinions(result);
+    } catch (err) {
+      toast.error(`Failed to get opinions: ${err.message}`);
+      setOpinions([]);
+    } finally {
+      setGetOpinionsLoading(false);
+    }
+  };
+
+  const handleGetOpinionStatistics = async () => {
+    if (!opinionPodId.trim() || !opinionContentId.trim()) {
+      toast.error('Pod ID and Content ID are required');
+      return;
+    }
+
+    try {
+      setGetStatsLoading(true);
+      const stats = await mediacore.getOpinionStatistics(opinionPodId.trim(), opinionContentId.trim());
+      setOpinionStatistics(stats);
+    } catch (err) {
+      toast.error(`Failed to get opinion statistics: ${err.message}`);
+      setOpinionStatistics(null);
+    } finally {
+      setGetStatsLoading(false);
+    }
+  };
+
+  const handleRefreshOpinions = async () => {
+    if (!opinionPodId.trim()) {
+      toast.error('Pod ID is required');
+      return;
+    }
+
+    try {
+      setRefreshOpinionsLoading(true);
+      const result = await mediacore.refreshPodOpinions(opinionPodId.trim());
+      toast.success(`Refreshed ${result.opinionsRefreshed} opinions`);
+
+      // Refresh current view
+      if (opinionContentId) {
+        await Promise.all([handleGetOpinions(), handleGetOpinionStatistics()]);
+      }
+    } catch (err) {
+      toast.error(`Failed to refresh opinions: ${err.message}`);
+    } finally {
+      setRefreshOpinionsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -6105,6 +6219,153 @@ const MediaCore = () => {
                   </Button>
                 </div>
               )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Opinion Management */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="star" />
+                Pod Opinion Management
+              </Card.Header>
+              <Card.Description>
+                Publish and view opinions on content variants within pods for quality assessment and community feedback
+              </Card.Description>
+            </Card.Content>
+
+            {/* Opinion Management */}
+            <Card.Content>
+              <Header size="small">Opinion Management</Header>
+
+              {/* Pod Selection */}
+              <Input
+                placeholder="Pod ID"
+                value={opinionPodId}
+                onChange={(e) => setOpinionPodId(e.target.value)}
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              <Button
+                color="blue"
+                onClick={() => handleRefreshOpinions()}
+                loading={refreshOpinionsLoading}
+                disabled={!opinionPodId.trim()}
+                style={{ marginBottom: '1em' }}
+              >
+                Refresh Pod Opinions
+              </Button>
+
+              {/* Content Opinions */}
+              <Header size="tiny">Content Opinions</Header>
+              <Input
+                placeholder="Content ID (e.g., content:audio:album:mb-id)"
+                value={opinionContentId}
+                onChange={(e) => setOpinionContentId(e.target.value)}
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              <div style={{ marginBottom: '1em' }}>
+                <Button
+                  color="teal"
+                  onClick={() => handleGetOpinions()}
+                  loading={getOpinionsLoading}
+                  disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  style={{ marginRight: '0.5em' }}
+                >
+                  Get Opinions
+                </Button>
+
+                <Button
+                  color="purple"
+                  onClick={() => handleGetOpinionStatistics()}
+                  loading={getStatsLoading}
+                  disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                >
+                  Get Statistics
+                </Button>
+              </div>
+
+              {/* Opinion Statistics */}
+              {opinionStatistics && (
+                <Message info style={{ marginBottom: '1em' }}>
+                  <Message.Header>Opinion Statistics</Message.Header>
+                  <p>
+                    <strong>Total Opinions:</strong> {opinionStatistics.totalOpinions}<br />
+                    <strong>Unique Variants:</strong> {opinionStatistics.uniqueVariants}<br />
+                    <strong>Average Score:</strong> {opinionStatistics.averageScore.toFixed(1)}<br />
+                    <strong>Score Range:</strong> {opinionStatistics.minScore} - {opinionStatistics.maxScore}<br />
+                    <strong>Last Updated:</strong> {new Date(opinionStatistics.lastUpdated).toLocaleString()}
+                  </p>
+                </Message>
+              )}
+
+              {/* Opinions List */}
+              {opinions.length > 0 && (
+                <div style={{ marginBottom: '1em' }}>
+                  <Header size="tiny">Opinions ({opinions.length})</Header>
+                  {opinions.map((opinion, idx) => (
+                    <Card key={idx} style={{ marginBottom: '0.5em' }}>
+                      <Card.Content style={{ padding: '0.5em' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <div>
+                            <strong>Variant:</strong> {opinion.variantHash.substring(0, 8)}...<br />
+                            <strong>Score:</strong> {opinion.score}/10
+                            {opinion.note && (
+                              <>
+                                <br /><strong>Note:</strong> {opinion.note}
+                              </>
+                            )}
+                          </div>
+                          <small>{opinion.senderPeerId}</small>
+                        </div>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Publish Opinion */}
+              <Header size="small">Publish New Opinion</Header>
+
+              <Input
+                placeholder="Variant Hash"
+                value={opinionVariantHash}
+                onChange={(e) => setOpinionVariantHash(e.target.value)}
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              <div style={{ marginBottom: '1em' }}>
+                <label style={{ marginRight: '1em' }}>Score (0-10):</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={opinionScore}
+                  onChange={(e) => setOpinionScore(parseFloat(e.target.value))}
+                  style={{ width: '200px' }}
+                />
+                <span style={{ marginLeft: '1em' }}>{opinionScore}/10</span>
+              </div>
+
+              <Input
+                placeholder="Optional note about this variant"
+                value={opinionNote}
+                onChange={(e) => setOpinionNote(e.target.value)}
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              <Button
+                color="green"
+                onClick={() => handlePublishOpinion()}
+                loading={publishOpinionLoading}
+                disabled={!opinionPodId.trim() || !opinionContentId.trim() || !opinionVariantHash.trim()}
+              >
+                Publish Opinion
+              </Button>
             </Card.Content>
           </Card>
         </Grid.Column>

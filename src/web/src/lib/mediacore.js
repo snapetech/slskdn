@@ -1844,6 +1844,92 @@ export const syncAllPodsBackfill = async () => {
 };
 
 /**
+ * Pod Opinion API base URL
+ */
+const opinionBaseUrl = `${apiBaseUrl}/pods`;
+
+/**
+ * Publish an opinion on a content variant.
+ */
+export const publishOpinion = async (podId, opinion) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(opinion),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to publish opinion: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get all opinions for a content item.
+ */
+export const getContentOpinions = async (podId, contentId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get content opinions: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get opinions for a specific variant.
+ */
+export const getVariantOpinions = async (podId, contentId, variantHash) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/variant/${variantHash}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get variant opinions: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get opinion statistics for a content item.
+ */
+export const getOpinionStatistics = async (podId, contentId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/stats`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get opinion statistics: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Refresh opinions for a pod from DHT.
+ */
+export const refreshPodOpinions = async (podId) => {
+  const response = await fetch(`${opinionBaseUrl}/${podId}/opinions/refresh`, {
+    method: 'POST',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to refresh pod opinions: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
  * Pod Channel API base URL
  */
 const channelBaseUrl = `${apiBaseUrl}/pods`;

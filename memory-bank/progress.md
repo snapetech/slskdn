@@ -33,6 +33,52 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1351: Content-Linked Pod Creation (FocusContentId) (Phase 10 Gap - P1)
+- **Status**: ✅ **COMPLETED** (2025-12-13)
+- **Implementation Details**:
+  - **IContentLinkService Interface**: Comprehensive content validation and metadata service contract
+  - **ContentLinkService Implementation**: MusicBrainz-integrated content resolver with extensible architecture
+  - **Content ID Validation**: Full support for MediaCore.ContentId format (content:domain:type:id)
+  - **MusicBrainz Integration**: Real metadata fetching for audio albums and tracks using existing MB client
+  - **Content Search Framework**: Extensible search API for future content provider integrations
+  - **Enhanced IPodService**: Added CreateContentLinkedPodAsync with automatic metadata enrichment
+  - **Pod Naming Automation**: Auto-generation of pod names from content metadata when unspecified
+  - **Content-Based Tagging**: Automatic tag generation (content:domain, type:type) for discoverability
+  - **PodContentController**: REST API for content validation, metadata fetching, and linked pod creation
+  - **WebGUI Content Linking**: Complete content search, validation, and pod creation workflow
+  - **Content Metadata Display**: Rich metadata presentation with artist, title, type information
+  - **Validation Feedback**: Real-time content ID validation with error messaging
+  - **Auto-Fill Functionality**: Intelligent pod name suggestion from content metadata
+  - **Extensible Architecture**: Framework for additional content providers (video, books, etc.)
+  - **Fallback Handling**: Graceful degradation when content services unavailable
+  - **Audit Trail**: Content validation logging for debugging and monitoring
+
+**Content ID Format & Validation**:
+```csharp
+// Content ID structure: content:<domain>:<type>:<identifier>
+var contentId = "content:audio:album:b1a2c3d4-1234-5678-9abc-def012345678";
+
+// Validation with metadata fetching
+var result = await contentLinkService.ValidateContentIdAsync(contentId);
+// Returns: IsValid, ErrorMessage?, Metadata?
+```
+
+**Content-Linked Pod Creation**:
+```csharp
+var pod = await podService.CreateContentLinkedPodAsync(new Pod {
+    FocusContentId = "content:audio:album:mb-release-id",
+    // Name auto-filled: "Artist Name - Album Title"
+    // Tags auto-added: ["content:audio", "type:album"]
+});
+```
+
+**MusicBrainz Metadata Integration**:
+```csharp
+// Automatic metadata fetching for supported content
+var metadata = await contentLinkService.GetContentMetadataAsync(contentId);
+// Returns: Title, Artist, Type, Domain, AdditionalInfo (release date, track count, etc.)
+```
+
 ### T-1350: Pod Channels (Full Implementation) (Phase 10 Gap - P1)
 - **Status**: ✅ **COMPLETED** (2025-12-13)
 - **Implementation Details**:

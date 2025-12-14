@@ -927,6 +927,19 @@ namespace slskd
                     sp.GetRequiredService<ILogger<PodCore.PodMessageBackfill>>());
             });
 
+            // Pod opinion service for managing content variant opinions
+            services.AddScoped<PodCore.IPodOpinionService>(sp =>
+            {
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var dhtClient = sp.GetService<Mesh.Dht.IMeshDhtClient>();
+                var messageSigner = sp.GetRequiredService<PodCore.IMessageSigner>();
+                return new PodCore.PodOpinionService(
+                    podService,
+                    dhtClient,
+                    messageSigner,
+                    sp.GetRequiredService<ILogger<PodCore.PodOpinionService>>());
+            });
+
             // Background service for periodic pod metadata refresh
             services.AddHostedService<PodCore.PodPublisherBackgroundService>();
 

@@ -2266,11 +2266,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete channel CRUD, DHT metadata publishing, per-channel routing validation.
 
-- [ ] **T-1351**: Implement content-linked pod creation
-  - Status: Not started
+- [x] **T-1351**: Implement content-linked pod creation
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Create pod with FocusContentId. Link to artist/album/show.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete content linking with MusicBrainz integration, validation, and metadata enrichment.
 
 - [ ] **T-1352**: Implement PodVariantOpinion publishing
   - Status: Not started
