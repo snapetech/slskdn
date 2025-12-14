@@ -19,6 +19,16 @@ public interface IPodPublisher
     Task PublishPodAsync(Pod pod, CancellationToken ct = default);
 
     /// <summary>
+    /// Publishes a pod's metadata to the DHT (alias for PublishPodAsync).
+    /// </summary>
+    Task PublishAsync(Pod pod, CancellationToken ct = default) => PublishPodAsync(pod, ct);
+
+    /// <summary>
+    /// Updates a pod's metadata in the DHT (alias for PublishPodAsync).
+    /// </summary>
+    Task UpdatePodAsync(Pod pod, CancellationToken ct = default) => PublishPodAsync(pod, ct);
+
+    /// <summary>
     /// Removes a pod's metadata from the DHT (unpublish).
     /// </summary>
     Task UnpublishPodAsync(string podId, CancellationToken ct = default);

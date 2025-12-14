@@ -5,6 +5,7 @@
 namespace slskd.Mesh.Realm
 {
     using Microsoft.Extensions.DependencyInjection;
+    using slskd.Mesh.Realm.Migration;
 
     /// <summary>
     ///     Extension methods for registering realm services.

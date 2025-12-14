@@ -27,6 +27,14 @@ namespace slskd.Common.Moderation
         Task RecordEventAsync(PeerReputationEvent @event, CancellationToken cancellationToken = default);
 
         /// <summary>
+        ///     Records a reputation event for a peer (alias for RecordEventAsync).
+        /// </summary>
+        /// <param name="event">The reputation event to record.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task RecordPeerEventAsync(PeerReputationEvent @event, CancellationToken cancellationToken = default) => RecordEventAsync(@event, cancellationToken);
+
+        /// <summary>
         ///     Gets the reputation score for a peer.
         /// </summary>
         /// <param name="peerId">The peer identifier.</param>
