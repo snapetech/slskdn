@@ -73,7 +73,7 @@ namespace slskd.Mesh.Realm.Bridge
                         actorId, remoteRealmId, localRealmId);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.Success(new { FollowedActor = actorId });
+                    return BridgeOperationResult.CreateSuccess(new { FollowedActor = actorId });
                 },
                 cancellationToken);
         }
@@ -113,7 +113,7 @@ namespace slskd.Mesh.Realm.Bridge
                         postId, remoteRealmId, localRealmId, mirrorToLocal);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.Success(new
+                    return BridgeOperationResult.CreateSuccess(new
                     {
                         MirroredPost = postId,
                         LocalMirror = mirrorToLocal
@@ -157,7 +157,7 @@ namespace slskd.Mesh.Realm.Bridge
                         remoteRealmId, localRealmId);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.Success(new
+                    return BridgeOperationResult.CreateSuccess(new
                     {
                         SharedContent = content,
                         RemoteRealm = remoteRealmId
@@ -203,7 +203,7 @@ namespace slskd.Mesh.Realm.Bridge
                         originalPostId, remoteRealmId, localRealmId);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.Success(new
+                    return BridgeOperationResult.CreateSuccess(new
                     {
                         AnnouncedPost = originalPostId,
                         AnnouncementText = announcementText,

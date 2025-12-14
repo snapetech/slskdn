@@ -198,7 +198,11 @@ public class DirectQuicDialer : ITransportDialer
             ClientAuthenticationOptions = new SslClientAuthenticationOptions
             {
                 ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
-                RemoteCertificateValidationCallback = SecurityUtils.CreatePinningValidationCallback(certificatePins)
+                RemoteCertificateValidationCallback = (sender, cert, chain, errors) =>
+                {
+                    var callback = SecurityUtils.CreatePinningValidationCallback(certificatePins);
+                    return callback(cert, chain, errors);
+                }
             }
         };
 

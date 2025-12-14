@@ -192,7 +192,7 @@ namespace slskd.SocialFederation
                 switch (contentItem.Domain.ToLowerInvariant())
                 {
                     case "music":
-                        if (contentItem is ContentDomain.MusicContentItem musicItem)
+                        if (contentItem is MusicItem musicItem)
                         {
                             workRef = WorkRef.FromMusicItem(musicItem, "https://localhost:5000");
                         }

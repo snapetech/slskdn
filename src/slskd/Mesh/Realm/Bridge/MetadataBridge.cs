@@ -83,7 +83,7 @@ namespace slskd.Mesh.Realm.Bridge
                         Results = new[] { "safe-metadata-result-1", "safe-metadata-result-2" }
                     };
 
-                    return BridgeOperationResult.Success(result);
+                    return BridgeOperationResult.CreateSuccess(result);
                 },
                 cancellationToken);
         }
@@ -140,7 +140,7 @@ namespace slskd.Mesh.Realm.Bridge
                         }
                     };
 
-                    return BridgeOperationResult.Success(result);
+                    return BridgeOperationResult.CreateSuccess(result);
                 },
                 cancellationToken);
         }
@@ -184,7 +184,7 @@ namespace slskd.Mesh.Realm.Bridge
                         // Never expose: GovernanceRoots, BootstrapNodes, internal policies
                     };
 
-                    return BridgeOperationResult.Success(realmInfo);
+                    return BridgeOperationResult.CreateSuccess(realmInfo);
                 },
                 cancellationToken);
         }
