@@ -39,7 +39,7 @@ public class ControlEnvelopeValidator
     /// <returns>Validation result with success/failure details.</returns>
     public EnvelopeValidationResult ValidateEnvelope(
         ControlEnvelope envelope,
-        MeshPeerDescriptor peerDescriptor,
+        slskd.Mesh.Dht.MeshPeerDescriptor peerDescriptor,
         string peerId)
     {
         if (envelope == null)
@@ -80,10 +80,7 @@ public class ControlEnvelopeValidator
         }
 
         // 4. Validate signature against allowed keys from descriptor
-        // Cast to DHT class if needed (contains ControlSigningKeys property)
-        var dhtDescriptor = peerDescriptor as slskd.Mesh.Dht.MeshPeerDescriptor 
-            ?? throw new InvalidOperationException("Peer descriptor must be DHT MeshPeerDescriptor for signature validation");
-        var signatureValid = ValidateEnvelopeSignature(envelope, dhtDescriptor);
+        var signatureValid = ValidateEnvelopeSignature(envelope, peerDescriptor);
         if (!signatureValid)
         {
             return EnvelopeValidationResult.Failure("Envelope signature verification failed");

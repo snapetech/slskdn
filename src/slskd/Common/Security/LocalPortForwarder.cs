@@ -65,7 +65,8 @@ public class LocalPortForwarder : IDisposable
             destinationHost,
             destinationPort,
             serviceName,
-            this);
+            this,
+            _logger);
 
         _activeForwarders[localPort] = forwarder;
 
@@ -169,7 +170,8 @@ public class LocalPortForwarder : IDisposable
                 podId,
                 destinationHost,
                 destinationPort,
-                this);
+                this,
+                _logger);
 
             _activeConnections[tunnelResponse.TunnelId] = connection;
 
@@ -344,7 +346,8 @@ internal class ForwarderInstance : IDisposable
         string destinationHost,
         int destinationPort,
         string? serviceName,
-        LocalPortForwarder parent)
+        LocalPortForwarder parent,
+        ILogger logger)
     {
         _localPort = localPort;
         _podId = podId;
@@ -352,7 +355,7 @@ internal class ForwarderInstance : IDisposable
         _destinationPort = destinationPort;
         _serviceName = serviceName;
         _parent = parent;
-        _logger = parent._logger;
+        _logger = logger;
     }
 
     public async Task StartAsync()
@@ -543,14 +546,15 @@ internal class ForwarderConnection : IDisposable
         string podId,
         string destinationHost,
         int destinationPort,
-        LocalPortForwarder parent)
+        LocalPortForwarder parent,
+        ILogger logger)
     {
         _tunnelId = tunnelId;
         _podId = podId;
         _destinationHost = destinationHost;
         _destinationPort = destinationPort;
         _parent = parent;
-        _logger = parent._logger;
+        _logger = logger;
         _lastActivity = DateTimeOffset.UtcNow;
     }
 
