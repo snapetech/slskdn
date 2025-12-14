@@ -18,19 +18,37 @@ namespace slskd.Mesh.Realm
     public sealed class MultiRealmHostedService : IHostedService
     {
         private readonly MultiRealmService _multiRealmService;
+        private readonly Microsoft.Extensions.Options.IOptionsMonitor<MultiRealmConfig> _config;
+        private readonly Microsoft.Extensions.Logging.ILogger<MultiRealmHostedService> _logger;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MultiRealmHostedService"/> class.
         /// </summary>
         /// <param name="multiRealmService">The multi-realm service.</param>
-        public MultiRealmHostedService(MultiRealmService multiRealmService)
+        /// <param name="config">The multi-realm configuration.</param>
+        /// <param name="logger">The logger.</param>
+        public MultiRealmHostedService(
+            MultiRealmService multiRealmService,
+            Microsoft.Extensions.Options.IOptionsMonitor<MultiRealmConfig> config,
+            Microsoft.Extensions.Logging.ILogger<MultiRealmHostedService> logger)
         {
             _multiRealmService = multiRealmService ?? throw new ArgumentNullException(nameof(multiRealmService));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <inheritdoc/>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            // Only initialize if we have multiple realms configured
+            var realms = _config.CurrentValue.Realms ?? Array.Empty<RealmConfig>();
+            if (realms.Length == 0)
+            {
+                _logger.LogDebug("[MultiRealmHostedService] Skipping initialization - no realms configured");
+                return;
+            }
+
+            _logger.LogInformation("[MultiRealmHostedService] Initializing multi-realm service with {Count} realms", realms.Length);
             await _multiRealmService.InitializeAsync(cancellationToken);
         }
 

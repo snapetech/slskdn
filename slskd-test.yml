@@ -19,12 +19,11 @@ realm:
     - "test-governance-root-1"
   bootstrapNodes: []
   policies:
-    gossip:
-      enabled: true
-      maxMessageSize: 65536
-      ttl: 64
-    replication:
-      enabled: false
+    gossipEnabled: true
+    replicationEnabled: false
+    maxGossipHops: 3
+    gossipIntervalSeconds: 300
+    federationAllowed: true
 
 # Multi-realm config - leave empty since we're using single realm
 multirealm:

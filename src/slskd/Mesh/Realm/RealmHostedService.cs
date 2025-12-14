@@ -18,20 +18,35 @@ namespace slskd.Mesh.Realm
     public sealed class RealmHostedService : IHostedService
     {
         private readonly RealmService _realmService;
+        private readonly Microsoft.Extensions.Logging.ILogger<RealmHostedService> _logger;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="RealmHostedService"/> class.
         /// </summary>
         /// <param name="realmService">The realm service.</param>
-        public RealmHostedService(RealmService realmService)
+        /// <param name="logger">The logger.</param>
+        public RealmHostedService(
+            RealmService realmService,
+            Microsoft.Extensions.Logging.ILogger<RealmHostedService> logger)
         {
             _realmService = realmService ?? throw new ArgumentNullException(nameof(realmService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <inheritdoc/>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await _realmService.InitializeAsync(cancellationToken);
+            try
+            {
+                _logger.LogInformation("[RealmHostedService] Starting realm initialization...");
+                await _realmService.InitializeAsync(cancellationToken);
+                _logger.LogInformation("[RealmHostedService] Realm initialization complete.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[RealmHostedService] FAILED to initialize realm");
+                throw;
+            }
         }
 
         /// <inheritdoc/>

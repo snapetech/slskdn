@@ -538,7 +538,18 @@ namespace slskd
                     .ConfigureAspDotNetServices()
                     .ConfigureDependencyInjectionContainer();
 
-                var app = builder.Build();
+                WebApplication app;
+                try
+                {
+                    Log.Information("Building DI container...");
+                    app = builder.Build();
+                    Log.Information("DI container built successfully!");
+                }
+                catch (Exception diEx)
+                {
+                    Log.Fatal(diEx, "FAILED to build DI container");
+                    throw;
+                }
 
                 if (!OptionsAtStartup.Flags.Volatile)
                 {
@@ -576,6 +587,8 @@ namespace slskd
 
         private static IServiceCollection ConfigureDependencyInjectionContainer(this IServiceCollection services)
         {
+            Log.Information("[DI] Starting ConfigureDependencyInjectionContainer...");
+
             // add the instance of OptionsAtStartup to DI as they were at startup. use when Options might change, but
             // the values at startup are to be used (generally anything marked RequiresRestart).
             services.AddSingleton(OptionsAtStartup);
@@ -1042,19 +1055,23 @@ namespace slskd
             services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
 
             // Realm services (T-REALM-01, T-REALM-02, T-REALM-04)
+            Log.Information("[DI] Configuring Realm services...");
             services.Configure<Mesh.Realm.RealmConfig>(Configuration.GetSection("Realm"));
             services.Configure<Mesh.Realm.MultiRealmConfig>(Configuration.GetSection("MultiRealm"));
             services.AddRealmServices();
 
             // Social federation services (required by bridges)
+            Log.Information("[DI] Configuring Social Federation services...");
             services.AddSocialFederation();
             services.AddBridgeServices();
 
             // Governance and Gossip services (T-REALM-03)
+            Log.Information("[DI] Configuring Governance and Gossip services...");
             services.AddGovernanceServices();
             services.AddGossipServices();
 
             // MeshCore (Phase 8 implementation)
+            Log.Information("[DI] Configuring MeshCore services...");
             services.Configure<Mesh.MeshOptions>(Configuration.GetSection("Mesh"));
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
             services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
