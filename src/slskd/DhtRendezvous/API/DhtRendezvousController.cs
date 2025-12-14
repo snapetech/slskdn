@@ -132,7 +132,6 @@ public class DhtRendezvousController : ControllerBase
         var peers = _dhtService.GetMeshPeers()
             .Select(p => new MeshPeerInfoResponse
             {
-                MeshPeerId = p.MeshPeerId,
                 Username = p.Username,
                 Address = p.Endpoint.Address.ToString(),
                 Port = p.Endpoint.Port,
@@ -161,7 +160,7 @@ public class DhtRendezvousController : ControllerBase
             Server = new ServerStatsResponse
             {
                 IsListening = serverStats.IsListening,
-                ListenPort = serverStats.ListenPort ?? 0,
+                ListenPort = serverStats.ListenPort,
                 ActiveConnections = serverStats.ActiveConnections,
                 TotalConnectionsAccepted = serverStats.TotalConnectionsAccepted,
                 TotalConnectionsRejected = serverStats.TotalConnectionsRejected,
@@ -335,14 +334,14 @@ public sealed class DiscoveryResultResponse
 
 public sealed class MeshPeerInfoResponse
 {
-    public required string MeshPeerId { get; init; }
-    public string? Username { get; init; }
+    public required string Username { get; init; }
     public required string Address { get; init; }
     public int Port { get; init; }
     public required List<string> Features { get; init; }
     public DateTimeOffset ConnectedAt { get; init; }
     public DateTimeOffset LastActivity { get; init; }
     public string? CertificateThumbprint { get; init; }
+    public string? Version { get; init; }
 }
 
 public sealed class OverlayStatsResponse

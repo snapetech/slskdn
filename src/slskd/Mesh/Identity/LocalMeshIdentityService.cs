@@ -89,6 +89,11 @@ public sealed class LocalMeshIdentityService
             Endpoints = endpoints,
             Capabilities = capabilities,
             Timestamp = timestamp,
+            Metadata = new Dictionary<string, string>
+            {
+                ["version"] = Program.FullVersion ?? "unknown",
+                ["build"] = Program.SemanticVersion ?? "unknown",
+            },
         };
         
         // Build the payload to sign
@@ -106,6 +111,11 @@ public sealed class LocalMeshIdentityService
             Endpoints = endpoints,
             Capabilities = capabilities,
             Timestamp = timestamp,
+            Metadata = new Dictionary<string, string>
+            {
+                ["version"] = Program.FullVersion ?? "unknown",
+                ["build"] = Program.SemanticVersion ?? "unknown",
+            },
         };
     }
     

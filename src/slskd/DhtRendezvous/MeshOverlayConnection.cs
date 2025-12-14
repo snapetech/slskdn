@@ -68,6 +68,11 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public IReadOnlyList<string> Features { get; private set; } = Array.Empty<string>();
     
     /// <summary>
+    /// Version string of the remote peer (e.g., "0.24.1-dev-91765670315").
+    /// </summary>
+    public string? PeerVersion { get; private set; }
+    
+    /// <summary>
     /// Whether handshake has completed successfully.
     /// </summary>
     public bool IsHandshakeComplete { get; private set; }
@@ -265,6 +270,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
             Nonce = nonce,
+            ClientVersion = Program.FullVersion,
         };
         
         await _framer.WriteMessageAsync(hello, handshakeCts.Token);
@@ -290,6 +296,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         MeshPeerId = ack.MeshPeerId;
         Username = ack.Username;
         Features = ack.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
+        PeerVersion = ack.Version; // Store peer version
         IsHandshakeComplete = true;
         State = ConnectionState.Active;
         
@@ -404,6 +411,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
             NonceEcho = hello.Nonce,
+            Version = Program.FullVersion,
         };
         
         await _framer.WriteMessageAsync(ack, handshakeCts.Token);
@@ -412,6 +420,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         MeshPeerId = hello.MeshPeerId;
         Username = hello.Username;
         Features = hello.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
+        PeerVersion = hello.ClientVersion; // Store peer version
         IsHandshakeComplete = true;
         State = ConnectionState.Active;
         
