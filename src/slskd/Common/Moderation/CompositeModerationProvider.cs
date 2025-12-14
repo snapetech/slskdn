@@ -356,7 +356,22 @@ namespace slskd.Common.Moderation
             {
                 try
                 {
-                    await _peerReputation.RecordPeerEventAsync(peerId, report, ct);
+                    var eventType = report.Severity switch
+                    {
+                        ReportSeverity.Critical => PeerReputationEventType.MaliciousBehavior,
+                        ReportSeverity.High => PeerReputationEventType.PolicyViolation,
+                        ReportSeverity.Medium => PeerReputationEventType.SuspiciousActivity,
+                        _ => PeerReputationEventType.Other
+                    };
+
+                    var reputationEvent = new PeerReputationEvent(
+                        peerId,
+                        eventType,
+                        contentId: null,
+                        timestamp: DateTimeOffset.UtcNow,
+                        metadata: report.Reason);
+
+                    await _peerReputation.RecordPeerEventAsync(reputationEvent, ct);
 
                     _logger.LogInformation(
                         "[SECURITY] MCP peer report | PeerIdPrefix={PeerIdPrefix} | Reason={Reason}",

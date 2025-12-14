@@ -302,11 +302,11 @@ namespace slskd.Common.Moderation
 
                 case ModerationVerdict.Allowed:
                     // For allowed content, we still want to track the LLM analysis
-                    return ModerationDecision.Allow(reason, provider);
+                    return ModerationDecision.Allow(reason);
 
                 case ModerationVerdict.Unknown:
                 default:
-                    return ModerationDecision.Unknown($"llm_unknown_{llmResponse.Confidence:F2}", provider);
+                    return ModerationDecision.Unknown($"llm_unknown_{llmResponse.Confidence:F2}");
             }
         }
 

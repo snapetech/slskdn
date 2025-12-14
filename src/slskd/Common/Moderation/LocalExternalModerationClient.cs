@@ -306,10 +306,10 @@ namespace slskd.Common.Moderation
                     return ModerationDecision.Quarantine(reason, provider);
 
                 case ModerationVerdict.Allowed:
-                    return ModerationDecision.Allow(reason, provider);
+                    return ModerationDecision.Allow(reason);
 
                 default:
-                    return ModerationDecision.Unknown($"local_llm_{response.Verdict.ToString().ToLowerInvariant()}", provider);
+                    return ModerationDecision.Unknown($"local_llm_{response.Verdict.ToString().ToLowerInvariant()}");
             }
         }
 

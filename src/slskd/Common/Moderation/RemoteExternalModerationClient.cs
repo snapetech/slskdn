@@ -296,10 +296,10 @@ Be conservative - when in doubt, choose 'Allowed' with low confidence."
                     return ModerationDecision.Quarantine(reason, provider);
 
                 case ModerationVerdict.Allowed:
-                    return ModerationDecision.Allow(reason, provider);
+                    return ModerationDecision.Allow(reason);
 
                 default:
-                    return ModerationDecision.Unknown($"llm_{response.Verdict.ToString().ToLowerInvariant()}", provider);
+                    return ModerationDecision.Unknown($"llm_{response.Verdict.ToString().ToLowerInvariant()}");
             }
         }
 
