@@ -245,10 +245,18 @@ namespace slskd.VirtualSoulfind.v2.Planning
                     }
 
                     // Step 2: Check peer reputation (T-MCP04)
-                    if (!string.IsNullOrWhiteSpace(candidate.PeerId))
+                    // For Soulseek backend, BackendRef contains "peerId|filepath"
+                    string? peerId = null;
+                    if (candidate.Backend == ContentBackendType.Soulseek && !string.IsNullOrWhiteSpace(candidate.BackendRef))
+                    {
+                        var parts = candidate.BackendRef.Split('|', 2);
+                        peerId = parts.Length > 0 ? parts[0] : null;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(peerId))
                     {
                         var isAllowed = await _peerReputationService.IsPeerAllowedForPlanningAsync(
-                            candidate.PeerId,
+                            peerId,
                             cancellationToken);
 
                         if (!isAllowed)

@@ -514,7 +514,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
         }
 
         // Check if transport is allowed by policy
-        return policy.IsTransportAllowed(meshTransportType.Value, _adversarialOptions.MeshTransport);
+        return policy.IsTransportAllowed(meshTransportType.Value, _adversarialOptions.MeshTransportOptions);
     }
 
     private static AnonymityTransportType? MapTransportTypeToAnonymityType(TransportType transportType)

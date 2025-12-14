@@ -79,7 +79,7 @@ public sealed class AdversarialOptions
     /// <summary>
     /// Gets or sets the mesh transport mode.
     /// </summary>
-    public string MeshTransport { get; set; } = "QUIC";
+    public slskd.Mesh.MeshTransportOptions MeshTransportOptions { get; set; } = new();
 }
 
 /// <summary>
