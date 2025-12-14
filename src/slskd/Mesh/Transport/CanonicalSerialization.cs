@@ -33,12 +33,12 @@ public static class CanonicalSerialization
             ExpiresAtUnixMs = descriptor.ExpiresAtUnixMs,
 
             // Canonical ordering for endpoints
-            Endpoints = (descriptor.Endpoints ?? Array.Empty<string>())
+            Endpoints = descriptor.Endpoints
                 .OrderBy(e => e, StringComparer.Ordinal)
                 .ToArray(),
 
             // Canonical ordering for transport endpoints
-            TransportEndpoints = (descriptor.TransportEndpoints ?? Array.Empty<TransportEndpoint>())
+            TransportEndpoints = descriptor.TransportEndpoints
                 .Select(ep => new CanonicalTransportEndpoint
                 {
                     TransportType = ep.TransportType,
@@ -56,12 +56,12 @@ public static class CanonicalSerialization
                 .ToArray(),
 
             // Canonical ordering for certificate pins
-            CertificatePins = (descriptor.CertificatePins ?? Array.Empty<string>())
+            CertificatePins = descriptor.CertificatePins
                 .OrderBy(pin => pin, StringComparer.Ordinal)
                 .ToArray(),
 
             // Canonical ordering for signing keys
-            ControlSigningKeys = (descriptor.ControlSigningKeys ?? Array.Empty<string>())
+            ControlSigningKeys = descriptor.ControlSigningKeys
                 .OrderBy(key => key, StringComparer.Ordinal)
                 .ToArray(),
 
