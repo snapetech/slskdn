@@ -120,10 +120,16 @@ class Footer extends Component {
           </div>
 
           {/* Center-Left: Transfer Speeds */}
-          <div className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}>
+          <div
+            className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}
+          >
             <span
               className="slskdn-footer-speed-item"
-              title={isLoggedIn ? "Total transfer speed (upload + download)" : "Login to see real-time speeds"}
+              title={
+                isLoggedIn
+                  ? 'Total transfer speed (upload + download)'
+                  : 'Login to see real-time speeds'
+              }
             >
               <strong>T:</strong>{' '}
               <span className="speed-value">
@@ -136,11 +142,17 @@ class Footer extends Component {
             <span className="slskdn-footer-divider">•</span>
             <span
               className="slskdn-footer-speed-item"
-              title={isLoggedIn ? "Soulseek network speed" : "Login to see real-time speeds"}
+              title={
+                isLoggedIn
+                  ? 'Soulseek network speed'
+                  : 'Login to see real-time speeds'
+              }
             >
               <strong>S:</strong>{' '}
               <span className="speed-value">
-                {isLoggedIn && speeds ? formatSpeed(speeds.soulseek).value : '0'}
+                {isLoggedIn && speeds
+                  ? formatSpeed(speeds.soulseek).value
+                  : '0'}
               </span>
               <span className="speed-unit">
                 {isLoggedIn && speeds ? formatSpeed(speeds.soulseek).unit : 'B'}
@@ -149,7 +161,11 @@ class Footer extends Component {
             <span className="slskdn-footer-divider">•</span>
             <span
               className="slskdn-footer-speed-item"
-              title={isLoggedIn ? "Mesh network speed" : "Login to see real-time speeds"}
+              title={
+                isLoggedIn
+                  ? 'Mesh network speed'
+                  : 'Login to see real-time speeds'
+              }
             >
               <strong>M:</strong>{' '}
               <span className="speed-value">
