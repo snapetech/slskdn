@@ -69,6 +69,11 @@ namespace slskd.VirtualSoulfind.Core
         string Title { get; }
 
         /// <summary>
+        ///     Gets the primary name for the item (typically same as Title).
+        /// </summary>
+        string? PrimaryName => Title;
+
+        /// <summary>
         ///     Gets the position/index within the parent work (optional).
         /// </summary>
         /// <remarks>

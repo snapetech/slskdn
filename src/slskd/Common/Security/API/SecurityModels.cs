@@ -23,6 +23,16 @@ namespace slskd.Common.Security.API
         /// Gets or sets the reason for the ban.
         /// </summary>
         public string? Reason { get; set; }
+
+        /// <summary>
+        /// Gets or sets the duration of the ban (TimeSpan).
+        /// </summary>
+        public TimeSpan? Duration { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the ban is permanent.
+        /// </summary>
+        public bool Permanent { get; set; } = false;
     }
 
     /// <summary>
@@ -40,6 +50,16 @@ namespace slskd.Common.Security.API
         /// Gets or sets the reason for the ban.
         /// </summary>
         public string? Reason { get; set; }
+
+        /// <summary>
+        /// Gets or sets the duration of the ban (TimeSpan).
+        /// </summary>
+        public TimeSpan? Duration { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the ban is permanent.
+        /// </summary>
+        public bool Permanent { get; set; } = false;
     }
 
     /// <summary>

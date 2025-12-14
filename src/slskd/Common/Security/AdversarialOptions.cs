@@ -576,6 +576,11 @@ public sealed class MeekTransportOptions
     /// Gets or sets whether to verify front domain.
     /// </summary>
     public bool VerifyFrontDomain { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets custom HTTP headers.
+    /// </summary>
+    public Dictionary<string, string>? CustomHeaders { get; set; }
 }
 
 /// <summary>
