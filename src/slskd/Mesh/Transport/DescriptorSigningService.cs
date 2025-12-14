@@ -28,7 +28,7 @@ public class DescriptorSigningService
     /// <param name="descriptor">The descriptor to sign.</param>
     /// <param name="privateKey">The Ed25519 private key for signing.</param>
     /// <returns>The signature as a base64 string.</returns>
-    public string SignDescriptor(MeshPeerDescriptor descriptor, byte[] privateKey)
+    public string SignDescriptor(slskd.Mesh.Dht.MeshPeerDescriptor descriptor, byte[] privateKey)
     {
         if (descriptor == null)
         {
@@ -66,7 +66,7 @@ public class DescriptorSigningService
     /// <param name="signature">The signature as a base64 string.</param>
     /// <param name="publicKey">The Ed25519 public key for verification.</param>
     /// <returns>True if the descriptor is valid.</returns>
-    public bool VerifyDescriptor(MeshPeerDescriptor descriptor, string signature, byte[] publicKey)
+    public bool VerifyDescriptor(slskd.Mesh.Dht.MeshPeerDescriptor descriptor, string signature, byte[] publicKey)
     {
         if (descriptor == null)
         {

@@ -12,6 +12,11 @@ namespace slskd.Common.Security
     public class WebSocketOptions
     {
         /// <summary>
+        /// Gets or sets a value indicating whether WebSocket transport is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
+        /// <summary>
         /// Gets or sets the WebSocket server URL.
         /// </summary>
         public string? ServerUrl { get; set; }

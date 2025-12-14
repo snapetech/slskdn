@@ -9,6 +9,12 @@ namespace slskd.Common.Security
     /// </summary>
     public class I2pTransportOptions
     {
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this transport is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
         /// <summary>
         /// Gets or sets the SAM bridge address.
         /// </summary>

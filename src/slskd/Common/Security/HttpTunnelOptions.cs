@@ -12,6 +12,11 @@ namespace slskd.Common.Security
     public class HttpTunnelOptions
     {
         /// <summary>
+        /// Gets or sets a value indicating whether this transport is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
+        /// <summary>
         /// Gets or sets the HTTP tunnel endpoint URL.
         /// </summary>
         public string? Endpoint { get; set; }

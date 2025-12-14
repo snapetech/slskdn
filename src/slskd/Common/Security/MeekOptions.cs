@@ -11,6 +11,12 @@ namespace slskd.Common.Security
     /// </summary>
     public class MeekOptions
     {
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this transport is enabled.
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
         /// <summary>
         /// Gets or sets the fronting domain (the domain that appears in SNI/Host header).
         /// </summary>
