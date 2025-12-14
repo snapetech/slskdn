@@ -105,7 +105,7 @@ namespace slskd.SocialFederation
                 _logger.LogInformation("[ActivityPub] Generating keypair for actor {ActorId}", actorId);
 
                 // Generate Ed25519 keypair
-                using var algorithm = SignatureAlgorithm.Ed25519;
+                var algorithm = SignatureAlgorithm.Ed25519;
                 using var key = Key.Create(algorithm);
 
                 // Export public key
@@ -175,7 +175,7 @@ namespace slskd.SocialFederation
                 var publicKeyPem = await GetPublicKeyAsync(actorId, cancellationToken);
 
                 // Parse PEM and verify signature
-                using var algorithm = SignatureAlgorithm.Ed25519;
+                var algorithm = SignatureAlgorithm.Ed25519;
                 var publicKeyBytes = ConvertFromPem(publicKeyPem);
                 using var key = Key.Import(algorithm, publicKeyBytes, KeyBlobFormat.PkixPublicKey);
 

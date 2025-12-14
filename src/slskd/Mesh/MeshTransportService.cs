@@ -70,7 +70,7 @@ public class MeshTransportService : IMeshTransportService
                 try
                 {
                     // Use policy-aware transport selection if peer context is available
-                    var transportTuple = await anonymitySelector.SelectAndConnectAsync(peerId ?? "unknown", podId, "dummy-host", 0, ct: ct);
+                    var transportTuple = await anonymitySelector.SelectAndConnectAsync(peerId ?? "unknown", podId, "dummy-host", 0, cancellationToken: ct);
                     anonymityTransport = transportTuple.Transport.TransportType;
 
                     logger.LogDebug("[MeshTransport] {ContentId}: Selected anonymity transport {AnonymityTransport} for peer {PeerId}",

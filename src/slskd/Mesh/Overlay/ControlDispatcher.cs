@@ -12,7 +12,7 @@ namespace slskd.Mesh.Overlay;
 public interface IControlDispatcher
 {
     Task<bool> HandleAsync(ControlEnvelope envelope, CancellationToken ct = default);
-    Task<bool> HandleAsync(ControlEnvelope envelope, MeshPeerDescriptor peerDescriptor, string peerId, CancellationToken ct = default);
+    Task<bool> HandleAsync(ControlEnvelope envelope, slskd.Mesh.Dht.MeshPeerDescriptor peerDescriptor, string peerId, CancellationToken ct = default);
 }
 
 public class ControlDispatcher : IControlDispatcher
@@ -44,7 +44,7 @@ public class ControlDispatcher : IControlDispatcher
     /// <summary>
     /// Handles envelope with full peer-bound security validation.
     /// </summary>
-    public async Task<bool> HandleAsync(ControlEnvelope envelope, MeshPeerDescriptor peerDescriptor, string peerId, CancellationToken ct = default)
+    public async Task<bool> HandleAsync(ControlEnvelope envelope, slskd.Mesh.Dht.MeshPeerDescriptor peerDescriptor, string peerId, CancellationToken ct = default)
     {
         // Apply privacy transforms to inbound payload if privacy layer is enabled
         if (privacyLayer != null && privacyLayer.IsEnabled && envelope.Payload != null && envelope.Payload.Length > 0)

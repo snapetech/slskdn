@@ -133,8 +133,8 @@ public class PodService : IPodService
 
         // Get current members for validation
         var members = podMembers.TryGetValue(pod.PodId, out var memberList)
-            ? memberList.AsReadOnly()
-            : Array.Empty<PodMember>();
+            ? memberList
+            : new List<PodMember>();
 
         // Validate updated pod
         var validation = PodValidation.ValidatePod(pod, members);

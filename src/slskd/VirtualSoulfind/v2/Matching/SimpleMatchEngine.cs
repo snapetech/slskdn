@@ -142,7 +142,7 @@ namespace slskd.VirtualSoulfind.v2.Matching
                 };
             }
 
-            return Task.FromResult(matchResult);
+            return matchResult;
         }
 
         // ========== Private Helper Methods ==========
