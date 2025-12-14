@@ -191,51 +191,6 @@ This branch is building three major capabilities on top of slskdn:
 
 ---
 
-## Implementation Roadmap
-
-### Phase 1: Service Fabric ✅ COMPLETE
-- [x] Service descriptors and directory (T-SF01)
-- [x] Service routing and RPC (T-SF02)
-- [x] Service wrappers (T-SF03)
-- [x] HTTP gateway with auth (T-SF04 + H-01)
-
-### Phase 2: Security Hardening 🚧 IN PROGRESS
-- [x] Security audit (T-SF05-001)
-- [x] HIGH priority fixes (rate limits, global quotas)
-- [ ] Discovery abuse metrics (T-SF05-002)
-- [ ] Integration tests (T-SF05-006)
-- [ ] Work budget implementation (H-02) **CRITICAL - BLOCKS V2**
-- [ ] Soulseek safety caps (H-08) **CRITICAL - BLOCKS V2**
-
-### Phase 3: Multi-Domain Foundation
-- [ ] Domain abstraction (T-VC01) 🔴 **CRITICAL RISK** - see CURSOR-WARNINGS.md
-- [ ] Music domain provider (T-VC02)
-- [ ] GenericFile domain provider (T-VC03)
-- [ ] Domain-aware planner + Soulseek gating (T-VC04) 🔴 **CRITICAL RISK**
-
-### Phase 4: VirtualSoulfind v2
-- [ ] Data model and catalogue store (V2-P1)
-- [ ] Intent queue and planner (V2-P2)
-- [ ] Match and verification engine (V2-P3)
-- [ ] Backend implementations (V2-P4)
-- [ ] Integration and work budget (V2-P5)
-- [ ] Advanced features (V2-P6)
-
-### Phase 5: Proxy/Relay Services
-- [ ] Define primitives (T-PR01) 🟢 **LOW RISK** - safe warm-up
-- [ ] Catalogue fetch service (T-PR02) 🟢 **LOW RISK**
-- [ ] Content relay service (T-PR03) 🟠 **HIGH RISK**
-- [ ] Trusted relay service (T-PR04) 🟠 **HIGH RISK**
-- [ ] Hardening and policy (H-PR05)
-
-### Phase 6: Testing & Hardening
-- [ ] Comprehensive testing (T-TEST-01 through T-TEST-07)
-- [ ] Remaining hardening tasks (H-03 through H-07, H-09, H-10)
-- [ ] Security audit and penetration testing
-- [ ] Performance optimization
-
----
-
 ## Contributing
 
 ### Before You Start
