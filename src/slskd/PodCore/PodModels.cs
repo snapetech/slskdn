@@ -38,7 +38,13 @@ public class Pod
 {
     public string PodId { get; set; } = string.Empty; // pod:<hash>
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public PodVisibility Visibility { get; set; } = PodVisibility.Unlisted;
+    public bool IsPublic { get; set; } = false;
+    public int MaxMembers { get; set; } = 50;
+    public bool AllowGuests { get; set; } = false;
+    public bool RequireApproval { get; set; } = false;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? FocusContentId { get; set; } // e.g., content:mb:recording:<mbid>
     public List<string> Tags { get; set; } = new();
     public List<PodChannel> Channels { get; set; } = new();
@@ -81,6 +87,7 @@ public class PodMember
 public class PodMessage
 {
     public string MessageId { get; set; } = string.Empty;
+    public string PodId { get; set; } = string.Empty;
     public string ChannelId { get; set; } = string.Empty;
     public string SenderPeerId { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;

@@ -104,7 +104,13 @@ namespace slskd.PodCore
     {
         public string PodId { get; set; }
         public string Name { get; set; }
+        public string? Description { get; set; }
         public PodVisibility Visibility { get; set; }
+        public bool IsPublic { get; set; }
+        public int MaxMembers { get; set; }
+        public bool AllowGuests { get; set; }
+        public bool RequireApproval { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
         public string FocusContentId { get; set; }
         public string Tags { get; set; } // JSON array
         public string Channels { get; set; } // JSON array

@@ -108,6 +108,31 @@ namespace slskd.VirtualSoulfind.Core.Music
         public int? DurationMs => TrackEntry.DurationMs;
 
         /// <summary>
+        ///     Gets the duration in seconds.
+        /// </summary>
+        public int? DurationSeconds => DurationMs.HasValue ? DurationMs.Value / 1000 : null;
+
+        /// <summary>
+        ///     Gets the genre.
+        /// </summary>
+        public string? Genre => TrackEntry.Genre;
+
+        /// <summary>
+        ///     Gets the release year.
+        /// </summary>
+        public int? Year => TrackEntry.Year;
+
+        /// <summary>
+        ///     Gets the MusicBrainz ID (recording ID).
+        /// </summary>
+        public string MusicBrainzId => TrackEntry.RecordingId;
+
+        /// <summary>
+        ///     Gets the Discogs ID.
+        /// </summary>
+        public string? DiscogsId => TrackEntry.DiscogsId;
+
+        /// <summary>
         ///     Creates a <see cref="MusicItem"/> from an <see cref="AlbumTargetTrackEntry"/>.
         /// </summary>
         /// <param name="trackEntry">The track entry.</param>
