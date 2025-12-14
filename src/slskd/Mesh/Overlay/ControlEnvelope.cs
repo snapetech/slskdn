@@ -1,5 +1,6 @@
 using System;
 using MessagePack;
+using slskd.Mesh.Transport;
 
 namespace slskd.Mesh.Overlay;
 

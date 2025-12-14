@@ -7,6 +7,7 @@ namespace slskd.SocialFederation
     using Microsoft.AspNetCore.DataProtection;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.DependencyInjection.Extensions;
+    using slskd.VirtualSoulfind.Core;
 
     /// <summary>
     ///     Extension methods for registering SocialFederation services.

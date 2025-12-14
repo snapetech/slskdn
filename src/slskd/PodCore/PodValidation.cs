@@ -362,7 +362,7 @@ namespace slskd.PodCore
             if (service.Port < 1 || service.Port > 65535)
                 return (false, "Port must be between 1 and 65535");
 
-            if (destination.Protocol != "tcp")
+            if (service.Protocol != "tcp")
                 return (false, "Only TCP protocol is currently supported");
 
             // Check for proxy ports and warn

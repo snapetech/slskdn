@@ -28,6 +28,7 @@ namespace slskd
     using System.Net;
     using System.Net.Sockets;
     using System.Reflection;
+    using System.Text.Json;
     using System.Runtime;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
