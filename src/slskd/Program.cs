@@ -504,18 +504,18 @@ namespace slskd
                     .UseUrls()
                     .UseKestrel(options =>
                     {
-                        Log.Information($"Listening for HTTP requests at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
+                        Log.Information($"Configuring HTTP listener at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
                         options.Listen(IPAddress.Any, OptionsAtStartup.Web.Port);
 
                         if (OptionsAtStartup.Web.Socket != null)
                         {
-                            Log.Information($"Listening for HTTP requests on unix domain socket (UDS) {OptionsAtStartup.Web.Socket}");
+                            Log.Information($"Configuring HTTP listener on unix domain socket (UDS) {OptionsAtStartup.Web.Socket}");
                             options.ListenUnixSocket(OptionsAtStartup.Web.Socket);
                         }
 
                         if (!OptionsAtStartup.Web.Https.Disabled)
                         {
-                            Log.Information($"Listening for HTTPS requests at https://{IPAddress.Any}:{OptionsAtStartup.Web.Https.Port}/");
+                            Log.Information($"Configuring HTTPS listener at https://{IPAddress.Any}:{OptionsAtStartup.Web.Https.Port}/");
                             options.Listen(IPAddress.Any, OptionsAtStartup.Web.Https.Port, listenOptions =>
                             {
                                 var cert = OptionsAtStartup.Web.Https.Certificate;
@@ -534,10 +534,12 @@ namespace slskd
                         }
                     });
 
+                Log.Information("[MAIN] About to configure ASP.NET services...");
                 builder.Services
                     .ConfigureAspDotNetServices()
                     .ConfigureDependencyInjectionContainer();
 
+                Log.Information("[MAIN] Services configured, building DI container...");
                 WebApplication app;
                 try
                 {
@@ -573,6 +575,15 @@ namespace slskd
                 }
 
                 Log.Information("Configuration complete.  Starting application...");
+                
+                // Add lifecycle hook to log when host actually starts listening
+                var lifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+                lifetime.ApplicationStarted.Register(() =>
+                {
+                    var addresses = app.Urls;
+                    Log.Information("✓ Host started and bound to: {Addresses}", string.Join(", ", addresses));
+                });
+                
                 app.Run();
             }
             catch (Exception ex)
@@ -1365,6 +1376,8 @@ namespace slskd
 
         private static IServiceCollection ConfigureAspDotNetServices(this IServiceCollection services)
         {
+            Log.Information("[ASP] Starting ConfigureAspDotNetServices...");
+            
             services.AddCors(options => options.AddPolicy("AllowAll", builder => builder
                 .SetIsOriginAllowed((host) => true)
                 .AllowAnyHeader()

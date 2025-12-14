@@ -130,6 +130,13 @@ public class Migrator
                 var src = MakeSourceDatabasePath(database.Name);
                 var dest = MakeBackupDatabasePath(database.Name, migrationId);
 
+                // Skip backup if source database doesn't exist yet (fresh install)
+                if (!File.Exists(src))
+                {
+                    Log.Debug("Skipping backup of {Database} - file does not exist yet (likely fresh install)", src);
+                    continue;
+                }
+
                 File.Copy(src, dest, overwrite: true);
 
                 Log.Information("Backed database {Original} up to {Backup}", src, dest);
