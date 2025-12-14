@@ -3,6 +3,14 @@
 > This file is the canonical task list for slskdN development.  
 > AI agents should add/update tasks here, not invent ephemeral todos in chat.
 
+> **📊 Task Count**: 387 tasks in this file (303 complete = 78%, 84 remaining)  
+> **🔄 Reconciliation Status**: Dashboard at `docs/TASK_STATUS_DASHBOARD.md` is being updated  
+>   - Dashboard currently shows 51/201 (25%) but this file shows 78% complete
+>   - Major completed phases from this file are being added to dashboard
+>   - Combined unique tasks across both files: ~540 total
+> **✅ Major Complete**: MusicBrainz (49), Mesh/Swarm (40+), PodCore (32), VirtualSoulfind Mesh (40), Testing (11), Soulbeet (9), Discovery (11), Job Manifests (12), UI Tasks (7), Stable Releases (10)
+> **Last Updated**: December 14, 2025
+
 ---
 
 ## Active Development

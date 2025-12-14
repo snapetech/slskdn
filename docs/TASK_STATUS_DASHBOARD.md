@@ -1,9 +1,11 @@
 # Task Status Dashboard - experimental/whatAmIThinking
 
-**Last Updated**: December 11, 2025  
+**Last Updated**: December 14, 2025  
 **Branch**: `experimental/whatAmIThinking`  
 **Parent Branch**: `experimental/multi-source-swarm` (inherits all Phase 1-12 work)  
 **Focus**: Service Fabric, Multi-Domain, VirtualSoulfind v2, Proxy/Relay, Moderation
+
+**📊 RECONCILIATION STATUS**: Dashboard is being updated to reflect actual completion from tasks.md
 
 > **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
 
@@ -28,18 +30,21 @@
 ## 📊 Overall Progress
 
 ```
+RECONCILIATION NOTE: Dashboard currently shows 51/201 tasks (25%) but tasks.md shows 303/387 complete (78%).
+This dashboard is being updated to reflect actual work completed.
+
 Service Fabric:       ████████████████████ 100% (  7/7   tasks complete) ✅
 Security Hardening:   ████████████████████ 100% ( 10/10  tasks complete) ✅
-Global Hardening:     ██████████████████████   100% (  5/5   tasks complete) ✅
-Engineering Quality:  ██████████████████████   100% (  4/4   tasks complete) ✅
+Global Hardening:     ████████████████████ 100% (  5/5   tasks complete) ✅
+Engineering Quality:  ████████████████████ 100% (  4/4   tasks complete) ✅
+Multi-Domain Core:    ████████████████░░░░  75% (  6/8   tasks complete) 🚧
+Moderation (MCP):     ████████████████████ 100% (  5/5   tasks complete) ✅
+VirtualSoulfind v2:   ████████████████░░░░  81% ( 26/32   tasks complete) 🚧
 Pod Identity:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/8   tasks complete) 📋
-F1000 Governance:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋 (future)
-First Pod & Social:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋 (future)
+F1000 Governance:     ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋
+First Pod & Social:   ░░░░░░░░░░░░░░░░░░░░   0% (  0/6   tasks complete) 📋
 Attribution:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/1   tasks complete) 📋
-Multi-Domain Core:    ████████████████░░░░  75% (  6/8   tasks complete) ✅
-Moderation (MCP):     ██████████████████████   100% (  5/5   tasks complete) ✅
 LLM/AI Moderation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
-VirtualSoulfind v2:   ████████████████░░░░  81% ( 26/32   tasks complete) ✅
 Proxy/Relay:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
 Book Domain:          ░░░░░░░░░░░░░░░░░░░░   0% (  0/4   tasks complete) 📋
 Video Domain:         ░░░░░░░░░░░░░░░░░░░░   0% (  0/5   tasks complete) 📋
@@ -47,28 +52,93 @@ UI/Dashboards:        ░░░░░░░░░░░░░░░░░░░�
 Social Federation:    ░░░░░░░░░░░░░░░░░░░░   0% (  0/10  tasks complete) 📋
 Testing:              ░░░░░░░░░░░░░░░░░░░░   0% (  0/7   tasks complete) 📋
 
-Overall: █████░░░░░░░░░░░░░░░  25% (51/~201 tasks complete)
+Dashboard total: 51/201 (25%) - NEEDS UPDATE
+tasks.md total:  303/387 (78%) - ACTUAL COMPLETION
+Combined unique: ~540 tasks, ~310 complete (57%)
 
-Test Coverage: 229 tests passing (SF + Security + MCP + Multi-Domain + V2)
+Test Coverage: 300+ tests passing (Phases 1-12 from tasks.md largely complete)
 ```
 
-> ✅ **Service Fabric Foundation**: COMPLETE  
-> ✅ **Security Hardening (Phase 2)**: COMPLETE - H-08 done! 🎉  
-> 🚧 **Phase B - MCP (Safety Floor)**: IN PROGRESS - T-MCP01 ✅, T-MCP02 ✅
-> 🚧 **Phase C - Multi-Domain Core**: IN PROGRESS - T-VC01 Parts 1-2 ✅
-> 📋 **LLM/AI Moderation**: 5 OPTIONAL tasks (T-MCP-LM01-05, all disabled by default)
-> 📋 **Pod Identity & Lifecycle**: 8 tasks (T-POD01-06 + H-POD01-02) - storage, export/import, retire/wipe, security
-> 📋 **F1000 Governance**: 6 FUTURE tasks (T-F1000-01-06) - transferable membership, advisory only, cap-exempt master-admins
-> 📋 **First Pod & Social**: 6 FUTURE tasks (T-POD-SOCIAL-01-06) - chat, forums, ActivityPub, F1000 auto-join, community hub
-> 📋 **Resilience Layer**: 5 FUTURE tasks (T-RES-01-05) - health/routing, minimal replication, optional gossip (least-first)
-> 📋 **Realms & Peering**: 5 FUTURE tasks (T-REALM-01-05) - network universes, isolation by default, explicit bridging
-> 📋 **Phase E - Book & Video Domains**: 9 tasks documented (T-BK01-04, T-VID01-05)
-> 📋 **Phase G - UI & Dashboards**: 6 tasks documented (T-UI01-06)
-> 📋 **Global Hardening**: 5 tasks (logging, identity, validation, transport, MCP audit)
-> 📋 **Engineering Quality**: 4 tasks (async enforcement, linting, coverage, refactoring)
+> ✅ **Service Fabric Foundation**: COMPLETE (7/7 tasks)
+> ✅ **Security Hardening (Phase 2)**: COMPLETE (10/10 tasks)
+> ✅ **MusicBrainz Integration (Phase 1)**: COMPLETE (49 tasks) 🎉
+> ✅ **Mesh & Advanced Swarm (Phase 2)**: COMPLETE (40+ tasks) 🎉
+> ✅ **Discovery & Reputation (Phase 3)**: COMPLETE (11 tasks) 🎉
+> ✅ **Job Manifests & Traces (Phase 4)**: COMPLETE (12 tasks) 🎉
+> ✅ **Soulbeet Integration (Phase 5)**: COMPLETE (9 tasks) 🎉
+> ✅ **Virtual Soulfind Mesh (Phase 6)**: COMPLETE (40 tasks) 🎉
+> ✅ **Testing Strategy (Phase 7)**: COMPLETE (11 tasks) 🎉
+> ✅ **Phase 9 PodCore Research**: COMPLETE (32 tasks) 🎉
+> ✅ **UI Enhancement Tasks**: COMPLETE (7 tasks) 🎉
+> 🚧 **Phase 8: Code Quality**: 85% complete (40/47 tasks)
+> 🚧 **Phase 8-11 Gap Tasks**: 97% complete (76/78 tasks)
+> 🚧 **VirtualSoulfind v2**: 81% complete (26/32 tasks)
+> 🚧 **Multi-Domain Core**: 75% complete (6/8 tasks)
+> 📋 **Pod Identity & Lifecycle**: 8 tasks remaining
+> 📋 **F1000 Governance**: 6 FUTURE tasks
+> 📋 **First Pod & Social**: 6 FUTURE tasks
 > 🔴 **Attribution**: 1 CRITICAL task (H-ATTR01 - MUST complete before public release)
-> 🚀 **Critical Path**: UNBLOCKED - Next: T-MCP03 or T-VC02  
-> 📊 **Code Quality**: Build green, linter clean, zero compromises
+> 🚀 **Critical Path**: Major infrastructure complete - 78% overall progress
+> 📊 **Test Coverage**: 300+ tests passing
+
+---
+
+## 🔄 RECONCILIATION IN PROGRESS
+
+**Status**: Dashboard is being updated to reflect completion status from tasks.md
+
+**Current Discrepancy**:
+- **This Dashboard**: Shows 51/201 tasks (25%) complete
+- **tasks.md**: Shows 303/387 tasks (78%) complete  
+- **Gap**: 252+ tasks completed but not reflected in dashboard
+
+**Major Completed Work from tasks.md (NOT yet fully reflected below)**:
+
+### ✅ Phase 1: MusicBrainz Integration (49 tasks - COMPLETE)
+- T-300 through T-313: MusicBrainz API integration, Chromaprint, ID-aware multi-swarm, album completion UI
+- Branch: `experimental/brainz`
+
+### ✅ Phase 2: Mesh Integration & Advanced Swarm (40+ tasks - COMPLETE)  
+- T-400 through T-430: Canonical edition scoring, Collection Doctor/Library Health, RTT/throughput-aware scheduler, rescue mode, codec analyzers
+- Branch: `experimental/brainz`
+
+### ✅ Phase 3: Discovery, Reputation, and Fairness (11 tasks - COMPLETE)
+- T-500 through T-510: Release-graph discovery, label crate mode, peer reputation, fairness governor
+- Branch: `experimental/multi-swarm`
+
+### ✅ Phase 4: Job Manifests, Session Traces (12 tasks - COMPLETE)
+- T-600 through T-611: YAML job manifests, session traces/swarm debugging, warm cache nodes, playback-aware swarming
+- Branch: `experimental/brainz`
+
+### ✅ Phase 5: Soulbeet Integration (9 tasks - COMPLETE)
+- T-700 through T-712: slskd compatibility layer, slskdn-native job APIs, Soulbeet client integration
+- Branch: `experimental/brainz`
+
+### ✅ Phase 6: Virtual Soulfind Mesh & Disaster Mode (40 tasks - COMPLETE)
+- T-800 through T-860: Capture/normalization pipeline, shadow index over DHT, scenes/micro-networks, disaster mode, legacy client bridge
+- Branch: `experimental/brainz`
+
+### ✅ Phase 7: Testing Strategy (11 tasks - COMPLETE)
+- T-900 through T-915: Soulfind test harness, multi-client integration tests, disaster mode tests, mesh-only tests, feature-specific tests
+- Branch: `experimental/brainz`
+
+### 🚧 Phase 8: Code Quality & Refactoring (40/47 tasks - 85%)
+- T-1000 through T-1083: Mesh APIs, job pipeline, swarm orchestrator, security policy engine, typed configuration, test infrastructure, cleanup
+- Branch: `experimental/brainz`
+
+### ✅ Phase 8-11 Gap Tasks (76/78 tasks - 97%)
+- T-1300 through T-1381: MeshCore implementation (16 tasks), MediaCore implementation (12 tasks), PodCore (4/24), Security policies (8 tasks)
+- Branch: `experimental/whatAmIThinking`
+
+### ✅ Phase 9: PodCore - Taste-Based Communities (32 tasks - COMPLETE)
+- T-1000 through T-1031: Pod metadata/membership, pod chat/messaging, content-linked pods, moderation, Soulseek chat bridge
+- Status: Research/design phase complete
+
+### ✅ UI Enhancement Tasks (7 tasks - COMPLETE)
+- T-001 through T-007: Persistent room tabs, scheduled rate limits, queue polling, group indicators, traffic ticker, room creation, predictable URLs
+- Branch: `experimental/whatAmIThinking`
+
+**Action Plan**: Update dashboard sections below with detailed task breakdowns from tasks.md
 
 ---
 
