@@ -232,3 +232,4 @@ public class TransportSelectorTests
         public DialerStatistics GetStatistics() => new DialerStatistics { TransportType = TransportType };
     }
 }
+

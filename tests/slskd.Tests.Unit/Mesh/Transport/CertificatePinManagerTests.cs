@@ -228,3 +228,4 @@ public class CertificatePinManagerTests : IDisposable
         return cert;
     }
 }
+

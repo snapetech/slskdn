@@ -353,3 +353,4 @@ public class HopInfo
     /// </summary>
     public string? TransportType { get; set; }
 }
+

@@ -348,3 +348,4 @@ namespace slskd.Common.CodeQuality
         }
     }
 }
+

@@ -14,6 +14,7 @@ namespace slskd.Tests.Unit.Relay.API
     using Moq;
     using slskd.Relay.API.Controllers;
     using slskd.Shares;
+    using slskd;
     using Xunit;
 
     /// <summary>
@@ -135,7 +136,7 @@ namespace slskd.Tests.Unit.Relay.API
             // Setup share repository to return no content
             _shareRepositoryMock
                 .Setup(x => x.FindContentItem("test.mp3", 8))
-                .Returns((string, string, string, bool, string)?)null; // No content found
+                .Returns<(string, string, string, bool, string)?>(null); // No content found
 
             // Act
             var result = controller.DownloadFile(token);
@@ -164,3 +165,4 @@ namespace slskd.Tests.Unit.Relay.API
         }
     }
 }
+

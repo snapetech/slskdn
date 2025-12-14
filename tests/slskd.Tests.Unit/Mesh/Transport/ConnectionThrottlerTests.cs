@@ -197,3 +197,4 @@ public class ConnectionThrottlerTests
         Assert.True(stats.GlobalConnectionTokens >= 0);
     }
 }
+

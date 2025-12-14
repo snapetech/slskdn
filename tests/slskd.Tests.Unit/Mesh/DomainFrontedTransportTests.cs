@@ -60,3 +60,4 @@ public class DomainFrontingOptions
     public string BackDomain { get; set; } = string.Empty;
     public bool Enabled { get; set; }
 }
+

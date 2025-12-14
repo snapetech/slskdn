@@ -861,3 +861,4 @@ namespace slskd.Common.CodeQuality
         public TimeSpan ExpectedMaxDuration { get; init; }
     }
 }
+

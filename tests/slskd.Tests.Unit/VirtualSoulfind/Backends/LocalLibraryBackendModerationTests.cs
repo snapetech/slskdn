@@ -67,7 +67,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
 
             _shareRepositoryMock
                 .Setup(x => x.FindContentItem(It.IsAny<string>()))
-                .Returns((string, string, string, bool, string, long)?)null; // No content found
+                .Returns<(string, string, string, bool, string, long)?>(null); // No content found
 
             // Act
             var candidates = await backend.FindCandidatesAsync(itemId);
@@ -102,3 +102,4 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
         }
     }
 }
+

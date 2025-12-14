@@ -128,3 +128,4 @@ namespace slskd.Mesh.Governance
             = new System.Collections.Generic.Dictionary<string, object>();
     }
 }
+

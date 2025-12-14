@@ -243,3 +243,4 @@ public static class LoggerExtensions
 {
     public static ILogger<T> As<T>(this ILogger logger) => (ILogger<T>)logger;
 }
+

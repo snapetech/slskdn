@@ -63,3 +63,4 @@ namespace slskd.Common.Moderation
         public string? Metadata { get; }
     }
 }
+

@@ -285,3 +285,4 @@ public class I2pSocksDialerTests
         Assert.True(stats.TotalAttempts >= 0);
     }
 }
+

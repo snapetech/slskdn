@@ -262,3 +262,4 @@ public class LoggingUtilsTests
     // Test class for logger mock
     private class TestClass { }
 }
+

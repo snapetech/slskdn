@@ -211,3 +211,4 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
             => new(logger, 5.0, 1.0, 256);
     }
 }
+

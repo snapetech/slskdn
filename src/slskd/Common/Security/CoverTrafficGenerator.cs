@@ -166,3 +166,4 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
         }
     }
 }
+

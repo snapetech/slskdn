@@ -367,3 +367,4 @@ public class DnsSecurityServiceTests : IDisposable
         Assert.Contains(publicIp, result.AllowedIPs);
     }
 }
+

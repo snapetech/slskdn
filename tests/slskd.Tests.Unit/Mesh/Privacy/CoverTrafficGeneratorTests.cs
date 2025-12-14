@@ -282,3 +282,4 @@ public class CoverTrafficGeneratorTests : IDisposable
         Assert.True(messageCount < 5, "Should generate fewer messages when activity is recorded");
     }
 }
+

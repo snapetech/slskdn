@@ -149,3 +149,4 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         }
     }
 }
+

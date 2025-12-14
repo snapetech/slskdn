@@ -19,3 +19,4 @@ spec:
     {{- end }}
   selector:
     {{- include "tc.v1.common.lib.metadata.selectorLabels" . | nindent 4 }}
+

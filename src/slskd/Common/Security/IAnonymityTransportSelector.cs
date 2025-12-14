@@ -53,3 +53,4 @@ public interface IAnonymityTransportSelector
     /// <returns>Task that completes when all connectivity tests are done.</returns>
     Task TestConnectivityAsync(CancellationToken cancellationToken = default);
 }
+

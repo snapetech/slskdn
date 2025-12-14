@@ -336,3 +336,4 @@ namespace slskd.SocialFederation
         public object To { get; set; } = new();
     }
 }
+

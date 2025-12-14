@@ -483,3 +483,4 @@ public class MembershipGateTests
             Assert.Contains(finalResult.Members, m => m.PeerId == $"peer-{i}"));
     }
 }
+

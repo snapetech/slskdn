@@ -430,3 +430,4 @@ I2P integration in slskdN is currently in early stages. Future enhancements incl
 - I2P-only mesh networks
 - Bandwidth optimization
 - Mobile I2P router support
+

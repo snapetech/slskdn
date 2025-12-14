@@ -217,3 +217,4 @@ public class BridgeStatistics
     public int ActiveBridges { get; set; }
     public int FailedBridges { get; set; }
 }
+

@@ -166,3 +166,4 @@ public class WebSocketTransportTests : IDisposable
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
     }
 }
+

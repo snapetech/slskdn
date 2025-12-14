@@ -275,3 +275,4 @@ public class TimedBatcherTests : IDisposable
         Assert.Equal(0, batcher.CurrentBatchSize);
     }
 }
+

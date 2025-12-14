@@ -10,6 +10,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
     using Microsoft.Extensions.Logging;
     using Moq;
     using slskd.Mesh.Realm;
+    using slskd.Mesh.Realm.Migration;
     using Xunit;
 
     /// <summary>
@@ -267,3 +268,4 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
         }
     }
 }
+

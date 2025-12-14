@@ -27,3 +27,4 @@ namespace slskd.VirtualSoulfind.Core.Music
         string? MusicBrainzArtistId,
         string? Isrc);
 }
+

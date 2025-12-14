@@ -409,3 +409,4 @@ namespace slskd.Common.CodeQuality
         Critical
     }
 }
+

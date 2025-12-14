@@ -286,3 +286,4 @@ namespace slskd.Mesh.Realm.Bridge
         public bool AnyAllowed => CanRead || CanWrite || CanFollow || CanMirror || CanShare || CanAnnounce;
     }
 }
+

@@ -68,3 +68,4 @@ public class PrivacyStatistics
     /// </summary>
     public long CoverMessagesSent { get; set; }
 }
+

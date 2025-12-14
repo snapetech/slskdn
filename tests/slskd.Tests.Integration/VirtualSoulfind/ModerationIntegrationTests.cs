@@ -9,22 +9,26 @@ namespace slskd.Tests.Integration.VirtualSoulfind
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Threading;
     using Microsoft.Extensions.DependencyInjection;
     using slskd.Common.Moderation;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Intents;
     using slskd.VirtualSoulfind.v2.Planning;
+    using slskd.Shares;
+    using slskd.MediaCore;
+    using slskd.Tests.Integration;
     using Xunit;
 
     /// <summary>
     ///     Integration tests for T-MCP03: End-to-end moderation enforcement.
     /// </summary>
     [Collection("Integration")]
-    public class ModerationIntegrationTests : IClassFixture<IntegrationTestFixture>
+    public class ModerationIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
-        private readonly IntegrationTestFixture _fixture;
+        private readonly StubWebApplicationFactory _fixture;
 
-        public ModerationIntegrationTests(IntegrationTestFixture fixture)
+        public ModerationIntegrationTests(StubWebApplicationFactory fixture)
         {
             _fixture = fixture;
         }
@@ -43,7 +47,7 @@ namespace slskd.Tests.Integration.VirtualSoulfind
             var desiredTrack = await intentQueue.EnqueueTrackAsync(
                 ContentDomain.Music,
                 trackId,
-                cancellationToken: TestContext.Current.CancellationToken);
+                cancellationToken: CancellationToken.None);
 
             // Act - Try to plan the track acquisition
             var plan = await planner.CreatePlanAsync(desiredTrack, cancellationToken: TestContext.Current.CancellationToken);
@@ -182,7 +186,7 @@ namespace slskd.Tests.Integration.VirtualSoulfind
             var desiredTrack = await intentQueue.EnqueueTrackAsync(
                 ContentDomain.Music,
                 trackId,
-                cancellationToken: TestContext.Current.CancellationToken);
+                cancellationToken: CancellationToken.None);
 
             // Act - Create acquisition plan
             var plan = await planner.CreatePlanAsync(desiredTrack, cancellationToken: TestContext.Current.CancellationToken);
@@ -207,3 +211,4 @@ namespace slskd.Tests.Integration.VirtualSoulfind
         }
     }
 }
+

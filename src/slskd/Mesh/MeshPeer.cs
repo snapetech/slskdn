@@ -151,3 +151,4 @@ public class MeshPeer
         TrustScore = Math.Max(0.0, TrustScore - 0.05);
     }
 }
+

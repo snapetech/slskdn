@@ -510,3 +510,4 @@ namespace slskd.Common.CodeQuality
         public Dictionary<string, int> MostCommonMissingChecks { get; init; } = new();
     }
 }
+

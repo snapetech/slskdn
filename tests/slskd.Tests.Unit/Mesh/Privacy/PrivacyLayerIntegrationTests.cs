@@ -2,6 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -317,3 +318,4 @@ public class PrivacyLayerIntegrationTests : IDisposable
         Assert.NotNull(privacyLayer);
     }
 }
+

@@ -179,3 +179,4 @@ public class RandomJitterObfuscatorTests : IDisposable
         Assert.Equal(TimeSpan.FromMilliseconds(1000), obfuscator.MaxDelay);
     }
 }
+

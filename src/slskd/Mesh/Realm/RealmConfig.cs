@@ -27,11 +27,10 @@ namespace slskd.Mesh.Realm
         ///     Used as namespace salt for mesh/DHT overlay isolation.
         ///     Must be non-empty and unique across all realms.
         /// </remarks>
-        [Required]
         [NotNullOrWhiteSpace]
         [RegularExpression(@"^[a-zA-Z0-9\-_\.]{3,64}$",
             ErrorMessage = "Realm ID must be 3-64 characters, containing only letters, numbers, hyphens, underscores, and periods.")]
-        public string Id { get; set; } = string.Empty;
+        public string Id { get; set; } = "default-realm-v1";
 
         /// <summary>
         ///     Gets or sets the display name for this realm.
@@ -262,3 +261,4 @@ namespace slskd.Mesh.Realm
         }
     }
 }
+

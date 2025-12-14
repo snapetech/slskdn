@@ -321,3 +321,4 @@ namespace slskd.Mesh.Realm.Migration
         public bool IsTransitionFromMultiRealm => CurrentRealmCount > 1 && ProposedRealmCount == 1;
     }
 }
+

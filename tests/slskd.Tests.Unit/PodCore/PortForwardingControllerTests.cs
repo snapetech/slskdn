@@ -55,3 +55,4 @@ public class PortForwardingRule
     public int RemotePort { get; set; }
     public bool IsActive { get; set; }
 }
+

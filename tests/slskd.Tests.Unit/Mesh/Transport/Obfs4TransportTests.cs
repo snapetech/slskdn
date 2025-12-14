@@ -231,3 +231,4 @@ public class Obfs4TransportTests : IDisposable
         Assert.False(isAvailable);
     }
 }
+

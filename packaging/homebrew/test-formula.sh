@@ -62,3 +62,4 @@ echo "2. Add slskdn.rb to Formula/"
 echo "3. Update URLs and SHA256 hashes with real release"
 echo "4. Test: brew install --build-from-source Formula/slskdn.rb"
 echo "5. Submit pull request"
+

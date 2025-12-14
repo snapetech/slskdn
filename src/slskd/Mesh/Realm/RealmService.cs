@@ -19,7 +19,7 @@ namespace slskd.Mesh.Realm
     ///     T-REALM-01: RealmConfig & RealmID Plumbing.
     ///     Manages realm identity, mesh isolation, and governance scoping.
     /// </remarks>
-    public sealed class RealmService : IDisposable
+    public sealed class RealmService : IRealmService, IDisposable
     {
         private readonly IOptionsMonitor<RealmConfig> _realmConfig;
         private readonly ILogger<RealmService> _logger;
@@ -44,6 +44,23 @@ namespace slskd.Mesh.Realm
         ///     Gets the current realm identifier.
         /// </summary>
         public string RealmId => _realmConfig.CurrentValue.Id;
+
+        /// <summary>
+        ///     Gets the current realm ID (implements IRealmService).
+        /// </summary>
+        public string CurrentRealmId => RealmId;
+
+        /// <summary>
+        ///     Determines whether a peer is allowed in the current realm (implements IRealmService).
+        /// </summary>
+        /// <param name="peerId">The peer ID to check.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>True if the peer is allowed.</returns>
+        public Task<bool> IsPeerAllowedInRealmAsync(string peerId, CancellationToken cancellationToken = default)
+        {
+            // For now, allow all peers. In the future, this could check governance rules.
+            return Task.FromResult(true);
+        }
 
         /// <summary>
         ///     Gets the namespace salt for this realm.
@@ -214,3 +231,4 @@ namespace slskd.Mesh.Realm
         }
     }
 }
+

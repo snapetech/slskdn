@@ -39,3 +39,4 @@ public class RandomJitterObfuscator : ITimingObfuscator
     /// </summary>
     public int MaxJitterMs => _options.JitterMs;
 }
+

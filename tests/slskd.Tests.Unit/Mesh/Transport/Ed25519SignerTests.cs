@@ -178,3 +178,4 @@ public class Ed25519SignerTests : IDisposable
         Assert.False(result);
     }
 }
+

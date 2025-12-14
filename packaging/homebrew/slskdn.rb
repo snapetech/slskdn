@@ -157,3 +157,4 @@ class Slskdn < Formula
     assert_predicate var/"slskdn/downloads", :directory?
   end
 end
+

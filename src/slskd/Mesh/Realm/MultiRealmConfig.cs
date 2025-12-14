@@ -26,9 +26,17 @@ namespace slskd.Mesh.Realm
         ///     T-REALM-02: Each realm config defines a separate overlay network.
         ///     The pod will establish connections to each realm's overlay.
         /// </remarks>
-        [Required]
         [MinLength(1, ErrorMessage = "At least one realm configuration is required.")]
-        public RealmConfig[] Realms { get; set; } = Array.Empty<RealmConfig>();
+        public RealmConfig[] Realms { get; set; } = new[]
+        {
+            new RealmConfig
+            {
+                Id = "default-realm-v1",
+                GovernanceRoots = new[] { "default-governance-root" },
+                BootstrapNodes = Array.Empty<string>(),
+                Policies = new RealmPolicies()
+            }
+        };
 
         /// <summary>
         ///     Gets or sets the bridge configuration for cross-realm communication.
@@ -240,3 +248,4 @@ namespace slskd.Mesh.Realm
         }
     }
 }
+

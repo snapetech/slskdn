@@ -1456,17 +1456,18 @@ public class DestinationAllowlistTests
 
     private PrivateGatewayMeshService CreateService()
     {
-        return new PrivateGatewayMeshService(
+        var service = new PrivateGatewayMeshService(
             _loggerMock.Object,
             _podServiceMock.Object,
             null!, // IServiceProvider not needed for these tests
             null!  // DnsSecurityService not needed for these tests
-        )
-        {
-            // Inject the DNS resolver mock
-            GetType().GetProperty("DnsResolver", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                ?.SetValue(this, _dnsResolverMock.Object);
-        };
+        );
+
+        // Inject the DNS resolver mock
+        service.GetType().GetProperty("DnsResolver", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.SetValue(service, _dnsResolverMock.Object);
+
+        return service;
     }
 
     private PodPrivateServicePolicy CreatePolicyWithAllowlist(params string[] hosts)

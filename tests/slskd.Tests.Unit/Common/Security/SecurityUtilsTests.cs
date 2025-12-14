@@ -471,3 +471,4 @@ public class SecurityUtilsTests
         Assert.True((secureClearAttr.Value & MethodImplOptions.NoInlining) != 0);
     }
 }
+

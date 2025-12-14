@@ -89,3 +89,4 @@ public class PeerIdFactoryTests
         Assert.Equal(peerId1, peerId2);
     }
 }
+

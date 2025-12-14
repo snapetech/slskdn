@@ -77,3 +77,4 @@ namespace slskd.Mesh.Governance
         Task<IReadOnlyCollection<GovernanceDocument>> GetDocumentsForRealmAsync(string realmId, CancellationToken cancellationToken = default);
     }
 }
+

@@ -1024,6 +1024,21 @@ namespace slskd
 
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
+            services.AddOptions<Mesh.MeshTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport"));
+            services.AddOptions<Mesh.TorTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:Tor"));
+            services.AddOptions<Mesh.I2PTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:I2P"));
+            services.AddOptions<Common.Security.WebSocketTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:WebSocket"));
+            services.AddOptions<Common.Security.HttpTunnelTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:HttpTunnel"));
+            services.AddOptions<Common.Security.Obfs4TransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:Obfs4"));
+            services.AddOptions<Common.Security.MeekTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:Meek"));
+
+            // Register options as singletons for direct injection (temporary workaround)
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Mesh.I2PTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.WebSocketTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.HttpTunnelTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.Obfs4TransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.MeekTransportOptions>>().Value);
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
             services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
 
@@ -1107,8 +1122,18 @@ namespace slskd
 
             // Transport dialers (Tor/I2P integration Phase 2)
             services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
-            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.TorSocksDialer>();
-            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.I2pSocksDialer>();
+            services.AddSingleton<Mesh.Transport.ITransportDialer>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>();
+                var logger = sp.GetRequiredService<ILogger<Mesh.Transport.TorSocksDialer>>();
+                return new Mesh.Transport.TorSocksDialer(options.Value, logger);
+            });
+            services.AddSingleton<Mesh.Transport.ITransportDialer>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<Mesh.I2PTransportOptions>>();
+                var logger = sp.GetRequiredService<ILogger<Mesh.Transport.I2pSocksDialer>>();
+                return new Mesh.Transport.I2pSocksDialer(options.Value, logger);
+            });
 
             // Transport policy manager for per-peer/per-pod policies
             services.AddSingleton<Mesh.Transport.TransportPolicyManager>();

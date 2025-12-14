@@ -166,3 +166,4 @@ public class Ed25519Signer : IDisposable
         _ecdsa?.Dispose();
     }
 }
+

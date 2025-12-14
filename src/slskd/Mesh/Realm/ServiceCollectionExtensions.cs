@@ -20,7 +20,7 @@ namespace slskd.Mesh.Realm
         public static IServiceCollection AddRealmServices(this IServiceCollection services)
         {
             // Register single-realm service (T-REALM-01)
-            services.AddSingleton<RealmService>();
+            services.AddSingleton<IRealmService, RealmService>();
 
             // Register realm service as hosted service for initialization
             services.AddHostedService<RealmHostedService>();

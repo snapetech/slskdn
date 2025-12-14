@@ -242,3 +242,4 @@ internal class TestableQuicOverlayClient : QuicOverlayClient
     // Expose protected methods for testing if needed
     // (Currently using public interface for testing)
 }
+

@@ -346,3 +346,4 @@ namespace slskd.Common.Moderation
         public int BurstLimit { get; set; } = 10;
     }
 }
+

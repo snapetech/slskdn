@@ -26,3 +26,4 @@ public class CoverTrafficGeneratorIntegrationTests
         Assert.True(true, "Placeholder test - CoverTrafficGeneratorIntegrationTests.AdaptiveTrafficGeneration not yet implemented");
     }
 }
+

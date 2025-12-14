@@ -127,3 +127,4 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         }
     }
 }
+

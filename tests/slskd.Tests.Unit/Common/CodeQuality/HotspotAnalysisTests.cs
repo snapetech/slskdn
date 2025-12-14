@@ -182,3 +182,4 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         public void Method22() { }
     }
 }
+

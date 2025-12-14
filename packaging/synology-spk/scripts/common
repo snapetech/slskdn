@@ -149,3 +149,4 @@ cleanup_firewall() {
         log_step "Firewall rules removed"
     fi
 }
+

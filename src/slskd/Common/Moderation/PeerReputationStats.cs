@@ -39,3 +39,4 @@ namespace slskd.Common.Moderation
         public double AverageReputationScore { get; init; }
     }
 }
+

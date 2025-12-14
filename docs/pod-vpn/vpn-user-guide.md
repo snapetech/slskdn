@@ -503,3 +503,4 @@ Implement network segmentation through pod policies:
 The slskdN Pod-Scoped Private Service Network provides a secure, flexible solution for accessing private services within trusted pod communities. By combining strong security controls with comprehensive audit capabilities, it enables organizations to safely extend their private networks through encrypted mesh tunnels while maintaining strict access controls and resource governance.
 
 For additional support or questions, consult the project documentation or community forums.
+

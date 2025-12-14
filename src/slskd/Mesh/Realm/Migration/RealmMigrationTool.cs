@@ -633,3 +633,4 @@ namespace slskd.Mesh.Realm.Migration
         public TimeSpan EstimatedDuration { get; set; }
     }
 }
+

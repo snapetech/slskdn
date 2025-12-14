@@ -39,3 +39,4 @@ public class StreamIsolationService
         throw new NotImplementedException("StreamIsolationService not yet implemented");
     }
 }
+

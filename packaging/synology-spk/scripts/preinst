@@ -46,3 +46,4 @@ if ! synogroup --get "$PACKAGE_GROUP" >/dev/null 2>&1; then
 fi
 
 log_step "Pre-installation completed successfully"
+

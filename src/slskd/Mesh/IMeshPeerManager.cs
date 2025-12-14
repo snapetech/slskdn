@@ -104,3 +104,4 @@ public class PeerStatistics
     /// </summary>
     public double AverageLatencyMs { get; set; }
 }
+
