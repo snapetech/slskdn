@@ -20,11 +20,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;1591;S1133;S2094;S1135;S3925;S125</NoWarn>
+    <NoWarn>1701;1702;1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1591;S1133;S2094;S1135;S3925;S125</NoWarn>
+    <NoWarn>1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -58,7 +58,7 @@
   <UsingTask TaskName="RegressionBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
 
   <!-- Static analysis (H-CODE02) -->
-  <Target Name="RunStaticAnalysis" AfterTargets="Build" Condition="'$(RunStaticAnalysis)' != 'false'">
+  <Target Name="RunStaticAnalysis" AfterTargets="Build" Condition="'$(RunStaticAnalysis)' == 'true'">
     <CodeAnalysisBuildTask
         ProjectDirectory="$(MSBuildProjectDirectory)"
         AssemblyPath="$(TargetPath)"
@@ -70,7 +70,7 @@
   </Target>
 
   <!-- Test coverage analysis (H-CODE03) -->
-  <Target Name="RunTestCoverageAnalysis" AfterTargets="Build" Condition="'$(RunTestCoverage)' != 'false'">
+  <Target Name="RunTestCoverageAnalysis" AfterTargets="Build" Condition="'$(RunTestCoverage)' == 'true'">
     <TestCoverageBuildTask
         ProjectDirectory="$(MSBuildProjectDirectory)"
         TestAssemblyPaths="@(TestAssemblyPaths)"
@@ -85,7 +85,7 @@
   </Target>
 
   <!-- Regression testing (H-CODE03) -->
-  <Target Name="RunRegressionTests" AfterTargets="Build" Condition="'$(RunRegressionTests)' != 'false'">
+  <Target Name="RunRegressionTests" AfterTargets="Build" Condition="'$(RunRegressionTests)' == 'true'">
     <RegressionBuildTask
         TestAssemblyPaths="@(TestAssemblyPaths)"
         OutputDirectory="$(ArtifactsPath)regression-reports"

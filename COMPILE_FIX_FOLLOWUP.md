@@ -221,3 +221,50 @@ Yet the compiler reported: `error CS0234: The type or namespace name 'TransportS
 
 This demonstrates that proper incremental fixes can resolve massive compilation issues without compromising the codebase.
 
+
+---
+
+## 🚨 CRITICAL - Blocking Build/Testing
+
+### 6. **Code Analyzer Errors Blocking Build**
+
+**Status**: 71 CA2201 analyzer errors are blocking Release and Debug builds
+
+**Error Type**: `error CA2201: Exception type System.Exception is not sufficiently specific`
+
+**Affected Files** (partial list):
+- `src/slskd/Common/Security/HttpTunnelTransport.cs`
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `src/slskd/Common/Security/MeekTransport.cs`
+- `src/slskd/Common/Security/Obfs4Transport.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Common/Security/WebSocketTransport.cs`
+- `src/slskd/Backfill/BackfillSchedulerService.cs`
+- `src/slskd/Mesh/Transport/DirectQuicDialer.cs` (CA2252 - QUIC preview types)
+
+**Issue**: Code throws generic `Exception` instead of specific exception types
+
+**Options to Fix**:
+1. **Replace generic exceptions** with specific types (e.g., `InvalidOperationException`, `NotSupportedException`, etc.)
+2. **Suppress CA2201** in .editorconfig or csproj for transport code (where generic exceptions are acceptable)
+3. **Disable analyzer** temporarily in csproj: `<EnableNETAnalyzers>false</EnableNETAnalyzers>`
+
+**Impact**: Cannot build or run the application until resolved
+
+**Recommendation**: Option 2 (suppress for transport code) is fastest - these are internal transport implementations where generic exceptions are acceptable for unexpected errors.
+
+---
+
+## ⚠️ Update to Priority List
+
+| Item | Status | Priority | Blocks Testing |
+|------|--------|----------|----------------|
+| **Code Analyzers (CA2201)** | ⏳ TODO | **CRITICAL** | ✅ YES |
+| StyleCop Headers | ✅ COMPLETE | ~~MEDIUM~~ | ❌ NO |
+| Pod Messaging DI | ⏳ TODO | HIGH | ❌ NO |
+| Relay MCP Check | ⏳ TODO | HIGH | ❌ NO |
+| TransportSelector Registration | ⏳ TODO | HIGH | ❌ NO |
+| LocalFileMetadata Review | ⏳ TODO | LOW | ❌ NO |
+
+**Next Action**: Fix CA2201 analyzer errors to unblock testing!
+
