@@ -27,14 +27,25 @@ public class ContentDirectory : IMeshDirectory
 
     public async Task<MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
     {
-        // TODO: Implement proper MeshPeerDescriptor return
-        throw new NotImplementedException("ContentDirectory.FindPeerByIdAsync not yet implemented");
+        var key = $"mesh:peer:{peerId}";
+        var descriptor = await dht.GetAsync<MeshPeerDescriptor>(key, ct);
+        return descriptor;
     }
 
     public async Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
-        // TODO: Implement proper MeshPeerDescriptor return
-        throw new NotImplementedException("ContentDirectory.FindPeersByContentAsync not yet implemented");
+        var key = $"mesh:content-peers:{contentId}";
+        var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
+        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeerDescriptor>();
+
+        return hints.Peers
+            .Select(p =>
+            {
+                var endpoint = p.Endpoints.FirstOrDefault();
+                var (address, port) = ParseEndpoint(endpoint);
+                return new MeshPeerDescriptor(p.PeerId, address, port);
+            })
+            .ToList();
     }
 
     public async Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)

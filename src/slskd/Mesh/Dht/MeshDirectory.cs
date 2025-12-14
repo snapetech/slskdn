@@ -64,13 +64,13 @@ public class MeshDirectory : IMeshDirectory
         return fresh;
     }
 
-    public async Task<IReadOnlyList<MeshContent>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer-content:{peerId}";
         var contentList = await dht.GetAsync<List<string>>(key, ct);
-        if (contentList == null || contentList.Count == 0) return Array.Empty<MeshContent>();
+        if (contentList == null || contentList.Count == 0) return Array.Empty<MeshContentDescriptor>();
 
-        var results = new List<MeshContent>();
+        var results = new List<MeshContentDescriptor>();
         foreach (var cid in contentList)
         {
             var contentDescriptor = await dht.GetAsync<MediaCore.ContentDescriptor>($"mesh:content:{cid}", ct);
@@ -81,7 +81,7 @@ public class MeshDirectory : IMeshDirectory
                 continue;
             }
 
-            results.Add(new MeshContent(
+            results.Add(new MeshContentDescriptor(
                 cid,
                 contentDescriptor.Hashes?.FirstOrDefault()?.Hex,
                 contentDescriptor.SizeBytes ?? 0,
