@@ -205,6 +205,27 @@ namespace slskd.Common.Security.API
     /// </summary>
     public sealed class AdversarialStats
     {
+        /// <summary>Gets or sets whether adversarial mode is enabled.</summary>
+        public bool Enabled { get; set; }
+
+        /// <summary>Gets or sets the current adversarial profile.</summary>
+        public string? Profile { get; set; }
+
+        /// <summary>Gets or sets whether privacy features are enabled.</summary>
+        public bool PrivacyEnabled { get; set; }
+
+        /// <summary>Gets or sets whether anonymity features are enabled.</summary>
+        public bool AnonymityEnabled { get; set; }
+
+        /// <summary>Gets or sets whether transport obfuscation is enabled.</summary>
+        public bool TransportEnabled { get; set; }
+
+        /// <summary>Gets or sets whether plausible deniability features are enabled.</summary>
+        public bool PlausibleDeniabilityEnabled { get; set; }
+
+        /// <summary>Gets or sets whether onion routing is enabled.</summary>
+        public bool OnionRoutingEnabled { get; set; }
+
         /// <summary>Gets or sets temporal consistency statistics.</summary>
         public TemporalStats? TemporalStats { get; set; }
 

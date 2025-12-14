@@ -108,11 +108,12 @@ public static class ServiceStatusCodes
     public const int Timeout = 5;
     public const int RateLimited = 6;
     public const int Unauthorized = 7;
-    public const int PayloadTooLarge = 8;
+    public const int Forbidden = 8;
+    public const int PayloadTooLarge = 9;
     
     /// <summary>
-    /// Service unavailable (9) - Circuit breaker open or service degraded.
+    /// Service unavailable (10) - Circuit breaker open or service degraded.
     /// </summary>
-    public const int ServiceUnavailable = 9;
+    public const int ServiceUnavailable = 10;
 }
 
