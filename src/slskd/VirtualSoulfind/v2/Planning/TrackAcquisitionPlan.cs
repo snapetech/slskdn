@@ -88,9 +88,29 @@ namespace slskd.VirtualSoulfind.v2.Planning
         public string TrackId { get; init; }
 
         /// <summary>
+        ///     Gets or initializes the desired track information.
+        /// </summary>
+        public object? DesiredTrack { get; init; }
+
+        /// <summary>
         ///     Gets or initializes the planning mode used.
         /// </summary>
         public PlanningMode Mode { get; init; }
+
+        /// <summary>
+        ///     Gets or initializes the plan status.
+        /// </summary>
+        public PlanStatus Status { get; init; }
+
+        /// <summary>
+        ///     Gets or initializes when this plan expires.
+        /// </summary>
+        public DateTimeOffset? ExpiresAt { get; init; }
+
+        /// <summary>
+        ///     Gets or initializes the error message if planning failed.
+        /// </summary>
+        public string? ErrorMessage { get; init; }
 
         /// <summary>
         ///     Gets or initializes the ordered list of steps to execute.

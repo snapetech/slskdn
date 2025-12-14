@@ -28,6 +28,24 @@ namespace slskd.Messaging
             var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(hash).Substring(0, 16).ToLowerInvariant();
         }
+
+        /// <summary>
+        /// Generates a conversation-specific pod ID from two user IDs.
+        /// </summary>
+        /// <param name="userId1">First user ID.</param>
+        /// <param name="userId2">Second user ID.</param>
+        /// <returns>A deterministic pod ID for the conversation.</returns>
+        public static string ConversationPodId(string userId1, string userId2)
+        {
+            // Sort user IDs to ensure consistent pod ID regardless of order
+            var users = new[] { userId1, userId2 };
+            Array.Sort(users, StringComparer.Ordinal);
+            
+            var input = $"conversation:{users[0]}:{users[1]}";
+            using var sha = SHA256.Create();
+            var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
+            return $"pod:conv:{Convert.ToHexString(hash).Substring(0, 16).ToLowerInvariant()}";
+        }
     }
 }
 

@@ -226,6 +226,9 @@ namespace slskd.Common.Security.API
         /// <summary>Gets or sets whether onion routing is enabled.</summary>
         public bool OnionRoutingEnabled { get; set; }
 
+        /// <summary>Gets or sets whether censorship resistance features are enabled.</summary>
+        public bool CensorshipResistanceEnabled { get; set; }
+
         /// <summary>Gets or sets temporal consistency statistics.</summary>
         public TemporalStats? TemporalStats { get; set; }
 

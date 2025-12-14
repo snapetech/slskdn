@@ -30,6 +30,21 @@ namespace slskd.VirtualSoulfind.Core
 
             return "***";
         }
+
+        /// <summary>
+        /// Sanitizes a file path for logging by showing only the filename.
+        /// </summary>
+        /// <param name="filePath">The file path to sanitize.</param>
+        /// <returns>Sanitized file path (filename only).</returns>
+        public static string? SanitizeFilePath(string? filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return filePath;
+            }
+
+            return System.IO.Path.GetFileName(filePath);
+        }
     }
 }
 
