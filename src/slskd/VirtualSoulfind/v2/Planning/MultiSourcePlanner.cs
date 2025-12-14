@@ -371,6 +371,9 @@ namespace slskd.VirtualSoulfind.v2.Planning
         }
     }
 
+    // NOTE: SourceCandidate is defined in slskd.VirtualSoulfind.v2.Sources namespace
+    // The duplicate definition below has been commented out to avoid conflicts
+    /*
     /// <summary>
     /// Represents a source candidate for multi-source downloads.
     /// </summary>
@@ -406,4 +409,5 @@ namespace slskd.VirtualSoulfind.v2.Planning
         /// </summary>
         public int ExpectedQuality { get; init; }
     }
+    */
 }

@@ -12,6 +12,7 @@ namespace slskd.SocialFederation
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using slskd.VirtualSoulfind.Core;
+    using slskd.VirtualSoulfind.Core.Music;
 
     /// <summary>
     ///     Integration service between VirtualSoulfind and federation publishing.

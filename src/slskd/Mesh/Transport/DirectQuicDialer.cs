@@ -5,6 +5,7 @@
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace slskd.Mesh.Transport;
