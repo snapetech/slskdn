@@ -63,6 +63,11 @@ public class MeshOptions
     /// Transport connectivity options (Tor, I2P, etc.).
     /// </summary>
     public MeshTransportOptions Transport { get; set; } = new();
+
+    /// <summary>
+    /// Data directory for mesh-related storage (certificates, pins, etc.).
+    /// </summary>
+    public string DataDirectory { get; set; } = "./data/mesh";
 }
 
 /// <summary>

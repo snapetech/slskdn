@@ -255,7 +255,8 @@ public class DirectQuicDialer : ITransportDialer
                 if (disposing)
                 {
                     _stream.Dispose();
-                    _connection.Dispose();
+                    // QuicConnection uses async disposal
+                    _ = _connection.DisposeAsync();
                     _onDispose?.Invoke();
                 }
             }

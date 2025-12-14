@@ -183,7 +183,7 @@ namespace slskd.SocialFederation
                 var workRef = new WorkRef
                 {
                     Id = $"work:{contentItem.Domain}:{SanitizeId(contentItem.Id.ToString())}",
-                    Domain = contentItem.Domain,
+                    Domain = contentItem.Domain.ToString(),
                     Title = contentItem.PrimaryName ?? "Unknown Title",
                     Published = DateTimeOffset.UtcNow
                 };

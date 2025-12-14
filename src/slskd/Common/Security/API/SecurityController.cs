@@ -441,7 +441,7 @@ public class SecurityController : ControllerBase
         return Ok(new AdversarialStats
         {
             Enabled = _adversarialOptions?.Enabled ?? false,
-            Profile = _adversarialOptions?.Profile ?? AdversarialProfile.Disabled,
+            Profile = (_adversarialOptions?.Profile ?? AdversarialProfile.Disabled).ToString(),
             PrivacyEnabled = _adversarialOptions?.Privacy?.Enabled ?? false,
             AnonymityEnabled = _adversarialOptions?.Anonymity?.Enabled ?? false,
             TransportEnabled = _adversarialOptions?.Transport?.Enabled ?? false,
