@@ -60,7 +60,7 @@ public class PrivacyLayer : IPrivacyLayer
                 _options.CoverTraffic,
                 () => new byte[] { 0x00 }, // Dummy cover message
                 () => Task.CompletedTask, // Dummy sender
-                logger);
+                _loggerFactory.CreateLogger<CoverTrafficGenerator>());
         }
     }
 

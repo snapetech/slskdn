@@ -15,6 +15,7 @@ namespace slskd.Mesh.Privacy;
 public class PrivacyLayer : IPrivacyLayer
 {
     private readonly ILogger<PrivacyLayer> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private PrivacyLayerOptions _options;
     private readonly object _configLock = new();
 
@@ -28,10 +29,12 @@ public class PrivacyLayer : IPrivacyLayer
     /// Initializes a new instance of the <see cref="PrivacyLayer"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="loggerFactory">The logger factory for creating component loggers.</param>
     /// <param name="options">The privacy layer options.</param>
-    public PrivacyLayer(ILogger<PrivacyLayer> logger, PrivacyLayerOptions options)
+    public PrivacyLayer(ILogger<PrivacyLayer> logger, ILoggerFactory loggerFactory, PrivacyLayerOptions options)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _options = options ?? throw new ArgumentNullException(nameof(options));
 
         InitializeComponents();
@@ -234,7 +237,7 @@ public class PrivacyLayer : IPrivacyLayer
         if (_options.Enabled && _options.Padding.Enabled)
         {
             _messagePadder = new BucketPadder(
-                _logger,
+                _loggerFactory.CreateLogger<BucketPadder>(),
                 _options.Padding.BucketSizes.FirstOrDefault(2048));
         }
         else
@@ -246,7 +249,7 @@ public class PrivacyLayer : IPrivacyLayer
         if (_options.Enabled && _options.Timing.Enabled)
         {
             _timingObfuscator = new RandomJitterObfuscator(
-                _logger,
+                _loggerFactory.CreateLogger<RandomJitterObfuscator>(),
                 _options.Timing.JitterMs);
         }
         else
@@ -258,7 +261,7 @@ public class PrivacyLayer : IPrivacyLayer
         if (_options.Enabled && _options.Batching.Enabled)
         {
             _messageBatcher = new TimedBatcher(
-                _logger,
+                _loggerFactory.CreateLogger<TimedBatcher>(),
                 _options.Batching.BatchWindowMs / 1000.0,
                 _options.Batching.MaxBatchSize);
         }
@@ -271,7 +274,7 @@ public class PrivacyLayer : IPrivacyLayer
         if (_options.Enabled && _options.CoverTraffic.Enabled)
         {
             _coverTrafficGenerator = new CoverTrafficGenerator(
-                _logger,
+                _loggerFactory.CreateLogger<CoverTrafficGenerator>(),
                 _options.CoverTraffic.IntervalSeconds,
                 jitterRangeSeconds: 5.0, // Default jitter
                 messageSize: 64); // Default message size

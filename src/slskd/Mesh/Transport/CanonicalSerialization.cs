@@ -104,7 +104,7 @@ public static class CanonicalSerialization
     /// <param name="descriptor1">First descriptor.</param>
     /// <param name="descriptor2">Second descriptor.</param>
     /// <returns>True if they serialize identically.</returns>
-    public static bool AreEquivalent(MeshPeerDescriptor descriptor1, MeshPeerDescriptor descriptor2)
+    public static bool AreEquivalent(Dht.MeshPeerDescriptor descriptor1, Dht.MeshPeerDescriptor descriptor2)
     {
         var bytes1 = SerializeForSigning(descriptor1);
         var bytes2 = SerializeForSigning(descriptor2);

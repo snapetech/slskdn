@@ -220,7 +220,7 @@ public class DnsLeakPreventionVerifier
         {
             var i2pResult = await VerifySocksConfigurationAsync(
                 i2pOptions.SocksHost,
-                i2pOptions.SocksPort,
+                i2pOptions.SocksPort ?? 7656, // Default I2P SAM port
                 "stats.i2p", // Known I2P test address
                 true);
 

@@ -136,8 +136,10 @@ public class DirectQuicDialer : ITransportDialer
                     // Then check peer-aware certificate pinning
                     if (certificate != null)
                     {
-                        var isValid = _pinManager.ValidateCertificatePin(peerId, certificate);
-                        LoggingUtils.LogCertificateValidation(_logger, peerId, certificate, isValid);
+                        // Cast to X509Certificate2 for extended certificate operations
+                        var cert2 = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+                        var isValid = _pinManager.ValidateCertificatePin(peerId, cert2);
+                        LoggingUtils.LogCertificateValidation(_logger, peerId, cert2, isValid);
                         return isValid;
                     }
 
