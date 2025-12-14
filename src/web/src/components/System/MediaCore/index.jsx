@@ -1898,7 +1898,7 @@ const MediaCore = () => {
       setContentValidationLoading(true);
       setContentValidation(null);
       setContentMetadata(null);
-      const result = await mediacore.validateContentId(contentId.trim());
+      const result = await mediacore.validateContentIdForPod(contentId.trim());
       setContentValidation(result);
 
       // If valid, automatically fetch metadata

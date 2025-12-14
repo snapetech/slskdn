@@ -1242,7 +1242,7 @@ export const refreshPodDiscovery = async () => {
 };
 
 // Pod Join/Leave API functions
-const membershipBaseUrl = baseUrl.replace('contentid', 'podcore/membership');
+// (membershipBaseUrl already declared above)
 
 /**
  * Submit a signed join request to a pod.
@@ -2089,7 +2089,7 @@ const contentBaseUrl = `${apiBaseUrl}/pods/content`;
 /**
  * Validate a content ID for pod linking.
  */
-export const validateContentId = async (contentId) => {
+export const validateContentIdForPod = async (contentId) => {
   const response = await fetch(`${contentBaseUrl}/validate`, {
     method: 'POST',
     headers: {
