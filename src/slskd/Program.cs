@@ -261,7 +261,12 @@ namespace slskd
 
         private static IConfigurationRoot Configuration { get; set; }
         private static OptionsAtStartup OptionsAtStartup { get; } = new OptionsAtStartup();
-        private static ILogger Log { get; set; } = new ConsoleWriteLineLogger();
+        
+        // Explicit Serilog.ILogger type to avoid ambiguity with Microsoft.Extensions.Logging.ILogger
+        private static Serilog.ILogger Log { get; set; } = new Serilog.LoggerConfiguration()
+            .WriteTo.Sink(new ConsoleWriteLineLogger())
+            .CreateLogger();
+            
         private static Mutex Mutex { get; } = new Mutex(initiallyOwned: true, Compute.Sha256Hash(AppName));
         private static IDisposable DotNetRuntimeStats { get; set; }
 

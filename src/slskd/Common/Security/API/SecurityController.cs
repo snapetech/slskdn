@@ -229,7 +229,7 @@ public class SecurityController : ControllerBase
             return BadRequest("Score must be between 0 and 100");
         }
 
-        _security?.PeerReputation?.SetScore(username, request.Score, request.Reason ?? "Manual adjustment");
+        _security?.PeerReputation?.SetScore(username, (int)request.Score, request.Reason ?? "Manual adjustment");
 
         _eventSink?.Report(SecurityEvent.Create(
             SecurityEventType.TrustChange,
@@ -322,10 +322,13 @@ public class SecurityController : ControllerBase
     [HttpPut("disclosure/{username}")]
     public ActionResult SetTrustTier(string username, [FromBody] SetTrustTierRequest request)
     {
-        if (!Enum.TryParse<TrustTier>(request.Tier, true, out var tier))
+        // Validate numeric tier value is a defined enum member
+        if (!Enum.IsDefined(typeof(TrustTier), request.Tier))
         {
             return BadRequest("Invalid trust tier");
         }
+
+        var tier = (TrustTier)request.Tier;
 
         _security?.AsymmetricDisclosure?.SetTrustTier(username, tier, request.Reason ?? "Manual override");
 
@@ -520,11 +523,20 @@ public class SecurityController : ControllerBase
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
         }
 
+        // Validate TargetPeerId is provided
+        if (string.IsNullOrWhiteSpace(request.TargetPeerId))
+        {
+            return BadRequest("TargetPeerId is required");
+        }
+
+        // Compute circuit length with precedence: Length (nullable) first, then CircuitLength, default to 3
+        var circuitLength = request.Length ?? request.CircuitLength;
+
         try
         {
             var circuit = await _circuitBuilder.BuildCircuitAsync(
                 request.TargetPeerId,
-                request.CircuitLength ?? 3);
+                circuitLength);
 
             return Ok(circuit.GetInfo());
         }
