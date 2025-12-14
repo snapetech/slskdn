@@ -94,30 +94,29 @@ namespace slskd.Configuration
                 {
                     var key = ConfigurationPath.Combine(path, property.Name.ToLowerInvariant());
 
+                    // Skip arrays early - handle them separately at the end
+                    if (property.PropertyType.IsArray)
+                    {
+                        // serialize array defaults and stick them on the parent key
+                        // (not indexed by array position).  this value is "stuck", and
+                        // we want to show that in the config debug view.  this isn't really
+                        // functional, just illustrative.
+                        Data[key] = JsonSerializer.Serialize(property.GetValue(defaults));
+                        continue;
+                    }
+
                     if (property.PropertyType.Namespace != null && property.PropertyType.Namespace.StartsWith(Namespace))
                     {
                         Map(property.PropertyType, key);
                     }
                     else
                     {
-                        // don't add array values to the configuration; these are additive across providers
-                        // and the default value from the class is "stuck", so adding them again results in duplicates.
-                        if (!property.PropertyType.IsArray)
-                        {
-                            var value = property.GetValue(defaults);
+                        // Add scalar property values
+                        var value = property.GetValue(defaults);
 
-                            if (value != null)
-                            {
-                                Data[key] = value.ToString();
-                            }
-                        }
-                        else
+                        if (value != null)
                         {
-                            // serialize array defaults and stick them on the parent key
-                            // (not indexed by array position).  this value is "stuck", and
-                            // we want to show that in the config debug view.  this isn't really
-                            // functional, just illustrative.
-                            Data[key] = JsonSerializer.Serialize(property.GetValue(defaults));
+                            Data[key] = value.ToString();
                         }
                     }
                 }

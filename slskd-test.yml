@@ -1,0 +1,16 @@
+soulseek:
+  username: test-user
+  password: test-password
+
+web:
+  port: 5030
+  authentication:
+    disabled: true
+
+realm:
+  id: test-realm-v1
+  displayName: Test Realm
+  description: Local testing realm
+
+mesh:
+  enabled: false
