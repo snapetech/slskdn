@@ -60,6 +60,21 @@ public sealed class AdversarialOptions
     /// Gets or sets plausible deniability options.
     /// </summary>
     public PlausibleDeniabilityOptions PlausibleDeniability { get; set; } = new();
+
+    /// <summary>
+    /// Gets the anonymity layer options (convenience property for accessing Anonymity).
+    /// </summary>
+    public AnonymityLayerOptions AnonymityLayer => Anonymity;
+
+    /// <summary>
+    /// Gets the obfuscated transport options (convenience property for accessing Transport).
+    /// </summary>
+    public ObfuscatedTransportOptions ObfuscatedTransports => Transport;
+
+    /// <summary>
+    /// Gets or sets the mesh transport mode.
+    /// </summary>
+    public string MeshTransport { get; set; } = "QUIC";
 }
 
 /// <summary>
