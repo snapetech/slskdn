@@ -2284,29 +2284,29 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete opinion aggregation with affinity weighting, consensus analysis, and recommendation engine.
 
-- [ ] **T-1354**: Implement PodAffinity scoring
-  - Status: Not started
+- [x] **T-1354**: Implement PodAffinity scoring
+  - Status: Done (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Track engagement (messages, activity). Compute affinity score per member.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in PodAffinityScorer.cs with engagement, trust, size, and activity scoring.
 
-- [ ] **T-1355**: Implement kick/ban with signed updates
-  - Status: Not started
+- [x] **T-1355**: Implement kick/ban with signed updates
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Owner/mod signs ban. Update membership record. Propagate to members.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in PodsController.cs BanMember endpoint with IPodService.BanAsync.
 
-- [ ] **T-1356**: Implement Soulseek chat bridge (ReadOnly)
-  - Status: Not started
+- [x] **T-1356**: Implement Soulseek chat bridge (ReadOnly)
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Mirror Soulseek room messages to bound pod channel. No outbound.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in SoulseekChatBridge.cs with readonly mode and message forwarding.
 
-- [ ] **T-1357**: Implement Soulseek chat bridge (Mirror)
-  - Status: Not started
+- [x] **T-1357**: Implement Soulseek chat bridge (Mirror)
+  - Status: Done (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Two-way sync. Pod messages sent to Soulseek room with prefix.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in SoulseekChatBridge.cs with mirror mode and bidirectional forwarding.
 
 - [ ] **T-1358**: Implement Soulseek identity mapping
   - Status: Not started
@@ -2314,23 +2314,35 @@
   - Branch: experimental/brainz
   - Notes: Map soulseek:username to synthetic PeerId. Optional verification linking.
 
-- [ ] **T-1359**: Create Pod API endpoints
-  - Status: Not started
+- [x] **T-1359**: Create Pod API endpoints
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: /api/v0/pods, /api/v0/pods/{id}, /api/v0/pods/{id}/messages, /api/v0/pods/{id}/members.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in PodsController.cs with full CRUD operations for pods, channels, messages, members.
 
-- [ ] **T-1360**: Create Pod list/detail UI
-  - Status: Not started
+- [x] **T-1360**: Create Pod list/detail UI
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: React components: PodList, PodDetail, PodMemberList. Join/leave buttons.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in Pods.jsx with sidebar pod list, tabbed channels, and detail view.
 
-- [ ] **T-1361**: Create Pod chat UI
-  - Status: Not started
+- [x] **T-1361**: Create Pod chat UI
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: React components: PodChat, MessageList, MessageInput. Channel tabs.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in Pods.jsx with message lists, input fields, and real-time updates.
+
+- [x] **T-1200**: Define AdversarialOptions configuration model
+  - Status: Done (2025-12-13)
+  - Priority: P1
+  - Branch: experimental/whatAmIThinking
+  - Notes: Created comprehensive AdversarialOptions.cs with privacy, anonymity, transport, onion routing, censorship resistance, and deniability options.
+
+- [x] **T-1201**: Implement IPrivacyLayer interface
+  - Status: Done (2025-12-13)
+  - Priority: P1
+  - Branch: experimental/whatAmIThinking
+  - Notes: Created IPrivacyLayer interface for composable privacy transformations with TransformOutboundAsync/TransformInboundAsync methods.
 
 - [ ] **T-1362**: Add PodCore unit tests
   - Status: Not started
@@ -2608,5 +2620,5 @@
 
 ---
 
-*Last updated: December 10, 2025*
+*Last updated: December 13, 2025*
 
