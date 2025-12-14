@@ -912,12 +912,11 @@ namespace slskd
             services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
 
             // Main pod service (SQLite-backed with persistence)
-            services.AddScoped<PodCore.IPodService>(sp =>
+            services.AddSingleton<PodCore.IPodService>(sp =>
             {
                 var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
-                var dbContext = factory.CreateDbContext();
                 return new PodCore.SqlitePodService(
-                    dbContext,
+                    factory,
                     sp.GetService<PodCore.IPodPublisher>(),
                     sp.GetService<PodCore.IPodMembershipSigner>(),
                     sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>(),
@@ -1046,6 +1045,9 @@ namespace slskd
             services.Configure<Mesh.Realm.RealmConfig>(Configuration.GetSection("Realm"));
             services.Configure<Mesh.Realm.MultiRealmConfig>(Configuration.GetSection("MultiRealm"));
             services.AddRealmServices();
+
+            // Social federation services (required by bridges)
+            services.AddSocialFederation();
             services.AddBridgeServices();
 
             // Governance and Gossip services (T-REALM-03)
@@ -1084,6 +1086,24 @@ namespace slskd
             services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
             services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
+
+            // Service Fabric (client + directory + validation)
+            services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDescriptorValidator, Mesh.ServiceFabric.MeshServiceDescriptorValidator>();
+            services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDirectory, Mesh.ServiceFabric.DhtMeshServiceDirectory>();
+            services.AddSingleton<Mesh.ServiceFabric.IMeshServiceClient, Mesh.ServiceFabric.MeshServiceClient>();
+
+            // Kademlia routing table using overlay key material for node ID
+            services.AddSingleton<Mesh.Dht.KademliaRoutingTable>(sp =>
+            {
+                var keyStore = sp.GetRequiredService<Mesh.Overlay.IKeyStore>();
+                var pubKey = keyStore.Current.PublicKey;
+
+                // KademliaRoutingTable expects 160-bit IDs (20 bytes). SHA1 gives exactly 20 bytes.
+                var selfId = System.Security.Cryptography.SHA1.HashData(pubKey);
+
+                return new Mesh.Dht.KademliaRoutingTable(selfId);
+            });
+
             // DHT services for Kademlia operations
             services.AddSingleton<Mesh.Dht.KademliaRpcClient>();
             services.AddSingleton<Mesh.ServiceFabric.Services.DhtMeshService>();

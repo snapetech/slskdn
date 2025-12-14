@@ -18,12 +18,25 @@ namespace slskd.Mesh.Governance
         /// <returns>The service collection.</returns>
         public static IServiceCollection AddGovernanceServices(this IServiceCollection services)
         {
-            // Register governance client
-            services.AddSingleton<IRealmAwareGovernanceClient, RealmAwareGovernanceClient>();
-            services.AddSingleton<IGovernanceClient>(sp => sp.GetRequiredService<IRealmAwareGovernanceClient>());
+            services.AddSingleton<IRealmAwareGovernanceClient>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RealmAwareGovernanceClient>>();
+                var cfg = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Mesh.Realm.MultiRealmConfig>>().CurrentValue;
 
+                if (cfg?.Realms != null && cfg.Realms.Length > 1)
+                {
+                    var multiRealm = sp.GetRequiredService<slskd.Mesh.Realm.MultiRealmService>();
+                    return new RealmAwareGovernanceClient(multiRealm, logger);
+                }
+
+                var realmService = sp.GetRequiredService<slskd.Mesh.Realm.IRealmService>();
+                return new RealmAwareGovernanceClient(realmService, logger);
+            });
+
+            services.AddSingleton<IGovernanceClient>(sp => sp.GetRequiredService<IRealmAwareGovernanceClient>());
             return services;
         }
     }
 }
+
 

@@ -69,3 +69,4 @@ echo "1. Copy the chart directory to your TrueNAS system"
 echo "2. Use the TrueNAS SCALE Apps interface to install from directory"
 echo "3. Or use helm: helm install slskdn ./charts/slskdn"
 
+

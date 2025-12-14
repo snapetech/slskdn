@@ -18,12 +18,26 @@ namespace slskd.Mesh.Gossip
         /// <returns>The service collection.</returns>
         public static IServiceCollection AddGossipServices(this IServiceCollection services)
         {
-            // Register gossip service
-            services.AddSingleton<IRealmAwareGossipService, RealmAwareGossipService>();
-            services.AddSingleton<IGossipService>(sp => sp.GetRequiredService<IRealmAwareGossipService>());
+            services.AddSingleton<IRealmAwareGossipService>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RealmAwareGossipService>>();
+                var cfg = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Mesh.Realm.MultiRealmConfig>>().CurrentValue;
 
+                // Multi-realm mode whenever more than one realm is configured
+                if (cfg?.Realms != null && cfg.Realms.Length > 1)
+                {
+                    var multiRealm = sp.GetRequiredService<slskd.Mesh.Realm.MultiRealmService>();
+                    return new RealmAwareGossipService(multiRealm, logger);
+                }
+
+                var realmService = sp.GetRequiredService<slskd.Mesh.Realm.IRealmService>();
+                return new RealmAwareGossipService(realmService, logger);
+            });
+
+            services.AddSingleton<IGossipService>(sp => sp.GetRequiredService<IRealmAwareGossipService>());
             return services;
         }
     }
 }
+
 

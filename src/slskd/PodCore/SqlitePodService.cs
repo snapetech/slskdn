@@ -30,19 +30,19 @@ namespace slskd.PodCore
     /// </summary>
     public class SqlitePodService : IPodService
     {
-        private readonly PodDbContext dbContext;
+        private readonly IDbContextFactory<PodDbContext> dbFactory;
         private readonly IPodPublisher podPublisher;
         private readonly IPodMembershipSigner membershipSigner;
         private readonly ILogger<SqlitePodService> logger;
 
     public SqlitePodService(
-        PodDbContext dbContext,
+        IDbContextFactory<PodDbContext> dbFactory,
         IPodPublisher podPublisher,
         IPodMembershipSigner membershipSigner,
         ILogger<SqlitePodService> logger,
         IContentLinkService contentLinkService = null)
     {
-        this.dbContext = dbContext;
+        this.dbFactory = dbFactory;
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
         this.logger = logger;
@@ -70,7 +70,8 @@ namespace slskd.PodCore
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
 
             // SECURITY: Use transaction for atomicity
-            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
             try
             {
                 var entity = new PodEntity
@@ -84,8 +85,8 @@ namespace slskd.PodCore
                     ExternalBindings = System.Text.Json.JsonSerializer.Serialize(pod.ExternalBindings ?? new List<ExternalBinding>()),
                 };
 
-                dbContext.Pods.Add(entity);
-                await dbContext.SaveChangesAsync(ct);
+                db.Pods.Add(entity);
+                await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
                 // SECURITY: Don't log sensitive pod details
@@ -136,10 +137,11 @@ namespace slskd.PodCore
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
 
             // SECURITY: Use transaction for atomicity
-            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
             try
             {
-                var existingEntity = await dbContext.Pods.FirstOrDefaultAsync(p => p.PodId == pod.PodId, ct);
+                var existingEntity = await db.Pods.FirstOrDefaultAsync(p => p.PodId == pod.PodId, ct);
                 if (existingEntity == null)
                 {
                     throw new KeyNotFoundException($"Pod with ID {pod.PodId} not found");
@@ -154,7 +156,7 @@ namespace slskd.PodCore
                 existingEntity.RequireApproval = pod.RequireApproval;
                 existingEntity.UpdatedAt = DateTimeOffset.UtcNow;
 
-                await dbContext.SaveChangesAsync(ct);
+                await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
                 // Publish update
@@ -172,7 +174,8 @@ namespace slskd.PodCore
 
         public async Task<IReadOnlyList<Pod>> ListAsync(CancellationToken ct = default)
         {
-            var entities = await dbContext.Pods.ToListAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var entities = await db.Pods.ToListAsync(ct);
             return entities.Select(EntityToPod).ToList();
         }
 
@@ -187,7 +190,8 @@ namespace slskd.PodCore
 
             try
             {
-                var entity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+                await using var db = await dbFactory.CreateDbContextAsync(ct);
+                var entity = await db.Pods.FindAsync(new object[] { podId }, ct);
                 return entity == null ? null : EntityToPod(entity);
             }
             catch (Exception ex)
@@ -199,7 +203,8 @@ namespace slskd.PodCore
 
         public async Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default)
         {
-            var entities = await dbContext.Members
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var entities = await db.Members
                 .Where(m => m.PodId == podId && !m.IsBanned)
                 .ToListAsync(ct);
 
@@ -214,7 +219,8 @@ namespace slskd.PodCore
 
         public async Task<IReadOnlyList<SignedMembershipRecord>> GetMembershipHistoryAsync(string podId, CancellationToken ct = default)
         {
-            var entities = await dbContext.MembershipRecords
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var entities = await db.MembershipRecords
                 .Where(r => r.PodId == podId)
                 .OrderBy(r => r.TimestampUnixMs)
                 .ToListAsync(ct);
@@ -246,17 +252,18 @@ namespace slskd.PodCore
             }
 
             // SECURITY: Use transaction
-            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
             try
             {
-                var pod = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+                var pod = await db.Pods.FindAsync(new object[] { podId }, ct);
                 if (pod == null)
                 {
                     logger.LogWarning("Attempted to join non-existent pod");
                     return false;
                 }
 
-                var existingMember = await dbContext.Members
+                var existingMember = await db.Members
                     .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == member.PeerId, ct);
 
                 if (existingMember != null)
@@ -280,7 +287,7 @@ namespace slskd.PodCore
                     IsBanned = false,
                 };
 
-                dbContext.Members.Add(memberEntity);
+                db.Members.Add(memberEntity);
 
                 // Add membership record
                 var membershipRecord = new SignedMembershipRecordEntity
@@ -292,8 +299,8 @@ namespace slskd.PodCore
                     Signature = string.Empty, // Will be populated by signing service
                 };
 
-                dbContext.MembershipRecords.Add(membershipRecord);
-                await dbContext.SaveChangesAsync(ct);
+                db.MembershipRecords.Add(membershipRecord);
+                await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
                 logger.LogInformation("User joined pod successfully");
@@ -309,7 +316,8 @@ namespace slskd.PodCore
 
         public async Task<bool> LeaveAsync(string podId, string peerId, CancellationToken ct = default)
         {
-            var member = await dbContext.Members
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var member = await db.Members
                 .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == peerId, ct);
 
             if (member == null)
@@ -318,7 +326,7 @@ namespace slskd.PodCore
                 return false;
             }
 
-            dbContext.Members.Remove(member);
+            db.Members.Remove(member);
 
             // Add membership record
             var membershipRecord = new SignedMembershipRecordEntity
@@ -330,8 +338,8 @@ namespace slskd.PodCore
                 Signature = string.Empty,
             };
 
-            dbContext.MembershipRecords.Add(membershipRecord);
-            await dbContext.SaveChangesAsync(ct);
+            db.MembershipRecords.Add(membershipRecord);
+            await db.SaveChangesAsync(ct);
 
             logger.LogInformation("User {PeerId} left pod {PodId}", peerId, podId);
             return true;
@@ -339,7 +347,8 @@ namespace slskd.PodCore
 
         public async Task<bool> BanAsync(string podId, string peerId, CancellationToken ct = default)
         {
-            var member = await dbContext.Members
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var member = await db.Members
                 .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == peerId, ct);
 
             if (member == null)
@@ -360,8 +369,8 @@ namespace slskd.PodCore
                 Signature = string.Empty,
             };
 
-            dbContext.MembershipRecords.Add(membershipRecord);
-            await dbContext.SaveChangesAsync(ct);
+            db.MembershipRecords.Add(membershipRecord);
+            await db.SaveChangesAsync(ct);
 
             logger.LogInformation("User {PeerId} banned from pod {PodId}", peerId, podId);
             return true;
@@ -402,7 +411,8 @@ namespace slskd.PodCore
         public async Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
         {
             // Verify pod exists
-            var podEntity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var podEntity = await db.Pods.FindAsync(new object[] { podId }, ct);
             if (podEntity == null)
             {
                 throw new ArgumentException($"Pod {podId} does not exist", nameof(podId));
@@ -433,7 +443,7 @@ namespace slskd.PodCore
 
             // Update database
             podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
-            await dbContext.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
 
             // Publish updated pod to DHT if listed
             if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
@@ -458,7 +468,8 @@ namespace slskd.PodCore
         public async Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default)
         {
             // Verify pod exists
-            var podEntity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var podEntity = await db.Pods.FindAsync(new object[] { podId }, ct);
             if (podEntity == null)
             {
                 return false;
@@ -489,7 +500,7 @@ namespace slskd.PodCore
 
             // Update database
             podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
-            await dbContext.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
 
             // Publish updated pod to DHT if listed
             if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
@@ -526,7 +537,8 @@ namespace slskd.PodCore
         public async Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
         {
             // Verify pod exists
-            var podEntity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var podEntity = await db.Pods.FindAsync(new object[] { podId }, ct);
             if (podEntity == null)
             {
                 return false;
@@ -565,7 +577,7 @@ namespace slskd.PodCore
 
             // Update database
             podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
-            await dbContext.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
 
             // Publish updated pod to DHT if listed
             if (podPublisher != null && pod.Visibility == PodVisibility.Listed)

@@ -98,3 +98,4 @@ public interface ICoverTrafficGenerator
     void RecordActivity();
 }
 
+

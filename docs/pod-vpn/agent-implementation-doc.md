@@ -444,3 +444,4 @@ src/slskd/
 
 This implementation provides a secure, pod-scoped private service access mechanism that gives users "VPN-like utility" without the risks and complexity of full internet egress. By maintaining strict controls and leveraging existing mesh infrastructure, it delivers meaningful functionality while preserving the system's security and performance characteristics.
 
+

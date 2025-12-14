@@ -54,3 +54,4 @@ public class CoverTrafficStats
     public bool IsActive { get; set; }
 }
 
+

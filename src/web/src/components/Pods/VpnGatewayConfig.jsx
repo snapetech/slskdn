@@ -619,3 +619,4 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
 
 export default VpnGatewayConfig;
 
+

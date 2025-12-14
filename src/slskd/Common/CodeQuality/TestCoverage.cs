@@ -632,3 +632,4 @@ namespace slskd.Common.CodeQuality
     }
 }
 
+

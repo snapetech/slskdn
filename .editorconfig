@@ -175,3 +175,4 @@ dotnet_diagnostic.SA1402.severity = none     # File may only contain a single ty
 dotnet_diagnostic.SA1600.severity = warning  # Elements should be documented
 dotnet_diagnostic.SA1633.severity = error    # File should have header
 
+

@@ -59,3 +59,4 @@ public interface INetworkSimulator
     Task SimulateConnectionBlockingAsync(string target, CancellationToken cancellationToken);
 }
 
+

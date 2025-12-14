@@ -74,3 +74,4 @@ echo "1. Build .NET application: dotnet publish -c Release -r linux-x64 --self-c
 echo "2. Copy output to $PACKAGE_DIR/"
 echo "3. Run this script again"
 
+

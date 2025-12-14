@@ -29,3 +29,4 @@ unregister_dsm_app
 
 log_step "Pre-uninstallation completed successfully"
 
+
