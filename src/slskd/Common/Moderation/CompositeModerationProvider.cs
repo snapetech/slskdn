@@ -358,10 +358,10 @@ namespace slskd.Common.Moderation
                 {
                     var eventType = report.Severity switch
                     {
-                        ReportSeverity.Critical => PeerReputationEventType.MaliciousBehavior,
-                        ReportSeverity.High => PeerReputationEventType.PolicyViolation,
-                        ReportSeverity.Medium => PeerReputationEventType.SuspiciousActivity,
-                        _ => PeerReputationEventType.Other
+                        ReportSeverity.Critical => PeerReputationEventType.AbusiveBehavior,
+                        ReportSeverity.High => PeerReputationEventType.ProtocolViolation,
+                        ReportSeverity.Medium => PeerReputationEventType.AssociatedWithBlockedContent,
+                        _ => PeerReputationEventType.ProtocolViolation
                     };
 
                     var reputationEvent = new PeerReputationEvent(
