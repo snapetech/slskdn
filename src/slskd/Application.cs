@@ -44,6 +44,7 @@ namespace slskd
     using slskd.Files;
     using slskd.Integrations.Pushbullet;
     using slskd.Messaging;
+    using slskd.PodCore;
     using slskd.Relay;
     using slskd.Search;
     using slskd.Shares;
@@ -1030,7 +1031,7 @@ namespace slskd
         {
             if (Users.IsBlacklisted(args.Username))
             {
-                Log.Debug("Ignored private message from blacklisted user {Username}: {Message}", args.Username, args.Message);
+                Log.Debug("Ignored private message from blacklisted user {Username}", args.Username);
                 return;
             }
             else
@@ -1038,11 +1039,108 @@ namespace slskd
                 // todo: raise blacklisted message event?
             }
 
+            // HARDENING: Handle PODMSG group pod messages
+            if (args.Message.StartsWith("PODMSG:", StringComparison.Ordinal))
+            {
+                _ = Task.Run(() => HandlePodMessageAsync(args.Username, args.Message));
+                return; // Don't process as regular PM
+            }
+
             Messaging.Conversations.HandleMessageAsync(args.Username, PrivateMessage.FromEventArgs(args));
 
             if (!args.Replayed)
             {
                 _ = Notifications.SendPrivateMessageAsync(args.Username, args.Message);
+            }
+        }
+
+        /// <summary>
+        /// Handles inbound pod messages received via private messages.
+        /// </summary>
+        private async Task HandlePodMessageAsync(string username, string message)
+        {
+            try
+            {
+                // HARDENING: Enforce maximum message size before parsing (16KB limit)
+                const int MaxMessageSize = 16 * 1024;
+                if (message.Length > MaxMessageSize)
+                {
+                    Log.Warning("Pod message from {Username} exceeds size limit ({Size} > {MaxSize})",
+                        username, message.Length, MaxMessageSize);
+                    return;
+                }
+
+                // Extract JSON payload after "PODMSG:" prefix
+                if (!message.StartsWith("PODMSG:", StringComparison.Ordinal) || message.Length <= "PODMSG:".Length)
+                {
+                    Log.Warning("Invalid PODMSG format from {Username}", username);
+                    return;
+                }
+
+                var jsonPayload = message.Substring("PODMSG:".Length);
+
+                // HARDENING: Enforce JSON payload size limit (12KB for actual JSON)
+                const int MaxJsonSize = 12 * 1024;
+                if (jsonPayload.Length > MaxJsonSize)
+                {
+                    Log.Warning("Pod message JSON payload from {Username} exceeds size limit ({Size} > {MaxSize})",
+                        username, jsonPayload.Length, MaxJsonSize);
+                    return;
+                }
+
+                // Parse PodMessage from JSON with strict options
+                var options = new JsonSerializerOptions
+                {
+                    MaxDepth = 3, // Prevent deep nesting attacks
+                    AllowTrailingCommas = false,
+                    ReadCommentHandling = JsonCommentHandling.Disallow
+                };
+
+                var podMessage = JsonSerializer.Deserialize<PodCore.PodMessage>(jsonPayload, options);
+                if (podMessage == null)
+                {
+                    Log.Warning("Failed to parse pod message JSON from {Username}", username);
+                    return;
+                }
+
+                // HARDENING: Validate sender matches the message sender peer ID
+                var expectedPeerId = $"bridge:{username}";
+                if (podMessage.SenderPeerId != expectedPeerId)
+                {
+                    Log.Warning("Pod message sender validation failed: expected {Expected}, got {Actual} from {Username}",
+                        expectedPeerId, podMessage.SenderPeerId, username);
+                    return;
+                }
+
+                // HARDENING: Additional validation - ensure PodId and ChannelId are present and valid
+                if (string.IsNullOrWhiteSpace(podMessage.PodId) || string.IsNullOrWhiteSpace(podMessage.ChannelId))
+                {
+                    Log.Warning("Pod message missing required PodId or ChannelId from {Username}", username);
+                    return;
+                }
+
+                if (!PodCore.PodValidation.IsValidPodId(podMessage.PodId) || !PodCore.PodValidation.IsValidChannelId(podMessage.ChannelId))
+                {
+                    Log.Warning("Pod message contains invalid PodId or ChannelId from {Username}", username);
+                    return;
+                }
+
+                // Store via IPodMessaging
+                var podMessaging = Program.ServiceProvider.GetRequiredService<PodCore.IPodMessaging>();
+                var stored = await podMessaging.SendAsync(podMessage);
+                if (stored)
+                {
+                    Log.Debug("Stored pod message {MessageId} from {Username} in pod {PodId} channel {ChannelId}",
+                        podMessage.MessageId, username, podMessage.PodId, podMessage.ChannelId);
+                }
+                else
+                {
+                    Log.Warning("Failed to store pod message {MessageId} from {Username}", podMessage.MessageId, username);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error handling pod message from {Username}", username);
             }
         }
 

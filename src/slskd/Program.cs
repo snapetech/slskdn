@@ -670,7 +670,12 @@ namespace slskd
             services.AddSingleton<IRoomTracker, RoomTracker>(_ => new RoomTracker(messageLimit: 250));
 
             services.AddSingleton<IMessagingService, MessagingService>();
-            services.AddSingleton<IConversationService, ConversationService>();
+            services.AddSingleton<IConversationService>(sp =>
+                new Messaging.ConversationService(
+                    sp.GetRequiredService<ISoulseekClient>(),
+                    sp.GetRequiredService<Events.EventBus>(),
+                    sp.GetRequiredService<IDbContextFactory<Messaging.MessagingDbContext>>(),
+                    sp.GetRequiredService<PodCore.IPodService>()));
 
             services.AddSingleton<IShareService, ShareService>();
             services.AddTransient<IShareRepositoryFactory, SqliteShareRepositoryFactory>();

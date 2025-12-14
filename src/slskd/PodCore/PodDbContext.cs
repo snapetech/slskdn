@@ -134,6 +134,7 @@ namespace slskd.PodCore
         public string SenderPeerId { get; set; }
         public string Body { get; set; }
         public string Signature { get; set; }
+        public int SigVersion { get; set; }
     }
 
     /// <summary>

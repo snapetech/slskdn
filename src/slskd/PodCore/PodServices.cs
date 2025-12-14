@@ -540,16 +540,9 @@ public class PodMessaging : IPodMessaging
             seenMessageIds.Add(message.MessageId);
         }
 
-        // 3. Extract podId from channelId (format: "podId:channelId")
-        var channelParts = message.ChannelId.Split(':', 2);
-        if (channelParts.Length != 2)
-        {
-            logger.LogWarning("[PodMessaging] Invalid channelId format: {ChannelId} (expected podId:channelId)", message.ChannelId);
-            return false;
-        }
-
-        var podId = channelParts[0];
-        var channelIdOnly = channelParts[1];
+        // 3. Get podId and channelId from message (HARDENING: no more parsing)
+        var podId = message.PodId;
+        var channelIdOnly = message.ChannelId;
 
         var pod = await podService.GetPodAsync(podId, ct);
         if (pod == null)
@@ -558,10 +551,10 @@ public class PodMessaging : IPodMessaging
             return false;
         }
 
-        var channel = pod.Channels.FirstOrDefault(c => c.ChannelId == message.ChannelId);
+        var channel = pod.Channels.FirstOrDefault(c => c.ChannelId == channelIdOnly);
         if (channel == null)
         {
-            logger.LogWarning("[PodMessaging] Channel {ChannelId} not found in pod {PodId}", message.ChannelId, pod.PodId);
+            logger.LogWarning("[PodMessaging] Channel {ChannelId} not found in pod {PodId}", channelIdOnly, pod.PodId);
             return false;
         }
 
@@ -596,7 +589,7 @@ public class PodMessaging : IPodMessaging
         var members = await podService.GetMembersAsync(pod.PodId, ct);
 
         // 6. Store message
-        var storageKey = $"{pod.PodId}:{message.ChannelId}";
+        var storageKey = $"{podId}:{channelIdOnly}"; // HARDENING: Use short channelId
         lock (storageLock)
         {
             if (!messageStorage.TryGetValue(storageKey, out var messages))
@@ -797,8 +790,17 @@ public class PodMessaging : IPodMessaging
 
     private static string BuildSignablePayload(PodMessage message)
     {
-        // Build deterministic payload for signing
-        return $"{message.MessageId}|{message.ChannelId}|{message.SenderPeerId}|{message.Body}|{message.TimestampUnixMs}";
+        // Build deterministic payload for signing based on signature version
+        if (message.SigVersion == 0)
+        {
+            // Legacy format: MessageId|ChannelId|SenderPeerId|Body|TimestampUnixMs
+            return $"{message.MessageId}|{message.ChannelId}|{message.SenderPeerId}|{message.Body}|{message.TimestampUnixMs}";
+        }
+        else
+        {
+            // Version 1: include PodId so signatures bind to pod+channel
+            return $"{message.MessageId}|{message.PodId}|{message.ChannelId}|{message.SenderPeerId}|{message.Body}|{message.TimestampUnixMs}";
+        }
     }
 }
 

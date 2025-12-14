@@ -224,8 +224,8 @@ public class PodsController : ControllerBase
     {
         try
         {
-            var fullChannelId = $"{podId}:{channelId}";
-            var messages = await podMessaging.GetMessagesAsync(podId, fullChannelId, since, ct);
+            // HARDENING: Use channelId directly without concatenation
+            var messages = await podMessaging.GetMessagesAsync(podId, channelId, since, ct);
             return Ok(messages);
         }
         catch (Exception ex)
@@ -257,11 +257,11 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "SenderPeerId is required" });
             }
 
-            var fullChannelId = $"{podId}:{channelId}";
+            // HARDENING: Use channelId directly without concatenation
             var message = new PodMessage
             {
                 MessageId = Guid.NewGuid().ToString("N"),
-                ChannelId = fullChannelId,
+                ChannelId = channelId,
                 SenderPeerId = request.SenderPeerId,
                 Body = request.Body,
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),

@@ -65,6 +65,13 @@ public class PodPublisher : IPodPublisher
             return;
         }
 
+        // HARDENING: Never publish DM pods, even if marked as listed
+        if (pod.Tags?.Contains("dm") == true)
+        {
+            logger.LogWarning("[PodPublisher] Blocking publish attempt for DM pod {PodId}", pod.PodId);
+            return;
+        }
+
         try
         {
             var dhtKey = DeriveDhtKey(pod.PodId);

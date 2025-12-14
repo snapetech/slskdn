@@ -25,6 +25,7 @@ namespace slskd.Messaging
     using Microsoft.EntityFrameworkCore;
     using Serilog;
     using slskd.Events;
+    using slskd.PodCore;
     using Soulseek;
 
     /// <summary>
@@ -114,17 +115,191 @@ namespace slskd.Messaging
         public ConversationService(
             ISoulseekClient soulseekClient,
             EventBus eventBus,
-            IDbContextFactory<MessagingDbContext> contextFactory)
+            IDbContextFactory<MessagingDbContext> contextFactory,
+            PodCore.IPodService podService)
         {
             SoulseekClient = soulseekClient;
             EventBus = eventBus;
             ContextFactory = contextFactory;
+            PodService = podService;
         }
 
         private EventBus EventBus { get; }
         private IDbContextFactory<MessagingDbContext> ContextFactory { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<ConversationService>();
         private ISoulseekClient SoulseekClient { get; }
+        private PodCore.IPodService PodService { get; }
+
+        // HARDENING: DM pod creation rate limiting
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTimeOffset> lastPodCreationByPeer = new();
+        private readonly object rateLimitLock = new();
+        private const int MinHoursBetweenPodCreationsPerPeer = 24; // 1 pod per peer per day
+        private const int MaxNewPodsPerDay = 50; // Global limit
+        private DateTimeOffset currentDayStart = DateTimeOffset.UtcNow.Date;
+        private int podsCreatedToday = 0;
+
+        /// <summary>
+        /// Validates a Soulseek username for DM pod creation.
+        /// </summary>
+        private static bool IsValidSoulseekUsername(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return false;
+            }
+
+            // Basic length check (Soulseek allows up to 64 chars, but be conservative)
+            if (username.Length > 64 || username.Length < 1)
+            {
+                return false;
+            }
+
+            // Allow only alphanumeric, underscore, hyphen, dot (common in usernames)
+            // Reject control characters, whitespace, colon (to prevent injection)
+            foreach (var c in username)
+            {
+                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                      (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if DM pod creation is allowed based on rate limits to prevent DoS attacks.
+        /// </summary>
+        private bool IsDmPodCreationAllowed(string username)
+        {
+            lock (rateLimitLock)
+            {
+                var now = DateTimeOffset.UtcNow;
+
+                // Reset daily counter if it's a new day
+                if (now.Date != currentDayStart.Date)
+                {
+                    currentDayStart = now.Date;
+                    podsCreatedToday = 0;
+                }
+
+                // Check global daily limit
+                if (podsCreatedToday >= MaxNewPodsPerDay)
+                {
+                    Log.Warning("Global DM pod creation limit ({Limit}) exceeded for today", MaxNewPodsPerDay);
+                    return false;
+                }
+
+                // Check per-peer rate limit
+                var peerId = $"bridge:{username}"; // Use bridge format for peer ID
+                if (lastPodCreationByPeer.TryGetValue(peerId, out var lastCreation))
+                {
+                    var timeSinceLastCreation = now - lastCreation;
+                    if (timeSinceLastCreation.TotalHours < MinHoursBetweenPodCreationsPerPeer)
+                    {
+                        Log.Warning("DM pod creation rate limit exceeded for user {Username}. Next allowed: {NextAllowed}",
+                            username, lastCreation.AddHours(MinHoursBetweenPodCreationsPerPeer));
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Creates a DM pod for the given username if it doesn't exist and rate limits allow.
+        /// </summary>
+        private async Task EnsureDmPodAsync(string username)
+        {
+            try
+            {
+                // HARDENING: Validate username format
+                if (!IsValidSoulseekUsername(username))
+                {
+                    Log.Warning("Invalid username format for DM pod creation: {Username}", username);
+                    return;
+                }
+
+                // Check rate limits first
+                if (!IsDmPodCreationAllowed(username))
+                {
+                    Log.Debug("DM pod creation blocked by rate limits for user {Username}", username);
+                    return;
+                }
+
+                // Generate deterministic pod ID
+                var localPeerId = "peer:mesh:self"; // Assume local peer
+                var remotePeerId = $"bridge:{username}";
+                var podId = PodIdFactory.ConversationPodId(localPeerId, remotePeerId);
+
+                // Check if pod already exists
+                var existingPod = await PodService.GetPodAsync(podId);
+                if (existingPod != null)
+                {
+                    Log.Debug("DM pod {PodId} already exists for user {Username}", podId, username);
+                    return;
+                }
+
+                // Create DM pod
+                Log.Information("Creating DM pod {PodId} for user {Username}", podId, username);
+
+                var pod = new PodCore.Pod
+                {
+                    PodId = podId,
+                    Name = username,
+                    Visibility = PodCore.PodVisibility.Private,
+                    Tags = new List<string> { "dm" },
+                    Channels = new List<PodCore.PodChannel>
+                    {
+                        new PodCore.PodChannel
+                        {
+                            ChannelId = "dm",
+                            Name = "DM",
+                            Kind = PodCore.PodChannelKind.General,
+                            BindingInfo = $"soulseek-dm:{username}"
+                        }
+                    }
+                };
+
+                var createdPod = await PodService.CreateAsync(pod);
+                if (createdPod != null)
+                {
+                    // Add members
+                    var localMember = new PodCore.PodMember
+                    {
+                        PeerId = localPeerId,
+                        Role = "member"
+                    };
+                    await PodService.JoinAsync(podId, localMember);
+
+                    var remoteMember = new PodCore.PodMember
+                    {
+                        PeerId = remotePeerId,
+                        Role = "member"
+                    };
+                    await PodService.JoinAsync(podId, remoteMember);
+
+                    // Update rate limit counters
+                    lock (rateLimitLock)
+                    {
+                        lastPodCreationByPeer[remotePeerId] = DateTimeOffset.UtcNow;
+                        podsCreatedToday++;
+                    }
+
+                    Log.Information("Successfully created DM pod {PodId} for user {Username}", podId, username);
+                }
+                else
+                {
+                    Log.Error("Failed to create DM pod for user {Username}", username);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error creating DM pod for user {Username}", username);
+            }
+        }
 
         /// <summary>
         ///     Acknowledges all unacknowledged <see cref="PrivateMessage"/> records from the specified <paramref name="username"/>.
@@ -394,6 +569,9 @@ namespace slskd.Messaging
             else
             {
                 context.Conversations.Add(new Conversation { Username = username, IsActive = true });
+
+                // HARDENING: Create DM pod for new conversation
+                _ = Task.Run(() => EnsureDmPodAsync(username));
             }
 
             try

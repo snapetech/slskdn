@@ -65,6 +65,7 @@ public class PodMessage
     public string Body { get; set; } = string.Empty;
     public long TimestampUnixMs { get; set; }
     public string Signature { get; set; } = string.Empty;
+    public int SigVersion { get; set; } = 1; // Version 1: includes PodId in signature payload
 }
 
 public class PodVariantOpinion
