@@ -18,7 +18,7 @@ public static class CanonicalSerialization
     /// </summary>
     /// <param name="descriptor">The descriptor to serialize.</param>
     /// <returns>Canonical byte representation.</returns>
-    public static byte[] SerializeForSigning(MeshPeerDescriptor descriptor)
+    public static byte[] SerializeForSigning(Dht.MeshPeerDescriptor descriptor)
     {
         if (descriptor == null)
         {

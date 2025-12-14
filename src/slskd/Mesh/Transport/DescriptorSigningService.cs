@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Security.Cryptography;
+using slskd.Mesh.Dht;
 
 namespace slskd.Mesh.Transport;
 
