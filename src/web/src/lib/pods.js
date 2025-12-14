@@ -44,6 +44,23 @@ export const create = async (pod) => {
   return response.json();
 };
 
+export const update = async (podId, pod) => {
+  const response = await fetch(`${baseUrl}/${podId}`, {
+    method: 'PUT',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(pod),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 export const getMembers = async (podId) => {
   const response = await fetch(`${baseUrl}/${podId}/members`, {
     headers: session.authHeaders(),

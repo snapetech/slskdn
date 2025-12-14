@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using slskd.Common.Security;
 
 /// <summary>
 /// API controller for security monitoring and management.
@@ -22,16 +23,28 @@ public class SecurityController : ControllerBase
 {
     private readonly SecurityServices? _security;
     private readonly ISecurityEventSink? _eventSink;
+    private readonly AdversarialOptions? _adversarialOptions;
+    private readonly AnonymityTransportSelector? _transportSelector;
+    private readonly Mesh.MeshCircuitBuilder? _circuitBuilder;
+    private readonly Mesh.IMeshPeerManager? _peerManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurityController"/> class.
     /// </summary>
     public SecurityController(
         SecurityServices? security = null,
-        ISecurityEventSink? eventSink = null)
+        ISecurityEventSink? eventSink = null,
+        AdversarialOptions? adversarialOptions = null,
+        AnonymityTransportSelector? transportSelector = null,
+        Mesh.MeshCircuitBuilder? circuitBuilder = null,
+        Mesh.IMeshPeerManager? peerManager = null)
     {
         _security = security;
         _eventSink = eventSink ?? security?.EventSink;
+        _adversarialOptions = adversarialOptions;
+        _transportSelector = transportSelector;
+        _circuitBuilder = circuitBuilder;
+        _peerManager = peerManager;
     }
 
     /// <summary>
@@ -399,6 +412,264 @@ public sealed class SecurityDashboard
     public TemporalStats? TemporalStats { get; set; }
 }
 
+    /// <summary>
+    /// Get current adversarial settings.
+    /// </summary>
+    [HttpGet("adversarial")]
+    public ActionResult<AdversarialOptions> GetAdversarialSettings()
+    {
+        if (_adversarialOptions == null)
+        {
+            return NotFound("Adversarial features are not configured");
+        }
+
+        return Ok(_adversarialOptions);
+    }
+
+    /// <summary>
+    /// Gets the current Tor connectivity status.
+    /// </summary>
+    /// <returns>The Tor transport status.</returns>
+    [HttpGet("tor/status")]
+    public ActionResult<AnonymityTransportStatus> GetTorStatus()
+    {
+        var torTransport = _transportSelector?.GetTorTransport();
+        if (torTransport == null)
+        {
+            return NotFound("Tor transport is not configured or available");
+        }
+
+        var status = torTransport.GetStatus();
+        return Ok(status);
+    }
+
+    /// <summary>
+    /// Tests Tor connectivity and returns the current status.
+    /// </summary>
+    /// <returns>The Tor transport status after connectivity test.</returns>
+    [HttpPost("tor/test")]
+    public async Task<ActionResult<AnonymityTransportStatus>> TestTorConnectivity()
+    {
+        var torTransport = _transportSelector?.GetTorTransport();
+        if (torTransport == null)
+        {
+            return NotFound("Tor transport is not configured or available");
+        }
+
+        try
+        {
+            await torTransport.IsAvailableAsync();
+            var status = torTransport.GetStatus();
+            return Ok(status);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Tor connectivity test failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Update adversarial settings.
+    /// </summary>
+    [HttpPut("adversarial")]
+    public ActionResult UpdateAdversarialSettings([FromBody] AdversarialOptions settings)
+    {
+        // NOTE: In a real implementation, this would persist the settings
+        // For now, just validate the input
+        if (settings == null)
+        {
+            return BadRequest("Settings cannot be null");
+        }
+
+        // Basic validation
+        if (settings.Privacy?.Padding?.BucketSizes != null &&
+            settings.Privacy.Padding.BucketSizes.Any(size => size <= 0))
+        {
+            return BadRequest("Bucket sizes must be positive");
+        }
+
+        // TODO: Implement persistence and runtime configuration updates
+        return Ok(new { message = "Adversarial settings updated (persistence not yet implemented)" });
+    }
+
+    /// <summary>
+    /// Get adversarial statistics.
+    /// </summary>
+    [HttpGet("adversarial/stats")]
+    public ActionResult<AdversarialStats> GetAdversarialStats()
+    {
+        return Ok(new AdversarialStats
+        {
+            Enabled = _adversarialOptions?.Enabled ?? false,
+            Profile = _adversarialOptions?.Profile ?? AdversarialProfile.Disabled,
+            PrivacyEnabled = _adversarialOptions?.Privacy?.Enabled ?? false,
+            AnonymityEnabled = _adversarialOptions?.Anonymity?.Enabled ?? false,
+            TransportEnabled = _adversarialOptions?.Transport?.Enabled ?? false,
+            OnionRoutingEnabled = _adversarialOptions?.OnionRouting?.Enabled ?? false,
+            CensorshipResistanceEnabled = _adversarialOptions?.CensorshipResistance?.Enabled ?? false,
+            PlausibleDeniabilityEnabled = _adversarialOptions?.PlausibleDeniability?.Enabled ?? false,
+        });
+    }
+
+    /// <summary>
+    /// Get transport selector status and available transports.
+    /// </summary>
+    [HttpGet("transports/status")]
+    public ActionResult<TransportSelectorStatus> GetTransportStatus()
+    {
+        if (_transportSelector == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Transport selector not available");
+        }
+
+        return Ok(_transportSelector.GetSelectorStatus());
+    }
+
+    /// <summary>
+    /// Get detailed status of all configured transports.
+    /// </summary>
+    [HttpGet("transports")]
+    public ActionResult<Dictionary<AnonymityTransportType, AnonymityTransportStatus>> GetAllTransportStatuses()
+    {
+        if (_transportSelector == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Transport selector not available");
+        }
+
+        return Ok(_transportSelector.GetAllStatuses());
+    }
+
+    /// <summary>
+    /// Test connectivity for all configured transports.
+    /// </summary>
+    [HttpPost("transports/test")]
+    public async Task<ActionResult> TestTransportConnectivity()
+    {
+        if (_transportSelector == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Transport selector not available");
+        }
+
+        try
+        {
+            await _transportSelector.TestConnectivityAsync();
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode((int)HttpStatusCode.InternalServerError, $"Connectivity test failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Get mesh circuit statistics.
+    /// </summary>
+    [HttpGet("circuits/stats")]
+    public ActionResult<CircuitStatistics> GetCircuitStats()
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        return Ok(_circuitBuilder.GetStatistics());
+    }
+
+    /// <summary>
+    /// Get information about all active circuits.
+    /// </summary>
+    [HttpGet("circuits")]
+    public ActionResult<List<CircuitInfo>> GetActiveCircuits()
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        var circuits = _circuitBuilder.GetActiveCircuits();
+        return Ok(circuits.Select(c => c.GetInfo()).ToList());
+    }
+
+    /// <summary>
+    /// Build a new circuit to a target peer.
+    /// </summary>
+    [HttpPost("circuits")]
+    public async Task<ActionResult<CircuitInfo>> BuildCircuit([FromBody] BuildCircuitRequest request)
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        try
+        {
+            var circuit = await _circuitBuilder.BuildCircuitAsync(
+                request.TargetPeerId,
+                request.CircuitLength ?? 3);
+
+            return Ok(circuit.GetInfo());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode((int)HttpStatusCode.BadRequest, $"Circuit building failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Destroy a circuit by ID.
+    /// </summary>
+    [HttpDelete("circuits/{circuitId}")]
+    public ActionResult DestroyCircuit(string circuitId)
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        _circuitBuilder.DestroyCircuit(circuitId);
+        return Ok();
+    }
+
+    /// <summary>
+    /// Get mesh peer statistics.
+    /// </summary>
+    [HttpGet("peers/stats")]
+    public ActionResult<PeerStatistics> GetPeerStats()
+    {
+        if (_peerManager == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Peer manager not available");
+        }
+
+        return Ok(_peerManager.GetStatistics());
+    }
+
+    /// <summary>
+    /// Get all available mesh peers.
+    /// </summary>
+    [HttpGet("peers")]
+    public async Task<ActionResult<List<PeerInfo>>> GetPeers()
+    {
+        if (_peerManager == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Peer manager not available");
+        }
+
+        var peers = await _peerManager.GetAvailablePeersAsync();
+        return Ok(peers.Select(p => new PeerInfo
+        {
+            PeerId = p.PeerId,
+            Addresses = p.Addresses.Select(a => a.ToString()).ToList(),
+            LastSeen = p.LastSeen,
+            TrustScore = p.TrustScore,
+            LatencyMs = p.LatencyMs,
+            BandwidthMbps = p.BandwidthMbps,
+            SupportsOnionRouting = p.SupportsOnionRouting,
+            Version = p.Version,
+            QualityScore = p.GetQualityScore()
+        }).ToList());
+    }
+
 /// <summary>
 /// Request to ban an IP.
 /// </summary>
@@ -457,5 +728,80 @@ public sealed class SetTrustTierRequest
 
     /// <summary>Gets or sets the reason.</summary>
     public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Adversarial features statistics.
+/// </summary>
+public sealed class AdversarialStats
+{
+    /// <summary>Gets or sets whether adversarial features are enabled.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Gets or sets the current adversarial profile.</summary>
+    public AdversarialProfile Profile { get; set; }
+
+    /// <summary>Gets or sets whether privacy layer is enabled.</summary>
+    public bool PrivacyEnabled { get; set; }
+
+    /// <summary>Gets or sets whether anonymity layer is enabled.</summary>
+    public bool AnonymityEnabled { get; set; }
+
+    /// <summary>Gets or sets whether obfuscated transport is enabled.</summary>
+    public bool TransportEnabled { get; set; }
+
+    /// <summary>Gets or sets whether onion routing is enabled.</summary>
+    public bool OnionRoutingEnabled { get; set; }
+
+    /// <summary>Gets or sets whether censorship resistance is enabled.</summary>
+    public bool CensorshipResistanceEnabled { get; set; }
+
+    /// <summary>Gets or sets whether plausible deniability is enabled.</summary>
+    public bool PlausibleDeniabilityEnabled { get; set; }
+}
+
+/// <summary>
+/// Request to build a new circuit.
+/// </summary>
+public sealed class BuildCircuitRequest
+{
+    /// <summary>Gets or sets the target peer ID.</summary>
+    public required string TargetPeerId { get; set; }
+
+    /// <summary>Gets or sets the circuit length (number of hops).</summary>
+    public int? CircuitLength { get; set; }
+}
+
+/// <summary>
+/// Information about a mesh peer.
+/// </summary>
+public sealed class PeerInfo
+{
+    /// <summary>Gets or sets the peer ID.</summary>
+    public string PeerId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the peer addresses.</summary>
+    public List<string> Addresses { get; set; } = new();
+
+    /// <summary>Gets or sets when the peer was last seen.</summary>
+    public DateTimeOffset LastSeen { get; set; }
+
+    /// <summary>Gets or sets the trust score.</summary>
+    public double TrustScore { get; set; }
+
+    /// <summary>Gets or sets the latency in milliseconds.</summary>
+    public int LatencyMs { get; set; }
+
+    /// <summary>Gets or sets the bandwidth in Mbps.</summary>
+    public double BandwidthMbps { get; set; }
+
+    /// <summary>Gets or sets whether the peer supports onion routing.</summary>
+    public bool SupportsOnionRouting { get; set; }
+
+    /// <summary>Gets or sets the peer version.</summary>
+    public string Version { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the quality score.</summary>
+    public double QualityScore { get; set; }
 }
 

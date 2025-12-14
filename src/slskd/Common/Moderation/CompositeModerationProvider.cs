@@ -49,6 +49,7 @@ namespace slskd.Common.Moderation
         private readonly IPeerReputationStore? _peerReputation;
         private readonly IExternalModerationClient? _externalClient;
         private readonly IShareRepository? _shareRepository; // T-MCP03: For looking up content items
+        private readonly IModerationProvider? _llmModerationProvider; // T-MCP-LM02: LLM moderation provider
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="CompositeModerationProvider"/> class.
@@ -59,7 +60,8 @@ namespace slskd.Common.Moderation
             IHashBlocklistChecker? hashBlocklist = null,
             IPeerReputationStore? peerReputation = null,
             IExternalModerationClient? externalClient = null,
-            IShareRepository? shareRepository = null) // T-MCP03: Optional injection
+            IShareRepository? shareRepository = null, // T-MCP03: Optional injection
+            IModerationProvider? llmModerationProvider = null) // T-MCP-LM02: Optional LLM provider
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -67,6 +69,7 @@ namespace slskd.Common.Moderation
             _peerReputation = peerReputation;
             _externalClient = externalClient;
             _shareRepository = shareRepository; // T-MCP03
+            _llmModerationProvider = llmModerationProvider; // T-MCP-LM02
         }
 
         /// <inheritdoc/>
@@ -141,7 +144,57 @@ namespace slskd.Common.Moderation
                 }
             }
 
-            // 3. DEFAULT: No blockers found
+            // 3. LLM MODERATION (T-MCP-LM02)
+            if (_llmModerationProvider != null && opts.LlmModeration.Enabled)
+            {
+                try
+                {
+                    _logger.LogDebug("[MCP] Calling LLM moderation provider for file | Id={Id}", file.Id);
+
+                    var llmDecision = await _llmModerationProvider.CheckLocalFileAsync(file, ct);
+
+                    // Only override with LLM decision if it's definitive (not Unknown)
+                    if (llmDecision.Verdict != ModerationVerdict.Unknown)
+                    {
+                        if (llmDecision.IsBlocking())
+                        {
+                            _logger.LogWarning(
+                                "[SECURITY] MCP LLM moderation blocked | InternalId={Id} | Reason={Reason}",
+                                file.Id,
+                                llmDecision.Reason);
+
+                            return llmDecision;
+                        }
+
+                        // For allowed content, log but continue (LLM is not authoritative for allowing)
+                        _logger.LogDebug(
+                            "[MCP] LLM moderation allowed | InternalId={Id} | Reason={Reason}",
+                            file.Id,
+                            llmDecision.Reason);
+                    }
+                    else
+                    {
+                        _logger.LogDebug(
+                            "[MCP] LLM moderation inconclusive, continuing to next provider | InternalId={Id}",
+                            file.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[SECURITY] LLM moderation provider failed | Id={Id}", file.Id);
+
+                    // FAILSAFE: Apply configured fallback behavior
+                    var fallback = opts.LlmModeration.FallbackBehavior;
+                    if (fallback == "block")
+                    {
+                        _logger.LogWarning("[SECURITY] LLM failsafe mode 'block' activated for file | Id={Id}", file.Id);
+                        return ModerationDecision.Block("llm_provider_failed_failsafe_block");
+                    }
+                    // For "allow" or "pass_to_next_provider", continue to default
+                }
+            }
+
+            // 4. DEFAULT: No blockers found
             return ModerationDecision.Unknown("no_blockers_triggered");
         }
 

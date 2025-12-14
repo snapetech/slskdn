@@ -410,7 +410,7 @@ What Pods **ARE NOT**:
 - Torrent indexes or magnet link feeds
 - Public "download everything" hubs
 - Auto-posting bots for new releases
-- Direct file-sharing mechanisms
+- Direct community content sharing mechanisms
 
 **Implementation Guardrails**:
 1. No "paste magnet and share" UI
@@ -500,7 +500,7 @@ This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdilli
 
 ### Protocol & Metadata
 
-- **Soulseek Protocol** - P2P file-sharing protocol by Nir Arbel
+- **Soulseek Protocol** - P2P community service protocol by Nir Arbel
 - **[MusicBrainz](https://musicbrainz.org/)** - Open music encyclopedia for metadata
 - **[Cover Art Archive](https://coverartarchive.org/)** - Album art for verified releases
 

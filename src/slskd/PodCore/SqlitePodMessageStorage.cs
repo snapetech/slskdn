@@ -22,6 +22,7 @@ public class SqlitePodMessageStorage : IPodMessageStorage
     private readonly PodDbContext dbContext;
     private readonly ILogger<SqlitePodMessageStorage> logger;
     private readonly string connectionString;
+    private bool initialized;
 
     private const int DefaultMessageLimit = 100;
     private const int MaxMessageLimit = 1000;
@@ -36,8 +37,18 @@ public class SqlitePodMessageStorage : IPodMessageStorage
         this.logger = logger;
         connectionString = dbContext.Database.GetConnectionString();
 
-        // Ensure FTS table and triggers exist
-        InitializeFtsTables().GetAwaiter().GetResult();
+        // FTS tables will be initialized lazily on first use
+    }
+
+    private async Task EnsureInitializedAsync(CancellationToken ct = default)
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        await InitializeFtsTables();
+        initialized = true;
     }
 
     public async Task<bool> StoreMessageAsync(string podId, string channelId, PodMessage message, CancellationToken ct = default)
@@ -54,6 +65,9 @@ public class SqlitePodMessageStorage : IPodMessageStorage
             logger.LogWarning("Invalid channel ID in StoreMessageAsync: {ChannelId}", channelId);
             return false;
         }
+
+        // Ensure FTS tables are initialized
+        await EnsureInitializedAsync(ct);
 
         var (isValid, error) = PodValidation.ValidateMessage(message);
         if (!isValid)

@@ -124,22 +124,22 @@ namespace slskd.VirtualSoulfind.v2.Matching
             });
         }
 
-        public Task<MatchResult> VerifyAsync(
+        public async Task<MatchResult> VerifyAsync(
             Track track,
             CandidateFileMetadata candidate,
             CancellationToken cancellationToken = default)
         {
             // Verification is stricter - we want at least Strong confidence
-            var matchResult = MatchAsync(track, candidate, cancellationToken).Result;
+            var matchResult = await MatchAsync(track, candidate, cancellationToken);
 
             if (matchResult.Confidence < MatchConfidence.Strong)
             {
-                return Task.FromResult(new MatchResult
+                return new MatchResult
                 {
                     Confidence = MatchConfidence.None,
                     Score = 0.0,
                     Reason = $"Verification failed: only {matchResult.Confidence} confidence",
-                });
+                };
             }
 
             return Task.FromResult(matchResult);

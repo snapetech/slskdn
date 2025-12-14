@@ -11,6 +11,7 @@ import Browse from './Browse/Browse';
 import Chat from './Chat/Chat';
 import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
+import PortForwarding from './PortForwarding/PortForwarding';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
 import {
@@ -436,6 +437,12 @@ class App extends Component {
                     Rooms
                   </Menu.Item>
                 </Link>
+                <Link to={`${urlBase}/port-forwarding`}>
+                  <Menu.Item>
+                    <Icon name="exchange" />
+                    Port Forwarding
+                  </Menu.Item>
+                </Link>
                 <Link to={`${urlBase}/chat`}>
                   <Menu.Item>
                     <Icon name="comment" />
@@ -652,6 +659,12 @@ class App extends Component {
                     path={`${urlBase}/pods/:podId?/channels/:channelId?`}
                     render={(props) =>
                       this.withTokenCheck(<Pods {...props} />)
+                    }
+                  />
+                  <Route
+                    path={`${urlBase}/port-forwarding`}
+                    render={(props) =>
+                      this.withTokenCheck(<PortForwarding {...props} />)
                     }
                   />
                   <Route

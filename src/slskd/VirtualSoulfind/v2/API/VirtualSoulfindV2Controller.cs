@@ -84,7 +84,26 @@ namespace slskd.VirtualSoulfind.v2.API
                 return BadRequest(ModelState);
             }
 
+            // H-VF01: Validate ContentDomain and required fields
+            if (!VirtualSoulfindValidation.IsValidContentDomain(request.Domain, out var domainError))
+            {
+                return BadRequest(domainError);
+            }
+
+            if (!VirtualSoulfindValidation.ValidateRequiredFields(
+                request.Domain, request.TrackId, null, null, out var fieldError))
+            {
+                return BadRequest(fieldError);
+            }
+
+            if (!VirtualSoulfindValidation.ValidateTrackIdFormat(
+                request.Domain, request.TrackId, out var formatError))
+            {
+                return BadRequest(formatError);
+            }
+
             var intent = await _intentQueue.EnqueueTrackAsync(
+                request.Domain,
                 request.TrackId,
                 request.Priority,
                 request.ParentDesiredReleaseId,
@@ -391,6 +410,12 @@ namespace slskd.VirtualSoulfind.v2.API
     /// </summary>
     public sealed class EnqueueTrackRequest
     {
+        /// <summary>
+        ///     Gets or sets the content domain.
+        /// </summary>
+        [Required]
+        public ContentDomain Domain { get; set; } = ContentDomain.Music;
+
         /// <summary>
         ///     Gets or sets the track ID.
         /// </summary>

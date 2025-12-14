@@ -8,7 +8,7 @@
     <projectUrl>https://github.com/snapetech/slskdn</projectUrl>
     <licenseUrl>https://github.com/snapetech/slskdn/blob/master/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <tags>slskdn soulseek p2p file-sharing music</tags>
+    <tags>slskdn soulseek p2p community-service content-sharing</tags>
     <summary>Batteries-included Soulseek web client</summary>
     <description>An experimental fork of slskd exploring advanced download features, protocol extensions, and network enhancements for Soulseek.</description>
   </metadata>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.slskd.slskdn</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>slskdN</name>
+  <summary>A decentralized mesh community service for Soulseek with VPN and advanced networking</summary>
+
+  <description>
+    <p>
+      slskdN is a modern, private, decentralized mesh community service for Soulseek,
+      written in C#. It's a fork of the original slskd project with enhanced features including:
+    </p>
+    <ul>
+      <li>Pod-scoped VPN for secure private networking between trusted community members</li>
+      <li>Multi-source content delivery from multiple community peers simultaneously</li>
+      <li>Decentralized mesh overlay network for peer discovery and community coordination</li>
+      <li>Advanced search with MusicBrainz integration for content discovery</li>
+      <li>Privacy features with Tor/I2P transport support and traffic analysis protection</li>
+      <li>Enterprise-grade security with certificate pinning and rate limiting</li>
+      <li>Modern web interface for easy management and VPN configuration</li>
+      <li>RESTful API for automation and community service integration</li>
+      <li>Anonymous transports (WebSocket, HTTP tunnel, Obfs4, Meek)</li>
+    </ul>
+    <p>
+      slskdN prioritizes user privacy and network health while providing enterprise-grade
+      security features and VPN capabilities for secure, private decentralized community services.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">slskdn.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>slskdN Web Interface</caption>
+      <image>https://raw.githubusercontent.com/slskd/slskd/main/docs/images/web-ui.png</image>
+    </screenshot>
+  </screenshots>
+
+  <categories>
+    <category>Network</category>
+    <category>FileTransfer</category>
+  </categories>
+
+  <keywords>
+    <keyword>soulseek</keyword>
+    <keyword>p2p</keyword>
+    <keyword>community-service</keyword>
+    <keyword>content-sharing</keyword>
+    <keyword>decentralized</keyword>
+    <keyword>privacy</keyword>
+    <keyword>vpn</keyword>
+    <keyword>tor</keyword>
+    <keyword>anonymous</keyword>
+    <keyword>mesh-networking</keyword>
+    <keyword>secure</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/slskd/slskd</url>
+  <url type="bugtracker">https://github.com/slskd/slskd/issues</url>
+  <url type="help">https://github.com/slskd/slskd/wiki</url>
+
+  <provides>
+    <binary>slskdn</binary>
+  </provides>
+
+  <developer_name>slskdN Team</developer_name>
+
+  <releases>
+    <release version="0.1.0" date="2025-12-13" type="stable">
+      <description>
+        <p>Pod-Scoped VPN and Advanced Networking Release.</p>
+        <p>This major release introduces enterprise-grade VPN capabilities and comprehensive networking features for secure, private decentralized community services.</p>
+        <ul>
+          <li><em>Pod-Scoped VPN:</em> Secure private networking between trusted community members with encrypted tunnels</li>
+          <li><em>Mesh Overlay Network:</em> Decentralized peer discovery and community coordination</li>
+          <li><em>Anonymous Transports:</em> Tor, I2P, WebSocket, HTTP tunnel, Obfs4, and Meek protocol support</li>
+          <li><em>Privacy Layer:</em> Traffic analysis protection with message padding, timing obfuscation, and batching</li>
+          <li><em>Enterprise Security:</em> Certificate pinning, rate limiting, comprehensive threat mitigation</li>
+          <li><em>Enhanced Web UI:</em> Modern interface for VPN configuration and community management</li>
+          <li><em>Content Moderation:</em> Peer reputation system and content filtering</li>
+          <li><em>Multi-Source Delivery:</em> Efficient peer-to-peer content distribution from multiple sources</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.0.1" date="2025-01-01" type="stable">
+      <description>
+        <p>Initial Flatpak release with core Soulseek functionality.</p>
+        <ul>
+          <li>Complete Soulseek network integration</li>
+          <li>Modern web interface for easy management</li>
+          <li>Multi-source download support for efficient transfers</li>
+          <li>Basic privacy and security features</li>
+          <li>RESTful API for automation and integration</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">moderate</content_attribute>
+    <content_attribute id="social-info">mild</content_attribute>
+  </content_rating>
+</component>

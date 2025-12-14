@@ -1,0 +1,129 @@
+{
+  "schemaVersion": "1.0",
+  "description": "Test coverage baseline configuration for slskdN",
+  "minimumOverallCoverage": 0.75,
+  "subsystemBaselines": {
+    "VirtualSoulfind.Core": {
+      "minimumMethodCoverage": 0.85,
+      "minimumClassCoverage": 0.80,
+      "description": "Content resolution and matching core logic"
+    },
+    "VirtualSoulfind.v2.Planning": {
+      "minimumMethodCoverage": 0.90,
+      "minimumClassCoverage": 0.85,
+      "description": "Download planning and peer selection algorithms"
+    },
+    "VirtualSoulfind.v2.Matching": {
+      "minimumMethodCoverage": 0.85,
+      "minimumClassCoverage": 0.80,
+      "description": "Content matching and fingerprinting logic"
+    },
+    "Common.Moderation": {
+      "minimumMethodCoverage": 0.90,
+      "minimumClassCoverage": 0.85,
+      "description": "Content filtering and peer reputation systems"
+    },
+    "Mesh.ServiceFabric": {
+      "minimumMethodCoverage": 0.80,
+      "minimumClassCoverage": 0.75,
+      "description": "Overlay networking and service fabric"
+    },
+    "PodCore": {
+      "minimumMethodCoverage": 0.85,
+      "minimumClassCoverage": 0.80,
+      "description": "Decentralized messaging and pod management"
+    },
+    "Common.Security": {
+      "minimumMethodCoverage": 0.90,
+      "minimumClassCoverage": 0.85,
+      "description": "Security utilities and validation"
+    },
+    "Mesh.Transport": {
+      "minimumMethodCoverage": 0.80,
+      "minimumClassCoverage": 0.75,
+      "description": "Transport layer abstraction and protocols"
+    },
+    "Mesh.Mesh": {
+      "minimumMethodCoverage": 0.75,
+      "minimumClassCoverage": 0.70,
+      "description": "Mesh networking core logic"
+    },
+    "Transfers.MultiSource": {
+      "minimumMethodCoverage": 0.85,
+      "minimumClassCoverage": 0.80,
+      "description": "Multi-source download orchestration"
+    },
+    "Relay": {
+      "minimumMethodCoverage": 0.80,
+      "minimumClassCoverage": 0.75,
+      "description": "Content relay and distribution services"
+    },
+    "DhtRendezvous": {
+      "minimumMethodCoverage": 0.75,
+      "minimumClassCoverage": 0.70,
+      "description": "Peer discovery and DHT operations"
+    },
+    "HashDb": {
+      "minimumMethodCoverage": 0.80,
+      "minimumClassCoverage": 0.75,
+      "description": "Content hashing and storage"
+    }
+  },
+  "riskBasedPriorities": {
+    "highRiskMethods": [
+      "*encrypt*",
+      "*decrypt*",
+      "*authenticate*",
+      "*authorize*",
+      "*validate*",
+      "*parse*",
+      "*execute*",
+      "*query*"
+    ],
+    "mediumRiskMethods": [
+      "*save*",
+      "*delete*",
+      "*update*",
+      "*create*",
+      "*send*",
+      "*receive*"
+    ]
+  },
+  "exclusions": {
+    "assemblies": [
+      "slskd.Common.CodeQuality",
+      "slskd.Web",
+      "Test assemblies"
+    ],
+    "types": [
+      "*Test*",
+      "*Mock*",
+      "*Stub*",
+      "*Controller",
+      "*ViewModel",
+      "*Dto",
+      "*Model"
+    ],
+    "methods": [
+      "ToString",
+      "GetHashCode",
+      "Equals",
+      "GetType",
+      "Main",
+      "Configure*",
+      "Register*"
+    ]
+  },
+  "reporting": {
+    "formats": ["json", "markdown", "html"],
+    "includeUncoveredMethods": true,
+    "maxUncoveredMethods": 50,
+    "groupByRiskLevel": true
+  },
+  "buildIntegration": {
+    "failOnRegression": true,
+    "failOnLowCoverage": true,
+    "generateReports": true,
+    "reportDirectory": "artifacts/coverage-reports"
+  }
+}

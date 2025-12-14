@@ -1,0 +1,30 @@
+apiVersion: v2
+name: slskdn
+description: A decentralized mesh community service for Soulseek with advanced VPN, privacy features, and peer networking - Next Generation
+type: application
+version: 0.2.0
+appVersion: "latest"
+keywords:
+  - p2p
+  - mesh-networking
+  - soulseek
+  - community-service
+  - decentralized
+home: https://github.com/slskd/slskd
+sources:
+  - https://github.com/slskd/slskd
+maintainers:
+  - name: slskdN Team
+    email: contact@slskdn.team
+annotations:
+  truecharts.org/category: media
+  truecharts.org/max_helm_version: "3.13"
+  truecharts.org/min_helm_version: "3.10"
+dependencies:
+  - name: common
+    version: 16.2.7
+    repository: https://library-charts.truecharts.org
+    condition: ""
+    alias: ""
+    tags: []
+    import-values: []

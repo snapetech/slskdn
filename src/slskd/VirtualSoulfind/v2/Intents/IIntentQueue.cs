@@ -44,6 +44,7 @@ namespace slskd.VirtualSoulfind.v2.Intents
         ///     Enqueue a track intent.
         /// </summary>
         Task<DesiredTrack> EnqueueTrackAsync(
+            ContentDomain domain,
             string trackId,
             IntentPriority priority = IntentPriority.Normal,
             string? parentDesiredReleaseId = null,

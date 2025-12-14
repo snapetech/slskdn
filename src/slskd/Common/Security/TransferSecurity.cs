@@ -329,7 +329,7 @@ public sealed class TransferSecurity
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to quarantine file: {Path}", filePath);
+            _logger.LogError(ex, "Failed to quarantine file: {SanitizedPath}", LoggingSanitizer.SanitizeFilePath(filePath));
             return null;
         }
     }

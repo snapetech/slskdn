@@ -17,7 +17,7 @@ Conflicts: slskd
 Replaces: slskd
 Description: 🔋 The batteries included, EXPERIMENTAL fork of slskd
  Feature-rich, including wishlist, smart ranking, tabbed browsing,
- notifications, and more. Modern web UI for the Soulseek file sharing
+ notifications, and more. Modern web UI for the Soulseek community service
  network.
  .
  Features include:

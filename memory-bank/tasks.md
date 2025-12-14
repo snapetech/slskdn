@@ -1579,47 +1579,47 @@
   - Branch: experimental/brainz
   - Notes: React settings panel skeleton: Settings → Privacy & Security. Preset selector (Standard/Enhanced/Maximum), expandable sections.
 
-- [ ] **T-1210**: Implement BucketPadder (message padding)
-  - Status: Not started
+- [x] **T-1210**: Implement BucketPadder (message padding)
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Pad messages to fixed bucket sizes (512, 1024, 2048, 4096, 8192, 16384 bytes). Use random fill bytes (not zeros) to prevent compression attacks. IMessagePadder interface.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented BucketPadder with fixed bucket sizes (512-16384 bytes), random fill bytes, and length header. Includes standard bucket sizes and utility methods.
 
-- [ ] **T-1211**: Implement RandomJitterObfuscator (timing)
-  - Status: Not started
+- [x] **T-1211**: Implement RandomJitterObfuscator (timing)
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Add configurable random delay (0-500ms default) to all outbound messages. ITimingObfuscator interface. Prevents timing correlation attacks.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented timing obfuscator with configurable delay ranges (0-1000ms), cryptographically secure random delays, and preset configurations for different privacy levels.
 
-- [ ] **T-1212**: Implement TimedBatcher (message batching)
-  - Status: Not started
+- [x] **T-1212**: Implement TimedBatcher (message batching)
+  - Status: Done (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Hold messages for configurable window (e.g., 2 seconds), send as batch. Prevents frequency analysis. IMessageBatcher interface.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented time-window message batching with configurable windows (0.5-10s) and max batch sizes (3-50). Thread-safe with proper locking and flush capabilities.
 
-- [ ] **T-1213**: Implement CoverTrafficGenerator
-  - Status: Not started
+- [x] **T-1213**: Implement CoverTrafficGenerator
+  - Status: Done (2025-12-13)
   - Priority: P3
-  - Branch: experimental/brainz
-  - Notes: Send dummy messages when idle (configurable interval, e.g., 30 seconds). Makes traffic patterns constant regardless of actual activity.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented constant traffic pattern generator with configurable intervals (5-60s), jitter, and activity-based suppression. Generates dummy messages to prevent traffic analysis.
 
-- [ ] **T-1214**: Integrate privacy layer with overlay messaging
-  - Status: Not started
+- [x] **T-1214**: Integrate privacy layer with overlay messaging
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Wire IPrivacyLayer into ControlDispatcher, QuicOverlayClient, UdpOverlayClient. All outbound messages pass through privacy transforms when enabled.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Fully integrated IPrivacyLayer into ControlDispatcher (inbound unpadding), QuicOverlayClient/UdpOverlayClient (outbound padding/timing/batching), and PodMessageRouter. All overlay messages pass through privacy transforms when enabled. Updated DI registrations to inject privacy layer.
 
-- [ ] **T-1215**: Add privacy layer unit tests
-  - Status: Not started
+- [x] **T-1215**: Add privacy layer unit tests
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Test padding bucket selection, random fill, timing distribution, batch accumulation, cover traffic intervals.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Comprehensive unit tests for all privacy components: BucketPadder (padding/unpadding, round-trip), RandomJitterObfuscator (delay ranges, presets), TimedBatcher (time/size triggers, batch management), CoverTrafficGenerator (intervals, activity suppression).
 
-- [ ] **T-1216**: Add privacy layer integration tests
-  - Status: Not started
+- [x] **T-1216**: Add privacy layer integration tests
+  - Status: Done (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: End-to-end tests: message round-trip with padding enabled, timing jitter verification, batch delivery.
+  - Branch: experimental/whatAmIThinking
+  - Notes: End-to-end integration tests: PrivacyLayerIntegrationTests (component interaction, round-trip transforms, configuration updates), OverlayPrivacyIntegrationTests (ControlDispatcher + overlay clients with privacy layer, message flow validation).
 
 - [ ] **T-1217**: Write privacy layer user documentation
   - Status: Not started
@@ -1647,11 +1647,11 @@
   - Branch: experimental/brainz
   - Notes: Never make direct connections; always route through trusted relay nodes within mesh. User never reveals IP to destination peer.
 
-- [ ] **T-1223**: Add Tor connectivity status to WebGUI
-  - Status: Not started
+- [x] **T-1223**: Add Tor connectivity status to WebGUI
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Status indicator (connected/disconnected/error), circuit info, SOCKS address/port configuration fields.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Added Tor status indicator to AdversarialSettings overview tab with connectivity status, last error, connection statistics, and test connectivity button. Integrated with SecurityController API endpoints.
 
 - [ ] **T-1224**: Implement stream isolation
   - Status: Not started
@@ -1659,11 +1659,11 @@
   - Branch: experimental/brainz
   - Notes: Use different Tor circuits per peer (via SOCKS5 auth). Prevents correlation of connections to same peer.
 
-- [ ] **T-1225**: Add anonymity transport selection logic
-  - Status: Not started
+- [x] **T-1225**: Add anonymity transport selection logic
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Transport priority: Direct (if not anonymity mode) → Tor → I2P → Relay. Fallback on failure.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Implemented policy-aware transport selection with TransportPolicyManager integration. AnonymityTransportSelector now considers per-peer/per-pod policies for PreferPrivateTransports, DisableClearnet, and custom preference orders. Added IAnonymityTransportSelector interface and comprehensive test coverage.
 
 - [ ] **T-1226**: Integrate with MeshTransportService
   - Status: Not started
@@ -2094,11 +2094,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Replaced TraceRoutesAsync placeholder with actual routing diagnostics including hop latencies and transport analysis.
 
-- [ ] **T-1311**: Implement mesh stats collection
-  - Status: Not started
+- [x] **T-1311**: Implement mesh stats collection
+  - Status: Done (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Replace hardcoded values. Track real peer count, messages sent/received, DHT ops/sec.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented with MeshStatsCollector.cs and MeshStatsController.cs providing real statistics for peer count, messages, DHT operations, etc.
 
 - [x] **T-1312**: Add mesh health monitoring
   - Status: Completed (2025-12-13)
@@ -2308,11 +2308,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Already implemented in SoulseekChatBridge.cs with mirror mode and bidirectional forwarding.
 
-- [ ] **T-1358**: Implement Soulseek identity mapping
-  - Status: Not started
+- [x] **T-1358**: Implement Soulseek identity mapping
+  - Status: Done (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Map soulseek:username to synthetic PeerId. Optional verification linking.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Already implemented in SoulseekChatBridge.cs with RegisterIdentityMapping, MapSoulseekToPodPeerId, and MapPodToSoulseekUsername methods.
 
 - [x] **T-1359**: Create Pod API endpoints
   - Status: Done (2025-12-13)
@@ -2343,6 +2343,12 @@
   - Priority: P1
   - Branch: experimental/whatAmIThinking
   - Notes: Created IPrivacyLayer interface for composable privacy transformations with TransformOutboundAsync/TransformInboundAsync methods.
+
+- [x] **T-1202**: Add adversarial section to WebGUI settings
+  - Status: Done (2025-12-13)
+  - Priority: P1
+  - Branch: experimental/whatAmIThinking
+  - Notes: Created comprehensive AdversarialSettings React component with tabbed interface for Privacy, Anonymity, and Transport layers. Added to Security tab with API endpoints.
 
 - [ ] **T-1362**: Add PodCore unit tests
   - Status: Not started
@@ -2493,25 +2499,25 @@
 
 ## Packaging & Distribution
 
-- [ ] **T-010**: TrueNAS SCALE Apps
-  - Status: Not started
+- [x] **T-010**: TrueNAS SCALE Apps
+  - Status: Done
   - Priority: High
-  - Notes: Helm chart or ix-chart format
+  - Notes: TrueCharts Helm chart enhanced with VPN features, mesh networking, and enterprise configuration options
 
-- [ ] **T-011**: Synology Package Center
-  - Status: Not started
+- [x] **T-011**: Synology Package Center
+  - Status: Done
   - Priority: High
-  - Notes: SPK format, cross-compile for ARM/x86
+  - Notes: SPK package enhanced with VPN features, mesh networking, and enterprise configuration options
 
-- [ ] **T-012**: Homebrew Formula
-  - Status: Not started
+- [x] **T-012**: Homebrew Formula
+  - Status: Done
   - Priority: High
-  - Notes: macOS package manager support
+  - Notes: Homebrew formula enhanced with VPN features, mesh networking, and comprehensive documentation
 
-- [ ] **T-013**: Flatpak (Flathub)
-  - Status: Not started
+- [x] **T-013**: Flatpak (Flathub)
+  - Status: Done
   - Priority: High
-  - Notes: Universal Linux packaging
+  - Notes: Flatpak package enhanced with VPN features, mesh networking, and comprehensive metadata for Flathub
 
 ---
 
@@ -2617,6 +2623,143 @@
 - [x] **T-109**: Push Notifications
   - Status: Done (Release .8)
   - Notes: Ntfy, Pushover, Pushbullet
+
+---
+
+# 🚀 Phase 14: Tier-1 Pod-Scoped Private Service Network (VPN-like Utility)
+
+## Overview
+Implement "Tailscale-like utility" for pod-private service access without becoming an internet exit node. Only pod members can securely reach specific private services hosted behind another pod member's network, with strict opt-in policies and security controls.
+
+**Key Properties:**
+- Only two endpoints carry traffic: Client ↔ Gateway peer over authenticated overlay
+- No third-party relays; no multi-hop routing; no public advertisement
+- Strictly opt-in with hard caps (pods ≤ 3 members for MVP)
+- No "internet egress" - only explicit allowlisted private destinations
+
+## Implementation Tasks
+
+### T-1400: Pod Policy Model & Persistence
+- [ ] **T-1400**: Add PodCapability.PrivateServiceGateway and policy fields
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Add capability flags, gateway peer ID, allowed destinations, private range policies, and quotas to pod models
+- [ ] **T-1401**: Update pod create/update API for gateway policies
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Add policy fields to API with gateway-only edit permissions, enforce MaxMembers ≤ 3
+- [ ] **T-1402**: Implement pod capability validation
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Validate capability requirements, enforce member limits, require non-empty allowlists
+
+### T-1410: Gateway Service Implementation
+- [ ] **T-1410**: Add "private-gateway" service to ServiceFabric
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Implement OpenTunnel, data forwarding, CloseTunnel methods over authenticated overlay
+- [ ] **T-1411**: Implement OpenTunnel validation logic
+  - Status: pending
+  - Priority: P0
+  - Branch: experimental/pod-vpn
+  - Notes: Identity checks, pod membership gates, destination allowlist validation, private range policies
+- [ ] **T-1412**: Implement TCP tunnel data forwarding
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Choose between QUIC stream multiplexing or framed messages, implement bidirectional forwarding
+- [ ] **T-1413**: Add DNS resolution and rebinding protection
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Resolve hostnames on gateway, validate resolved IPs, implement rebinding defense
+
+### T-1420: Security Hardening & Validation
+- [ ] **T-1420**: Implement IP range classifier
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Classify private/reserved/local/metadata IPs, block dangerous ranges by default
+- [ ] **T-1421**: Add strict input validation functions
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Hostname charset validation, length limits, port range checks, constant-time comparisons
+- [ ] **T-1422**: Implement quotas and rate limits
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Per-peer and per-pod tunnel limits, rate limiting, timeouts, backoff for failures
+
+### T-1430: Client-Side Implementation
+- [ ] **T-1430**: Implement client local port forward
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Local listener on 127.0.0.1:<ephemeral>, bridge local connections to tunnel streams
+- [ ] **T-1431**: Add client tunnel management UI
+  - Status: pending
+  - Priority: P2
+  - Branch: experimental/pod-vpn
+  - Notes: Display available destinations from pod policy, select gateway peer, manage active tunnels
+- [ ] **T-1432**: Implement client-side tunnel lifecycle
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Open tunnels, handle data forwarding, close tunnels gracefully, error handling
+
+### T-1440: Testing & Validation
+- [ ] **T-1440**: Pod policy enforcement tests
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Members > 3 cannot enable, cannot open tunnels; membership gate denies non-members
+- [ ] **T-1441**: Destination allowlist tests
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Default-deny behavior, exact allow matches succeed, private range restrictions
+- [ ] **T-1442**: Security hardening tests
+  - Status: pending
+  - Priority: P1
+  - Branch: experimental/pod-vpn
+  - Notes: Metadata IP always denied, SSRF protections, rate limit enforcement, timeout handling
+- [ ] **T-1443**: Integration tests
+  - Status: pending
+  - Priority: P2
+  - Branch: experimental/pod-vpn
+  - Notes: End-to-end tunnel creation, data forwarding, client port forwarding, concurrent tunnel handling
+
+### T-1450: Documentation & User Experience
+- [ ] **T-1450**: Write user documentation
+  - Status: pending
+  - Priority: P2
+  - Branch: experimental/pod-vpn
+  - Notes: Gateway setup guide, client usage instructions, security considerations, troubleshooting
+- [ ] **T-1451**: Add WebGUI pod VPN management
+  - Status: pending
+  - Priority: P2
+  - Branch: experimental/pod-vpn
+  - Notes: Pod settings for gateway configuration, destination allowlist management, client tunnel interface
+- [ ] **T-1452**: Implement logging and monitoring
+  - Status: pending
+  - Priority: P2
+  - Branch: experimental/pod-vpn
+  - Notes: Minimal default logging, debug mode for detailed logs, tunnel statistics, security event logging
+
+## Phase 14 Summary
+- **Total Tasks**: 21
+- **Completed**: 0 (0%)
+- **In Progress**: 0
+- **Pending**: 21 (100%)
+- **Priority Breakdown**:
+  - P0: 1 task (5%)
+  - P1: 16 tasks (76%)
+  - P2: 4 tasks (19%)
 
 ---
 

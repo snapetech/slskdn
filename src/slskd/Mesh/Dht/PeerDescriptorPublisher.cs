@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Transport;
+using static slskd.Mesh.TransportType;
 
 namespace slskd.Mesh.Dht;
 
@@ -25,17 +27,23 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     private readonly MeshOptions options;
     private readonly INatDetector natDetector;
     private readonly Mesh.ServiceFabric.Services.HolePunchMeshService? holePunchService;
+    private readonly MeshTransportOptions transportOptions;
+    private readonly DescriptorSigningService signingService;
 
     public PeerDescriptorPublisher(
         ILogger<PeerDescriptorPublisher> logger,
         IMeshDhtClient dht,
         IOptions<MeshOptions> options,
-        INatDetector natDetector)
+        INatDetector natDetector,
+        IOptions<MeshTransportOptions> transportOptions,
+        DescriptorSigningService signingService)
     {
         this.logger = logger;
         this.dht = dht;
         this.options = options.Value;
         this.natDetector = natDetector;
+        this.transportOptions = transportOptions.Value;
+        this.signingService = signingService;
     }
 
     /// <summary>
@@ -83,6 +91,43 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     {
         var nat = await natDetector.DetectAsync(ct);
 
+        // Build legacy endpoints for backward compatibility
+        var legacyEndpoints = await BuildLegacyEndpointsAsync(ct);
+
+        // Build transport endpoints based on configuration and privacy settings
+        var transportEndpoints = BuildTransportEndpoints();
+
+        // Determine sequence number for anti-rollback protection
+        var sequenceNumber = signingService.GetLastAcceptedSequence(options.SelfPeerId) + 1;
+
+        var descriptor = new MeshPeerDescriptor
+        {
+            PeerId = options.SelfPeerId,
+            Endpoints = legacyEndpoints,
+            NatType = nat.ToString().ToLowerInvariant(),
+            RelayRequired = nat == NatType.Symmetric,
+            SequenceNumber = sequenceNumber,
+            TransportEndpoints = transportEndpoints,
+            // TODO: Add certificate pins and signing keys when identity system is complete
+            CertificatePins = new List<string>(),
+            ControlSigningKeys = new List<string>()
+        };
+
+        // Sign the descriptor
+        var signature = signingService.SignDescriptor(descriptor, new byte[32]); // TODO: Use actual private key
+        descriptor.Signature = signature;
+
+        var key = $"mesh:peer:{descriptor.PeerId}";
+        var ttlSeconds = options.PeerDescriptorRefresh.DescriptorTtlSeconds;
+        await dht.PutAsync(key, descriptor, ttlSeconds: ttlSeconds, ct: ct);
+
+        logger.LogInformation("[MeshDHT] Published self descriptor {PeerId} seq={Sequence} endpoints={LegacyCount} transports={TransportCount} privacy={PrivacyMode}",
+            descriptor.PeerId, descriptor.SequenceNumber, descriptor.Endpoints.Count, descriptor.TransportEndpoints.Count,
+            transportOptions.Tor.PrivacyModeNoClearnetAdvertise ? "enabled" : "disabled");
+    }
+
+    private async Task<List<string>> BuildLegacyEndpointsAsync(CancellationToken ct)
+    {
         // Start with configured endpoints
         var endpoints = new List<string>(options.SelfEndpoints);
 
@@ -112,18 +157,76 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             endpoints.AddRange(options.RelayEndpoints);
         }
 
-        var descriptor = new MeshPeerDescriptor
-        {
-            PeerId = options.SelfPeerId,
-            Endpoints = endpoints.Distinct().ToList(), // Remove duplicates
-            NatType = nat.ToString().ToLowerInvariant(),
-            RelayRequired = nat == NatType.Symmetric
-        };
+        return endpoints.Distinct().ToList();
+    }
 
-        var key = $"mesh:peer:{descriptor.PeerId}";
-        var ttlSeconds = options.PeerDescriptorRefresh.DescriptorTtlSeconds;
-        await dht.PutAsync(key, descriptor, ttlSeconds: ttlSeconds, ct: ct);
-        logger.LogInformation("[MeshDHT] Published self descriptor {PeerId} endpoints={Count} nat={Nat}", descriptor.PeerId, descriptor.Endpoints.Count, descriptor.NatType);
+    private List<TransportEndpoint> BuildTransportEndpoints()
+    {
+        var endpoints = new List<TransportEndpoint>();
+
+        // Add direct QUIC endpoint if enabled and not in privacy mode
+        if (transportOptions.EnableDirect && !transportOptions.Tor.PrivacyModeNoClearnetAdvertise)
+        {
+            // Use detected network endpoints for direct connectivity
+            var detectedEndpoints = DetectNetworkEndpoints();
+            foreach (var endpointStr in detectedEndpoints)
+            {
+                try
+                {
+                    // Parse "host:port" format
+                    var parts = endpointStr.Split(':');
+                    if (parts.Length == 2 && int.TryParse(parts[1], out var port))
+                    {
+                        endpoints.Add(new TransportEndpoint
+                        {
+                            TransportType = TransportType.DirectQuic,
+                            Host = parts[0],
+                            Port = port,
+                            Scope = TransportScope.ControlAndData,
+                            Preference = 0, // Highest preference for direct
+                            Cost = 0
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to create direct QUIC endpoint from {Endpoint}", endpointStr);
+                }
+            }
+        }
+
+        // Add Tor onion endpoint if enabled and configured
+        if (transportOptions.Tor.Enabled && transportOptions.Tor.AdvertiseOnion && !string.IsNullOrEmpty(transportOptions.Tor.OnionAddress))
+        {
+            endpoints.Add(new TransportEndpoint
+            {
+                TransportType = TransportType.TorOnionQuic,
+                Host = transportOptions.Tor.OnionAddress,
+                Port = transportOptions.Tor.OnionPort ?? 443, // Default onion port
+                Scope = transportOptions.Tor.AllowDataOverTor ? TransportScope.ControlAndData : TransportScope.Control,
+                Preference = 1, // Second preference after direct
+                Cost = 10 // Higher cost due to latency
+            });
+        }
+
+        // Add I2P endpoint if enabled and configured
+        if (transportOptions.I2P.Enabled && transportOptions.I2P.AdvertiseI2P && !string.IsNullOrEmpty(transportOptions.I2P.DestinationAddress))
+        {
+            endpoints.Add(new TransportEndpoint
+            {
+                TransportType = TransportType.I2PQuic,
+                Host = transportOptions.I2P.DestinationAddress,
+                Port = 443, // Standard port for I2P destinations
+                Scope = transportOptions.I2P.AllowDataOverI2p ? TransportScope.ControlAndData : TransportScope.Control,
+                Preference = 2, // Third preference
+                Cost = 15 // Even higher cost due to I2P latency
+            });
+        }
+
+        logger.LogDebug("Built {Count} transport endpoints: {Endpoints}",
+            endpoints.Count, string.Join(", ", endpoints.Select(e => $"{e.TransportType}({e.Preference})")));
+
+        return endpoints;
     }
 
     /// <summary>

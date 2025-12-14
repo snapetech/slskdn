@@ -795,6 +795,23 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
+            // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03)
+            services.AddSingleton<VirtualSoulfind.Core.Music.IMusicContentDomainProvider, VirtualSoulfind.Core.Music.MusicContentDomainProvider>();
+            services.AddSingleton<VirtualSoulfind.Core.GenericFile.IGenericFileContentDomainProvider, VirtualSoulfind.Core.GenericFile.GenericFileContentDomainProvider>();
+
+            // Peer Reputation System (T-MCP04)
+            services.AddSingleton<Common.Moderation.IPeerReputationStore>(sp =>
+            {
+                var dataProtection = sp.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>();
+                var protector = dataProtection.CreateProtector("PeerReputation");
+                var storagePath = Path.Combine(Program.AppDirectory, "reputation", "peers.db");
+                return new Common.Moderation.PeerReputationStore(
+                    sp.GetRequiredService<ILogger<Common.Moderation.PeerReputationStore>>(),
+                    protector,
+                    storagePath);
+            });
+            services.AddSingleton<Common.Moderation.PeerReputationService>();
+
             // MediaCore (Phase 9)
             services.AddOptions<MediaCore.MediaCoreOptions>();
             services.AddSingleton<MediaCore.IDescriptorValidator, MediaCore.DescriptorValidator>();
@@ -819,7 +836,14 @@ namespace slskd
             services.AddSingleton<PodCore.IPodMembershipVerifier, PodCore.PodMembershipVerifier>();
             services.AddSingleton<PodCore.IPodDiscoveryService, PodCore.PodDiscoveryService>();
             services.AddSingleton<PodCore.IPodJoinLeaveService, PodCore.PodJoinLeaveService>();
-            services.AddSingleton<PodCore.IPodMessageRouter, PodCore.PodMessageRouter>();
+            services.AddSingleton<PodCore.IPodMessageRouter>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<PodCore.PodMessageRouter>>();
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var overlayClient = sp.GetRequiredService<Mesh.Overlay.IOverlayClient>();
+                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                return new PodCore.PodMessageRouter(logger, podService, overlayClient, privacyLayer);
+            });
             services.AddSingleton<PodCore.IMessageSigner, PodCore.MessageSigner>();
 
             // MultiSource MediaCore integration
@@ -965,10 +989,41 @@ namespace slskd
             services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
             services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
             services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSection("Security:Adversarial"));
+
+            // Transport policy manager for per-peer/per-pod transport policies
+            services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
+
+            // Anonymity transport selector with policy-aware selection
+            services.AddSingleton<Common.Security.IAnonymityTransportSelector>(sp =>
+            {
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
+                var policyManager = sp.GetRequiredService<Mesh.Transport.TransportPolicyManager>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Common.Security.AnonymityTransportSelector>>();
+                return new Common.Security.AnonymityTransportSelector(options.Value, policyManager, logger);
+            });
+
+            // Privacy layer for traffic analysis protection
+            services.AddSingleton<Mesh.Privacy.IPrivacyLayer>(sp =>
+            {
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Privacy.PrivacyLayer>>();
+                return new Mesh.Privacy.PrivacyLayer(logger, options.Value.Privacy);
+            });
+
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
             services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
+
+            // Realm services (T-REALM-01, T-REALM-02, T-REALM-04)
+            services.Configure<Mesh.Realm.RealmConfig>(Configuration.GetSection("Realm"));
+            services.Configure<Mesh.Realm.MultiRealmConfig>(Configuration.GetSection("MultiRealm"));
+            services.AddRealmServices();
+            services.AddBridgeServices();
+
+            // Governance and Gossip services (T-REALM-03)
+            services.AddGovernanceServices();
+            services.AddGossipServices();
 
             // MeshCore (Phase 8 implementation)
             services.Configure<Mesh.MeshOptions>(Configuration.GetSection("Mesh"));
@@ -1011,10 +1066,77 @@ namespace slskd
             services.AddSingleton<Mesh.ServiceFabric.Services.HolePunchMeshService>();
             services.AddSingleton<Mesh.Nat.IHolePunchCoordinator, Mesh.Nat.HolePunchCoordinator>();
             services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
+
+            // Private gateway service for VPN functionality (Phase 14)
+            services.AddSingleton<DnsSecurityService>();
+            services.AddSingleton<LocalPortForwarder>();
+            services.AddSingleton<Mesh.ServiceFabric.Services.PrivateGatewayMeshService>();
+
+            // Onion routing services (Phase 12)
+            services.AddSingleton<Mesh.IMeshPeerManager, Mesh.MeshPeerManager>();
+            services.AddSingleton<Mesh.IMeshTransportService>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.MeshTransportService>>();
+                var meshOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.MeshOptions>>();
+                var anonymitySelector = sp.GetService<Common.Security.IAnonymityTransportSelector>();
+                var adversarialOptions = sp.GetService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
+                return new Mesh.MeshTransportService(logger, meshOptions, anonymitySelector, adversarialOptions);
+            });
+
+            services.AddSingleton<Mesh.MeshCircuitBuilder>(sp =>
+            {
+                var meshOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.MeshOptions>>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.MeshCircuitBuilder>>();
+                var peerManager = sp.GetRequiredService<Mesh.IMeshPeerManager>();
+                var transportSelector = sp.GetRequiredService<Common.Security.IAnonymityTransportSelector>();
+                return new Mesh.MeshCircuitBuilder(meshOptions.Value, logger, peerManager, transportSelector);
+            });
+            services.AddHostedService<Mesh.CircuitMaintenanceService>();
+
+            // Transport dialers (Tor/I2P integration Phase 2)
+            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
+            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.TorSocksDialer>();
+            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.I2pSocksDialer>();
+
+            // Transport policy manager for per-peer/per-pod policies
+            services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
+
+            // Transport downgrade protection
+            services.AddSingleton<Mesh.Transport.TransportDowngradeProtector>();
+
+            // Certificate pin management for peer identity verification
+            services.AddSingleton<Mesh.Transport.CertificatePinManager>();
+
+            // Rate limiting for DoS protection
+            services.AddSingleton<Mesh.Transport.RateLimiter>();
+            services.AddSingleton<Mesh.Transport.ConnectionThrottler>();
+            services.AddSingleton<Mesh.Dht.DhtRateLimiter>();
+
+            // DNS leak prevention verification
+            services.AddSingleton<Mesh.Transport.DnsLeakPreventionVerifier>();
+
+            // Transport selector for endpoint negotiation
+            services.AddSingleton<Mesh.Transport.TransportSelector>();
+
+            // Descriptor signing service for cryptographic integrity
+            services.AddSingleton<Mesh.Transport.DescriptorSigningService>();
+
+            // Ed25519 signing implementation
+            services.AddSingleton<Mesh.Transport.Ed25519Signer>();
+
+            // Control envelope validator for replay protection and peer-bound verification
+            services.AddSingleton<Mesh.Overlay.ControlEnvelopeValidator>();
+
             // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();
-            services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
+            services.AddSingleton<Mesh.Overlay.IControlDispatcher>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.ControlDispatcher>>();
+                var validator = sp.GetRequiredService<Mesh.Overlay.ControlEnvelopeValidator>();
+                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                return new Mesh.Overlay.ControlDispatcher(logger, validator, privacyLayer);
+            });
             // Mesh message signing for mesh sync security
             services.AddSingleton<Mesh.IMeshMessageSigner, Mesh.MeshMessageSigner>();
             services.AddSingleton(sp =>
@@ -1024,7 +1146,14 @@ namespace slskd
             });
             services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
             services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();
-            services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
+            services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.QuicOverlayClient>>();
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.Overlay.OverlayOptions>>();
+                var signer = sp.GetRequiredService<Mesh.Overlay.IControlSigner>();
+                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                return new Mesh.Overlay.QuicOverlayClient(logger, options, signer, privacyLayer);
+            });
             services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(Configuration.GetSection("OverlayData"));
             services.AddHostedService<Mesh.Overlay.QuicDataServer>();
             services.AddSingleton<Mesh.Overlay.IOverlayDataPlane, Mesh.Overlay.QuicDataClient>();
@@ -1211,6 +1340,12 @@ namespace slskd
                     shareRepository: shareRepository); // T-MCP03
             });
 
+            // T-FED01: Register Social Federation services
+            if (OptionsAtStartup.SocialFederation.Enabled)
+            {
+                services.AddSocialFederation();
+            }
+
             if (!OptionsAtStartup.Web.Authentication.Disabled)
             {
                 services.AddAuthorization(options =>
@@ -1379,7 +1514,7 @@ namespace slskd
                     {
                         Version = "v0",
                         Title = AppName,
-                        Description = "A modern client-server application for the Soulseek file sharing network",
+                        Description = "A modern client-server application for the Soulseek community service network",
                         Contact = new OpenApiContact
                         {
                             Name = "GitHub",

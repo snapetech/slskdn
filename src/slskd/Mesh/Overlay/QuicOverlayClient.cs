@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Privacy;
 
 /// <summary>
 /// QUIC overlay client for control-plane messages (ControlEnvelope).
@@ -19,15 +20,18 @@ public class QuicOverlayClient : IOverlayClient
 {
     private readonly ILogger<QuicOverlayClient> logger;
     private readonly OverlayOptions options;
+    private readonly IPrivacyLayer? privacyLayer;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> connections = new();
 
     public QuicOverlayClient(
         ILogger<QuicOverlayClient> logger,
         IOptions<OverlayOptions> options,
-        IControlSigner signer)
+        IControlSigner signer,
+        IPrivacyLayer? privacyLayer = null)
     {
         this.logger = logger;
         this.options = options.Value;
+        this.privacyLayer = privacyLayer;
     }
 
     /// <summary>
@@ -50,15 +54,35 @@ public class QuicOverlayClient : IOverlayClient
 
         try
         {
-            // Get or create connection
-            if (!connections.TryGetValue(endpoint, out var connection) || connection == null)
+            // Apply outbound privacy transforms if enabled
+            if (privacyLayer != null && privacyLayer.IsEnabled && envelope.Payload != null && envelope.Payload.Length > 0)
             {
-                connection = await CreateConnectionAsync(endpoint, ct);
-                if (connection == null)
+                envelope.Payload = await privacyLayer.ProcessOutboundMessageAsync(envelope.Payload, ct);
+                if (envelope.Payload.Length == 0)
                 {
-                    return false;
+                    // Message was queued for batching, not ready to send yet
+                    logger.LogTrace("[Overlay-QUIC] Message queued for batching, not sending immediately");
+                    return true; // Not an error, just delayed
                 }
-                connections.TryAdd(endpoint, connection);
+                logger.LogTrace("[Overlay-QUIC] Applied outbound privacy transforms to envelope {MessageId}", envelope.MessageId);
+            }
+
+            // Check for pending batches to send
+            if (privacyLayer != null)
+            {
+                var batches = privacyLayer.GetPendingBatches();
+                if (batches != null && batches.Count > 0)
+                {
+                    // Send batched messages first
+                    foreach (var batchPayload in batches)
+                    {
+                        if (!await SendPayloadAsync(batchPayload, endpoint, ct))
+                        {
+                            return false;
+                        }
+                    }
+                    logger.LogDebug("[Overlay-QUIC] Sent {Count} batched messages to {Endpoint}", batches.Count, endpoint);
+                }
             }
 
             // Serialize envelope
@@ -69,13 +93,24 @@ public class QuicOverlayClient : IOverlayClient
                 return false;
             }
 
-            // Open stream and send
-            await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
-            await stream.WriteAsync(payload, ct);
-            // Stream will be closed when disposed
+            // Send the main payload
+            var success = await SendPayloadAsync(payload, endpoint, ct);
 
-            logger.LogDebug("[Overlay-QUIC] Sent control {Type} to {Endpoint}", envelope.Type, endpoint);
-            return true;
+            if (success && privacyLayer != null)
+            {
+                // Apply timing delay if enabled
+                var delay = privacyLayer.GetOutboundDelay();
+                if (delay > TimeSpan.Zero)
+                {
+                    await Task.Delay(delay, ct);
+                    logger.LogTrace("[Overlay-QUIC] Applied timing delay {Delay}ms", delay.TotalMilliseconds);
+                }
+
+                // Record the outbound message for privacy layer tracking
+                privacyLayer.RecordOutboundMessage();
+            }
+
+            return success;
         }
         catch (Exception ex)
         {
@@ -83,6 +118,27 @@ public class QuicOverlayClient : IOverlayClient
             connections.TryRemove(endpoint, out _);
             return false;
         }
+    }
+
+    private async Task<bool> SendPayloadAsync(byte[] payload, IPEndPoint endpoint, CancellationToken ct)
+    {
+        // Get or create connection
+        if (!connections.TryGetValue(endpoint, out var connection) || connection == null)
+        {
+            connection = await CreateConnectionAsync(endpoint, ct);
+            if (connection == null)
+            {
+                return false;
+            }
+            connections.TryAdd(endpoint, connection);
+        }
+
+        // Open stream and send
+        await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
+        await stream.WriteAsync(payload, ct);
+        // Stream will be closed when disposed
+
+        return true;
     }
 
     private async Task<QuicConnection?> CreateConnectionAsync(IPEndPoint endpoint, CancellationToken ct)

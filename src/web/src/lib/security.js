@@ -192,9 +192,67 @@ export const getAnomalies = async (count = 100) => {
   return (await api.get(`${baseUrl}/anomalies`, { params: { count } })).data;
 };
 
+/**
+ * Get adversarial settings
+ */
+export const getAdversarialSettings = async () => {
+  return (await api.get(`${baseUrl}/adversarial`)).data;
+};
+
+/**
+ * Update adversarial settings
+ */
+export const updateAdversarialSettings = async (settings) => {
+  return (await api.put(`${baseUrl}/adversarial`, settings)).data;
+};
+
+/**
+ * Get adversarial statistics
+ */
+export const getAdversarialStats = async () => {
+  return (await api.get(`${baseUrl}/adversarial/stats`)).data;
+};
+
+/**
+ * Get transport selector status
+ */
+export const getTransportStatus = async () => {
+  return (await api.get(`${baseUrl}/transports/status`)).data;
+};
+
+/**
+ * Get detailed status of all transports
+ */
+export const getAllTransportStatuses = async () => {
+  return (await api.get(`${baseUrl}/transports`)).data;
+};
+
+/**
+ * Test connectivity for all transports
+ */
+export const testTransportConnectivity = async () => {
+  return await api.post(`${baseUrl}/transports/test`);
+};
+
+/**
+ * Get Tor connectivity status
+ */
+export const getTorStatus = async () => {
+  return (await api.get(`${baseUrl}/tor/status`)).data;
+};
+
+/**
+ * Test Tor connectivity
+ */
+export const testTorConnectivity = async () => {
+  return (await api.post(`${baseUrl}/tor/test`)).data;
+};
+
 export default {
   banIp,
   banUsername,
+  getAdversarialSettings,
+  getAdversarialStats,
   getAnomalies,
   getBans,
   getCanaryStats,
@@ -207,10 +265,15 @@ export default {
   getSuspiciousPeers,
   getThreats,
   getTopConnectors,
+  getTorStatus,
+  getTransportStatus,
   getTrustedPeers,
   runEntropyCheck,
   setReputation,
   setTrustTier,
+  testTorConnectivity,
+  testTransportConnectivity,
   unbanIp,
   unbanUsername,
+  updateAdversarialSettings,
 };

@@ -88,7 +88,7 @@ public sealed class NetworkGuard : IDisposable
         var tracker = _connectionTrackers.GetOrAdd(remoteIp, _ => new ConnectionTracker());
         if (tracker.ActiveConnections >= MaxConnectionsPerIp)
         {
-            _logger.LogWarning("Connection rejected from {Ip}: per-IP limit reached ({Count}/{Max})", remoteIp, tracker.ActiveConnections, MaxConnectionsPerIp);
+            _logger.LogWarning("Connection rejected from {SanitizedIp}: per-IP limit reached ({Count}/{Max})", LoggingSanitizer.SanitizeIpAddress(remoteIp), tracker.ActiveConnections, MaxConnectionsPerIp);
             return false;
         }
 

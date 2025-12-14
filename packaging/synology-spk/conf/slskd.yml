@@ -1,0 +1,100 @@
+# slskdN Configuration Template for Synology
+# This file is used as a template during package installation
+# Customize these settings for your Synology environment
+
+# Web UI settings
+web:
+  enabled: true
+  port: 5030
+  https:
+    disabled: true
+
+# Soulseek network settings
+soulseek:
+  # Your Soulseek username/password (set these!)
+  username: ""
+  password: ""
+  listen:
+    port: 2234
+  connection:
+    timeout: 10000
+
+# Data directories (automatically set during installation)
+directories:
+  shared: "/var/packages/slskdn/shares/slskdn/shared"
+  downloads: "/var/packages/slskdn/shares/slskdn/downloads"
+  incomplete: "/var/packages/slskdn/shares/slskdn/incomplete"
+
+# Logging
+logger:
+  level: info
+  file:
+    enabled: true
+    path: "/var/packages/slskdn/shares/slskdn/logs"
+
+# Security (optional - enable as needed)
+# security:
+#   apiKeys:
+#     - "your-secure-api-key-here"
+#   requireApiKey: false
+
+# Performance tuning for Synology
+# Adjust based on your NAS specifications
+global:
+  upload:
+    slots: 4
+    speedLimit: 0  # KB/s, 0 = unlimited
+  download:
+    slots: 8
+    speedLimit: 0  # KB/s, 0 = unlimited
+
+# Queue management
+queue:
+  maxLength: 1000
+
+# File management
+files:
+  resumeOnStartup: true
+  retryOnFailure: true
+  maxRetryCount: 3
+
+# Synology-specific settings
+# These optimize slskdN for Synology NAS environments
+system:
+  # Use more conservative memory settings
+  memory:
+    maxWorkingSet: 512MB
+  # Enable file system monitoring
+  filesystem:
+    watch: true
+    pollInterval: 5000  # ms
+
+# VPN & Mesh Networking (Advanced Features)
+# Enable pod-based VPN for secure private networking
+podcore:
+  enabled: false
+  peerId: ""  # Auto-generated unique identifier
+
+# Mesh overlay network for decentralized peer discovery
+mesh:
+  enabled: false
+  peerId: ""  # Auto-generated
+  networkName: ""  # Name of mesh network to join
+  networkPassword: ""  # Password for private networks (leave empty for public)
+  parent: ""  # Parent mesh node (optional)
+
+# Anonymous transports for enhanced privacy
+transports:
+  tor:
+    enabled: false
+  i2p:
+    enabled: false
+  relay:
+    enabled: false
+
+# Traffic analysis protection (privacy layer)
+privacy:
+  enabled: false
+  messagePadding: false  # Prevent size-based traffic analysis
+  timingObfuscation: false  # Add random delays
+  messageBatching: false  # Batch messages together

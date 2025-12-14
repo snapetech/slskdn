@@ -49,20 +49,24 @@ namespace slskd.Relay
         ///     Initializes a new instance of the <see cref="RelayController"/> class.
         /// </summary>
         /// <param name="relayService"></param>
+        /// <param name="shareRepository">The share repository for content moderation checks.</param>
         /// <param name="optionsMonitor"></param>
         /// <param name="optionsAtStartup"></param>
         public RelayController(
             IRelayService relayService,
+            IShareRepository shareRepository,
             IOptionsMonitor<Options> optionsMonitor,
             OptionsAtStartup optionsAtStartup)
         {
             Relay = relayService;
+            ShareRepository = shareRepository;
             OptionsMonitor = optionsMonitor;
             OptionsAtStartup = optionsAtStartup;
         }
 
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayController>();
         private IRelayService Relay { get; }
+        private IShareRepository ShareRepository { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
@@ -145,6 +149,16 @@ namespace slskd.Relay
             }
 
             var sourceFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
+
+            // H-MCP01: Check if content is advertisable before serving via relay
+            var contentItem = await ShareRepository.FindContentItem(filename, filename.Length);
+            if (contentItem == null || contentItem.IsAdvertisable == false)
+            {
+                Log.Warning(
+                    "[SECURITY] MCP blocked relay download | Filename={Filename} | Reason=Content not advertisable",
+                    filename);
+                return Unauthorized();
+            }
 
             Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", agentName, guid, filename);
 
@@ -233,6 +247,16 @@ namespace slskd.Relay
                 {
                     Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
                     return Unauthorized();
+                }
+
+                // H-MCP01: Check if filename indicates acceptable content before relay upload
+                // Note: Full moderation happens at destination, but we can do basic filename checks
+                if (string.IsNullOrEmpty(filename) || filename.Contains("..") || Path.GetInvalidFileNameChars().Any(c => filename.Contains(c)))
+                {
+                    Log.Warning(
+                        "[SECURITY] MCP blocked relay upload | Filename={Filename} | Reason=Invalid filename",
+                        filename);
+                    return BadRequest("Invalid filename");
                 }
 
                 Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", agentName, guid, filename);

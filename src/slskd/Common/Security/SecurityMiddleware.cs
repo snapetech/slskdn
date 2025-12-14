@@ -127,7 +127,7 @@ public sealed class SecurityMiddleware
             var path = context.Request.Path.Value;
             if (!string.IsNullOrEmpty(path) && PathGuard.ContainsTraversal(path))
             {
-                _logger.LogWarning("Path traversal attempt from {Ip}: {Path}", remoteIp, path);
+                _logger.LogWarning("Path traversal attempt from {SanitizedIp}: {SanitizedPath}", LoggingSanitizer.SanitizeIpAddress(remoteIp), LoggingSanitizer.SanitizeSensitiveData(path));
                 _violationTracker?.RecordIpViolation(remoteIp, ViolationType.PathTraversal, path);
 
                 _eventSink?.Report(SecurityEvent.Create(

@@ -44,6 +44,24 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
         if (descriptor == null)
             throw new ArgumentNullException(nameof(descriptor));
 
+        // H-MCP01: Check if content is advertisable before publishing to network
+        if (descriptor.IsAdvertisable == false)
+        {
+            _logger.LogWarning(
+                "[ContentDescriptorPublisher] Blocked publication of non-advertisable content {ContentId}",
+                descriptor.ContentId);
+
+            return new DescriptorPublishResult(
+                Success: false,
+                ContentId: descriptor.ContentId,
+                Version: "0",
+                PublishedAt: DateTimeOffset.UtcNow,
+                Ttl: TimeSpan.Zero,
+                ErrorMessage: "Content is not advertisable",
+                WasUpdated: false,
+                PreviousVersion: null);
+        }
+
         var startTime = DateTimeOffset.UtcNow;
         var version = GenerateVersion(descriptor);
         var ttl = TimeSpan.FromMinutes(Math.Min(_options.MaxTtlMinutes, 60)); // Cap at 1 hour

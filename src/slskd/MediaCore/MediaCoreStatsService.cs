@@ -85,8 +85,8 @@ public class MediaCoreStatsService : IMediaCoreStatsService
         await Task.WhenAll(contentRegistryTask, descriptorTask, fuzzyTask, ipldTask,
                           perceptualTask, portabilityTask, publishingTask);
 
-        // Get synchronous system resources
-        var systemResources = GetSystemResourceStatsAsync(cancellationToken).GetAwaiter().GetResult();
+        // Get system resources
+        var systemResources = await GetSystemResourceStatsAsync(cancellationToken);
 
         return new MediaCoreStatsDashboard(
             Timestamp: timestamp,

@@ -82,6 +82,14 @@ namespace slskd.Common.Moderation
         /// </summary>
         public ReputationOptions Reputation { get; init; } = new ReputationOptions();
 
+        /// <summary>
+        ///     Gets LLM moderation options.
+        /// </summary>
+        /// <remarks>
+        ///     T-MCP-LM01: Configuration for AI-powered content moderation.
+        /// </remarks>
+        public LlmModerationOptions LlmModeration { get; init; } = new LlmModerationOptions();
+
         /// <inheritdoc />
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
@@ -129,12 +137,26 @@ namespace slskd.Common.Moderation
         public class ExternalModerationOptions : IValidatableObject
         {
             /// <summary>
+            ///     Gets the external moderation mode.
+            /// </summary>
+            /// <remarks>
+            ///     T-MCP-LM03: Mode selection for LLM client types.
+            ///     - Off: No external moderation
+            ///     - Local: Use local LLM service (HTTP to localhost/local network)
+            ///     - Remote: Use remote LLM API (HTTPS with domain allowlist)
+            /// </remarks>
+            [Argument(default, "moderation-external-mode")]
+            [EnvironmentVariable("MODERATION_EXTERNAL_MODE")]
+            [Description("external moderation mode: Off, Local, or Remote")]
+            public string Mode { get; init; } = "Off";
+
+            /// <summary>
             ///     Gets a value indicating whether external moderation is enabled.
             /// </summary>
-            [Argument(default, "moderation-external-enabled")]
-            [EnvironmentVariable("MODERATION_EXTERNAL_ENABLED")]
-            [Description("enable external moderation service (opt-in)")]
-            public bool Enabled { get; init; } = false;
+            /// <remarks>
+            ///     Computed from Mode - enabled when Mode is not "Off".
+            /// </remarks>
+            public bool Enabled => !string.Equals(Mode, "Off", StringComparison.OrdinalIgnoreCase);
 
             /// <summary>
             ///     Gets the external service endpoint.
@@ -170,27 +192,59 @@ namespace slskd.Common.Moderation
             {
                 var results = new List<ValidationResult>();
 
+                // Validate mode
+                var validModes = new[] { "Off", "Local", "Remote" };
+                if (!validModes.Contains(Mode, StringComparer.OrdinalIgnoreCase))
+                {
+                    results.Add(new ValidationResult(
+                        $"Mode must be one of: {string.Join(", ", validModes)}, got: {Mode}",
+                        new[] { nameof(Mode) }));
+                }
+
                 if (Enabled)
                 {
                     if (string.IsNullOrWhiteSpace(Endpoint))
                     {
                         results.Add(new ValidationResult(
-                            "External moderation is enabled, but no Endpoint is specified.",
+                            $"External moderation mode '{Mode}' requires an Endpoint.",
                             new[] { nameof(Endpoint) }));
                     }
-                    else if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri) ||
-                             uri.Scheme != "https")
+                    else if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri))
                     {
                         results.Add(new ValidationResult(
-                            $"Endpoint must be an absolute HTTPS URL, got: {Endpoint}",
+                            $"Endpoint must be an absolute URI, got: {Endpoint}",
+                            new[] { nameof(Endpoint) }));
+                    }
+                    else if (string.Equals(Mode, "Remote", StringComparison.OrdinalIgnoreCase) && uri.Scheme != "https")
+                    {
+                        results.Add(new ValidationResult(
+                            $"Remote mode requires HTTPS endpoint, got: {Endpoint}",
                             new[] { nameof(Endpoint) }));
                     }
 
-                    if (AllowedDomains.Length == 0)
+                    // Domain validation based on mode
+                    if (string.Equals(Mode, "Remote", StringComparison.OrdinalIgnoreCase))
                     {
-                        results.Add(new ValidationResult(
-                            "External moderation is enabled, but AllowedDomains is empty. Add at least one domain.",
-                            new[] { nameof(AllowedDomains) }));
+                        if (AllowedDomains.Length == 0)
+                        {
+                            results.Add(new ValidationResult(
+                                "Remote mode requires AllowedDomains for SSRF protection.",
+                                new[] { nameof(AllowedDomains) }));
+                        }
+                    }
+                    else if (string.Equals(Mode, "Local", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // For local mode, AllowedDomains is optional (defaults to localhost)
+                        // but if specified, validate them
+                        foreach (var domain in AllowedDomains)
+                        {
+                            if (string.IsNullOrWhiteSpace(domain) || domain.Contains("*") || IPAddress.TryParse(domain, out _))
+                            {
+                                results.Add(new ValidationResult(
+                                    $"Local mode AllowedDomains should not contain wildcards or IP addresses: {domain}",
+                                    new[] { nameof(AllowedDomains) }));
+                            }
+                        }
                     }
                 }
 

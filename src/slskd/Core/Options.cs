@@ -31,6 +31,7 @@ namespace slskd
     using FluentFTP;
     using NetTools;
     using slskd.Authentication;
+    using slskd.Common;
     using slskd.Common.Moderation;
     using slskd.Configuration;
     using slskd.Events;
@@ -353,6 +354,30 @@ namespace slskd
         /// </summary>
         [Validate]
         public ModerationOptions Moderation { get; init; } = new ModerationOptions();
+
+        /// <summary>
+        ///     Gets options for social federation (T-FED01).
+        /// </summary>
+        [Validate]
+        public SocialFederationOptions SocialFederation { get; init; } = new SocialFederationOptions();
+
+        /// <summary>
+        ///     Gets options for federation publishing (T-FED03).
+        /// </summary>
+        [Validate]
+        public FederationPublishingOptions FederationPublishing { get; init; } = new FederationPublishingOptions();
+
+        /// <summary>
+        ///     Gets options for realm configuration (T-REALM-01).
+        /// </summary>
+        [Validate]
+        public Mesh.Realm.RealmConfig Realm { get; init; } = new Mesh.Realm.RealmConfig();
+
+        /// <summary>
+        ///     Gets options for multi-realm configuration (T-REALM-02).
+        /// </summary>
+        [Validate]
+        public Mesh.Realm.MultiRealmConfig MultiRealm { get; init; } = new Mesh.Realm.MultiRealmConfig();
 
         /// <summary>
         /// Gets or sets warm cache configuration.

@@ -61,6 +61,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         private readonly ISourceRegistry _sourceRegistry;
         private readonly IEnumerable<IContentBackend> _backends;
         private readonly IModerationProvider _moderationProvider;
+        private readonly PeerReputationService _peerReputationService;
         private readonly PlanningMode _defaultMode;
 
         /// <summary>
@@ -76,12 +77,14 @@ namespace slskd.VirtualSoulfind.v2.Planning
             ISourceRegistry sourceRegistry,
             IEnumerable<IContentBackend> backends,
             IModerationProvider moderationProvider,
+            PeerReputationService peerReputationService,
             PlanningMode defaultMode = PlanningMode.SoulseekFriendly)
         {
             _catalogueStore = catalogueStore ?? throw new ArgumentNullException(nameof(catalogueStore));
             _sourceRegistry = sourceRegistry ?? throw new ArgumentNullException(nameof(sourceRegistry));
             _backends = backends ?? throw new ArgumentNullException(nameof(backends));
             _moderationProvider = moderationProvider ?? throw new ArgumentNullException(nameof(moderationProvider));
+            _peerReputationService = peerReputationService ?? throw new ArgumentNullException(nameof(peerReputationService));
             _defaultMode = defaultMode;
         }
 
@@ -91,6 +94,20 @@ namespace slskd.VirtualSoulfind.v2.Planning
             PlanningMode? mode = null,
             CancellationToken cancellationToken = default)
         {
+            // H-VF01: Validate ContentDomain before planning
+            if (!VirtualSoulfindValidation.IsValidContentDomain(desiredTrack.Domain, out var domainError))
+            {
+                return new TrackAcquisitionPlan
+                {
+                    DesiredTrack = desiredTrack,
+                    Status = PlanStatus.Failed,
+                    ErrorMessage = $"Domain validation failed: {domainError}",
+                    Steps = Array.Empty<PlanStep>(),
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    ExpiresAt = DateTimeOffset.UtcNow,
+                };
+            }
+
             var effectiveMode = mode ?? _defaultMode;
 
             // Step 1: Look up track in catalogue to get ContentDomain
@@ -107,9 +124,8 @@ namespace slskd.VirtualSoulfind.v2.Planning
                 };
             }
 
-            // For v2 Phase 1: assume Music domain (we only have Music catalogue entities)
-            // Future: extend with domain detection
-            var domain = ContentDomain.Music;
+            // H-VF01: Use domain from DesiredTrack instead of hardcoding
+            var domain = desiredTrack.Domain;
 
             // Step 2: Query source registry for existing candidates
             // Convert TrackId (string) to ContentItemId for v1 compatibility
@@ -216,8 +232,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
             {
                 try
                 {
-                    // Check through MCP using contentId as string
-                    // CheckContentIdAsync takes a string contentId
+                    // Step 1: Check through MCP using contentId as string
                     var decision = await _moderationProvider.CheckContentIdAsync(
                         trackId,
                         cancellationToken);
@@ -229,11 +244,25 @@ namespace slskd.VirtualSoulfind.v2.Planning
                         continue;
                     }
 
+                    // Step 2: Check peer reputation (T-MCP04)
+                    if (!string.IsNullOrWhiteSpace(candidate.PeerId))
+                    {
+                        var isAllowed = await _peerReputationService.IsPeerAllowedForPlanningAsync(
+                            candidate.PeerId,
+                            cancellationToken);
+
+                        if (!isAllowed)
+                        {
+                            // Skip banned peers
+                            continue;
+                        }
+                    }
+
                     filtered.Add(candidate);
                 }
                 catch
                 {
-                    // MCP check failed; skip this candidate (fail-safe)
+                    // MCP or reputation check failed; skip this candidate (fail-safe)
                     continue;
                 }
             }

@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Overlay;
+using slskd.Mesh.Privacy;
 
 /// <summary>
 /// Service for routing pod messages through the decentralized overlay network.
@@ -23,6 +24,7 @@ public class PodMessageRouter : IPodMessageRouter
     private readonly ILogger<PodMessageRouter> _logger;
     private readonly IPodService _podService;
     private readonly IOverlayClient _overlayClient;
+    private readonly IPrivacyLayer? _privacyLayer;
 
     // Time-windowed Bloom filter for efficient deduplication
     private readonly TimeWindowedBloomFilter _deduplicationFilter;
@@ -44,11 +46,13 @@ public class PodMessageRouter : IPodMessageRouter
     public PodMessageRouter(
         ILogger<PodMessageRouter> logger,
         IPodService podService,
-        IOverlayClient overlayClient)
+        IOverlayClient overlayClient,
+        IPrivacyLayer? privacyLayer = null)
     {
         _logger = logger;
         _podService = podService;
         _overlayClient = overlayClient;
+        _privacyLayer = privacyLayer;
 
         // Initialize time-windowed Bloom filter for efficient deduplication
         // 24-hour windows, expected 10,000 messages per window, 1% false positive rate
@@ -311,6 +315,19 @@ public class PodMessageRouter : IPodMessageRouter
             // Create overlay control envelope for pod message
             var messageJson = JsonSerializer.Serialize(message);
             var payload = System.Text.Encoding.UTF8.GetBytes(messageJson);
+
+            // Apply outbound privacy transforms if enabled
+            if (_privacyLayer != null && _privacyLayer.IsEnabled && payload.Length > 0)
+            {
+                payload = await _privacyLayer.ProcessOutboundMessageAsync(payload, cancellationToken);
+                if (payload.Length == 0)
+                {
+                    // Message was queued for batching, not ready to send yet
+                    _logger.LogTrace("[PodMessageRouter] Message queued for batching, not sending immediately");
+                    return true; // Not an error, just delayed
+                }
+                _logger.LogTrace("[PodMessageRouter] Applied outbound privacy transforms to message {MessageId}", message.MessageId);
+            }
 
             var envelope = new ControlEnvelope
             {

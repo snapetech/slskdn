@@ -60,4 +60,13 @@
     <Rule Id="SA1623" Action="Info" />
     <Rule Id="SA1649" Action="None" />
   </Rules>
+  <!-- slskdN Custom Analyzers (H-CODE02) -->
+  <Rules AnalyzerId="slskd.Common.CodeQuality" RuleNamespace="slskd.Common.CodeQuality">
+    <Rule Id="SLKDN001" Action="Error" />    <!-- BlockingAsyncCall -->
+    <Rule Id="SLKDN002" Action="Warning" />  <!-- DangerousApiUsage -->
+    <Rule Id="SLKDN003" Action="Error" />    <!-- SqlInjectionRisk -->
+    <Rule Id="SLKDN004" Action="Warning" />  <!-- MissingNullCheck -->
+    <Rule Id="SLKDN005" Action="Warning" />  <!-- EmptyCatchBlock -->
+    <Rule Id="SLKDN006" Action="Warning" />  <!-- InefficientStringConcat -->
+  </Rules>
 </RuleSet>

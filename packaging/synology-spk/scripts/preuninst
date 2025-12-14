@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# slskdN pre-uninstallation script for Synology Package Center
+# This script runs before package removal
+
+# Exit on any error
+set -e
+
+# Source common functions
+. "$(dirname "$0")"/common
+
+log_step "slskdN pre-uninstallation started"
+
+# Stop the service
+log_step "Stopping slskdN service..."
+stop_service
+
+# Create backup of configuration
+log_step "Creating configuration backup..."
+backup_config
+
+# Clean up firewall rules
+log_step "Cleaning up firewall rules..."
+cleanup_firewall
+
+# Unregister from DSM
+log_step "Unregistering from DSM..."
+unregister_dsm_app
+
+log_step "Pre-uninstallation completed successfully"

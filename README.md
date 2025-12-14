@@ -312,7 +312,7 @@ We reject:
 
 ❌ Generic anonymization network (not Tor)  
 ❌ Exit node for arbitrary traffic (not a proxy service)  
-❌ Generic file sharing (domain-specific only)  
+❌ Generic content distribution (Soulseek community-specific only)  
 ❌ Cryptocurrency/blockchain features (out of scope)
 
 ---
@@ -361,7 +361,7 @@ This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdilli
 
 ### Protocol & Network
 
-- **Soulseek Protocol** - The P2P file-sharing protocol created by Nir Arbel
+- **Soulseek Protocol** - The P2P community service protocol created by Nir Arbel
   - We implement a compatible client
   - No affiliation with the official Soulseek network or its operators
 

@@ -58,6 +58,11 @@ public class MeshOptions
     /// Peer descriptor refresh options.
     /// </summary>
     public PeerDescriptorRefreshOptions PeerDescriptorRefresh { get; set; } = new();
+
+    /// <summary>
+    /// Transport connectivity options (Tor, I2P, etc.).
+    /// </summary>
+    public MeshTransportOptions Transport { get; set; } = new();
 }
 
 /// <summary>

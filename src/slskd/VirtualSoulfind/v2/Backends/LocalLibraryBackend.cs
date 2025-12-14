@@ -55,7 +55,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
         public ContentBackendType Type => ContentBackendType.LocalLibrary;
 
         /// <inheritdoc/>
-        public ContentDomain? SupportedDomain => ContentDomain.Music;
+        public ContentDomain? SupportedDomain => null; // Supports all domains
 
         /// <inheritdoc/>
         public async Task<IReadOnlyList<SourceCandidate>> FindCandidatesAsync(

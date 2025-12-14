@@ -28,6 +28,11 @@ namespace slskd.VirtualSoulfind.v2.Intents
     public sealed class DesiredTrack
     {
         /// <summary>
+        ///     Gets or initializes the content domain.
+        /// </summary>
+        public ContentDomain Domain { get; init; }
+
+        /// <summary>
         ///     Gets or initializes the unique ID for this intent.
         /// </summary>
         public string DesiredTrackId { get; init; }

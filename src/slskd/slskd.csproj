@@ -35,6 +35,8 @@
   <ItemGroup>
     <PackageReference Include="System.Reactive" Version="6.0.0" />
     <PackageReference Include="MessagePack" Version="2.5.140" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
   </ItemGroup>
 
   <Target Name="CopyAfterBuild" AfterTargets="AfterBuild">
@@ -46,6 +48,50 @@
     <Copy SourceFiles="..\..\LICENSE" DestinationFolder="$(PublishDir)" />
     <Copy SourceFiles="..\..\config\slskd.example.yml" DestinationFolder="$(PublishDir)\config" />
     <Move SourceFiles="$(PublishDir)\slskd.xml" DestinationFolder="$(PublishDir)\etc" />
+  </Target>
+
+  <!-- Custom code quality tasks (H-CODE02, H-CODE03) -->
+  <UsingTask TaskName="CodeAnalysisBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
+  <UsingTask TaskName="TestCoverageBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
+  <UsingTask TaskName="RegressionBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
+
+  <!-- Static analysis (H-CODE02) -->
+  <Target Name="RunStaticAnalysis" AfterTargets="Build" Condition="'$(RunStaticAnalysis)' != 'false'">
+    <CodeAnalysisBuildTask
+        ProjectDirectory="$(MSBuildProjectDirectory)"
+        AssemblyPath="$(TargetPath)"
+        TreatWarningsAsErrors="$(TreatWarningsAsErrors)"
+        MaxViolations="100">
+      <Output TaskParameter="ExitCode" PropertyName="StaticAnalysisExitCode" />
+    </CodeAnalysisBuildTask>
+    <Error Condition="'$(StaticAnalysisExitCode)' != '0'" Text="Static analysis failed. Fix violations before proceeding." />
+  </Target>
+
+  <!-- Test coverage analysis (H-CODE03) -->
+  <Target Name="RunTestCoverageAnalysis" AfterTargets="Build" Condition="'$(RunTestCoverage)' != 'false'">
+    <TestCoverageBuildTask
+        ProjectDirectory="$(MSBuildProjectDirectory)"
+        TestAssemblyPaths="@(TestAssemblyPaths)"
+        SourceAssemblyPaths="$(TargetPath)"
+        OutputDirectory="$(ArtifactsPath)coverage-reports"
+        MinimumCoverage="0.75"
+        FailOnLowCoverage="$(FailBuildOnLowCoverage)"
+        MaxUncoveredMethods="50">
+      <Output TaskParameter="ExitCode" PropertyName="CoverageAnalysisExitCode" />
+    </TestCoverageBuildTask>
+    <Error Condition="'$(CoverageAnalysisExitCode)' != '0'" Text="Test coverage analysis failed. Address coverage gaps before proceeding." />
+  </Target>
+
+  <!-- Regression testing (H-CODE03) -->
+  <Target Name="RunRegressionTests" AfterTargets="Build" Condition="'$(RunRegressionTests)' != 'false'">
+    <RegressionBuildTask
+        TestAssemblyPaths="@(TestAssemblyPaths)"
+        OutputDirectory="$(ArtifactsPath)regression-reports"
+        RunBenchmarks="$(RunPerformanceBenchmarks)"
+        BenchmarkIterations="$(BenchmarkIterations)">
+      <Output TaskParameter="ExitCode" PropertyName="RegressionTestExitCode" />
+    </RegressionBuildTask>
+    <Error Condition="'$(RegressionTestExitCode)' != '0'" Text="Regression testing failed. Fix critical issues before proceeding." />
   </Target>
 
   <ItemGroup>

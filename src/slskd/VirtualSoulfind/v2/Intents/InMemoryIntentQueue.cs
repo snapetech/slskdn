@@ -56,6 +56,7 @@ namespace slskd.VirtualSoulfind.v2.Intents
         }
 
         public Task<DesiredTrack> EnqueueTrackAsync(
+            ContentDomain domain,
             string trackId,
             IntentPriority priority = IntentPriority.Normal,
             string? parentDesiredReleaseId = null,
@@ -63,6 +64,7 @@ namespace slskd.VirtualSoulfind.v2.Intents
         {
             var desiredTrack = new DesiredTrack
             {
+                Domain = domain,
                 DesiredTrackId = Guid.NewGuid().ToString(),
                 TrackId = trackId,
                 ParentDesiredReleaseId = parentDesiredReleaseId,

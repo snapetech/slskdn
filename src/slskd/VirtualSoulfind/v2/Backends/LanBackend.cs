@@ -31,7 +31,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     ///     Backend for LAN-based content discovery (SMB, NFS, local network shares).
     /// </summary>
     /// <remarks>
-    ///     Phase 2 implementation: Local network file sharing.
+    ///     Phase 2 implementation: Local network community content sharing.
     ///     Security: Private IP ranges only, no external access.
     /// </remarks>
     public sealed class LanBackend : IContentBackend

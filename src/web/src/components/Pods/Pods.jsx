@@ -1,6 +1,8 @@
 import { urlBase } from '../../config';
 import * as pods from '../../lib/pods';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import PortForwarding from './PortForwarding';
+import VpnGatewayConfig from './VpnGatewayConfig';
 import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 import {
@@ -379,7 +381,25 @@ class Pods extends Component {
               {podDetail.channels?.length > 0 ? (
                 <Tab
                   menu={{ pointing: true }}
-                  panes={panes}
+                  panes={[
+                    ...panes,
+                    {
+                      menuItem: { key: 'vpn-gateway', icon: 'shield', content: 'VPN Gateway' },
+                      render: () => (
+                        <Tab.Pane>
+                          <VpnGatewayConfig podId={activePodId} podDetail={podDetail} />
+                        </Tab.Pane>
+                      ),
+                    },
+                    {
+                      menuItem: { key: 'port-forwarding', icon: 'exchange', content: 'Port Forwarding' },
+                      render: () => (
+                        <Tab.Pane>
+                          <PortForwarding />
+                        </Tab.Pane>
+                      ),
+                    },
+                  ]}
                 />
               ) : (
                 <PlaceholderSegment

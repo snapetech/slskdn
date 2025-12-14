@@ -27,7 +27,7 @@ Obsoletes:      slskd < %{version}
 %description
 The batteries included, **EXPERIMENTAL** fork of slskd. Feature-rich,
 including wishlist, smart ranking, tabbed browsing, notifications,
-and more. Modern web UI for the Soulseek file sharing network.
+and more. Modern web UI for the Soulseek community service network.
 
 Features include:
 - Wishlist with auto-download

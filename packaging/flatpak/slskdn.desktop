@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=slskdN
+Comment=A decentralized mesh community service for Soulseek with VPN and advanced networking
+Exec=slskdn-wrapper
+Icon=io.github.slskd.slskdn
+Terminal=false
+Type=Application
+Categories=Network;FileTransfer;P2P;
+Keywords=soulseek;p2p;community-service;decentralized;vpn;mesh-networking;privacy;
+StartupWMClass=slskdn
+X-Flatpak=io.github.slskd.slskdn

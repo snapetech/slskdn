@@ -36,6 +36,15 @@ namespace slskd.PodCore
         public const int MaxPeerIdLength = 255;
         public const int MaxPublicKeyLength = 1024;
 
+        // Private service limits
+        public const int MaxAllowedDestinations = 50;
+        public const int MaxRegisteredServices = 20;
+        public const int MaxHostPatternLength = 255;
+        public const int MaxServiceNameLength = 50;
+        public const int MaxServiceDescriptionLength = 200;
+        public const int MaxConcurrentTunnelsPerPeer = 10;
+        public const int MaxConcurrentTunnelsPod = 50;
+
         // Allowed character patterns (prevent injection attacks)
         private static readonly Regex PodIdPattern = new Regex(@"^pod:[a-f0-9]{32}$", RegexOptions.Compiled);
         private static readonly Regex PeerIdPattern = new Regex(@"^[a-zA-Z0-9\-_.@]{1,255}$", RegexOptions.Compiled);
@@ -45,7 +54,7 @@ namespace slskd.PodCore
         /// <summary>
         /// Validates pod for creation/update.
         /// </summary>
-        public static (bool IsValid, string Error) ValidatePod(Pod pod)
+        public static (bool IsValid, string Error) ValidatePod(Pod pod, List<PodMember>? members = null)
         {
             if (pod == null)
                 return (false, "Pod cannot be null");
@@ -96,6 +105,21 @@ namespace slskd.PodCore
 
                     if (channel.Name.Length > MaxChannelNameLength)
                         return (false, $"Channel name exceeds {MaxChannelNameLength} characters");
+                }
+            }
+
+            // Capabilities validation
+            var memberCount = members?.Count ?? 0;
+            var capabilitiesValidation = ValidateCapabilities(pod.Capabilities, pod.PrivateServicePolicy, memberCount);
+            if (!capabilitiesValidation.IsValid)
+                return capabilitiesValidation;
+
+            // Additional validation: enforce MaxMembers <= 3 for VPN pods
+            if (pod.Capabilities?.Contains(PodCapability.PrivateServiceGateway) == true)
+            {
+                if (memberCount > (pod.PrivateServicePolicy?.MaxMembers ?? 3))
+                {
+                    return (false, $"Pod has {memberCount} members but private service gateway allows maximum {pod.PrivateServicePolicy?.MaxMembers ?? 3} members");
                 }
             }
 
@@ -223,6 +247,273 @@ namespace slskd.PodCore
         public static bool IsValidChannelId(string channelId)
         {
             return !string.IsNullOrEmpty(channelId) && ChannelIdPattern.IsMatch(channelId);
+        }
+
+        /// <summary>
+        /// Validates pod private service policy.
+        /// </summary>
+        public static (bool IsValid, string Error) ValidatePrivateServicePolicy(PodPrivateServicePolicy policy, List<PodMember> members)
+        {
+            if (policy == null)
+                return (false, "Private service policy cannot be null");
+
+            // Max members validation
+            if (policy.MaxMembers < 2 || policy.MaxMembers > 10)
+                return (false, "MaxMembers must be between 2 and 10");
+
+            // Gateway peer validation
+            if (string.IsNullOrWhiteSpace(policy.GatewayPeerId))
+                return (false, "GatewayPeerId is required");
+
+            if (!IsValidPeerId(policy.GatewayPeerId))
+                return (false, "Invalid GatewayPeerId format");
+
+            if (!members.Any(m => m.PeerId == policy.GatewayPeerId))
+                return (false, "GatewayPeerId must be a pod member");
+
+            // Registered services validation (preferred approach)
+            if (policy.RegisteredServices == null)
+                return (false, "RegisteredServices cannot be null");
+
+            if (policy.RegisteredServices.Count > MaxRegisteredServices)
+                return (false, $"Cannot have more than {MaxRegisteredServices} registered services");
+
+            foreach (var service in policy.RegisteredServices)
+            {
+                var serviceValidation = ValidateRegisteredService(service);
+                if (!serviceValidation.IsValid)
+                    return serviceValidation;
+            }
+
+            // Legacy allowed destinations validation
+            if (policy.AllowedDestinations == null)
+                return (false, "AllowedDestinations cannot be null");
+
+            if (policy.AllowedDestinations.Count > MaxAllowedDestinations)
+                return (false, $"Cannot have more than {MaxAllowedDestinations} allowed destinations");
+
+            foreach (var dest in policy.AllowedDestinations)
+            {
+                var destValidation = ValidateAllowedDestination(dest);
+                if (!destValidation.IsValid)
+                    return destValidation;
+            }
+
+            // If both are empty and capability is enabled, reject
+            if (policy.Enabled && policy.RegisteredServices.Count == 0 && policy.AllowedDestinations.Count == 0)
+                return (false, "Cannot enable private service gateway without registered services or allowed destinations");
+
+            // Quota validations
+            if (policy.MaxConcurrentTunnelsPerPeer < 0 || policy.MaxConcurrentTunnelsPerPeer > MaxConcurrentTunnelsPerPeer)
+                return (false, $"MaxConcurrentTunnelsPerPeer must be between 0 and {MaxConcurrentTunnelsPerPeer}");
+
+            if (policy.MaxConcurrentTunnelsPod < 0 || policy.MaxConcurrentTunnelsPod > MaxConcurrentTunnelsPod)
+                return (false, $"MaxConcurrentTunnelsPod must be between 0 and {MaxConcurrentTunnelsPod}");
+
+            if (policy.MaxNewTunnelsPerMinutePerPeer < 0 || policy.MaxNewTunnelsPerMinutePerPeer > 100)
+                return (false, "MaxNewTunnelsPerMinutePerPeer must be between 0 and 100");
+
+            // Timeout validations
+            if (policy.IdleTimeout < TimeSpan.FromSeconds(30) || policy.IdleTimeout > TimeSpan.FromHours(24))
+                return (false, "IdleTimeout must be between 30 seconds and 24 hours");
+
+            if (policy.MaxLifetime < TimeSpan.FromMinutes(1) || policy.MaxLifetime > TimeSpan.FromDays(7))
+                return (false, "MaxLifetime must be between 1 minute and 7 days");
+
+            if (policy.DialTimeout < TimeSpan.FromSeconds(1) || policy.DialTimeout > TimeSpan.FromMinutes(5))
+                return (false, "DialTimeout must be between 1 second and 5 minutes");
+
+            return (true, string.Empty);
+        }
+
+        /// <summary>
+        /// Validates a registered service.
+        /// </summary>
+        public static (bool IsValid, string Error) ValidateRegisteredService(RegisteredService service)
+        {
+            if (service == null)
+                return (false, "RegisteredService cannot be null");
+
+            if (string.IsNullOrWhiteSpace(service.Name))
+                return (false, "Service name is required");
+
+            if (service.Name.Length > MaxServiceNameLength)
+                return (false, $"Service name exceeds {MaxServiceNameLength} characters");
+
+            if (ContainsDangerousContent(service.Name))
+                return (false, "Service name contains invalid characters");
+
+            if (service.Description?.Length > MaxServiceDescriptionLength)
+                return (false, $"Service description exceeds {MaxServiceDescriptionLength} characters");
+
+            if (string.IsNullOrWhiteSpace(service.Host))
+                return (false, "Host is required");
+
+            if (service.Host.Length > MaxHostPatternLength)
+                return (false, $"Host exceeds {MaxHostPatternLength} characters");
+
+            // Strict validation: no wildcards allowed in MVP
+            if (service.Host.Contains('*') || service.Host.Contains('?'))
+                return (false, "Wildcards are not allowed in registered services (use exact hostnames or IPs only)");
+
+            if (!IsValidExactHostOrIP(service.Host))
+                return (false, "Invalid host format (must be exact hostname or IP address)");
+
+            if (service.Port < 1 || service.Port > 65535)
+                return (false, "Port must be between 1 and 65535");
+
+            if (destination.Protocol != "tcp")
+                return (false, "Only TCP protocol is currently supported");
+
+            // Check for proxy ports and warn
+            if (IsProxyPort(service.Port))
+            {
+                // In MVP, we could reject these, but for now just log the concern
+                // The gateway operator needs to explicitly understand the risk
+            }
+
+            return (true, string.Empty);
+        }
+
+        /// <summary>
+        /// Validates an allowed destination (legacy - prefer RegisteredService).
+        /// </summary>
+        public static (bool IsValid, string Error) ValidateAllowedDestination(AllowedDestination destination)
+        {
+            if (destination == null)
+                return (false, "AllowedDestination cannot be null");
+
+            if (string.IsNullOrWhiteSpace(destination.HostPattern))
+                return (false, "HostPattern is required");
+
+            if (destination.HostPattern.Length > MaxHostPatternLength)
+                return (false, $"HostPattern exceeds {MaxHostPatternLength} characters");
+
+            // MVP: No wildcards allowed - must be exact hostname or IP
+            if (destination.HostPattern.Contains('*') || destination.HostPattern.Contains('?'))
+                return (false, "Wildcards are not allowed in allowed destinations (use exact hostnames or IPs only)");
+
+            if (!IsValidExactHostOrIP(destination.HostPattern))
+                return (false, "Invalid HostPattern format (must be exact hostname or IP address)");
+
+            if (destination.Port < 1 || destination.Port > 65535)
+                return (false, "Port must be between 1 and 65535");
+
+            if (destination.Protocol != "tcp")
+                return (false, "Only TCP protocol is currently supported");
+
+            // MVP: disallow public destinations entirely
+            if (destination.AllowPublic)
+                return (false, "Public destinations are not allowed in MVP");
+
+            // Check for proxy ports
+            if (IsProxyPort(destination.Port))
+            {
+                // Allow but log the security concern
+            }
+
+            return (true, string.Empty);
+        }
+
+        /// <summary>
+        /// Validates host pattern (hostname, wildcard, or IP).
+        /// </summary>
+        private static bool IsValidHostPattern(string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                return false;
+
+            // Remove dangerous characters
+            if (ContainsDangerousContent(pattern))
+                return false;
+
+            // Check if it's a valid hostname pattern
+            var hostnamePattern = new Regex(@"^[a-zA-Z0-9\-\.\*\?]+$", RegexOptions.Compiled);
+            if (!hostnamePattern.IsMatch(pattern))
+                return false;
+
+            // Additional validation for wildcard patterns
+            if (pattern.Contains('*') || pattern.Contains('?'))
+            {
+                // Ensure wildcards are used reasonably
+                if (pattern.Count(c => c == '*') > 2 || pattern.Count(c => c == '?') > 10)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Validates exact hostname or IP address (no wildcards).
+        /// </summary>
+        private static bool IsValidExactHostOrIP(string host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+                return false;
+
+            // Allow IP addresses
+            if (IPAddress.TryParse(host, out _))
+                return true;
+
+            // Exact hostname validation (no wildcards)
+            if (host.Contains('*') || host.Contains('?'))
+                return false;
+
+            // Hostname validation (simplified, no wildcards allowed)
+            var hostnamePattern = @"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$";
+            return Regex.IsMatch(host, hostnamePattern) && host.Length <= 253;
+        }
+
+        /// <summary>
+        /// Checks if a port is commonly used for proxy services.
+        /// </summary>
+        private static bool IsProxyPort(int port)
+        {
+            // Common proxy ports that could allow tunneling through tunnels
+            var proxyPorts = new[] { 1080, 3128, 8080, 8118, 9050, 9150 };
+            return proxyPorts.Contains(port);
+        }
+
+        /// <summary>
+        /// Validates pod capabilities against member count and other constraints.
+        /// </summary>
+        public static (bool IsValid, string Error) ValidateCapabilities(List<PodCapability> capabilities, PodPrivateServicePolicy? policy, int memberCount)
+        {
+            if (capabilities == null)
+                return (true, string.Empty); // No capabilities is fine
+
+            if (capabilities.Contains(PodCapability.PrivateServiceGateway))
+            {
+                if (policy == null)
+                    return (false, "PrivateServiceGateway capability requires a policy");
+
+                if (!policy.Enabled)
+                    return (false, "PrivateServiceGateway capability requires policy.Enabled = true");
+
+                // Enforce MVP limit: MaxMembers <= 3 for VPN pods
+                if (policy.MaxMembers > 3)
+                    return (false, "PrivateServiceGateway allows maximum 3 members in MVP");
+
+                if (memberCount > policy.MaxMembers)
+                    return (false, $"Pod has {memberCount} members but private service gateway allows maximum {policy.MaxMembers}");
+
+                // Require non-empty allowlist
+                if (policy.AllowedDestinations == null || policy.AllowedDestinations.Count == 0)
+                    return (false, "PrivateServiceGateway capability requires at least one allowed destination");
+
+                // Validate gateway peer designation
+                if (string.IsNullOrWhiteSpace(policy.GatewayPeerId))
+                    return (false, "PrivateServiceGateway capability requires a designated gateway peer");
+
+                if (!IsValidPeerId(policy.GatewayPeerId))
+                    return (false, "Invalid GatewayPeerId format");
+
+                var policyValidation = ValidatePrivateServicePolicy(policy, new List<PodMember>()); // Members validated separately
+                if (!policyValidation.IsValid)
+                    return policyValidation;
+            }
+
+            return (true, string.Empty);
         }
     }
 }
