@@ -356,11 +356,14 @@ namespace slskd.Common.Moderation
             {
                 try
                 {
-                    var eventType = report.Severity switch
+                    // Map reason code to event type
+                    var eventType = report.ReasonCode switch
                     {
-                        ReportSeverity.Critical => PeerReputationEventType.AbusiveBehavior,
-                        ReportSeverity.High => PeerReputationEventType.ProtocolViolation,
-                        ReportSeverity.Medium => PeerReputationEventType.AssociatedWithBlockedContent,
+                        "malicious_behavior" => PeerReputationEventType.AbusiveBehavior,
+                        "repeated_violations" => PeerReputationEventType.ProtocolViolation,
+                        "served_bad_copy" => PeerReputationEventType.ServedBadCopy,
+                        "requested_blocked_content" => PeerReputationEventType.RequestedBlockedContent,
+                        "associated_with_blocked_content" => PeerReputationEventType.AssociatedWithBlockedContent,
                         _ => PeerReputationEventType.ProtocolViolation
                     };
 
@@ -369,7 +372,7 @@ namespace slskd.Common.Moderation
                         eventType,
                         contentId: null,
                         timestamp: DateTimeOffset.UtcNow,
-                        metadata: report.Reason);
+                        metadata: report.Notes);
 
                     await _peerReputation.RecordPeerEventAsync(reputationEvent, ct);
 

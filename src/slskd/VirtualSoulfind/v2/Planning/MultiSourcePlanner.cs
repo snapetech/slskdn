@@ -400,5 +400,10 @@ namespace slskd.VirtualSoulfind.v2.Planning
         /// Gets the trust score for this source's peer (0-100).
         /// </summary>
         public int TrustScore { get; init; }
+
+        /// <summary>
+        /// Gets the expected quality level for this source.
+        /// </summary>
+        public int ExpectedQuality { get; init; }
     }
 }
