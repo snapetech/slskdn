@@ -1842,3 +1842,94 @@ export const syncAllPodsBackfill = async () => {
 
   return response.json();
 };
+
+/**
+ * Pod Channel API base URL
+ */
+const channelBaseUrl = `${apiBaseUrl}/pods`;
+
+/**
+ * Create a new channel in a pod.
+ */
+export const createChannel = async (podId, channel) => {
+  const response = await fetch(`${channelBaseUrl}/${podId}/channels`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(channel),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create channel: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get all channels in a pod.
+ */
+export const getChannels = async (podId) => {
+  const response = await fetch(`${channelBaseUrl}/${podId}/channels`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get channels: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get a specific channel in a pod.
+ */
+export const getChannel = async (podId, channelId) => {
+  const response = await fetch(`${channelBaseUrl}/${podId}/channels/${channelId}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get channel: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update a channel in a pod.
+ */
+export const updateChannel = async (podId, channelId, channel) => {
+  const response = await fetch(`${channelBaseUrl}/${podId}/channels/${channelId}`, {
+    method: 'PUT',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(channel),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update channel: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Delete a channel from a pod.
+ */
+export const deleteChannel = async (podId, channelId) => {
+  const response = await fetch(`${channelBaseUrl}/${podId}/channels/${channelId}`, {
+    method: 'DELETE',
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete channel: ${response.statusText}`);
+  }
+
+  return response.json();
+};

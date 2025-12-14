@@ -340,5 +340,194 @@ namespace slskd.PodCore
                 };
             }
         }
+
+        // Channel management implementation
+        public async Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+        {
+            // Verify pod exists
+            var podEntity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+            if (podEntity == null)
+            {
+                throw new ArgumentException($"Pod {podId} does not exist", nameof(podId));
+            }
+
+            // Generate channel ID if not provided
+            if (string.IsNullOrWhiteSpace(channel.ChannelId))
+            {
+                channel.ChannelId = $"channel:{Guid.NewGuid():N}";
+            }
+
+            // Validate channel data
+            if (string.IsNullOrWhiteSpace(channel.Name))
+            {
+                throw new ArgumentException("Channel name is required", nameof(channel));
+            }
+
+            // Load current pod data
+            var pod = await GetPodAsync(podId, ct);
+            if (pod == null)
+            {
+                throw new ArgumentException($"Pod {podId} does not exist", nameof(podId));
+            }
+
+            // Add channel
+            pod.Channels ??= new List<PodChannel>();
+            pod.Channels.Add(channel);
+
+            // Update database
+            podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
+            await dbContext.SaveChangesAsync(ct);
+
+            // Publish updated pod to DHT if listed
+            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await podPublisher.PublishPodAsync(pod, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to publish pod update to DHT");
+                    }
+                }, ct);
+            }
+
+            logger.LogInformation("Created channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
+            return channel;
+        }
+
+        public async Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default)
+        {
+            // Verify pod exists
+            var podEntity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+            if (podEntity == null)
+            {
+                return false;
+            }
+
+            // Load current pod data
+            var pod = await GetPodAsync(podId, ct);
+            if (pod?.Channels == null)
+            {
+                return false;
+            }
+
+            var channelIndex = pod.Channels.FindIndex(c => c.ChannelId == channelId);
+            if (channelIndex == -1)
+            {
+                return false;
+            }
+
+            // Don't allow deletion of system channels
+            var channel = pod.Channels[channelIndex];
+            if (channel.Kind == PodChannelKind.General && channel.Name.ToLowerInvariant() == "general")
+            {
+                throw new InvalidOperationException("Cannot delete the default general channel");
+            }
+
+            // Remove channel
+            pod.Channels.RemoveAt(channelIndex);
+
+            // Update database
+            podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
+            await dbContext.SaveChangesAsync(ct);
+
+            // Publish updated pod to DHT if listed
+            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await podPublisher.PublishPodAsync(pod, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to publish pod update to DHT");
+                    }
+                }, ct);
+            }
+
+            logger.LogInformation("Deleted channel {ChannelId} from pod {PodId}", channelId, podId);
+            return true;
+        }
+
+        public async Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default)
+        {
+            var pod = await GetPodAsync(podId, ct);
+            return pod?.Channels?.FirstOrDefault(c => c.ChannelId == channelId);
+        }
+
+        public async Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default)
+        {
+            var pod = await GetPodAsync(podId, ct);
+            return (IReadOnlyList<PodChannel>)(pod?.Channels ?? new List<PodChannel>());
+        }
+
+        public async Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+        {
+            // Verify pod exists
+            var podEntity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+            if (podEntity == null)
+            {
+                return false;
+            }
+
+            // Load current pod data
+            var pod = await GetPodAsync(podId, ct);
+            if (pod?.Channels == null)
+            {
+                return false;
+            }
+
+            var existingChannel = pod.Channels.FirstOrDefault(c => c.ChannelId == channel.ChannelId);
+            if (existingChannel == null)
+            {
+                return false;
+            }
+
+            // Validate channel data
+            if (string.IsNullOrWhiteSpace(channel.Name))
+            {
+                throw new ArgumentException("Channel name is required", nameof(channel));
+            }
+
+            // Don't allow changing system channels
+            if (existingChannel.Kind == PodChannelKind.General &&
+                existingChannel.Name.ToLowerInvariant() == "general" &&
+                (channel.Kind != PodChannelKind.General || channel.Name.ToLowerInvariant() != "general"))
+            {
+                throw new InvalidOperationException("Cannot modify the default general channel");
+            }
+
+            // Update channel
+            var index = pod.Channels.IndexOf(existingChannel);
+            pod.Channels[index] = channel;
+
+            // Update database
+            podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
+            await dbContext.SaveChangesAsync(ct);
+
+            // Publish updated pod to DHT if listed
+            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await podPublisher.PublishPodAsync(pod, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to publish pod update to DHT");
+                    }
+                }, ct);
+            }
+
+            logger.LogInformation("Updated channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
+            return true;
+        }
     }
 }

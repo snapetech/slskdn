@@ -259,6 +259,18 @@ const MediaCore = () => {
   const [syncBackfillLoading, setSyncBackfillLoading] = useState(false);
   const [lastSeenTimestamps, setLastSeenTimestamps] = useState(null);
   const [backfillPodId, setBackfillPodId] = useState('');
+
+  // Pod Channel Management states
+  const [channels, setChannels] = useState([]);
+  const [channelsLoading, setChannelsLoading] = useState(false);
+  const [createChannelLoading, setCreateChannelLoading] = useState(false);
+  const [updateChannelLoading, setUpdateChannelLoading] = useState(false);
+  const [deleteChannelLoading, setDeleteChannelLoading] = useState(false);
+  const [channelPodId, setChannelPodId] = useState('');
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelKind, setNewChannelKind] = useState('General');
+  const [editingChannel, setEditingChannel] = useState(null);
+  const [editChannelName, setEditChannelName] = useState('');
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1735,6 +1747,108 @@ const MediaCore = () => {
       toast.error(`Failed to get last seen timestamps: ${err.message}`);
       setLastSeenTimestamps(null);
     }
+  };
+
+  // Pod Channel Management handlers
+  const handleGetChannels = async () => {
+    if (!channelPodId.trim()) {
+      toast.error('Pod ID is required');
+      return;
+    }
+
+    try {
+      setChannelsLoading(true);
+      const result = await mediacore.getChannels(channelPodId);
+      setChannels(result);
+    } catch (err) {
+      toast.error(`Failed to get channels: ${err.message}`);
+      setChannels([]);
+    } finally {
+      setChannelsLoading(false);
+    }
+  };
+
+  const handleCreateChannel = async () => {
+    if (!channelPodId.trim()) {
+      toast.error('Pod ID is required');
+      return;
+    }
+
+    if (!newChannelName.trim()) {
+      toast.error('Channel name is required');
+      return;
+    }
+
+    try {
+      setCreateChannelLoading(true);
+      const channel = {
+        name: newChannelName,
+        kind: newChannelKind,
+      };
+      await mediacore.createChannel(channelPodId, channel);
+      toast.success(`Channel "${newChannelName}" created successfully`);
+      setNewChannelName('');
+      // Refresh channels list
+      await handleGetChannels();
+    } catch (err) {
+      toast.error(`Failed to create channel: ${err.message}`);
+    } finally {
+      setCreateChannelLoading(false);
+    }
+  };
+
+  const handleUpdateChannel = async (channelId) => {
+    if (!editChannelName.trim()) {
+      toast.error('Channel name is required');
+      return;
+    }
+
+    try {
+      setUpdateChannelLoading(true);
+      const updatedChannel = {
+        channelId: channelId,
+        name: editChannelName,
+        kind: editingChannel.kind,
+      };
+      await mediacore.updateChannel(channelPodId, channelId, updatedChannel);
+      toast.success(`Channel updated successfully`);
+      setEditingChannel(null);
+      setEditChannelName('');
+      // Refresh channels list
+      await handleGetChannels();
+    } catch (err) {
+      toast.error(`Failed to update channel: ${err.message}`);
+    } finally {
+      setUpdateChannelLoading(false);
+    }
+  };
+
+  const handleDeleteChannel = async (channelId, channelName) => {
+    if (!confirm(`Are you sure you want to delete the channel "${channelName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeleteChannelLoading(true);
+      await mediacore.deleteChannel(channelPodId, channelId);
+      toast.success(`Channel "${channelName}" deleted successfully`);
+      // Refresh channels list
+      await handleGetChannels();
+    } catch (err) {
+      toast.error(`Failed to delete channel: ${err.message}`);
+    } finally {
+      setDeleteChannelLoading(false);
+    }
+  };
+
+  const startEditingChannel = (channel) => {
+    setEditingChannel(channel);
+    setEditChannelName(channel.name);
+  };
+
+  const cancelEditingChannel = () => {
+    setEditingChannel(null);
+    setEditChannelName('');
   };
 
   useEffect(() => {
@@ -5576,6 +5690,151 @@ const MediaCore = () => {
               {lastSeenTimestamps && Object.keys(lastSeenTimestamps).length === 0 && (
                 <Message size="small" info>
                   No last seen timestamps recorded for pod {backfillPodId}
+                </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Channel Management */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="hashtag" />
+                Pod Channel Management
+              </Card.Header>
+              <Card.Description>
+                Create, update, and manage channels within pods for organized messaging
+              </Card.Description>
+            </Card.Content>
+
+            {/* Channel Management */}
+            <Card.Content>
+              <Header size="small">Pod Channel Operations</Header>
+
+              <Input
+                placeholder="Pod ID for channel management"
+                value={channelPodId}
+                onChange={(e) => setChannelPodId(e.target.value)}
+                action={
+                  <Button
+                    color="blue"
+                    onClick={() => handleGetChannels()}
+                    loading={channelsLoading}
+                    disabled={!channelPodId.trim()}
+                  >
+                    Load Channels
+                  </Button>
+                }
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              {/* Create New Channel */}
+              <Header size="tiny">Create New Channel</Header>
+              <Input
+                placeholder="Channel name"
+                value={newChannelName}
+                onChange={(e) => setNewChannelName(e.target.value)}
+                action={
+                  <>
+                    <select
+                      value={newChannelKind}
+                      onChange={(e) => setNewChannelKind(e.target.value)}
+                      style={{ padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                    >
+                      <option value="General">General</option>
+                      <option value="Custom">Custom</option>
+                      <option value="Bound">Bound</option>
+                    </select>
+                    <Button
+                      color="green"
+                      onClick={() => handleCreateChannel()}
+                      loading={createChannelLoading}
+                      disabled={!newChannelName.trim() || !channelPodId.trim()}
+                    >
+                      Create
+                    </Button>
+                  </>
+                }
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              {/* Channels List */}
+              {channels.length > 0 && (
+                <div>
+                  <Header size="tiny">Existing Channels</Header>
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {channels.map((channel) => (
+                      <Card key={channel.channelId} style={{ marginBottom: '0.5em' }}>
+                        <Card.Content style={{ padding: '0.5em' }}>
+                          {editingChannel && editingChannel.channelId === channel.channelId ? (
+                            <div>
+                              <Input
+                                placeholder="Channel name"
+                                value={editChannelName}
+                                onChange={(e) => setEditChannelName(e.target.value)}
+                                action={
+                                  <>
+                                    <Button
+                                      size="small"
+                                      color="green"
+                                      onClick={() => handleUpdateChannel(channel.channelId)}
+                                      loading={updateChannelLoading}
+                                      disabled={!editChannelName.trim()}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      onClick={() => cancelEditingChannel()}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </>
+                                }
+                                style={{ width: '100%' }}
+                              />
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <strong>{channel.name}</strong>
+                                <div style={{ fontSize: '0.8em', color: '#666', marginTop: '0.25em' }}>
+                                  ID: {channel.channelId} • Type: {channel.kind}
+                                  {channel.bindingInfo && ` • Binding: ${channel.bindingInfo}`}
+                                </div>
+                              </div>
+                              <div>
+                                <Button
+                                  size="tiny"
+                                  onClick={() => startEditingChannel(channel)}
+                                  disabled={channel.name.toLowerCase() === 'general' && channel.kind === 'General'}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="tiny"
+                                  color="red"
+                                  onClick={() => handleDeleteChannel(channel.channelId, channel.name)}
+                                  loading={deleteChannelLoading}
+                                  disabled={channel.name.toLowerCase() === 'general' && channel.kind === 'General'}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </Card.Content>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {channels.length === 0 && channelPodId && !channelsLoading && (
+                <Message size="small" info>
+                  No channels found in pod {channelPodId}. Create the first channel above.
                 </Message>
               )}
             </Card.Content>

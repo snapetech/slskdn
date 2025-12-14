@@ -80,6 +80,23 @@ public class PodMessageRouter : IPodMessageRouter
             }
 
             var podId = channelParts[0];
+            var simpleChannelId = channelParts[1];
+
+            // Validate that the channel exists in the pod
+            var channel = await _podService.GetChannelAsync(podId, simpleChannelId, cancellationToken);
+            if (channel == null)
+            {
+                _logger.LogWarning("[PodMessageRouter] Attempted to route message to non-existent channel {ChannelId} in pod {PodId}", simpleChannelId, podId);
+                return new PodMessageRoutingResult(
+                    Success: false,
+                    MessageId: message.MessageId,
+                    PodId: podId,
+                    TargetPeerCount: 0,
+                    SuccessfullyRoutedCount: 0,
+                    FailedRoutingCount: 0,
+                    RoutingDuration: DateTimeOffset.UtcNow - startTime,
+                    ErrorMessage: $"Channel {simpleChannelId} does not exist in pod {podId}");
+            }
 
             // Check for duplicate routing using Bloom filter
             if (IsMessageSeen(message.MessageId, podId))

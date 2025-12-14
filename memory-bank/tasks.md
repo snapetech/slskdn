@@ -2254,11 +2254,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete SQLite message storage with FTS search, retention policies, and management APIs.
 
-- [ ] **T-1349**: Implement message backfill protocol
-  - Status: Not started
+- [x] **T-1349**: Implement message backfill protocol
+  - Status: Completed (2025-12-13)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Request missed messages from peers. Sync on rejoin.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete backfill protocol with range requests, sync-on-rejoin, and overlay integration.
 
 - [ ] **T-1350**: Implement pod channels (full)
   - Status: Not started

@@ -33,6 +33,63 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1349: Message Backfill Protocol (Range Sync) (Phase 10 Gap - P2)
+- **Status**: ✅ **COMPLETED** (2025-12-13)
+- **Implementation Details**:
+  - **IPodMessageBackfill Interface**: Comprehensive backfill coordination contract with sync and request handling
+  - **PodMessageBackfill Service**: Full backfill protocol implementation with overlay network integration
+  - **MessageRange Model**: Efficient range-based message requests with pagination and limits
+  - **PodBackfillResponse Model**: Structured response format for backfill data transfer
+  - **Sync-on-Rejoin Logic**: Automatic backfill triggering when peers rejoin pods after disconnection
+  - **Range-Based Requests**: Timestamp range queries to minimize data transfer and processing
+  - **Redundant Requests**: Multiple peer targeting for reliability in dynamic networks
+  - **Last-Seen Timestamp Tracking**: Per-channel timestamp management for efficient sync detection
+  - **Backfill Statistics**: Comprehensive metrics tracking (requests, messages, data transfer, performance)
+  - **PodMessageBackfillController**: RESTful API for manual backfill operations and monitoring
+  - **Overlay Network Integration**: Message routing through existing overlay infrastructure
+  - **Timeout Handling**: Configurable timeouts with graceful degradation
+  - **Error Recovery**: Robust error handling with partial success tracking
+  - **Duplicate Prevention**: Integration with Bloom filter deduplication during backfill
+  - **WebGUI Controls**: Manual backfill sync, statistics display, and timestamp management
+  - **Automatic Cleanup**: Backfill data lifecycle management with retention policies
+  - **Performance Monitoring**: Request/response timing and data transfer metrics
+  - **Peer Discovery**: Dynamic peer selection for optimal backfill performance
+
+**Backfill Protocol Flow**:
+```csharp
+// 1. Peer Rejoins Pod
+var lastSeen = backfillService.GetLastSeenTimestamps(podId);
+
+// 2. Detect Missing Ranges  
+var ranges = CalculateMissingRanges(lastSeen, currentPodState);
+
+// 3. Request Backfill from Peers
+var result = await backfillService.SyncOnRejoinAsync(podId, lastSeen);
+
+// 4. Process Responses
+foreach (var response in peerResponses)
+{
+    await backfillService.ProcessBackfillResponseAsync(podId, response.RespondingPeerId, response);
+}
+```
+
+**Message Range Optimization**:
+```csharp
+// Efficient range requests minimize data transfer
+var range = new MessageRange(
+    FromTimestampInclusive: lastSeen + 1,
+    ToTimestampExclusive: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+    MaxMessages: 1000  // Prevent overwhelming requests
+);
+```
+
+**Reliability Features**:
+- **Multiple Peer Targets**: Send requests to 3+ peers for redundancy
+- **Partial Success Handling**: Accept incomplete backfill rather than failing entirely
+- **Timeout Protection**: 30-second timeouts prevent hanging operations
+- **Progress Tracking**: Real-time statistics and completion monitoring
+- **Error Isolation**: Individual peer failures don't affect overall backfill success
+
 ### T-1348: Local Message Storage (SQLite + FTS) (Phase 10 Gap - P1)
 - **Status**: ✅ **COMPLETED** (2025-12-13)
 - **Implementation Details**:
