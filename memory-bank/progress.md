@@ -33,6 +33,57 @@
   - **Monitoring**: Statistics collection and health assessment
   - **Discovery**: Peer and content discovery algorithms
 
+### T-1353: Pod Opinion Aggregation with Affinity Weighting (Phase 10 Gap - P2)
+- **Status**: ✅ **COMPLETED** (2025-12-13)
+- **Implementation Details**:
+  - **IPodOpinionAggregator Interface**: Comprehensive opinion aggregation contract with affinity weighting
+  - **PodOpinionAggregator Service**: Full statistical analysis engine for community consensus
+  - **Member Affinity Scoring**: Multi-factor credibility calculation (activity, trust, role, tenure)
+  - **Weighted Opinion Analysis**: Affinity-weighted statistical aggregation with consensus metrics
+  - **Consensus Strength Calculation**: Variance-based agreement analysis across opinion distributions
+  - **Variant Recommendation Engine**: Five-tier recommendation system (Strongly Recommended to Strongly Not)
+  - **Activity-Based Affinity**: Message count, opinion count, membership duration, recency factors
+  - **Trust Score Calculation**: Role-based (owner/mod/member) and clean record bonuses
+  - **Statistical Aggregation**: Weighted averages, standard deviations, score distributions
+  - **Consensus Recommendations**: AI-powered variant ranking with supporting rationale
+  - **Affinity Caching System**: 5-10 minute cached affinity scores for performance optimization
+  - **Opinion Contribution Tracking**: Per-member contribution transparency and weighting
+  - **Real-time Affinity Updates**: Background recalculation of member credibility scores
+  - **PodOpinionController Aggregation**: REST API endpoints for aggregated analysis
+  - **WebGUI Aggregation Interface**: Comprehensive consensus dashboard with visualizations
+  - **Recommendation Visualization**: Color-coded confidence levels and supporting factors
+  - **Member Affinity Dashboard**: Activity metrics, trust scores, and engagement analysis
+  - **Consensus Thresholds**: Configurable agreement levels for recommendation confidence
+  - **Performance Optimization**: Cached aggregations with intelligent expiry policies
+
+**Affinity Scoring Algorithm**:
+```csharp
+// Multi-factor affinity calculation
+var affinityScore = CalculateAffinityScore(
+    messageCount: memberActivity.Messages,
+    opinionCount: memberActivity.Opinions,
+    membershipDuration: tenure,
+    isActive: recentActivity);
+
+// Trust score based on role and history
+var trustScore = baseTrust + roleBonus + cleanRecordBonus;
+
+// Final affinity = activity × trust (0-1 scale)
+var finalAffinity = Math.Min(1.0, activityScore * trustScore);
+```
+
+**Consensus Analysis Engine**:
+```csharp
+// Statistical consensus determination
+var consensusStrength = CalculateConsensusStrength(variants);
+// Factors: score variance, opinion count, reviewer agreement
+
+// Generate recommendations with reasoning
+var recommendations = variants.Select(variant =>
+    GenerateRecommendation(variant, aggregated, consensusStrength)
+).OrderByDescending(r => r.ConsensusScore);
+```
+
 ### T-1352: PodVariantOpinion Publishing (DHT) (Phase 10 Gap - P2)
 - **Status**: ✅ **COMPLETED** (2025-12-13)
 - **Implementation Details**:
