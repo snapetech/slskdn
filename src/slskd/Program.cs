@@ -436,6 +436,9 @@ namespace slskd
             ConfigureGlobalLogger();
             Log = Serilog.Log.ForContext(typeof(Program));
 
+            // Install hard telemetry to catch silent exits
+            InstallShutdownTelemetry();
+
             if (!OptionsAtStartup.Flags.NoLogo)
             {
                 PrintLogo(FullVersion);
@@ -2221,6 +2224,37 @@ namespace slskd
                     throw new IOException($"Directory {directory} is not writeable: {ex.Message}", ex);
                 }
             }
+        }
+
+        private static void InstallShutdownTelemetry()
+        {
+            // Install hard telemetry to catch silent exits and unhandled exceptions
+            // This ensures we always know WHY the process terminated
+
+            AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+            {
+                var msg = $"[FATAL] ProcessExit event fired - process terminating";
+                Console.Error.WriteLine(msg);
+                try { Log?.Fatal(msg); } catch { }
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                var ex = e.ExceptionObject as Exception;
+                var msg = $"[FATAL] Unhandled exception: {ex?.Message ?? e.ExceptionObject?.ToString() ?? "unknown"}";
+                Console.Error.WriteLine(msg);
+                Console.Error.WriteLine(ex?.StackTrace ?? "no stack trace");
+                try { Log?.Fatal(ex, msg); } catch { }
+            };
+
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
+                Console.Error.WriteLine(msg);
+                Console.Error.WriteLine(e.Exception.StackTrace);
+                try { Log?.Fatal(e.Exception, msg); } catch { }
+                e.SetObserved(); // Prevent process termination
+            };
         }
     }
 }

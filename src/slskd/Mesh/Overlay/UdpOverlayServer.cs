@@ -35,55 +35,63 @@ public class UdpOverlayServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Enable)
+        try
         {
-            logger.LogInformation("[Overlay] UDP overlay disabled");
-            return;
-        }
-
-        udp = new UdpClient(new IPEndPoint(IPAddress.Any, options.ListenPort))
-        {
-            Client =
+            if (!options.Enable)
             {
-                ReceiveBufferSize = options.ReceiveBufferBytes,
-                SendBufferSize = options.SendBufferBytes
+                logger.LogInformation("[Overlay] UDP overlay disabled");
+                return;
             }
-        };
 
-        logger.LogInformation("[Overlay] UDP listening on {Port}", options.ListenPort);
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
+            udp = new UdpClient(new IPEndPoint(IPAddress.Any, options.ListenPort))
             {
-                var result = await udp.ReceiveAsync(stoppingToken);
-                if (result.Buffer.Length > options.MaxDatagramBytes)
+                Client =
                 {
-                    logger.LogWarning("[Overlay] Dropping oversized datagram size={Size}", result.Buffer.Length);
-                    continue;
+                    ReceiveBufferSize = options.ReceiveBufferBytes,
+                    SendBufferSize = options.SendBufferBytes
                 }
+            };
 
-                ControlEnvelope envelope;
+            logger.LogInformation("[Overlay] UDP listening on {Port}", options.ListenPort);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
                 try
                 {
-                    envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(result.Buffer);
+                    var result = await udp.ReceiveAsync(stoppingToken);
+                    if (result.Buffer.Length > options.MaxDatagramBytes)
+                    {
+                        logger.LogWarning("[Overlay] Dropping oversized datagram size={Size}", result.Buffer.Length);
+                        continue;
+                    }
+
+                    ControlEnvelope envelope;
+                    try
+                    {
+                        envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(result.Buffer);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "[Overlay] Failed to decode envelope");
+                        continue;
+                    }
+
+                    await dispatcher.HandleAsync(envelope, stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // shutdown
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "[Overlay] Failed to decode envelope");
-                    continue;
+                    logger.LogWarning(ex, "[Overlay] Receive loop error");
                 }
-
-                await dispatcher.HandleAsync(envelope, stoppingToken);
             }
-            catch (OperationCanceledException)
-            {
-                // shutdown
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "[Overlay] Receive loop error");
-            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[Overlay] FATAL: UDP overlay server failed to start - {Message}", ex.Message);
+            throw; // Re-throw to stop host if UDP is critical
         }
     }
 
