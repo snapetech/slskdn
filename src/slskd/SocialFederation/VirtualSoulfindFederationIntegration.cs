@@ -189,7 +189,7 @@ namespace slskd.SocialFederation
                 };
 
                 // Add domain-specific metadata
-                switch (contentItem.Domain.ToLowerInvariant())
+                switch (contentItem.Domain.ToString().ToLowerInvariant())
                 {
                     case "music":
                         if (contentItem is MusicItem musicItem)

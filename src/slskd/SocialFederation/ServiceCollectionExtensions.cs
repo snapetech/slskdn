@@ -78,8 +78,9 @@ namespace slskd.SocialFederation
                 var keyStore = sp.GetRequiredService<IActivityPubKeyStore>();
                 var musicActor = sp.GetService<MusicLibraryActor>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LibraryActorService>>();
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
-                return new LibraryActorService(federationOptions, keyStore, musicActor, logger);
+                return new LibraryActorService(federationOptions, keyStore, musicActor, logger, loggerFactory);
             });
 
             // Register federation service

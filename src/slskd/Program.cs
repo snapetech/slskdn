@@ -1009,7 +1009,8 @@ namespace slskd
                 var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
                 var policyManager = sp.GetRequiredService<Mesh.Transport.TransportPolicyManager>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Common.Security.AnonymityTransportSelector>>();
-                return new Common.Security.AnonymityTransportSelector(options.Value, policyManager, logger);
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                return new Common.Security.AnonymityTransportSelector(options.Value, policyManager, logger, loggerFactory);
             });
 
             // Privacy layer for traffic analysis protection
@@ -1017,7 +1018,8 @@ namespace slskd
             {
                 var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Privacy.PrivacyLayer>>();
-                return new Mesh.Privacy.PrivacyLayer(logger, options.Value.Privacy);
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                return new Mesh.Privacy.PrivacyLayer(logger, loggerFactory, options.Value.Privacy);
             });
 
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
