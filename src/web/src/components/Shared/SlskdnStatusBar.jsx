@@ -149,8 +149,8 @@ const SlskdnStatusBar = () => {
             isBeacon === null
               ? 'Checking beacon status...'
               : isBeacon
-                ? `📡 BEACON! Broadcasting to ${dhtNodes} DHT nodes. Found ${discoveredPeers} peers (${slskdnPeersNew + slskdnPeersOld} slskdn: ${slskdnPeersNew} new, ${slskdnPeersOld} old).`
-                : `Not beacon-capable (behind NAT). Found ${discoveredPeers} peers (${slskdnPeersNew + slskdnPeersOld} slskdn: ${slskdnPeersNew} new, ${slskdnPeersOld} old).`
+                ? `📡 BEACON! Broadcasting to ${dhtNodes} DHT nodes. Found ${discoveredPeers} peers${slskdnPeersNew + slskdnPeersOld > 0 ? ` (${slskdnPeersNew + slskdnPeersOld} slskdn: ${slskdnPeersNew} new, ${slskdnPeersOld} old)` : ''}.`
+                : `Not beacon-capable (behind NAT). Found ${discoveredPeers} peers${slskdnPeersNew + slskdnPeersOld > 0 ? ` (${slskdnPeersNew + slskdnPeersOld} slskdn: ${slskdnPeersNew} new, ${slskdnPeersOld} old)` : ''}.`
           }
           to={`${urlBase}/system/network`}
         >

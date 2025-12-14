@@ -160,9 +160,9 @@ public class DhtRendezvousController : ControllerBase
         var blocklistStats = _blocklist.GetStats();
         
         // Get version stats from connected peers
-        var peers = _dhtService.GetMeshPeers();
-        var peersWithVersion = peers.Count(p => !string.IsNullOrEmpty(p.PeerVersion));
-        var peersWithoutVersion = peers.Count(p => string.IsNullOrEmpty(p.PeerVersion));
+        var connectedPeers = _dhtService.GetMeshPeers();
+        var slskdnPeersWithVersion = connectedPeers.Count(p => p.PeerVersion.HasValue);
+        var slskdnPeersWithoutVersion = connectedPeers.Count(p => !p.PeerVersion.HasValue);
         
         return Ok(new OverlayStatsResponse
         {
@@ -181,9 +181,9 @@ public class DhtRendezvousController : ControllerBase
                 SuccessfulConnections = connectorStats.SuccessfulConnections,
                 FailedConnections = connectorStats.FailedConnections,
                 SuccessRate = connectorStats.SuccessRate,
-                TotalSlskdnPeers = peersWithVersion + peersWithoutVersion,
-                SlskdnPeersWithVersion = peersWithVersion,
-                SlskdnPeersWithoutVersion = peersWithoutVersion,
+                TotalSlskdnPeers = slskdnPeersWithVersion + slskdnPeersWithoutVersion,
+                SlskdnPeersWithVersion = slskdnPeersWithVersion,
+                SlskdnPeersWithoutVersion = slskdnPeersWithoutVersion,
             },
             RateLimiter = new RateLimiterStatsResponse
             {
