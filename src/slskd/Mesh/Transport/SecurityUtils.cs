@@ -324,13 +324,6 @@ public class ConnectionRateLimiter
         return _attempts.GetOrAdd(peerId, _ => new ConnectionAttemptInfo());
     }
 
-    private class ConnectionAttemptInfo
-    {
-        public int AttemptCount { get; set; }
-        public DateTimeOffset BackoffUntil { get; set; } = DateTimeOffset.MinValue;
-        public DateTimeOffset LastSuccess { get; set; } = DateTimeOffset.MinValue;
-        public DateTimeOffset LastFailure { get; set; } = DateTimeOffset.MinValue;
-    }
 }
 
 /// <summary>

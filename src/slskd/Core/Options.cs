@@ -35,6 +35,7 @@ namespace slskd
     using slskd.Common.Moderation;
     using slskd.Configuration;
     using slskd.Events;
+    using slskd.SocialFederation;
     using slskd.Relay;
     using slskd.Shares;
     using slskd.Validation;

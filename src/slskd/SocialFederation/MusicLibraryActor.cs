@@ -11,6 +11,8 @@ namespace slskd.SocialFederation
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using slskd.VirtualSoulfind.Core;
+    using slskd.VirtualSoulfind.Core.Music;
 
     /// <summary>
     ///     Music library actor for ActivityPub federation.
@@ -21,7 +23,7 @@ namespace slskd.SocialFederation
     /// </remarks>
     public sealed class MusicLibraryActor : LibraryActor
     {
-        private readonly ContentDomain.IMusicContentDomainProvider _musicProvider;
+        private readonly IMusicContentDomainProvider _musicProvider;
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
 
         /// <summary>
@@ -34,7 +36,7 @@ namespace slskd.SocialFederation
         public MusicLibraryActor(
             IOptionsMonitor<SocialFederationOptions> federationOptions,
             IActivityPubKeyStore keyStore,
-            ContentDomain.IMusicContentDomainProvider musicProvider,
+            IMusicContentDomainProvider musicProvider,
             ILogger<MusicLibraryActor> logger)
             : base("music", federationOptions, keyStore, logger)
         {

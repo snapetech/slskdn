@@ -25,31 +25,19 @@ public class ContentDirectory : IMeshDirectory
         this.validator = validator;
     }
 
-    public async Task<MeshPeer?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
+    public async Task<MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
     {
-        var key = $"mesh:peer:{peerId}";
-        var desc = await dht.GetAsync<MeshPeerDescriptor>(key, ct);
-        if (desc == null) return null;
-        var endpoint = desc.Endpoints?.FirstOrDefault();
-        return new MeshPeer(desc.PeerId, endpoint, null, null);
+        // TODO: Implement proper MeshPeerDescriptor return
+        throw new NotImplementedException("ContentDirectory.FindPeerByIdAsync not yet implemented");
     }
 
-    public async Task<IReadOnlyList<MeshPeer>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
-        var key = $"mesh:content-peers:{contentId}";
-        var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
-        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeer>();
-
-        return hints.Peers
-            .Select(p =>
-            {
-                var endpoint = p.Endpoints?.FirstOrDefault();
-                return new MeshPeer(p.PeerId, endpoint, null, null);
-            })
-            .ToList();
+        // TODO: Implement proper MeshPeerDescriptor return
+        throw new NotImplementedException("ContentDirectory.FindPeersByContentAsync not yet implemented");
     }
 
-    public async Task<IReadOnlyList<MeshContent>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer-content:{peerId}";
         var contentList = await dht.GetAsync<List<string>>(key, ct);

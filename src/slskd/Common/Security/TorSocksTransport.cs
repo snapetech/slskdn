@@ -23,10 +23,6 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
     private readonly ConcurrentDictionary<string, IsolationCircuit> _circuitPool = new();
     private readonly object _circuitLock = new();
 
-    // Circuit isolation: different isolation keys get different Tor circuits
-    private readonly ConcurrentDictionary<string, IsolationCircuit> _circuitPool = new();
-    private readonly object _circuitLock = new();
-
     /// <summary>
     /// Initializes a new instance of the <see cref="TorSocksTransport"/> class.
     /// </summary>

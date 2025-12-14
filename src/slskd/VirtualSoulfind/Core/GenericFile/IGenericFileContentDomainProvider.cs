@@ -6,6 +6,7 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
 {
     using System.Threading;
     using System.Threading.Tasks;
+    using slskd.Common.Moderation;
 
     /// <summary>
     ///     Interface for the GenericFile domain provider in VirtualSoulfind v2.

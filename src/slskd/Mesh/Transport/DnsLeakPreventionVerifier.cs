@@ -4,6 +4,7 @@
 
 using System.Net;
 using System.Net.Sockets;
+using slskd.Common.Security;
 
 namespace slskd.Mesh.Transport;
 
@@ -63,7 +64,7 @@ public class DnsLeakPreventionVerifier
                     $"Hostname validation failed: {hostnameValidation.ErrorMessage}");
             }
 
-            return DnsLeakVerificationResult.Success();
+            return DnsLeakVerificationResult.CreateSuccess();
         }
         catch (Exception ex)
         {
@@ -108,7 +109,7 @@ public class DnsLeakPreventionVerifier
                 return SocksConnectionResult.Failure("SOCKS5 handshake failed");
             }
 
-            return SocksConnectionResult.Success();
+            return SocksConnectionResult.CreateSuccess();
         }
         catch (Exception ex)
         {
@@ -135,7 +136,7 @@ public class DnsLeakPreventionVerifier
 
             if (testResult.Success)
             {
-                return DnsLeakTestResult.LeakPrevented();
+                return DnsLeakTestResult.CreateLeakPrevented();
             }
             else
             {
@@ -272,7 +273,7 @@ public class DnsLeakVerificationResult
     /// <summary>
     /// Creates a successful result.
     /// </summary>
-    public static DnsLeakVerificationResult Success() =>
+    public static DnsLeakVerificationResult CreateSuccess() =>
         new() { Success = true };
 
     /// <summary>
@@ -302,7 +303,7 @@ public class SocksConnectionResult
     /// <summary>
     /// Creates a successful result.
     /// </summary>
-    public static SocksConnectionResult Success() =>
+    public static SocksConnectionResult CreateSuccess() =>
         new() { Success = true };
 
     /// <summary>
@@ -332,7 +333,7 @@ public class DnsLeakTestResult
     /// <summary>
     /// Creates a result indicating leaks are prevented.
     /// </summary>
-    public static DnsLeakTestResult LeakPrevented() =>
+    public static DnsLeakTestResult CreateLeakPrevented() =>
         new() { LeakPrevented = true };
 
     /// <summary>

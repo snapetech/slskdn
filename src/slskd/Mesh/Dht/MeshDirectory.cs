@@ -30,7 +30,7 @@ public class MeshDirectory : IMeshDirectory
         this.descriptorValidator = descriptorValidator;
     }
 
-    public async Task<MeshPeer?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
+    public async Task<MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer:{peerId}";
         var raw = await dht.GetRawAsync(key, ct);
@@ -49,7 +49,7 @@ public class MeshDirectory : IMeshDirectory
         }
     }
 
-    public async Task<IReadOnlyList<MeshPeer>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
         var key = $"mesh:content-peers:{contentId}";
         var hints = await dht.GetAsync<ContentPeerHints>(key, ct);

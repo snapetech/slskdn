@@ -9,6 +9,8 @@ namespace slskd.SocialFederation
     using System.ComponentModel.DataAnnotations;
     using System.Linq;
     using System.Text.Json.Serialization;
+    using slskd.VirtualSoulfind.Core;
+    using slskd.VirtualSoulfind.Core.Music;
 
     /// <summary>
     ///     WorkRef object type for ActivityPub federation.
@@ -195,7 +197,7 @@ namespace slskd.SocialFederation
         /// <param name="musicItem">The music content item.</param>
         /// <param name="instanceUrl">The instance base URL.</param>
         /// <returns>A WorkRef for the music item.</returns>
-        public static WorkRef FromMusicItem(ContentDomain.MusicContentItem musicItem, string instanceUrl)
+        public static WorkRef FromMusicItem(MusicItem musicItem, string instanceUrl)
         {
             var workRef = new WorkRef
             {

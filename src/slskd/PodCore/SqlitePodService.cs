@@ -117,6 +117,59 @@ namespace slskd.PodCore
             }
         }
 
+        public async Task<Pod> UpdateAsync(Pod pod, CancellationToken ct = default)
+        {
+            // SECURITY: Validate input
+            var (isValid, error) = PodValidation.ValidatePod(pod);
+            if (!isValid)
+            {
+                logger.LogWarning("Pod update rejected: {Reason}", error);
+                throw new ArgumentException(error, nameof(pod));
+            }
+
+            if (string.IsNullOrWhiteSpace(pod.PodId))
+            {
+                throw new ArgumentException("PodId is required for update", nameof(pod));
+            }
+
+            // SECURITY: Sanitize inputs
+            pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+
+            // SECURITY: Use transaction for atomicity
+            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            try
+            {
+                var existingEntity = await dbContext.Pods.FirstOrDefaultAsync(p => p.PodId == pod.PodId, ct);
+                if (existingEntity == null)
+                {
+                    throw new KeyNotFoundException($"Pod with ID {pod.PodId} not found");
+                }
+
+                // Update entity properties
+                existingEntity.Name = pod.Name;
+                existingEntity.Description = pod.Description;
+                existingEntity.IsPublic = pod.IsPublic;
+                existingEntity.MaxMembers = pod.MaxMembers;
+                existingEntity.AllowGuests = pod.AllowGuests;
+                existingEntity.RequireApproval = pod.RequireApproval;
+                existingEntity.UpdatedAt = DateTimeOffset.UtcNow;
+
+                await dbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                // Publish update
+                await podPublisher.PublishAsync(pod, ct);
+
+                return pod;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error updating pod {PodId}", pod.PodId);
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        }
+
         public async Task<IReadOnlyList<Pod>> ListAsync(CancellationToken ct = default)
         {
             var entities = await dbContext.Pods.ToListAsync(ct);

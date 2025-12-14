@@ -125,7 +125,7 @@ public class TransportDowngradeProtector
                 _logger.LogWarning("Potential downgrade attack pattern detected for peer {PeerId}: private connections failed, then clearnet succeeded",
                     peerId);
 
-                return DowngradeDetectionResult.PatternDetected(
+                return DowngradeDetectionResult.CreatePatternDetected(
                     "Suspicious pattern: private transport failures followed by clearnet success");
             }
         }
@@ -226,7 +226,7 @@ public class DowngradeDetectionResult
     /// <summary>
     /// Creates a result indicating a suspicious pattern was detected.
     /// </summary>
-    public static DowngradeDetectionResult PatternDetected(string description) =>
+    public static DowngradeDetectionResult CreatePatternDetected(string description) =>
         new() { PatternDetected = true, PatternDescription = description };
 }
 

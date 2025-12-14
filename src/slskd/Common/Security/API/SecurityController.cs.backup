@@ -9,11 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using slskd.Common.Security;
-using slskd.Mesh;
 
 /// <summary>
 /// API controller for security monitoring and management.
@@ -367,6 +365,57 @@ public class SecurityController : ControllerBase
         var anomalies = _security?.ParanoidMode?.GetRecentAnomalies(count) ?? Array.Empty<ServerAnomaly>();
         return Ok(anomalies);
     }
+}
+
+/// <summary>
+/// Security dashboard overview.
+/// </summary>
+public sealed class SecurityDashboard
+{
+    /// <summary>Gets or sets event statistics.</summary>
+    public SecurityEventStats? EventStats { get; set; }
+
+    /// <summary>Gets or sets network guard statistics.</summary>
+    public NetworkGuardStats? NetworkGuardStats { get; set; }
+
+    /// <summary>Gets or sets violation statistics.</summary>
+    public ViolationStats? ViolationStats { get; set; }
+
+    /// <summary>Gets or sets reputation statistics.</summary>
+    public ReputationStats? ReputationStats { get; set; }
+
+    /// <summary>Gets or sets paranoid mode statistics.</summary>
+    public ParanoidStats? ParanoidStats { get; set; }
+
+    /// <summary>Gets or sets fingerprint detection statistics.</summary>
+    public ReconnaissanceStats? FingerprintStats { get; set; }
+
+    /// <summary>Gets or sets honeypot statistics.</summary>
+    public HoneypotStats? HoneypotStats { get; set; }
+
+    /// <summary>Gets or sets canary statistics.</summary>
+    public CanaryStats? CanaryStats { get; set; }
+
+    /// <summary>Gets or sets entropy statistics.</summary>
+    public EntropyStats? EntropyStats { get; set; }
+
+    /// <summary>Gets or sets consensus statistics.</summary>
+    public ConsensusStats? ConsensusStats { get; set; }
+
+    /// <summary>Gets or sets verification statistics.</summary>
+    public VerificationStats? VerificationStats { get; set; }
+
+    /// <summary>Gets or sets disclosure statistics.</summary>
+    public DisclosureStats? DisclosureStats { get; set; }
+
+    /// <summary>Gets or sets temporal consistency statistics.</summary>
+    public TemporalStats? TemporalStats { get; set; }
+}
+
+    /// <summary>
+    /// Get current adversarial settings.
+    /// </summary>
+    [HttpGet("adversarial")]
     public ActionResult<AdversarialOptions> GetAdversarialSettings()
     {
         if (_adversarialOptions == null)
@@ -377,6 +426,10 @@ public class SecurityController : ControllerBase
         return Ok(_adversarialOptions);
     }
 
+    /// <summary>
+    /// Gets the current Tor connectivity status.
+    /// </summary>
+    /// <returns>The Tor transport status.</returns>
     [HttpGet("tor/status")]
     public ActionResult<AnonymityTransportStatus> GetTorStatus()
     {
@@ -390,6 +443,10 @@ public class SecurityController : ControllerBase
         return Ok(status);
     }
 
+    /// <summary>
+    /// Tests Tor connectivity and returns the current status.
+    /// </summary>
+    /// <returns>The Tor transport status after connectivity test.</returns>
     [HttpPost("tor/test")]
     public async Task<ActionResult<AnonymityTransportStatus>> TestTorConnectivity()
     {
@@ -411,6 +468,9 @@ public class SecurityController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Update adversarial settings.
+    /// </summary>
     [HttpPut("adversarial")]
     public ActionResult UpdateAdversarialSettings([FromBody] AdversarialOptions settings)
     {
@@ -432,6 +492,9 @@ public class SecurityController : ControllerBase
         return Ok(new { message = "Adversarial settings updated (persistence not yet implemented)" });
     }
 
+    /// <summary>
+    /// Get adversarial statistics.
+    /// </summary>
     [HttpGet("adversarial/stats")]
     public ActionResult<AdversarialStats> GetAdversarialStats()
     {
@@ -448,6 +511,9 @@ public class SecurityController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Get transport selector status and available transports.
+    /// </summary>
     [HttpGet("transports/status")]
     public ActionResult<TransportSelectorStatus> GetTransportStatus()
     {
@@ -459,6 +525,9 @@ public class SecurityController : ControllerBase
         return Ok(_transportSelector.GetSelectorStatus());
     }
 
+    /// <summary>
+    /// Get detailed status of all configured transports.
+    /// </summary>
     [HttpGet("transports")]
     public ActionResult<Dictionary<AnonymityTransportType, AnonymityTransportStatus>> GetAllTransportStatuses()
     {
@@ -470,6 +539,9 @@ public class SecurityController : ControllerBase
         return Ok(_transportSelector.GetAllStatuses());
     }
 
+    /// <summary>
+    /// Test connectivity for all configured transports.
+    /// </summary>
     [HttpPost("transports/test")]
     public async Task<ActionResult> TestTransportConnectivity()
     {
@@ -489,6 +561,9 @@ public class SecurityController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get mesh circuit statistics.
+    /// </summary>
     [HttpGet("circuits/stats")]
     public ActionResult<CircuitStatistics> GetCircuitStats()
     {
@@ -500,6 +575,9 @@ public class SecurityController : ControllerBase
         return Ok(_circuitBuilder.GetStatistics());
     }
 
+    /// <summary>
+    /// Get information about all active circuits.
+    /// </summary>
     [HttpGet("circuits")]
     public ActionResult<List<CircuitInfo>> GetActiveCircuits()
     {
@@ -512,6 +590,9 @@ public class SecurityController : ControllerBase
         return Ok(circuits.Select(c => c.GetInfo()).ToList());
     }
 
+    /// <summary>
+    /// Build a new circuit to a target peer.
+    /// </summary>
     [HttpPost("circuits")]
     public async Task<ActionResult<CircuitInfo>> BuildCircuit([FromBody] BuildCircuitRequest request)
     {
@@ -534,6 +615,9 @@ public class SecurityController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Destroy a circuit by ID.
+    /// </summary>
     [HttpDelete("circuits/{circuitId}")]
     public ActionResult DestroyCircuit(string circuitId)
     {
@@ -546,6 +630,9 @@ public class SecurityController : ControllerBase
         return Ok();
     }
 
+    /// <summary>
+    /// Get mesh peer statistics.
+    /// </summary>
     [HttpGet("peers/stats")]
     public ActionResult<PeerStatistics> GetPeerStats()
     {
@@ -557,6 +644,9 @@ public class SecurityController : ControllerBase
         return Ok(_peerManager.GetStatistics());
     }
 
+    /// <summary>
+    /// Get all available mesh peers.
+    /// </summary>
     [HttpGet("peers")]
     public async Task<ActionResult<List<PeerInfo>>> GetPeers()
     {
@@ -580,4 +670,138 @@ public class SecurityController : ControllerBase
         }).ToList());
     }
 
+/// <summary>
+/// Request to ban an IP.
+/// </summary>
+public sealed class BanIpRequest
+{
+    /// <summary>Gets or sets the IP address.</summary>
+    public required string IpAddress { get; set; }
+
+    /// <summary>Gets or sets the reason.</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>Gets or sets duration in minutes.</summary>
+    public int? Duration { get; set; }
+
+    /// <summary>Gets or sets whether permanent.</summary>
+    public bool Permanent { get; set; }
 }
+
+/// <summary>
+/// Request to ban a username.
+/// </summary>
+public sealed class BanUsernameRequest
+{
+    /// <summary>Gets or sets the username.</summary>
+    public required string Username { get; set; }
+
+    /// <summary>Gets or sets the reason.</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>Gets or sets duration in minutes.</summary>
+    public int? Duration { get; set; }
+
+    /// <summary>Gets or sets whether permanent.</summary>
+    public bool Permanent { get; set; }
+}
+
+/// <summary>
+/// Request to set reputation.
+/// </summary>
+public sealed class SetReputationRequest
+{
+    /// <summary>Gets or sets the score (0-100).</summary>
+    public required int Score { get; set; }
+
+    /// <summary>Gets or sets the reason.</summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Request to set trust tier.
+/// </summary>
+public sealed class SetTrustTierRequest
+{
+    /// <summary>Gets or sets the tier name.</summary>
+    public required string Tier { get; set; }
+
+    /// <summary>Gets or sets the reason.</summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Adversarial features statistics.
+/// </summary>
+public sealed class AdversarialStats
+{
+    /// <summary>Gets or sets whether adversarial features are enabled.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Gets or sets the current adversarial profile.</summary>
+    public AdversarialProfile Profile { get; set; }
+
+    /// <summary>Gets or sets whether privacy layer is enabled.</summary>
+    public bool PrivacyEnabled { get; set; }
+
+    /// <summary>Gets or sets whether anonymity layer is enabled.</summary>
+    public bool AnonymityEnabled { get; set; }
+
+    /// <summary>Gets or sets whether obfuscated transport is enabled.</summary>
+    public bool TransportEnabled { get; set; }
+
+    /// <summary>Gets or sets whether onion routing is enabled.</summary>
+    public bool OnionRoutingEnabled { get; set; }
+
+    /// <summary>Gets or sets whether censorship resistance is enabled.</summary>
+    public bool CensorshipResistanceEnabled { get; set; }
+
+    /// <summary>Gets or sets whether plausible deniability is enabled.</summary>
+    public bool PlausibleDeniabilityEnabled { get; set; }
+}
+
+/// <summary>
+/// Request to build a new circuit.
+/// </summary>
+public sealed class BuildCircuitRequest
+{
+    /// <summary>Gets or sets the target peer ID.</summary>
+    public required string TargetPeerId { get; set; }
+
+    /// <summary>Gets or sets the circuit length (number of hops).</summary>
+    public int? CircuitLength { get; set; }
+}
+
+/// <summary>
+/// Information about a mesh peer.
+/// </summary>
+public sealed class PeerInfo
+{
+    /// <summary>Gets or sets the peer ID.</summary>
+    public string PeerId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the peer addresses.</summary>
+    public List<string> Addresses { get; set; } = new();
+
+    /// <summary>Gets or sets when the peer was last seen.</summary>
+    public DateTimeOffset LastSeen { get; set; }
+
+    /// <summary>Gets or sets the trust score.</summary>
+    public double TrustScore { get; set; }
+
+    /// <summary>Gets or sets the latency in milliseconds.</summary>
+    public int LatencyMs { get; set; }
+
+    /// <summary>Gets or sets the bandwidth in Mbps.</summary>
+    public double BandwidthMbps { get; set; }
+
+    /// <summary>Gets or sets whether the peer supports onion routing.</summary>
+    public bool SupportsOnionRouting { get; set; }
+
+    /// <summary>Gets or sets the peer version.</summary>
+    public string Version { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the quality score.</summary>
+    public double QualityScore { get; set; }
+}
+

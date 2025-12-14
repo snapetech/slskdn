@@ -5,6 +5,7 @@
 namespace slskd.VirtualSoulfind.Core.GenericFile
 {
     using System;
+    using slskd.Common.Moderation;
     using slskd.VirtualSoulfind.Core;
 
     /// <summary>

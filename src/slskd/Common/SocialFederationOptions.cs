@@ -6,7 +6,10 @@ namespace slskd.Common
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.ComponentModel.DataAnnotations;
+    using Utility.CommandLine;
+    using Utility.EnvironmentVariables;
 
     /// <summary>
     ///     Social federation options.

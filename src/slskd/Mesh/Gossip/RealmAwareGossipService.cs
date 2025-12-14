@@ -304,6 +304,8 @@ namespace slskd.Mesh.Gossip
                 _multiRealmService = multiRealmService;
             }
 
+            public string CurrentRealmId => throw new NotSupportedException("Composite realm service doesn't have a single realm ID");
+
             public string RealmId => throw new NotSupportedException("Composite realm service doesn't have a single realm ID");
 
             public byte[] NamespaceSalt => throw new NotSupportedException("Composite realm service doesn't have a single namespace salt");
@@ -339,6 +341,13 @@ namespace slskd.Mesh.Gossip
                 }
 
                 return IsSameRealm(realmId);
+            }
+
+            public Task<bool> IsPeerAllowedInRealmAsync(string peerId, CancellationToken cancellationToken = default)
+            {
+                // For composite realm service, allow all peers by default
+                // Individual realm services handle their own peer filtering
+                return Task.FromResult(true);
             }
         }
 

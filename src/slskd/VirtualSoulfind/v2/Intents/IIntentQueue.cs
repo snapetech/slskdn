@@ -20,6 +20,8 @@ namespace slskd.VirtualSoulfind.v2.Intents
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using slskd.VirtualSoulfind.Core;
+    using slskd.VirtualSoulfind.Core;
 
     /// <summary>
     ///     Queue for managing content acquisition intents.

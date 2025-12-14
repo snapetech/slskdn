@@ -3,6 +3,8 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using slskd.Mesh;
+using slskd.Mesh.ServiceFabric;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

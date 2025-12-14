@@ -46,40 +46,6 @@ namespace slskd.Common.Moderation
     /// <summary>
     ///     Sub-provider for peer reputation tracking and banning.
     /// </summary>
-    /// <remarks>
-    ///     <para>
-    ///         🔒 MANDATORY: See `MCP-HARDENING.md` Section 3 for:
-    ///         - Sybil resistance (event rate limiting)
-    ///         - Peer ID hashing for logging (SHA256 + salt)
-    ///         - Encrypted persistence (DataProtection API)
-    ///         - Reputation decay (prevent permanent bans)
-    ///     </para>
-    /// </remarks>
-    public interface IPeerReputationStore
-    {
-        /// <summary>
-        ///     Records a peer event (positive or negative).
-        /// </summary>
-        /// <param name="peerId">The internal peer identifier.</param>
-        /// <param name="report">The peer report.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>A task representing the operation.</returns>
-        /// <remarks>
-        ///     🔒 CRITICAL: peerId must be internal ID, NOT Soulseek username or IP.
-        /// </remarks>
-        Task RecordPeerEventAsync(
-            string peerId,
-            PeerReport report,
-            CancellationToken ct);
-
-        /// <summary>
-        ///     Checks if a peer is banned.
-        /// </summary>
-        /// <param name="peerId">The internal peer identifier.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>True if the peer is banned; otherwise false.</returns>
-        Task<bool> IsPeerBannedAsync(string peerId, CancellationToken ct);
-    }
 
     /// <summary>
     ///     Sub-provider for external moderation services (optional, opt-in).

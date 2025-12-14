@@ -385,6 +385,20 @@ namespace slskd.Common.Moderation
             return "no_extension";
         }
 
+        /// <inheritdoc />
+        public Task ReportContentAsync(string contentId, ModerationReport report, CancellationToken ct)
+        {
+            // LLM provider doesn't handle content reporting - delegate to other providers
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc />
+        public Task ReportPeerAsync(string peerId, PeerReport report, CancellationToken ct)
+        {
+            // LLM provider doesn't handle peer reporting - delegate to other providers
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         ///     Truncates content to a maximum length.
         /// </summary>

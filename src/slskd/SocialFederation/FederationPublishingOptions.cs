@@ -6,7 +6,10 @@ namespace slskd.SocialFederation
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.ComponentModel.DataAnnotations;
+    using Utility.CommandLine;
+    using Utility.EnvironmentVariables;
 
     /// <summary>
     ///     Federation publishing options.

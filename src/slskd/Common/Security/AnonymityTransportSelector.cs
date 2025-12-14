@@ -2,6 +2,9 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using slskd.Mesh;
+using slskd.Mesh.Transport;
+
 namespace slskd.Common.Security;
 
 /// <summary>
@@ -53,7 +56,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
 {
     private readonly AdversarialOptions _adversarialOptions;
     private readonly ILogger<AnonymityTransportSelector> _logger;
-    private readonly Transport.TransportPolicyManager _policyManager;
+    private readonly TransportPolicyManager _policyManager;
 
     private readonly Dictionary<AnonymityTransportType, IAnonymityTransport> _transports = new();
     private readonly object _transportsLock = new();
@@ -68,7 +71,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
     /// <param name="logger">The logger.</param>
     public AnonymityTransportSelector(
         AdversarialOptions adversarialOptions,
-        Transport.TransportPolicyManager policyManager,
+        TransportPolicyManager policyManager,
         ILogger<AnonymityTransportSelector> logger)
     {
         _adversarialOptions = adversarialOptions ?? throw new ArgumentNullException(nameof(adversarialOptions));
@@ -334,7 +337,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
         AnonymityTransportType? excludeType = null)
     {
         // Get applicable transport policy
-        Transport.TransportPolicy? policy = null;
+        TransportPolicy? policy = null;
         if (!string.IsNullOrEmpty(peerId))
         {
             policy = _policyManager.GetApplicablePolicy(peerId, podId);
@@ -393,7 +396,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
         return await SelectTransportAsync(peerId: null, podId: null, cancellationToken, excludeType);
     }
 
-    private List<AnonymityTransportType> GetTransportPriorityOrder(Transport.TransportPolicy? policy = null)
+    private List<AnonymityTransportType> GetTransportPriorityOrder(TransportPolicy? policy = null)
     {
         var priorityOrder = new List<AnonymityTransportType>();
 
@@ -484,7 +487,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
         return priorityOrder;
     }
 
-    private bool IsTransportAllowedByPolicy(AnonymityTransportType transportType, Transport.TransportPolicy policy)
+    private bool IsTransportAllowedByPolicy(AnonymityTransportType transportType, TransportPolicy policy)
     {
         // Convert anonymity transport type to mesh transport type for policy checking
         var meshTransportType = MapAnonymityTypeToTransportType(transportType);
@@ -497,24 +500,24 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
         return policy.IsTransportAllowed(meshTransportType.Value, _adversarialOptions.MeshTransport);
     }
 
-    private static AnonymityTransportType? MapTransportTypeToAnonymityType(Transport.TransportType transportType)
+    private static AnonymityTransportType? MapTransportTypeToAnonymityType(TransportType transportType)
     {
         return transportType switch
         {
-            Transport.TransportType.DirectQuic => AnonymityTransportType.Direct,
-            Transport.TransportType.TorOnionQuic => AnonymityTransportType.Tor,
-            Transport.TransportType.I2PQuic => AnonymityTransportType.I2P,
+            TransportType.DirectQuic => AnonymityTransportType.Direct,
+            TransportType.TorOnionQuic => AnonymityTransportType.Tor,
+            TransportType.I2PQuic => AnonymityTransportType.I2P,
             _ => null
         };
     }
 
-    private static Transport.TransportType? MapAnonymityTypeToTransportType(AnonymityTransportType anonymityType)
+    private static TransportType? MapAnonymityTypeToTransportType(AnonymityTransportType anonymityType)
     {
         return anonymityType switch
         {
-            AnonymityTransportType.Direct => Transport.TransportType.DirectQuic,
-            AnonymityTransportType.Tor => Transport.TransportType.TorOnionQuic,
-            AnonymityTransportType.I2P => Transport.TransportType.I2PQuic,
+            AnonymityTransportType.Direct => TransportType.DirectQuic,
+            AnonymityTransportType.Tor => TransportType.TorOnionQuic,
+            AnonymityTransportType.I2P => TransportType.I2PQuic,
             _ => null
         };
     }

@@ -356,7 +356,7 @@ namespace slskd.Mesh.Realm.Bridge
         /// </summary>
         /// <param name="data">The result data.</param>
         /// <returns>The result.</returns>
-        public static BridgeOperationResult Success(object? data = null)
+        public static BridgeOperationResult CreateSuccess(object? data = null)
         {
             return new BridgeOperationResult { Success = true, Data = data };
         }

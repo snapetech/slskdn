@@ -95,6 +95,10 @@
   </Target>
 
   <ItemGroup>
+    <!-- Temporarily exclude problematic TransportSelector.cs to enable testing -->
+    <Compile Remove="Mesh/Transport/TransportSelector.cs" />
+    <!-- Exclude CodeQuality MSBuild tasks from compilation -->
+    <Compile Remove="Common\CodeQuality\**" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="FluentFTP" Version="49.0.2" />

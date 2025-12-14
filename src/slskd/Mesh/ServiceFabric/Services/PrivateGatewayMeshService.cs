@@ -5,6 +5,7 @@
 using MessagePack;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using slskd.Common.Security;
 using slskd.Mesh.ServiceFabric;
 using slskd.PodCore;
 using System;
