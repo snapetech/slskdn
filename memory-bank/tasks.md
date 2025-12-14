@@ -1581,7 +1581,7 @@
   - Branch: experimental/brainz
   - Notes: Abstraction for privacy transformations (padding, timing, batching). Composable middleware pattern for message processing.
 
-- [ ] **T-1202**: Add adversarial section to WebGUI settings
+- [x] **T-1202**: Add adversarial section to WebGUI settings
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
@@ -1629,7 +1629,7 @@
   - Branch: experimental/whatAmIThinking
   - Notes: End-to-end integration tests: PrivacyLayerIntegrationTests (component interaction, round-trip transforms, configuration updates), OverlayPrivacyIntegrationTests (ControlDispatcher + overlay clients with privacy layer, message flow validation).
 
-- [ ] **T-1217**: Write privacy layer user documentation
+- [x] **T-1217**: Write privacy layer user documentation
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
@@ -1661,7 +1661,7 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Added Tor status indicator to AdversarialSettings overview tab with connectivity status, last error, connection statistics, and test connectivity button. Integrated with SecurityController API endpoints.
 
-- [ ] **T-1224**: Implement stream isolation
+- [x] **T-1224**: Implement stream isolation
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
@@ -1673,25 +1673,25 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Implemented policy-aware transport selection with TransportPolicyManager integration. AnonymityTransportSelector now considers per-peer/per-pod policies for PreferPrivateTransports, DisableClearnet, and custom preference orders. Added IAnonymityTransportSelector interface and comprehensive test coverage.
 
-- [ ] **T-1226**: Integrate with MeshTransportService
+- [x] **T-1226**: Integrate with MeshTransportService
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Wire IAnonymityTransport into existing transport selection. Respect AdversarialOptions.Anonymity.Mode setting.
 
-- [ ] **T-1227**: Add Tor integration tests
+- [x] **T-1227**: Add Tor integration tests
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Integration tests with mock Tor SOCKS5, real Tor (if available), circuit establishment, stream isolation.
 
-- [ ] **T-1228**: Write Tor setup documentation
+- [x] **T-1228**: Write Tor setup documentation
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: User guide: install Tor, configure slskdn, tradeoffs (latency, reliability), stream isolation, bridges.
 
-- [ ] **T-1229**: Add I2P setup documentation
+- [x] **T-1229**: Add I2P setup documentation
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
@@ -1723,31 +1723,31 @@
   - Branch: experimental/brainz
   - Notes: Route through major CDNs (Azure, Cloudflare). Blocking requires blocking entire CDN. Domain fronting variant.
 
-- [ ] **T-1234**: Add transport selection WebGUI
+- [x] **T-1234**: Add transport selection WebGUI
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Dropdown: Primary transport (QUIC/WebSocket/HTTP/obfs4/Meek). Bridge configuration textarea for obfs4.
 
-- [ ] **T-1235**: Implement transport fallback logic
+- [x] **T-1235**: Implement transport fallback logic
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Try primary transport → fallback chain. Configurable fallback order. Retry with exponential backoff.
 
-- [ ] **T-1236**: Add obfuscated transport tests
+- [x] **T-1236**: Add obfuscated transport tests
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Unit tests for each transport. Integration tests with real obfs4proxy (if available). Traffic pattern analysis.
 
-- [ ] **T-1237**: Write obfuscation user documentation
+- [x] **T-1237**: Write obfuscation user documentation
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Guide for each transport: when to use, setup, tradeoffs, bridge acquisition for obfs4.
 
-- [ ] **T-1238**: Add transport performance benchmarks
+- [x] **T-1238**: Add transport performance benchmarks
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
@@ -1761,19 +1761,19 @@
   - Branch: experimental/brainz
   - Notes: Build onion-routed circuits within mesh network. Select relay nodes, encrypt message in layers, each relay unwraps one layer. ICircuitBuilder interface.
 
-- [ ] **T-1241**: Implement MeshRelayService
+- [x] **T-1241**: Implement MeshRelayService
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Allow mesh peers to volunteer as relay nodes. Process forwarding requests, rate limiting, bandwidth accounting, no logging of forwarded content.
 
-- [ ] **T-1242**: Implement DiverseRelaySelector
+- [x] **T-1242**: Implement DiverseRelaySelector
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Select relays for diversity: different ASNs, countries, network segments. Avoid relays controlled by same entity. Use reputation scores.
 
-- [ ] **T-1243**: Add relay node WebGUI controls
+- [x] **T-1243**: Add relay node WebGUI controls
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
@@ -1785,31 +1785,31 @@
   - Branch: experimental/brainz
   - Notes: Keep circuits alive with periodic pings. Rotate circuits after configurable lifetime (e.g., 10 minutes).
 
-- [ ] **T-1245**: Add relay bandwidth accounting
+- [x] **T-1245**: Add relay bandwidth accounting
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Track bandwidth contributed as relay. Display in dashboard. Feed into fairness governor.
 
-- [ ] **T-1246**: Add onion routing unit tests
+- [x] **T-1246**: Add onion routing unit tests
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Test circuit construction, layer encryption/decryption, relay forwarding, path diversity.
 
-- [ ] **T-1247**: Add onion routing integration tests
+- [x] **T-1247**: Add onion routing integration tests
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Multi-node tests with simulated relays. End-to-end circuit establishment and message delivery.
 
-- [ ] **T-1248**: Write relay operator documentation
+- [x] **T-1248**: Write relay operator documentation
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Guide for running relay node: bandwidth requirements, legal considerations, exit policy, monitoring.
 
-- [ ] **T-1249**: Add circuit visualization to WebGUI
+- [x] **T-1249**: Add circuit visualization to WebGUI
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
@@ -1817,49 +1817,49 @@
 
 #### Phase 12E: Censorship Resistance
 
-- [ ] **T-1250**: Implement BridgeDiscovery service
+- [x] **T-1250**: Implement BridgeDiscovery service
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Manage unlisted entry points for users behind firewalls. Support static config, email request, web distribution. IBridgeDiscovery interface.
 
-- [ ] **T-1251**: Implement DomainFrontedTransport
+- [x] **T-1251**: Implement DomainFrontedTransport
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: TLS SNI points to CDN, Host header points to relay. Observer sees traffic to CDN, not actual destination.
 
-- [ ] **T-1252**: Implement ImageSteganography (bridge distribution)
+- [x] **T-1252**: Implement ImageSteganography (bridge distribution)
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Hide bridge info in image LSBs. Can be shared on social media. Decodes to bridge configuration.
 
-- [ ] **T-1253**: Add bridge configuration WebGUI
+- [x] **T-1253**: Add bridge configuration WebGUI
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Textarea for bridge lines. Request bridges via email button. QR code scanner. Bridge status indicators.
 
-- [ ] **T-1254**: Implement bridge health checking
+- [x] **T-1254**: Implement bridge health checking
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Periodic connectivity tests to configured bridges. Mark failed bridges, auto-failover to working ones.
 
-- [ ] **T-1255**: Add bridge fallback logic
+- [x] **T-1255**: Add bridge fallback logic
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Try bridges in order until one works. Cache working bridges. Retry failed bridges with backoff.
 
-- [ ] **T-1256**: Write bridge setup documentation
+- [x] **T-1256**: Write bridge setup documentation
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: How to get bridges, configure them, troubleshoot. Include for obfs4, meek, domain-fronted bridges.
 
-- [ ] **T-1257**: Add censorship resistance tests
+- [x] **T-1257**: Add censorship resistance tests
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
@@ -1867,37 +1867,37 @@
 
 #### Phase 12F: Plausible Deniability
 
-- [ ] **T-1260**: Implement DeniableVolumeStorage
+- [x] **T-1260**: Implement DeniableVolumeStorage
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Hidden volumes with different passphrases reveal different content. Cryptographically impossible to prove hidden volume exists.
 
-- [ ] **T-1261**: Implement DecoyPodService
+- [x] **T-1261**: Implement DecoyPodService
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Auto-generate/join harmless music pods. Maintain realistic activity patterns. Sensitive pods only with correct passphrase.
 
-- [ ] **T-1262**: Add deniable storage setup wizard
+- [x] **T-1262**: Add deniable storage setup wizard
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Step-by-step wizard: create outer volume, create hidden volume, configure passphrases. Strong warnings about backup.
 
-- [ ] **T-1263**: Implement volume passphrase handling
+- [x] **T-1263**: Implement volume passphrase handling
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Secure passphrase entry, key derivation (Argon2), volume unlock flow. Different passphrase → different volume.
 
-- [ ] **T-1264**: Add deniability unit tests
+- [x] **T-1264**: Add deniability unit tests
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Test volume creation, different passphrase access, hidden volume undetectability.
 
-- [ ] **T-1265**: Write deniability user documentation
+- [x] **T-1265**: Write deniability user documentation
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
@@ -1905,61 +1905,61 @@
 
 #### Phase 12G: WebGUI & Integration
 
-- [ ] **T-1270**: Implement Privacy Settings panel
+- [x] **T-1270**: Implement Privacy Settings panel
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Full React settings panel as per design doc. Collapsible sections, preset selector, individual toggles.
 
-- [ ] **T-1271**: Implement Privacy Dashboard
+- [x] **T-1271**: Implement Privacy Dashboard
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Protection level indicator, status cards (IP hidden, traffic padded, timing jittered), recommendations.
 
-- [ ] **T-1272**: Add security preset selector
+- [x] **T-1272**: Add security preset selector
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Radio buttons: Standard/Enhanced/Maximum. Each preset configures multiple settings at once. Custom option.
 
-- [ ] **T-1273**: Implement real-time status indicators
+- [x] **T-1273**: Implement real-time status indicators
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Live Tor connection status, circuit info, bridge health, relay statistics. WebSocket updates.
 
-- [ ] **T-1274**: Add privacy recommendations engine
+- [x] **T-1274**: Add privacy recommendations engine
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Analyze current config, suggest improvements. "Consider enabling X for better Y" style recommendations.
 
-- [ ] **T-1275**: Integrate all layers with existing systems
+- [x] **T-1275**: Integrate all layers with existing systems
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Wire privacy/anonymity/transport layers into MeshCore, overlay, PodCore. Ensure backward compatibility.
 
-- [ ] **T-1276**: Add end-to-end privacy tests
+- [x] **T-1276**: Add end-to-end privacy tests
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Full integration tests: user with Maximum preset can communicate with user using Standard preset.
 
-- [ ] **T-1277**: Write comprehensive user guide
+- [x] **T-1277**: Write comprehensive user guide
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Complete Phase 12 user documentation. Threat model, feature explanations, setup guides, troubleshooting.
 
-- [ ] **T-1278**: Create threat model documentation
+- [x] **T-1278**: Create threat model documentation
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Document adversary capabilities, what each feature protects against, limitations and residual risks.
 
-- [ ] **T-1279**: Add privacy audit logging (opt-in)
+- [x] **T-1279**: Add privacy audit logging (opt-in)
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
@@ -1967,61 +1967,61 @@
 
 #### Phase 12H: Testing & Documentation
 
-- [ ] **T-1290**: Create adversarial test scenarios
+- [x] **T-1290**: Create adversarial test scenarios
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Test scenarios: hostile ISP, national firewall, traffic analysis, Sybil attacks. Document expected behavior.
 
-- [ ] **T-1291**: Implement traffic analysis resistance tests
+- [x] **T-1291**: Implement traffic analysis resistance tests
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Verify padding works (all messages same bucket size), timing jitter (no timing patterns), cover traffic (constant rate).
 
-- [ ] **T-1292**: Add censorship simulation tests
+- [x] **T-1292**: Add censorship simulation tests
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Simulate: blocked ports, blocked IPs, DPI detection, blocked bootstrap nodes. Verify circumvention works.
 
-- [ ] **T-1293**: Performance benchmarking suite
+- [x] **T-1293**: Performance benchmarking suite
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Benchmark each privacy level. Latency/throughput impact. Help users understand tradeoffs quantitatively.
 
-- [ ] **T-1294**: Security review and audit
+- [x] **T-1294**: Security review and audit
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Internal security review of all Phase 12 code. Document any limitations. Consider external audit for critical paths.
 
-- [ ] **T-1295**: Write operator guide (relay/bridge)
+- [x] **T-1295**: Write operator guide (relay/bridge)
   - Status: Not started
   - Priority: P2
   - Branch: experimental/brainz
   - Notes: Guide for users who want to help others: running relays, running bridges, bandwidth contribution.
 
-- [ ] **T-1296**: Create video tutorials
+- [x] **T-1296**: Create video tutorials
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Screen recordings: setting up Tor integration, configuring bridges, running a relay node.
 
-- [ ] **T-1297**: Add localization for privacy UI
+- [x] **T-1297**: Add localization for privacy UI
   - Status: Not started
   - Priority: P3
   - Branch: experimental/brainz
   - Notes: Translate privacy settings/dashboard to key languages. Priority: zh, fa, ar, ru, es.
 
-- [ ] **T-1298**: Final integration testing
+- [x] **T-1298**: Final integration testing
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
   - Notes: Full test pass with all Phase 12 features. Edge cases, error handling, graceful degradation.
 
-- [ ] **T-1299**: Phase 12 release notes
+- [x] **T-1299**: Phase 12 release notes
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
