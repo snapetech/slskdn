@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Segment,
-  Header,
-  Button,
-  Input,
-  Table,
-  Label,
-  Icon,
-  Message,
-  Grid,
-  Statistic,
-  Tab,
-  Loader,
-} from 'semantic-ui-react';
 import * as libraryHealth from '../../../lib/libraryHealth';
 import { LoaderSegment } from '../../Shared';
+import React, { useEffect, useState } from 'react';
+import {
+  Button,
+  Grid,
+  Header,
+  Icon,
+  Input,
+  Label,
+  Loader,
+  Message,
+  Segment,
+  Statistic,
+  Tab,
+  Table,
+} from 'semantic-ui-react';
 
 const LibraryHealth = () => {
   const [libraryPath, setLibraryPath] = useState('');
@@ -30,22 +30,27 @@ const LibraryHealth = () => {
 
   const loadSummary = async (path) => {
     if (!path) return;
-    
+
     try {
       setLoading(true);
       setError(null);
-      const [summaryResp, byTypeResp, byArtistResp, issuesResp] = await Promise.all([
-        libraryHealth.getSummary(path),
-        libraryHealth.getIssuesByType(path),
-        libraryHealth.getIssuesByArtist(10),
-        libraryHealth.getIssues({ libraryPath: path, limit: 100 }),
-      ]);
+      const [summaryResp, byTypeResp, byArtistResp, issuesResp] =
+        await Promise.all([
+          libraryHealth.getSummary(path),
+          libraryHealth.getIssuesByType(path),
+          libraryHealth.getIssuesByArtist(10),
+          libraryHealth.getIssues({ libraryPath: path, limit: 100 }),
+        ]);
       setSummary(summaryResp.data);
       setIssuesByType(byTypeResp.data.groups || []);
       setIssuesByArtist(byArtistResp.data.groups || []);
       setIssues(issuesResp.data.issues || []);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to load library health data');
+    } catch (error_) {
+      setError(
+        error_.response?.data?.message ||
+          error_.message ||
+          'Failed to load library health data',
+      );
     } finally {
       setLoading(false);
     }
@@ -66,46 +71,68 @@ const LibraryHealth = () => {
       // Poll for completion
       const poll = setInterval(async () => {
         const statusResp = await libraryHealth.getScanStatus(scanId);
-        if (statusResp.data.status === 'Completed' || statusResp.data.status === 'Failed') {
+        if (
+          statusResp.data.status === 'Completed' ||
+          statusResp.data.status === 'Failed'
+        ) {
           clearInterval(poll);
           setScanning(false);
           loadSummary(libraryPath);
         }
-      }, 2000);
+      }, 2_000);
 
       setTimeout(() => {
         clearInterval(poll);
         setScanning(false);
         loadSummary(libraryPath);
-      }, 60000); // Max 1 minute polling
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to start scan');
+      }, 60_000); // Max 1 minute polling
+    } catch (error_) {
+      setError(
+        error_.response?.data?.message ||
+          error_.message ||
+          'Failed to start scan',
+      );
       setScanning(false);
     }
   };
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'Critical': return 'red';
-      case 'High': return 'orange';
-      case 'Medium': return 'yellow';
-      case 'Low': return 'blue';
-      case 'Info': return 'grey';
-      default: return 'grey';
+      case 'Critical':
+        return 'red';
+      case 'High':
+        return 'orange';
+      case 'Medium':
+        return 'yellow';
+      case 'Low':
+        return 'blue';
+      case 'Info':
+        return 'grey';
+      default:
+        return 'grey';
     }
   };
 
   const getIssueTypeLabel = (type) => {
     switch (type) {
-      case 'SuspectedTranscode': return 'Suspected Transcode';
-      case 'NonCanonicalVariant': return 'Non-Canonical Variant';
-      case 'TrackNotInTaggedRelease': return 'Track Not in Tagged Release';
-      case 'MissingTrackInRelease': return 'Missing Track in Release';
-      case 'CorruptedFile': return 'Corrupted File';
-      case 'MissingMetadata': return 'Missing Metadata';
-      case 'MultipleVariants': return 'Multiple Variants';
-      case 'WrongDuration': return 'Wrong Duration';
-      default: return type;
+      case 'SuspectedTranscode':
+        return 'Suspected Transcode';
+      case 'NonCanonicalVariant':
+        return 'Non-Canonical Variant';
+      case 'TrackNotInTaggedRelease':
+        return 'Track Not in Tagged Release';
+      case 'MissingTrackInRelease':
+        return 'Missing Track in Release';
+      case 'CorruptedFile':
+        return 'Corrupted File';
+      case 'MissingMetadata':
+        return 'Missing Metadata';
+      case 'MultipleVariants':
+        return 'Multiple Variants';
+      case 'WrongDuration':
+        return 'Wrong Duration';
+      default:
+        return type;
     }
   };
 
@@ -116,6 +143,7 @@ const LibraryHealth = () => {
     } else {
       newSelected.add(issueId);
     }
+
     setSelectedIssues(newSelected);
   };
 
@@ -123,7 +151,7 @@ const LibraryHealth = () => {
     if (selectedIssues.size === issues.length) {
       setSelectedIssues(new Set());
     } else {
-      setSelectedIssues(new Set(issues.map(i => i.issueId)));
+      setSelectedIssues(new Set(issues.map((index) => index.issueId)));
     }
   };
 
@@ -142,9 +170,13 @@ const LibraryHealth = () => {
       // Reload issues after a delay
       setTimeout(() => {
         loadSummary(libraryPath);
-      }, 1000);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to create fix job');
+      }, 1_000);
+    } catch (error_) {
+      setError(
+        error_.response?.data?.message ||
+          error_.message ||
+          'Failed to create fix job',
+      );
     } finally {
       setFixing(false);
     }
@@ -157,9 +189,13 @@ const LibraryHealth = () => {
       await libraryHealth.createRemediationJob([issueId]);
       setTimeout(() => {
         loadSummary(libraryPath);
-      }, 1000);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to create fix job');
+      }, 1_000);
+    } catch (error_) {
+      setError(
+        error_.response?.data?.message ||
+          error_.message ||
+          'Failed to create fix job',
+      );
     } finally {
       setFixing(false);
     }
@@ -175,7 +211,9 @@ const LibraryHealth = () => {
                 <Icon name="heartbeat" />
                 <Header.Content>
                   Library Health Scanner
-                  <Header.Subheader>Detect quality issues, transcodes, and missing tracks</Header.Subheader>
+                  <Header.Subheader>
+                    Detect quality issues, transcodes, and missing tracks
+                  </Header.Subheader>
                 </Header.Content>
               </Header>
             </Segment>
@@ -186,22 +224,22 @@ const LibraryHealth = () => {
           <Grid.Column width={16}>
             <Segment>
               <Input
-                fluid
                 action={
                   <Button
-                    primary
-                    onClick={handleStartScan}
                     disabled={scanning || !libraryPath}
                     loading={scanning}
+                    onClick={handleStartScan}
+                    primary
                   >
                     <Icon name="search" />
                     {scanning ? 'Scanning...' : 'Start Scan'}
                   </Button>
                 }
+                disabled={scanning}
+                fluid
+                onChange={(e) => setLibraryPath(e.target.value)}
                 placeholder="Enter library path (e.g., /music or C:\Music)"
                 value={libraryPath}
-                onChange={(e) => setLibraryPath(e.target.value)}
-                disabled={scanning}
               />
             </Segment>
           </Grid.Column>
@@ -239,7 +277,9 @@ const LibraryHealth = () => {
                       <Statistic.Label>Open</Statistic.Label>
                     </Statistic>
                     <Statistic color="green">
-                      <Statistic.Value>{summary.issuesResolved}</Statistic.Value>
+                      <Statistic.Value>
+                        {summary.issuesResolved}
+                      </Statistic.Value>
                       <Statistic.Label>Resolved</Statistic.Label>
                     </Statistic>
                   </Statistic.Group>
@@ -255,13 +295,18 @@ const LibraryHealth = () => {
                     <Table.Header>
                       <Table.Row>
                         <Table.HeaderCell>Type</Table.HeaderCell>
-                        <Table.HeaderCell textAlign="right">Count</Table.HeaderCell>
+                        <Table.HeaderCell textAlign="right">
+                          Count
+                        </Table.HeaderCell>
                       </Table.Row>
                     </Table.Header>
                     <Table.Body>
                       {issuesByType.length === 0 ? (
                         <Table.Row>
-                          <Table.Cell colSpan={2} textAlign="center">
+                          <Table.Cell
+                            colSpan={2}
+                            textAlign="center"
+                          >
                             No issues detected
                           </Table.Cell>
                         </Table.Row>
@@ -269,7 +314,9 @@ const LibraryHealth = () => {
                         issuesByType.map((group) => (
                           <Table.Row key={group.type}>
                             <Table.Cell>
-                              <Label basic>{getIssueTypeLabel(group.type)}</Label>
+                              <Label basic>
+                                {getIssueTypeLabel(group.type)}
+                              </Label>
                             </Table.Cell>
                             <Table.Cell textAlign="right">
                               <strong>{group.count}</strong>
@@ -289,19 +336,24 @@ const LibraryHealth = () => {
                     <Table.Header>
                       <Table.Row>
                         <Table.HeaderCell>Artist</Table.HeaderCell>
-                        <Table.HeaderCell textAlign="right">Issues</Table.HeaderCell>
+                        <Table.HeaderCell textAlign="right">
+                          Issues
+                        </Table.HeaderCell>
                       </Table.Row>
                     </Table.Header>
                     <Table.Body>
                       {issuesByArtist.length === 0 ? (
                         <Table.Row>
-                          <Table.Cell colSpan={2} textAlign="center">
+                          <Table.Cell
+                            colSpan={2}
+                            textAlign="center"
+                          >
                             No artist data available
                           </Table.Cell>
                         </Table.Row>
                       ) : (
-                        issuesByArtist.map((group, idx) => (
-                          <Table.Row key={idx}>
+                        issuesByArtist.map((group, index) => (
+                          <Table.Row key={index}>
                             <Table.Cell>{group.artist}</Table.Cell>
                             <Table.Cell textAlign="right">
                               <strong>{group.count}</strong>
@@ -342,22 +394,23 @@ const LibraryHealth = () => {
                 {error}
               </Message>
             )}
-            
+
             {selectedIssues.size > 0 && (
               <Segment>
                 <Button
-                  primary
-                  onClick={handleFixSelected}
                   disabled={fixing}
                   loading={fixing}
+                  onClick={handleFixSelected}
+                  primary
                 >
                   <Icon name="wrench" />
-                  Fix {selectedIssues.size} Selected Issue{selectedIssues.size > 1 ? 's' : ''}
+                  Fix {selectedIssues.size} Selected Issue
+                  {selectedIssues.size > 1 ? 's' : ''}
                 </Button>
                 <Button
                   basic
-                  onClick={() => setSelectedIssues(new Set())}
                   disabled={fixing}
+                  onClick={() => setSelectedIssues(new Set())}
                 >
                   Clear Selection
                 </Button>
@@ -369,19 +422,28 @@ const LibraryHealth = () => {
             ) : issues.length === 0 ? (
               <Segment placeholder>
                 <Header icon>
-                  <Icon name="check circle" color="green" />
+                  <Icon
+                    color="green"
+                    name="check circle"
+                  />
                   No issues detected
                 </Header>
               </Segment>
             ) : (
-              <Table selectable celled>
+              <Table
+                celled
+                selectable
+              >
                 <Table.Header>
                   <Table.Row>
                     <Table.HeaderCell collapsing>
                       <input
-                        type="checkbox"
-                        checked={selectedIssues.size === issues.length && issues.length > 0}
+                        checked={
+                          selectedIssues.size === issues.length &&
+                          issues.length > 0
+                        }
                         onChange={handleToggleAll}
+                        type="checkbox"
                       />
                     </Table.HeaderCell>
                     <Table.HeaderCell>Type</Table.HeaderCell>
@@ -390,7 +452,9 @@ const LibraryHealth = () => {
                     <Table.HeaderCell>Track</Table.HeaderCell>
                     <Table.HeaderCell>Reason</Table.HeaderCell>
                     <Table.HeaderCell>Status</Table.HeaderCell>
-                    <Table.HeaderCell textAlign="center">Actions</Table.HeaderCell>
+                    <Table.HeaderCell textAlign="center">
+                      Actions
+                    </Table.HeaderCell>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
@@ -398,19 +462,25 @@ const LibraryHealth = () => {
                     <Table.Row key={issue.issueId}>
                       <Table.Cell collapsing>
                         <input
-                          type="checkbox"
                           checked={selectedIssues.has(issue.issueId)}
-                          onChange={() => handleToggleIssue(issue.issueId)}
                           disabled={!issue.canAutoFix}
+                          onChange={() => handleToggleIssue(issue.issueId)}
+                          type="checkbox"
                         />
                       </Table.Cell>
                       <Table.Cell>
-                        <Label basic size="small">
+                        <Label
+                          basic
+                          size="small"
+                        >
                           {getIssueTypeLabel(issue.type)}
                         </Label>
                       </Table.Cell>
                       <Table.Cell>
-                        <Label color={getSeverityColor(issue.severity)} size="small">
+                        <Label
+                          color={getSeverityColor(issue.severity)}
+                          size="small"
+                        >
                           {issue.severity}
                         </Label>
                       </Table.Cell>
@@ -418,20 +488,23 @@ const LibraryHealth = () => {
                       <Table.Cell>{issue.title || '-'}</Table.Cell>
                       <Table.Cell>
                         <span title={issue.reason}>
-                          {issue.reason?.length > 50 
-                            ? issue.reason.substring(0, 50) + '...' 
+                          {issue.reason?.length > 50
+                            ? issue.reason.slice(0, 50) + '...'
                             : issue.reason}
                         </span>
                       </Table.Cell>
                       <Table.Cell>
-                        <Label 
-                          size="mini" 
+                        <Label
                           color={
-                            issue.status === 'Resolved' ? 'green' :
-                            issue.status === 'Fixing' ? 'blue' :
-                            issue.status === 'Failed' ? 'red' :
-                            'grey'
+                            issue.status === 'Resolved'
+                              ? 'green'
+                              : issue.status === 'Fixing'
+                                ? 'blue'
+                                : issue.status === 'Failed'
+                                  ? 'red'
+                                  : 'grey'
                           }
+                          size="mini"
                         >
                           {issue.status}
                         </Label>
@@ -439,17 +512,21 @@ const LibraryHealth = () => {
                       <Table.Cell textAlign="center">
                         {issue.canAutoFix && issue.status === 'Detected' && (
                           <Button
-                            size="tiny"
-                            primary
-                            onClick={() => handleFixSingle(issue.issueId)}
                             disabled={fixing}
+                            onClick={() => handleFixSingle(issue.issueId)}
+                            primary
+                            size="tiny"
                           >
                             <Icon name="wrench" />
                             Fix
                           </Button>
                         )}
                         {issue.status === 'Fixing' && (
-                          <Loader active inline size="tiny" />
+                          <Loader
+                            active
+                            inline
+                            size="tiny"
+                          />
                         )}
                       </Table.Cell>
                     </Table.Row>
@@ -466,17 +543,17 @@ const LibraryHealth = () => {
   const panes = [
     {
       menuItem: {
-        key: 'overview',
-        icon: 'dashboard',
         content: 'Overview',
+        icon: 'dashboard',
+        key: 'overview',
       },
       render: () => <OverviewPane />,
     },
     {
       menuItem: {
-        key: 'issues',
-        icon: 'warning',
         content: 'All Issues',
+        icon: 'warning',
+        key: 'issues',
       },
       render: () => <IssuesPane />,
     },
@@ -490,5 +567,3 @@ const LibraryHealth = () => {
 };
 
 export default LibraryHealth;
-
-

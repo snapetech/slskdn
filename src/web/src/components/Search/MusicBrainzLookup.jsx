@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { Button, Form, Header, Input, List, Segment } from 'semantic-ui-react';
-import { toast } from 'react-toastify';
 import { resolveTarget } from '../../lib/musicBrainz';
+import React, { useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
+import { Button, Form, Header, Input, List, Segment } from 'semantic-ui-react';
 
 const MusicBrainzLookup = ({ disabled }) => {
   const [releaseInput, setReleaseInput] = useState('');
@@ -20,9 +20,9 @@ const MusicBrainzLookup = ({ disabled }) => {
 
     try {
       const payload = {
-        releaseId: releaseInput.trim() || undefined,
-        recordingId: recordingInput.trim() || undefined,
         discogsReleaseId: discogsInput.trim() || undefined,
+        recordingId: recordingInput.trim() || undefined,
+        releaseId: releaseInput.trim() || undefined,
       };
 
       const response = await resolveTarget(payload);
@@ -35,7 +35,9 @@ const MusicBrainzLookup = ({ disabled }) => {
       );
     } catch (error) {
       console.error(error);
-      toast.error(error?.response?.data ?? error?.message ?? 'Failed to resolve target');
+      toast.error(
+        error?.response?.data ?? error?.message ?? 'Failed to resolve target',
+      );
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,8 @@ const MusicBrainzLookup = ({ disabled }) => {
           <List.Item>
             <List.Header>Album</List.Header>
             <List.Description>
-              {target.album.title} · {target.album.artist} · {target.album.tracks?.length ?? 0} tracks
+              {target.album.title} · {target.album.artist} ·{' '}
+              {target.album.tracks?.length ?? 0} tracks
             </List.Description>
           </List.Item>
         </List>
@@ -65,7 +68,10 @@ const MusicBrainzLookup = ({ disabled }) => {
           <List.Item>
             <List.Header>Track</List.Header>
             <List.Description>
-              {target.track.title} · {target.track.artist} · {target.track.duration ? `${(target.track.duration / 60000).toFixed(2)} min` : 'unknown length'}
+              {target.track.title} · {target.track.artist} ·{' '}
+              {target.track.duration
+                ? `${(target.track.duration / 60_000).toFixed(2)} min`
+                : 'unknown length'}
             </List.Description>
           </List.Item>
         </List>
@@ -76,41 +82,44 @@ const MusicBrainzLookup = ({ disabled }) => {
   }, [target]);
 
   return (
-    <Segment raised className="musicbrainz-lookup-segment">
+    <Segment
+      className="musicbrainz-lookup-segment"
+      raised
+    >
       <Header as="h4">MusicBrainz / Discogs Lookup</Header>
       <Form>
         <Form.Field>
           <Input
+            disabled={disabled || loading}
             label="MusicBrainz Release ID"
+            onChange={(event) => setReleaseInput(event.target.value)}
             placeholder="e.g. 1c3b3668-..."
             value={releaseInput}
-            onChange={(event) => setReleaseInput(event.target.value)}
-            disabled={disabled || loading}
           />
         </Form.Field>
         <Form.Field>
           <Input
+            disabled={disabled || loading}
             label="MusicBrainz Recording ID"
+            onChange={(event) => setRecordingInput(event.target.value)}
             placeholder="e.g. 8af4c1b9-..."
             value={recordingInput}
-            onChange={(event) => setRecordingInput(event.target.value)}
-            disabled={disabled || loading}
           />
         </Form.Field>
         <Form.Field>
           <Input
+            disabled={disabled || loading}
             label="Discogs Release/Master ID"
+            onChange={(event) => setDiscogsInput(event.target.value)}
             placeholder="e.g. 123456"
             value={discogsInput}
-            onChange={(event) => setDiscogsInput(event.target.value)}
-            disabled={disabled || loading}
           />
         </Form.Field>
         <Button
-          primary
+          disabled={disabled || loading}
           loading={loading}
           onClick={handleLookup}
-          disabled={disabled || loading}
+          primary
         >
           Resolve target
         </Button>
@@ -121,6 +130,3 @@ const MusicBrainzLookup = ({ disabled }) => {
 };
 
 export default MusicBrainzLookup;
-
-
-

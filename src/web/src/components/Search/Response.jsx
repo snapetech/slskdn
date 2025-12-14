@@ -37,15 +37,19 @@ const getBadgeColor = (downloadStats) => {
 const getGroupIndicator = (group) => {
   switch (group) {
     case 'privileged':
-      return { icon: 'star', color: 'yellow', tooltip: 'Privileged User' };
+      return { color: 'yellow', icon: 'star', tooltip: 'Privileged User' };
     case 'leechers':
-      return { icon: 'exclamation triangle', color: 'orange', tooltip: 'Leecher (Low shares)' };
+      return {
+        color: 'orange',
+        icon: 'exclamation triangle',
+        tooltip: 'Leecher (Low shares)',
+      };
     case 'blacklisted':
-      return { icon: 'ban', color: 'red', tooltip: 'Blacklisted User' };
+      return { color: 'red', icon: 'ban', tooltip: 'Blacklisted User' };
     default:
       // For user-defined groups or default group, show a generic user icon
       return group && group !== 'default'
-        ? { icon: 'user', color: 'blue', tooltip: `Group: ${group}` }
+        ? { color: 'blue', icon: 'user', tooltip: `Group: ${group}` }
         : null;
   }
 };
@@ -317,23 +321,25 @@ class Response extends Component {
                 {response.username}
               </UserCard>
             </Link>
-            {!userGroupLoading && userGroup && (() => {
-              const indicator = getGroupIndicator(userGroup);
-              return indicator ? (
-                <Popup
-                  content={indicator.tooltip}
-                  position="top center"
-                  trigger={
-                    <Icon
-                      name={indicator.icon}
-                      color={indicator.color}
-                      size="small"
-                      style={{ marginLeft: '4px' }}
-                    />
-                  }
-                />
-              ) : null;
-            })()}
+            {!userGroupLoading &&
+              userGroup &&
+              (() => {
+                const indicator = getGroupIndicator(userGroup);
+                return indicator ? (
+                  <Popup
+                    content={indicator.tooltip}
+                    position="top center"
+                    trigger={
+                      <Icon
+                        color={indicator.color}
+                        name={indicator.icon}
+                        size="small"
+                        style={{ marginLeft: '4px' }}
+                      />
+                    }
+                  />
+                ) : null;
+              })()}
             {downloadStats && (
               <Popup
                 content={`${downloadStats.successfulDownloads} successful, ${downloadStats.failedDownloads} failed downloads from this user`}

@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import * as pods from '../../lib/pods';
+import React, { useEffect, useState } from 'react';
 import {
   Button,
+  Checkbox,
+  Dropdown,
   Form,
   Header,
   Icon,
+  Input,
+  Label,
   Message,
   Modal,
   Segment,
   Tab,
   Table,
-  Label,
-  Input,
-  Dropdown,
-  Checkbox,
 } from 'semantic-ui-react';
-import * as pods from '../../lib/pods';
 
-const VpnGatewayConfig = ({ podId, podDetail }) => {
+const VpnGatewayConfig = ({ podDetail, podId }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -24,20 +24,26 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
 
   // VPN Policy state
   const [vpnPolicy, setVpnPolicy] = useState({
-    enabled: false,
-    maxMembers: 3,
-    gatewayPeerId: '',
+    allowedDestinations: [],
     allowPrivateRanges: true,
     allowPublicDestinations: false,
-    allowedDestinations: [],
-    registeredServices: [],
-    maxConcurrentTunnelsPerPeer: 5,
-    maxConcurrentTunnelsPod: 15,
-    maxNewTunnelsPerMinutePerPeer: 10,
-    maxBytesPerDayPerPeer: 1073741824, // 1GB
+    enabled: false,
+    gatewayPeerId: '',
+    // 1GB
     idleTimeout: '01:00:00',
+
+    maxBytesPerDayPerPeer: 1_073_741_824,
+
+    dialTimeout: '00:00:30',
+
+    maxConcurrentTunnelsPerPeer: 5,
+
+    maxConcurrentTunnelsPod: 15,
+
     maxLifetime: '24:00:00',
-    dialTimeout: '00:00:30'
+    maxMembers: 3,
+    maxNewTunnelsPerMinutePerPeer: 10,
+    registeredServices: [],
   });
 
   // Modal states for adding destinations and services
@@ -46,40 +52,60 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
   const [newDestination, setNewDestination] = useState({
     hostPattern: '',
     port: '',
-    protocol: 'tcp'
+    protocol: 'tcp',
   });
   const [newService, setNewService] = useState({
-    name: '',
     description: '',
-    kind: 'WebInterface',
     destinationHost: '',
     destinationPort: '',
-    protocol: 'tcp'
+    kind: 'WebInterface',
+    name: '',
+    protocol: 'tcp',
   });
 
   useEffect(() => {
     if (podDetail?.privateServicePolicy) {
       setVpnPolicy({
         ...podDetail.privateServicePolicy,
-        // Ensure defaults for missing fields
-        maxMembers: podDetail.privateServicePolicy.maxMembers || 3,
+
+        allowedDestinations:
+          podDetail.privateServicePolicy.allowedDestinations || [],
+
+        allowPrivateRanges:
+          podDetail.privateServicePolicy.allowPrivateRanges ?? true,
+
+        allowPublicDestinations:
+          podDetail.privateServicePolicy.allowPublicDestinations ?? false,
+
         gatewayPeerId: podDetail.privateServicePolicy.gatewayPeerId || '',
-        allowPrivateRanges: podDetail.privateServicePolicy.allowPrivateRanges ?? true,
-        allowPublicDestinations: podDetail.privateServicePolicy.allowPublicDestinations ?? false,
-        allowedDestinations: podDetail.privateServicePolicy.allowedDestinations || [],
-        registeredServices: podDetail.privateServicePolicy.registeredServices || [],
-        maxConcurrentTunnelsPerPeer: podDetail.privateServicePolicy.maxConcurrentTunnelsPerPeer || 5,
-        maxConcurrentTunnelsPod: podDetail.privateServicePolicy.maxConcurrentTunnelsPod || 15,
-        maxNewTunnelsPerMinutePerPeer: podDetail.privateServicePolicy.maxNewTunnelsPerMinutePerPeer || 10,
-        maxBytesPerDayPerPeer: podDetail.privateServicePolicy.maxBytesPerDayPerPeer || 1073741824,
+
         idleTimeout: podDetail.privateServicePolicy.idleTimeout || '01:00:00',
-        maxLifetime: podDetail.privateServicePolicy.maxLifetime || '24:00:00',
-        dialTimeout: podDetail.privateServicePolicy.dialTimeout || '00:00:30'
+
+        maxBytesPerDayPerPeer:
+          podDetail.privateServicePolicy.maxBytesPerDayPerPeer || 1_073_741_824,
+
+        dialTimeout: podDetail.privateServicePolicy.dialTimeout || '00:00:30',
+
+        maxConcurrentTunnelsPerPeer:
+          podDetail.privateServicePolicy.maxConcurrentTunnelsPerPeer || 5,
+
+        maxConcurrentTunnelsPod:
+          podDetail.privateServicePolicy.maxConcurrentTunnelsPod || 15,
+        
+maxLifetime: podDetail.privateServicePolicy.maxLifetime || '24:00:00',
+        // Ensure defaults for missing fields
+maxMembers: podDetail.privateServicePolicy.maxMembers || 3,
+        maxNewTunnelsPerMinutePerPeer:
+          podDetail.privateServicePolicy.maxNewTunnelsPerMinutePerPeer || 10,
+        registeredServices:
+          podDetail.privateServicePolicy.registeredServices || [],
       });
     }
   }, [podDetail]);
 
-  const hasVpnCapability = podDetail?.capabilities?.includes('PrivateServiceGateway');
+  const hasVpnCapability = podDetail?.capabilities?.includes(
+    'PrivateServiceGateway',
+  );
 
   const handleSavePolicy = async () => {
     if (!podId) return;
@@ -92,7 +118,7 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
       // Create updated pod with VPN policy
       const updatedPod = {
         ...podDetail,
-        privateServicePolicy: vpnPolicy.enabled ? vpnPolicy : null
+        privateServicePolicy: vpnPolicy.enabled ? vpnPolicy : null,
       };
 
       await pods.update(podId, updatedPod);
@@ -112,51 +138,72 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
       ...vpnPolicy.allowedDestinations,
       {
         hostPattern: newDestination.hostPattern,
-        port: parseInt(newDestination.port, 10),
-        protocol: newDestination.protocol
-      }
+        port: Number.parseInt(newDestination.port, 10),
+        protocol: newDestination.protocol,
+      },
     ];
 
-    setVpnPolicy(prev => ({ ...prev, allowedDestinations: updatedDestinations }));
+    setVpnPolicy((previous) => ({
+      ...previous,
+      allowedDestinations: updatedDestinations,
+    }));
     setNewDestination({ hostPattern: '', port: '', protocol: 'tcp' });
     setShowAddDestination(false);
   };
 
   const handleRemoveDestination = (index) => {
-    const updatedDestinations = vpnPolicy.allowedDestinations.filter((_, i) => i !== index);
-    setVpnPolicy(prev => ({ ...prev, allowedDestinations: updatedDestinations }));
+    const updatedDestinations = vpnPolicy.allowedDestinations.filter(
+      (_, index_) => index_ !== index,
+    );
+    setVpnPolicy((previous) => ({
+      ...previous,
+      allowedDestinations: updatedDestinations,
+    }));
   };
 
   const handleAddService = () => {
-    if (!newService.name || !newService.destinationHost || !newService.destinationPort) return;
+    if (
+      !newService.name ||
+      !newService.destinationHost ||
+      !newService.destinationPort
+    )
+      return;
 
     const updatedServices = [
       ...vpnPolicy.registeredServices,
       {
-        name: newService.name,
         description: newService.description,
-        kind: newService.kind,
         destinationHost: newService.destinationHost,
-        destinationPort: parseInt(newService.destinationPort, 10),
-        protocol: newService.protocol
-      }
+        destinationPort: Number.parseInt(newService.destinationPort, 10),
+        kind: newService.kind,
+        name: newService.name,
+        protocol: newService.protocol,
+      },
     ];
 
-    setVpnPolicy(prev => ({ ...prev, registeredServices: updatedServices }));
+    setVpnPolicy((previous) => ({
+      ...previous,
+      registeredServices: updatedServices,
+    }));
     setNewService({
-      name: '',
       description: '',
-      kind: 'WebInterface',
       destinationHost: '',
       destinationPort: '',
-      protocol: 'tcp'
+      kind: 'WebInterface',
+      name: '',
+      protocol: 'tcp',
     });
     setShowAddService(false);
   };
 
   const handleRemoveService = (index) => {
-    const updatedServices = vpnPolicy.registeredServices.filter((_, i) => i !== index);
-    setVpnPolicy(prev => ({ ...prev, registeredServices: updatedServices }));
+    const updatedServices = vpnPolicy.registeredServices.filter(
+      (_, index_) => index_ !== index,
+    );
+    setVpnPolicy((previous) => ({
+      ...previous,
+      registeredServices: updatedServices,
+    }));
   };
 
   const formatBytes = (bytes) => {
@@ -164,8 +211,8 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
     let value = bytes;
     let unitIndex = 0;
 
-    while (value >= 1024 && unitIndex < units.length - 1) {
-      value /= 1024;
+    while (value >= 1_024 && unitIndex < units.length - 1) {
+      value /= 1_024;
       unitIndex++;
     }
 
@@ -181,7 +228,10 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
         </Header>
         <Segment.Inline>
           <p>This pod does not have VPN gateway capability enabled.</p>
-          <p>To enable VPN functionality, add the "PrivateServiceGateway" capability to the pod.</p>
+          <p>
+            To enable VPN functionality, add the "PrivateServiceGateway"
+            capability to the pod.
+          </p>
         </Segment.Inline>
       </Segment>
     );
@@ -191,12 +241,12 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
     { key: 'WebInterface', text: 'Web Interface', value: 'WebInterface' },
     { key: 'Database', text: 'Database', value: 'Database' },
     { key: 'SSH', text: 'SSH', value: 'SSH' },
-    { key: 'Custom', text: 'Custom', value: 'Custom' }
+    { key: 'Custom', text: 'Custom', value: 'Custom' },
   ];
 
   const protocolOptions = [
     { key: 'tcp', text: 'TCP', value: 'tcp' },
-    { key: 'udp', text: 'UDP', value: 'udp' }
+    { key: 'udp', text: 'UDP', value: 'udp' },
   ];
 
   const panes = [
@@ -209,30 +259,45 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
               <Form.Field width={4}>
                 <label>Enable VPN Gateway</label>
                 <Checkbox
-                  toggle
                   checked={vpnPolicy.enabled}
-                  onChange={(e, { checked }) => setVpnPolicy(prev => ({ ...prev, enabled: checked }))}
+                  onChange={(e, { checked }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      enabled: checked,
+                    }))
+                  }
+                  toggle
                 />
               </Form.Field>
               <Form.Field width={4}>
                 <label>Max Pod Members</label>
                 <Input
-                  type="number"
-                  min={1}
-                  max={3}
-                  value={vpnPolicy.maxMembers}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, maxMembers: parseInt(value, 10) || 3 }))}
                   disabled={!vpnPolicy.enabled}
+                  max={3}
+                  min={1}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      maxMembers: Number.parseInt(value, 10) || 3,
+                    }))
+                  }
+                  type="number"
+                  value={vpnPolicy.maxMembers}
                 />
                 <small>Hard limit of 3 for VPN-enabled pods</small>
               </Form.Field>
               <Form.Field width={8}>
                 <label>Gateway Peer ID</label>
                 <Input
+                  disabled={!vpnPolicy.enabled}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      gatewayPeerId: value,
+                    }))
+                  }
                   placeholder="peer-id-of-gateway-node"
                   value={vpnPolicy.gatewayPeerId}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, gatewayPeerId: value }))}
-                  disabled={!vpnPolicy.enabled}
                 />
               </Form.Field>
             </Form.Group>
@@ -241,18 +306,28 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
             <Form.Group>
               <Form.Field>
                 <Checkbox
-                  label="Allow private IP ranges (RFC1918)"
                   checked={vpnPolicy.allowPrivateRanges}
-                  onChange={(e, { checked }) => setVpnPolicy(prev => ({ ...prev, allowPrivateRanges: checked }))}
                   disabled={!vpnPolicy.enabled}
+                  label="Allow private IP ranges (RFC1918)"
+                  onChange={(e, { checked }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      allowPrivateRanges: checked,
+                    }))
+                  }
                 />
               </Form.Field>
               <Form.Field>
                 <Checkbox
-                  label="Allow public internet destinations"
                   checked={vpnPolicy.allowPublicDestinations}
-                  onChange={(e, { checked }) => setVpnPolicy(prev => ({ ...prev, allowPublicDestinations: checked }))}
                   disabled={!vpnPolicy.enabled}
+                  label="Allow public internet destinations"
+                  onChange={(e, { checked }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      allowPublicDestinations: checked,
+                    }))
+                  }
                 />
               </Form.Field>
             </Form.Group>
@@ -266,11 +341,11 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
         <Tab.Pane>
           <div style={{ marginBottom: '20px' }}>
             <Button
-              primary
-              icon="plus"
               content="Add Destination"
-              onClick={() => setShowAddDestination(true)}
               disabled={!vpnPolicy.enabled}
+              icon="plus"
+              onClick={() => setShowAddDestination(true)}
+              primary
             />
           </div>
 
@@ -284,25 +359,28 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {vpnPolicy.allowedDestinations.map((dest, index) => (
+              {vpnPolicy.allowedDestinations.map((destination, index) => (
                 <Table.Row key={index}>
-                  <Table.Cell>{dest.hostPattern}</Table.Cell>
-                  <Table.Cell>{dest.port}</Table.Cell>
-                  <Table.Cell>{dest.protocol?.toUpperCase()}</Table.Cell>
+                  <Table.Cell>{destination.hostPattern}</Table.Cell>
+                  <Table.Cell>{destination.port}</Table.Cell>
+                  <Table.Cell>{destination.protocol?.toUpperCase()}</Table.Cell>
                   <Table.Cell>
                     <Button
-                      icon="trash"
                       color="red"
-                      size="small"
-                      onClick={() => handleRemoveDestination(index)}
                       disabled={!vpnPolicy.enabled}
+                      icon="trash"
+                      onClick={() => handleRemoveDestination(index)}
+                      size="small"
                     />
                   </Table.Cell>
                 </Table.Row>
               ))}
               {vpnPolicy.allowedDestinations.length === 0 && (
                 <Table.Row>
-                  <Table.Cell colSpan={4} textAlign="center">
+                  <Table.Cell
+                    colSpan={4}
+                    textAlign="center"
+                  >
                     No destinations configured
                   </Table.Cell>
                 </Table.Row>
@@ -318,11 +396,11 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
         <Tab.Pane>
           <div style={{ marginBottom: '20px' }}>
             <Button
-              primary
-              icon="plus"
               content="Add Service"
-              onClick={() => setShowAddService(true)}
               disabled={!vpnPolicy.enabled}
+              icon="plus"
+              onClick={() => setShowAddService(true)}
+              primary
             />
           </div>
 
@@ -345,22 +423,26 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
                     <Label color="blue">{service.kind}</Label>
                   </Table.Cell>
                   <Table.Cell>
-                    {service.destinationHost}:{service.destinationPort} ({service.protocol})
+                    {service.destinationHost}:{service.destinationPort} (
+                    {service.protocol})
                   </Table.Cell>
                   <Table.Cell>
                     <Button
-                      icon="trash"
                       color="red"
-                      size="small"
-                      onClick={() => handleRemoveService(index)}
                       disabled={!vpnPolicy.enabled}
+                      icon="trash"
+                      onClick={() => handleRemoveService(index)}
+                      size="small"
                     />
                   </Table.Cell>
                 </Table.Row>
               ))}
               {vpnPolicy.registeredServices.length === 0 && (
                 <Table.Row>
-                  <Table.Cell colSpan={5} textAlign="center">
+                  <Table.Cell
+                    colSpan={5}
+                    textAlign="center"
+                  >
                     No services registered
                   </Table.Cell>
                 </Table.Row>
@@ -380,23 +462,34 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
               <Form.Field>
                 <label>Max Concurrent Tunnels Per Peer</label>
                 <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={vpnPolicy.maxConcurrentTunnelsPerPeer}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, maxConcurrentTunnelsPerPeer: parseInt(value, 10) || 5 }))}
                   disabled={!vpnPolicy.enabled}
+                  max={20}
+                  min={1}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      maxConcurrentTunnelsPerPeer:
+                        Number.parseInt(value, 10) || 5,
+                    }))
+                  }
+                  type="number"
+                  value={vpnPolicy.maxConcurrentTunnelsPerPeer}
                 />
               </Form.Field>
               <Form.Field>
                 <label>Max Concurrent Tunnels (Pod Total)</label>
                 <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={vpnPolicy.maxConcurrentTunnelsPod}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, maxConcurrentTunnelsPod: parseInt(value, 10) || 15 }))}
                   disabled={!vpnPolicy.enabled}
+                  max={100}
+                  min={1}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      maxConcurrentTunnelsPod: Number.parseInt(value, 10) || 15,
+                    }))
+                  }
+                  type="number"
+                  value={vpnPolicy.maxConcurrentTunnelsPod}
                 />
               </Form.Field>
             </Form.Group>
@@ -405,24 +498,42 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
               <Form.Field>
                 <label>Max New Tunnels Per Minute Per Peer</label>
                 <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={vpnPolicy.maxNewTunnelsPerMinutePerPeer}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, maxNewTunnelsPerMinutePerPeer: parseInt(value, 10) || 10 }))}
                   disabled={!vpnPolicy.enabled}
+                  max={60}
+                  min={1}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      maxNewTunnelsPerMinutePerPeer:
+                        Number.parseInt(value, 10) || 10,
+                    }))
+                  }
+                  type="number"
+                  value={vpnPolicy.maxNewTunnelsPerMinutePerPeer}
                 />
               </Form.Field>
               <Form.Field>
                 <label>Max Bandwidth Per Day Per Peer</label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={Math.round(vpnPolicy.maxBytesPerDayPerPeer / (1024 * 1024))} // Convert to MB
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, maxBytesPerDayPerPeer: parseInt(value, 10) * 1024 * 1024 || 1073741824 }))}
                   disabled={!vpnPolicy.enabled}
+                  min={0}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      maxBytesPerDayPerPeer:
+                        Number.parseInt(value, 10) * 1_024 * 1_024 ||
+                        1_073_741_824,
+                    }))
+                  }
+                  type="number"
+                  value={Math.round(
+                    vpnPolicy.maxBytesPerDayPerPeer / (1_024 * 1_024),
+                  )} // Convert to MB
                 />
-                <small>MB per day per peer ({formatBytes(vpnPolicy.maxBytesPerDayPerPeer)})</small>
+                <small>
+                  MB per day per peer (
+                  {formatBytes(vpnPolicy.maxBytesPerDayPerPeer)})
+                </small>
               </Form.Field>
             </Form.Group>
 
@@ -431,30 +542,45 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
               <Form.Field>
                 <label>Idle Timeout (HH:MM:SS)</label>
                 <Input
+                  disabled={!vpnPolicy.enabled}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      idleTimeout: value,
+                    }))
+                  }
                   placeholder="01:00:00"
                   value={vpnPolicy.idleTimeout}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, idleTimeout: value }))}
-                  disabled={!vpnPolicy.enabled}
                 />
                 <small>Close tunnels after this period of inactivity</small>
               </Form.Field>
               <Form.Field>
                 <label>Max Lifetime (HH:MM:SS)</label>
                 <Input
+                  disabled={!vpnPolicy.enabled}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      maxLifetime: value,
+                    }))
+                  }
                   placeholder="24:00:00"
                   value={vpnPolicy.maxLifetime}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, maxLifetime: value }))}
-                  disabled={!vpnPolicy.enabled}
                 />
                 <small>Maximum duration a tunnel can remain open</small>
               </Form.Field>
               <Form.Field>
                 <label>Dial Timeout (HH:MM:SS)</label>
                 <Input
+                  disabled={!vpnPolicy.enabled}
+                  onChange={(e, { value }) =>
+                    setVpnPolicy((previous) => ({
+                      ...previous,
+                      dialTimeout: value,
+                    }))
+                  }
                   placeholder="00:00:30"
                   value={vpnPolicy.dialTimeout}
-                  onChange={(e, { value }) => setVpnPolicy(prev => ({ ...prev, dialTimeout: value }))}
-                  disabled={!vpnPolicy.enabled}
                 />
                 <small>Timeout for establishing outbound connections</small>
               </Form.Field>
@@ -481,51 +607,75 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
         </Message>
       )}
 
-      <Tab menu={{ pointing: true }} panes={panes} />
+      <Tab
+        menu={{ pointing: true }}
+        panes={panes}
+      />
 
       <div style={{ marginTop: '20px', textAlign: 'right' }}>
         <Button
-          primary
-          loading={saving}
           disabled={!vpnPolicy.enabled}
+          loading={saving}
           onClick={handleSavePolicy}
+          primary
         >
           Save VPN Configuration
         </Button>
       </div>
 
       {/* Add Destination Modal */}
-      <Modal open={showAddDestination} onClose={() => setShowAddDestination(false)} size="small">
+      <Modal
+        onClose={() => setShowAddDestination(false)}
+        open={showAddDestination}
+        size="small"
+      >
         <Modal.Header>Add Allowed Destination</Modal.Header>
         <Modal.Content>
           <Form>
             <Form.Field required>
               <label>Host Pattern</label>
               <Input
+                onChange={(e, { value }) =>
+                  setNewDestination((previous) => ({
+                    ...previous,
+                    hostPattern: value,
+                  }))
+                }
                 placeholder="example.com or *.example.com"
                 value={newDestination.hostPattern}
-                onChange={(e, { value }) => setNewDestination(prev => ({ ...prev, hostPattern: value }))}
               />
-              <small>Use exact hostname or wildcard patterns (e.g., *.domain.com)</small>
+              <small>
+                Use exact hostname or wildcard patterns (e.g., *.domain.com)
+              </small>
             </Form.Field>
             <Form.Field required>
               <label>Port</label>
               <Input
-                type="number"
+                max={65_535}
                 min={1}
-                max={65535}
+                onChange={(e, { value }) =>
+                  setNewDestination((previous) => ({
+                    ...previous,
+                    port: value,
+                  }))
+                }
                 placeholder="80"
+                type="number"
                 value={newDestination.port}
-                onChange={(e, { value }) => setNewDestination(prev => ({ ...prev, port: value }))}
               />
             </Form.Field>
             <Form.Field>
               <label>Protocol</label>
               <Dropdown
-                selection
+                onChange={(e, { value }) =>
+                  setNewDestination((previous) => ({
+                    ...previous,
+                    protocol: value,
+                  }))
+                }
                 options={protocolOptions}
+                selection
                 value={newDestination.protocol}
-                onChange={(e, { value }) => setNewDestination(prev => ({ ...prev, protocol: value }))}
               />
             </Form.Field>
           </Form>
@@ -533,9 +683,9 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
         <Modal.Actions>
           <Button onClick={() => setShowAddDestination(false)}>Cancel</Button>
           <Button
-            primary
-            onClick={handleAddDestination}
             disabled={!newDestination.hostPattern || !newDestination.port}
+            onClick={handleAddDestination}
+            primary
           >
             Add Destination
           </Button>
@@ -543,61 +693,89 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
       </Modal>
 
       {/* Add Service Modal */}
-      <Modal open={showAddService} onClose={() => setShowAddService(false)} size="small">
+      <Modal
+        onClose={() => setShowAddService(false)}
+        open={showAddService}
+        size="small"
+      >
         <Modal.Header>Add Registered Service</Modal.Header>
         <Modal.Content>
           <Form>
             <Form.Field required>
               <label>Service Name</label>
               <Input
+                onChange={(e, { value }) =>
+                  setNewService((previous) => ({ ...previous, name: value }))
+                }
                 placeholder="My Web Service"
                 value={newService.name}
-                onChange={(e, { value }) => setNewService(prev => ({ ...prev, name: value }))}
               />
             </Form.Field>
             <Form.Field>
               <label>Description</label>
               <Input
+                onChange={(e, { value }) =>
+                  setNewService((previous) => ({
+                    ...previous,
+                    description: value,
+                  }))
+                }
                 placeholder="Description of the service"
                 value={newService.description}
-                onChange={(e, { value }) => setNewService(prev => ({ ...prev, description: value }))}
               />
             </Form.Field>
             <Form.Field>
               <label>Service Type</label>
               <Dropdown
-                selection
+                onChange={(e, { value }) =>
+                  setNewService((previous) => ({ ...previous, kind: value }))
+                }
                 options={serviceKindOptions}
+                selection
                 value={newService.kind}
-                onChange={(e, { value }) => setNewService(prev => ({ ...prev, kind: value }))}
               />
             </Form.Field>
             <Form.Field required>
               <label>Destination Host</label>
               <Input
+                onChange={(e, { value }) =>
+                  setNewService((previous) => ({
+                    ...previous,
+                    destinationHost: value,
+                  }))
+                }
                 placeholder="service.internal.company.com"
                 value={newService.destinationHost}
-                onChange={(e, { value }) => setNewService(prev => ({ ...prev, destinationHost: value }))}
               />
             </Form.Field>
             <Form.Field required>
               <label>Destination Port</label>
               <Input
-                type="number"
+                max={65_535}
                 min={1}
-                max={65535}
+                onChange={(e, { value }) =>
+                  setNewService((previous) => ({
+                    ...previous,
+                    destinationPort: value,
+                  }))
+                }
                 placeholder="443"
+                type="number"
                 value={newService.destinationPort}
-                onChange={(e, { value }) => setNewService(prev => ({ ...prev, destinationPort: value }))}
               />
             </Form.Field>
             <Form.Field>
               <label>Protocol</label>
               <Dropdown
-                selection
+                onChange={(e, { value }) =>
+                  setNewService((previous) => ({
+                    ...previous,
+                    protocol: value,
+                  }))
+                }
                 options={protocolOptions}
+                selection
                 value={newService.protocol}
-                onChange={(e, { value }) => setNewService(prev => ({ ...prev, protocol: value }))}
               />
             </Form.Field>
           </Form>
@@ -605,9 +783,13 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
         <Modal.Actions>
           <Button onClick={() => setShowAddService(false)}>Cancel</Button>
           <Button
-            primary
+            disabled={
+              !newService.name ||
+              !newService.destinationHost ||
+              !newService.destinationPort
+            }
             onClick={handleAddService}
-            disabled={!newService.name || !newService.destinationHost || !newService.destinationPort}
+            primary
           >
             Add Service
           </Button>
@@ -618,5 +800,3 @@ const VpnGatewayConfig = ({ podId, podDetail }) => {
 };
 
 export default VpnGatewayConfig;
-
-

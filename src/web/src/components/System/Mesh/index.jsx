@@ -1,6 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Grid, Header, Icon, Label, List, Loader, Message, Segment, Statistic } from 'semantic-ui-react';
 import * as mesh from '../../../lib/mesh';
+import React, { useEffect, useState } from 'react';
+import {
+  Card,
+  Grid,
+  Header,
+  Icon,
+  Label,
+  List,
+  Loader,
+  Message,
+  Segment,
+  Statistic,
+} from 'semantic-ui-react';
 
 const Mesh = () => {
   const [stats, setStats] = useState(null);
@@ -14,8 +25,8 @@ const Mesh = () => {
         setError(null);
         const data = await mesh.getStats();
         setStats(data);
-      } catch (err) {
-        setError(err.message);
+      } catch (error_) {
+        setError(error_.message);
       } finally {
         setLoading(false);
       }
@@ -24,32 +35,43 @@ const Mesh = () => {
     fetchStats();
 
     // Refresh stats every 30 seconds
-    const interval = setInterval(fetchStats, 30000);
+    const interval = setInterval(fetchStats, 30_000);
     return () => clearInterval(interval);
   }, []);
 
   const getHealthColor = (status) => {
     switch (status) {
-      case 'Healthy': return 'green';
-      case 'Degraded': return 'yellow';
-      case 'Unhealthy': return 'red';
-      default: return 'grey';
+      case 'Healthy':
+        return 'green';
+      case 'Degraded':
+        return 'yellow';
+      case 'Unhealthy':
+        return 'red';
+      default:
+        return 'grey';
     }
   };
 
   const getHealthIcon = (status) => {
     switch (status) {
-      case 'Healthy': return 'checkmark';
-      case 'Degraded': return 'warning sign';
-      case 'Unhealthy': return 'remove';
-      default: return 'question';
+      case 'Healthy':
+        return 'checkmark';
+      case 'Degraded':
+        return 'warning sign';
+      case 'Unhealthy':
+        return 'remove';
+      default:
+        return 'question';
     }
   };
 
   if (loading && !stats) {
     return (
       <Segment>
-        <Loader active inline="centered">
+        <Loader
+          active
+          inline="centered"
+        >
           Loading mesh statistics...
         </Loader>
       </Segment>
@@ -78,7 +100,10 @@ const Mesh = () => {
           <Card fluid>
             <Card.Content>
               <Card.Header>
-                <Icon name={getHealthIcon(stats?.status)} color={getHealthColor(stats?.status)} />
+                <Icon
+                  color={getHealthColor(stats?.status)}
+                  name={getHealthIcon(stats?.status)}
+                />
                 Network Health: {stats?.status || 'Unknown'}
               </Card.Header>
               <Card.Description>
@@ -98,15 +123,21 @@ const Mesh = () => {
                 <Statistic.Label>Total Peers</Statistic.Label>
               </Statistic>
               <Statistic>
-                <Statistic.Value>{stats?.activeDhtSessions || 0}</Statistic.Value>
+                <Statistic.Value>
+                  {stats?.activeDhtSessions || 0}
+                </Statistic.Value>
                 <Statistic.Label>DHT Sessions</Statistic.Label>
               </Statistic>
               <Statistic>
-                <Statistic.Value>{stats?.activeOverlaySessions || 0}</Statistic.Value>
+                <Statistic.Value>
+                  {stats?.activeOverlaySessions || 0}
+                </Statistic.Value>
                 <Statistic.Label>Overlay Sessions</Statistic.Label>
               </Statistic>
               <Statistic>
-                <Statistic.Value>{stats?.routingTableSize || 0}</Statistic.Value>
+                <Statistic.Value>
+                  {stats?.routingTableSize || 0}
+                </Statistic.Value>
                 <Statistic.Label>Routing Table Size</Statistic.Label>
               </Statistic>
             </Statistic.Group>
@@ -120,29 +151,40 @@ const Mesh = () => {
               <Icon name="plug" />
               Connections
             </Header>
-            <List divided relaxed>
+            <List
+              divided
+              relaxed
+            >
               <List.Item>
                 <List.Content>
                   <List.Header>DHT Nodes</List.Header>
-                  <List.Description>{stats?.activeDhtSessions || 0} active connections</List.Description>
+                  <List.Description>
+                    {stats?.activeDhtSessions || 0} active connections
+                  </List.Description>
                 </List.Content>
               </List.Item>
               <List.Item>
                 <List.Content>
                   <List.Header>Overlay Sessions</List.Header>
-                  <List.Description>{stats?.activeOverlaySessions || 0} active sessions</List.Description>
+                  <List.Description>
+                    {stats?.activeOverlaySessions || 0} active sessions
+                  </List.Description>
                 </List.Content>
               </List.Item>
               <List.Item>
                 <List.Content>
                   <List.Header>Mirrored Sessions</List.Header>
-                  <List.Description>{stats?.activeMirroredSessions || 0} relay connections</List.Description>
+                  <List.Description>
+                    {stats?.activeMirroredSessions || 0} relay connections
+                  </List.Description>
                 </List.Content>
               </List.Item>
               <List.Item>
                 <List.Content>
                   <List.Header>Bootstrap Peers</List.Header>
-                  <List.Description>{stats?.bootstrapPeers || 0} bootstrap nodes</List.Description>
+                  <List.Description>
+                    {stats?.bootstrapPeers || 0} bootstrap nodes
+                  </List.Description>
                 </List.Content>
               </List.Item>
             </List>
@@ -156,7 +198,10 @@ const Mesh = () => {
               <Icon name="chart line" />
               Performance
             </Header>
-            <List divided relaxed>
+            <List
+              divided
+              relaxed
+            >
               <List.Item>
                 <List.Content>
                   <List.Header>DHT Operations/sec</List.Header>
@@ -168,19 +213,25 @@ const Mesh = () => {
               <List.Item>
                 <List.Content>
                   <List.Header>Messages Sent</List.Header>
-                  <List.Description>{stats?.messagesSent || 0} total messages</List.Description>
+                  <List.Description>
+                    {stats?.messagesSent || 0} total messages
+                  </List.Description>
                 </List.Content>
               </List.Item>
               <List.Item>
                 <List.Content>
                   <List.Header>Messages Received</List.Header>
-                  <List.Description>{stats?.messagesReceived || 0} total messages</List.Description>
+                  <List.Description>
+                    {stats?.messagesReceived || 0} total messages
+                  </List.Description>
                 </List.Content>
               </List.Item>
               <List.Item>
                 <List.Content>
                   <List.Header>Peer Churn Events</List.Header>
-                  <List.Description>{stats?.peerChurnEvents || 0} churn events</List.Description>
+                  <List.Description>
+                    {stats?.peerChurnEvents || 0} churn events
+                  </List.Description>
                 </List.Content>
               </List.Item>
             </List>
@@ -201,7 +252,11 @@ const Mesh = () => {
                     <List.Content>
                       <List.Header>NAT Type</List.Header>
                       <List.Description>
-                        <Label color={stats?.natType === 'Direct' ? 'green' : 'yellow'}>
+                        <Label
+                          color={
+                            stats?.natType === 'Direct' ? 'green' : 'yellow'
+                          }
+                        >
                           {stats?.natType || 'Unknown'}
                         </Label>
                       </List.Description>
@@ -215,16 +270,29 @@ const Mesh = () => {
                     <List.Content>
                       <List.Header>Health Indicators</List.Header>
                       <List.Description>
-                        <Label color={stats?.routingTableHealthy ? 'green' : 'red'}>
-                          Routing Table: {stats?.routingTableHealthy ? 'Healthy' : 'Unhealthy'}
+                        <Label
+                          color={stats?.routingTableHealthy ? 'green' : 'red'}
+                        >
+                          Routing Table:{' '}
+                          {stats?.routingTableHealthy ? 'Healthy' : 'Unhealthy'}
                         </Label>
                         <br />
-                        <Label color={stats?.peerConnectivityHealthy ? 'green' : 'red'}>
-                          Peer Connectivity: {stats?.peerConnectivityHealthy ? 'Healthy' : 'Unhealthy'}
+                        <Label
+                          color={
+                            stats?.peerConnectivityHealthy ? 'green' : 'red'
+                          }
+                        >
+                          Peer Connectivity:{' '}
+                          {stats?.peerConnectivityHealthy
+                            ? 'Healthy'
+                            : 'Unhealthy'}
                         </Label>
                         <br />
-                        <Label color={stats?.messageFlowHealthy ? 'green' : 'red'}>
-                          Message Flow: {stats?.messageFlowHealthy ? 'Healthy' : 'Unhealthy'}
+                        <Label
+                          color={stats?.messageFlowHealthy ? 'green' : 'red'}
+                        >
+                          Message Flow:{' '}
+                          {stats?.messageFlowHealthy ? 'Healthy' : 'Unhealthy'}
                         </Label>
                       </List.Description>
                     </List.Content>
@@ -240,4 +308,3 @@ const Mesh = () => {
 };
 
 export default Mesh;
-

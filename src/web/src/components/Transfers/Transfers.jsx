@@ -28,29 +28,35 @@ const Transfers = ({ direction, server }) => {
       // Automatically fetch queue positions for queued downloads
       if (direction === 'download') {
         const queuedDownloads = response
-          .flatMap(user => user.directories.flatMap(dir => dir.files))
-          .filter(file => file.state && file.state.includes('Queued'));
+          .flatMap((user) => user.directories.flatMap((dir) => dir.files))
+          .filter((file) => file.state && file.state.includes('Queued'));
 
         // Update queue positions in parallel
         const queuePositionPromises = queuedDownloads.map(async (file) => {
           try {
             const queueResponse = await transfersLibrary.getPlaceInQueue({
               id: file.id,
-              username: file.username
+              username: file.username,
             });
 
             // Find and update the transfer in the response data
-            response.forEach(user => {
-              user.directories.forEach(dir => {
-                const transfer = dir.files.find(f => f.id === file.id && f.username === file.username);
+            for (const user of response) {
+              for (const dir of user.directories) {
+                const transfer = dir.files.find(
+                  (f) => f.id === file.id && f.username === file.username,
+                );
                 if (transfer) {
                   transfer.placeInQueue = queueResponse.data;
                 }
-              });
-            });
+              }
+            }
           } catch (error) {
             // Silently fail individual queue position fetches to avoid spam
-            console.debug('Failed to fetch queue position for', file.filename, error);
+            console.debug(
+              'Failed to fetch queue position for',
+              file.filename,
+              error,
+            );
           }
         });
 

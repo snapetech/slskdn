@@ -1,6 +1,6 @@
 import { urlBase } from '../../config';
-import * as portForwarding from '../../lib/portForwarding';
 import * as pods from '../../lib/pods';
+import * as portForwarding from '../../lib/portForwarding';
 import React, { Component } from 'react';
 import {
   Button,
@@ -8,6 +8,7 @@ import {
   Dimmer,
   Dropdown,
   Form,
+  Header,
   Icon,
   Input,
   Label,
@@ -20,29 +21,28 @@ import {
   Statistic,
   Tab,
   Table,
-  Header,
 } from 'semantic-ui-react';
 
 const initialState = {
-  pods: [],
-  selectedPodId: null,
-  selectedPodDetail: null,
   availablePorts: [],
-  forwardingStatus: [],
-  showCreateModal: false,
-  creatingForwarding: false,
-  stoppingForwarding: false,
-  loading: false,
-  error: null,
   createForm: {
-    localPort: '',
     destinationHost: '',
+    localPort: '',
     destinationPort: '',
     serviceName: '',
   },
+  creatingForwarding: false,
+  error: null,
+  forwardingStatus: [],
   intervals: {
     status: undefined,
   },
+  loading: false,
+  pods: [],
+  selectedPodDetail: null,
+  selectedPodId: null,
+  showCreateModal: false,
+  stoppingForwarding: false,
 };
 
 class PortForwarding extends Component {
@@ -54,7 +54,7 @@ class PortForwarding extends Component {
   componentDidMount() {
     this.setState({
       intervals: {
-        status: window.setInterval(this.fetchForwardingStatus, 5000),
+        status: window.setInterval(this.fetchForwardingStatus, 5_000),
       },
     });
 
@@ -68,7 +68,7 @@ class PortForwarding extends Component {
   }
 
   initializeComponent = async () => {
-    this.setState({ loading: true, error: null });
+    this.setState({ error: null, loading: true });
 
     try {
       await Promise.all([
@@ -115,7 +115,11 @@ class PortForwarding extends Component {
   };
 
   handlePodSelection = async (podId) => {
-    this.setState({ selectedPodId: podId, selectedPodDetail: null, loading: true });
+    this.setState({
+      loading: true,
+      selectedPodDetail: null,
+      selectedPodId: podId,
+    });
 
     try {
       const podDetail = await pods.get(podId);
@@ -137,20 +141,28 @@ class PortForwarding extends Component {
     }
 
     // Validate form
-    if (!createForm.localPort || !createForm.destinationHost || !createForm.destinationPort) {
+    if (
+      !createForm.localPort ||
+      !createForm.destinationHost ||
+      !createForm.destinationPort
+    ) {
       this.setState({ error: 'Please fill in all required fields' });
       return;
     }
 
-    const localPort = parseInt(createForm.localPort);
-    const destinationPort = parseInt(createForm.destinationPort);
+    const localPort = Number.parseInt(createForm.localPort);
+    const destinationPort = Number.parseInt(createForm.destinationPort);
 
-    if (isNaN(localPort) || localPort < 1024 || localPort > 65535) {
+    if (isNaN(localPort) || localPort < 1_024 || localPort > 65_535) {
       this.setState({ error: 'Local port must be between 1024 and 65535' });
       return;
     }
 
-    if (isNaN(destinationPort) || destinationPort < 1 || destinationPort > 65535) {
+    if (
+      isNaN(destinationPort) ||
+      destinationPort < 1 ||
+      destinationPort > 65_535
+    ) {
       this.setState({ error: 'Destination port must be between 1 and 65535' });
       return;
     }
@@ -159,10 +171,10 @@ class PortForwarding extends Component {
 
     try {
       await portForwarding.startForwarding({
-        localPort,
-        podId: selectedPodId,
         destinationHost: createForm.destinationHost,
         destinationPort,
+        localPort,
+        podId: selectedPodId,
         serviceName: createForm.serviceName || undefined,
       });
 
@@ -185,7 +197,7 @@ class PortForwarding extends Component {
   };
 
   handleStopForwarding = async (localPort) => {
-    this.setState({ stoppingForwarding: true, error: null });
+    this.setState({ error: null, stoppingForwarding: true });
 
     try {
       await portForwarding.stopForwarding(localPort);
@@ -202,9 +214,9 @@ class PortForwarding extends Component {
   };
 
   handleFormChange = (field, value) => {
-    this.setState(prevState => ({
+    this.setState((previousState) => ({
       createForm: {
-        ...prevState.createForm,
+        ...previousState.createForm,
         [field]: value,
       },
     }));
@@ -212,25 +224,26 @@ class PortForwarding extends Component {
 
   render() {
     const {
-      pods,
-      selectedPodId,
-      selectedPodDetail,
       availablePorts,
-      forwardingStatus,
-      showCreateModal,
-      creatingForwarding,
-      stoppingForwarding,
-      loading,
-      error,
       createForm,
+      creatingForwarding,
+      error,
+      forwardingStatus,
+      loading,
+      pods,
+      selectedPodDetail,
+      selectedPodId,
+      showCreateModal,
+      stoppingForwarding,
     } = this.state;
 
-    const selectedPod = pods.find(p => p.podId === selectedPodId);
+    const selectedPod = pods.find((p) => p.podId === selectedPodId);
 
     // Filter pods that have VPN gateway capability
-    const vpnCapablePods = pods.filter(pod =>
-      pod.capabilities?.includes('PrivateServiceGateway') ||
-      pod.privateServicePolicy?.enabled === true
+    const vpnCapablePods = pods.filter(
+      (pod) =>
+        pod.capabilities?.includes('PrivateServiceGateway') ||
+        pod.privateServicePolicy?.enabled === true,
     );
 
     const panes = [
@@ -245,14 +258,20 @@ class PortForwarding extends Component {
 
             {forwardingStatus.length === 0 ? (
               <Segment placeholder>
-                <Icon name="exchange" size="huge" />
+                <Icon
+                  name="exchange"
+                  size="huge"
+                />
                 <h3>No active port forwarding</h3>
-                <p>Start forwarding local ports to remote services through VPN tunnels.</p>
+                <p>
+                  Start forwarding local ports to remote services through VPN
+                  tunnels.
+                </p>
                 <Button
+                  disabled={vpnCapablePods.length === 0}
+                  onClick={() => this.setState({ showCreateModal: true })}
                   primary
                   size="large"
-                  onClick={() => this.setState({ showCreateModal: true })}
-                  disabled={vpnCapablePods.length === 0}
                 >
                   <Icon name="plus" />
                   Start Forwarding
@@ -262,9 +281,9 @@ class PortForwarding extends Component {
               <div>
                 <div style={{ marginBottom: '20px', textAlign: 'right' }}>
                   <Button
-                    primary
-                    onClick={() => this.setState({ showCreateModal: true })}
                     disabled={vpnCapablePods.length === 0}
+                    onClick={() => this.setState({ showCreateModal: true })}
+                    primary
                   >
                     <Icon name="plus" />
                     Add Forwarding
@@ -296,7 +315,13 @@ class PortForwarding extends Component {
                           <div>
                             <strong>{forwarding.podId}</strong>
                             {forwarding.serviceName && (
-                              <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
+                              <div
+                                style={{
+                                  color: '#666',
+                                  fontSize: '0.8em',
+                                  marginTop: '4px',
+                                }}
+                              >
                                 <Icon name="server" />
                                 Service: {forwarding.serviceName}
                               </div>
@@ -304,25 +329,40 @@ class PortForwarding extends Component {
                           </div>
                         </Table.Cell>
                         <Table.Cell>
-                          <code style={{ backgroundColor: '#f8f9fa', padding: '4px 8px', borderRadius: '4px' }}>
-                            {forwarding.destinationHost}:{forwarding.destinationPort}
+                          <code
+                            style={{
+                              backgroundColor: '#f8f9fa',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                            }}
+                          >
+                            {forwarding.destinationHost}:
+                            {forwarding.destinationPort}
                           </code>
                         </Table.Cell>
                         <Table.Cell>
                           <Label color={forwarding.isActive ? 'green' : 'red'}>
-                            <Icon name={forwarding.isActive ? 'checkmark' : 'remove'} />
+                            <Icon
+                              name={
+                                forwarding.isActive ? 'checkmark' : 'remove'
+                              }
+                            />
                             {forwarding.isActive ? 'Active' : 'Inactive'}
                           </Label>
                         </Table.Cell>
                         <Table.Cell textAlign="center">
-                          <Label circular color="blue">
+                          <Label
+                            circular
+                            color="blue"
+                          >
                             {forwarding.activeConnections}
                           </Label>
                         </Table.Cell>
                         <Table.Cell>
                           {forwarding.bytesForwarded > 0 ? (
                             <span>
-                              {(forwarding.bytesForwarded / 1024).toFixed(1)} KB
+                              {(forwarding.bytesForwarded / 1_024).toFixed(1)}{' '}
+                              KB
                             </span>
                           ) : (
                             <span style={{ color: '#999' }}>0 KB</span>
@@ -333,11 +373,15 @@ class PortForwarding extends Component {
                             content="Stop port forwarding"
                             trigger={
                               <Button
-                                icon="stop"
                                 color="red"
-                                size="small"
+                                icon="stop"
                                 loading={stoppingForwarding}
-                                onClick={() => this.handleStopForwarding(forwarding.localPort)}
+                                onClick={() =>
+                                  this.handleStopForwarding(
+                                    forwarding.localPort,
+                                  )
+                                }
+                                size="small"
                               />
                             }
                           />
@@ -360,7 +404,10 @@ class PortForwarding extends Component {
               <p>Check which local ports are available for forwarding.</p>
             </div>
 
-            <Statistic.Group size="small" widths="three">
+            <Statistic.Group
+              size="small"
+              widths="three"
+            >
               <Statistic color="green">
                 <Statistic.Value>{availablePorts.length}</Statistic.Value>
                 <Statistic.Label>Available Ports</Statistic.Label>
@@ -370,7 +417,13 @@ class PortForwarding extends Component {
                 <Statistic.Label>In Use</Statistic.Label>
               </Statistic>
               <Statistic color="grey">
-                <Statistic.Value>{65535 - 1024 + 1 - availablePorts.length - forwardingStatus.length}</Statistic.Value>
+                <Statistic.Value>
+                  {65_535 -
+                    1_024 +
+                    1 -
+                    availablePorts.length -
+                    forwardingStatus.length}
+                </Statistic.Value>
                 <Statistic.Label>System Reserved</Statistic.Label>
               </Statistic>
             </Statistic.Group>
@@ -378,27 +431,32 @@ class PortForwarding extends Component {
             <Segment style={{ marginTop: '20px' }}>
               <Header as="h4">Available Ports for Forwarding</Header>
               <p>Ports in range 1024-65535 that are currently available:</p>
-              <div style={{
-                maxHeight: '300px',
-                overflowY: 'auto',
-                fontFamily: 'monospace',
-                fontSize: '12px',
-                backgroundColor: '#f8f9fa',
-                padding: '15px',
-                borderRadius: '4px',
-                border: '1px solid #dee2e6',
-              }}>
+              <div
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  padding: '15px',
+                }}
+              >
                 {availablePorts.length > 0 ? (
                   <div>
                     {availablePorts.slice(0, 50).join(', ')}
                     {availablePorts.length > 50 && (
-                      <div style={{ marginTop: '10px', color: '#666' }}>
-                        ... and {availablePorts.length - 50} more ports available
+                      <div style={{ color: '#666', marginTop: '10px' }}>
+                        ... and {availablePorts.length - 50} more ports
+                        available
                       </div>
                     )}
                   </div>
                 ) : (
-                  <em style={{ color: '#999' }}>No ports available or still loading...</em>
+                  <em style={{ color: '#999' }}>
+                    No ports available or still loading...
+                  </em>
                 )}
               </div>
             </Segment>
@@ -416,14 +474,25 @@ class PortForwarding extends Component {
 
             {vpnCapablePods.length === 0 ? (
               <Segment placeholder>
-                <Icon name="warning circle" size="huge" color="orange" />
+                <Icon
+                  color="orange"
+                  name="warning circle"
+                  size="huge"
+                />
                 <h3>No VPN-Capable Pods Found</h3>
-                <p>To use port forwarding, you need at least one pod with VPN gateway capability enabled.</p>
+                <p>
+                  To use port forwarding, you need at least one pod with VPN
+                  gateway capability enabled.
+                </p>
                 <div style={{ marginTop: '15px' }}>
-                  <p><strong>How to enable VPN on a pod:</strong></p>
+                  <p>
+                    <strong>How to enable VPN on a pod:</strong>
+                  </p>
                   <ol>
                     <li>Create or join a pod</li>
-                    <li>Enable the <code>PrivateServiceGateway</code> capability</li>
+                    <li>
+                      Enable the <code>PrivateServiceGateway</code> capability
+                    </li>
                     <li>Configure allowed destinations and policies</li>
                   </ol>
                 </div>
@@ -431,27 +500,44 @@ class PortForwarding extends Component {
             ) : (
               <Card.Group itemsPerRow={2}>
                 {vpnCapablePods.map((pod) => (
-                  <Card key={pod.podId} fluid>
+                  <Card
+                    fluid
+                    key={pod.podId}
+                  >
                     <Card.Content>
                       <Card.Header>
-                        <Icon name="shield" color="green" />
+                        <Icon
+                          color="green"
+                          name="shield"
+                        />
                         {pod.name || pod.podId}
                       </Card.Header>
-                      <Card.Meta>
-                        Pod ID: {pod.podId}
-                      </Card.Meta>
+                      <Card.Meta>Pod ID: {pod.podId}</Card.Meta>
                       <Card.Description>
-                        <p><strong>Members:</strong> {pod.members?.length || 0}</p>
-                        <p><strong>Channels:</strong> {pod.channels?.length || 0}</p>
+                        <p>
+                          <strong>Members:</strong> {pod.members?.length || 0}
+                        </p>
+                        <p>
+                          <strong>Channels:</strong> {pod.channels?.length || 0}
+                        </p>
                         {pod.privateServicePolicy?.enabled && (
                           <div>
-                            <Label color="green" size="small">
+                            <Label
+                              color="green"
+                              size="small"
+                            >
                               <Icon name="lock" />
                               VPN Gateway Active
                             </Label>
                             {pod.privateServicePolicy.allowedDestinations && (
-                              <p style={{ marginTop: '8px', fontSize: '0.9em' }}>
-                                <strong>Allowed Destinations:</strong> {pod.privateServicePolicy.allowedDestinations.length}
+                              <p
+                                style={{ fontSize: '0.9em', marginTop: '8px' }}
+                              >
+                                <strong>Allowed Destinations:</strong>{' '}
+                                {
+                                  pod.privateServicePolicy.allowedDestinations
+                                    .length
+                                }
                               </p>
                             )}
                           </div>
@@ -460,13 +546,13 @@ class PortForwarding extends Component {
                     </Card.Content>
                     <Card.Content extra>
                       <Button
-                        primary
                         fluid
                         onClick={() => {
                           this.setState({ selectedPodId: pod.podId });
                           this.handlePodSelection(pod.podId);
                           this.setState({ showCreateModal: true });
                         }}
+                        primary
                       >
                         <Icon name="exchange" />
                         Use for Forwarding
@@ -492,9 +578,10 @@ class PortForwarding extends Component {
             <Icon name="exchange" />
             Port Forwarding
           </Header>
-          <p style={{ fontSize: '1.1em', color: '#666' }}>
+          <p style={{ color: '#666', fontSize: '1.1em' }}>
             Forward local ports to remote services through secure VPN tunnels.
-            Access internal databases, APIs, and services as if they were running locally.
+            Access internal databases, APIs, and services as if they were
+            running locally.
           </p>
         </div>
 
@@ -503,8 +590,8 @@ class PortForwarding extends Component {
             <Message.Header>Operation Failed</Message.Header>
             <p>{error}</p>
             <Button
-              size="small"
               onClick={() => this.setState({ error: null })}
+              size="small"
             >
               Dismiss
             </Button>
@@ -519,10 +606,10 @@ class PortForwarding extends Component {
 
         {/* Create Forwarding Modal */}
         <Modal
-          open={showCreateModal}
-          onClose={() => this.setState({ showCreateModal: false })}
-          size="small"
           closeIcon
+          onClose={() => this.setState({ showCreateModal: false })}
+          open={showCreateModal}
+          size="small"
         >
           <Modal.Header>
             <Icon name="plus" />
@@ -531,37 +618,51 @@ class PortForwarding extends Component {
           <Modal.Content>
             <Message info>
               <Message.Header>Secure VPN Tunneling</Message.Header>
-              <p>Create an encrypted tunnel from your local machine to a remote service through a pod's VPN gateway.</p>
+              <p>
+                Create an encrypted tunnel from your local machine to a remote
+                service through a pod's VPN gateway.
+              </p>
             </Message>
 
             <Form>
               <Form.Field required>
                 <label>VPN Pod</label>
                 <Dropdown
-                  placeholder="Select a VPN-capable pod"
                   fluid
-                  selection
-                  search
-                  options={vpnCapablePods.map(pod => ({
+                  loading={loading}
+                  onChange={(e, { value }) => this.handlePodSelection(value)}
+                  options={vpnCapablePods.map((pod) => ({
+                    description: pod.privateServicePolicy?.enabled
+                      ? 'VPN Gateway Active'
+                      : 'VPN Capable',
                     key: pod.podId,
                     text: `${pod.name || pod.podId} (${pod.members?.length || 0} members)`,
                     value: pod.podId,
-                    description: pod.privateServicePolicy?.enabled ? 'VPN Gateway Active' : 'VPN Capable',
                   }))}
+                  placeholder="Select a VPN-capable pod"
+                  search
+                  selection
                   value={selectedPodId || ''}
-                  onChange={(e, { value }) => this.handlePodSelection(value)}
-                  loading={loading}
                 />
                 {selectedPodDetail && (
-                  <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <div
+                    style={{
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '4px',
+                      marginTop: '10px',
+                      padding: '10px',
+                    }}
+                  >
                     <p style={{ margin: '0 0 5px 0' }}>
-                      <strong>Pod:</strong> {selectedPodDetail.name || selectedPodDetail.podId}
+                      <strong>Pod:</strong>{' '}
+                      {selectedPodDetail.name || selectedPodDetail.podId}
                     </p>
                     <p style={{ margin: '0 0 5px 0' }}>
-                      <strong>Members:</strong> {selectedPodDetail.members?.length || 0}
+                      <strong>Members:</strong>{' '}
+                      {selectedPodDetail.members?.length || 0}
                     </p>
                     {selectedPodDetail.privateServicePolicy?.enabled && (
-                      <p style={{ margin: '0', color: '#28a745' }}>
+                      <p style={{ color: '#28a745', margin: '0' }}>
                         <Icon name="shield" />
                         <strong>VPN Gateway:</strong> Enabled
                       </p>
@@ -576,14 +677,16 @@ class PortForwarding extends Component {
                   content="Port on your local machine where the remote service will be accessible (1024-65535)"
                   trigger={
                     <Input
-                      type="number"
-                      placeholder="e.g., 8080"
-                      min="1024"
-                      max="65535"
-                      value={createForm.localPort}
-                      onChange={(e) => this.handleFormChange('localPort', e.target.value)}
                       label={{ basic: true, content: 'localhost:' }}
                       labelPosition="left"
+                      max="65535"
+                      min="1024"
+                      onChange={(e) =>
+                        this.handleFormChange('localPort', e.target.value)
+                      }
+                      placeholder="e.g., 8080"
+                      type="number"
+                      value={createForm.localPort}
                     />
                   }
                 />
@@ -595,9 +698,11 @@ class PortForwarding extends Component {
                   content="Hostname or IP address of the remote service you want to access"
                   trigger={
                     <Input
+                      onChange={(e) =>
+                        this.handleFormChange('destinationHost', e.target.value)
+                      }
                       placeholder="e.g., database.internal.company.com"
                       value={createForm.destinationHost}
-                      onChange={(e) => this.handleFormChange('destinationHost', e.target.value)}
                     />
                   }
                 />
@@ -609,12 +714,14 @@ class PortForwarding extends Component {
                   content="Port number of the remote service"
                   trigger={
                     <Input
-                      type="number"
-                      placeholder="e.g., 5432"
-                      min="1"
                       max="65535"
+                      min="1"
+                      onChange={(e) =>
+                        this.handleFormChange('destinationPort', e.target.value)
+                      }
+                      placeholder="e.g., 5432"
+                      type="number"
                       value={createForm.destinationPort}
-                      onChange={(e) => this.handleFormChange('destinationPort', e.target.value)}
                     />
                   }
                 />
@@ -626,9 +733,11 @@ class PortForwarding extends Component {
                   content="Friendly name for the service (helps organize your forwarding rules)"
                   trigger={
                     <Input
+                      onChange={(e) =>
+                        this.handleFormChange('serviceName', e.target.value)
+                      }
                       placeholder="e.g., postgres-db, api-server"
                       value={createForm.serviceName}
-                      onChange={(e) => this.handleFormChange('serviceName', e.target.value)}
                     />
                   }
                 />
@@ -636,22 +745,28 @@ class PortForwarding extends Component {
 
               <Message warning>
                 <Message.Header>Security Notice</Message.Header>
-                <p>All traffic will be routed through the pod's VPN gateway with end-to-end encryption.
-                The remote destination must be allowed by the pod's security policy.</p>
+                <p>
+                  All traffic will be routed through the pod's VPN gateway with
+                  end-to-end encryption. The remote destination must be allowed
+                  by the pod's security policy.
+                </p>
               </Message>
             </Form>
           </Modal.Content>
           <Modal.Actions>
-            <Button
-              onClick={() => this.setState({ showCreateModal: false })}
-            >
+            <Button onClick={() => this.setState({ showCreateModal: false })}>
               Cancel
             </Button>
             <Button
-              primary
+              disabled={
+                !selectedPodId ||
+                !createForm.localPort ||
+                !createForm.destinationHost ||
+                !createForm.destinationPort
+              }
               loading={creatingForwarding}
-              disabled={!selectedPodId || !createForm.localPort || !createForm.destinationHost || !createForm.destinationPort}
               onClick={this.handleCreateForwarding}
+              primary
             >
               <Icon name="play" />
               Start Forwarding
@@ -664,5 +779,3 @@ class PortForwarding extends Component {
 }
 
 export default PortForwarding;
-
-

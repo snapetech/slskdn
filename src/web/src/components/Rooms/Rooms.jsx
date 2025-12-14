@@ -205,13 +205,19 @@ const Rooms = () => {
     });
   };
 
-  const handleUserProfile = useCallback((username) => {
-    history.push('/users', { user: username });
-  }, [history]);
+  const handleUserProfile = useCallback(
+    (username) => {
+      history.push('/users', { user: username });
+    },
+    [history],
+  );
 
-  const handleBrowseShares = useCallback((username) => {
-    history.push('/browse', { user: username });
-  }, [history]);
+  const handleBrowseShares = useCallback(
+    (username) => {
+      history.push('/browse', { user: username });
+    },
+    [history],
+  );
 
   const roomOptions = availableRooms.map((r) => ({
     description: r.isPrivate ? 'Private' : '',
@@ -245,10 +251,10 @@ const Rooms = () => {
       >
         <RoomSession
           key={tab.key}
-          roomName={tab.roomName}
+          onBrowseShares={handleBrowseShares}
           onLeaveRoom={leaveRoom}
           onUserProfile={handleUserProfile}
-          onBrowseShares={handleBrowseShares}
+          roomName={tab.roomName}
         />
       </Tab.Pane>
     ),
@@ -266,8 +272,15 @@ const Rooms = () => {
             size="big"
           />
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ alignItems: 'center', display: 'flex', gap: '8px' }}>
             <Dropdown
               className="rooms-input"
               clearable

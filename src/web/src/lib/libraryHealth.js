@@ -1,25 +1,32 @@
 import api from './api';
 
 export const startScan = (libraryPath) =>
-  api.post('/api/library/health/scans', { libraryPath, includeSubdirectories: true });
+  api.post('/api/library/health/scans', {
+    includeSubdirectories: true,
+    libraryPath,
+  });
 
 export const getScanStatus = (scanId) =>
   api.get(`/api/library/health/scans/${scanId}`);
 
 export const getSummary = (libraryPath) =>
-  api.get(`/api/library/health/summary?libraryPath=${encodeURIComponent(libraryPath)}`);
+  api.get(
+    `/api/library/health/summary?libraryPath=${encodeURIComponent(libraryPath)}`,
+  );
 
 export const getIssues = (filter = {}) => {
-  const params = new URLSearchParams();
-  if (filter.libraryPath) params.append('libraryPath', filter.libraryPath);
-  if (filter.limit) params.append('limit', filter.limit);
-  if (filter.offset) params.append('offset', filter.offset);
-  return api.get(`/api/library/health/issues?${params.toString()}`);
+  const parameters = new URLSearchParams();
+  if (filter.libraryPath) parameters.append('libraryPath', filter.libraryPath);
+  if (filter.limit) parameters.append('limit', filter.limit);
+  if (filter.offset) parameters.append('offset', filter.offset);
+  return api.get(`/api/library/health/issues?${parameters.toString()}`);
 };
 
 export const getIssuesByType = (libraryPath = null) => {
-  const params = libraryPath ? `?libraryPath=${encodeURIComponent(libraryPath)}` : '';
-  return api.get(`/api/library/health/issues/by-type${params}`);
+  const parameters = libraryPath
+    ? `?libraryPath=${encodeURIComponent(libraryPath)}`
+    : '';
+  return api.get(`/api/library/health/issues/by-type${parameters}`);
 };
 
 export const getIssuesByArtist = (limit = 20) =>
@@ -35,15 +42,13 @@ export const createRemediationJob = (issueIds) =>
   api.post(`/api/library/health/issues/fix`, { issueIds });
 
 export default {
-  startScan,
-  getScanStatus,
-  getSummary,
+  createRemediationJob,
   getIssues,
-  getIssuesByType,
   getIssuesByArtist,
   getIssuesByRelease,
+  getIssuesByType,
+  getScanStatus,
+  getSummary,
+  startScan,
   updateIssueStatus,
-  createRemediationJob,
 };
-
-

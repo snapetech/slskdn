@@ -1,13 +1,6 @@
 import './Rooms.css';
 import React, { useState } from 'react';
-import {
-  Button,
-  Header,
-  Icon,
-  Input,
-  Modal,
-  Radio,
-} from 'semantic-ui-react';
+import { Button, Header, Icon, Input, Modal, Radio } from 'semantic-ui-react';
 
 const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
   const [open, setOpen] = useState(false);
@@ -32,7 +25,9 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
       setRoomName('');
       setIsPrivate(false);
     } catch (error) {
-      setError(error?.response?.data || error?.message || 'Failed to create room');
+      setError(
+        error?.response?.data || error?.message || 'Failed to create room',
+      );
     } finally {
       setLoading(false);
     }
@@ -48,8 +43,6 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
     <Modal
       size="small"
       {...modalOptions}
-      open={open}
-      onOpen={() => setOpen(true)}
       onClose={() => {
         if (!loading) {
           setOpen(false);
@@ -58,8 +51,14 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
           setIsPrivate(false);
         }
       }}
+      onOpen={() => setOpen(true)}
+      open={open}
       trigger={
-        <Button icon color="green" title="Create New Room">
+        <Button
+          color="green"
+          icon
+          title="Create New Room"
+        >
           <Icon name="plus" />
           Create Room
         </Button>
@@ -74,15 +73,17 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
           <div>
             <Header as="h4">Room Name</Header>
             <Input
+              error={Boolean(error)}
               fluid
-              placeholder="Enter room name..."
-              value={roomName}
               onChange={(_, { value }) => setRoomName(value)}
               onKeyPress={handleKeyPress}
-              error={!!error}
+              placeholder="Enter room name..."
+              value={roomName}
             />
             {error && (
-              <div style={{ color: '#db2828', fontSize: '12px', marginTop: '4px' }}>
+              <div
+                style={{ color: '#db2828', fontSize: '12px', marginTop: '4px' }}
+              >
                 {error}
               </div>
             )}
@@ -91,30 +92,34 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
           <div>
             <Header as="h4">Room Type</Header>
             <div style={{ display: 'flex', gap: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{ alignItems: 'center', display: 'flex', gap: '8px' }}
+              >
                 <Radio
-                  name="roomType"
-                  value="public"
                   checked={!isPrivate}
+                  name="roomType"
                   onChange={() => setIsPrivate(false)}
+                  value="public"
                 />
                 <div>
                   <strong>Public Room</strong>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ color: '#666', fontSize: '12px' }}>
                     Anyone can join and see the room
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{ alignItems: 'center', display: 'flex', gap: '8px' }}
+              >
                 <Radio
-                  name="roomType"
-                  value="private"
                   checked={isPrivate}
+                  name="roomType"
                   onChange={() => setIsPrivate(true)}
+                  value="private"
                 />
                 <div>
                   <strong>Private Room</strong>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ color: '#666', fontSize: '12px' }}>
                     Only invited members can join
                   </div>
                 </div>
@@ -122,7 +127,13 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
             </div>
           </div>
 
-          <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '4px' }}>
+          <div
+            style={{
+              background: '#f8f9fa',
+              borderRadius: '4px',
+              padding: '12px',
+            }}
+          >
             <Icon name="info circle" />
             <strong>Note:</strong> Room creation depends on server permissions.
             Private rooms require server operator approval.
@@ -131,16 +142,16 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
       </Modal.Content>
       <Modal.Actions>
         <Button
-          onClick={() => setOpen(false)}
           disabled={loading}
+          onClick={() => setOpen(false)}
         >
           Cancel
         </Button>
         <Button
-          positive
-          loading={loading}
           disabled={!roomName.trim() || loading}
+          loading={loading}
           onClick={handleCreate}
+          positive
         >
           <Icon name="plus" />
           Create Room
@@ -151,4 +162,3 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
 };
 
 export default RoomCreateModal;
-

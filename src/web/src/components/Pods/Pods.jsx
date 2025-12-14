@@ -18,18 +18,18 @@ import {
 } from 'semantic-ui-react';
 
 const initialState = {
-  activePodId: null,
   activeChannelId: null,
-  pods: [],
-  loading: false,
-  podDetail: null,
-  members: [],
-  messages: {},
-  messageInput: '',
+  activePodId: null,
   intervals: {
     messages: undefined,
     pods: undefined,
   },
+  loading: false,
+  members: [],
+  messageInput: '',
+  messages: {},
+  podDetail: null,
+  pods: [],
 };
 
 class Pods extends Component {
@@ -45,8 +45,8 @@ class Pods extends Component {
 
     this.setState(
       {
-        activePodId: podId || null,
         activeChannelId: channelId || null,
+        activePodId: podId || null,
         intervals: {
           messages: window.setInterval(this.fetchMessages, 2_000),
           pods: window.setInterval(this.fetchPods, 5_000),
@@ -64,22 +64,21 @@ class Pods extends Component {
     );
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(previousProps) {
     // Handle route changes
     const podId = this.props.match?.params?.podId;
     const channelId = this.props.match?.params?.channelId;
-    const prevPodId = prevProps.match?.params?.podId;
-    const prevChannelId = prevProps.match?.params?.channelId;
+    const previousPodId = previousProps.match?.params?.podId;
+    const previousChannelId = previousProps.match?.params?.channelId;
 
-    if (podId !== prevPodId || channelId !== prevChannelId) {
-      if (podId) {
-        this.selectPod(podId, channelId);
-      }
+    if ((podId !== previousPodId || channelId !== previousChannelId) && podId) {
+      this.selectPod(podId, channelId);
     }
   }
 
   componentWillUnmount() {
-    const { messages: messagesInterval, pods: podsInterval } = this.state.intervals;
+    const { messages: messagesInterval, pods: podsInterval } =
+      this.state.intervals;
 
     clearInterval(podsInterval);
     clearInterval(messagesInterval);
@@ -101,21 +100,24 @@ class Pods extends Component {
     try {
       const detail = await pods.get(podId);
       const members = await pods.getMembers(podId);
-      this.setState({ podDetail: detail, members: members || [] });
+      this.setState({ members: members || [], podDetail: detail });
     } catch (error) {
       console.error('Failed to fetch pod detail:', error);
     }
   };
 
   fetchMessages = async () => {
-    const { activePodId, activeChannelId, messages } = this.state;
+    const { activeChannelId, activePodId, messages } = this.state;
 
     if (!activePodId || !activeChannelId) {
       return;
     }
 
     try {
-      const channelMessages = await pods.getMessages(activePodId, activeChannelId);
+      const channelMessages = await pods.getMessages(
+        activePodId,
+        activeChannelId,
+      );
       this.setState({
         messages: {
           ...messages,
@@ -129,16 +131,19 @@ class Pods extends Component {
 
   selectPod = async (podId, channelId = null) => {
     // Avoid redundant updates
-    if (this.state.activePodId === podId && this.state.activeChannelId === channelId) {
+    if (
+      this.state.activePodId === podId &&
+      this.state.activeChannelId === channelId
+    ) {
       return;
     }
 
-    this.setState({ loading: true, activePodId: podId });
+    this.setState({ activePodId: podId, loading: true });
 
     await this.fetchPodDetail(podId);
 
     // Select first channel if none specified
-    const podDetail = this.state.podDetail || await pods.get(podId);
+    const podDetail = this.state.podDetail || (await pods.get(podId));
     if (!channelId && podDetail?.channels?.length > 0) {
       channelId = podDetail.channels[0].channelId;
     }
@@ -153,7 +158,9 @@ class Pods extends Component {
     const currentChannelId = this.props.match?.params?.channelId;
     if (podId !== currentPodId || channelId !== currentChannelId) {
       if (channelId) {
-        this.props.history.push(`${urlBase}/pods/${podId}/channels/${channelId}`);
+        this.props.history.push(
+          `${urlBase}/pods/${podId}/channels/${channelId}`,
+        );
       } else {
         this.props.history.push(`${urlBase}/pods/${podId}`);
       }
@@ -166,7 +173,7 @@ class Pods extends Component {
   };
 
   handleSendMessage = async () => {
-    const { activePodId, activeChannelId, messageInput } = this.state;
+    const { activeChannelId, activePodId, messageInput } = this.state;
     const { state: applicationState } = this.props;
 
     if (!activePodId || !activeChannelId || !messageInput.trim()) {
@@ -177,7 +184,12 @@ class Pods extends Component {
     const senderPeerId = applicationState?.user?.username || 'local-peer';
 
     try {
-      await pods.sendMessage(activePodId, activeChannelId, messageInput, senderPeerId);
+      await pods.sendMessage(
+        activePodId,
+        activeChannelId,
+        messageInput,
+        senderPeerId,
+      );
       this.setState({ messageInput: '' });
       // Messages will be refreshed by interval
     } catch (error) {
@@ -192,9 +204,6 @@ class Pods extends Component {
 
     try {
       const newPod = await pods.create({
-        name,
-        visibility: 'Unlisted',
-        tags: [],
         channels: [
           {
             channelId: 'general',
@@ -203,6 +212,9 @@ class Pods extends Component {
           },
         ],
         externalBindings: [],
+        name,
+        tags: [],
+        visibility: 'Unlisted',
       });
 
       await this.fetchPods();
@@ -215,14 +227,14 @@ class Pods extends Component {
 
   render() {
     const {
-      pods: podsList,
-      activePodId,
       activeChannelId,
-      podDetail,
-      members,
-      messages,
-      messageInput,
+      activePodId,
       loading,
+      members,
+      messageInput,
+      messages,
+      podDetail,
+      pods: podsList,
     } = this.state;
 
     const currentMessages =
@@ -230,92 +242,103 @@ class Pods extends Component {
         ? messages[`${activePodId}:${activeChannelId}`] || []
         : [];
 
-    const panes = podDetail?.channels?.map((channel) => ({
-      menuItem: channel.name,
-      render: () => (
-        <Tab.Pane>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            <Segment
+    const panes =
+      podDetail?.channels?.map((channel) => ({
+        menuItem: channel.name,
+        render: () => (
+          <Tab.Pane>
+            <div
               style={{
-                flex: 1,
-                overflowY: 'auto',
-                minHeight: '400px',
-                maxHeight: '600px',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
               }}
             >
-              {currentMessages.length === 0 ? (
-                <PlaceholderSegment
-                  icon="comments"
-                  caption="No messages yet"
-                />
-              ) : (
-                <List relaxed="very">
-                  {currentMessages.map((msg, idx) => (
-                    <List.Item key={idx}>
-                      <List.Content>
-                        <List.Header>
-                          {msg.senderPeerId}
-                          <span
-                            style={{
-                              marginLeft: '10px',
-                              fontSize: '0.8em',
-                              color: '#999',
-                            }}
-                          >
-                            {new Date(msg.timestampUnixMs).toLocaleTimeString()}
-                          </span>
-                        </List.Header>
-                        <List.Description>{msg.body}</List.Description>
-                      </List.Content>
-                    </List.Item>
-                  ))}
-                </List>
-              )}
-            </Segment>
-            <Segment>
-              <Input
-                action={
-                  <Button
-                    icon="send"
-                    onClick={this.handleSendMessage}
-                    primary
-                  />
-                }
-                fluid
-                onChange={(e) => this.setState({ messageInput: e.target.value })}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    this.handleSendMessage();
-                  }
+              <Segment
+                style={{
+                  flex: 1,
+                  maxHeight: '600px',
+                  minHeight: '400px',
+                  overflowY: 'auto',
                 }}
-                placeholder="Type a message..."
-                value={messageInput}
-              />
-            </Segment>
-          </div>
-        </Tab.Pane>
-      ),
-    })) || [];
+              >
+                {currentMessages.length === 0 ? (
+                  <PlaceholderSegment
+                    caption="No messages yet"
+                    icon="comments"
+                  />
+                ) : (
+                  <List relaxed="very">
+                    {currentMessages.map((message, index) => (
+                      <List.Item key={index}>
+                        <List.Content>
+                          <List.Header>
+                            {message.senderPeerId}
+                            <span
+                              style={{
+                                color: '#999',
+                                fontSize: '0.8em',
+                                marginLeft: '10px',
+                              }}
+                            >
+                              {new Date(
+                                message.timestampUnixMs,
+                              ).toLocaleTimeString()}
+                            </span>
+                          </List.Header>
+                          <List.Description>{message.body}</List.Description>
+                        </List.Content>
+                      </List.Item>
+                    ))}
+                  </List>
+                )}
+              </Segment>
+              <Segment>
+                <Input
+                  action={
+                    <Button
+                      icon="send"
+                      onClick={this.handleSendMessage}
+                      primary
+                    />
+                  }
+                  fluid
+                  onChange={(e) =>
+                    this.setState({ messageInput: e.target.value })
+                  }
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      this.handleSendMessage();
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  value={messageInput}
+                />
+              </Segment>
+            </div>
+          </Tab.Pane>
+        ),
+      })) || [];
 
     return (
       <div style={{ display: 'flex', height: '100vh' }}>
         {/* Pod List Sidebar */}
         <Segment
           style={{
-            width: '250px',
-            minWidth: '250px',
-            margin: 0,
             borderRadius: 0,
+            margin: 0,
+            minWidth: '250px',
             overflowY: 'auto',
+            width: '250px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '10px',
+            }}
+          >
             <h3>Pods</h3>
             <Button
               icon="plus"
@@ -325,8 +348,8 @@ class Pods extends Component {
           </div>
           {podsList.length === 0 ? (
             <PlaceholderSegment
-              icon="users"
               caption="No pods yet"
+              icon="users"
             />
           ) : (
             <List selection>
@@ -351,11 +374,11 @@ class Pods extends Component {
         {/* Pod Detail */}
         <Segment
           style={{
-            flex: 1,
-            margin: 0,
             borderRadius: 0,
             display: 'flex',
+            flex: 1,
             flexDirection: 'column',
+            margin: 0,
           }}
         >
           {loading ? (
@@ -364,8 +387,8 @@ class Pods extends Component {
             </Dimmer>
           ) : !podDetail ? (
             <PlaceholderSegment
-              icon="users"
               caption="Select a pod to view details"
+              icon="users"
             />
           ) : (
             <>
@@ -384,15 +407,26 @@ class Pods extends Component {
                   panes={[
                     ...panes,
                     {
-                      menuItem: { key: 'vpn-gateway', icon: 'shield', content: 'VPN Gateway' },
+                      menuItem: {
+                        content: 'VPN Gateway',
+                        icon: 'shield',
+                        key: 'vpn-gateway',
+                      },
                       render: () => (
                         <Tab.Pane>
-                          <VpnGatewayConfig podId={activePodId} podDetail={podDetail} />
+                          <VpnGatewayConfig
+                            podDetail={podDetail}
+                            podId={activePodId}
+                          />
                         </Tab.Pane>
                       ),
                     },
                     {
-                      menuItem: { key: 'port-forwarding', icon: 'exchange', content: 'Port Forwarding' },
+                      menuItem: {
+                        content: 'Port Forwarding',
+                        icon: 'exchange',
+                        key: 'port-forwarding',
+                      },
                       render: () => (
                         <Tab.Pane>
                           <PortForwarding />
@@ -403,8 +437,8 @@ class Pods extends Component {
                 />
               ) : (
                 <PlaceholderSegment
-                  icon="comments"
                   caption="No channels available"
+                  icon="comments"
                 />
               )}
             </>
@@ -416,4 +450,3 @@ class Pods extends Component {
 }
 
 export default withRouter(Pods);
-

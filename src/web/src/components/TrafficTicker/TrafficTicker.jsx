@@ -7,24 +7,34 @@ const MAX_ACTIVITIES = 50; // Keep last 50 activities
 
 const getActivityIcon = (direction, state) => {
   const isCompleted = state.includes('Completed');
-  const isFailed = state.includes('Errored') || state.includes('Cancelled') || state.includes('TimedOut') || state.includes('Rejected');
+  const isFailed =
+    state.includes('Errored') ||
+    state.includes('Cancelled') ||
+    state.includes('TimedOut') ||
+    state.includes('Rejected');
 
   if (direction === 'Download') {
     if (isCompleted) {
       return isFailed ? 'x' : 'checkmark';
     }
+
     return 'download';
   } else {
     if (isCompleted) {
       return isFailed ? 'x' : 'checkmark';
     }
+
     return 'upload';
   }
 };
 
 const getActivityColor = (direction, state) => {
   const isCompleted = state.includes('Completed');
-  const isFailed = state.includes('Errored') || state.includes('Cancelled') || state.includes('TimedOut') || state.includes('Rejected');
+  const isFailed =
+    state.includes('Errored') ||
+    state.includes('Cancelled') ||
+    state.includes('TimedOut') ||
+    state.includes('Rejected');
 
   if (isFailed) return 'red';
   if (isCompleted) return 'green';
@@ -33,11 +43,20 @@ const getActivityColor = (direction, state) => {
 };
 
 const formatActivity = (activity) => {
-  const { direction, username, filename, state, size, averageSpeed, percentComplete } = activity;
+  const {
+    averageSpeed,
+    direction,
+    filename,
+    percentComplete,
+    size,
+    state,
+    username,
+  } = activity;
   const fileName = filename.split('\\').pop().split('/').pop();
 
   if (state.includes('Completed')) {
-    const speedText = averageSpeed > 0 ? ` @ ${formatBytes(averageSpeed)}/s` : '';
+    const speedText =
+      averageSpeed > 0 ? ` @ ${formatBytes(averageSpeed)}/s` : '';
     return `${direction === 'Download' ? '↓' : '↑'} ${username}/${fileName} ${state}${speedText}`;
   }
 
@@ -50,10 +69,12 @@ const formatActivity = (activity) => {
 
 const formatBytes = (bytes) => {
   if (bytes === 0) return '0 B';
-  const k = 1024;
+  const k = 1_024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  const index = Math.floor(Math.log(bytes) / Math.log(k));
+  return (
+    Number.parseFloat((bytes / k ** index).toFixed(1)) + ' ' + sizes[index]
+  );
 };
 
 const TrafficTicker = () => {
@@ -65,7 +86,10 @@ const TrafficTicker = () => {
     const transfersHub = createTransfersHubConnection();
 
     transfersHub.on('activity', (activity) => {
-      setActivities(prev => [activity, ...prev.slice(0, MAX_ACTIVITIES - 1)]);
+      setActivities((previous) => [
+        activity,
+        ...previous.slice(0, MAX_ACTIVITIES - 1),
+      ]);
     });
 
     transfersHub.onreconnecting(() => setConnected(false));
@@ -88,10 +112,14 @@ const TrafficTicker = () => {
         <Icon name="exchange" />
         <span>Transfer Activity</span>
         <Icon
-          name={connected ? 'wifi' : 'remove'}
           color={connected ? 'green' : 'red'}
+          name={connected ? 'wifi' : 'remove'}
           size="small"
-          title={connected ? 'Connected to transfer feed' : 'Disconnected from transfer feed'}
+          title={
+            connected
+              ? 'Connected to transfer feed'
+              : 'Disconnected from transfer feed'
+          }
         />
       </div>
 
@@ -102,14 +130,20 @@ const TrafficTicker = () => {
             <span>No recent activity</span>
           </div>
         ) : (
-          <List divided relaxed>
+          <List
+            divided
+            relaxed
+          >
             {visibleActivities.map((activity, index) => (
               <List.Item key={`${activity.timestamp}-${index}`}>
                 <List.Content>
                   <div className="traffic-activity">
                     <Icon
+                      color={getActivityColor(
+                        activity.direction,
+                        activity.state,
+                      )}
                       name={getActivityIcon(activity.direction, activity.state)}
-                      color={getActivityColor(activity.direction, activity.state)}
                       size="small"
                     />
                     <Popup
@@ -131,8 +165,8 @@ const TrafficTicker = () => {
         {hasMore && (
           <div className="traffic-ticker-toggle">
             <button
-              onClick={() => setExpanded(!expanded)}
               className="traffic-ticker-toggle-button"
+              onClick={() => setExpanded(!expanded)}
             >
               {expanded ? 'Show Less' : `Show ${activities.length - 10} More`}
             </button>
@@ -144,4 +178,3 @@ const TrafficTicker = () => {
 };
 
 export default TrafficTicker;
-

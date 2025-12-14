@@ -70,15 +70,22 @@ const Security = () => {
   }
 
   const stats = dashboard || {};
-  
+
   // Check if security is enabled but no data is available yet
-  const hasAnyData = stats.networkGuardStats || stats.reputationStats || 
-                     stats.violationStats || stats.eventStats ||
-                     stats.paranoidStats || stats.honeypotStats ||
-                     stats.fingerprintStats || stats.canaryStats ||
-                     stats.entropyStats || stats.consensusStats ||
-                     stats.verificationStats || stats.disclosureStats ||
-                     stats.temporalStats;
+  const hasAnyData =
+    stats.networkGuardStats ||
+    stats.reputationStats ||
+    stats.violationStats ||
+    stats.eventStats ||
+    stats.paranoidStats ||
+    stats.honeypotStats ||
+    stats.fingerprintStats ||
+    stats.canaryStats ||
+    stats.entropyStats ||
+    stats.consensusStats ||
+    stats.verificationStats ||
+    stats.disclosureStats ||
+    stats.temporalStats;
 
   if (!hasAnyData) {
     return (
@@ -88,31 +95,44 @@ const Security = () => {
           Security System Active - No Activity Yet
         </Message.Header>
         <p>
-          The security subsystem is running but hasn't collected data yet. This is normal for:
+          The security subsystem is running but hasn't collected data yet. This
+          is normal for:
         </p>
         <ul>
-          <li><strong>Fresh installations</strong> - Security features need time to observe network activity</li>
-          <li><strong>Standalone mode</strong> - Most security features activate when mesh networking is enabled</li>
-          <li><strong>Low traffic</strong> - Peer reputation, violation tracking, and behavioral analysis require peer interactions</li>
+          <li>
+            <strong>Fresh installations</strong> - Security features need time
+            to observe network activity
+          </li>
+          <li>
+            <strong>Standalone mode</strong> - Most security features activate
+            when mesh networking is enabled
+          </li>
+          <li>
+            <strong>Low traffic</strong> - Peer reputation, violation tracking,
+            and behavioral analysis require peer interactions
+          </li>
         </ul>
         <p>
           <strong>To activate security features:</strong>
         </p>
         <ol>
           <li>Connect to the Soulseek network (if not already connected)</li>
-          <li>Enable mesh networking via DHT/Overlay (check footer for connectivity)</li>
+          <li>
+            Enable mesh networking via DHT/Overlay (check footer for
+            connectivity)
+          </li>
           <li>Wait for peer connections and transfer activity</li>
         </ol>
         <p>
-          Security monitoring will begin automatically once peer activity is detected.
-          Check the <strong>Mesh</strong> tab to verify connectivity.
+          Security monitoring will begin automatically once peer activity is
+          detected. Check the <strong>Mesh</strong> tab to verify connectivity.
         </p>
         <Button
           icon="refresh"
           loading={refreshing}
           onClick={fetchData}
-          size="small"
           primary
+          size="small"
         >
           Refresh Status
         </Button>
@@ -136,7 +156,9 @@ const Security = () => {
                 <Icon name="shield alternate" />
                 <Header.Content>
                   Security Status
-                  <Header.Subheader>Real-time security monitoring</Header.Subheader>
+                  <Header.Subheader>
+                    Real-time security monitoring
+                  </Header.Subheader>
                 </Header.Content>
               </Header>
               <Button
@@ -184,8 +206,8 @@ const Security = () => {
                 Security Overview
               </Header>
               <p>
-                <strong>Network Guard:</strong> Rate limiting and connection caps are{' '}
-                {stats.networkGuardStats ? 'active' : 'inactive'}.
+                <strong>Network Guard:</strong> Rate limiting and connection
+                caps are {stats.networkGuardStats ? 'active' : 'inactive'}.
               </p>
               <p>
                 <strong>Peer Reputation:</strong>{' '}
@@ -193,8 +215,9 @@ const Security = () => {
                 {stats.reputationStats?.untrustedPeers ?? 0} untrusted peers.
               </p>
               <p>
-                <strong>Violations:</strong> {stats.violationStats?.trackedIps ?? 0}{' '}
-                IPs, {stats.violationStats?.trackedUsernames ?? 0} usernames tracked.
+                <strong>Violations:</strong>{' '}
+                {stats.violationStats?.trackedIps ?? 0} IPs,{' '}
+                {stats.violationStats?.trackedUsernames ?? 0} usernames tracked.
               </p>
               <p>
                 <strong>Crypto Health:</strong> Entropy checks:{' '}

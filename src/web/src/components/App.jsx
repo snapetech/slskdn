@@ -22,8 +22,8 @@ import {
 import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
 import System from './System/System';
-import Transfers from './Transfers/Transfers';
 import TrafficTicker from './TrafficTicker/TrafficTicker';
+import Transfers from './Transfers/Transfers';
 import Users from './Users/Users';
 import Wishlist from './Wishlist/Wishlist';
 import React, { Component } from 'react';
@@ -581,7 +581,9 @@ class App extends Component {
             </Menu>
           </Sidebar>
           <Sidebar.Pusher className="app-content">
-            {session.isLoggedIn() || isPassthroughEnabled() ? <SlskdnStatusBar /> : null}
+            {session.isLoggedIn() || isPassthroughEnabled() ? (
+              <SlskdnStatusBar />
+            ) : null}
             <AppContext.Provider
               // eslint-disable-next-line no-warning-comments
               // TODO: needs useMemo, but class component. yolo for now.
@@ -657,9 +659,7 @@ class App extends Component {
                   />
                   <Route
                     path={`${urlBase}/pods/:podId?/channels/:channelId?`}
-                    render={(props) =>
-                      this.withTokenCheck(<Pods {...props} />)
-                    }
+                    render={(props) => this.withTokenCheck(<Pods {...props} />)}
                   />
                   <Route
                     path={`${urlBase}/port-forwarding`}

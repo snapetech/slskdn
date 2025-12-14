@@ -47,8 +47,8 @@ class RoomSession extends Component {
     document.removeEventListener('click', this.handleCloseContextMenu);
   }
 
-  componentDidUpdate(prevProps) {
-    if (prevProps.roomName !== this.props.roomName) {
+  componentDidUpdate(previousProps) {
+    if (previousProps.roomName !== this.props.roomName) {
       this.setState(initialState, () => {
         this.fetchRoom();
       });
@@ -65,11 +65,11 @@ class RoomSession extends Component {
       const users = await rooms.getUsers({ roomName });
 
       this.setState({
+        loading: false,
         room: {
           messages,
           users,
         },
-        loading: false,
       });
     } catch (error) {
       console.error('Failed to fetch room data:', error);
@@ -196,22 +196,18 @@ class RoomSession extends Component {
   }
 
   render() {
-    const {
-      roomName,
-      onLeaveRoom,
-    } = this.props;
+    const { onLeaveRoom, roomName } = this.props;
 
-    const {
-      loading,
-      room,
-      contextMenu,
-    } = this.state;
+    const { contextMenu, loading, room } = this.state;
 
     if (!roomName || roomName.length === 0) {
       return (
         <div className="room-session-empty">
           <Segment placeholder>
-            <Icon name="comments" size="big" />
+            <Icon
+              name="comments"
+              size="big"
+            />
             <p>Select a room to start chatting</p>
           </Segment>
         </div>
@@ -316,7 +312,10 @@ class RoomSession extends Component {
                       <Icon name="users" />
                       Users ({room.users.length})
                     </div>
-                    <List divided relaxed>
+                    <List
+                      divided
+                      relaxed
+                    >
                       {room.users.map((user) => (
                         <List.Item key={user.username}>
                           <List.Content>
@@ -341,4 +340,3 @@ class RoomSession extends Component {
 }
 
 export default RoomSession;
-

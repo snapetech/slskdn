@@ -372,14 +372,14 @@ export const exportMetadata = async (contentIds, includeLinks = true) => {
 /**
  * Import metadata from a package.
  */
-export const importMetadata = async (package, conflictStrategy = 'Merge', dryRun = false) => {
+export const importMetadata = async (packageData, conflictStrategy = 'Merge', dryRun = false) => {
   const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/import`, {
     method: 'POST',
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ package, conflictStrategy, dryRun }),
+    body: JSON.stringify({ package: packageData, conflictStrategy, dryRun }),
   });
 
   if (!response.ok) {
@@ -392,14 +392,14 @@ export const importMetadata = async (package, conflictStrategy = 'Merge', dryRun
 /**
  * Analyze conflicts in a metadata package.
  */
-export const analyzeMetadataConflicts = async (package) => {
+export const analyzeMetadataConflicts = async (packageData) => {
   const response = await fetch(`${baseUrl.replace('contentid', 'portability')}/analyze`, {
     method: 'POST',
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ package }),
+    body: JSON.stringify({ package: packageData }),
   });
 
   if (!response.ok) {

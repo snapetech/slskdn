@@ -9,7 +9,12 @@ import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
 import MusicBrainzLookup from './MusicBrainzLookup';
 import React, { useEffect, useRef, useState } from 'react';
-import { useHistory, useLocation, useParams, useRouteMatch } from 'react-router-dom';
+import {
+  useHistory,
+  useLocation,
+  useParams,
+  useRouteMatch,
+} from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Button, Icon, Input, Segment } from 'semantic-ui-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -207,12 +212,15 @@ const Searches = ({ server } = {}) => {
 
   // Handle URL query parameters for predictable search URLs
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const queryParam = urlParams.get('q');
+    const urlParameters = new URLSearchParams(location.search);
+    const queryParameter = urlParameters.get('q');
 
-    if (queryParam && !creating && !searchId) {
+    if (queryParameter && !creating && !searchId) {
       // Automatically create a search from the URL query parameter
-      create({ navigate: false, search: decodeURIComponent(queryParam) }).then(() => {
+      create({
+        navigate: false,
+        search: decodeURIComponent(queryParameter),
+      }).then(() => {
         // Clear the query parameter from the URL after creating the search
         history.replace({ search: '' });
       });

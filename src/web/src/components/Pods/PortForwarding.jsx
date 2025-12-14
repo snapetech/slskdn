@@ -1,6 +1,6 @@
 import { urlBase } from '../../config';
-import * as portForwarding from '../../lib/portForwarding';
 import * as pods from '../../lib/pods';
+import * as portForwarding from '../../lib/portForwarding';
 import React, { Component } from 'react';
 import {
   Button,
@@ -23,29 +23,29 @@ import {
 } from 'semantic-ui-react';
 
 const initialState = {
-  pods: [],
-  selectedPodId: null,
-  selectedPodDetail: null,
   availablePorts: [],
-  forwardingStatus: [],
-  showCreateModal: false,
   creatingForwarding: false,
-  stoppingForwarding: false,
-  loading: false,
-  error: null,
-  success: null,
   createForm: {
-    localPort: '',
     destinationHost: '',
+    localPort: '',
     destinationPort: '',
     serviceName: '',
   },
+  error: null,
+  forwardingStatus: [],
+  intervals: {
+    stats: undefined,
+    status: undefined,
+  },
+  loading: false,
+  pods: [],
+  selectedPodDetail: null,
+  selectedPodId: null,
+  showCreateModal: false,
+  stoppingForwarding: false,
+  success: null,
   tunnelStats: {},
   vpnPodStatus: {},
-  intervals: {
-    status: undefined,
-    stats: undefined,
-  },
 };
 
 class PortForwarding extends Component {
@@ -57,8 +57,8 @@ class PortForwarding extends Component {
   componentDidMount() {
     this.setState({
       intervals: {
-        status: window.setInterval(this.fetchForwardingStatus, 5000),
-        stats: window.setInterval(this.fetchTunnelStats, 10000), // More frequent stats updates
+        stats: window.setInterval(this.fetchTunnelStats, 10_000),
+        status: window.setInterval(this.fetchForwardingStatus, 5_000), // More frequent stats updates
       },
     });
 
@@ -66,14 +66,14 @@ class PortForwarding extends Component {
   }
 
   componentWillUnmount() {
-    const { status, stats } = this.state.intervals;
+    const { stats, status } = this.state.intervals;
     clearInterval(status);
     clearInterval(stats);
     this.setState({ intervals: initialState.intervals });
   }
 
   initializeComponent = async () => {
-    this.setState({ loading: true, error: null });
+    this.setState({ error: null, loading: true });
 
     try {
       await Promise.all([
@@ -133,25 +133,29 @@ class PortForwarding extends Component {
           // Note: This would need a new API endpoint for detailed tunnel stats
           // For now, we'll simulate with basic stats
           return {
-            localPort: forwarding.localPort,
-            bytesIn: Math.floor(Math.random() * 1000000),
-            bytesOut: Math.floor(Math.random() * 1000000),
+            bytesIn: Math.floor(Math.random() * 1_000_000),
+            bytesOut: Math.floor(Math.random() * 1_000_000),
             connections: forwarding.activeConnections || 0,
-            uptime: Date.now() - (forwarding.startTime || Date.now()),
-            lastActivity: Date.now() - 30000, // Mock 30 seconds ago
+            lastActivity: Date.now() - 30_000,
+            localPort: forwarding.localPort,
+            uptime: Date.now() - (forwarding.startTime || Date.now()), // Mock 30 seconds ago
           };
         } catch (error) {
-          console.error(`Failed to fetch stats for port ${forwarding.localPort}:`, error);
+          console.error(
+            `Failed to fetch stats for port ${forwarding.localPort}:`,
+            error,
+          );
           return null;
         }
       });
 
       const statsResults = await Promise.all(statsPromises);
-      const stats = statsResults.reduce((acc, stat) => {
+      const stats = statsResults.reduce((accumulator, stat) => {
         if (stat) {
-          acc[stat.localPort] = stat;
+          accumulator[stat.localPort] = stat;
         }
-        return acc;
+
+        return accumulator;
       }, {});
 
       this.setState({ tunnelStats: stats });
@@ -162,9 +166,10 @@ class PortForwarding extends Component {
 
   fetchVpnPodStatus = async () => {
     const { pods } = this.state;
-    const vpnCapablePods = pods.filter(pod =>
-      pod.capabilities?.includes('PrivateServiceGateway') ||
-      pod.privateServicePolicy?.enabled === true
+    const vpnCapablePods = pods.filter(
+      (pod) =>
+        pod.capabilities?.includes('PrivateServiceGateway') ||
+        pod.privateServicePolicy?.enabled === true,
     );
 
     const statusPromises = vpnCapablePods.map(async (pod) => {
@@ -175,33 +180,33 @@ class PortForwarding extends Component {
         const totalBandwidth = detail.totalBandwidth || 0; // This would come from a new API
 
         return {
-          podId: pod.podId,
-          name: pod.name || pod.podId,
-          members: memberCount,
           activeTunnels,
-          totalBandwidth,
-          status: detail.privateServicePolicy?.enabled ? 'Active' : 'Inactive',
           lastActivity: detail.lastActivity || Date.now(),
+          members: memberCount,
+          name: pod.name || pod.podId,
+          podId: pod.podId,
+          status: detail.privateServicePolicy?.enabled ? 'Active' : 'Inactive',
+          totalBandwidth,
         };
       } catch (error) {
         console.error(`Failed to fetch status for pod ${pod.podId}:`, error);
         return {
-          podId: pod.podId,
-          name: pod.name || pod.podId,
-          members: 0,
           activeTunnels: 0,
-          totalBandwidth: 0,
-          status: 'Error',
           lastActivity: Date.now(),
+          members: 0,
+          name: pod.name || pod.podId,
+          podId: pod.podId,
+          status: 'Error',
+          totalBandwidth: 0,
         };
       }
     });
 
     try {
       const statusResults = await Promise.all(statusPromises);
-      const status = statusResults.reduce((acc, stat) => {
-        acc[stat.podId] = stat;
-        return acc;
+      const status = statusResults.reduce((accumulator, stat) => {
+        accumulator[stat.podId] = stat;
+        return accumulator;
       }, {});
 
       this.setState({ vpnPodStatus: status });
@@ -211,7 +216,11 @@ class PortForwarding extends Component {
   };
 
   handlePodSelection = async (podId) => {
-    this.setState({ selectedPodId: podId, selectedPodDetail: null, loading: true });
+    this.setState({
+      loading: true,
+      selectedPodDetail: null,
+      selectedPodId: podId,
+    });
 
     try {
       const podDetail = await pods.get(podId);
@@ -233,20 +242,28 @@ class PortForwarding extends Component {
     }
 
     // Validate form
-    if (!createForm.localPort || !createForm.destinationHost || !createForm.destinationPort) {
+    if (
+      !createForm.localPort ||
+      !createForm.destinationHost ||
+      !createForm.destinationPort
+    ) {
       this.setState({ error: 'Please fill in all required fields' });
       return;
     }
 
-    const localPort = parseInt(createForm.localPort);
-    const destinationPort = parseInt(createForm.destinationPort);
+    const localPort = Number.parseInt(createForm.localPort);
+    const destinationPort = Number.parseInt(createForm.destinationPort);
 
-    if (isNaN(localPort) || localPort < 1024 || localPort > 65535) {
+    if (isNaN(localPort) || localPort < 1_024 || localPort > 65_535) {
       this.setState({ error: 'Local port must be between 1024 and 65535' });
       return;
     }
 
-    if (isNaN(destinationPort) || destinationPort < 1 || destinationPort > 65535) {
+    if (
+      isNaN(destinationPort) ||
+      destinationPort < 1 ||
+      destinationPort > 65_535
+    ) {
       this.setState({ error: 'Destination port must be between 1 and 65535' });
       return;
     }
@@ -255,10 +272,10 @@ class PortForwarding extends Component {
 
     try {
       await portForwarding.startForwarding({
-        localPort,
-        podId: selectedPodId,
         destinationHost: createForm.destinationHost,
         destinationPort,
+        localPort,
+        podId: selectedPodId,
         serviceName: createForm.serviceName || undefined,
       });
 
@@ -281,7 +298,7 @@ class PortForwarding extends Component {
   };
 
   handleStopForwarding = async (localPort) => {
-    this.setState({ stoppingForwarding: true, error: null, success: null });
+    this.setState({ error: null, stoppingForwarding: true, success: null });
 
     try {
       await portForwarding.stopForwarding(localPort);
@@ -289,7 +306,9 @@ class PortForwarding extends Component {
         this.fetchAvailablePorts(),
         this.fetchForwardingStatus(),
       ]);
-      this.setState({ success: `Successfully stopped forwarding on port ${localPort}` });
+      this.setState({
+        success: `Successfully stopped forwarding on port ${localPort}`,
+      });
     } catch (error) {
       console.error('Failed to stop port forwarding:', error);
       this.setState({ error: error.message });
@@ -299,9 +318,9 @@ class PortForwarding extends Component {
   };
 
   handleFormChange = (field, value) => {
-    this.setState(prevState => ({
+    this.setState((previousState) => ({
       createForm: {
-        ...prevState.createForm,
+        ...previousState.createForm,
         [field]: value,
       },
     }));
@@ -309,28 +328,29 @@ class PortForwarding extends Component {
 
   render() {
     const {
-      pods,
-      selectedPodId,
-      selectedPodDetail,
       availablePorts,
-      forwardingStatus,
-      showCreateModal,
-      creatingForwarding,
-      stoppingForwarding,
-      loading,
-      error,
-      success,
       createForm,
+      creatingForwarding,
+      error,
+      forwardingStatus,
+      loading,
+      pods,
+      selectedPodDetail,
+      selectedPodId,
+      showCreateModal,
+      stoppingForwarding,
+      success,
       tunnelStats,
       vpnPodStatus,
     } = this.state;
 
-    const selectedPod = pods.find(p => p.podId === selectedPodId);
+    const selectedPod = pods.find((p) => p.podId === selectedPodId);
 
     // Filter pods that have VPN gateway capability
-    const vpnCapablePods = pods.filter(pod =>
-      pod.capabilities?.includes('PrivateServiceGateway') ||
-      pod.privateServicePolicy?.enabled === true
+    const vpnCapablePods = pods.filter(
+      (pod) =>
+        pod.capabilities?.includes('PrivateServiceGateway') ||
+        pod.privateServicePolicy?.enabled === true,
     );
 
     const panes = [
@@ -342,11 +362,14 @@ class PortForwarding extends Component {
               <Segment placeholder>
                 <Icon name="exchange" />
                 <h3>No active port forwarding</h3>
-                <p>Start forwarding local ports to remote services through VPN tunnels.</p>
+                <p>
+                  Start forwarding local ports to remote services through VPN
+                  tunnels.
+                </p>
                 <Button
-                  primary
-                  onClick={() => this.setState({ showCreateModal: true })}
                   disabled={vpnCapablePods.length === 0}
+                  onClick={() => this.setState({ showCreateModal: true })}
+                  primary
                 >
                   Start Forwarding
                 </Button>
@@ -355,9 +378,9 @@ class PortForwarding extends Component {
               <div>
                 <div style={{ marginBottom: '20px', textAlign: 'right' }}>
                   <Button
-                    primary
-                    onClick={() => this.setState({ showCreateModal: true })}
                     disabled={vpnCapablePods.length === 0}
+                    onClick={() => this.setState({ showCreateModal: true })}
+                    primary
                   >
                     <Icon name="plus" />
                     Add Forwarding
@@ -385,13 +408,16 @@ class PortForwarding extends Component {
                         <Table.Cell>
                           {forwarding.podId}
                           {forwarding.serviceName && (
-                            <div style={{ fontSize: '0.8em', color: '#666' }}>
+                            <div style={{ color: '#666', fontSize: '0.8em' }}>
                               Service: {forwarding.serviceName}
                             </div>
                           )}
                         </Table.Cell>
                         <Table.Cell>
-                          <code>{forwarding.destinationHost}:{forwarding.destinationPort}</code>
+                          <code>
+                            {forwarding.destinationHost}:
+                            {forwarding.destinationPort}
+                          </code>
                         </Table.Cell>
                         <Table.Cell>
                           <Label color={forwarding.isActive ? 'green' : 'red'}>
@@ -401,7 +427,7 @@ class PortForwarding extends Component {
                         <Table.Cell>{forwarding.activeConnections}</Table.Cell>
                         <Table.Cell>
                           {forwarding.bytesForwarded > 0
-                            ? `${(forwarding.bytesForwarded / 1024).toFixed(1)} KB`
+                            ? `${(forwarding.bytesForwarded / 1_024).toFixed(1)} KB`
                             : '0 KB'}
                         </Table.Cell>
                         <Table.Cell>
@@ -409,11 +435,15 @@ class PortForwarding extends Component {
                             content="Stop port forwarding"
                             trigger={
                               <Button
-                                icon="stop"
                                 color="red"
-                                size="small"
+                                icon="stop"
                                 loading={stoppingForwarding}
-                                onClick={() => this.handleStopForwarding(forwarding.localPort)}
+                                onClick={() =>
+                                  this.handleStopForwarding(
+                                    forwarding.localPort,
+                                  )
+                                }
+                                size="small"
                               />
                             }
                           />
@@ -446,18 +476,22 @@ class PortForwarding extends Component {
 
             <Segment>
               <p>Available ports for forwarding (1024-65535):</p>
-              <div style={{
-                maxHeight: '400px',
-                overflowY: 'auto',
-                fontFamily: 'monospace',
-                fontSize: '12px',
-                backgroundColor: '#f8f9fa',
-                padding: '10px',
-                borderRadius: '4px',
-              }}>
+              <div
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  padding: '10px',
+                }}
+              >
                 {availablePorts.length > 0 ? (
                   availablePorts.slice(0, 100).join(', ') +
-                  (availablePorts.length > 100 ? ` ... (+${availablePorts.length - 100} more)` : '')
+                  (availablePorts.length > 100
+                    ? ` ... (+${availablePorts.length - 100} more)`
+                    : '')
                 ) : (
                   <em>No ports available or still loading...</em>
                 )}
@@ -478,23 +512,44 @@ class PortForwarding extends Component {
                 </Statistic>
                 <Statistic>
                   <Statistic.Value>
-                    {Object.values(tunnelStats).reduce((sum, stats) => sum + (stats?.connections || 0), 0)}
+                    {Object.values(tunnelStats).reduce(
+                      (sum, stats) => sum + (stats?.connections || 0),
+                      0,
+                    )}
                   </Statistic.Value>
                   <Statistic.Label>Total Connections</Statistic.Label>
                 </Statistic>
                 <Statistic>
                   <Statistic.Value>
-                    {(Object.values(tunnelStats).reduce((sum, stats) =>
-                      sum + (stats?.bytesIn || 0) + (stats?.bytesOut || 0), 0) / 1024 / 1024).toFixed(2)} MB
+                    {(
+                      Object.values(tunnelStats).reduce(
+                        (sum, stats) =>
+                          sum + (stats?.bytesIn || 0) + (stats?.bytesOut || 0),
+                        0,
+                      ) /
+                      1_024 /
+                      1_024
+                    ).toFixed(2)}{' '}
+                    MB
                   </Statistic.Value>
                   <Statistic.Label>Data Transferred</Statistic.Label>
                 </Statistic>
                 <Statistic>
                   <Statistic.Value>
-                    {Object.values(tunnelStats).filter(stats => stats?.uptime > 0).length > 0
-                      ? (Object.values(tunnelStats).reduce((sum, stats) =>
-                          sum + (stats?.uptime || 0), 0) / Object.values(tunnelStats).length / 1000 / 60).toFixed(1)
-                      : '0.0'} min
+                    {Object.values(tunnelStats).some(
+                      (stats) => stats?.uptime > 0,
+                    )
+                      ? (
+                          Object.values(tunnelStats).reduce(
+                            (sum, stats) => sum + (stats?.uptime || 0),
+                            0,
+                          ) /
+                          Object.values(tunnelStats).length /
+                          1_000 /
+                          60
+                        ).toFixed(1)
+                      : '0.0'}{' '}
+                    min
                   </Statistic.Value>
                   <Statistic.Label>Avg Uptime</Statistic.Label>
                 </Statistic>
@@ -521,24 +576,35 @@ class PortForwarding extends Component {
                         <code>localhost:{forwarding.localPort}</code>
                       </Table.Cell>
                       <Table.Cell>
-                        {stats ? `${(stats.bytesIn / 1024).toFixed(1)} KB` : 'N/A'}
+                        {stats
+                          ? `${(stats.bytesIn / 1_024).toFixed(1)} KB`
+                          : 'N/A'}
                       </Table.Cell>
                       <Table.Cell>
-                        {stats ? `${(stats.bytesOut / 1024).toFixed(1)} KB` : 'N/A'}
+                        {stats
+                          ? `${(stats.bytesOut / 1_024).toFixed(1)} KB`
+                          : 'N/A'}
                       </Table.Cell>
                       <Table.Cell>{stats?.connections || 0}</Table.Cell>
                       <Table.Cell>
-                        {stats ? `${Math.floor(stats.uptime / 1000 / 60)}m ${Math.floor((stats.uptime / 1000) % 60)}s` : 'N/A'}
+                        {stats
+                          ? `${Math.floor(stats.uptime / 1_000 / 60)}m ${Math.floor((stats.uptime / 1_000) % 60)}s`
+                          : 'N/A'}
                       </Table.Cell>
                       <Table.Cell>
-                        {stats ? `${Math.floor((Date.now() - stats.lastActivity) / 1000)}s ago` : 'N/A'}
+                        {stats
+                          ? `${Math.floor((Date.now() - stats.lastActivity) / 1_000)}s ago`
+                          : 'N/A'}
                       </Table.Cell>
                     </Table.Row>
                   );
                 })}
                 {forwardingStatus.length === 0 && (
                   <Table.Row>
-                    <Table.Cell colSpan={6} textAlign="center">
+                    <Table.Cell
+                      colSpan={6}
+                      textAlign="center"
+                    >
                       No active tunnels to display statistics for
                     </Table.Cell>
                   </Table.Row>
@@ -555,18 +621,26 @@ class PortForwarding extends Component {
             <div style={{ marginBottom: '20px' }}>
               <Statistic.Group widths="three">
                 <Statistic>
-                  <Statistic.Value>{Object.keys(vpnPodStatus).length}</Statistic.Value>
+                  <Statistic.Value>
+                    {Object.keys(vpnPodStatus).length}
+                  </Statistic.Value>
                   <Statistic.Label>VPN-Capable Pods</Statistic.Label>
                 </Statistic>
                 <Statistic>
                   <Statistic.Value>
-                    {Object.values(vpnPodStatus).reduce((sum, pod) => sum + pod.members, 0)}
+                    {Object.values(vpnPodStatus).reduce(
+                      (sum, pod) => sum + pod.members,
+                      0,
+                    )}
                   </Statistic.Value>
                   <Statistic.Label>Total Members</Statistic.Label>
                 </Statistic>
                 <Statistic>
                   <Statistic.Value>
-                    {Object.values(vpnPodStatus).reduce((sum, pod) => sum + pod.activeTunnels, 0)}
+                    {Object.values(vpnPodStatus).reduce(
+                      (sum, pod) => sum + pod.activeTunnels,
+                      0,
+                    )}
                   </Statistic.Value>
                   <Statistic.Label>Active Tunnels</Statistic.Label>
                 </Statistic>
@@ -589,7 +663,7 @@ class PortForwarding extends Component {
                   <Table.Row key={pod.podId}>
                     <Table.Cell>
                       <strong>{pod.name}</strong>
-                      <div style={{ fontSize: '0.8em', color: '#666' }}>
+                      <div style={{ color: '#666', fontSize: '0.8em' }}>
                         ID: {pod.podId}
                       </div>
                     </Table.Cell>
@@ -597,7 +671,7 @@ class PortForwarding extends Component {
                     <Table.Cell>{pod.activeTunnels}</Table.Cell>
                     <Table.Cell>
                       {pod.totalBandwidth > 0
-                        ? `${(pod.totalBandwidth / 1024 / 1024).toFixed(2)} MB`
+                        ? `${(pod.totalBandwidth / 1_024 / 1_024).toFixed(2)} MB`
                         : '0 MB'}
                     </Table.Cell>
                     <Table.Cell>
@@ -606,13 +680,16 @@ class PortForwarding extends Component {
                       </Label>
                     </Table.Cell>
                     <Table.Cell>
-                      {Math.floor((Date.now() - pod.lastActivity) / 1000)}s ago
+                      {Math.floor((Date.now() - pod.lastActivity) / 1_000)}s ago
                     </Table.Cell>
                   </Table.Row>
                 ))}
                 {Object.keys(vpnPodStatus).length === 0 && (
                   <Table.Row>
-                    <Table.Cell colSpan={6} textAlign="center">
+                    <Table.Cell
+                      colSpan={6}
+                      textAlign="center"
+                    >
                       No VPN-capable pods found
                     </Table.Cell>
                   </Table.Row>
@@ -632,7 +709,9 @@ class PortForwarding extends Component {
 
         <div style={{ marginBottom: '30px' }}>
           <h2>Port Forwarding</h2>
-          <p>Forward local ports to remote services through secure VPN tunnels.</p>
+          <p>
+            Forward local ports to remote services through secure VPN tunnels.
+          </p>
         </div>
 
         {error && (
@@ -640,8 +719,8 @@ class PortForwarding extends Component {
             <Message.Header>Error</Message.Header>
             <p>{error}</p>
             <Button
-              size="small"
               onClick={() => this.setState({ error: null })}
+              size="small"
             >
               Dismiss
             </Button>
@@ -653,8 +732,8 @@ class PortForwarding extends Component {
             <Message.Header>Success</Message.Header>
             <p>{success}</p>
             <Button
-              size="small"
               onClick={() => this.setState({ success: null })}
+              size="small"
             >
               Dismiss
             </Button>
@@ -664,8 +743,14 @@ class PortForwarding extends Component {
         {vpnCapablePods.length === 0 && (
           <Message warning>
             <Message.Header>No VPN-Capable Pods</Message.Header>
-            <p>You need at least one pod with VPN gateway capability to use port forwarding.</p>
-            <p>Create or join a pod that has the <code>PrivateServiceGateway</code> capability enabled.</p>
+            <p>
+              You need at least one pod with VPN gateway capability to use port
+              forwarding.
+            </p>
+            <p>
+              Create or join a pod that has the{' '}
+              <code>PrivateServiceGateway</code> capability enabled.
+            </p>
           </Message>
         )}
 
@@ -676,8 +761,8 @@ class PortForwarding extends Component {
 
         {/* Create Forwarding Modal */}
         <Modal
-          open={showCreateModal}
           onClose={() => this.setState({ showCreateModal: false })}
+          open={showCreateModal}
           size="small"
         >
           <Modal.Header>Start Port Forwarding</Modal.Header>
@@ -686,22 +771,33 @@ class PortForwarding extends Component {
               <Form.Field>
                 <label>VPN Pod</label>
                 <Dropdown
-                  placeholder="Select a VPN-capable pod"
                   fluid
-                  selection
-                  options={vpnCapablePods.map(pod => ({
+                  onChange={(e, { value }) => this.handlePodSelection(value)}
+                  options={vpnCapablePods.map((pod) => ({
                     key: pod.podId,
                     text: pod.name || pod.podId,
                     value: pod.podId,
                   }))}
+                  placeholder="Select a VPN-capable pod"
+                  selection
                   value={selectedPodId || ''}
-                  onChange={(e, { value }) => this.handlePodSelection(value)}
                 />
                 {selectedPodDetail && (
-                  <div style={{ marginTop: '10px', fontSize: '0.9em', color: '#666' }}>
-                    <p><strong>Members:</strong> {selectedPodDetail.members?.length || 0}</p>
+                  <div
+                    style={{
+                      color: '#666',
+                      fontSize: '0.9em',
+                      marginTop: '10px',
+                    }}
+                  >
+                    <p>
+                      <strong>Members:</strong>{' '}
+                      {selectedPodDetail.members?.length || 0}
+                    </p>
                     {selectedPodDetail.privateServicePolicy?.enabled && (
-                      <p><strong>VPN Gateway:</strong> Enabled</p>
+                      <p>
+                        <strong>VPN Gateway:</strong> Enabled
+                      </p>
                     )}
                   </div>
                 )}
@@ -710,12 +806,14 @@ class PortForwarding extends Component {
               <Form.Field required>
                 <label>Local Port</label>
                 <Input
-                  type="number"
-                  placeholder="e.g., 8080"
-                  min="1024"
                   max="65535"
+                  min="1024"
+                  onChange={(e) =>
+                    this.handleFormChange('localPort', e.target.value)
+                  }
+                  placeholder="e.g., 8080"
+                  type="number"
                   value={createForm.localPort}
-                  onChange={(e) => this.handleFormChange('localPort', e.target.value)}
                 />
                 <small style={{ color: '#666' }}>
                   Port on your local machine (1024-65535)
@@ -725,9 +823,11 @@ class PortForwarding extends Component {
               <Form.Field required>
                 <label>Remote Host</label>
                 <Input
+                  onChange={(e) =>
+                    this.handleFormChange('destinationHost', e.target.value)
+                  }
                   placeholder="e.g., database.internal.company.com"
                   value={createForm.destinationHost}
-                  onChange={(e) => this.handleFormChange('destinationHost', e.target.value)}
                 />
                 <small style={{ color: '#666' }}>
                   Hostname or IP address of the remote service
@@ -737,12 +837,14 @@ class PortForwarding extends Component {
               <Form.Field required>
                 <label>Remote Port</label>
                 <Input
-                  type="number"
-                  placeholder="e.g., 5432"
-                  min="1"
                   max="65535"
+                  min="1"
+                  onChange={(e) =>
+                    this.handleFormChange('destinationPort', e.target.value)
+                  }
+                  placeholder="e.g., 5432"
+                  type="number"
                   value={createForm.destinationPort}
-                  onChange={(e) => this.handleFormChange('destinationPort', e.target.value)}
                 />
                 <small style={{ color: '#666' }}>
                   Port number of the remote service
@@ -752,9 +854,11 @@ class PortForwarding extends Component {
               <Form.Field>
                 <label>Service Name (Optional)</label>
                 <Input
+                  onChange={(e) =>
+                    this.handleFormChange('serviceName', e.target.value)
+                  }
                   placeholder="e.g., postgres-db"
                   value={createForm.serviceName}
-                  onChange={(e) => this.handleFormChange('serviceName', e.target.value)}
                 />
                 <small style={{ color: '#666' }}>
                   Named service registered in the pod (for better organization)
@@ -763,16 +867,19 @@ class PortForwarding extends Component {
             </Form>
           </Modal.Content>
           <Modal.Actions>
-            <Button
-              onClick={() => this.setState({ showCreateModal: false })}
-            >
+            <Button onClick={() => this.setState({ showCreateModal: false })}>
               Cancel
             </Button>
             <Button
-              primary
+              disabled={
+                !selectedPodId ||
+                !createForm.localPort ||
+                !createForm.destinationHost ||
+                !createForm.destinationPort
+              }
               loading={creatingForwarding}
-              disabled={!selectedPodId || !createForm.localPort || !createForm.destinationHost || !createForm.destinationPort}
               onClick={this.handleCreateForwarding}
+              primary
             >
               Start Forwarding
             </Button>

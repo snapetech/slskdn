@@ -1174,7 +1174,7 @@ const MediaCore = () => {
   };
 
   // Pod Membership Verification handlers
-  const handleVerifyMembership = async () => {
+  const handleVerifyPodMembership = async () => {
     if (!verifyPodId.trim() || !verifyPeerId.trim()) {
       alert('Please enter both Pod ID and Peer ID');
       return;
@@ -4916,7 +4916,7 @@ const MediaCore = () => {
                   fluid
                   loading={verifyingMembership}
                   disabled={verifyingMembership || !verifyPodId.trim() || !verifyPeerId.trim()}
-                  onClick={handleVerifyMembership}
+                  onClick={handleVerifyPodMembership}
                 >
                   Verify Membership
                 </Button>
