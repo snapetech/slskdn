@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using Obfs4Options = slskd.Common.Security.Obfs4TransportOptions;
 
 namespace slskd.Common.Security;
 

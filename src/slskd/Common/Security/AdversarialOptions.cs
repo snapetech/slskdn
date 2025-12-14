@@ -7,6 +7,11 @@ namespace slskd.Common.Security;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
+// Type aliases for backward compatibility  
+using HttpTunnelOptions = slskd.Common.Security.HttpTunnelTransportOptions;
+using MeekOptions = slskd.Common.Security.MeekTransportOptions;
+using Obfs4Options = slskd.Common.Security.Obfs4TransportOptions;
+
 /// <summary>
 /// Configuration options for adversarial resilience and privacy hardening features.
 /// ALL FEATURES DISABLED BY DEFAULT - only enable if you understand the security implications.
@@ -440,6 +445,11 @@ public enum ObfuscatedTransport
 public sealed class WebSocketTransportOptions
 {
     /// <summary>
+    /// Gets or sets whether WebSocket transport is enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets WebSocket server URL.
     /// </summary>
     public string ServerUrl { get; set; } = string.Empty;
@@ -460,6 +470,11 @@ public sealed class WebSocketTransportOptions
 /// </summary>
 public sealed class HttpTunnelTransportOptions
 {
+    /// <summary>
+    /// Gets or sets whether HTTP tunnel transport is enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = false;
+
     /// <summary>
     /// Gets or sets HTTP proxy URL.
     /// </summary>
@@ -482,6 +497,11 @@ public sealed class HttpTunnelTransportOptions
 public sealed class Obfs4TransportOptions
 {
     /// <summary>
+    /// Gets or sets whether Obfs4 transport is enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets Obfs4 bridge lines.
     /// Each line should be in Tor bridge format.
     /// </summary>
@@ -503,6 +523,11 @@ public sealed class Obfs4TransportOptions
 /// </summary>
 public sealed class MeekTransportOptions
 {
+    /// <summary>
+    /// Gets or sets whether Meek transport is enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = false;
+
     /// <summary>
     /// Gets or sets Meek bridge URL.
     /// </summary>

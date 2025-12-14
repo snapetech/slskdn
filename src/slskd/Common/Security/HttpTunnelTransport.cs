@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Buffers;
 using System.Collections.Generic;
+using HttpTunnelOptions = slskd.Common.Security.HttpTunnelTransportOptions;
 
 namespace slskd.Common.Security;
 
