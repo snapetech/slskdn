@@ -361,6 +361,130 @@ try {
 }
 ```
 
+### 11. ESLint Rules - NEVER CREATE LINTING ERRORS
+
+**CRITICAL**: AI agents MUST follow ALL ESLint rules. Don't disable linting to "work around" errors - FIX THE CODE.
+
+#### Common Rules to Follow:
+
+**prettier/prettier**: Code formatting MUST match exactly
+```javascript
+// WRONG - long lines must wrap
+const result = this.withTokenCheck(<MyComponent prop1="value1" prop2="value2" prop3="value3" />);
+
+// CORRECT - wrap at logical points
+const result = this.withTokenCheck(
+  <MyComponent prop1="value1" prop2="value2" prop3="value3" />
+);
+```
+
+**padding-line-between-statements**: Blank line before return/if/etc
+```javascript
+// WRONG
+const result = calculate();
+return result;
+
+// CORRECT
+const result = calculate();
+
+return result;
+```
+
+**react/no-access-state-in-setstate**: Use functional setState when referencing previous state
+```javascript
+// WRONG
+this.setState({ count: this.state.count + 1 });
+
+// CORRECT
+this.setState((prevState) => ({ count: prevState.count + 1 }));
+```
+
+**react/jsx-sort-props**: Props must be alphabetically sorted
+```javascript
+// WRONG
+<Button onClick={handleClick} disabled={false} primary />
+
+// CORRECT
+<Button disabled={false} onClick={handleClick} primary />
+```
+
+**canonical/sort-keys**: Object keys must be alphabetically sorted
+```javascript
+// WRONG
+this.state = {
+  loading: false,
+  data: [],
+  error: null,
+};
+
+// CORRECT
+this.state = {
+  data: [],
+  error: null,
+  loading: false,
+};
+```
+
+**no-unused-vars**: Remove unused imports
+```javascript
+// WRONG
+import { Button, Card, Icon } from 'semantic-ui-react'; // Icon unused
+
+// CORRECT
+import { Button, Card } from 'semantic-ui-react';
+```
+
+**unicorn/prevent-abbreviations**: Use full words, not abbreviations
+```javascript
+// WRONG
+const prevState = this.state;
+const prevProps = this.props;
+
+// CORRECT
+const previousState = this.state;
+const previousProps = this.props;
+```
+
+**unicorn/no-lonely-if**: Don't nest single if statements
+```javascript
+// WRONG
+if (condition1) {
+  if (condition2) {
+    doSomething();
+  }
+}
+
+// CORRECT
+if (condition1 && condition2) {
+  doSomething();
+}
+```
+
+**require-atomic-updates**: Avoid race conditions in async functions
+```javascript
+// WRONG
+conversations = await fetchConversations(); // Can race
+
+// CORRECT
+const newConversations = await fetchConversations();
+conversations = newConversations;
+```
+
+#### Before Committing Frontend Code:
+
+1. **Run the build** with linting enabled: `npm run build`
+2. **Fix ALL errors** - don't commit if there are linting errors
+3. **Never use `DISABLE_ESLINT_PLUGIN=true`** except for temporary local testing
+
+#### If You See Linting Errors:
+
+1. **READ the error message** - it tells you exactly what to fix
+2. **Look at existing code** - find similar patterns and copy the style
+3. **Fix the code** - don't disable the rule
+4. **Run build again** - verify it passes
+
+**Remember**: Linting errors waste time. Get it right the first time by following these patterns.
+
 ---
 
 ## Directory Structure
