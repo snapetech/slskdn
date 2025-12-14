@@ -73,7 +73,7 @@ public class TorSocksDialer : ITransportDialer
         }
 
         // Certificate pins are ignored for Tor (TCP proxy)
-        Interlocked.Increment(ref _statistics.TotalAttempts);
+        _statistics.TotalAttempts++;
 
         var startTime = DateTimeOffset.UtcNow;
 
@@ -96,15 +96,15 @@ public class TorSocksDialer : ITransportDialer
             var connectionTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
             _statistics.AverageConnectionTimeMs = (_statistics.AverageConnectionTimeMs * _statistics.SuccessfulConnections + connectionTime) / (_statistics.SuccessfulConnections + 1);
 
-            Interlocked.Increment(ref _statistics.SuccessfulConnections);
-            Interlocked.Increment(ref _statistics.ActiveConnections);
+            _statistics.SuccessfulConnections++;
+            _statistics.ActiveConnections++;
 
             LoggingUtils.LogConnectionEstablished(_logger, "unknown-peer", $"{endpoint.Host}:{endpoint.Port}", endpoint.TransportType);
-            return new TorStreamWrapper(stream, () => Interlocked.Decrement(ref _statistics.ActiveConnections));
+            return new TorStreamWrapper(stream, () => _statistics.ActiveConnections--);
         }
         catch (Exception ex)
         {
-            Interlocked.Increment(ref _statistics.FailedConnections);
+            _statistics.FailedConnections++;
             _statistics.LastError = LoggingUtils.SafeException(ex);
             LoggingUtils.LogConnectionFailed(_logger, "unknown-peer", $"{endpoint.Host}:{endpoint.Port}", ex.Message);
             throw;

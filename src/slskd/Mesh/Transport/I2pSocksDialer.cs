@@ -73,7 +73,7 @@ public class I2pSocksDialer : ITransportDialer
         }
 
         // Certificate pins are ignored for I2P (TCP proxy)
-        Interlocked.Increment(ref _statistics.TotalAttempts);
+        _statistics.TotalAttempts++;
 
         var startTime = DateTimeOffset.UtcNow;
 
@@ -87,15 +87,15 @@ public class I2pSocksDialer : ITransportDialer
             var connectionTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
             _statistics.AverageConnectionTimeMs = (_statistics.AverageConnectionTimeMs * _statistics.SuccessfulConnections + connectionTime) / (_statistics.SuccessfulConnections + 1);
 
-            Interlocked.Increment(ref _statistics.SuccessfulConnections);
-            Interlocked.Increment(ref _statistics.ActiveConnections);
+            _statistics.SuccessfulConnections++;
+            _statistics.ActiveConnections++;
 
             _logger.LogDebug("I2P connection established to {Host}:{Port}", endpoint.Host, endpoint.Port);
-            return new I2pStreamWrapper(stream, () => Interlocked.Decrement(ref _statistics.ActiveConnections));
+            return new I2pStreamWrapper(stream, () => _statistics.ActiveConnections--);
         }
         catch (Exception ex)
         {
-            Interlocked.Increment(ref _statistics.FailedConnections);
+            _statistics.FailedConnections++;
             _statistics.LastError = ex.Message;
             _logger.LogWarning(ex, "Failed to establish I2P connection to {Host}:{Port}", endpoint.Host, endpoint.Port);
             throw;

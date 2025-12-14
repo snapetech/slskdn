@@ -82,7 +82,7 @@ public class DirectQuicDialer : ITransportDialer
             throw new ArgumentException("Endpoint not supported by this dialer", nameof(endpoint));
         }
 
-        Interlocked.Increment(ref _statistics.TotalAttempts);
+        _statistics.TotalAttempts++;
 
         var startTime = DateTimeOffset.UtcNow;
         var ipEndpoint = new IPEndPoint(IPAddress.Parse(endpoint.Host), endpoint.Port);
@@ -98,15 +98,15 @@ public class DirectQuicDialer : ITransportDialer
             var connectionTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
             _statistics.AverageConnectionTimeMs = (_statistics.AverageConnectionTimeMs * _statistics.SuccessfulConnections + connectionTime) / (_statistics.SuccessfulConnections + 1);
 
-            Interlocked.Increment(ref _statistics.SuccessfulConnections);
-            Interlocked.Increment(ref _statistics.ActiveConnections);
+            _statistics.SuccessfulConnections++;
+            _statistics.ActiveConnections++;
 
             LoggingUtils.LogConnectionEstablished(_logger, peerId, ipEndpoint.ToString(), TransportType.DirectQuic);
-            return new QuicStreamWrapper(stream, connection, () => Interlocked.Decrement(ref _statistics.ActiveConnections));
+            return new QuicStreamWrapper(stream, connection, () => _statistics.ActiveConnections--);
         }
         catch (Exception ex)
         {
-            Interlocked.Increment(ref _statistics.FailedConnections);
+            _statistics.FailedConnections++;
             _statistics.LastError = LoggingUtils.SafeException(ex);
             LoggingUtils.LogConnectionFailed(_logger, peerId, ipEndpoint.ToString(), ex.Message);
             throw;
