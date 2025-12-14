@@ -120,48 +120,46 @@ class Footer extends Component {
           </div>
 
           {/* Center-Left: Transfer Speeds */}
-          {isLoggedIn && speeds && (
-            <div className="slskdn-footer-speeds">
-              <span
-                className="slskdn-footer-speed-item"
-                title="Total transfer speed (upload + download)"
-              >
-                <strong>T:</strong>{' '}
-                <span className="speed-value">
-                  {formatSpeed(speeds.total).value}
-                </span>
-                <span className="speed-unit">
-                  {formatSpeed(speeds.total).unit}
-                </span>
+          <div className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}>
+            <span
+              className="slskdn-footer-speed-item"
+              title={isLoggedIn ? "Total transfer speed (upload + download)" : "Login to see real-time speeds"}
+            >
+              <strong>T:</strong>{' '}
+              <span className="speed-value">
+                {isLoggedIn && speeds ? formatSpeed(speeds.total).value : '0'}
               </span>
-              <span className="slskdn-footer-divider">•</span>
-              <span
-                className="slskdn-footer-speed-item"
-                title="Soulseek network speed"
-              >
-                <strong>S:</strong>{' '}
-                <span className="speed-value">
-                  {formatSpeed(speeds.soulseek).value}
-                </span>
-                <span className="speed-unit">
-                  {formatSpeed(speeds.soulseek).unit}
-                </span>
+              <span className="speed-unit">
+                {isLoggedIn && speeds ? formatSpeed(speeds.total).unit : 'B'}
               </span>
-              <span className="slskdn-footer-divider">•</span>
-              <span
-                className="slskdn-footer-speed-item"
-                title="Mesh network speed"
-              >
-                <strong>M:</strong>{' '}
-                <span className="speed-value">
-                  {formatSpeed(speeds.mesh).value}
-                </span>
-                <span className="speed-unit">
-                  {formatSpeed(speeds.mesh).unit}
-                </span>
+            </span>
+            <span className="slskdn-footer-divider">•</span>
+            <span
+              className="slskdn-footer-speed-item"
+              title={isLoggedIn ? "Soulseek network speed" : "Login to see real-time speeds"}
+            >
+              <strong>S:</strong>{' '}
+              <span className="speed-value">
+                {isLoggedIn && speeds ? formatSpeed(speeds.soulseek).value : '0'}
               </span>
-            </div>
-          )}
+              <span className="speed-unit">
+                {isLoggedIn && speeds ? formatSpeed(speeds.soulseek).unit : 'B'}
+              </span>
+            </span>
+            <span className="slskdn-footer-divider">•</span>
+            <span
+              className="slskdn-footer-speed-item"
+              title={isLoggedIn ? "Mesh network speed" : "Login to see real-time speeds"}
+            >
+              <strong>M:</strong>{' '}
+              <span className="speed-value">
+                {isLoggedIn && speeds ? formatSpeed(speeds.mesh).value : '0'}
+              </span>
+              <span className="speed-unit">
+                {isLoggedIn && speeds ? formatSpeed(speeds.mesh).unit : 'B'}
+              </span>
+            </span>
+          </div>
 
           {/* Center: Copyright */}
           <div className="slskdn-footer-center">
