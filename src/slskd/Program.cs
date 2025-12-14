@@ -881,7 +881,8 @@ namespace slskd
                     dbContext,
                     sp.GetService<PodCore.IPodPublisher>(),
                     sp.GetService<PodCore.IPodMembershipSigner>(),
-                    sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>());
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>(),
+                    sp.GetService<PodCore.IContentLinkService>());
             });
 
             // Pod messaging service (SQLite-backed)
@@ -902,6 +903,15 @@ namespace slskd
                 return new PodCore.SqlitePodMessageStorage(
                     dbContext,
                     sp.GetRequiredService<ILogger<PodCore.SqlitePodMessageStorage>>());
+            });
+
+            // Content link service for pod content validation
+            services.AddScoped<PodCore.IContentLinkService>(sp =>
+            {
+                var musicBrainzClient = sp.GetService<Integrations.MusicBrainz.IMusicBrainzClient>();
+                return new PodCore.ContentLinkService(
+                    musicBrainzClient,
+                    sp.GetRequiredService<ILogger<PodCore.ContentLinkService>>());
             });
 
             // Pod message backfill service for synchronizing missed messages

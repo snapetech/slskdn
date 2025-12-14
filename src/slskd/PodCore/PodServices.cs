@@ -31,6 +31,10 @@ public interface IPodService
     Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default);
     Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default);
     Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default);
+
+    // Content linking
+    Task<ContentValidationResult> ValidateContentLinkAsync(string contentId, CancellationToken ct = default);
+    Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -46,11 +50,15 @@ public class PodService : IPodService
 
     public PodService(
         IPodPublisher podPublisher = null,
-        IPodMembershipSigner membershipSigner = null)
+        IPodMembershipSigner membershipSigner = null,
+        IContentLinkService contentLinkService = null)
     {
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
+        ContentLinkService = contentLinkService;
     }
+
+    private IContentLinkService ContentLinkService { get; }
 
     public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
     {
@@ -395,6 +403,60 @@ public class PodService : IPodService
         }
 
         return true;
+    }
+
+    // Content linking implementation
+    public async Task<ContentValidationResult> ValidateContentLinkAsync(string contentId, CancellationToken ct = default)
+    {
+        if (ContentLinkService == null)
+        {
+            // If no content service available, only do basic format validation
+            var isValid = !string.IsNullOrWhiteSpace(contentId) &&
+                         contentId.StartsWith("content:", StringComparison.OrdinalIgnoreCase);
+
+            return new ContentValidationResult(
+                IsValid: isValid,
+                ContentId: contentId,
+                ErrorMessage: isValid ? null : "Invalid content ID format or content link service unavailable");
+        }
+
+        return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
+    }
+
+    public async Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default)
+    {
+        // Validate content link if specified
+        if (!string.IsNullOrWhiteSpace(pod.FocusContentId))
+        {
+            var validation = await ValidateContentLinkAsync(pod.FocusContentId, ct);
+            if (!validation.IsValid)
+            {
+                throw new ArgumentException($"Invalid content link: {validation.ErrorMessage}", nameof(pod));
+            }
+
+            // Enhance pod name with content metadata if available
+            if (validation.Metadata != null && string.IsNullOrWhiteSpace(pod.Name))
+            {
+                pod.Name = $"{validation.Metadata.Artist} - {validation.Metadata.Title}";
+            }
+
+            // Add content-based tags
+            pod.Tags ??= new List<string>();
+            if (validation.Metadata != null)
+            {
+                if (!pod.Tags.Contains($"content:{validation.Metadata.Domain}"))
+                {
+                    pod.Tags.Add($"content:{validation.Metadata.Domain}");
+                }
+                if (!pod.Tags.Contains($"type:{validation.Metadata.Type}"))
+                {
+                    pod.Tags.Add($"type:{validation.Metadata.Type}");
+                }
+            }
+        }
+
+        // Create the pod normally
+        return await CreateAsync(pod, ct);
     }
 }
 

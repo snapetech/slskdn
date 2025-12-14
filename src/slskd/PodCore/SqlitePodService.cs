@@ -35,17 +35,21 @@ namespace slskd.PodCore
         private readonly IPodMembershipSigner membershipSigner;
         private readonly ILogger<SqlitePodService> logger;
 
-        public SqlitePodService(
-            PodDbContext dbContext,
-            IPodPublisher podPublisher,
-            IPodMembershipSigner membershipSigner,
-            ILogger<SqlitePodService> logger)
-        {
-            this.dbContext = dbContext;
-            this.podPublisher = podPublisher;
-            this.membershipSigner = membershipSigner;
-            this.logger = logger;
-        }
+    public SqlitePodService(
+        PodDbContext dbContext,
+        IPodPublisher podPublisher,
+        IPodMembershipSigner membershipSigner,
+        ILogger<SqlitePodService> logger,
+        IContentLinkService contentLinkService = null)
+    {
+        this.dbContext = dbContext;
+        this.podPublisher = podPublisher;
+        this.membershipSigner = membershipSigner;
+        this.logger = logger;
+        ContentLinkService = contentLinkService;
+    }
+
+    private IContentLinkService ContentLinkService { get; }
 
         public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
         {
@@ -528,6 +532,60 @@ namespace slskd.PodCore
 
             logger.LogInformation("Updated channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
             return true;
+        }
+
+        // Content linking implementation
+        public async Task<ContentValidationResult> ValidateContentLinkAsync(string contentId, CancellationToken ct = default)
+        {
+            if (ContentLinkService == null)
+            {
+                // If no content service available, only do basic format validation
+                var isValid = !string.IsNullOrWhiteSpace(contentId) &&
+                             contentId.StartsWith("content:", StringComparison.OrdinalIgnoreCase);
+
+                return new ContentValidationResult(
+                    IsValid: isValid,
+                    ContentId: contentId,
+                    ErrorMessage: isValid ? null : "Invalid content ID format or content link service unavailable");
+            }
+
+            return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
+        }
+
+        public async Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default)
+        {
+            // Validate content link if specified
+            if (!string.IsNullOrWhiteSpace(pod.FocusContentId))
+            {
+                var validation = await ValidateContentLinkAsync(pod.FocusContentId, ct);
+                if (!validation.IsValid)
+                {
+                    throw new ArgumentException($"Invalid content link: {validation.ErrorMessage}", nameof(pod));
+                }
+
+                // Enhance pod name with content metadata if available
+                if (validation.Metadata != null && string.IsNullOrWhiteSpace(pod.Name))
+                {
+                    pod.Name = $"{validation.Metadata.Artist} - {validation.Metadata.Title}";
+                }
+
+                // Add content-based tags
+                pod.Tags ??= new List<string>();
+                if (validation.Metadata != null)
+                {
+                    if (!pod.Tags.Contains($"content:{validation.Metadata.Domain}"))
+                    {
+                        pod.Tags.Add($"content:{validation.Metadata.Domain}");
+                    }
+                    if (!pod.Tags.Contains($"type:{validation.Metadata.Type}"))
+                    {
+                        pod.Tags.Add($"type:{validation.Metadata.Type}");
+                    }
+                }
+            }
+
+            // Create the pod normally
+            return await CreateAsync(pod, ct);
         }
     }
 }

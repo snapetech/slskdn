@@ -271,6 +271,19 @@ const MediaCore = () => {
   const [newChannelKind, setNewChannelKind] = useState('General');
   const [editingChannel, setEditingChannel] = useState(null);
   const [editChannelName, setEditChannelName] = useState('');
+
+  // Pod Content Linking states
+  const [contentId, setContentId] = useState('');
+  const [contentValidation, setContentValidation] = useState(null);
+  const [contentMetadata, setContentMetadata] = useState(null);
+  const [contentSearchQuery, setContentSearchQuery] = useState('');
+  const [contentSearchResults, setContentSearchResults] = useState([]);
+  const [contentValidationLoading, setContentValidationLoading] = useState(false);
+  const [contentMetadataLoading, setContentMetadataLoading] = useState(false);
+  const [contentSearchLoading, setContentSearchLoading] = useState(false);
+  const [createPodLoading, setCreatePodLoading] = useState(false);
+  const [newPodName, setNewPodName] = useState('');
+  const [newPodVisibility, setNewPodVisibility] = useState('Unlisted');
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
   const [publishSize, setPublishSize] = useState(1024);
@@ -1849,6 +1862,126 @@ const MediaCore = () => {
   const cancelEditingChannel = () => {
     setEditingChannel(null);
     setEditChannelName('');
+  };
+
+  // Pod Content Linking handlers
+  const handleValidateContentId = async () => {
+    if (!contentId.trim()) {
+      toast.error('Content ID is required');
+      return;
+    }
+
+    try {
+      setContentValidationLoading(true);
+      setContentValidation(null);
+      setContentMetadata(null);
+      const result = await mediacore.validateContentId(contentId.trim());
+      setContentValidation(result);
+
+      // If valid, automatically fetch metadata
+      if (result.isValid) {
+        await handleGetContentMetadata();
+      }
+    } catch (err) {
+      setContentValidation({ isValid: false, error: err.message });
+      toast.error(`Failed to validate content ID: ${err.message}`);
+    } finally {
+      setContentValidationLoading(false);
+    }
+  };
+
+  const handleGetContentMetadata = async () => {
+    if (!contentId.trim()) return;
+
+    try {
+      setContentMetadataLoading(true);
+      const metadata = await mediacore.getContentMetadata(contentId.trim());
+      setContentMetadata(metadata);
+
+      // Auto-fill pod name if empty
+      if (!newPodName.trim() && metadata) {
+        setNewPodName(`${metadata.artist} - ${metadata.title}`);
+      }
+    } catch (err) {
+      toast.error(`Failed to get content metadata: ${err.message}`);
+      setContentMetadata(null);
+    } finally {
+      setContentMetadataLoading(false);
+    }
+  };
+
+  const handleSearchContent = async () => {
+    if (!contentSearchQuery.trim()) return;
+
+    try {
+      setContentSearchLoading(true);
+      setContentSearchResults([]);
+      const results = await mediacore.searchContent(contentSearchQuery.trim(), null, 10);
+      setContentSearchResults(results);
+    } catch (err) {
+      toast.error(`Failed to search content: ${err.message}`);
+      setContentSearchResults([]);
+    } finally {
+      setContentSearchLoading(false);
+    }
+  };
+
+  const handleCreateContentLinkedPod = async () => {
+    if (!contentId.trim()) {
+      toast.error('Content ID is required');
+      return;
+    }
+
+    if (!newPodName.trim()) {
+      toast.error('Pod name is required');
+      return;
+    }
+
+    if (!contentValidation?.isValid) {
+      toast.error('Please validate the content ID first');
+      return;
+    }
+
+    try {
+      setCreatePodLoading(true);
+      const podRequest = {
+        podId: '', // Auto-generate
+        name: newPodName.trim(),
+        visibility: newPodVisibility,
+        contentId: contentId.trim(),
+        tags: [],
+        channels: [
+          {
+            channelId: 'general',
+            name: 'General',
+            kind: 'General'
+          }
+        ],
+        externalBindings: []
+      };
+
+      const createdPod = await mediacore.createContentLinkedPod(podRequest);
+      toast.success(`Pod "${createdPod.name}" created successfully!`);
+
+      // Reset form
+      setContentId('');
+      setContentValidation(null);
+      setContentMetadata(null);
+      setNewPodName('');
+      setContentSearchQuery('');
+      setContentSearchResults([]);
+
+    } catch (err) {
+      toast.error(`Failed to create pod: ${err.message}`);
+    } finally {
+      setCreatePodLoading(false);
+    }
+  };
+
+  const selectContentFromSearch = (contentItem) => {
+    setContentId(contentItem.contentId);
+    setContentSearchQuery('');
+    setContentSearchResults([]);
   };
 
   useEffect(() => {
@@ -5836,6 +5969,141 @@ const MediaCore = () => {
                 <Message size="small" info>
                   No channels found in pod {channelPodId}. Create the first channel above.
                 </Message>
+              )}
+            </Card.Content>
+          </Card>
+        </Grid.Column>
+
+        {/* Pod Content Linking */}
+        <Grid.Column width={16}>
+          <Card fluid>
+            <Card.Content>
+              <Card.Header>
+                <Icon name="linkify" />
+                Pod Content Linking
+              </Card.Header>
+              <Card.Description>
+                Create pods linked to specific content (music, videos, etc.) for focused discussions
+              </Card.Description>
+            </Card.Content>
+
+            {/* Content Linking */}
+            <Card.Content>
+              <Header size="small">Content Search & Validation</Header>
+
+              {/* Content Search */}
+              <Input
+                placeholder="Search for content (artist, album, movie, etc.)"
+                value={contentSearchQuery}
+                onChange={(e) => setContentSearchQuery(e.target.value)}
+                action={
+                  <Button
+                    color="blue"
+                    onClick={() => handleSearchContent()}
+                    loading={contentSearchLoading}
+                    disabled={!contentSearchQuery.trim()}
+                  >
+                    Search
+                  </Button>
+                }
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              {/* Search Results */}
+              {contentSearchResults.length > 0 && (
+                <div style={{ marginBottom: '1em' }}>
+                  <Header size="tiny">Search Results</Header>
+                  {contentSearchResults.map((item, idx) => (
+                    <Card key={idx} style={{ marginBottom: '0.5em', cursor: 'pointer' }}
+                          onClick={() => selectContentFromSearch(item)}>
+                      <Card.Content style={{ padding: '0.5em' }}>
+                        <strong>{item.title}</strong>
+                        {item.subtitle && <div>{item.subtitle}</div>}
+                        <small>{item.domain} • {item.type}</small>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Content Validation */}
+              <Input
+                placeholder="Content ID (e.g., content:audio:album:mb-release-id)"
+                value={contentId}
+                onChange={(e) => setContentId(e.target.value)}
+                action={
+                  <Button
+                    color="green"
+                    onClick={() => handleValidateContentId()}
+                    loading={contentValidationLoading}
+                    disabled={!contentId.trim()}
+                  >
+                    Validate
+                  </Button>
+                }
+                style={{ width: '100%', marginBottom: '1em' }}
+              />
+
+              {/* Validation Result */}
+              {contentValidation && (
+                <Message size="small"
+                         positive={contentValidation.isValid}
+                         negative={!contentValidation.isValid}
+                         style={{ marginBottom: '1em' }}>
+                  <Message.Header>
+                    {contentValidation.isValid ? '✓ Valid Content ID' : '✗ Invalid Content ID'}
+                  </Message.Header>
+                  {!contentValidation.isValid && contentValidation.errorMessage && (
+                    <p>{contentValidation.errorMessage}</p>
+                  )}
+                </Message>
+              )}
+
+              {/* Content Metadata */}
+              {contentMetadata && (
+                <Message size="small" info style={{ marginBottom: '1em' }}>
+                  <Message.Header>Content Metadata</Message.Header>
+                  <p>
+                    <strong>Title:</strong> {contentMetadata.title}<br />
+                    <strong>Artist:</strong> {contentMetadata.artist}<br />
+                    <strong>Type:</strong> {contentMetadata.type} ({contentMetadata.domain})
+                  </p>
+                </Message>
+              )}
+
+              {/* Pod Creation */}
+              {contentValidation?.isValid && (
+                <div>
+                  <Header size="small">Create Content-Linked Pod</Header>
+
+                  <Input
+                    placeholder="Pod name (auto-filled from content)"
+                    value={newPodName}
+                    onChange={(e) => setNewPodName(e.target.value)}
+                    style={{ width: '100%', marginBottom: '1em' }}
+                  />
+
+                  <div style={{ marginBottom: '1em' }}>
+                    <label style={{ marginRight: '1em' }}>Visibility:</label>
+                    <select
+                      value={newPodVisibility}
+                      onChange={(e) => setNewPodVisibility(e.target.value)}
+                    >
+                      <option value="Unlisted">Unlisted</option>
+                      <option value="Listed">Listed</option>
+                      <option value="Private">Private</option>
+                    </select>
+                  </div>
+
+                  <Button
+                    color="teal"
+                    onClick={() => handleCreateContentLinkedPod()}
+                    loading={createPodLoading}
+                    disabled={!newPodName.trim()}
+                  >
+                    Create Content-Linked Pod
+                  </Button>
+                </div>
               )}
             </Card.Content>
           </Card>

@@ -2260,11 +2260,11 @@
   - Branch: experimental/whatAmIThinking
   - Notes: Complete backfill protocol with range requests, sync-on-rejoin, and overlay integration.
 
-- [ ] **T-1350**: Implement pod channels (full)
-  - Status: Not started
+- [x] **T-1350**: Implement pod channels (full)
+  - Status: Completed (2025-12-13)
   - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Create/delete channels. Channel metadata in DHT. Per-channel routing.
+  - Branch: experimental/whatAmIThinking
+  - Notes: Complete channel CRUD, DHT metadata publishing, per-channel routing validation.
 
 - [ ] **T-1351**: Implement content-linked pod creation
   - Status: Not started

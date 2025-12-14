@@ -1933,3 +1933,83 @@ export const deleteChannel = async (podId, channelId) => {
 
   return response.json();
 };
+
+/**
+ * Content API base URL
+ */
+const contentBaseUrl = `${apiBaseUrl}/pods/content`;
+
+/**
+ * Validate a content ID for pod linking.
+ */
+export const validateContentId = async (contentId) => {
+  const response = await fetch(`${contentBaseUrl}/validate`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(contentId),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to validate content ID: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get metadata for a content ID.
+ */
+export const getContentMetadata = async (contentId) => {
+  const params = new URLSearchParams({ contentId });
+  const response = await fetch(`${contentBaseUrl}/metadata?${params}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get content metadata: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Search for content that can be linked to pods.
+ */
+export const searchContent = async (query, domain = null, limit = 20) => {
+  const params = new URLSearchParams({ query });
+  if (domain) params.append('domain', domain);
+  if (limit) params.append('limit', limit);
+
+  const response = await fetch(`${contentBaseUrl}/search?${params}`, {
+    headers: session.authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to search content: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Create a pod linked to specific content.
+ */
+export const createContentLinkedPod = async (podRequest) => {
+  const response = await fetch(`${contentBaseUrl}/create-pod`, {
+    method: 'POST',
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(podRequest),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create content-linked pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
