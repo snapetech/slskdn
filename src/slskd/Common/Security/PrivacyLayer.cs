@@ -15,6 +15,7 @@ public class PrivacyLayer : IPrivacyLayer
     private readonly IMessageBatcher? _batcher;
     private readonly ICoverTrafficGenerator? _coverTrafficGenerator;
     private readonly ILogger<PrivacyLayer> _logger;
+    private readonly ILoggerFactory _loggerFactory;
 
     // Statistics
     private long _outboundMessagesProcessed;
@@ -28,10 +29,12 @@ public class PrivacyLayer : IPrivacyLayer
     /// </summary>
     /// <param name="options">The privacy layer options.</param>
     /// <param name="logger">The logger.</param>
-    public PrivacyLayer(PrivacyLayerOptions options, ILogger<PrivacyLayer> logger)
+    /// <param name="loggerFactory">The logger factory.</param>
+    public PrivacyLayer(PrivacyLayerOptions options, ILogger<PrivacyLayer> logger, ILoggerFactory loggerFactory)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
         // Initialize components if enabled
         if (_options.Padding?.Enabled == true)
@@ -46,7 +49,7 @@ public class PrivacyLayer : IPrivacyLayer
 
         if (_options.Batching?.Enabled == true)
         {
-            _batcher = new TimedBatcher(_options.Batching, logger);
+            _batcher = new TimedBatcher(_options.Batching, _loggerFactory.CreateLogger<TimedBatcher>());
         }
 
         if (_options.CoverTraffic?.Enabled == true)

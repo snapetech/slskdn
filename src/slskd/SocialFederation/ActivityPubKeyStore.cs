@@ -182,7 +182,7 @@ namespace slskd.SocialFederation
                 var signatureBytes = Convert.FromBase64String(signature);
                 var messageBytes = Encoding.UTF8.GetBytes(signedString);
 
-                return algorithm.Verify(key, messageBytes, signatureBytes);
+                return algorithm.Verify(key.PublicKey, messageBytes, signatureBytes);
             }
             catch (Exception ex)
             {

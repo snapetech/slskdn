@@ -56,6 +56,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
 {
     private readonly AdversarialOptions _adversarialOptions;
     private readonly ILogger<AnonymityTransportSelector> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly TransportPolicyManager _policyManager;
 
     private readonly Dictionary<AnonymityTransportType, IAnonymityTransport> _transports = new();
@@ -72,11 +73,13 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
     public AnonymityTransportSelector(
         AdversarialOptions adversarialOptions,
         TransportPolicyManager policyManager,
-        ILogger<AnonymityTransportSelector> logger)
+        ILogger<AnonymityTransportSelector> logger,
+        ILoggerFactory loggerFactory)
     {
         _adversarialOptions = adversarialOptions ?? throw new ArgumentNullException(nameof(adversarialOptions));
         _policyManager = policyManager ?? throw new ArgumentNullException(nameof(policyManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
         InitializeTransports();
     }
@@ -282,39 +285,53 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
             var anonymityOptions = _adversarialOptions.AnonymityLayer;
             if (anonymityOptions.Mode == AnonymityMode.Tor || anonymityOptions.Mode == AnonymityMode.Direct)
             {
-                _transports[AnonymityTransportType.Tor] = new TorSocksTransport(anonymityOptions.Tor, _logger);
+                _transports[AnonymityTransportType.Tor] = new TorSocksTransport(
+                    anonymityOptions.Tor, 
+                    _loggerFactory.CreateLogger<TorSocksTransport>());
             }
 
             if (anonymityOptions.Mode == AnonymityMode.I2P)
             {
-                _transports[AnonymityTransportType.I2P] = new I2PTransport(anonymityOptions.I2P, _logger);
+                _transports[AnonymityTransportType.I2P] = new I2PTransport(
+                    anonymityOptions.I2P, 
+                    _loggerFactory.CreateLogger<I2PTransport>());
             }
 
             if (anonymityOptions.Mode == AnonymityMode.RelayOnly)
             {
-                _transports[AnonymityTransportType.RelayOnly] = new RelayOnlyTransport(anonymityOptions.RelayOnly, _logger);
+                _transports[AnonymityTransportType.RelayOnly] = new RelayOnlyTransport(
+                    anonymityOptions.RelayOnly, 
+                    _loggerFactory.CreateLogger<RelayOnlyTransport>());
             }
 
             // Initialize obfuscated transports (available regardless of anonymity mode)
             var transportOptions = _adversarialOptions.ObfuscatedTransports;
             if (transportOptions.WebSocket.Enabled)
             {
-                _transports[AnonymityTransportType.WebSocket] = new WebSocketTransport(transportOptions.WebSocket, _logger);
+                _transports[AnonymityTransportType.WebSocket] = new WebSocketTransport(
+                    transportOptions.WebSocket, 
+                    _loggerFactory.CreateLogger<WebSocketTransport>());
             }
 
             if (transportOptions.HttpTunnel.Enabled)
             {
-                _transports[AnonymityTransportType.HttpTunnel] = new HttpTunnelTransport(transportOptions.HttpTunnel, _logger);
+                _transports[AnonymityTransportType.HttpTunnel] = new HttpTunnelTransport(
+                    transportOptions.HttpTunnel, 
+                    _loggerFactory.CreateLogger<HttpTunnelTransport>());
             }
 
             if (transportOptions.Obfs4.Enabled)
             {
-                _transports[AnonymityTransportType.Obfs4] = new Obfs4Transport(transportOptions.Obfs4, _logger);
+                _transports[AnonymityTransportType.Obfs4] = new Obfs4Transport(
+                    transportOptions.Obfs4, 
+                    _loggerFactory.CreateLogger<Obfs4Transport>());
             }
 
             if (transportOptions.Meek.Enabled)
             {
-                _transports[AnonymityTransportType.Meek] = new MeekTransport(transportOptions.Meek, _logger);
+                _transports[AnonymityTransportType.Meek] = new MeekTransport(
+                    transportOptions.Meek, 
+                    _loggerFactory.CreateLogger<MeekTransport>());
             }
 
             _logger.LogInformation("Initialized {Count} transports: {TransportTypes}",

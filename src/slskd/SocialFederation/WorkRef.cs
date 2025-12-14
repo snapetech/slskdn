@@ -201,7 +201,7 @@ namespace slskd.SocialFederation
         {
             var workRef = new WorkRef
             {
-                Id = $"{instanceUrl}/works/music/{SanitizeId(musicItem.Id)}",
+                Id = $"{instanceUrl}/works/music/{SanitizeId(musicItem.Id.ToString())}",
                 Domain = "music",
                 Title = musicItem.Title ?? "Unknown Title",
                 Creator = musicItem.Artist,

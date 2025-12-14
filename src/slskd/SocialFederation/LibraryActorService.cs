@@ -26,6 +26,7 @@ namespace slskd.SocialFederation
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
         private readonly IActivityPubKeyStore _keyStore;
         private readonly ILogger<LibraryActorService> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="LibraryActorService"/> class.
@@ -38,11 +39,13 @@ namespace slskd.SocialFederation
             IOptionsMonitor<SocialFederationOptions> federationOptions,
             IActivityPubKeyStore keyStore,
             MusicLibraryActor? musicActor,
-            ILogger<LibraryActorService> logger)
+            ILogger<LibraryActorService> logger,
+            ILoggerFactory loggerFactory)
         {
             _federationOptions = federationOptions ?? throw new ArgumentNullException(nameof(federationOptions));
             _keyStore = keyStore ?? throw new ArgumentNullException(nameof(keyStore));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
             // Register the music actor if available
             if (musicActor != null)
@@ -117,12 +120,11 @@ namespace slskd.SocialFederation
                 try
                 {
                     // Create generic actors - these can be replaced with specific implementations later
-                    var logger = _logger; // Use the same logger for all generic actors
                     var actor = new GenericLibraryActor(
                         domain,
                         _federationOptions,
                         _keyStore,
-                        logger);
+                        _loggerFactory.CreateLogger<GenericLibraryActor>());
 
                     _actors[domain] = actor;
                     _logger.LogDebug("[LibraryActorService] Registered generic actor for domain {Domain}", domain);

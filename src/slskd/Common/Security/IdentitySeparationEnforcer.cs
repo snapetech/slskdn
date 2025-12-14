@@ -217,7 +217,7 @@ namespace slskd.Common.Security
         private static bool IsValidActivityPubIdentity(string identity)
         {
             // ActivityPub actors: @username@domain format
-            return identity.StartsWith("@") && identity.Contains("@", 1);
+            return identity.StartsWith("@") && identity.IndexOf('@', 1) > 0;
         }
     }
 }

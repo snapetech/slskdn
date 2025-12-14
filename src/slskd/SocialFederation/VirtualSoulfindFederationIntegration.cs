@@ -68,7 +68,7 @@ namespace slskd.SocialFederation
             }
 
             // Check if we can publish this content
-            if (!_federationService.CanPublishContent(contentItem.Domain, isAdvertisable))
+            if (!_federationService.CanPublishContent(contentItem.Domain.ToString(), isAdvertisable))
             {
                 _logger.LogDebug("[VSFederation] Skipping content {Id} - not publishable", contentItem.Id);
                 return;
@@ -182,7 +182,7 @@ namespace slskd.SocialFederation
                 // Create base WorkRef
                 var workRef = new WorkRef
                 {
-                    Id = $"work:{contentItem.Domain}:{SanitizeId(contentItem.Id)}",
+                    Id = $"work:{contentItem.Domain}:{SanitizeId(contentItem.Id.ToString())}",
                     Domain = contentItem.Domain,
                     Title = contentItem.PrimaryName ?? "Unknown Title",
                     Published = DateTimeOffset.UtcNow
