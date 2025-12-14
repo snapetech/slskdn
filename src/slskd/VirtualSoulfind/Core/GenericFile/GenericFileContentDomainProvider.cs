@@ -67,8 +67,10 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
             {
                 // For GenericFile domain, we create items on-demand
                 // In a full implementation, this might check a cache or database for existing items
-                var fileMetadata = new LocalFileMetadata(filename, sizeBytes)
+                var fileMetadata = new LocalFileMetadata
                 {
+                    Id = filename,  // Use filename as ID (not full path for security)
+                    SizeBytes = sizeBytes,
                     PrimaryHash = primaryHash
                 };
 

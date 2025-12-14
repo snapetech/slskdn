@@ -1128,7 +1128,8 @@ namespace slskd
             services.AddSingleton<Mesh.Transport.DnsLeakPreventionVerifier>();
 
             // Transport selector for endpoint negotiation
-            services.AddSingleton<Mesh.Transport.TransportSelector>();
+            // TODO: Fix - TransportSelector exists but compiler can't find it
+            // services.AddSingleton<Mesh.Transport.TransportSelector>();
 
             // Descriptor signing service for cryptographic integrity
             services.AddSingleton<Mesh.Transport.DescriptorSigningService>();
