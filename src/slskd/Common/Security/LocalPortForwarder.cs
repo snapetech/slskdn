@@ -142,7 +142,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "OpenTunnel",
-                openTunnelRequest,
+                MessagePack.MessagePackSerializer.Serialize(openTunnelRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -204,7 +204,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "TunnelData",
-                dataRequest,
+                MessagePack.MessagePackSerializer.Serialize(dataRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -236,7 +236,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "GetTunnelData",
-                getDataRequest,
+                MessagePack.MessagePackSerializer.Serialize(getDataRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -275,7 +275,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "CloseTunnel",
-                closeRequest,
+                MessagePack.MessagePackSerializer.Serialize(closeRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
