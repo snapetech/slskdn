@@ -39,14 +39,22 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
     {
         var request = context.HttpContext.Request;
         
-        // 1. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE)
+        // 1. Exempt endpoints with [AllowAnonymous] attribute (like login)
+        var endpoint = context.HttpContext.GetEndpoint();
+        if (endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() != null)
+        {
+            Log.Verbose("[CSRF] Skipping validation for anonymous endpoint: {Path}", request.Path);
+            return; // Anonymous endpoint - no CSRF needed (e.g., login)
+        }
+
+        // 2. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE)
         if (SafeMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
         {
             Log.Verbose("[CSRF] Skipping validation for safe method: {Method}", request.Method);
             return; // Safe method - no CSRF needed
         }
 
-        // 2. Exempt requests with Authorization header (JWT/Bearer tokens)
+        // 3. Exempt requests with Authorization header (JWT/Bearer tokens)
         if (request.Headers.ContainsKey("Authorization"))
         {
             var authHeader = request.Headers["Authorization"].ToString();
@@ -57,21 +65,21 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             }
         }
 
-        // 3. Exempt requests with API key header
+        // 4. Exempt requests with API key header
         if (request.Headers.ContainsKey("X-API-Key"))
         {
             Log.Verbose("[CSRF] Skipping validation for API key");
             return; // API key auth - no CSRF needed
         }
 
-        // 4. Exempt requests with API key in query string (for compatibility)
+        // 5. Exempt requests with API key in query string (for compatibility)
         if (request.Query.ContainsKey("api_key") || request.Query.ContainsKey("apikey"))
         {
             Log.Verbose("[CSRF] Skipping validation for API key in query string");
             return; // API key auth - no CSRF needed
         }
 
-        // 5. Check if request has any authentication cookies
+        // 6. Check if request has any authentication cookies
         var hasCookies = request.Cookies.Any();
         if (!hasCookies)
         {
@@ -79,7 +87,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             return; // No cookies - pure API client, no CSRF needed
         }
 
-        // 6. This is a cookie-based request (web UI) - validate CSRF token
+        // 7. This is a cookie-based request (web UI) - validate CSRF token
         Log.Debug("[CSRF] Validating CSRF token for cookie-based request: {Method} {Path}", 
             request.Method, request.Path);
 
