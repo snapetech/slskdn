@@ -2,7 +2,7 @@
 
 **Feature**: CSRF Protection for slskdN  
 **Branch**: `experimental/whatAmIThinking`  
-**Status**: Ready for Testing
+**Status**: ✅ **Implemented and Tested** (Commit: fc715979)
 
 ---
 
@@ -12,8 +12,9 @@
 - ✅ AntiForgery services configured (30-day session tokens)
 - ✅ CSRF middleware generates tokens automatically
 - ✅ Custom validation filter (`ValidateCsrfForCookiesOnlyAttribute`)
-- ✅ Smart exemptions (JWT, API keys, safe methods)
+- ✅ Smart exemptions (anonymous endpoints, JWT, API keys, safe methods)
 - ✅ All 85+ controllers protected
+- ✅ Login fix applied (anonymous endpoints exempt)
 
 ### Frontend:
 - ✅ Axios interceptor automatically adds CSRF tokens

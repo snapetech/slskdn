@@ -174,6 +174,7 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 
 ### 🔒 Security Hardening
 Multi-layered security approach with the following protections:
+- **CSRF Protection** — Cross-site request forgery prevention for web UI (automatic, zero-config)
 - **NetworkGuard** — Rate limiting, connection caps per IP
 - **ViolationTracker** — Auto-escalating bans for bad actors
 - **PathGuard** — Directory traversal prevention (always enabled)
@@ -184,7 +185,7 @@ Multi-layered security approach with the following protections:
 - **ByzantineConsensus** — 2/3+1 voting for multi-source verification
 - **Security dashboard** — Real-time monitoring in Web UI (System → Security tab)
 
-📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [Guidelines](SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
+📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [CSRF testing guide](docs/security/CSRF_TESTING_GUIDE.md) • [Security comparison](docs/security/SECURITY_COMPARISON_ANALYSIS.md) • [Guidelines](SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
 
 ### 🎵 MusicBrainz Integration & Library Health
 Automated metadata enrichment and quality assurance.
