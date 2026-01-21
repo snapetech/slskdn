@@ -52,9 +52,10 @@ jobs:
         id: version
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-          # Version format: 0.24.1-dev-YYYYMMDD-HHMMSS (tag format)
-          # For NuGet/PKGBUILD: replace hyphens in timestamp portion
+          # Use epoch prefixed with '9' for correct lexicographic sorting
+          EPOCH=$(date +%s)
+          TIMESTAMP="9${EPOCH}"
+          # Version format: 0.24.1-dev-9EPOCH (prefixed with 9 for proper versioning)
           DEV_VERSION="${BASE_VERSION}-dev-${TIMESTAMP}"
           
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
