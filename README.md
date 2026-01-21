@@ -488,7 +488,7 @@ Features that prove stable may be submitted as PRs to upstream slskd. Our auto-r
 ## Versioning
 slskdN follows slskd's version numbers with a suffix: `0.24.1-slskdN.1` = First slskdN release based on slskd 0.24.1
 
-Development builds use epoch-based versioning: `0.24.1-dev-91769014133` for proper sorting.
+Development builds use epoch-based versioning: `0.24.1-dev-9<timestamp>` for proper sorting.
 
 ---
 
