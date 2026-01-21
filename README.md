@@ -173,7 +173,7 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 📖 **Design docs**: [MeshCore research](docs/phase8-meshcore-research.md) • [Mesh architecture](docs/virtual-soulfind-mesh-architecture.md)
 
 ### 🔒 Security Hardening
-Zero-trust security framework with defense-in-depth:
+Multi-layered security approach with the following protections:
 - **NetworkGuard** — Rate limiting, connection caps per IP
 - **ViolationTracker** — Auto-escalating bans for bad actors
 - **PathGuard** — Directory traversal prevention (always enabled)

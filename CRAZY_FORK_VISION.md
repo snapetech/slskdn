@@ -754,7 +754,7 @@ Once the service fabric is stable, this enables:
 - **Budget Level** (H-02): All operations consume work budget
 - **Plan Level** (H-14): Validator checks caps before execution
 
-**Result**: Soulseek abuse is **architecturally impossible**, not just configurable.
+**Result**: Soulseek abuse is prevented by multiple independent enforcement layers, not just configuration options.
 
 ### 2. Privacy Modes
 **Problem**: How to balance features vs correlation?
@@ -815,7 +815,7 @@ Once the service fabric is stable, this enables:
 ### Architecture Where Abuse is Impossible
 
 **Not**: "We have rate limiting so abuse is hard"
-**Actually**: "We have 4 independent layers of enforcement so abuse is architecturally impossible"
+**Actually**: "We have 4 independent layers of enforcement that make abuse extremely difficult"
 
 Layers:
 1. Domain gating (Soulseek only for Music)

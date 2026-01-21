@@ -92,7 +92,7 @@ Content-aware acquisition that's not limited to music. Supports multiple content
 - **Friendly Mode**: Respects Soulseek etiquette by default
 - **Work Budget**: All Soulseek operations consume budget
 
-**Result**: Soulseek abuse for non-music content is architecturally impossible.
+**Result**: Soulseek abuse for non-music content is prevented by multiple enforcement layers (domain gating, work budget, rate caps, plan validation).
 
 #### Intent Management
 - **Origin Tracking**: Tag intents by source (UserLocal, LocalAutomation, RemoteMesh, RemoteGateway)

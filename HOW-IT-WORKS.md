@@ -227,7 +227,7 @@ Result: Home server controls VPS without port forwarding
 - Future domains can add their own backends without touching existing code
 
 **Why This Matters**:
-- Soulseek abuse is **architecturally impossible** for non-music domains
+- Soulseek abuse for non-music domains is prevented at multiple layers (compile-time domain gating, runtime work budget enforcement, rate limiting)
 - Each domain gets appropriate matching logic (MBID for music, hash for files)
 - No code duplication; planner/resolver are domain-agnostic
 
