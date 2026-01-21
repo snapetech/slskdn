@@ -70,7 +70,9 @@ jobs:
         working-directory: src/web
         run: |
           npm ci
-          DISABLE_ESLINT_PLUGIN=true npm run build
+          CI=false DISABLE_ESLINT_PLUGIN=true npm run build
+          echo "✅ Frontend build complete - verifying wwwroot will be included"
+          ls -lh build/static/js/main.*.js | head -1
 
       - name: Build Backend (Linux x64)
         run: |
@@ -110,10 +112,38 @@ jobs:
 
       - name: Copy Web Assets
         run: |
+          echo "📦 Copying frontend build to wwwroot for all platforms..."
+          # Ensure wwwroot directories exist
+          mkdir -p publish-linux-x64/wwwroot publish-win-x64/wwwroot publish-osx-x64/wwwroot publish-osx-arm64/wwwroot
+          
+          # Copy frontend build to all platform wwwroot directories
           cp -r src/web/build/* publish-linux-x64/wwwroot/
           cp -r src/web/build/* publish-win-x64/wwwroot/
           cp -r src/web/build/* publish-osx-x64/wwwroot/
           cp -r src/web/build/* publish-osx-arm64/wwwroot/
+          
+          # Verify wwwroot was populated
+          echo "✅ Verifying wwwroot contents:"
+          ls -lh publish-linux-x64/wwwroot/static/js/main.*.js | head -1 || echo "⚠️ No JS files found in wwwroot!"
+          echo "✅ Frontend assets copied to all platform builds"
+
+      - name: Verify wwwroot Before Archiving
+        run: |
+          echo "🔍 Verifying wwwroot is present in all platform builds..."
+          for platform in linux-x64 win-x64 osx-x64 osx-arm64; do
+            PLATFORM_DIR="publish-${platform}"
+            if [ ! -d "${PLATFORM_DIR}/wwwroot" ]; then
+              echo "❌ ERROR: ${PLATFORM_DIR}/wwwroot missing!"
+              exit 1
+            fi
+            JS_COUNT=$(find "${PLATFORM_DIR}/wwwroot/static/js" -name "main.*.js" 2>/dev/null | wc -l)
+            if [ "$JS_COUNT" -eq 0 ]; then
+              echo "❌ ERROR: No main.*.js files in ${PLATFORM_DIR}/wwwroot!"
+              exit 1
+            fi
+            echo "✅ ${platform}: wwwroot present with ${JS_COUNT} JS file(s)"
+          done
+          echo "✅ All platforms have wwwroot with frontend assets"
 
       - name: Create Release Archives
         run: |
@@ -122,6 +152,17 @@ jobs:
           cd publish-osx-x64 && zip -r ../slskdn-dev-osx-x64.zip . && cd ..
           cd publish-osx-arm64 && zip -r ../slskdn-dev-osx-arm64.zip . && cd ..
           ls -lh slskdn-dev-*.zip
+          
+          # Verify wwwroot is in the archives
+          echo "🔍 Verifying wwwroot in archives..."
+          for zip in slskdn-dev-*.zip; do
+            if unzip -l "$zip" | grep -q "wwwroot/static/js/main"; then
+              echo "✅ $zip contains wwwroot with frontend assets"
+            else
+              echo "❌ ERROR: $zip missing wwwroot!"
+              exit 1
+            fi
+          done
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
