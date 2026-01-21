@@ -20,6 +20,7 @@ namespace slskd.API.Native;
 [ApiVersion("0")]
 [ApiController]
 [Authorize]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PortForwardingController : ControllerBase
 {
     private readonly LocalPortForwarder _portForwarder;

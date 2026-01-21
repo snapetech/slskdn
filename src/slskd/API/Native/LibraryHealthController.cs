@@ -17,6 +17,7 @@ using slskd.LibraryHealth;
 [ApiController]
 [Route("api/slskdn/library")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class LibraryHealthController : ControllerBase
 {
     private readonly ILibraryHealthService healthService;

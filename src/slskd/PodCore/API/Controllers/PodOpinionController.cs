@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 [Produces("application/json")]
 [Consumes("application/json")]
 [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodOpinionController : ControllerBase
 {
     private readonly IPodOpinionService _opinionService;

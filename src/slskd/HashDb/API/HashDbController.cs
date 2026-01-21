@@ -27,6 +27,7 @@ namespace slskd.HashDb.API
     using Serilog;
     using slskd.HashDb.Models;
     using slskd.Search;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Hash Database API controller.
@@ -34,6 +35,7 @@ namespace slskd.HashDb.API
     [Route("api/v{version:apiVersion}/hashdb")]
     [ApiVersion("0")]
     [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class HashDbController : ControllerBase
     {
         /// <summary>

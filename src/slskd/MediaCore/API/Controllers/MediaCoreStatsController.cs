@@ -14,6 +14,7 @@ namespace slskd.MediaCore.API.Controllers;
 /// </summary>
 [Route("api/v0/mediacore/stats")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class MediaCoreStatsController : ControllerBase
 {
     private readonly ILogger<MediaCoreStatsController> _logger;

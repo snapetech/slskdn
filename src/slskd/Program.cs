@@ -1956,6 +1956,20 @@ namespace slskd
             }
 
             services.AddMemoryCache(); // Required by ShardCache and others
+
+            // CSRF Protection (only applies to cookie-based authentication, not JWT/API keys)
+            services.AddAntiforgery(options =>
+            {
+                options.Cookie.Name = "XSRF-TOKEN";
+                options.HeaderName = "X-CSRF-TOKEN";
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS in prod, HTTP in dev
+                options.Cookie.HttpOnly = false; // JavaScript needs to read this
+                
+                // Session-based tokens (30 days with sliding expiration)
+                // Tokens don't expire independently - they're tied to the session
+            });
+
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddControllers()
                 .ConfigureApiBehaviorOptions(options =>
@@ -2051,6 +2065,26 @@ namespace slskd
             }));
 
             app.UseCors("AllowAll");
+
+            // CSRF token middleware - generates tokens for cookie-based auth
+            // This must come AFTER UsePathBase but BEFORE UseAuthentication
+            app.Use(async (context, next) =>
+            {
+                var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
+                var tokens = antiforgery.GetAndStoreTokens(context);
+                
+                // Set the XSRF-TOKEN cookie that frontend JavaScript can read
+                context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken, 
+                    new CookieOptions 
+                    { 
+                        HttpOnly = false,  // JavaScript needs to read this
+                        Secure = context.Request.IsHttps,
+                        SameSite = SameSiteMode.Strict,
+                        Path = "/"
+                    });
+                
+                await next();
+            });
 
             if (OptionsAtStartup.Web.Https.Force)
             {

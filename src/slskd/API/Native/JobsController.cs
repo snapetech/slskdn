@@ -16,6 +16,7 @@ using slskd.Integrations.MusicBrainz;
 [ApiController]
 [Route("api/jobs")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class JobsController : ControllerBase
 {
     private readonly IDiscographyJobService discographyJobService;

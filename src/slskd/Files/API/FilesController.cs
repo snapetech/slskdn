@@ -31,6 +31,7 @@ namespace slskd.Files.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Files.
@@ -40,6 +41,7 @@ namespace slskd.Files.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class FilesController : ControllerBase
     {
         public FilesController(

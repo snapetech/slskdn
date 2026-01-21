@@ -32,6 +32,7 @@ namespace slskd.Search.API
     using Serilog;
     using SearchQuery = Soulseek.SearchQuery;
     using SearchScope = Soulseek.SearchScope;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Search.
@@ -41,6 +42,7 @@ namespace slskd.Search.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class SearchesController : ControllerBase
     {
         /// <summary>

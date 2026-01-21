@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class TelemetryController : ControllerBase
 {
     /// <summary>

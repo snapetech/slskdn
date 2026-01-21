@@ -11,6 +11,7 @@ namespace slskd.SocialFederation.API
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     WebFinger endpoint for ActivityPub discovery.
@@ -21,6 +22,7 @@ namespace slskd.SocialFederation.API
     /// </remarks>
     [ApiController]
     [Route(".well-known")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class WebFingerController : ControllerBase
     {
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;

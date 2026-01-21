@@ -24,6 +24,7 @@ namespace slskd.Destinations.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Options;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Download destination management endpoints.
@@ -33,6 +34,7 @@ namespace slskd.Destinations.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class DestinationsController : ControllerBase
     {
         public DestinationsController(IOptionsSnapshot<slskd.Options> optionsSnapshot)

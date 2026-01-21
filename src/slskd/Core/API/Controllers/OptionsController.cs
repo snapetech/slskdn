@@ -33,6 +33,7 @@ namespace slskd.Core.API
     using Serilog;
     using slskd.Validation;
     using IOFile = System.IO.File;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Options.
@@ -42,6 +43,7 @@ namespace slskd.Core.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class OptionsController : ControllerBase
     {
         public OptionsController(

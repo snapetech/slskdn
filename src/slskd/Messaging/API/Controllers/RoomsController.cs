@@ -32,6 +32,7 @@ namespace slskd.Messaging.API
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Soulseek;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Rooms.
@@ -41,6 +42,7 @@ namespace slskd.Messaging.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class RoomsController : ControllerBase
     {
         public RoomsController(

@@ -15,6 +15,7 @@ namespace slskd.Integrations.MusicBrainz.API
     using slskd.HashDb;
     using slskd.Integrations.MusicBrainz.API.DTO;
     using slskd.Integrations.MusicBrainz.Models;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     MusicBrainz lookup.
@@ -25,6 +26,7 @@ namespace slskd.Integrations.MusicBrainz.API
     [Produces("application/json")]
     [Consumes("application/json")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class MusicBrainzController : ControllerBase
     {
         private readonly IMusicBrainzClient client;

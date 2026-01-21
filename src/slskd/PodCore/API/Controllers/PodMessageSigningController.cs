@@ -14,6 +14,7 @@ namespace slskd.PodCore.API.Controllers;
 /// </summary>
 [Route("api/v0/podcore/signing")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodMessageSigningController : ControllerBase
 {
     private readonly ILogger<PodMessageSigningController> _logger;

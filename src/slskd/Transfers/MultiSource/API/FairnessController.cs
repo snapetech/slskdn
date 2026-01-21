@@ -11,6 +11,7 @@ namespace slskd.Transfers.MultiSource.API
     using Microsoft.AspNetCore.Mvc;
     using slskd.Authentication;
     using slskd.Transfers.MultiSource.Metrics;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Fairness / contribution summary API.
@@ -21,6 +22,7 @@ namespace slskd.Transfers.MultiSource.API
     [Produces("application/json")]
     [Consumes("application/json")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class FairnessController : ControllerBase
     {
         private readonly IFairnessGuard fairness;

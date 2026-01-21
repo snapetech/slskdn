@@ -22,6 +22,7 @@ using slskd.DhtRendezvous.Security;
 [ApiVersion("0")]
 [Route("api/v{version:apiVersion}")]
 [Authorize]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class DhtRendezvousController : ControllerBase
 {
     private readonly IDhtRendezvousService _dhtService;

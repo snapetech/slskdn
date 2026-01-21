@@ -21,6 +21,7 @@ using slskd.Mesh;
 [ApiController]
 [Route("api/v0/security")]
 [Authorize]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class SecurityController : ControllerBase
 {
     private readonly SecurityServices? _security;

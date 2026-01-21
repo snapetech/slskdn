@@ -14,6 +14,7 @@ namespace slskd.PodCore.API.Controllers;
 /// </summary>
 [Route("api/v0/podcore/verification")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodVerificationController : ControllerBase
 {
     private readonly ILogger<PodVerificationController> _logger;

@@ -33,6 +33,7 @@ namespace slskd.VirtualSoulfind.v2.API
     using slskd.VirtualSoulfind.v2.Processing;
     using slskd.VirtualSoulfind.v2.Resolution;
     using slskd.VirtualSoulfind.v2.Execution;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     API controller for VirtualSoulfind v2.
@@ -41,6 +42,7 @@ namespace slskd.VirtualSoulfind.v2.API
     [Route("api/v1/virtualsoulfind/v2")]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class VirtualSoulfindV2Controller : ControllerBase
     {
         private readonly IIntentQueue _intentQueue;

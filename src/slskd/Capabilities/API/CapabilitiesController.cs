@@ -22,6 +22,7 @@ namespace slskd.Capabilities.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Capabilities API controller.
@@ -29,6 +30,7 @@ namespace slskd.Capabilities.API
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("0")]
     [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class CapabilitiesController : ControllerBase
     {
         /// <summary>

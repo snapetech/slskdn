@@ -13,6 +13,7 @@ namespace slskd.SocialFederation.API
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using slskd.SocialFederation;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     ActivityPub protocol endpoints.
@@ -23,6 +24,7 @@ namespace slskd.SocialFederation.API
     /// </remarks>
     [ApiController]
     [Route("actors")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ActivityPubController : ControllerBase
     {
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;

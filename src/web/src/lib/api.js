@@ -8,6 +8,19 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Helper function to get CSRF token from cookie
+const getCsrfToken = () => {
+  const name = 'XSRF-TOKEN=';
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    cookie = cookie.trim();
+    if (cookie.indexOf(name) === 0) {
+      return cookie.substring(name.length);
+    }
+  }
+  return null;
+};
+
 api.interceptors.request.use((config) => {
   const token = getToken();
 
@@ -15,6 +28,19 @@ api.interceptors.request.use((config) => {
 
   if (!isPassthroughEnabled() && token) {
     config.headers.Authorization = 'Bearer ' + token;
+  }
+
+  // Add CSRF token for state-changing requests (POST/PUT/DELETE/PATCH)
+  // Only needed if we're using cookie-based auth (no JWT token)
+  const needsCsrf = ['post', 'put', 'delete', 'patch'].includes(
+    (config.method || '').toLowerCase(),
+  );
+  
+  if (needsCsrf) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      config.headers['X-CSRF-TOKEN'] = csrfToken;
+    }
   }
 
   return config;

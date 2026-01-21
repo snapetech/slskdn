@@ -39,6 +39,7 @@ using Soulseek;
 [ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ReportsController : ControllerBase
 {
     /// <summary>

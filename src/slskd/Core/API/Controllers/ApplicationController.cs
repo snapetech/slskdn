@@ -31,6 +31,7 @@ namespace slskd.Core.API
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Hosting;
     using Serilog;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Application.
@@ -40,6 +41,7 @@ namespace slskd.Core.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ApplicationController : ControllerBase
     {
         public ApplicationController(

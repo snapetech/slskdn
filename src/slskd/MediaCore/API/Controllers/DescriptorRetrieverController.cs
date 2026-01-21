@@ -15,6 +15,7 @@ namespace slskd.MediaCore.API.Controllers;
 /// </summary>
 [Route("api/v0/mediacore/retrieve")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class DescriptorRetrieverController : ControllerBase
 {
     private readonly ILogger<DescriptorRetrieverController> _logger;

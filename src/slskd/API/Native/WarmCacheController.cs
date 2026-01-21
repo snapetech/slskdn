@@ -17,6 +17,7 @@ using slskd.Transfers.MultiSource.Caching;
 [ApiController]
 [Route("api/slskdn/warm-cache")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class WarmCacheController : ControllerBase
 {
     private readonly IWarmCachePopularityService popularityService;

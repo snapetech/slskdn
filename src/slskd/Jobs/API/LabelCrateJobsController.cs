@@ -9,10 +9,12 @@ namespace slskd.Jobs.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using slskd.Authentication;
+    using slskd.Core.Security;
 
     [ApiController]
     [Route("api/jobs/label-crate")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class LabelCrateJobsController : ControllerBase
     {
         private readonly ILabelCrateJobService jobService;

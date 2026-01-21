@@ -27,8 +27,10 @@ namespace slskd.Users.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
+    using slskd.Core.Security;
 
     using Soulseek;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Users.
@@ -38,6 +40,7 @@ namespace slskd.Users.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class UsersController : ControllerBase
     {
         /// <summary>

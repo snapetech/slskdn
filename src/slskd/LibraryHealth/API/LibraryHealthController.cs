@@ -11,6 +11,7 @@ namespace slskd.LibraryHealth.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
+    using slskd.Core.Security;
 
     /// <summary>
     /// API controller for Library Health (Collection Doctor).
@@ -18,6 +19,7 @@ namespace slskd.LibraryHealth.API
     [ApiController]
     [Route("api/library/health")]
     [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class LibraryHealthController : ControllerBase
     {
         private readonly ILibraryHealthService libraryHealth;

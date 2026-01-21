@@ -14,6 +14,7 @@ namespace slskd.PodCore.API.Controllers;
 /// </summary>
 [Route("api/v0/podcore/membership")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodJoinLeaveController : ControllerBase
 {
     private readonly ILogger<PodJoinLeaveController> _logger;

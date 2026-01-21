@@ -13,6 +13,7 @@ using slskd.VirtualSoulfind.Bridge;
 [Route("api/bridge/admin")]
 [ApiController]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class BridgeAdminController : ControllerBase
 {
     private readonly ILogger<BridgeAdminController> logger;

@@ -16,6 +16,7 @@ namespace slskd.MediaCore.API.Controllers;
 /// </summary>
 [Route("api/v0/mediacore/fuzzymatch")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class FuzzyMatcherController : ControllerBase
 {
     private readonly ILogger<FuzzyMatcherController> _logger;

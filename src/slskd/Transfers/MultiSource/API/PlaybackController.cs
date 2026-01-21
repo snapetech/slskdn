@@ -11,6 +11,7 @@ namespace slskd.Transfers.MultiSource.API
     using Microsoft.AspNetCore.Mvc;
     using slskd.Authentication;
     using slskd.Transfers.MultiSource.Playback;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Playback feedback API (experimental).
@@ -21,6 +22,7 @@ namespace slskd.Transfers.MultiSource.API
     [Produces("application/json")]
     [Consumes("application/json")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class PlaybackController : ControllerBase
     {
         private readonly IPlaybackFeedbackService feedback;

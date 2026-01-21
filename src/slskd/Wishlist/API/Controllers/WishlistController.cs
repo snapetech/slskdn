@@ -26,6 +26,7 @@ namespace slskd.Wishlist.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Wishlist management endpoints.
@@ -35,6 +36,7 @@ namespace slskd.Wishlist.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class WishlistController : ControllerBase
     {
         public WishlistController(IWishlistService wishlistService)

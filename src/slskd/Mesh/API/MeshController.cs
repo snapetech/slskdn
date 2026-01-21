@@ -25,6 +25,7 @@ namespace slskd.Mesh.API
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
     using slskd.Mesh.Messages;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Mesh Sync API controller.
@@ -32,6 +33,7 @@ namespace slskd.Mesh.API
     [Route("api/v{version:apiVersion}/mesh")]
     [ApiVersion("0")]
     [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class MeshController : ControllerBase
     {
         /// <summary>

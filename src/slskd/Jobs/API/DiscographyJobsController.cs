@@ -10,10 +10,12 @@ namespace slskd.Jobs.API
     using Microsoft.AspNetCore.Mvc;
     using slskd.Authentication;
     using slskd.Integrations.MusicBrainz;
+    using slskd.Core.Security;
 
     [ApiController]
     [Route("api/jobs/discography")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class DiscographyJobsController : ControllerBase
     {
         private readonly IDiscographyJobService jobService;

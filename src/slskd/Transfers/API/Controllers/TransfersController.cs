@@ -30,6 +30,7 @@ namespace slskd.Transfers.API
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
     using slskd.Transfers.AutoReplace;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Transfers.
@@ -39,6 +40,7 @@ namespace slskd.Transfers.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class TransfersController : ControllerBase
     {
         /// <summary>

@@ -15,6 +15,7 @@ namespace slskd.MediaCore.API.Controllers;
 /// </summary>
 [Route("api/v0/mediacore/publish")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ContentDescriptorPublisherController : ControllerBase
 {
     private readonly ILogger<ContentDescriptorPublisherController> _logger;

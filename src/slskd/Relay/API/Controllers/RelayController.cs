@@ -37,6 +37,7 @@ namespace slskd.Relay
     using Microsoft.Net.Http.Headers;
     using Serilog;
     using slskd.Shares;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Relay.
@@ -44,6 +45,7 @@ namespace slskd.Relay
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("0")]
     [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class RelayController : ControllerBase
     {
         private const long ONE_GIBIBYTE = 1L * 1024L * 1024L * 1024L; // 1073741824

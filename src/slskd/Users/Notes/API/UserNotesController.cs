@@ -23,6 +23,7 @@ namespace slskd.Users.Notes.API
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Controller for managing user notes.
@@ -31,6 +32,7 @@ namespace slskd.Users.Notes.API
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/users/notes")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class UserNotesController : ControllerBase
     {
         private readonly IUserNoteService userNoteService;

@@ -29,6 +29,7 @@ namespace slskd.Messaging.API
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Conversations.
@@ -38,6 +39,7 @@ namespace slskd.Messaging.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ConversationsController : ControllerBase
     {
         /// <summary>

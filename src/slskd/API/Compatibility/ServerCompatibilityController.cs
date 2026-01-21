@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/server")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ServerCompatibilityController : ControllerBase
 {
     private readonly ILogger<ServerCompatibilityController> logger;

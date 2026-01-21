@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/virtualsoulfind/shadow-index")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ShadowIndexController : ControllerBase
 {
     private readonly ILogger<ShadowIndexController> logger;

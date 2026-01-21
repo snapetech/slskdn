@@ -24,6 +24,7 @@ namespace slskd.Shares.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Soulseek;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Shares.
@@ -33,6 +34,7 @@ namespace slskd.Shares.API
     [Produces("application/json")]
     [Consumes("application/json")]
     [Route("api/v{version:apiVersion}/[controller]")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class SharesController : ControllerBase
     {
         /// <summary>

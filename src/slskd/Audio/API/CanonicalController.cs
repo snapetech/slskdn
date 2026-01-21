@@ -8,9 +8,11 @@ namespace slskd.Audio.API
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
+    using slskd.Core.Security;
 
     [ApiController]
     [Route("api/audio/canonical")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class CanonicalController : ControllerBase
     {
         private readonly ICanonicalStatsService canonicalStats;

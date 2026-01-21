@@ -28,6 +28,7 @@ namespace slskd.Core.API
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Soulseek;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Server.
@@ -37,6 +38,7 @@ namespace slskd.Core.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ServerController : ControllerBase
     {
         public ServerController(

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/virtualsoulfind/canonical")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class CanonicalController : ControllerBase
 {
     private readonly ILogger<CanonicalController> logger;

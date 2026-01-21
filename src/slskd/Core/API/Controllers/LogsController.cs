@@ -24,6 +24,7 @@ namespace slskd.Core.API
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Logs.
@@ -33,6 +34,7 @@ namespace slskd.Core.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class LogsController : ControllerBase
     {
         /// <summary>

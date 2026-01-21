@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/virtualsoulfind/disaster-mode")]
 [Produces("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class DisasterModeController : ControllerBase
 {
     private readonly ILogger<DisasterModeController> logger;

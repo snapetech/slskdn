@@ -15,6 +15,7 @@ using slskd.PodCore;
 [Route("api/v0/pods")]
 [Produces("application/json")]
 [Authorize]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodsController : ControllerBase
 {
     private readonly IPodService podService;

@@ -28,6 +28,7 @@ namespace slskd.Transfers.MultiSource.API
     using slskd.Transfers.MultiSource.Discovery;
     using Soulseek;
     using IOPath = System.IO.Path;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Experimental multi-source download API.
@@ -37,6 +38,7 @@ namespace slskd.Transfers.MultiSource.API
     [ApiController]
     [Produces("application/json")]
     [Consumes("application/json")]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class MultiSourceController : ControllerBase
     {
         /// <summary>

@@ -15,6 +15,7 @@ namespace slskd.MediaCore.API.Controllers;
 /// </summary>
 [Route("api/v0/mediacore/ipld")]
 [ApiController]
+    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class IpldController : ControllerBase
 {
     private readonly ILogger<IpldController> _logger;
