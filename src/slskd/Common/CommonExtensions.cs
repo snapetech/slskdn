@@ -108,28 +108,48 @@ namespace slskd
 
             foreach (var prop in left?.GetType().GetProperties())
             {
-                var leftVal = prop.GetValue(left);
-                var rightVal = prop.GetValue(right);
-                var propType = prop.PropertyType;
-                var fqn = string.IsNullOrEmpty(parentFqn) ? prop.Name : string.Join(".", parentFqn, prop.Name);
+                try
+                {
+                    // Skip properties that require parameters to get (indexers, etc.)
+                    if (prop.GetIndexParameters().Length > 0)
+                    {
+                        continue;
+                    }
 
-                if (propType.IsArray || (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Dictionary<,>)))
-                {
-                    if (leftVal.ToJson() != rightVal.ToJson())
+                    var leftVal = prop.GetValue(left);
+                    var rightVal = prop.GetValue(right);
+                    var propType = prop.PropertyType;
+                    var fqn = string.IsNullOrEmpty(parentFqn) ? prop.Name : string.Join(".", parentFqn, prop.Name);
+
+                    if (propType.IsArray || (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Dictionary<,>)))
                     {
-                        differences.Add((prop, fqn, leftVal, rightVal));
+                        if (leftVal.ToJson() != rightVal.ToJson())
+                        {
+                            differences.Add((prop, fqn, leftVal, rightVal));
+                        }
+                    }
+                    else if (propType.IsPrimitive || propType.IsEnum || Nullable.GetUnderlyingType(propType) != null || new[] { typeof(string), typeof(decimal) }.Contains(propType))
+                    {
+                        if (!Equals(leftVal, rightVal))
+                        {
+                            differences.Add((prop, fqn, leftVal, rightVal));
+                        }
+                    }
+                    else
+                    {
+                        differences.AddRange(DiffWith(leftVal, rightVal, fqn));
                     }
                 }
-                else if (propType.IsPrimitive || propType.IsEnum || Nullable.GetUnderlyingType(propType) != null || new[] { typeof(string), typeof(decimal) }.Contains(propType))
+                catch (System.Reflection.TargetParameterCountException)
                 {
-                    if (!Equals(leftVal, rightVal))
-                    {
-                        differences.Add((prop, fqn, leftVal, rightVal));
-                    }
+                    // Skip properties that require parameters (e.g., indexers)
+                    continue;
                 }
-                else
+                catch (Exception)
                 {
-                    differences.AddRange(DiffWith(leftVal, rightVal, fqn));
+                    // Skip properties that can't be accessed (e.g., complex constructors)
+                    // Log at debug level if needed, but don't fail the entire diff
+                    continue;
                 }
             }
 
