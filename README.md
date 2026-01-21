@@ -246,10 +246,29 @@ Access at http://localhost:5030
 
 ### Development Builds
 For latest experimental features:
+
+<!-- BEGIN_DEV_BUILD -->
+**[Development Build 'dev-91769020061' →](https://github.com/snapetech/slskdn/releases/tag/dev-91769020061)**
+
+Version: `0.24.1-dev-91769020061` | Branch: `experimental/whatAmIThinking`
+
 ```bash
-yay -S slskdn-dev          # Latest dev build
-sudo systemctl enable --now slskd
+# Arch Linux (AUR)
+yay -S slskdn-dev
+
+# Fedora/RHEL (COPR)
+sudo dnf copr enable slskdn/slskdn-dev
+sudo dnf install slskdn-dev
+
+# Ubuntu/Debian (PPA)
+sudo add-apt-repository ppa:keefshape/slskdn
+sudo apt update
+sudo apt install slskdn-dev
+
+# Docker
+docker pull ghcr.io/snapetech/slskdn:dev
 ```
+<!-- END_DEV_BUILD -->
 
 ### Homebrew (macOS/Linux)
 Install the pre-built binary:
