@@ -191,15 +191,15 @@ jobs:
           VERSION="${{ needs.build.outputs.dev_version }}"
           
           # Ensure we're on latest branch state
-          git fetch origin experimental/multi-source-swarm
-          git reset --hard origin/experimental/multi-source-swarm
+          git fetch origin experimental/whatAmIThinking
+          git reset --hard origin/experimental/whatAmIThinking
           
           # Update README.md dev build section
           sed -i '/<!-- BEGIN_DEV_BUILD -->/,/<!-- END_DEV_BUILD -->/c\
           <!-- BEGIN_DEV_BUILD -->\
           **[Development Build '"${TAG_NAME}"' →](https://github.com/snapetech/slskdn/releases/tag/'"${TAG_NAME}"')** \
           \
-          Version: `'"${VERSION}"'` | Branch: `experimental/multi-source-swarm` \
+          Version: `'"${VERSION}"'` | Branch: `experimental/whatAmIThinking` \
           \
           ```bash\
           # Arch Linux (AUR)\
@@ -236,7 +236,7 @@ jobs:
             
             # Retry push up to 3 times with exponential backoff to handle concurrent builds
             for i in 1 2 3; do
-              if git push origin HEAD:experimental/multi-source-swarm; then
+              if git push origin HEAD:experimental/whatAmIThinking; then
                 echo "✅ README.md updated and pushed"
                 break
               else
@@ -246,8 +246,8 @@ jobs:
                 fi
                 echo "Push failed, retrying in $((i*2)) seconds..."
                 sleep $((i*2))
-                git fetch origin experimental/multi-source-swarm
-                git reset --hard origin/experimental/multi-source-swarm
+                git fetch origin experimental/whatAmIThinking
+                git reset --hard origin/experimental/whatAmIThinking
                 # Re-apply changes if they were lost
                 if ! git diff --quiet README.md; then
                   git add README.md
@@ -319,7 +319,7 @@ jobs:
             ## Development Build
             
             **Version:** ${{ needs.build.outputs.version }}
-            **Branch:** experimental/multi-source-swarm
+            **Branch:** experimental/whatAmIThinking
             **Commit:** ${{ needs.build.outputs.short_sha }}
             **Built:** ${{ github.event.head_commit.timestamp }}
             
@@ -543,8 +543,8 @@ jobs:
       - name: Update flake.nix
         run: |
           # Ensure we're on latest branch state before modifying
-          git fetch origin experimental/multi-source-swarm
-          git reset --hard origin/experimental/multi-source-swarm
+          git fetch origin experimental/whatAmIThinking
+          git reset --hard origin/experimental/whatAmIThinking
           
           # Update devVersion
           sed -i "s/devVersion = \".*\";/devVersion = \"${{ needs.build.outputs.dev_version }}\";/" flake.nix
@@ -576,7 +576,7 @@ jobs:
             
             # Retry push up to 3 times with exponential backoff to handle concurrent builds
             for i in 1 2 3; do
-              if git push origin HEAD:experimental/multi-source-swarm; then
+              if git push origin HEAD:experimental/whatAmIThinking; then
                 echo "✅ flake.nix updated and pushed"
                 break
               else
@@ -586,8 +586,8 @@ jobs:
                 fi
                 echo "Push failed, retrying in $((i*2)) seconds..."
                 sleep $((i*2))
-                git fetch origin experimental/multi-source-swarm
-                git reset --hard origin/experimental/multi-source-swarm
+                git fetch origin experimental/whatAmIThinking
+                git reset --hard origin/experimental/whatAmIThinking
                 # Re-apply changes if they were lost
                 if ! git diff --quiet flake.nix; then
                   git add flake.nix
@@ -643,8 +643,8 @@ jobs:
         if: steps.sha.outputs.has_windows == 'true'
         run: |
           # Ensure we're on latest branch state before modifying
-          git fetch origin experimental/multi-source-swarm
-          git reset --hard origin/experimental/multi-source-swarm
+          git fetch origin experimental/whatAmIThinking
+          git reset --hard origin/experimental/whatAmIThinking
           
           # Convert version for Winget (dots only)
           $WINGET_VERSION = "${{ needs.build.outputs.dev_version }}" -replace '-','.'
@@ -669,7 +669,7 @@ jobs:
           if (-not (git diff --quiet packaging/winget/)) {
             git add packaging/winget/
             git commit -m "chore(winget): update dev manifests to ${{ needs.build.outputs.dev_version }} [skip ci]"
-            git push origin HEAD:experimental/multi-source-swarm
+            git push origin HEAD:experimental/whatAmIThinking
             Write-Host "✅ Winget manifests updated and pushed"
           } else {
             Write-Host "No changes to Winget manifests"
@@ -859,7 +859,7 @@ jobs:
           cat > debian/changelog << EOF
           slskdn-dev (${DEB_VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
 
-            * Development build from experimental/multi-source-swarm
+            * Development build from experimental/whatAmIThinking
             * Multi-source swarm downloads
             * DHT mesh network
             * BitTorrent DHT rendezvous
