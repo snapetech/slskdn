@@ -1,340 +1,486 @@
-# slskdn - Experimental Branch: Service Fabric & Multi-Domain Architecture
-
-**Branch**: `experimental/whatAmIThinking` → `experimental/multi-source-swarm`  
-**Status**: ✅ Working Dev Build - Ready for Release  
-**Last Updated**: January 20, 2026
+<p align="center">
+  <img src="https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png" width="100" height="100" alt="slskdN logo">
+</p>
+<h1 align="center">slskdN(OT)</h1>
+<p align="center"><strong>The batteries-included Soulseek web client</strong></p>
+<p align="center">
+  <a href="https://github.com/snapetech/slskdn/releases">Releases</a> •
+  <a href="https://github.com/snapetech/slskdn/issues">Issues</a> •
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="https://discord.gg/NRzj8xycQZ">Discord</a>
+</p>
+<p align="center">
+  <a href="https://github.com/snapetech/slskdn/actions/workflows/ci.yml"><img src="https://github.com/snapetech/slskdn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/snapetech/slskdn/releases"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version"></a>
+  <a href="https://ghcr.io/snapetech/slskdn"><img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker"></a>
+  <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR"></a>
+  <a href="https://copr.fedorainfracloud.org/coprs/slskdn/slskdn/"><img src="https://img.shields.io/badge/copr-slskdn%2Fslskdn-51A2DA?logo=fedora" alt="COPR"></a>
+  <a href="https://launchpad.net/~snapetech/+archive/ubuntu/slskdn"><img src="https://img.shields.io/badge/ppa-snapetech%2Fslskdn-E95420?logo=ubuntu" alt="PPA"></a>
+  <a href="https://github.com/snapetech/homebrew-slskdn"><img src="https://img.shields.io/badge/homebrew-slskdn-blue?logo=homebrew" alt="Homebrew"></a>
+  <a href="https://search.nixos.org/packages?channel=unstable&query=slskdn"><img src="https://img.shields.io/badge/nix-flake-5277C3?logo=nixos" alt="Nix"></a>
+  <a href="https://snapcraft.io/slskdn"><img src="https://img.shields.io/badge/snap-slskdn-E95420?logo=snapcraft" alt="Snap"></a>
+  <a href="https://community.chocolatey.org/packages/slskdn"><img src="https://img.shields.io/chocolatey/v/slskdn?label=choco" alt="Chocolatey"></a>
+  <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/s/snapetech/slskdn"><img src="https://img.shields.io/badge/winget-slskdn-00D1F1?logo=windows" alt="Winget"></a>
+  <img src="https://img.shields.io/badge/base-slskd%200.24.1-purple" alt="Based on slskd">
+  <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
+  <a href="https://discord.gg/NRzj8xycQZ"><img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://cursor.sh"><img src="https://img.shields.io/badge/Built%20with-Cursor-F7F7F7?logo=cursor&logoColor=black" alt="Built with Cursor"></a>
+</p>
 
 ---
 
-## What's Happening Here
+<small>
 
-This branch is building three major capabilities on top of slskdn:
+## What is slskdN?
+**slskdN(OT)** (as in, NOT slskd), is a richly feature-added fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
+> **Everything built-in. No scripts required.**
 
-1. **Service Fabric**: Generic service discovery and RPC over the mesh overlay
-2. **Multi-Domain VirtualSoulfind**: Content acquisition that's not limited to music
-3. **Proxy/Relay Primitives**: Application-specific fetch/relay without becoming an exit node
+If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN(OT) is for you. We also think that when someone takes the time to contribute working code, having a conversation about it is the least one can do.
 
-**Philosophy**: Security-first, paranoid-bastard-approved, zero compromises on quality or safety.
+## Features
+
+### 🔄 Auto-Replace Stuck Downloads
+Downloads get stuck. Users go offline. Transfers time out. Instead of manually searching for alternatives, slskdN does it automatically.
+- Toggle switch in Downloads header ("Auto-Replace")
+- Detects stuck downloads (timed out, errored, rejected, cancelled)
+- Searches network for alternatives, filters by extension and size (default 5%)
+- Ranks by size match, free slots, queue depth, speed
+- Auto-cancels stuck download and enqueues best alternative
+```bash
+--auto-replace-enabled  --auto-replace-max-size-diff-percent 5.0  --auto-replace-interval 60
+```
+
+### ⭐ Wishlist / Background Search
+Save searches that run automatically in the background. Never miss rare content again.
+- New **Wishlist** item in navigation sidebar
+- Add searches with custom filters and max results
+- Toggle auto-download, configurable interval, track matches and run history
+- Manual "Run Now" button for each search
+```bash
+--wishlist-enabled  --wishlist-interval 60  --wishlist-auto-download  --wishlist-max-results 100
+```
+
+### 📁 Multiple Download Destinations
+Configure multiple download folders and choose where files go.
+```yaml
+destinations:
+  folders:
+    - name: "Music"
+      path: "/downloads/music"
+      default: true
+    - name: "Audiobooks"
+      path: "/downloads/audiobooks"
+```
+
+### 🗑️ Clear All Searches
+One-click cleanup for your search history.
+- Red **"Clear All"** button in top-right of search list
+- Removes all completed searches, real-time UI update via SignalR
+
+### 🧠 Smart Search Result Ranking
+Intelligent sorting that considers multiple factors to show best sources first.
+- New default sort: **"⭐ Smart Ranking (Best Overall)"**
+- Combines: Upload speed (40pts), Queue length (30pts), Free slot (15pts), History (+/-15pts)
+- Purple badge shows smart score next to each username
+- Also adds **"File Count"** sort option
+
+### 📊 User Download History Badges
+See at a glance which users you've successfully downloaded from before.
+- 🟢 **Green** = 5+ successful downloads | 🔵 **Blue** = 1-4 successful | 🟠 **Orange** = More failures
+- Hover for exact counts
+
+### 🚫 Block Users from Search Results
+Hide specific users from your search results.
+- Click user icon (👤✕) to block, **"Hide Blocked Users (N)"** toggle
+- Block list stored in localStorage, persists across sessions
+
+### 🗑️ Delete Files on Disk
+Clean up unwanted downloads directly from the UI.
+- **"Remove and Delete File(s) from Disk"** button in Downloads
+- Deletes file AND removes from list, cleans empty parent directories
+
+### 💾 Save Search Filters
+Set your preferred search filters once and forget them.
+- Enter filters (e.g. `isLossless minbr:320`), click **Save** icon
+- Filters auto-load for all future searches
+
+### 🔍 Advanced Search Filters & Page Size
+Power user filtering with a visual interface.
+- **Visual Filter Editor**: Bitrate, Duration, File Size (Min/Max), CBR/VBR/Lossless toggles
+- **Page Size**: 25, 50, 100, 200, 500 results per page
+- Settings persist across sessions
+
+### 📝 User Notes & Ratings
+Keep track of users with persistent notes and color-coded ratings.
+- Add notes from Search Results or Browse views
+- Assign color ratings (Red, Green, etc.), mark as "High Priority"
+
+### 💬 Improved Chat Rooms
+Enhanced interaction in chat rooms.
+- Right-click users: **Browse Files**, **Private Chat**, **Add Notes**
+
+### 📂 Multi-Select Folder Downloads
+Download multiple folders at once with checkbox selection.
+- In Browse view, check folders and click "Download Selected"
+- Recursively collects all files in folders/subfolders
+
+### 📱 Ntfy & Pushover Notifications
+Get notified on your phone when important things happen.
+- Native support for **Ntfy** and **Pushover**
+- Notifications for Private Messages and Room Mentions
+
+### 📑 Tabbed Browsing
+Browse multiple users at once.
+- Open multiple users in separate tabs, state preserved per tab
+- Browse data cached per-user
+
+### 🧠 Unified Smart Source Ranking
+All automatic downloads use intelligent source selection based on your history.
+- Tracks success/failure rates per user, used by auto-replace and wishlist
+- API endpoint at `/api/v0/ranking`
+
+### 📱 PWA & Mobile Support
+Install slskdN as an app on your phone.
+- Add to Home Screen on iOS/Android, standalone mode
+
+---
+
+## 🧪 Experimental Features
+
+The following features are **implemented and available** in development builds (`experimental/whatAmIThinking` branch):
+
+### 🚀 Multi-Source Swarm Downloads
+Download files from multiple peers simultaneously for faster, more reliable transfers.
+- **Parallel chunk downloads** from multiple sources
+- **Automatic source discovery** finds all peers with matching files
+- **Intelligent stitching** assembles chunks seamlessly
+- **Failure resilience** continues from other sources if one fails
+- **SHA-256 verification** ensures content integrity
+- **Network-friendly** — distributes load instead of hammering single users
+
+📖 **[Full network impact analysis](docs/multipart-downloads.md)**
+
+### 🌐 DHT Peer Discovery & Mesh Networking
+Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
+- **DHT bootstrap** — 60+ bootstrap nodes for peer discovery
+- **Mesh overlay network** — TLS-encrypted P2P connections
+- **Hash database sync** — Epidemic protocol for content verification database
+- **Peer greeting service** — Auto-discovery and handshake
+- **NAT detection** — UPnP/NAT-PMP port mapping
+- **Live status bar** — Real-time DHT nodes, mesh peers, hash counts in UI footer
+
+### 🔒 Security Hardening
+Zero-trust security framework with defense-in-depth:
+- **NetworkGuard** — Rate limiting, connection caps per IP
+- **ViolationTracker** — Auto-escalating bans for bad actors
+- **PathGuard** — Directory traversal prevention (always enabled)
+- **ContentSafety** — Magic byte verification, quarantine suspicious files
+- **PeerReputation** — Behavioral scoring system
+- **CryptographicCommitment** — Pre-transfer hash commitment
+- **ProofOfStorage** — Random chunk challenges
+- **ByzantineConsensus** — 2/3+1 voting for multi-source verification
+- **Security dashboard** — Real-time monitoring in Web UI (System → Security tab)
+
+### 🎵 MusicBrainz Integration & Library Health
+Automated metadata enrichment and quality assurance.
+- **MusicBrainz Client** — Query recordings, releases, artists
+- **Album Targets** — MBID-based album tracking and completion monitoring
+- **Chromaprint Integration** — Audio fingerprinting for identification
+- **AcoustID API** — Fingerprint-to-MBID lookups
+- **Auto-Tagging Pipeline** — Automatic metadata tagging from MusicBrainz
+- **Library Health Scanner** — Detects transcodes, quality issues, missing tracks
+- **Remediation Service** — Auto-fix via automatic re-download of better quality
+
+### 📦 Pod System (Decentralized Communities)
+Topic-based micro-communities over the mesh overlay.
+- **Pod creation/management** — Private, Unlisted, or Listed visibility
+- **DHT-based pod discovery** — Find pods by name, focus, or tags
+- **Decentralized chat** — Pod messaging over mesh overlay
+- **Soulseek chat bridge** — Bridge legacy Soulseek rooms to pods
+- **Gold Star Club** — Auto-join pod for first 1000 users
+- **Pod APIs** — Full REST API for pod operations
+
+### 🎭 VirtualSoulfind & Shadow Index
+Decentralized content discovery without relying solely on the Soulseek network.
+- **Shadow Index** — Decentralized MBID→peers mapping
+- **Traffic Observer** — Observes search results and extracts MBIDs
+- **Privacy Controls** — Username pseudonymization, configurable retention
+- **Disaster Mode** — Mesh-only operation when Soulseek unavailable
+- **Scene System** — Topic-based micro-networks for niche content
+
+### 🔧 Service Fabric
+Generic service layer for mesh-based applications.
+- **Service descriptors** — Signed Ed25519 descriptors for service discovery
+- **Service directory** — DHT-based service registry
+- **Service router** — Routes requests to service providers
+- **HTTP gateway** — API key + CSRF authentication for services
+- **Service wrappers** — Pods, VirtualSoulfind, introspection wrapped as services
 
 ---
 
 ## Quick Start
+Getting started is simple—we don't believe in gatekeeping.
 
-### Read These First
+### Arch Linux (AUR)
+**Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
+```bash
+yay -S slskdn-bin          # Binary package (recommended)
+yay -S slskdn              # Or build from source
+sudo systemctl enable --now slskd
+```
+Access at http://localhost:5030
 
-1. **[FEATURES.md](FEATURES.md)** - Complete feature list and configuration examples
-2. **[HOW-IT-WORKS.md](HOW-IT-WORKS.md)** - Technical architecture and synergies (no hype, just engineering)
-3. **[SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md)** - **MANDATORY** security requirements for all work
+### Development Builds
+For latest experimental features:
+```bash
+yay -S slskdn-dev          # Latest dev build
+sudo systemctl enable --now slskd
+```
 
-### Implementation Status
+### Homebrew (macOS/Linux)
+Install the pre-built binary:
+```bash
+brew tap snapetech/slskdn
+brew install slskdn
+```
 
-- ✅ **Service Fabric** (T-SF01-04, H-01): SHIPPED
-  - Service descriptors, directory, router, client
-  - HTTP gateway with API key + CSRF authentication
-  - Service wrappers for pods, VirtualSoulfind, introspection
-  - 58 tests passing, build green
+### Nix (Flake)
+```bash
+nix profile install github:snapetech/slskdn
+```
 
-- ✅ **Security Hardening** (T-SF05): COMPLETE
-  - Security audit complete
-  - HIGH priority fixes implemented (configurable rate limits, global quotas)
-  - Path traversal protection fixed and tested
-  - Integration tests added
-  - All security features tested and documented
-  - Security middleware fully functional and tested
-  - All security features verified working in production
+### Snap (Linux)
+```bash
+sudo snap install slskdn
+```
 
-- 📋 **Multi-Domain** (T-VC01-04): DOCUMENTED, ready to implement
-- 📋 **VirtualSoulfind v2** (V2-P1-P6): DOCUMENTED, ready to implement
-- 📋 **Proxy/Relay** (T-PR01-05): DOCUMENTED, ready to implement
+### Windows (Winget)
+```powershell
+winget install snapetech.slskdn
+```
 
----
+### Windows (Chocolatey)
+```powershell
+choco install slskdn
+```
 
-## Documentation Index
+### With Docker
+```bash
+docker run -d \
+  -p 5030:5030 -p 50300:50300 \
+  -e SLSKD_SLSK_USERNAME=your_username \
+  -e SLSKD_SLSK_PASSWORD=your_password \
+  -v /path/to/downloads:/downloads \
+  -v /path/to/app:/app \
+  --name slskdN \
+  ghcr.io/snapetech/slskdn:latest
+```
 
-### Architecture & Features
+### With Docker Compose
+```yaml
+version: "3"
+services:
+  slskdN:
+    image: ghcr.io/snapetech/slskdn:latest
+    container_name: slskdN
+    ports:
+      - "5030:5030"
+      - "50300:50300"
+    environment:
+      - SLSKD_SLSK_USERNAME=your_username
+      - SLSKD_SLSK_PASSWORD=your_password
+    volumes:
+      - ./app:/app
+      - ./downloads:/downloads
+      - ./music:/music:ro
+    restart: unless-stopped
+```
 
-**[FEATURES.md](FEATURES.md)** (500 lines)
-- Complete feature breakdown organized by capability
-- Configuration examples with secure defaults
-- Use cases and performance characteristics
-- Roadmap with implementation phases
-
-**[HOW-IT-WORKS.md](HOW-IT-WORKS.md)** (531 lines)
-- Technical explainer (no hype, just engineering)
-- How the three systems work independently
-- How they synergize together
-- Security model (defense in depth)
-- Performance model (caching, streaming, limits)
-- Concrete use cases with flow diagrams
-- What we're building vs what we're NOT building
-
-**[CRAZY_FORK_VISION.md](CRAZY_FORK_VISION.md)** (572 lines)
-- The vision: Why this is "crazy" (and why it works)
-- Implementation status and metrics
-- How we went MAXIMUM PARANOID in one session
-- Weaponized perfectionism explained
-
-### Security & Guidelines
-
-**[SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md)** (988 lines) ⚠️ **MANDATORY**
-- **READ THIS BEFORE WRITING ANY CODE**
-- Global hardening principles (default deny, least privilege, no generic proxy)
-- VirtualSoulfind & multi-domain security requirements
-- Proxy/relay security requirements
-- Work budget integration patterns
-- Logging & metrics hygiene (no PII, low cardinality)
-- Test & review requirements
-- Security sanity checklist (8 mandatory checks before task completion)
-
-**[CURSOR-WARNINGS.md](CURSOR-WARNINGS.md)** (892 lines) ⚠️ **CRITICAL**
-- LLM implementation risk assessment per task
-- Risk ranking: 🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low
-- Predictable failure modes with code examples
-- Strict prompt requirements for dangerous tasks
-- Test requirements and human review checklists
-- Recommended implementation order
-
-**[T-SF05-AUDIT.md](T-SF05-AUDIT.md)** (366 lines)
-- Security audit results for T-SF01-04
-- HIGH/MEDIUM/LOW priority findings
-- Concrete recommendations with code examples
-- Integration points to review
-
-### Task Breakdowns
-
-**[SERVICE_FABRIC_TASKS.md](SERVICE_FABRIC_TASKS.md)**
-- T-SF01 through T-SF07: Complete service fabric implementation
-- H-01 through H-10: Security hardening tasks
-- Detailed scope, success criteria, anti-slop checklists per task
-- Security gates that must pass before deployment
-
-**[PROXY-RELAY-TASKS.md](PROXY-RELAY-TASKS.md)** (972 lines)
-- T-PR01 through T-PR04: Proxy/relay primitives
-- H-PR05: Hardening and policy
-- Why this is NOT "Tor but worse"
-- Application-specific design (domains, content IDs, service names)
-- Why these primitives don't create liabilities
-
-**[VIRTUALSOULFIND-V2-TASKS.md](VIRTUALSOULFIND-V2-TASKS.md)**
-- V2-P1 through V2-P6: VirtualSoulfind v2 implementation
-- 6 phases, 100+ tasks
-- Integration with H-11 through H-15 hardening tasks
-
-**[VIRTUALSOULFIND-CONTENT-DOMAINS.md](VIRTUALSOULFIND-CONTENT-DOMAINS.md)**
-- T-VC01 through T-VC04: Multi-domain refactoring
-- ContentDomain abstraction (Music, GenericFile, future domains)
-- Domain-aware planner and backends
-- **Soulseek gating to Music domain only (compile-time enforced)**
-
-**[VIRTUALSOULFIND-V2-HARDENING.md](VIRTUALSOULFIND-V2-HARDENING.md)**
-- H-11 through H-15: Implementation-ready hardening briefs
-- Identity separation, intent queue security, backend safety
-- Planner/resolver safety, service/gateway exposure
-- Paste-into-Cursor format
-
-**[HARDENING-TASKS.md](HARDENING-TASKS.md)**
-- H-01 through H-10: General security hardening
-- Categorized by risk (Critical, High, Medium, Low)
-- Concrete action items per task
-
-**[TESTING-STRATEGY.md](TESTING-STRATEGY.md)**
-- T-TEST-01 through T-TEST-07: Comprehensive testing strategy
-- Network condition simulation
-- Load patterns (low to abusive)
-- Abuse scenarios and chaos engineering
-- Test harness architecture
-
-**[COMPLETE-SUMMARY.md](COMPLETE-SUMMARY.md)**
-- High-level summary of all work accomplished
-- Documentation scope, security gates status
-- Implementation roadmap overview
+### From Source
+```bash
+git clone https://github.com/snapetech/slskdn.git && cd slskdn
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
+export PATH="$HOME/.dotnet:$PATH"
+dotnet run --project src/slskd/slskd.csproj
+```
 
 ---
 
-## Key Design Decisions
+## Comparison with slskd
 
-### 1. Service Fabric
-**Problem**: Every feature required custom protocols and DHT keys.  
-**Solution**: Generic service layer with signed descriptors, RPC, and HTTP gateway.  
-**Result**: New features = new `IMeshService` implementations. Discovery, routing, security handled by fabric.
+| Feature | slskd | slskdN |
+|---------|:-----:|:------:|
+| Core Soulseek functionality | ✅ | ✅ |
+| Web UI & REST API | ✅ | ✅ |
+| Auto-replace stuck downloads | ❌ | ✅ |
+| Wishlist/background search | ❌ | ✅ |
+| Multiple download destinations | ❌ | ✅ |
+| Clear all searches | ❌ | ✅ |
+| Smart result ranking | ❌ | ✅ |
+| User download history badges | ❌ | ✅ |
+| Block users from search | ❌ | ✅ |
+| Delete files on disk | ❌ | ✅ |
+| Save default filters | ❌ | ✅ |
+| Multi-select folder downloads | ❌ | ✅ |
+| Ntfy/Pushover notifications | ❌ | ✅ |
+| Tabbed browsing | ❌ | ✅ |
+| Smart source ranking | ❌ | ✅ |
+| User notes & ratings | ❌ | ✅ |
+| PWA support | ❌ | ✅ |
+| **Multi-source downloads** | ❌ | ✅ 🧪 |
+| **DHT mesh networking** | ❌ | ✅ 🧪 |
+| **Security hardening** | ❌ | ✅ 🧪 |
+| **MusicBrainz integration** | ❌ | ✅ 🧪 |
+| **Library health scanner** | ❌ | ✅ 🧪 |
+| **Pod communities** | ❌ | ✅ 🧪 |
+| **VirtualSoulfind v2** | ❌ | ✅ 🧪 |
+| **Service fabric** | ❌ | ✅ 🧪 |
+| Open to community feedback | 🔒 | ✅ |
 
-### 2. Multi-Domain Architecture
-**Problem**: VirtualSoulfind was music-only; adding new content types would require duplicating everything.  
-**Solution**: Content domain abstraction with domain-specific providers.  
-**Result**: Music, GenericFile, (future: Movies/TV/Books) with appropriate matching logic per domain.
+🧪 = Experimental feature (available in dev builds)
 
-### 3. Soulseek Safety
-**Problem**: How to add "turbo" features without abusing Soulseek?  
-**Solution**: Four-layer enforcement:
-1. Domain gating (Soulseek backend only accepts `ContentDomain.Music`)
-2. Work budget (all operations consume units)
-3. Backend caps (searches/browses per minute)
-4. Plan validation (checks before execution)
+---
 
-**Result**: Soulseek abuse is architecturally impossible, not just difficult.
+## Configuration
 
-### 4. Proxy/Relay Primitives
-**Problem**: Need metadata caching, content CDN, NAT traversal.  
-**Solution**: Application-specific primitives (NOT generic SOCKS/proxy):
-- Catalogue fetch: Domain allowlist only
-- Content relay: Content ID mapping only
-- Trusted relay: Peer allowlist + target service allowlist only
+slskdN uses the same config format as slskd, with additional options:
 
-**Result**: Solves real problems without liability or abuse risk.
+```yaml
+soulseek:
+  username: your_username
+  password: your_password
+  listen_port: 50300
 
-### 5. Security Model
-**Philosophy**: Paranoid bastard mode - security baked in, not bolted on.
-- Default deny everywhere
-- Work budget universal
-- No PII in logs/metrics
-- SSRF protection built-in
-- Rate limiting at all layers
-- Input validation universal
+directories:
+  downloads: /downloads
+  incomplete: /downloads/incomplete
 
-**Result**: Architecture where abuse is **impossible**, not just **difficult**.
+shares:
+  directories:
+    - /music
+
+web:
+  port: 5030
+  authentication:
+    username: admin
+    password: change_me
+
+# slskdN-specific features
+global:
+  download:
+    auto_replace_stuck: true
+    auto_replace_threshold: 5.0
+    auto_replace_interval: 60
+  wishlist:
+    enabled: true
+    interval: 60
+    auto_download: false
+
+destinations:
+  folders:
+    - name: "Music"
+      path: "/downloads/music"
+      default: true
+    - name: "Audiobooks"
+      path: "/downloads/audiobooks"
+
+# Experimental features (dev builds only)
+security:
+  enabled: true
+  profile: Standard  # Minimal, Standard, Maximum, or Custom
+  
+mesh:
+  enabled: true
+  dht:
+    bootstrap_nodes: 60
+  overlay:
+    udp_port: 50301
+    quic_port: 50302
+```
+
+Detailed documentation for configuration options can be found [here](https://github.com/slskd/slskd/blob/master/docs/config.md), and an example of the YAML configuration file can be reviewed [here](https://github.com/slskd/slskd/blob/master/config/slskd.example.yml).
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Features Overview](FEATURES.md) | Complete feature list and configuration |
+| [How It Works](HOW-IT-WORKS.md) | Technical architecture and design |
+| [Multi-Source Downloads](docs/multipart-downloads.md) | Network impact analysis |
+| [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) | Peer discovery architecture |
+| [Security Specs](docs/SECURITY_IMPLEMENTATION_SPECS.md) | Security feature details |
+| [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Development status |
+| [Configuration](docs/config.md) | All configuration options |
+| [Building](docs/build.md) | Build instructions |
+| [Docker](docs/docker.md) | Container deployment |
+
+---
+
+## Experimental Feature Status
+
+Features in the `experimental/whatAmIThinking` branch:
+
+| Feature Category | Status | Notes |
+|------------------|--------|-------|
+| **Auto-Replace** | ✅ Stable | Production-ready |
+| **Wishlist** | ✅ Stable | Production-ready |
+| **Smart Ranking** | ✅ Stable | Production-ready |
+| **User Notes** | ✅ Stable | Production-ready |
+| **UI Enhancements** | ✅ Stable | Status bars, network monitoring |
+| **Multi-Source Downloads** | ✅ Stable | Concurrency limits, network-friendly |
+| **DHT Peer Discovery** | ✅ Stable | Fully functional mesh overlay |
+| **Security Hardening** | ✅ Stable | Comprehensive framework, tested |
+| **MusicBrainz Integration** | ✅ Stable | Fingerprinting, auto-tagging |
+| **Library Health Scanner** | ✅ Stable | Quality detection and remediation |
+| **PodCore** | 🟡 Experimental | Functional, API may evolve |
+| **VirtualSoulfind v2** | 🟡 Experimental | Shadow index, disaster mode |
+| **Service Fabric** | 🟡 Experimental | Generic service layer |
+
+For the stable upstream client, see [slskd/slskd](https://github.com/slskd/slskd).
+
+---
+
+## Reverse Proxy
+slskdN may require extra configuration when running it behind a reverse proxy. Refer [here](https://github.com/slskd/slskd/blob/master/docs/reverse_proxy.md) for a short guide.
 
 ---
 
 ## Contributing
+We welcome contributions from *everyone*—first-timers and veterans alike. No prior commit history required.
 
-### Before You Start
+1. **Pick an issue** from our [Issue Tracker](https://github.com/snapetech/slskdn/issues)
+2. **Fork the repo** and create a feature branch
+3. **Submit a PR** with your changes
 
-1. **Read [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md)** - MANDATORY, non-negotiable
-2. **Check [CURSOR-WARNINGS.md](CURSOR-WARNINGS.md)** - Risk assessment before implementing
-3. **Review task brief** - Each task has scope, success criteria, anti-slop checklist
+```bash
+cd src/slskd && dotnet watch run     # Backend
+cd src/web && npm install && npm start  # Frontend
+```
 
-### Security-First Development
-
-Every contribution MUST:
-- Follow security guidelines (default deny, work budget, no PII)
-- Pass security sanity checklist (8 mandatory checks)
-- Include comprehensive tests (unit + integration + abuse scenarios)
-- Have no linter errors
-
-**If ANY security checkbox is unchecked, the contribution is NOT complete.**
-
-### Code Review Requirements
-
-Reviewers MUST verify:
-- [ ] Security guidelines followed
-- [ ] Config defaults are safe
-- [ ] No generic proxy behavior introduced
-- [ ] Work budget integrated
-- [ ] Logging/metrics privacy-safe
-- [ ] Tests cover security scenarios
-- [ ] Documentation updated
-
-### Anti-Slop Policy
-
-We reject:
-- ❌ Random helper scripts
-- ❌ Dead/commented code
-- ❌ TODO comments without issues
-- ❌ Magic numbers (use config)
-- ❌ Copy-paste without refactoring
-- ❌ "Temporary" workarounds
+For experimental features, see:
+- [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md) - Security requirements
+- [CURSOR-WARNINGS.md](CURSOR-WARNINGS.md) - LLM implementation risk assessment
+- [SERVICE_FABRIC_TASKS.md](SERVICE_FABRIC_TASKS.md) - Task breakdowns
 
 ---
 
-## Current Metrics
-
-**Code**:
-- Service Fabric: ~3000 lines
-- Tests: 58 passing
-- Build: Green ✅
-- Linter: Clean (no new errors)
-
-**Documentation**:
-- 7 comprehensive documents
-- 4821 lines of detailed specs
-- 230+ concrete tasks defined
-- 27 hardening requirements
-- 3 security gates
-
-**Quality**:
-- Compromises: **ZERO**
-- Technical debt: **ZERO**
-- Footguns: **ZERO** (prevented by paranoid design)
-- Paranoia level: **MAXIMUM**
+## Upstream Contributions
+Features that prove stable may be submitted as PRs to upstream slskd. Our auto-replace feature was first: [slskd PR #1553](https://github.com/slskd/slskd/pull/1553). We aim to be a **proving ground**, not a permanent fork. We believe good software comes from open dialogue—not just with established contributors, but with everyone who has something to offer. Our door is always open.
 
 ---
 
-## What We're Building
+## Versioning
+slskdN follows slskd's version numbers with a suffix: `0.24.1-slskdN.1` = First slskdN release based on slskd 0.24.1
 
-✅ **Application-specific service fabric** (generic service layer)  
-✅ **Content-domain-aware acquisition** (Music, GenericFile, future domains)  
-✅ **Whitelisted metadata fetching** (MusicBrainz, cover art)  
-✅ **Verified content CDN over mesh** (quality-filtered distribution)  
-✅ **Personal infrastructure NAT traversal** (your nodes only)
-
-## What We're NOT Building
-
-❌ Generic anonymization network (not Tor)  
-❌ Exit node for arbitrary traffic (not a proxy service)  
-❌ Cryptocurrency/blockchain features (out of scope)
-
----
-
-## FAQ
-
-### Is this production-ready?
-**No.** This is experimental work. Critical security gates (H-02, H-08) must pass before deployment.
-
-### Why so much documentation?
-Because we refuse to compromise on quality. Comprehensive docs prevent bugs, guide implementation, and ensure security requirements are met.
-
-### Why "paranoid bastard mode"?
-Because security isn't optional. Default deny, fail secure, no PII, work budget everywhere, SSRF protection universal. If it can be abused, it's architecturally prevented.
-
-### Can I use this with existing slskdn?
-Not yet. This branch is for development. Features will be merged to main when ready (after all gates pass).
-
-### How do I help?
-Read [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md), pick a task, check [CURSOR-WARNINGS.md](CURSOR-WARNINGS.md) for risk level, implement with tests, submit PR.
-
----
-
-## Acknowledgments
-
-**slskdn** is built on the excellent work of others:
-
-### Upstream Project
-
-This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdillingham and contributors.
-
-- **slskd** is a modern, headless Soulseek client with a web interface and REST API
-- Licensed under AGPL-3.0
-- We maintain the same license and contribute our changes back to the community
-- Philosophy: slskd focuses on a lean core with API-driven extensibility; slskdn focuses on batteries-included features
-
-**Why we forked**: To build experimental mesh networking, decentralized discovery, and advanced automation features that go beyond slskd's core mission. We deeply respect the upstream project and its maintainer's design philosophy.
-
-### Development Dependencies
-
-- **[Soulfind](https://github.com/soulfind-dev/soulfind)** - Open-source Soulseek server implementation
-  - Used as a test fixture for integration testing (development only)
-  - Not a runtime dependency
-  - Helps us verify protocol compatibility and disaster mode behavior
-  - See `docs/dev/soulfind-integration-notes.md` for details
-
-### Protocol & Network
-
-- **Soulseek Protocol** - The P2P community service protocol created by Nir Arbel
-  - We implement a compatible client
-  - No affiliation with the official Soulseek network or its operators
-
-### Metadata & Discovery
-
-- **[MusicBrainz](https://musicbrainz.org/)** - Open music encyclopedia for metadata enrichment
-- **[Cover Art Archive](https://coverartarchive.org/)** - Album art for verified releases
+Development builds use epoch-based versioning: `0.24.1-dev-91769014133` for proper sorting.
 
 ---
 
 ## License
-
-This project is licensed under **AGPL-3.0**, the same license as the upstream slskd project.
-
-See [LICENSE](LICENSE) file for full license text.
+[GNU Affero General Public License v3.0](LICENSE), same as slskd.
 
 **Key requirements**:
 - Source code must be made available when running the software over a network
@@ -343,20 +489,67 @@ See [LICENSE](LICENSE) file for full license text.
 
 ---
 
-## Status
+## Acknowledgments
 
-**Version**: 0.24.1-dev (experimental)  
-**Branch**: experimental/whatAmIThinking → experimental/multi-source-swarm  
-**Production Ready**: Dev build ready for testing  
-**Status**: ✅ All compilation fixes complete, all security features working, frontend functional
+**slskdn** is built on the excellent work of others:
 
-**Last Commit**: `chore: commit working build state - verified running backend and frontend`  
-**Date**: January 20, 2026
+### Upstream Project
+This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdillingham and contributors.
+- **slskd** is a modern, headless Soulseek client with a web interface and REST API
+- Licensed under AGPL-3.0
+- We maintain the same license and contribute our changes back to the community
+- Philosophy: slskd focuses on a lean core with API-driven extensibility; slskdn focuses on batteries-included features
+
+**Why we forked**: To build experimental features (mesh networking, multi-source downloads, advanced automation) that go beyond slskd's core mission. We deeply respect the upstream project and its maintainer's design philosophy.
+
+### Protocol & Network
+- **Soulseek Protocol** - The P2P file-sharing protocol created by Nir Arbel
+- **[Soulseek.NET](https://github.com/jpdillingham/Soulseek.NET)** - The excellent .NET Soulseek library
+- The Soulseek community
+
+### Metadata & Discovery
+- **[MusicBrainz](https://musicbrainz.org/)** - Open music encyclopedia for metadata enrichment
+- **[Cover Art Archive](https://coverartarchive.org/)** - Album art for verified releases
+- **[AcoustID](https://acoustid.org/)** - Audio fingerprinting service
 
 ---
 
-*slskdn - Soulseek with mesh networking, done right.*
+## Use of AI in This Project
 
-*No hype. Just engineering. Zero compromises.*
+This project was built in partnership with tools, not replacements for people. Throughout its development, we made deliberate use of AI-powered assistants—most notably [Cursor](https://cursor.sh) and several leading large language models—as part of the day-to-day engineering workflow.
 
-*The paranoid bastard's way.*
+**These systems helped in three main ways:**
+
+| Area | How AI Assisted |
+|------|-----------------|
+| **Research & Exploration** | Quickly surfacing prior art, sketching out alternative designs, and pressure-testing edge cases that would have taken much longer to explore alone. |
+| **Automation & Busywork** | Generating initial scaffolding, refactoring repetitive patterns, and handling mechanical changes that are important but rarely insightful. |
+| **Thinking Partner** | Serving as a second pair of eyes on tricky problems, helping articulate trade-offs, and translating rough ideas into shapes that could be implemented and tested. |
+
+**What these tools did not do is replace responsibility.** Every behavior that matters—protocol decisions, data flows, failure modes, and user-visible effects—was reviewed, edited, or rewritten by a human before it landed in this repository. The models accelerated the work and helped make the project possible at this scope, but accountability for the result sits squarely with the maintainer.
+
+If you're reading this code, you should assume that:
+- ✅ AI tools were used as collaborators in research, drafting, and mechanical edits
+- ✅ The final form of the project reflects human judgment, testing, and ongoing maintenance
+
+> **In other words: this is an AI-assisted project, not an AI-generated one.**
+
+---
+
+## 📈 Development Statistics
+
+**Based on slskd 0.24.1** with extensive enhancements:
+
+- **Commits ahead**: 4,473+ commits
+- **New systems**: 7 major subsystems (Mesh, Swarm, Security, Pods, MediaCore, VirtualSoulfind, Service Fabric)
+- **New features**: 127+ individual features
+- **Test coverage**: 543 tests passing (92% success rate)
+- **Documentation**: 100+ markdown files
+- **Files changed**: 450+ files
+
+---
+
+</small>
+
+<p align="center"><strong>slskdN</strong> — For users who'd rather download music than learn Python.</p>
+<p align="center"><em>"slop on top"</em> 🍦🤖✨</p>
