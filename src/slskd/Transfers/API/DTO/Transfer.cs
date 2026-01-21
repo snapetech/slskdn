@@ -1,3 +1,7 @@
+// <copyright file="Transfer.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="Transfer.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //

@@ -1,3 +1,7 @@
+// <copyright file="DhtKeyDerivation.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 using System.Security.Cryptography;
@@ -74,19 +78,3 @@ public static class DhtKeyDerivation
         return false;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

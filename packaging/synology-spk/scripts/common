@@ -1,0 +1,153 @@
+#!/bin/sh
+
+# Common functions for slskdN Synology package scripts
+
+# Package constants
+PACKAGE_NAME="slskdn"
+PACKAGE_USER="slskdn"
+PACKAGE_GROUP="slskdn"
+SHARE_PATH="/var/packages/$PACKAGE_NAME/shares/$PACKAGE_NAME"
+TARGET_PATH="/var/packages/$PACKAGE_NAME/target"
+
+# Logging functions
+log_step() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> /var/log/packages/${PACKAGE_NAME}.log
+    echo "$1"
+}
+
+log_error() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> /var/log/packages/${PACKAGE_NAME}.log
+    echo "ERROR: $1" >&2
+}
+
+# Directory management
+create_directory() {
+    local dir_path="$1"
+    local dir_user="$2"
+    local dir_group="$3"
+
+    if [ ! -d "$dir_path" ]; then
+        mkdir -p "$dir_path"
+        chown "$dir_user:$dir_group" "$dir_path"
+        log_step "Created directory: $dir_path"
+    else
+        log_step "Directory already exists: $dir_path"
+    fi
+}
+
+# Port checking
+check_port() {
+    local port="$1"
+    local service="$2"
+
+    # Check if port is in use
+    if netstat -tln 2>/dev/null | grep -q ":$port "; then
+        log_error "Port $port is already in use (required for $service)"
+        return 1
+    fi
+
+    log_step "Port $port is available for $service"
+    return 0
+}
+
+# Service management
+start_service() {
+    if [ -f "/usr/local/etc/rc.d/${PACKAGE_NAME}.sh" ]; then
+        "/usr/local/etc/rc.d/${PACKAGE_NAME}.sh" start
+    fi
+}
+
+stop_service() {
+    if [ -f "/usr/local/etc/rc.d/${PACKAGE_NAME}.sh" ]; then
+        "/usr/local/etc/rc.d/${PACKAGE_NAME}.sh" stop
+    fi
+}
+
+# Backup management
+backup_config() {
+    local backup_dir="/var/packages/${PACKAGE_NAME}/backup"
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+
+    if [ -d "$SHARE_PATH/config" ]; then
+        mkdir -p "$backup_dir"
+        cp -r "$SHARE_PATH/config" "$backup_dir/config_$timestamp"
+        log_step "Configuration backed up to: $backup_dir/config_$timestamp"
+    fi
+}
+
+restore_config() {
+    local backup_dir="/var/packages/${PACKAGE_NAME}/backup"
+    local latest_backup=$(ls -t "$backup_dir"/config_* 2>/dev/null | head -1)
+
+    if [ -n "$latest_backup" ] && [ -d "$latest_backup" ]; then
+        cp -r "$latest_backup"/* "$SHARE_PATH/config/" 2>/dev/null || true
+        log_step "Configuration restored from: $latest_backup"
+    fi
+}
+
+# DSM integration
+register_dsm_app() {
+    # Register with DSM application portal
+    if [ -f "/usr/syno/synoman/webman/3rdparty/${PACKAGE_NAME}" ]; then
+        # Application is already registered
+        return 0
+    fi
+
+    # Create application entry for DSM
+    mkdir -p "/usr/syno/synoman/webman/3rdparty"
+
+    cat > "/usr/syno/synoman/webman/3rdparty/${PACKAGE_NAME}" << EOF
+{
+    "title": "slskdN",
+    "desc": "Soulseek Network Client - Next Generation",
+    "icon": "images/${PACKAGE_NAME}-{0}.png",
+    "type": "url",
+    "url": "/webman/3rdparty/${PACKAGE_NAME}/",
+    "urlOpenType": "openUrl",
+    "openWith": "iframe",
+    "adminOnly": false,
+    "allUsers": true
+}
+EOF
+
+    log_step "Registered application with DSM"
+}
+
+unregister_dsm_app() {
+    # Remove DSM application registration
+    if [ -f "/usr/syno/synoman/webman/3rdparty/${PACKAGE_NAME}" ]; then
+        rm -f "/usr/syno/synoman/webman/3rdparty/${PACKAGE_NAME}"
+        log_step "Unregistered application from DSM"
+    fi
+}
+
+# Firewall management
+setup_firewall() {
+    if synofirewall --status >/dev/null 2>&1; then
+        log_step "Setting up firewall rules..."
+
+        # Allow web UI port
+        synofirewall --add-rule packages "$PACKAGE_NAME" tcp 5030 5030 2>/dev/null || true
+
+        # Allow Soulseek port
+        synofirewall --add-rule packages "$PACKAGE_NAME" tcp 2234 2234 2>/dev/null || true
+
+        log_step "Firewall rules configured"
+    else
+        log_step "Firewall not enabled, skipping rule setup"
+    fi
+}
+
+cleanup_firewall() {
+    if synofirewall --status >/dev/null 2>&1; then
+        log_step "Removing firewall rules..."
+
+        # Remove rules
+        synofirewall --delete-rule packages "$PACKAGE_NAME" tcp 5030 5030 2>/dev/null || true
+        synofirewall --delete-rule packages "$PACKAGE_NAME" tcp 2234 2234 2>/dev/null || true
+
+        log_step "Firewall rules removed"
+    fi
+}
+
+

@@ -106,7 +106,18 @@ namespace slskd.Shares
         /// <param name="touchedAt">The timestamp at which the file was last modified, according to the host OS.</param>
         /// <param name="file">The Soulseek.File instance representing the file.</param>
         /// <param name="timestamp">The timestamp to assign to the record.</param>
-        void InsertFile(string maskedFilename, string originalFilename, DateTime touchedAt, File file, long timestamp);
+        /// <param name="isBlocked">Whether the file is blocked by MCP.</param>
+        /// <param name="isQuarantined">Whether the file is quarantined by MCP.</param>
+        /// <param name="moderationReason">The moderation reason, if any.</param>
+        void InsertFile(
+            string maskedFilename,
+            string originalFilename,
+            DateTime touchedAt,
+            File file,
+            long timestamp,
+            bool isBlocked = false,
+            bool isQuarantined = false,
+            string moderationReason = null);
 
         /// <summary>
         ///     Inserts a scan record at the specified <paramref name="timestamp"/>.
@@ -194,5 +205,46 @@ namespace slskd.Shares
         ///     Reclaims unused space.
         /// </summary>
         void Vacuum();
+
+        // T-MCP03: Content item management for VirtualSoulfind advertisable gating
+
+        /// <summary>
+        ///     Inserts or updates a content item mapping.
+        /// </summary>
+        /// <param name="contentId">The unique content identifier.</param>
+        /// <param name="domain">The content domain (Music, GenericFile, etc.).</param>
+        /// <param name="workId">The optional parent work identifier.</param>
+        /// <param name="maskedFilename">The file this content maps to.</param>
+        /// <param name="isAdvertisable">Whether this content can be advertised.</param>
+        /// <param name="moderationReason">The moderation reason, if any.</param>
+        /// <param name="checkedAt">The timestamp when this was checked.</param>
+        void UpsertContentItem(
+            string contentId,
+            string domain,
+            string workId,
+            string maskedFilename,
+            bool isAdvertisable,
+            string moderationReason,
+            long checkedAt);
+
+        /// <summary>
+        ///     Finds a content item by content ID.
+        /// </summary>
+        /// <param name="contentId">The content identifier.</param>
+        /// <returns>The content item info, or null if not found.</returns>
+        (string Domain, string WorkId, string MaskedFilename, bool IsAdvertisable, string ModerationReason, long CheckedAt)? FindContentItem(string contentId);
+
+        /// <summary>
+        ///     Lists all content items associated with a file.
+        /// </summary>
+        /// <param name="maskedFilename">The file to look up.</param>
+        /// <returns>The list of content items for this file.</returns>
+        IEnumerable<(string ContentId, string Domain, string WorkId, bool IsAdvertisable, string ModerationReason)> ListContentItemsForFile(string maskedFilename);
+
+        /// <summary>
+        ///     Counts advertisable content items.
+        /// </summary>
+        /// <returns>The number of advertisable items.</returns>
+        int CountAdvertisableItems();
     }
 }

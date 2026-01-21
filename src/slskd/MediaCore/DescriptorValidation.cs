@@ -1,3 +1,7 @@
+// <copyright file="DescriptorValidation.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System.Security.Cryptography;
 
 namespace slskd.MediaCore;
@@ -65,19 +69,3 @@ public class DescriptorValidator : IDescriptorValidator
         return System.Text.Encoding.UTF8.GetByteCount(payload);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,7 @@
+// <copyright file="PodsController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Native;
 
 using Microsoft.AspNetCore.Authorization;
@@ -75,22 +79,130 @@ public class PodsController : ControllerBase
     /// Creates a new pod.
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> CreatePod([FromBody] Pod pod, CancellationToken ct = default)
+    public async Task<IActionResult> CreatePod([FromBody] CreatePodRequest request, CancellationToken ct = default)
     {
         try
         {
-            if (pod == null)
+            if (request == null || request.Pod == null)
             {
                 return BadRequest(new { error = "Pod data is required" });
             }
 
-            var created = await podService.CreateAsync(pod, ct);
+            if (string.IsNullOrWhiteSpace(request.RequestingPeerId))
+            {
+                return BadRequest(new { error = "RequestingPeerId is required" });
+            }
+
+            // Validate that the requesting peer will be the first member (and owner)
+            if (request.Pod.Capabilities?.Contains(PodCapability.PrivateServiceGateway) == true)
+            {
+                if (request.Pod.PrivateServicePolicy?.GatewayPeerId != request.RequestingPeerId)
+                {
+                    return BadRequest(new { error = "When creating a VPN pod, RequestingPeerId must match GatewayPeerId" });
+                }
+            }
+
+            var created = await podService.CreateAsync(request.Pod, ct);
+
+            // Add the creator as the first member (owner)
+            var firstMember = new PodMember
+            {
+                PeerId = request.RequestingPeerId,
+                Role = "owner",
+                IsBanned = false
+            };
+            await podService.JoinAsync(created.PodId, firstMember, ct);
+
             return CreatedAtAction(nameof(GetPod), new { podId = created.PodId }, created);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create pod");
             return StatusCode(500, new { error = "Failed to create pod" });
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing pod.
+    /// </summary>
+    [HttpPut("{podId}")]
+    public async Task<IActionResult> UpdatePod(
+        string podId,
+        [FromBody] UpdatePodRequest request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null || request.Pod == null)
+            {
+                return BadRequest(new { error = "Pod data is required" });
+            }
+
+            if (request.Pod.PodId != podId)
+            {
+                return BadRequest(new { error = "PodId in URL must match PodId in body" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.RequestingPeerId))
+            {
+                return BadRequest(new { error = "RequestingPeerId is required" });
+            }
+
+            // Get existing pod to check authorization
+            var existingPod = await podService.GetPodAsync(podId, ct);
+            if (existingPod == null)
+            {
+                return NotFound(new { error = $"Pod {podId} not found" });
+            }
+
+            // Get current members for authorization check
+            var members = await podService.GetMembersAsync(podId, ct);
+
+            // Check if user is authorized to modify private service policy
+            if (request.Pod.Capabilities?.Contains(PodCapability.PrivateServiceGateway) == true ||
+                (existingPod.Capabilities?.Contains(PodCapability.PrivateServiceGateway) == true &&
+                 request.Pod.PrivateServicePolicy != null))
+            {
+                // Only gateway peer can enable VPN capability or modify policy
+                var gatewayPeerId = request.Pod.PrivateServicePolicy?.GatewayPeerId ??
+                                   existingPod.PrivateServicePolicy?.GatewayPeerId;
+
+                if (!string.IsNullOrEmpty(gatewayPeerId))
+                {
+                    var isGatewayPeer = string.Equals(request.RequestingPeerId, gatewayPeerId, StringComparison.Ordinal);
+                    var isPodMember = members.Any(m => string.Equals(m.PeerId, request.RequestingPeerId, StringComparison.Ordinal));
+
+                    if (!isPodMember)
+                    {
+                        return StatusCode(403, new { error = "Only pod members can update pods" });
+                    }
+
+                    if (!isGatewayPeer)
+                    {
+                        return StatusCode(403, new { error = "Only the designated gateway peer can modify private service policy" });
+                    }
+                }
+            }
+
+            var updated = await podService.UpdateAsync(request.Pod, ct);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { error = $"Pod {podId} not found" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update pod {PodId}", podId);
+            return StatusCode(500, new { error = "Failed to update pod" });
         }
     }
 
@@ -224,8 +336,8 @@ public class PodsController : ControllerBase
     {
         try
         {
-            var fullChannelId = $"{podId}:{channelId}";
-            var messages = await podMessaging.GetMessagesAsync(podId, fullChannelId, since, ct);
+            // HARDENING: Use channelId directly without concatenation
+            var messages = await podMessaging.GetMessagesAsync(podId, channelId, since, ct);
             return Ok(messages);
         }
         catch (Exception ex)
@@ -257,11 +369,11 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "SenderPeerId is required" });
             }
 
-            var fullChannelId = $"{podId}:{channelId}";
+            // HARDENING: Use channelId directly without concatenation
             var message = new PodMessage
             {
                 MessageId = Guid.NewGuid().ToString("N"),
-                ChannelId = fullChannelId,
+                ChannelId = channelId,
                 SenderPeerId = request.SenderPeerId,
                 Body = request.Body,
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
@@ -348,24 +460,10 @@ public class PodsController : ControllerBase
     }
 }
 
+public record CreatePodRequest(Pod Pod, string RequestingPeerId);
 public record JoinPodRequest(string PeerId);
 public record LeavePodRequest(string PeerId);
 public record BanMemberRequest(string PeerId);
 public record SendMessageRequest(string Body, string SenderPeerId, string? Signature = null);
 public record BindRoomRequest(string RoomName, string? Mode = null);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+public record UpdatePodRequest(Pod Pod, string RequestingPeerId);

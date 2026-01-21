@@ -1,3 +1,7 @@
+// <copyright file="SceneMembershipTracker.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.Scenes;
 
 using slskd.VirtualSoulfind.ShadowIndex;
@@ -206,19 +210,3 @@ public class SceneMembershipTracker : ISceneMembershipTracker
         };
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,7 @@
+// <copyright file="Metrics.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="Metrics.cs" company="slskdN">
 //     Copyright (c) slskdN. All rights reserved.
 //

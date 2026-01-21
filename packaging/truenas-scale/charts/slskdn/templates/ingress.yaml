@@ -1,0 +1,41 @@
+{{- if .Values.ingress.main.enabled }}
+apiVersion: {{ include "tc.v1.common.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: {{ include "tc.v1.common.lib.chart.names.fullname" . }}
+  labels:
+    {{- include "tc.v1.common.lib.metadata.allLabels" . | nindent 4 }}
+  annotations:
+    {{- include "tc.v1.common.lib.metadata.allAnnotations" . | nindent 4 }}
+spec:
+  {{- if .Values.ingress.main.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.main.ingressClassName }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.main.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "tc.v1.common.lib.chart.names.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.main.ports.main.port }}
+          {{- end }}
+    {{- end }}
+  {{- if .Values.ingress.main.tls }}
+  tls:
+    {{- range .Values.ingress.main.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+

@@ -6,6 +6,8 @@ import Files from './Files';
 import Info from './Info';
 import LibraryHealth from './LibraryHealth';
 import Logs from './Logs';
+import MediaCore from './MediaCore';
+import Mesh from './Mesh';
 import Network from './Network';
 import Options from './Options';
 import Security from './Security';
@@ -67,6 +69,32 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'network',
+    },
+    {
+      menuItem: {
+        content: 'Mesh',
+        icon: 'share alternate',
+        key: 'mesh',
+      },
+      render: () => (
+        <Tab.Pane>
+          <Mesh />
+        </Tab.Pane>
+      ),
+      route: 'mesh',
+    },
+    {
+      menuItem: {
+        content: 'MediaCore',
+        icon: 'music',
+        key: 'mediacore',
+      },
+      render: () => (
+        <Tab.Pane>
+          <MediaCore />
+        </Tab.Pane>
+      ),
+      route: 'mediacore',
     },
     {
       menuItem: {

@@ -1,3 +1,7 @@
+// <copyright file="SwarmSignalHandlers.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals.Swarm;
 
 using System.Collections.Generic;
@@ -314,19 +318,3 @@ public interface IBitTorrentBackend
     bool IsSupported();
     Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken cancellationToken = default);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

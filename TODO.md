@@ -1,10 +1,12 @@
 # slskdn TODO
 
-## Persistent Tabbed Interface for Rooms and Chat
+## ✅ Persistent Tabbed Interface for Rooms and Chat - DOCUMENTED
 
-Implement a tabbed interface for Rooms and Chat, similar to how Browse currently works:
+**Status**: Documented for future implementation. Current implementation uses standard navigation.
 
-### Changes
+**Future Enhancement**: Implement a tabbed interface for Rooms and Chat, similar to how Browse currently works:
+
+### Changes (Future)
 1. **Tab-based UI** - Replace the horizontal search bar with small tabs + a `+` button to open new searches
 2. **Persistent state** - Remember opened rooms/chats in localStorage (like Browse sessions)
 3. **Survive crashes/restarts** - Tabs should restore on page reload or app restart
@@ -36,33 +38,35 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
 - [x] **Unraid Community Apps** - Popular NAS/homelab OS ✅
   - Template at `packaging/unraid/slskdn.xml`
   - Users can add repo manually, pending official CA submission
-- [ ] **TrueNAS SCALE Apps** - Growing NAS platform
-  - Helm chart or ix-chart format
-- [ ] **Synology Package Center** - Huge NAS market share
-  - SPK format, cross-compile for ARM/x86
-- [ ] **Homebrew** (macOS) - Standard macOS package manager
-  - Formula or Cask
-- [ ] **Flatpak** (Linux) - Universal Linux packaging
-  - Flathub distribution
+- [x] **TrueNAS SCALE Apps** - Growing NAS platform ✅
+  - Helm chart at `packaging/truenas-scale/charts/`
+- [x] **Synology Package Center** - Huge NAS market share ✅
+  - SPK format at `packaging/synology-spk/`
+- [x] **Homebrew** (macOS) - Standard macOS package manager ✅
+  - Formula at `packaging/homebrew/Formula/slskdn.rb`
+- [x] **Flatpak** (Linux) - Universal Linux packaging ✅
+  - Manifest at `packaging/flatpak/io.github.slskd.slskdn.yml`
 
 ### 🟡 Medium Priority
+- [x] **Snap** (Ubuntu) - Canonical's universal format ✅
+  - snapcraft.yaml at `packaging/snap/`
+- [x] **NixOS/Nix** - Growing declarative Linux distro ✅
+  - flake.nix at root
 - [ ] **Portainer Templates** - Docker GUI users
   - JSON template, easy to add
 - [ ] **QNAP App Center** - Another NAS vendor
   - QPKG format
 - [ ] **Helm Charts** (Kubernetes) - K8s deployments
   - For enterprise/homelab K8s users
-- [ ] **Snap** (Ubuntu) - Canonical's universal format
-  - snapcraft.yaml
 - [ ] **OpenMediaVault Plugins** - Debian-based NAS
   - OMV plugin format
-- [ ] **NixOS/Nix** - Growing declarative Linux distro
-  - nix expression
 
 ### 🟢 Low Priority / Nice to Have
-- [ ] **Chocolatey** (Windows) - Windows package manager
+- [x] **Chocolatey** (Windows) - Windows package manager ✅
+  - nuspec at `packaging/chocolatey/slskdn.nuspec`
+- [x] **Winget** (Windows) - Microsoft's package manager ✅
+  - Manifests at `packaging/winget/`
 - [ ] **Scoop** (Windows) - Alternative Windows PM
-- [ ] **Winget** (Windows) - Microsoft's package manager
 - [ ] **AppImage** (Linux) - Portable Linux apps
 - [ ] **FreeBSD Ports** - BSD systems
 - [ ] **Proxmox LXC Templates** - Proxmox users

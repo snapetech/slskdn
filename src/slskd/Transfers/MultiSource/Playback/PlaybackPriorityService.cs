@@ -1,3 +1,7 @@
+// <copyright file="PlaybackPriorityService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.Playback
 {
     using System.Collections.Concurrent;
@@ -105,20 +109,3 @@ namespace slskd.Transfers.MultiSource.Playback
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

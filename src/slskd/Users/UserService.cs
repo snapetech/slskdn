@@ -424,27 +424,20 @@ namespace slskd.Users
                 }
                 else
                 {
-                    // the option validation logic should have ensured the file format could be auto-detected and that the file
-                    // contained no formatting errors. this should only fail on transient I/O errors.
-                    _ = Task.Run(() => Blacklist.Load(options.Blacklist.File, BlacklistFormat.AutoDetect))
-                        .ContinueWith(task =>
-                        {
-                            // if the task faulted, the load of the file failed, and the user isn't getting the
-                            // intended protection from the blacklist. in this case we can:
-                            //   1) log an error and continue, potentially against the desires of the user
-                            //   2) kill the application and force the user to deal with the cause
-                            // a user taking advantage of the blacklist feature would absolutely want to know if it wasn't working,
-                            // so we're taking door #2.
-                            if (task.IsFaulted)
-                            {
-                                Log.Fatal(task.Exception, "Fatal error loading blacklist from file {File}: {Message}", options.Blacklist.File, task.Exception?.Message);
-                                Program.Exit(1);
-                            }
-                            else
-                            {
-                                Log.Information("Blacklist updated with {Count} CIDRs from file {File}", Blacklist.Count, options.Blacklist.File);
-                            }
-                        });
+                    // Load blacklist synchronously during startup to fail fast and visibly
+                    // if the file is missing/unreadable
+                    try
+                    {
+                        Blacklist.Load(options.Blacklist.File, BlacklistFormat.AutoDetect);
+                        Log.Information("Blacklist loaded with {Count} CIDRs from file {File}", Blacklist.Count, options.Blacklist.File);
+                    }
+                    catch (Exception ex)
+                    {
+                        // CRITICAL: If blacklist is enabled but cannot be loaded, we MUST fail startup
+                        // A user relying on the blacklist would want to know immediately if it's not working
+                        Log.Fatal(ex, "FATAL: Cannot load blacklist from file {File}. Application will not start without a valid blacklist when enabled.", options.Blacklist.File);
+                        throw new InvalidOperationException($"Failed to load blacklist from {options.Blacklist.File}: {ex.Message}", ex);
+                    }
                 }
 
                 LastBlacklistOptionsHash = blacklistOptionsHash;

@@ -1,3 +1,7 @@
+// <copyright file="RoomResponse.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="RoomResponse.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //

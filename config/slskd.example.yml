@@ -188,6 +188,33 @@
 #     password: slskd
 # feature:
 #   swagger: false
+# security:
+#   enabled: true  # Enable security features (path traversal protection is ALWAYS enabled)
+#   profile: Standard  # Security profile: Minimal, Standard, Maximum, or Custom
+#   network_guard:
+#     enabled: true
+#     max_connections_per_ip: 10
+#     max_global_connections: 100
+#     max_messages_per_minute: 60
+#     max_message_size: 10485760  # 10 MB
+#   violation_tracker:
+#     enabled: true
+#     violations_before_auto_ban: 5
+#     base_ban_duration_minutes: 60
+#   path_guard:
+#     enabled: true  # Path traversal protection (ALWAYS enabled, even if security.enabled is false)
+#     max_path_length: 512
+#     max_path_depth: 20
+#   content_safety:
+#     enabled: true
+#     verify_magic_bytes: true
+#     quarantine_suspicious: true
+#     quarantine_directory: ~
+#     block_executables: true
+#   peer_reputation:
+#     enabled: true
+#     trusted_threshold: 70
+#     untrusted_threshold: 20
 # soulseek:
 #   address: vps.slsknet.org
 #   port: 2271

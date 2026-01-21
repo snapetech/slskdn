@@ -1,0 +1,87 @@
+apiVersion: {{ include "tc.v1.common.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "tc.v1.common.lib.chart.names.fullname" . }}
+  labels:
+    {{- include "tc.v1.common.lib.metadata.allLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tc.v1.common.lib.metadata.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tc.v1.common.lib.metadata.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- include "tc.v1.common.lib.metadata.allAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "tc.v1.common.lib.controller.pod" . | nindent 6 }}
+      containers:
+        - name: {{ include "tc.v1.common.lib.chart.names.fullname" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 5030
+              protocol: TCP
+            {{- if .Values.service.https.enabled }}
+            - name: https
+              containerPort: 5031
+              protocol: TCP
+            {{- end }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            {{- if $value }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.persistence.config.enabled }}
+            - name: config
+              mountPath: /app/config
+            {{- end }}
+            {{- if .Values.persistence.downloads.enabled }}
+            - name: downloads
+              mountPath: /app/downloads
+            {{- end }}
+            {{- if .Values.persistence.shares.enabled }}
+            - name: shares
+              mountPath: /app/shared
+            {{- end }}
+            {{- if .Values.persistence.incomplete.enabled }}
+            - name: incomplete
+              mountPath: /app/incomplete
+            {{- end }}
+          {{- include "tc.v1.common.lib.controller.resources" . | nindent 10 }}
+          {{- include "tc.v1.common.lib.controller.probe" . | nindent 10 }}
+      volumes:
+        {{- if .Values.persistence.config.enabled }}
+        - name: config
+          hostPath:
+            path: {{ .Values.persistence.config.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.persistence.downloads.enabled }}
+        - name: downloads
+          hostPath:
+            path: {{ .Values.persistence.downloads.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.persistence.shares.enabled }}
+        - name: shares
+          hostPath:
+            path: {{ .Values.persistence.shares.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.persistence.incomplete.enabled }}
+        - name: incomplete
+          hostPath:
+            path: {{ .Values.persistence.incomplete.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
+
+

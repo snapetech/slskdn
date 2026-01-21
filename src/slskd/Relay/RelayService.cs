@@ -1,3 +1,7 @@
+// <copyright file="RelayService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="RelayService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //

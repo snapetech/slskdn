@@ -1,3 +1,7 @@
+// <copyright file="JobsController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Native;
 
 using Microsoft.AspNetCore.Authorization;

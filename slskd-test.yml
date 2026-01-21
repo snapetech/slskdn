@@ -1,0 +1,30 @@
+soulseek:
+  username: "test-user"
+  password: "test-password"
+
+web:
+  port: 5030
+  authentication:
+    disabled: true
+
+mesh:
+  enabled: false
+
+# Single realm configuration for testing
+realm:
+  id: "test-realm-v1"
+  displayName: "Test Realm"
+  description: "Local testing realm for slskdN features"
+  governanceRoots:
+    - "test-governance-root-1"
+  bootstrapNodes: []
+  policies:
+    gossipEnabled: true
+    replicationEnabled: false
+    maxGossipHops: 3
+    gossipIntervalSeconds: 300
+    federationAllowed: true
+
+# Multi-realm config - leave empty since we're using single realm
+multirealm:
+  realms: []

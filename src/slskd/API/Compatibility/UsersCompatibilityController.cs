@@ -1,3 +1,7 @@
+// <copyright file="UsersCompatibilityController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.Compatibility;
 
 using Microsoft.AspNetCore.Authorization;
@@ -38,19 +42,3 @@ public class UsersCompatibilityController : ControllerBase
         });
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

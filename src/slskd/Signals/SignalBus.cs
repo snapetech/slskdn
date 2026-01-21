@@ -1,3 +1,7 @@
+// <copyright file="SignalBus.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals;
 
 using System.Collections.Concurrent;
@@ -253,19 +257,3 @@ public class SignalBus : ISignalBus, IDisposable
         subscribersLock?.Dispose();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

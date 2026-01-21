@@ -8,7 +8,7 @@ import AlbumCompletionPanel from './AlbumCompletionPanel';
 import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
 import MusicBrainzLookup from './MusicBrainzLookup';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   useHistory,
   useLocation,
@@ -31,16 +31,27 @@ const Searches = ({ server } = {}) => {
 
   const inputRef = useRef();
 
-  const { id: searchId } = useParams();
   const history = useHistory();
-  const match = useRouteMatch();
   const location = useLocation();
-  const baseSearchPath = searchId
-    ? match.url.replace(`/${searchId}`, '')
-    : match.url;
-  const queryParamSearchText =
-    new URLSearchParams(location.search).get('q')?.trim() ?? '';
-  const handledPrefillRef = useRef('');
+  const match = useRouteMatch();
+  const { id: searchId } = useParams();
+
+  // Handle URL query parameters for predictable search URLs
+  useEffect(() => {
+    const urlParameters = new URLSearchParams(location.search);
+    const queryParameter = urlParameters.get('q');
+
+    if (queryParameter && !creating && !searchId) {
+      // Automatically create a search from the URL query parameter
+      create({
+        navigate: false,
+        search: decodeURIComponent(queryParameter),
+      }).then(() => {
+        // Clear the query parameter from the URL after creating the search
+        history.replace({ search: '' });
+      });
+    }
+  }, [location.search, creating, searchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onConnecting = () => {
     setConnecting(true);
@@ -118,7 +129,7 @@ const Searches = ({ server } = {}) => {
 
   // create a new search, and optionally navigate to it to display the details
   // we do this if the user clicks the search icon, or repeats an existing search
-  const create = useCallback(async ({ navigate = false, search } = {}) => {
+  const create = async ({ navigate = false, search } = {}) => {
     const ref = inputRef?.current?.inputRef?.current;
     const searchText = search || ref?.value;
     const id = uuidv4();
@@ -140,10 +151,10 @@ const Searches = ({ server } = {}) => {
       setCreating(false);
 
       if (navigate) {
-        const url = `${baseSearchPath}/${id}${
-          searchText ? `?q=${encodeURIComponent(searchText)}` : ''
-        }`;
-        history.push(url);
+        // Use predictable URL with query parameter instead of UUID
+        const baseUrl = match.url;
+        const encodedQuery = encodeURIComponent(searchText);
+        history.push(`${baseUrl}?q=${encodedQuery}`);
       }
     } catch (createError) {
       console.error(createError);
@@ -152,54 +163,7 @@ const Searches = ({ server } = {}) => {
       );
       setCreating(false);
     }
-  }, [baseSearchPath, searchId, server?.isConnected]);
-
-  useEffect(() => {
-    handledPrefillRef.current = '';
-    if (queryParamSearchText && inputRef?.current?.inputRef?.current) {
-      inputRef.current.inputRef.current.value = queryParamSearchText;
-    }
-  }, [queryParamSearchText]);
-
-  useEffect(() => {
-    const normalizedQuery = (queryParamSearchText || '').toLowerCase();
-    if (!normalizedQuery || connecting) {
-      return;
-    }
-
-    const existing = Object.values(searches).find(
-      (s) => (s.searchText || '').toLowerCase() === normalizedQuery,
-    );
-
-    if (existing) {
-      const desiredUrl = `${baseSearchPath}/${existing.id}?q=${encodeURIComponent(queryParamSearchText)}`;
-      if (history.location.pathname + history.location.search !== desiredUrl) {
-        history.replace(desiredUrl);
-      }
-      handledPrefillRef.current = normalizedQuery;
-      return;
-    }
-
-    if (handledPrefillRef.current === normalizedQuery) {
-      return;
-    }
-
-    if (server?.isConnected === false) {
-      return;
-    }
-
-    handledPrefillRef.current = normalizedQuery;
-    create({ navigate: true, search: queryParamSearchText });
-  }, [
-    baseSearchPath,
-    connecting,
-    create,
-    history,
-    queryParamSearchText,
-    searchId,
-    searches,
-    server?.isConnected,
-  ]);
+  };
 
   // delete a search
   const remove = async (search) => {
@@ -268,12 +232,6 @@ const Searches = ({ server } = {}) => {
   // display the details for the search, if there is one
   if (searchId) {
     if (searches[searchId]) {
-      const params = new URLSearchParams(location.search);
-      if (!params.get('q') && searches[searchId].searchText) {
-        params.set('q', searches[searchId].searchText);
-        history.replace(`${match.url}?${params.toString()}`);
-      }
-
       return (
         <SearchDetail
           creating={creating}

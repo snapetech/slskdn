@@ -17,6 +17,11 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Realm;
+using slskd.Mesh.Realm.Bridge;
+using slskd.Mesh.Governance;
+using slskd.Mesh.Gossip;
+using slskd.SocialFederation;
 
 namespace slskd
 {
@@ -39,6 +44,7 @@ namespace slskd
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.DataProtection;
     using Microsoft.AspNetCore.Diagnostics;
+    using Microsoft.AspNetCore.Diagnostics.HealthChecks;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
     using Microsoft.EntityFrameworkCore;
@@ -70,6 +76,7 @@ namespace slskd
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
     using slskd.Integrations.Webhooks;
+    using slskd.Mesh;
     using slskd.Messaging;
     using slskd.Relay;
     using slskd.Search;
@@ -78,6 +85,7 @@ namespace slskd
     using slskd.Telemetry;
     using slskd.Transfers;
     using slskd.Transfers.Downloads;
+    using slskd.Transfers.MultiSource;
     using slskd.Transfers.Uploads;
     using slskd.Users;
     using slskd.Common.Security;
@@ -253,7 +261,12 @@ namespace slskd
 
         private static IConfigurationRoot Configuration { get; set; }
         private static OptionsAtStartup OptionsAtStartup { get; } = new OptionsAtStartup();
-        private static ILogger Log { get; set; } = new ConsoleWriteLineLogger();
+        
+        // Explicit Serilog.ILogger type to avoid ambiguity with Microsoft.Extensions.Logging.ILogger
+        private static Serilog.ILogger Log { get; set; } = new Serilog.LoggerConfiguration()
+            .WriteTo.Sink(new ConsoleWriteLineLogger())
+            .CreateLogger();
+            
         private static Mutex Mutex { get; } = new Mutex(initiallyOwned: true, Compute.Sha256Hash(AppName));
         private static IDisposable DotNetRuntimeStats { get; set; }
 
@@ -400,6 +413,26 @@ namespace slskd
                 Configuration.GetSection(AppName)
                     .Bind(OptionsAtStartup, (o) => { o.BindNonPublicProperties = true; });
 
+                // Log security configuration after binding
+                Log.Information("[Config] After binding OptionsAtStartup.Security.Enabled = {Enabled}, Profile = {Profile}", 
+                    OptionsAtStartup.Security?.Enabled ?? false, 
+                    OptionsAtStartup.Security?.Profile.ToString() ?? "null");
+                
+                // Also check raw configuration sections
+                var securitySection = Configuration.GetSection("security");
+                var slskdSecuritySection = Configuration.GetSection("slskd:security");
+                Log.Information("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}", 
+                    securitySection.Exists(), 
+                    slskdSecuritySection.Exists());
+                if (securitySection.Exists())
+                {
+                    Log.Information("[Config] Raw security section enabled value: {Enabled}", securitySection["enabled"]);
+                }
+                if (slskdSecuritySection.Exists())
+                {
+                    Log.Information("[Config] Raw slskd:security section enabled value: {Enabled}", slskdSecuritySection["enabled"]);
+                }
+
                 if (OptionsAtStartup.Debug)
                 {
                     Log.Information($"Configuration:\n{Configuration.GetDebugView()}");
@@ -422,6 +455,9 @@ namespace slskd
 
             ConfigureGlobalLogger();
             Log = Serilog.Log.ForContext(typeof(Program));
+
+            // Install hard telemetry to catch silent exits
+            InstallShutdownTelemetry();
 
             if (!OptionsAtStartup.Flags.NoLogo)
             {
@@ -491,18 +527,19 @@ namespace slskd
                     .UseUrls()
                     .UseKestrel(options =>
                     {
-                        Log.Information($"Listening for HTTP requests at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
+                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
                         options.Listen(IPAddress.Any, OptionsAtStartup.Web.Port);
+                        Log.Information($"[Kestrel] HTTP listener configured");
 
                         if (OptionsAtStartup.Web.Socket != null)
                         {
-                            Log.Information($"Listening for HTTP requests on unix domain socket (UDS) {OptionsAtStartup.Web.Socket}");
+                            Log.Information($"Configuring HTTP listener on unix domain socket (UDS) {OptionsAtStartup.Web.Socket}");
                             options.ListenUnixSocket(OptionsAtStartup.Web.Socket);
                         }
 
                         if (!OptionsAtStartup.Web.Https.Disabled)
                         {
-                            Log.Information($"Listening for HTTPS requests at https://{IPAddress.Any}:{OptionsAtStartup.Web.Https.Port}/");
+                            Log.Information($"Configuring HTTPS listener at https://{IPAddress.Any}:{OptionsAtStartup.Web.Https.Port}/");
                             options.Listen(IPAddress.Any, OptionsAtStartup.Web.Https.Port, listenOptions =>
                             {
                                 var cert = OptionsAtStartup.Web.Https.Certificate;
@@ -521,11 +558,25 @@ namespace slskd
                         }
                     });
 
+                Log.Information("[MAIN] About to configure ASP.NET services...");
                 builder.Services
                     .ConfigureAspDotNetServices()
                     .ConfigureDependencyInjectionContainer();
 
-                var app = builder.Build();
+                Log.Information("[MAIN] Services configured, building DI container...");
+                WebApplication app;
+                try
+                {
+                    Log.Information("Building DI container...");
+                    Log.Information("[DI] About to call builder.Build() - this will construct all singleton services...");
+                    app = builder.Build();
+                    Log.Information("DI container built successfully!");
+                }
+                catch (Exception diEx)
+                {
+                    Log.Fatal(diEx, "FAILED to build DI container");
+                    throw;
+                }
 
                 if (!OptionsAtStartup.Flags.Volatile)
                 {
@@ -537,10 +588,22 @@ namespace slskd
 
                 // hack: services that exist only to subscribe to the event bus are not referenced by anything else
                 //       and are thus never instantiated.  force a reference here so they are created.
+                Log.Information("[DI] Forcing construction of ScriptService and WebhookService...");
                 _ = app.Services.GetService<ScriptService>();
                 _ = app.Services.GetService<WebhookService>();
+                Log.Information("[DI] ScriptService and WebhookService constructed");
 
-                app.ConfigureAspDotNetPipeline();
+                Log.Information("[DI] About to configure ASP.NET pipeline...");
+                try
+                {
+                    app.ConfigureAspDotNetPipeline();
+                    Log.Information("[DI] ASP.NET pipeline configured");
+                }
+                catch (Exception pipelineEx)
+                {
+                    Log.Error(pipelineEx, "[DI] EXCEPTION configuring ASP.NET pipeline: {Message}", pipelineEx.Message);
+                    throw;
+                }
 
                 if (OptionsAtStartup.Flags.NoStart)
                 {
@@ -549,7 +612,38 @@ namespace slskd
                 }
 
                 Log.Information("Configuration complete.  Starting application...");
+                
+                // Add lifecycle hook to log when host actually starts listening
+                var lifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+                lifetime.ApplicationStarted.Register(() =>
+                {
+                    var addresses = app.Urls;
+                    Log.Information("✓ Host started and bound to: {Addresses}", string.Join(", ", addresses));
+                });
+                
+                lifetime.ApplicationStopping.Register(() =>
+                {
+                    Log.Information("Application is stopping...");
+                });
+                
+                Log.Information("[Program] About to call app.Run()...");
+                Log.Information("[Program] app.Run() will start the web server and all hosted services...");
+                
+                // Add lifecycle hooks to track startup progress
+                var hostLifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+                
+                // Log when web server starts listening (happens before hosted services StartAsync)
+                hostLifetime.ApplicationStarted.Register(() =>
+                {
+                    Log.Information("[Program] ✓ ApplicationStarted event fired - all hosted services have completed StartAsync");
+                });
+                
+                // Try to detect if we're hanging during web server startup
+                Log.Information("[Program] Calling app.Run() - this will block until shutdown...");
+                Log.Information("[Program] If you see this but not 'Host started and bound', the web server is hanging");
+                
                 app.Run();
+                Log.Information("[Program] app.Run() returned (this should not happen normally)");
             }
             catch (Exception ex)
             {
@@ -563,6 +657,8 @@ namespace slskd
 
         private static IServiceCollection ConfigureDependencyInjectionContainer(this IServiceCollection services)
         {
+            Log.Information("[DI] Starting ConfigureDependencyInjectionContainer...");
+
             // add the instance of OptionsAtStartup to DI as they were at startup. use when Options might change, but
             // the values at startup are to be used (generally anything marked RequiresRestart).
             services.AddSingleton(OptionsAtStartup);
@@ -589,7 +685,6 @@ namespace slskd
             // as with options, the monitor should be used for services with Singleton lifetime, snapshots for everything else
             // IManagedState should be used where state is being mutated and accessed in the same context
             services.AddManagedState<State>();
-            services.AddSingleton<slskd.Privacy.IMessagePadder, slskd.Privacy.MessagePadder>();
 
             // add IHttpClientFactory
             // use through 'using var http = HttpClientFactory.CreateClient()' wherever HTTP calls will be made
@@ -617,8 +712,70 @@ namespace slskd
 
             // add the core application service to DI as well as a hosted service so that other services can
             // access instance methods
-            services.AddSingleton<IApplication, Application>();
-            services.AddHostedService(p => p.GetRequiredService<IApplication>());
+            services.AddSingleton<IApplication>(sp =>
+            {
+                Log.Information("[DI] Factory function called to construct Application singleton...");
+                Log.Information("[DI] Resolving OptionsAtStartup...");
+                var optionsAtStartup = sp.GetRequiredService<OptionsAtStartup>();
+                Log.Information("[DI] Resolving IOptionsMonitor<Options>...");
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<Options>>();
+                Log.Information("[DI] Resolving IManagedState<State>...");
+                var state = sp.GetRequiredService<IManagedState<State>>();
+                Log.Information("[DI] Resolving ISoulseekClient...");
+                var soulseekClient = sp.GetRequiredService<ISoulseekClient>();
+                Log.Information("[DI] Resolving FileService...");
+                var fileService = sp.GetRequiredService<FileService>();
+                Log.Information("[DI] Resolving ConnectionWatchdog...");
+                var connectionWatchdog = sp.GetRequiredService<ConnectionWatchdog>();
+                Log.Information("[DI] Resolving ITransferService...");
+                var transferService = sp.GetRequiredService<ITransferService>();
+                Log.Information("[DI] Resolving IBrowseTracker...");
+                var browseTracker = sp.GetRequiredService<IBrowseTracker>();
+                Log.Information("[DI] Resolving IRoomService...");
+                var roomService = sp.GetRequiredService<IRoomService>();
+                Log.Information("[DI] Resolving IUserService...");
+                var userService = sp.GetRequiredService<IUserService>();
+                Log.Information("[DI] Resolving IMessagingService...");
+                var messagingService = sp.GetRequiredService<IMessagingService>();
+                Log.Information("[DI] Resolving IShareService...");
+                var shareService = sp.GetRequiredService<IShareService>();
+                Log.Information("[DI] Resolving ISearchService...");
+                var searchService = sp.GetRequiredService<ISearchService>();
+                Log.Information("[DI] Resolving INotificationService...");
+                var notificationService = sp.GetRequiredService<Integrations.Notifications.INotificationService>();
+                Log.Information("[DI] Resolving IRelayService...");
+                var relayService = sp.GetRequiredService<IRelayService>();
+                Log.Information("[DI] Resolving IHubContext<ApplicationHub>...");
+                var applicationHub = sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<ApplicationHub>>();
+                Log.Information("[DI] Resolving IHubContext<LogsHub>...");
+                var logHub = sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<LogsHub>>();
+                Log.Information("[DI] Resolving IHubContext<TransfersHub>...");
+                var transfersHub = sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<Transfers.API.TransfersHub>>();
+                Log.Information("[DI] Resolving EventBus...");
+                var eventBus = sp.GetRequiredService<Events.EventBus>();
+                Log.Information("[DI] All dependencies resolved, constructing Application...");
+                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                var app = new Application(
+                    optionsAtStartup, optionsMonitor, state, soulseekClient, fileService,
+                    connectionWatchdog, transferService, browseTracker, roomService,
+                    userService, messagingService, shareService, searchService,
+                    notificationService, relayService, applicationHub, logHub, transfersHub,
+                    eventBus, sp, scopeFactory);
+                Log.Information("[DI] Application singleton constructed successfully");
+                return app;
+            });
+            // Use a wrapper to avoid factory function blocking
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing ApplicationHostedServiceWrapper hosted service...");
+                Log.Information("[DI] About to resolve IApplication from DI...");
+                var app = p.GetRequiredService<IApplication>();
+                Log.Information("[DI] IApplication resolved successfully");
+                Log.Information("[DI] About to create ApplicationHostedServiceWrapper instance...");
+                var service = new ApplicationHostedServiceWrapper(app, p.GetService<Microsoft.Extensions.Logging.ILogger<ApplicationHostedServiceWrapper>>());
+                Log.Information("[DI] ApplicationHostedServiceWrapper constructed");
+                return service;
+            });
 
             services.AddSingleton<IWaiter, Waiter>();
             services.AddSingleton<ConnectionWatchdog, ConnectionWatchdog>();
@@ -668,9 +825,44 @@ namespace slskd
             services.AddSingleton<IRoomTracker, RoomTracker>(_ => new RoomTracker(messageLimit: 250));
 
             services.AddSingleton<IMessagingService, MessagingService>();
-            services.AddSingleton<IConversationService, ConversationService>();
+            services.AddSingleton<IConversationService>(sp =>
+            {
+                Log.Information("[DI] Constructing ConversationService...");
+                Log.Information("[DI] Resolving ISoulseekClient for ConversationService...");
+                var soulseekClient = sp.GetRequiredService<ISoulseekClient>();
+                Log.Information("[DI] Resolving EventBus for ConversationService...");
+                var eventBus = sp.GetRequiredService<Events.EventBus>();
+                Log.Information("[DI] Resolving IDbContextFactory<MessagingDbContext> for ConversationService...");
+                var contextFactory = sp.GetRequiredService<IDbContextFactory<Messaging.MessagingDbContext>>();
+                Log.Information("[DI] Resolving IPodService for ConversationService...");
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                Log.Information("[DI] All ConversationService dependencies resolved, creating instance...");
+                var service = new Messaging.ConversationService(soulseekClient, eventBus, contextFactory, podService);
+                Log.Information("[DI] ConversationService constructed");
+                return service;
+            });
 
-            services.AddSingleton<IShareService, ShareService>();
+            services.AddSingleton<IShareService>(sp =>
+            {
+                Log.Information("[DI] Constructing ShareService...");
+                Log.Information("[DI] Resolving FileService for ShareService...");
+                var fileService = sp.GetRequiredService<FileService>();
+                Log.Information("[DI] Resolving IShareRepositoryFactory for ShareService...");
+                var shareRepositoryFactory = sp.GetRequiredService<IShareRepositoryFactory>();
+                Log.Information("[DI] Resolving IOptionsMonitor<Options> for ShareService...");
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<Options>>();
+                Log.Information("[DI] Resolving IModerationProvider for ShareService...");
+                var moderationProvider = sp.GetRequiredService<Common.Moderation.IModerationProvider>();
+                Log.Information("[DI] Resolving IShareScanner for ShareService (optional)...");
+                var scanner = sp.GetService<IShareScanner>();
+                Log.Information("[DI] Resolving IContentPeerHintService for ShareService (optional)...");
+                var contentPeerHintService = sp.GetService<Mesh.Dht.IContentPeerHintService>();
+                Log.Information("[DI] All ShareService dependencies resolved, creating instance...");
+                var service = new ShareService(
+                    fileService, shareRepositoryFactory, optionsMonitor, moderationProvider, scanner, contentPeerHintService);
+                Log.Information("[DI] ShareService constructed");
+                return service;
+            });
             services.AddTransient<IShareRepositoryFactory, SqliteShareRepositoryFactory>();
 
             services.AddSingleton<ISearchService, SearchService>();
@@ -679,9 +871,59 @@ namespace slskd
 
             services.AddSingleton<IRoomService, RoomService>();
 
-            services.AddSingleton<ITransferService, TransferService>();
-            services.AddSingleton<IDownloadService, DownloadService>();
-            services.AddSingleton<IUploadService, UploadService>();
+            services.AddSingleton<IScheduledRateLimitService, ScheduledRateLimitService>();
+            services.AddSingleton<IDownloadService>(sp =>
+            {
+                Log.Information("[DI] Constructing DownloadService...");
+                var service = new DownloadService(
+                    sp.GetRequiredService<IOptionsMonitor<Options>>(),
+                    sp.GetRequiredService<ISoulseekClient>(),
+                    sp.GetRequiredService<IDbContextFactory<TransfersDbContext>>(),
+                    sp.GetRequiredService<FileService>(),
+                    sp.GetRequiredService<IRelayService>(),
+                    sp.GetRequiredService<IFTPService>(),
+                    sp.GetRequiredService<EventBus>(),
+                    sp.GetService<Transfers.MultiSource.Metrics.IPeerMetricsService>());
+                Log.Information("[DI] DownloadService constructed");
+                return service;
+            });
+            services.AddSingleton<IUploadService>(sp =>
+            {
+                Log.Information("[DI] Constructing UploadService...");
+                Log.Information("[DI] Resolving FileService for UploadService...");
+                var fileService = sp.GetRequiredService<FileService>();
+                Log.Information("[DI] Resolving IUserService for UploadService...");
+                var userService = sp.GetRequiredService<IUserService>();
+                Log.Information("[DI] Resolving ISoulseekClient for UploadService...");
+                var soulseekClient = sp.GetRequiredService<ISoulseekClient>();
+                Log.Information("[DI] Resolving IOptionsMonitor<Options> for UploadService...");
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<Options>>();
+                Log.Information("[DI] Resolving IShareService for UploadService...");
+                var shareService = sp.GetRequiredService<IShareService>();
+                Log.Information("[DI] Resolving IRelayService for UploadService...");
+                var relayService = sp.GetRequiredService<IRelayService>();
+                Log.Information("[DI] Resolving IDbContextFactory<TransfersDbContext> for UploadService...");
+                var contextFactory = sp.GetRequiredService<IDbContextFactory<TransfersDbContext>>();
+                Log.Information("[DI] Resolving EventBus for UploadService...");
+                var eventBus = sp.GetRequiredService<EventBus>();
+                Log.Information("[DI] Resolving IScheduledRateLimitService for UploadService (optional)...");
+                var scheduledRateLimitService = sp.GetService<IScheduledRateLimitService>();
+                Log.Information("[DI] All UploadService dependencies resolved, creating instance...");
+                var service = new UploadService(
+                    fileService, userService, soulseekClient, optionsMonitor,
+                    shareService, relayService, contextFactory, eventBus, scheduledRateLimitService);
+                Log.Information("[DI] UploadService constructed");
+                return service;
+            });
+            services.AddSingleton<ITransferService>(sp =>
+            {
+                Log.Information("[DI] Constructing TransferService...");
+                var service = new TransferService(
+                    sp.GetRequiredService<IUploadService>(),
+                    sp.GetRequiredService<IDownloadService>());
+                Log.Information("[DI] TransferService constructed");
+                return service;
+            });
             services.AddSingleton<FileService>();
             services.AddSingleton<Transfers.AutoReplace.IAutoReplaceService, Transfers.AutoReplace.AutoReplaceService>();
 
@@ -787,10 +1029,61 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
+            // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03)
+            services.AddSingleton<VirtualSoulfind.Core.Music.IMusicContentDomainProvider, VirtualSoulfind.Core.Music.MusicContentDomainProvider>();
+            services.AddSingleton<VirtualSoulfind.Core.GenericFile.IGenericFileContentDomainProvider, VirtualSoulfind.Core.GenericFile.GenericFileContentDomainProvider>();
+
+            // Peer Reputation System (T-MCP04)
+            services.AddSingleton<Common.Moderation.IPeerReputationStore>(sp =>
+            {
+                var dataProtection = sp.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>();
+                var protector = dataProtection.CreateProtector("PeerReputation");
+                var storagePath = Path.Combine(Program.AppDirectory, "reputation", "peers.db");
+                return new Common.Moderation.PeerReputationStore(
+                    sp.GetRequiredService<ILogger<Common.Moderation.PeerReputationStore>>(),
+                    protector,
+                    storagePath);
+            });
+            services.AddSingleton<Common.Moderation.PeerReputationService>();
+
             // MediaCore (Phase 9)
             services.AddOptions<MediaCore.MediaCoreOptions>();
             services.AddSingleton<MediaCore.IDescriptorValidator, MediaCore.DescriptorValidator>();
-            services.AddSingleton<MediaCore.IDescriptorPublisher, MediaCore.DescriptorPublisher>();
+            services.AddSingleton<MediaCore.IDescriptorPublisher>(sp =>
+                new MediaCore.DescriptorPublisher(
+                    sp.GetRequiredService<ILogger<MediaCore.DescriptorPublisher>>(),
+                    sp.GetRequiredService<MediaCore.IDescriptorValidator>(),
+                    sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>(),
+                    sp.GetRequiredService<IOptions<MediaCore.MediaCoreOptions>>()));
+            services.AddSingleton<MediaCore.IContentIdRegistry, MediaCore.ContentIdRegistry>();
+            services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
+            services.AddSingleton<MediaCore.IPerceptualHasher, MediaCore.PerceptualHasher>();
+            services.AddSingleton<MediaCore.IMetadataPortability, MediaCore.MetadataPortability>();
+            services.AddSingleton<MediaCore.IContentDescriptorPublisher, MediaCore.ContentDescriptorPublisher>();
+            services.AddSingleton<MediaCore.IDescriptorRetriever, MediaCore.DescriptorRetriever>();
+            services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
+            services.AddSingleton<MediaCore.IMediaCoreStatsService, MediaCore.MediaCoreStatsService>();
+
+            // PodCore services
+            services.AddSingleton<PodCore.IPodDhtPublisher, PodCore.PodDhtPublisher>();
+            services.AddSingleton<PodCore.IPodMembershipService, PodCore.PodMembershipService>();
+            services.AddSingleton<PodCore.IPodMembershipVerifier, PodCore.PodMembershipVerifier>();
+            services.AddSingleton<PodCore.IPodDiscoveryService, PodCore.PodDiscoveryService>();
+            services.AddSingleton<PodCore.IPodJoinLeaveService, PodCore.PodJoinLeaveService>();
+            services.AddSingleton<PodCore.IPodMessageRouter>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<PodCore.PodMessageRouter>>();
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var overlayClient = sp.GetRequiredService<Mesh.Overlay.IOverlayClient>();
+                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                return new PodCore.PodMessageRouter(logger, podService, overlayClient, privacyLayer);
+            });
+            services.AddSingleton<PodCore.IMessageSigner, PodCore.MessageSigner>();
+
+            // MultiSource MediaCore integration
+            services.AddSingleton<IMediaCoreSwarmIntelligence, MediaCoreSwarmIntelligence>();
+            services.AddSingleton<IMediaCoreSwarmService, MediaCoreSwarmService>();
+            services.AddSingleton<slskd.Transfers.MultiSource.Scheduling.IChunkScheduler, slskd.Transfers.MultiSource.Scheduling.MediaCoreChunkScheduler>();
             services.AddSingleton<MediaCore.IIpldMapper, MediaCore.IpldMapper>();
             services.AddSingleton<MediaCore.IFuzzyMatcher, MediaCore.FuzzyMatcher>();
             services.AddSingleton<MediaCore.IContentDescriptorSource, MediaCore.ShadowIndexDescriptorSource>();
@@ -833,25 +1126,61 @@ namespace slskd
             services.AddSingleton<PodCore.IPodMembershipSigner, PodCore.PodMembershipSigner>();
 
             // Pod DHT publishing + discovery
-            services.AddSingleton<PodCore.IPodPublisher, PodCore.PodPublisher>();
+            services.AddSingleton<PodCore.IPodPublisher>(sp =>
+            {
+                Log.Information("[DI] Constructing PodPublisher...");
+                Log.Information("[DI] Resolving IMeshDhtClient for PodPublisher...");
+                var dht = sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>();
+                Log.Information("[DI] Resolving IServiceScopeFactory for PodPublisher...");
+                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                Log.Information("[DI] Resolving ILogger<PodPublisher> for PodPublisher...");
+                var logger = sp.GetRequiredService<ILogger<PodCore.PodPublisher>>();
+                Log.Information("[DI] All PodPublisher dependencies resolved, creating instance...");
+                var service = new PodCore.PodPublisher(dht, scopeFactory, logger);
+                Log.Information("[DI] PodPublisher constructed");
+                return service;
+            });
             services.AddSingleton<PodCore.IPodDiscovery, PodCore.PodDiscovery>();
 
             // Peer resolution service (for PeerReputation lookup)
             services.AddSingleton<PodCore.IPeerResolutionService, PodCore.PeerResolutionService>();
 
             // Soulseek chat bridge
-            services.AddSingleton<PodCore.ISoulseekChatBridge, PodCore.SoulseekChatBridge>();
+            services.AddSingleton<PodCore.ISoulseekChatBridge>(sp =>
+            {
+                Log.Information("[DI] Constructing SoulseekChatBridge...");
+                Log.Information("[DI] Resolving IServiceScopeFactory for SoulseekChatBridge...");
+                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                Log.Information("[DI] Resolving IRoomService for SoulseekChatBridge...");
+                var roomService = sp.GetRequiredService<IRoomService>();
+                Log.Information("[DI] Resolving ISoulseekClient for SoulseekChatBridge...");
+                var soulseekClient = sp.GetRequiredService<ISoulseekClient>();
+                Log.Information("[DI] Resolving ILogger<SoulseekChatBridge> for SoulseekChatBridge...");
+                var logger = sp.GetRequiredService<ILogger<PodCore.SoulseekChatBridge>>();
+                Log.Information("[DI] All SoulseekChatBridge dependencies resolved, creating instance...");
+                var service = new PodCore.SoulseekChatBridge(scopeFactory, roomService, soulseekClient, logger);
+                Log.Information("[DI] SoulseekChatBridge constructed");
+                return service;
+            });
 
             // Main pod service (SQLite-backed with persistence)
-            services.AddScoped<PodCore.IPodService>(sp =>
+            services.AddSingleton<PodCore.IPodService>(sp =>
             {
+                Log.Information("[DI] Constructing SqlitePodService...");
+                Log.Information("[DI] Resolving IDbContextFactory<PodDbContext> for SqlitePodService...");
                 var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
-                var dbContext = factory.CreateDbContext();
-                return new PodCore.SqlitePodService(
-                    dbContext,
-                    sp.GetService<PodCore.IPodPublisher>(),
-                    sp.GetService<PodCore.IPodMembershipSigner>(),
-                    sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>());
+                Log.Information("[DI] Resolving IPodPublisher for SqlitePodService (optional)...");
+                var podPublisher = sp.GetService<PodCore.IPodPublisher>();
+                Log.Information("[DI] Resolving IPodMembershipSigner for SqlitePodService (optional)...");
+                var membershipSigner = sp.GetService<PodCore.IPodMembershipSigner>();
+                Log.Information("[DI] Resolving ILogger<SqlitePodService> for SqlitePodService...");
+                var logger = sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>();
+                Log.Information("[DI] Resolving IServiceScopeFactory for SqlitePodService (for lazy IContentLinkService resolution)...");
+                var scopeFactory = sp.GetService<IServiceScopeFactory>();
+                Log.Information("[DI] All SqlitePodService dependencies resolved, creating instance (IContentLinkService will be resolved lazily via scope)...");
+                var service = new PodCore.SqlitePodService(factory, podPublisher, membershipSigner, logger, scopeFactory);
+                Log.Information("[DI] SqlitePodService constructed");
+                return service;
             });
 
             // Pod messaging service (SQLite-backed)
@@ -864,79 +1193,401 @@ namespace slskd
                     sp.GetRequiredService<ILogger<PodCore.SqlitePodMessaging>>());
             });
 
+            // Pod message storage service with full-text search and retention policies
+            services.AddScoped<PodCore.IPodMessageStorage>(sp =>
+            {
+                var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
+                var dbContext = factory.CreateDbContext();
+                return new PodCore.SqlitePodMessageStorage(
+                    dbContext,
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodMessageStorage>>());
+            });
+
+            // Content link service for pod content validation
+            services.AddScoped<PodCore.IContentLinkService>(sp =>
+            {
+                var musicBrainzClient = sp.GetService<Integrations.MusicBrainz.IMusicBrainzClient>();
+                return new PodCore.ContentLinkService(
+                    musicBrainzClient,
+                    sp.GetRequiredService<ILogger<PodCore.ContentLinkService>>());
+            });
+
+            // Pod message backfill service for synchronizing missed messages
+            services.AddScoped<PodCore.IPodMessageBackfill>(sp =>
+            {
+                var messageStorage = sp.GetRequiredService<PodCore.IPodMessageStorage>();
+                var messageRouter = sp.GetRequiredService<PodCore.IPodMessageRouter>();
+                var overlayClient = sp.GetRequiredService<Mesh.Overlay.IOverlayClient>();
+                return new PodCore.PodMessageBackfill(
+                    messageStorage,
+                    messageRouter,
+                    overlayClient,
+                    sp.GetRequiredService<ILogger<PodCore.PodMessageBackfill>>());
+            });
+
+            // Pod opinion service for managing content variant opinions
+            services.AddScoped<PodCore.IPodOpinionService>(sp =>
+            {
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var dhtClient = sp.GetService<Mesh.Dht.IMeshDhtClient>();
+                var messageSigner = sp.GetRequiredService<PodCore.IMessageSigner>();
+                return new PodCore.PodOpinionService(
+                    podService,
+                    dhtClient,
+                    messageSigner,
+                    sp.GetRequiredService<ILogger<PodCore.PodOpinionService>>());
+            });
+
+            // Pod opinion aggregator for weighted opinion analysis and consensus
+            services.AddScoped<PodCore.IPodOpinionAggregator>(sp =>
+            {
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var opinionService = sp.GetRequiredService<PodCore.IPodOpinionService>();
+                var messageStorage = sp.GetRequiredService<PodCore.IPodMessageStorage>();
+                return new PodCore.PodOpinionAggregator(
+                    podService,
+                    opinionService,
+                    messageStorage,
+                    sp.GetRequiredService<ILogger<PodCore.PodOpinionAggregator>>());
+            });
+
             // Background service for periodic pod metadata refresh
-            services.AddHostedService<PodCore.PodPublisherBackgroundService>();
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing PodPublisherBackgroundService hosted service...");
+                var service = ActivatorUtilities.CreateInstance<PodCore.PodPublisherBackgroundService>(p);
+                Log.Information("[DI] PodPublisherBackgroundService constructed");
+                return service;
+            });
 
             // Typed options (Phase 11)
             services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
             services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
+            services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSection("Security:Adversarial"));
+
+            // Transport policy manager for per-peer/per-pod transport policies
+            services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
+
+            // Anonymity transport selector with policy-aware selection
+            services.AddSingleton<Common.Security.IAnonymityTransportSelector>(sp =>
+            {
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
+                var policyManager = sp.GetRequiredService<Mesh.Transport.TransportPolicyManager>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Common.Security.AnonymityTransportSelector>>();
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                return new Common.Security.AnonymityTransportSelector(options.Value, policyManager, logger, loggerFactory);
+            });
+
+            // Privacy layer for traffic analysis protection
+            services.AddSingleton<Mesh.Privacy.IPrivacyLayer>(sp =>
+            {
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Privacy.PrivacyLayer>>();
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                return new Mesh.Privacy.PrivacyLayer(logger, loggerFactory, options.Value.Privacy);
+            });
+
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
+            services.AddOptions<Mesh.MeshTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport"));
+            services.AddOptions<Mesh.TorTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:Tor"));
+            services.AddOptions<Mesh.I2PTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:I2P"));
+            services.AddOptions<Common.Security.WebSocketTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:WebSocket"));
+            services.AddOptions<Common.Security.HttpTunnelTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:HttpTunnel"));
+            services.AddOptions<Common.Security.Obfs4TransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:Obfs4"));
+            services.AddOptions<Common.Security.MeekTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:Meek"));
+
+            // Register options as singletons for direct injection (temporary workaround)
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Mesh.I2PTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.WebSocketTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.HttpTunnelTransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.Obfs4TransportOptions>>().Value);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.MeekTransportOptions>>().Value);
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
             services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
+            services.AddOptions<Mesh.ServiceFabric.MeshGatewayOptions>().Bind(Configuration.GetSection("MeshGateway"));
+
+            // Realm services (T-REALM-01, T-REALM-02, T-REALM-04)
+            Log.Information("[DI] Configuring Realm services...");
+            services.Configure<Mesh.Realm.RealmConfig>(Configuration.GetSection("Realm"));
+            services.Configure<Mesh.Realm.MultiRealmConfig>(Configuration.GetSection("MultiRealm"));
+            services.AddRealmServices();
+
+            // Social federation services (required by bridges)
+            Log.Information("[DI] Configuring Social Federation services...");
+            services.AddSocialFederation();
+            services.AddBridgeServices();
+
+            // Governance and Gossip services (T-REALM-03)
+            Log.Information("[DI] Configuring Governance and Gossip services...");
+            services.AddGovernanceServices();
+            services.AddGossipServices();
 
             // MeshCore (Phase 8 implementation)
+            Log.Information("[DI] Configuring MeshCore services...");
             services.Configure<Mesh.MeshOptions>(Configuration.GetSection("Mesh"));
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
             services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
             services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
             services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
             // DHT: use in-memory Kademlia-style implementation for now
-            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, Mesh.Dht.InMemoryDhtClient>();
-            services.AddSingleton<Mesh.Dht.IMeshDhtClient, Mesh.Dht.MeshDhtClient>();
-            services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher, Mesh.Dht.PeerDescriptorPublisher>();
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient>(sp =>
+            {
+                Log.Information("[DI] Constructing InMemoryDhtClient...");
+                Log.Information("[DI] Resolving ILogger<InMemoryDhtClient>...");
+                var logger = sp.GetRequiredService<ILogger<Mesh.Dht.InMemoryDhtClient>>();
+                Log.Information("[DI] Resolving IOptions<MeshOptions> for InMemoryDhtClient...");
+                var options = sp.GetRequiredService<IOptions<Mesh.MeshOptions>>();
+                Log.Information("[DI] Resolving MeshStatsCollector for InMemoryDhtClient (optional)...");
+                var statsCollector = sp.GetRequiredService<Mesh.MeshStatsCollector>();
+                Log.Information("[DI] All InMemoryDhtClient dependencies resolved, creating instance...");
+                var service = new Mesh.Dht.InMemoryDhtClient(logger, options, statsCollector);
+                Log.Information("[DI] InMemoryDhtClient constructed");
+                return service;
+            });
+            services.AddSingleton<Mesh.Dht.IMeshDhtClient>(sp =>
+            {
+                Log.Information("[DI] Constructing MeshDhtClient...");
+                Log.Information("[DI] Resolving ILogger<MeshDhtClient>...");
+                var logger = sp.GetRequiredService<ILogger<Mesh.Dht.MeshDhtClient>>();
+                Log.Information("[DI] Resolving IDhtClient for MeshDhtClient...");
+                var dhtClient = sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>();
+                Log.Information("[DI] All MeshDhtClient dependencies resolved, creating instance (DhtService will be resolved lazily to break circular dependency)...");
+                var service = new Mesh.Dht.MeshDhtClient(logger, dhtClient, sp);
+                Log.Information("[DI] MeshDhtClient constructed");
+                return service;
+            });
+            services.AddSingleton<Mesh.Dht.IPeerDescriptorPublisher>(sp =>
+            {
+                Log.Information("[DI] Constructing PeerDescriptorPublisher...");
+                var service = new Mesh.Dht.PeerDescriptorPublisher(
+                    sp.GetRequiredService<ILogger<Mesh.Dht.PeerDescriptorPublisher>>(),
+                    sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>(),
+                    sp.GetRequiredService<IOptions<Mesh.MeshOptions>>(),
+                    sp.GetRequiredService<Mesh.INatDetector>(),
+                    sp.GetRequiredService<IOptions<Mesh.MeshTransportOptions>>(),
+                    sp.GetRequiredService<Mesh.Transport.DescriptorSigningService>(),
+                    sp.GetService<Mesh.Overlay.IKeyStore>());
+                Log.Information("[DI] PeerDescriptorPublisher constructed");
+                return service;
+            });
             services.AddSingleton<Mesh.IMeshDirectory, Mesh.Dht.ContentDirectory>();
             services.AddSingleton<Mesh.IMeshAdvanced>(sp => new Mesh.MeshAdvanced(
                 sp.GetRequiredService<ILogger<Mesh.MeshAdvanced>>(),
                 sp.GetRequiredService<Mesh.IMeshDirectory>(),
-                sp.GetRequiredService<Mesh.MeshStatsCollector>()));
-            services.AddSingleton<Mesh.MeshStatsCollector>();
-            services.AddHostedService<Mesh.Bootstrap.MeshBootstrapService>();
-            services.AddHostedService<Mesh.Dht.PeerDescriptorRefreshService>();
-            services.AddHostedService<Mesh.Dht.PeerDescriptorWatcher>(); // Populates endpoint registry
-            services.AddSingleton<Mesh.Dht.IContentPeerPublisher, Mesh.Dht.ContentPeerPublisher>();
-            services.AddSingleton<Mesh.Dht.IContentPeerHintService, Mesh.Dht.ContentPeerHintService>();
+                sp.GetRequiredService<Mesh.MeshStatsCollector>(),
+                sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>(),
+                sp.GetRequiredService<Mesh.Nat.INatTraversalService>()));
+            services.AddSingleton<Mesh.MeshStatsCollector>(sp =>
+            {
+                Log.Information("[DI] Constructing MeshStatsCollector...");
+                var service = new Mesh.MeshStatsCollector(
+                    sp.GetRequiredService<ILogger<Mesh.MeshStatsCollector>>(),
+                    sp);
+                Log.Information("[DI] MeshStatsCollector constructed");
+                return service;
+            });
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Resolving MeshBootstrapService hosted service...");
+                var service = ActivatorUtilities.CreateInstance<Mesh.Bootstrap.MeshBootstrapService>(p);
+                Log.Information("[DI] MeshBootstrapService hosted service resolved");
+                return service;
+            });
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Resolving PeerDescriptorRefreshService hosted service...");
+                var service = ActivatorUtilities.CreateInstance<Mesh.Dht.PeerDescriptorRefreshService>(p);
+                Log.Information("[DI] PeerDescriptorRefreshService hosted service resolved");
+                return service;
+            });
+            services.AddSingleton<Mesh.Dht.IContentPeerPublisher>(sp =>
+            {
+                Log.Information("[DI] Constructing ContentPeerPublisher...");
+                Log.Information("[DI] Resolving ILogger<ContentPeerPublisher>...");
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Dht.ContentPeerPublisher>>();
+                Log.Information("[DI] Resolving IMeshDhtClient for ContentPeerPublisher...");
+                var dht = sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>();
+                Log.Information("[DI] Resolving IOptions<MeshOptions> for ContentPeerPublisher...");
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.MeshOptions>>();
+                Log.Information("[DI] All ContentPeerPublisher dependencies resolved, creating instance...");
+                var service = new Mesh.Dht.ContentPeerPublisher(logger, dht, options);
+                Log.Information("[DI] ContentPeerPublisher constructed");
+                return service;
+            });
+            services.AddSingleton<Mesh.Dht.IContentPeerHintService>(sp =>
+            {
+                Log.Information("[DI] Constructing ContentPeerHintService...");
+                var service = new Mesh.Dht.ContentPeerHintService(
+                    sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Dht.ContentPeerHintService>>(),
+                    sp.GetRequiredService<Mesh.Dht.IContentPeerPublisher>());
+                Log.Information("[DI] ContentPeerHintService constructed");
+                return service;
+            });
             services.AddHostedService(sp => (Mesh.Dht.ContentPeerHintService)sp.GetRequiredService<Mesh.Dht.IContentPeerHintService>());
             services.AddSingleton<Mesh.Health.IMeshHealthService, Mesh.Health.MeshHealthService>();
-            
-            // Security: Identity key store (stable Ed25519 identity, NEVER rotates)
-            services.AddSingleton<Mesh.Security.IIdentityKeyStore>(sp =>
-                new Mesh.Security.FileIdentityKeyStore(
-                    sp.GetRequiredService<ILogger<Mesh.Security.FileIdentityKeyStore>>()));
-            
-            // Security: Descriptor signing and verification
-            services.AddSingleton<Mesh.Security.IDescriptorSigner, Mesh.Security.DescriptorSigner>();
-            
-            // Security: Peer endpoint registry for reverse lookup
-            services.AddSingleton<Mesh.Security.IPeerEndpointRegistry, Mesh.Security.PeerEndpointRegistry>();
-            
-            // Security: TOFU pin store for trust-on-first-use fallback
-            services.AddSingleton<Mesh.Security.ITofuPinStore, Mesh.Security.TofuPinStore>();
-            
-            // Security: Peer pin cache for SPKI pinning
-            services.AddSingleton<Mesh.Security.IPeerPinCache, Mesh.Security.PeerPinCache>();
-            
-            // Security: Control envelope verification (peer-aware, not self-asserted)
-            services.AddSingleton<Mesh.Security.IControlVerification, Mesh.Security.ControlVerification>();
-            
-            // Security: Replay cache for anti-replay attack protection
-            services.AddSingleton<Mesh.Security.IReplayCache, Mesh.Security.ReplayCache>();
-            
-            // Security: Anti-rollback tracking for descriptor sequence numbers
-            services.AddSingleton<Mesh.Security.IDescriptorSeqTracker>(sp =>
+
+            // Service Fabric (client + directory + validation)
+            services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDescriptorValidator, Mesh.ServiceFabric.MeshServiceDescriptorValidator>();
+            services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDirectory, Mesh.ServiceFabric.DhtMeshServiceDirectory>();
+            services.AddSingleton<Mesh.ServiceFabric.IMeshServiceClient, Mesh.ServiceFabric.MeshServiceClient>();
+
+            // Kademlia routing table using overlay key material for node ID
+            services.AddSingleton<Mesh.Dht.KademliaRoutingTable>(sp =>
             {
-                var logger = sp.GetRequiredService<ILogger<Mesh.Security.DescriptorSeqTracker>>();
-                var path = Path.Combine(Program.DataDirectory, "mesh-descriptor-seq.json");
-                return new Mesh.Security.DescriptorSeqTracker(logger, path);
+                var keyStore = sp.GetRequiredService<Mesh.Overlay.IKeyStore>();
+                var pubKey = keyStore.Current.PublicKey;
+
+                // KademliaRoutingTable expects 160-bit IDs (20 bytes). SHA1 gives exactly 20 bytes.
+                var selfId = System.Security.Cryptography.SHA1.HashData(pubKey);
+
+                return new Mesh.Dht.KademliaRoutingTable(selfId);
             });
-            
-            // Security: Rate limiter for DoS protection
-            services.AddSingleton<Mesh.Security.IMeshRateLimiter, Mesh.Security.MeshRateLimiter>();
-            
-            // KeyStore for Ed25519 control signing keys (CAN rotate, subordinate to identity)
+
+            // DHT services for Kademlia operations
+            services.AddSingleton<Mesh.Dht.KademliaRpcClient>(sp =>
+            {
+                Log.Information("[DI] Constructing KademliaRpcClient...");
+                Log.Information("[DI] Resolving ILogger<KademliaRpcClient>...");
+                var logger = sp.GetRequiredService<ILogger<Mesh.Dht.KademliaRpcClient>>();
+                Log.Information("[DI] Resolving IMeshServiceClient for KademliaRpcClient...");
+                var meshClient = sp.GetRequiredService<Mesh.ServiceFabric.IMeshServiceClient>();
+                Log.Information("[DI] Resolving KademliaRoutingTable for KademliaRpcClient...");
+                var routingTable = sp.GetRequiredService<Mesh.Dht.KademliaRoutingTable>();
+                Log.Information("[DI] Resolving IDhtClient for KademliaRpcClient...");
+                var dhtClient = sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>();
+                Log.Information("[DI] All KademliaRpcClient dependencies resolved, creating instance...");
+                var service = new Mesh.Dht.KademliaRpcClient(logger, meshClient, routingTable, dhtClient);
+                Log.Information("[DI] KademliaRpcClient constructed");
+                return service;
+            });
+            services.AddSingleton<Mesh.ServiceFabric.Services.DhtMeshService>();
+            services.AddSingleton<Mesh.Dht.DhtService>(sp =>
+            {
+                Log.Information("[DI] Constructing DhtService...");
+                Log.Information("[DI] Resolving ILogger<DhtService>...");
+                var logger = sp.GetRequiredService<ILogger<Mesh.Dht.DhtService>>();
+                Log.Information("[DI] Resolving KademliaRoutingTable for DhtService...");
+                var routingTable = sp.GetRequiredService<Mesh.Dht.KademliaRoutingTable>();
+                Log.Information("[DI] Resolving IDhtClient for DhtService...");
+                var dhtClient = sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>();
+                Log.Information("[DI] Resolving KademliaRpcClient for DhtService...");
+                var rpcClient = sp.GetRequiredService<Mesh.Dht.KademliaRpcClient>();
+                Log.Information("[DI] Resolving IMeshMessageSigner for DhtService...");
+                var messageSigner = sp.GetRequiredService<Mesh.IMeshMessageSigner>();
+                Log.Information("[DI] All DhtService dependencies resolved, creating instance...");
+                var service = new Mesh.Dht.DhtService(logger, routingTable, dhtClient, rpcClient, messageSigner);
+                Log.Information("[DI] DhtService constructed");
+                return service;
+            });
+
+            // Hole punching services for NAT traversal
+            services.AddSingleton<Mesh.ServiceFabric.Services.HolePunchMeshService>();
+            services.AddSingleton<Mesh.Nat.IHolePunchCoordinator, Mesh.Nat.HolePunchCoordinator>();
+            services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
+
+            // Private gateway service for VPN functionality (Phase 14)
+            services.AddSingleton<DnsSecurityService>();
+            services.AddSingleton<LocalPortForwarder>();
+            services.AddSingleton<Mesh.ServiceFabric.Services.PrivateGatewayMeshService>();
+
+            // Onion routing services (Phase 12)
+            services.AddSingleton<Mesh.IMeshPeerManager, Mesh.MeshPeerManager>();
+            services.AddSingleton<Mesh.IMeshTransportService>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.MeshTransportService>>();
+                var meshOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.MeshOptions>>();
+                var anonymitySelector = sp.GetService<Common.Security.IAnonymityTransportSelector>();
+                var adversarialOptions = sp.GetService<Microsoft.Extensions.Options.IOptions<Common.Security.AdversarialOptions>>();
+                return new Mesh.MeshTransportService(logger, meshOptions, anonymitySelector, adversarialOptions);
+            });
+
+            services.AddSingleton<Mesh.MeshCircuitBuilder>(sp =>
+            {
+                var meshOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.MeshOptions>>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.MeshCircuitBuilder>>();
+                var peerManager = sp.GetRequiredService<Mesh.IMeshPeerManager>();
+                var transportSelector = sp.GetRequiredService<Common.Security.IAnonymityTransportSelector>();
+                return new Mesh.MeshCircuitBuilder(meshOptions.Value, logger, peerManager, transportSelector);
+            });
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing CircuitMaintenanceService hosted service...");
+                var service = ActivatorUtilities.CreateInstance<Mesh.CircuitMaintenanceService>(p);
+                Log.Information("[DI] CircuitMaintenanceService constructed");
+                return service;
+            });
+
+            // Transport dialers (Tor/I2P integration Phase 2)
+            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
+            services.AddSingleton<Mesh.Transport.ITransportDialer>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>();
+                var logger = sp.GetRequiredService<ILogger<Mesh.Transport.TorSocksDialer>>();
+                return new Mesh.Transport.TorSocksDialer(options.Value, logger);
+            });
+            services.AddSingleton<Mesh.Transport.ITransportDialer>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<Mesh.I2PTransportOptions>>();
+                var logger = sp.GetRequiredService<ILogger<Mesh.Transport.I2pSocksDialer>>();
+                return new Mesh.Transport.I2pSocksDialer(options.Value, logger);
+            });
+
+            // Transport policy manager for per-peer/per-pod policies
+            services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
+
+            // Transport downgrade protection
+            services.AddSingleton<Mesh.Transport.TransportDowngradeProtector>();
+
+            // Certificate pin management for peer identity verification
+            services.AddSingleton<Mesh.Transport.CertificatePinManager>();
+
+            // Rate limiting for DoS protection
+            services.AddSingleton<Mesh.Transport.RateLimiter>();
+            services.AddSingleton<Mesh.Transport.ConnectionThrottler>();
+            services.AddSingleton<Mesh.Dht.DhtRateLimiter>();
+
+            // DNS leak prevention verification
+            services.AddSingleton<Mesh.Transport.DnsLeakPreventionVerifier>();
+
+            // Transport selector for endpoint negotiation
+            services.AddSingleton<Mesh.Transport.TransportSelector>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<Mesh.MeshTransportOptions>>();
+                var dialers = sp.GetServices<Mesh.Transport.ITransportDialer>();
+                var policyManager = sp.GetRequiredService<Mesh.Transport.TransportPolicyManager>();
+                var downgradeProtector = sp.GetRequiredService<Mesh.Transport.TransportDowngradeProtector>();
+                var connectionThrottler = sp.GetRequiredService<Mesh.Transport.ConnectionThrottler>();
+                var logger = sp.GetRequiredService<ILogger<Mesh.Transport.TransportSelector>>();
+                return new Mesh.Transport.TransportSelector(
+                    options.Value,
+                    dialers,
+                    policyManager,
+                    downgradeProtector,
+                    connectionThrottler,
+                    logger);
+            });
+
+            // Descriptor signing service for cryptographic integrity
+            services.AddSingleton<Mesh.Transport.DescriptorSigningService>();
+
+            // Ed25519 signing implementation
+            services.AddSingleton<Mesh.Transport.Ed25519Signer>();
+
+            // Control envelope validator for replay protection and peer-bound verification
+            services.AddSingleton<Mesh.Overlay.ControlEnvelopeValidator>();
+
+            // KeyStore for Ed25519 signing (used by ControlSigner and MeshMessageSigner)
             services.AddSingleton<Mesh.Overlay.IKeyStore, Mesh.Overlay.FileKeyStore>();
             services.AddSingleton<Mesh.Overlay.IControlSigner, Mesh.Overlay.ControlSigner>();
-            services.AddSingleton<Mesh.Overlay.IControlDispatcher, Mesh.Overlay.ControlDispatcher>();
+            services.AddSingleton<Mesh.Overlay.IControlDispatcher>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.ControlDispatcher>>();
+                var validator = sp.GetRequiredService<Mesh.Overlay.ControlEnvelopeValidator>();
+                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                return new Mesh.Overlay.ControlDispatcher(logger, validator, privacyLayer);
+            });
             // Mesh message signing for mesh sync security
             services.AddSingleton<Mesh.IMeshMessageSigner, Mesh.MeshMessageSigner>();
             services.AddSingleton(sp =>
@@ -944,15 +1595,46 @@ namespace slskd
                 var keyStore = sp.GetRequiredService<Mesh.Overlay.IKeyStore>();
                 return keyStore.Current;
             });
-            services.AddHostedService<Mesh.Overlay.UdpOverlayServer>();
-            services.AddHostedService<Mesh.Overlay.QuicOverlayServer>();
-            services.AddSingleton<Mesh.Overlay.IOverlayClient, Mesh.Overlay.QuicOverlayClient>();
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing UdpOverlayServer hosted service...");
+                var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
+                Log.Information("[DI] UdpOverlayServer constructed");
+                return service;
+            });
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing QuicOverlayServer hosted service...");
+                var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(p);
+                Log.Information("[DI] QuicOverlayServer constructed");
+                return service;
+            });
+            services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.QuicOverlayClient>>();
+                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.Overlay.OverlayOptions>>();
+                var signer = sp.GetRequiredService<Mesh.Overlay.IControlSigner>();
+                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                return new Mesh.Overlay.QuicOverlayClient(logger, options, signer, privacyLayer);
+            });
             services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(Configuration.GetSection("OverlayData"));
-            services.AddHostedService<Mesh.Overlay.QuicDataServer>();
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing QuicDataServer hosted service...");
+                var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicDataServer>(p);
+                Log.Information("[DI] QuicDataServer constructed");
+                return service;
+            });
             services.AddSingleton<Mesh.Overlay.IOverlayDataPlane, Mesh.Overlay.QuicDataClient>();
 
             // MediaCore publisher
-            services.AddHostedService<MediaCore.ContentPublisherService>();
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Constructing ContentPublisherService hosted service...");
+                var service = ActivatorUtilities.CreateInstance<MediaCore.ContentPublisherService>(p);
+                Log.Information("[DI] ContentPublisherService constructed");
+                return service;
+            });
 
             // Capabilities - tracks available features per peer
             services.AddSingleton<Capabilities.ICapabilityService, Capabilities.CapabilityService>();
@@ -964,60 +1646,24 @@ namespace slskd
             services.AddSingleton<OverlayRateLimiter>();
             services.AddSingleton<OverlayBlocklist>();
             services.AddSingleton<MeshNeighborRegistry>();
-            services.AddSingleton<DhtRendezvous.Security.ReplayCache>();
             services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();
             services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
-            
-            // P2-1: Certificate expiration monitoring
-            services.AddHostedService<DhtRendezvous.Security.CertificateExpirationMonitor>();
 
             services.AddSingleton<IDhtRendezvousService, DhtRendezvousService>();
-            services.AddHostedService(p => (DhtRendezvousService)p.GetRequiredService<IDhtRendezvousService>());
+            services.AddHostedService(p =>
+            {
+                Log.Information("[DI] Resolving DhtRendezvousService hosted service...");
+                var service = (DhtRendezvousService)p.GetRequiredService<IDhtRendezvousService>();
+                Log.Information("[DI] DhtRendezvousService hosted service resolved");
+                return service;
+            });
 
             // Backfill services (Long-tail content discovery)
             services.AddSingleton<Backfill.IBackfillSchedulerService, Backfill.BackfillSchedulerService>();
             services.AddHostedService(p => (Backfill.BackfillSchedulerService)p.GetRequiredService<Backfill.IBackfillSchedulerService>());
 
-            // Mesh identity services (DHT-first peer registry)
-            services.AddSingleton<Mesh.Identity.LocalMeshIdentityService>(sp => 
-                new Mesh.Identity.LocalMeshIdentityService(
-                    sp.GetRequiredService<ILogger<Mesh.Identity.LocalMeshIdentityService>>(),
-                    Path.Combine(AppDirectory, "mesh-identity.key")));
-            services.AddSingleton<Mesh.Identity.IMeshPeerRegistry>(sp => 
-                new Mesh.Identity.MeshPeerRegistry(
-                    sp.GetRequiredService<ILogger<Mesh.Identity.MeshPeerRegistry>>(),
-                    AppDirectory));
-            services.AddSingleton<Mesh.Identity.ISoulseekMeshIdentityMapper>(sp => 
-                new Mesh.Identity.SoulseekMeshIdentityMapper(
-                    sp.GetRequiredService<ILogger<Mesh.Identity.SoulseekMeshIdentityMapper>>(),
-                    AppDirectory));
-
-            // BitTorrent rendezvous service (optional peer discovery channel)
-            // Always register, service checks EnableRendezvousTorrent config internally
-            services.AddSingleton<BitTorrent.RendezvousTorrentService>(sp => 
-                new BitTorrent.RendezvousTorrentService(
-                    sp.GetRequiredService<ILogger<BitTorrent.RendezvousTorrentService>>(),
-                    AppDirectory,
-                    sp.GetRequiredService<IOptions<Options>>().Value.BitTorrent));
-            services.AddHostedService(p => p.GetRequiredService<BitTorrent.RendezvousTorrentService>());
-
-
             // Mesh services (Hash database synchronization)
-            services.AddSingleton<Mesh.IProofOfPossessionService, Mesh.ProofOfPossessionService>();
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
-            
-            // Mesh overlay sync adapter (bridges mesh sync to overlay connections)
-            services.AddSingleton<DhtRendezvous.OverlayMeshSyncAdapter>();
-            services.AddSingleton<DhtRendezvous.IMeshOverlayMessageHandler>(sp => 
-                sp.GetRequiredService<DhtRendezvous.OverlayMeshSyncAdapter>());
-            
-            // Soulseek-Mesh bridge services (ensure mesh discoveries benefit Soulseek community)
-            services.AddSingleton<DhtRendezvous.SoulseekMeshBridgeService>();
-            services.AddHostedService(sp => sp.GetRequiredService<DhtRendezvous.SoulseekMeshBridgeService>());
-            services.AddSingleton<Mesh.MeshSearchBridgeService>();
-            
-            // Mesh data plane for chunk downloads
-            services.AddSingleton<Mesh.IMeshDataPlane, Mesh.MeshDataPlane>();
 
             // Multi-source download services (Swarm)
             services.AddSingleton<ISourceDiscoveryService>(sp => new SourceDiscoveryService(
@@ -1093,7 +1739,9 @@ namespace slskd
             services.AddSingleton<Users.Notes.IUserNoteService, Users.Notes.UserNoteService>();
 
             // Security services (zero-trust hardening)
+            Log.Information("[DI] About to call AddSlskdnSecurity...");
             services.AddSlskdnSecurity(Configuration);
+            Log.Information("[DI] AddSlskdnSecurity completed");
 
             return services;
         }
@@ -1125,6 +1773,8 @@ namespace slskd
 
         private static IServiceCollection ConfigureAspDotNetServices(this IServiceCollection services)
         {
+            Log.Information("[ASP] Starting ConfigureAspDotNetServices...");
+            
             services.AddCors(options => options.AddPolicy("AllowAll", builder => builder
                 .SetIsOriginAllowed((host) => true)
                 .AllowAnyHeader()
@@ -1144,6 +1794,42 @@ namespace slskd
 
             services.AddSingleton(jwtSigningKey);
             services.AddSingleton<ISecurityService, SecurityService>();
+            services.AddSingleton<Common.Security.ISoulseekSafetyLimiter, Common.Security.SoulseekSafetyLimiter>();
+
+            // T-MCP01: Register Moderation / Control Plane services
+            services.AddSingleton<Common.Moderation.IModerationProvider>(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptionsMonitor<Options>>();
+                var logger = sp.GetRequiredService<ILogger<Common.Moderation.CompositeModerationProvider>>();
+
+                if (!opts.CurrentValue.Moderation.Enabled)
+                {
+                    return new Common.Moderation.NoopModerationProvider();
+                }
+
+                // T-MCP03: Inject share repository for content ID checking
+                var shareRepository = sp.GetService<Shares.IShareRepository>();
+
+                // For now, use CompositeModerationProvider with no sub-providers
+                // T-MCP02+ will add actual implementations
+                // We need to wrap the Options.Moderation in an IOptionsMonitor
+                var moderationOptions = Microsoft.Extensions.Options.Options.Create(opts.CurrentValue.Moderation);
+                var moderationOptionsMonitor = new Common.Moderation.WrappedOptionsMonitor<Common.Moderation.ModerationOptions>(moderationOptions);
+
+                return new Common.Moderation.CompositeModerationProvider(
+                    moderationOptionsMonitor,
+                    logger,
+                    hashBlocklist: null,
+                    peerReputation: null,
+                    externalClient: null,
+                    shareRepository: shareRepository); // T-MCP03
+            });
+
+            // T-FED01: Register Social Federation services
+            if (OptionsAtStartup.SocialFederation.Enabled)
+            {
+                services.AddSocialFederation();
+            }
 
             if (!OptionsAtStartup.Web.Authentication.Disabled)
             {
@@ -1240,20 +1926,28 @@ namespace slskd
                     options.AddPolicy(AuthPolicy.Any, policy =>
                     {
                         policy.AuthenticationSchemes.Add(PassthroughAuthentication.AuthenticationScheme);
+                        policy.RequireAuthenticatedUser();
                     });
 
                     options.AddPolicy(AuthPolicy.ApiKeyOnly, policy =>
                     {
                         policy.AuthenticationSchemes.Add(PassthroughAuthentication.AuthenticationScheme);
+                        policy.RequireAuthenticatedUser();
                     });
 
                     options.AddPolicy(AuthPolicy.JwtOnly, policy =>
                     {
                         policy.AuthenticationSchemes.Add(PassthroughAuthentication.AuthenticationScheme);
+                        policy.RequireAuthenticatedUser();
                     });
                 });
 
-                services.AddAuthentication(PassthroughAuthentication.AuthenticationScheme)
+                services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = PassthroughAuthentication.AuthenticationScheme;
+                    options.DefaultChallengeScheme = PassthroughAuthentication.AuthenticationScheme;
+                    options.DefaultScheme = PassthroughAuthentication.AuthenticationScheme;
+                })
                     .AddScheme<PassthroughAuthenticationOptions, PassthroughAuthenticationHandler>(PassthroughAuthentication.AuthenticationScheme, options =>
                     {
                         options.Username = "Anonymous";
@@ -1291,7 +1985,8 @@ namespace slskd
                 });
 
             services.AddHealthChecks()
-                .AddSecurityHealthCheck();
+                .AddSecurityHealthCheck()
+                .AddMeshHealthCheck();
 
             services.AddApiVersioning(options =>
                 {
@@ -1312,7 +2007,7 @@ namespace slskd
                     {
                         Version = "v0",
                         Title = AppName,
-                        Description = "A modern client-server application for the Soulseek file sharing network",
+                        Description = "A modern client-server application for the Soulseek community service network",
                         Contact = new OpenApiContact
                         {
                             Name = "GitHub",
@@ -1344,6 +2039,11 @@ namespace slskd
 
         private static WebApplication ConfigureAspDotNetPipeline(this WebApplication app)
         {
+            // STEP 1: Verify middleware is in the built pipeline by inspecting the ApplicationBuilder
+            // STEP 2: Check for exceptions during pipeline construction
+            // STEP 3: Use a custom middleware class instead of inline delegate
+            Log.Information("[Pipeline] Starting ConfigureAspDotNetPipeline...");
+            
             // stop ASP.NET from sending a full stack trace and ProblemDetails for unhandled exceptions
             app.UseExceptionHandler(a => a.Run(async context =>
             {
@@ -1359,6 +2059,13 @@ namespace slskd
 
                 Log.Information($"Forcing HTTP requests to HTTPS");
             }
+
+            // Security middleware (rate limiting, violation tracking, etc.)
+            // MUST be FIRST in pipeline (before UsePathBase) to catch path traversal and other attacks
+            // This ensures we check the raw request path before any path rewriting occurs
+            Log.Information("[Pipeline] About to call UseSlskdnSecurity (FIRST in pipeline)...");
+            app.UseSlskdnSecurity();
+            Log.Information("[Pipeline] UseSlskdnSecurity completed");
 
             // allow users to specify a custom path base, for use behind a reverse proxy
             var urlBase = OptionsAtStartup.Web.UrlBase;
@@ -1383,29 +2090,40 @@ namespace slskd
                 EnableDirectoryBrowsing = false,
                 EnableDefaultFiles = true,
             };
+            
+            // CRITICAL: Block suspicious paths at the file server level
+            // This is the last line of defense before files are served
+            fileServerOptions.StaticFileOptions.OnPrepareResponse = (context) =>
+            {
+                var path = context.Context.Request.Path.Value ?? string.Empty;
+                var rawTarget = context.Context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpRequestFeature>()?.RawTarget ?? string.Empty;
+                
+                if (path.Contains("/etc/passwd") || path.Contains("/etc/") || 
+                    rawTarget.Contains("/etc/passwd") || rawTarget.Contains("/etc/") ||
+                    path.StartsWith("/etc", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Warning("[FILE_SERVER_BLOCK] Blocking suspicious path: {Path}, RawTarget: {RawTarget}", path, rawTarget);
+                    context.Context.Response.StatusCode = 400;
+                    context.Context.Response.ContentLength = 0;
+                }
+            };
 
-            if (!OptionsAtStartup.Headless)
-            {
-                app.UseFileServer(fileServerOptions);
-                Log.Information("Serving static content from {ContentPath}", contentPath);
-            }
-            else
-            {
-                Log.Warning("Running in headless mode; web UI is DISABLED");
-            }
+            // Mesh gateway auth middleware (must be before UseRouting to catch /mesh paths)
+            // This middleware blocks /mesh/* paths when gateway is disabled
+            app.UseMiddleware<Mesh.ServiceFabric.MeshGatewayAuthMiddleware>();
+
+            app.UseAuthentication();
+            app.UseRouting();
+            app.UseAuthorization();
 
             if (OptionsAtStartup.Web.Logging)
             {
                 app.UseSerilogRequestLogging();
             }
 
-            // Security middleware (rate limiting, violation tracking, etc.)
-            app.UseSlskdnSecurity();
-
-            app.UseAuthentication();
-            app.UseRouting();
-            app.UseAuthorization();
-
+            // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
+            // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
+            
             // starting with .NET 7 the framework *really* wants you to use top level endpoint mapping
             // for whatever reason this breaks everything, and i just can't bring myself to care unless
             // UseEndpoints is going to be deprecated or if there's some material benefit
@@ -1414,11 +2132,16 @@ namespace slskd
             {
                 endpoints.MapHub<ApplicationHub>("/hub/application");
                 endpoints.MapHub<LogsHub>("/hub/logs");
+                endpoints.MapHub<Transfers.API.TransfersHub>("/hub/transfers");
                 endpoints.MapHub<SearchHub>("/hub/search");
                 endpoints.MapHub<RelayHub>("/hub/relay");
 
                 endpoints.MapControllers();
                 endpoints.MapHealthChecks("/health");
+                endpoints.MapHealthChecks("/health/mesh", new HealthCheckOptions
+                {
+                    Predicate = check => check.Tags.Contains("mesh")
+                });
 
                 if (OptionsAtStartup.Metrics.Enabled)
                 {
@@ -1463,6 +2186,18 @@ namespace slskd
             });
 #pragma warning restore ASP0014 // Suggest using top level route registrations
 
+            // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
+            // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
+            if (!OptionsAtStartup.Headless)
+            {
+                app.UseFileServer(fileServerOptions);
+                Log.Information("Serving static content from {ContentPath}", contentPath);
+            }
+            else
+            {
+                Log.Warning("Running in headless mode; web UI is DISABLED");
+            }
+
             // if this is an /api route and no API controller was matched, give up and return a 404.
             app.Use(async (context, next) =>
             {
@@ -1503,8 +2238,6 @@ namespace slskd
                     await next();
                 });
 
-                // either serve the index, or 404
-                app.UseFileServer(fileServerOptions);
             }
 
             return app;
@@ -1554,9 +2287,7 @@ namespace slskd
                         var record = new LogRecord()
                         {
                             Timestamp = logEvent.Timestamp.LocalDateTime,
-                            Context = logEvent.Properties.ContainsKey("SourceContext") 
-                                ? logEvent.Properties["SourceContext"].ToString().TrimStart('"').TrimEnd('"')
-                                : "Unknown",
+                            Context = logEvent.Properties["SourceContext"].ToString().TrimStart('"').TrimEnd('"'),
                             SubContext = logEvent.Properties.ContainsKey("SubContext") ? logEvent.Properties["SubContext"].ToString().TrimStart('"').TrimEnd('"') : null,
                             Level = logEvent.Level.ToString(),
                             Message = message.TrimStart('"').TrimEnd('"'),
@@ -1600,6 +2331,7 @@ namespace slskd
         private static IConfigurationBuilder AddConfigurationProviders(this IConfigurationBuilder builder, string environmentVariablePrefix, string configurationFile, bool reloadOnChange)
         {
             configurationFile = Path.GetFullPath(configurationFile);
+            Log.Information("[Config] Loading configuration from {ConfigFile}", configurationFile);
 
             var multiValuedArguments = typeof(Options)
                 .GetPropertiesRecursively()
@@ -1613,7 +2345,7 @@ namespace slskd
                 .Where(v => v != "\u0000")
                 .ToArray();
 
-            return builder
+            var result = builder
                 .AddDefaultValues(
                     targetType: typeof(Options))
                 .AddEnvironmentVariables(
@@ -1629,6 +2361,9 @@ namespace slskd
                     targetType: typeof(Options),
                     multiValuedArguments,
                     commandLine: Environment.CommandLine);
+            
+            Log.Information("[Config] Configuration providers added, YAML file: {ConfigFile}", configurationFile);
+            return result;
         }
 
         private static IServiceCollection AddDbContext<T>(this IServiceCollection services, string connectionString)
@@ -1929,5 +2664,37 @@ namespace slskd
                 }
             }
         }
+
+        private static void InstallShutdownTelemetry()
+        {
+            // Install hard telemetry to catch silent exits and unhandled exceptions
+            // This ensures we always know WHY the process terminated
+
+            AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+            {
+                var msg = $"[FATAL] ProcessExit event fired - process terminating";
+                Console.Error.WriteLine(msg);
+                try { Log?.Fatal(msg); } catch { }
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                var ex = e.ExceptionObject as Exception;
+                var msg = $"[FATAL] Unhandled exception: {ex?.Message ?? e.ExceptionObject?.ToString() ?? "unknown"}";
+                Console.Error.WriteLine(msg);
+                Console.Error.WriteLine(ex?.StackTrace ?? "no stack trace");
+                try { Log?.Fatal(ex, msg); } catch { }
+            };
+
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
+                Console.Error.WriteLine(msg);
+                Console.Error.WriteLine(e.Exception.StackTrace);
+                try { Log?.Fatal(e.Exception, msg); } catch { }
+                e.SetObserved(); // Prevent process termination
+            };
+        }
+
     }
 }

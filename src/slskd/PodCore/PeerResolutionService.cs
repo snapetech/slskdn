@@ -1,3 +1,7 @@
+// <copyright file="PeerResolutionService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.PodCore;
 
 using System;
@@ -225,19 +229,3 @@ public class PeerMetadata
     public string? Endpoint { get; set; } // Format: "ip:port" or "udp://ip:port"
     public long UpdatedAt { get; set; } // Unix timestamp in milliseconds
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

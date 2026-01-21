@@ -1,3 +1,7 @@
+// <copyright file="MeshDirectory.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,8 +10,6 @@ using System.Threading.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.MediaCore;
-using MeshPeer = slskd.Mesh.MeshPeerDescriptor;
-using MeshContent = slskd.Mesh.MeshContentDescriptor;
 
 namespace slskd.Mesh.Dht;
 
@@ -30,7 +32,7 @@ public class MeshDirectory : IMeshDirectory
         this.descriptorValidator = descriptorValidator;
     }
 
-    public async Task<MeshPeer?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
+    public async Task<slskd.Mesh.MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer:{peerId}";
         var raw = await dht.GetRawAsync(key, ct);
@@ -38,9 +40,13 @@ public class MeshDirectory : IMeshDirectory
 
         try
         {
-            var desc = MessagePackSerializer.Deserialize<MeshPeerDescriptor>(raw);
-            var endpoint = desc.Endpoints?.FirstOrDefault();
-            return new MeshPeer(desc.PeerId, endpoint, null, null);
+            // Deserialize DHT descriptor
+            var dhtDesc = MessagePackSerializer.Deserialize<MeshPeerDescriptor>(raw);
+            
+            // Convert to interface descriptor
+            var endpoint = dhtDesc.Endpoints?.FirstOrDefault();
+            var (address, port) = ParseEndpoint(endpoint);
+            return new slskd.Mesh.MeshPeerDescriptor(dhtDesc.PeerId, address, port);
         }
         catch (Exception ex)
         {
@@ -49,28 +55,33 @@ public class MeshDirectory : IMeshDirectory
         }
     }
 
-    public async Task<IReadOnlyList<MeshPeer>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<slskd.Mesh.MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
     {
         var key = $"mesh:content-peers:{contentId}";
         var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
-        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<MeshPeer>();
+        if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<slskd.Mesh.MeshPeerDescriptor>();
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var fresh = hints.Peers
             .Where(p => now - p.TimestampUnixMs < 3600_000) // 1h freshness
-            .Select(p => new MeshPeer(p.PeerId, p.Endpoints?.FirstOrDefault(), null, null))
+            .Select(p =>
+            {
+                var endpoint = p.Endpoints?.FirstOrDefault();
+                var (address, port) = ParseEndpoint(endpoint);
+                return new slskd.Mesh.MeshPeerDescriptor(p.PeerId, address, port);
+            })
             .ToList();
 
         return fresh;
     }
 
-    public async Task<IReadOnlyList<MeshContent>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<slskd.Mesh.MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
     {
         var key = $"mesh:peer-content:{peerId}";
         var contentList = await dht.GetAsync<List<string>>(key, ct);
-        if (contentList == null || contentList.Count == 0) return Array.Empty<MeshContent>();
+        if (contentList == null || contentList.Count == 0) return Array.Empty<slskd.Mesh.MeshContentDescriptor>();
 
-        var results = new List<MeshContent>();
+        var results = new List<slskd.Mesh.MeshContentDescriptor>();
         foreach (var cid in contentList)
         {
             var contentDescriptor = await dht.GetAsync<MediaCore.ContentDescriptor>($"mesh:content:{cid}", ct);
@@ -81,7 +92,7 @@ public class MeshDirectory : IMeshDirectory
                 continue;
             }
 
-            results.Add(new MeshContent(
+            results.Add(new slskd.Mesh.MeshContentDescriptor(
                 cid,
                 contentDescriptor.Hashes?.FirstOrDefault()?.Hex,
                 contentDescriptor.SizeBytes ?? 0,
@@ -89,5 +100,20 @@ public class MeshDirectory : IMeshDirectory
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Parse an endpoint string (e.g., "host:port") into address and port.
+    /// </summary>
+    private (string? address, int? port) ParseEndpoint(string? endpoint)
+    {
+        if (string.IsNullOrEmpty(endpoint)) return (null, null);
+        
+        var parts = endpoint.Split(':');
+        if (parts.Length != 2) return (endpoint, null);
+        
+        var address = parts[0];
+        var port = int.TryParse(parts[1], out var p) ? p : (int?)null;
+        return (address, port);
     }
 }

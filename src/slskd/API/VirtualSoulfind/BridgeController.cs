@@ -1,3 +1,7 @@
+// <copyright file="BridgeController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.API.VirtualSoulfind;
 
 using Microsoft.AspNetCore.Mvc;
@@ -166,19 +170,3 @@ public record BridgeSearchRequest(string Query);
 /// Bridge download request.
 /// </summary>
 public record BridgeDownloadRequest(string Username, string Filename, string TargetPath);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

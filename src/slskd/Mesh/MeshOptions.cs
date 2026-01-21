@@ -1,3 +1,7 @@
+// <copyright file="MeshOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh;
 
 /// <summary>
@@ -54,4 +58,45 @@ public class MeshOptions
         "stun.l.google.com:19302",
         "stun1.l.google.com:19302"
     };
+
+    /// <summary>
+    /// Peer descriptor refresh options.
+    /// </summary>
+    public PeerDescriptorRefreshOptions PeerDescriptorRefresh { get; set; } = new();
+
+    /// <summary>
+    /// Transport connectivity options (Tor, I2P, etc.).
+    /// </summary>
+    public MeshTransportOptions Transport { get; set; } = new();
+
+    /// <summary>
+    /// Data directory for mesh-related storage (certificates, pins, etc.).
+    /// </summary>
+    public string DataDirectory { get; set; } = "./data/mesh";
+}
+
+/// <summary>
+/// Options for peer descriptor refresh behavior.
+/// </summary>
+public class PeerDescriptorRefreshOptions
+{
+    /// <summary>
+    /// Interval between periodic descriptor refreshes (TTL/2 by default).
+    /// </summary>
+    public TimeSpan RefreshInterval { get; set; } = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Interval for checking IP address changes.
+    /// </summary>
+    public TimeSpan IpCheckInterval { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Enable automatic detection of network interface IP changes.
+    /// </summary>
+    public bool EnableIpChangeDetection { get; set; } = true;
+
+    /// <summary>
+    /// TTL for peer descriptors in seconds.
+    /// </summary>
+    public int DescriptorTtlSeconds { get; set; } = 3600; // 1 hour
 }

@@ -90,6 +90,10 @@ namespace slskd.PodCore
 
             modelBuilder.Entity<SignedMembershipRecordEntity>()
                 .HasIndex(e => e.PodId);
+
+            // Full-text search virtual table for pod messages
+            // Note: FTS tables are created manually in migrations or OnConfiguring
+            // as EF Core doesn't support virtual tables directly
         }
     }
 
@@ -100,7 +104,13 @@ namespace slskd.PodCore
     {
         public string PodId { get; set; }
         public string Name { get; set; }
+        public string? Description { get; set; }
         public PodVisibility Visibility { get; set; }
+        public bool IsPublic { get; set; }
+        public int MaxMembers { get; set; }
+        public bool AllowGuests { get; set; }
+        public bool RequireApproval { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
         public string FocusContentId { get; set; }
         public string Tags { get; set; } // JSON array
         public string Channels { get; set; } // JSON array
@@ -130,6 +140,19 @@ namespace slskd.PodCore
         public string SenderPeerId { get; set; }
         public string Body { get; set; }
         public string Signature { get; set; }
+        public int SigVersion { get; set; }
+    }
+
+    /// <summary>
+    ///     Full-text search virtual table for pod messages.
+    /// </summary>
+    public class PodMessageFts
+    {
+        public string PodId { get; set; }
+        public string ChannelId { get; set; }
+        public long TimestampUnixMs { get; set; }
+        public string SenderPeerId { get; set; }
+        public string Body { get; set; }
     }
 
     /// <summary>

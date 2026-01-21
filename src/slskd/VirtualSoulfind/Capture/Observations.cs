@@ -1,3 +1,7 @@
+// <copyright file="Observations.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.Capture;
 
 /// <summary>
@@ -42,19 +46,3 @@ public class TransferObservation
     public double ThroughputBytesPerSec { get; set; }
     public bool Success { get; set; }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

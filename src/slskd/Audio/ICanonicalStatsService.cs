@@ -1,3 +1,7 @@
+// <copyright file="ICanonicalStatsService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Audio
 {
     using System.Collections.Generic;
@@ -13,20 +17,3 @@ namespace slskd.Audio
         Task RecomputeAllStatsAsync(CancellationToken ct = default);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

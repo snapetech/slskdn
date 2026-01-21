@@ -5,6 +5,8 @@
 > **Dependencies**: Phases 1-5 (MusicBrainz, Multi-swarm, DHT, Overlay)  
 > **Estimated Duration**: 12-16 weeks
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
+
 ---
 
 ## Overview

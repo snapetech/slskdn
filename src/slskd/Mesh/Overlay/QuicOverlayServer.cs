@@ -1,9 +1,12 @@
+// <copyright file="QuicOverlayServer.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 #pragma warning disable CA2252 // Preview features - QUIC APIs require preview features
 
 namespace slskd.Mesh.Overlay;
 
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -14,7 +17,6 @@ using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using slskd.Mesh.Security;
 
 /// <summary>
 /// QUIC overlay server for control-plane messages (ControlEnvelope).
@@ -24,25 +26,18 @@ public class QuicOverlayServer : BackgroundService
     private readonly ILogger<QuicOverlayServer> logger;
     private readonly OverlayOptions options;
     private readonly IControlDispatcher dispatcher;
-    private readonly IPeerEndpointRegistry endpointRegistry;
-    private readonly IPeerPinCache pinCache;
-    private readonly IMeshRateLimiter rateLimiter;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
 
     public QuicOverlayServer(
         ILogger<QuicOverlayServer> logger,
         IOptions<OverlayOptions> options,
-        IControlDispatcher dispatcher,
-        IPeerEndpointRegistry endpointRegistry,
-        IPeerPinCache pinCache,
-        IMeshRateLimiter rateLimiter)
+        IControlDispatcher dispatcher)
     {
+        logger.LogInformation("[QuicOverlayServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
-        this.endpointRegistry = endpointRegistry;
-        this.pinCache = pinCache;
-        this.rateLimiter = rateLimiter;
+        logger.LogInformation("[QuicOverlayServer] Constructor completed");
     }
 
     /// <summary>
@@ -52,6 +47,7 @@ public class QuicOverlayServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[QuicOverlayServer] ExecuteAsync called");
         if (!options.Enable)
         {
             logger.LogInformation("[Overlay-QUIC] Disabled by configuration");
@@ -66,12 +62,8 @@ public class QuicOverlayServer : BackgroundService
 
         try
         {
-            // Load or create persistent certificate for QUIC/TLS
-            var certificate = Security.PersistentCertificate.LoadOrCreate(
-                options.TlsCertPath,
-                options.TlsCertPassword,
-                "CN=mesh-overlay-control",
-                validityYears: 5);
+            // Generate self-signed certificate for QUIC/TLS
+            var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic");
 
             var listenerOptions = new QuicListenerOptions
             {
@@ -190,61 +182,13 @@ public class QuicOverlayServer : BackgroundService
                     return;
                 }
 
-                // Pre-auth rate limiting by IP
-                if (!rateLimiter.AllowPreAuth(remoteEndPoint.Address))
-                {
-                    logger.LogWarning("[Overlay-QUIC] Pre-auth rate limit exceeded for {Endpoint}", remoteEndPoint);
-                    return;
-                }
+                var envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(buffer.AsMemory(0, totalRead));
+                logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
 
-                // Safe deserialization with size validation
-                if (!Security.MeshSizeLimits.TryDeserializeControlEnvelope(buffer.AsMemory(0, totalRead).ToArray(), logger, out var envelope))
-                {
-                    logger.LogWarning("[Overlay-QUIC] Failed to deserialize envelope from {Endpoint}", remoteEndPoint);
-                    return;
-                }
-
-                logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope!.Type, remoteEndPoint);
-
-                // Resolve peer context
-                var peerId = endpointRegistry.GetPeerId(remoteEndPoint);
-                if (peerId == null)
-                {
-                    logger.LogWarning("[Overlay-QUIC] Cannot resolve PeerId for {Endpoint}, rejecting envelope", remoteEndPoint);
-                    return;
-                }
-
-                // Post-auth rate limiting by PeerId
-                if (!rateLimiter.AllowPostAuth(peerId))
-                {
-                    logger.LogWarning("[Overlay-QUIC] Post-auth rate limit exceeded for {PeerId}", peerId);
-                    return;
-                }
-
-                var descriptor = pinCache.GetDescriptor(peerId);
-                var allowedKeys = descriptor?.ControlSigningKeys
-                    ?.Select(k => Convert.FromBase64String(k.PublicKey))
-                    .ToList()
-                    ?? new List<byte[]>();
-
-                if (allowedKeys.Count == 0)
-                {
-                    logger.LogWarning("[Overlay-QUIC] No control signing keys for {PeerId}, rejecting envelope", peerId);
-                    return;
-                }
-
-                var peerContext = new PeerContext
-                {
-                    PeerId = peerId,
-                    RemoteEndPoint = remoteEndPoint,
-                    Transport = "quic",
-                    AllowedControlSigningKeys = allowedKeys,
-                };
-
-                var handled = await dispatcher.HandleAsync(envelope, peerContext, ct);
+                var handled = await dispatcher.HandleAsync(envelope, ct);
                 if (!handled)
                 {
-                    logger.LogWarning("[Overlay-QUIC] Failed to handle envelope {Type} from {PeerId}", envelope.Type, peerId);
+                    logger.LogWarning("[Overlay-QUIC] Failed to handle envelope {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
                 }
             }
         }

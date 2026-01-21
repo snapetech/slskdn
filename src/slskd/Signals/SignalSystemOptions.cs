@@ -1,3 +1,7 @@
+// <copyright file="SignalSystemOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals;
 
 using System.ComponentModel.DataAnnotations;
@@ -64,19 +68,3 @@ public class SignalChannelOptions
     /// </summary>
     public bool RequireActiveSession { get; set; } = false;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

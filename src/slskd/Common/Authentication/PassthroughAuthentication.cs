@@ -1,3 +1,7 @@
+// <copyright file="PassthroughAuthentication.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="PassthroughAuthentication.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
@@ -62,6 +66,16 @@ namespace slskd.Authentication
             var ticket = new AuthenticationTicket(principal, new AuthenticationProperties(), PassthroughAuthentication.AuthenticationScheme);
 
             return Task.FromResult(AuthenticateResult.Success(ticket));
+        }
+
+        /// <summary>
+        ///     Handles authentication challenges by returning success (no challenge needed for passthrough).
+        /// </summary>
+        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            // For passthrough authentication, we always succeed, so no challenge is needed
+            // Return success instead of challenge to prevent 401 responses
+            return HandleAuthenticateAsync();
         }
     }
 

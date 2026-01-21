@@ -1,5 +1,9 @@
 # slskdn - The Rich-Featured Soulseek Distribution
 
+> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) by jpdillingham. We deeply respect the upstream project and maintain the same AGPL-3.0 license. See the [Acknowledgments](#acknowledgments) section below for full attribution.
+
+---
+
 ## Positioning
 
 **slskdn** is a **distribution** of slskd—not just a fork, but a complete ecosystem with:
@@ -406,7 +410,7 @@ What Pods **ARE NOT**:
 - Torrent indexes or magnet link feeds
 - Public "download everything" hubs
 - Auto-posting bots for new releases
-- Direct file-sharing mechanisms
+- Direct community content sharing mechanisms
 
 **Implementation Guardrails**:
 1. No "paste magnet and share" UI
@@ -471,6 +475,34 @@ What Pods **ARE NOT**:
 - Phase 5-6: 📋 Next up (Soulbeet integration, virtual Soulfind bridge)
 - Phase 7: 🔬 Research (Virtual Soulfind mesh, shadow index)
 - Phase 8-9: 🔬 Long-term (MeshCore, MediaCore, PodCore)
+
+---
+
+## Acknowledgments
+
+**slskdn** is built on the excellent work of others:
+
+### Upstream Project
+
+This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdillingham and contributors.
+
+- **slskd** is a modern, headless Soulseek client with a web interface and REST API
+- Licensed under AGPL-3.0
+- We maintain the same license and contribute our changes back to the community
+- Philosophy: slskd focuses on a lean core with API-driven extensibility; slskdn focuses on batteries-included features
+
+**Why we forked**: To build experimental mesh networking, decentralized discovery, and advanced automation features that go beyond slskd's core mission. We deeply respect the upstream project and its maintainer's design philosophy.
+
+### Development Dependencies
+
+- **[Soulfind](https://github.com/soulfind-dev/soulfind)** - Open-source Soulseek server implementation (test fixture only)
+- See `docs/dev/soulfind-integration-notes.md` for details on how we use it
+
+### Protocol & Metadata
+
+- **Soulseek Protocol** - P2P community service protocol by Nir Arbel
+- **[MusicBrainz](https://musicbrainz.org/)** - Open music encyclopedia for metadata
+- **[Cover Art Archive](https://coverartarchive.org/)** - Album art for verified releases
 
 ---
 

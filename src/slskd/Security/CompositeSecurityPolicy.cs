@@ -1,3 +1,7 @@
+// <copyright file="CompositeSecurityPolicy.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.Logging;
 
 namespace slskd.Security;
@@ -31,19 +35,3 @@ public class CompositeSecurityPolicy : ISecurityPolicyEngine
         return new SecurityDecision(true, "all policies passed");
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

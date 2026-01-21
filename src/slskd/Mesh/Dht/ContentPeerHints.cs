@@ -1,3 +1,7 @@
+// <copyright file="ContentPeerHints.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using MessagePack;
 
 namespace slskd.Mesh.Dht;
@@ -21,19 +25,3 @@ public class ContentPeerHints
 {
     [Key(0)] public List<ContentPeerHint> Peers { get; set; } = new();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

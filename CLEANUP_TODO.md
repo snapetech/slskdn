@@ -6,15 +6,16 @@ This document tracks the cleanup and hardening tasks identified for the `experim
 
 - [x] **[Security]** Verify `FilesService.DeleteFilesAsync` with a unit test using directory traversal inputs (Base64 encoded `..` paths). ✅ **COMPLETED** - Added comprehensive security tests
 - [x] **[Robustness]** Add concurrency limits to `MultiSourceDownloadService` retry loop. Currently spawns unbounded `Task.Run` calls; cap at ~10-20 workers. ✅ **COMPLETED** - Uses `SemaphoreSlim(MaxConcurrentRetryWorkers = 10)`
-- [ ] **[Hygiene]** Remove or replace "Simulated" logic in `BackfillSchedulerService`. Either implement real downloads or disable the feature. ⚠️ **VERIFICATION NEEDED** - Not found in current codebase, may have been removed
+- [x] **[Hygiene]** Remove or replace "Simulated" logic in `BackfillSchedulerService`. ✅ **VERIFIED** - No simulated logic found in current codebase
 - [x] **[Cleanup]** Standardize `DhtRendezvousService` and `MultiSourceDownloadService` to use the same logging (`ILogger<T>`) and field naming conventions. ✅ **COMPLETED** - All services now use `ILogger<T>` consistently
 - [x] **[Frontend]** Fix login screen API calls - `SlskdnStatusBar` was making authenticated API calls before login. ✅ **COMPLETED** - Only render status bar when authenticated
-- [ ] **[Frontend]** Plan migration off `react-scripts` (deprecated) to `vite` or `rsbuild`.
+- [x] **[Frontend]** Fix all runtime errors (apiBaseUrl, searchId, hooks order). ✅ **COMPLETED** - All frontend errors resolved
+- [ ] **[Frontend]** Plan migration off `react-scripts` (deprecated) to `vite` or `rsbuild` - Future enhancement
 
 ## 🛡️ Security Findings
 
 ### High Severity
-- [ ] **Filesystem Traversal:** Ensure `FilesController` validates Base64-decoded paths *before* passing them to `FilesService`, or ensure `FilesService` handles them robustly against `GetFullPath` checks.
+- [x] **Filesystem Traversal:** Ensure `FilesController` validates Base64-decoded paths *before* passing them to `FilesService`, or ensure `FilesService` handles them robustly against `GetFullPath` checks. ✅ **COMPLETED** - Path traversal protection implemented and tested
 
 ### Medium Severity
 - [x] **Unbounded Concurrency:** `MultiSourceDownloadService.SwarmDownloadAsync` retry loop needs a `SemaphoreSlim` or `Parallel.ForEachAsync`. ✅ **COMPLETED** - Implemented with `SemaphoreSlim(MaxConcurrentRetryWorkers = 10)`

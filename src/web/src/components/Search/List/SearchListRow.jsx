@@ -29,7 +29,7 @@ const SearchListRow = ({ onRemove, onStop, search }) => {
         <SearchStatusIcon state={search.state} />
       </Table.Cell>
       <Table.Cell>
-        <Link to={`${match.url}/${search.id}?q=${encodeURIComponent(search.searchText)}`}>
+        <Link to={`${match.url}?q=${encodeURIComponent(search.searchText)}`}>
           {search.searchText}
         </Link>
       </Table.Cell>

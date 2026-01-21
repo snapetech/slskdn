@@ -29,16 +29,33 @@ export const get = async (podId) => {
 
 export const create = async (pod) => {
   const response = await fetch(baseUrl, {
-    method: 'POST',
+    body: JSON.stringify(pod),
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(pod),
+    method: 'POST',
   });
 
   if (!response.ok) {
     throw new Error(`Failed to create pod: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+export const update = async (podId, pod) => {
+  const response = await fetch(`${baseUrl}/${podId}`, {
+    body: JSON.stringify(pod),
+    headers: {
+      ...session.authHeaders(),
+      'Content-Type': 'application/json',
+    },
+    method: 'PUT',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update pod: ${response.statusText}`);
   }
 
   return response.json();
@@ -58,12 +75,12 @@ export const getMembers = async (podId) => {
 
 export const join = async (podId, peerId) => {
   const response = await fetch(`${baseUrl}/${podId}/join`, {
-    method: 'POST',
+    body: JSON.stringify({ peerId }),
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ peerId }),
+    method: 'POST',
   });
 
   if (!response.ok) {
@@ -75,12 +92,12 @@ export const join = async (podId, peerId) => {
 
 export const leave = async (podId, peerId) => {
   const response = await fetch(`${baseUrl}/${podId}/leave`, {
-    method: 'POST',
+    body: JSON.stringify({ peerId }),
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ peerId }),
+    method: 'POST',
   });
 
   if (!response.ok) {
@@ -91,9 +108,9 @@ export const leave = async (podId, peerId) => {
 };
 
 export const getMessages = async (podId, channelId, since = null) => {
-  const params = since ? `?since=${since}` : '';
+  const parameters = since ? `?since=${since}` : '';
   const response = await fetch(
-    `${baseUrl}/${podId}/channels/${channelId}/messages${params}`,
+    `${baseUrl}/${podId}/channels/${channelId}/messages${parameters}`,
     {
       headers: session.authHeaders(),
     },
@@ -106,16 +123,22 @@ export const getMessages = async (podId, channelId, since = null) => {
   return response.json();
 };
 
-export const sendMessage = async (podId, channelId, body, senderPeerId, signature = null) => {
+export const sendMessage = async (
+  podId,
+  channelId,
+  body,
+  senderPeerId,
+  signature = null,
+) => {
   const response = await fetch(
     `${baseUrl}/${podId}/channels/${channelId}/messages`,
     {
-      method: 'POST',
+      body: JSON.stringify({ body, senderPeerId, signature }),
       headers: {
         ...session.authHeaders(),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ body, senderPeerId, signature }),
+      method: 'POST',
     },
   );
 
@@ -126,16 +149,21 @@ export const sendMessage = async (podId, channelId, body, senderPeerId, signatur
   return response.json();
 };
 
-export const bindRoom = async (podId, channelId, roomName, mode = 'readonly') => {
+export const bindRoom = async (
+  podId,
+  channelId,
+  roomName,
+  mode = 'readonly',
+) => {
   const response = await fetch(
     `${baseUrl}/${podId}/channels/${channelId}/bind`,
     {
-      method: 'POST',
+      body: JSON.stringify({ mode, roomName }),
       headers: {
         ...session.authHeaders(),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ roomName, mode }),
+      method: 'POST',
     },
   );
 
@@ -150,8 +178,8 @@ export const unbindRoom = async (podId, channelId) => {
   const response = await fetch(
     `${baseUrl}/${podId}/channels/${channelId}/unbind`,
     {
-      method: 'POST',
       headers: session.authHeaders(),
+      method: 'POST',
     },
   );
 
@@ -161,19 +189,3 @@ export const unbindRoom = async (podId, channelId) => {
 
   return response.json();
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

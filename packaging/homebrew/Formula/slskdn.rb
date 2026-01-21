@@ -1,5 +1,5 @@
 class Slskdn < Formula
-  desc "Batteries-included Soulseek web client"
+  desc "Decentralized mesh community service for Soulseek with VPN and advanced networking"
   homepage "https://github.com/snapetech/slskdn"
   license "AGPL-3.0-or-later"
   version "0.24.1-slskdn.32"

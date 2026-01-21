@@ -1,3 +1,7 @@
+// <copyright file="PodServices.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.PodCore;
 
 using System;
@@ -6,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using slskd.Common.Security;
 using slskd.Messaging;
 using Soulseek;
 using NSec.Cryptography;
@@ -17,6 +22,7 @@ using System.Text.Json;
 public interface IPodService
 {
     Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default);
+    Task<Pod> UpdateAsync(Pod pod, CancellationToken ct = default);
     Task<IReadOnlyList<Pod>> ListAsync(CancellationToken ct = default);
     Task<bool> JoinAsync(string podId, PodMember member, CancellationToken ct = default);
     Task<bool> LeaveAsync(string podId, string peerId, CancellationToken ct = default);
@@ -24,6 +30,17 @@ public interface IPodService
     Task<Pod?> GetPodAsync(string podId, CancellationToken ct = default);
     Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default);
     Task<IReadOnlyList<SignedMembershipRecord>> GetMembershipHistoryAsync(string podId, CancellationToken ct = default);
+
+    // Channel management
+    Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default);
+    Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default);
+    Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default);
+    Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default);
+    Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default);
+
+    // Content linking
+    Task<ContentValidationResult> ValidateContentLinkAsync(string contentId, CancellationToken ct = default);
+    Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -39,18 +56,47 @@ public class PodService : IPodService
 
     public PodService(
         IPodPublisher podPublisher = null,
-        IPodMembershipSigner membershipSigner = null)
+        IPodMembershipSigner membershipSigner = null,
+        IContentLinkService contentLinkService = null)
     {
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
+        ContentLinkService = contentLinkService;
     }
+
+    private IContentLinkService ContentLinkService { get; }
 
     public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
     {
+        if (pod == null)
+            throw new ArgumentNullException(nameof(pod));
+
+        // Validate pod before creation (no members exist yet)
+        var validation = PodValidation.ValidatePod(pod, new List<PodMember>());
+        if (!validation.IsValid)
+            throw new ArgumentException(validation.Error, nameof(pod));
+
         if (string.IsNullOrWhiteSpace(pod.PodId))
         {
             pod.PodId = $"pod:{Guid.NewGuid():N}";
         }
+
+        // Ensure pod ID format is valid
+        if (!PodValidation.IsValidPodId(pod.PodId))
+        {
+            throw new ArgumentException("Invalid pod ID format", nameof(pod));
+        }
+
+        // Prevent duplicate pods
+        if (pods.ContainsKey(pod.PodId))
+        {
+            throw new InvalidOperationException($"Pod {pod.PodId} already exists");
+        }
+
+        // Initialize collections
+        pod.Channels ??= new List<PodChannel>();
+        pod.ExternalBindings ??= new List<ExternalBinding>();
+
         pods[pod.PodId] = pod;
         if (!podMembers.ContainsKey(pod.PodId))
         {
@@ -70,6 +116,51 @@ public class PodService : IPodService
                 {
                     // Log but don't fail pod creation if publishing fails
                     System.Diagnostics.Debug.WriteLine($"[PodService] Failed to publish pod to DHT: {ex.Message}");
+                }
+            }, ct);
+        }
+
+        return pod;
+    }
+
+    public async Task<Pod> UpdateAsync(Pod pod, CancellationToken ct = default)
+    {
+        if (pod == null)
+            throw new ArgumentNullException(nameof(pod));
+
+        if (string.IsNullOrEmpty(pod.PodId))
+            throw new ArgumentException("PodId is required for updates", nameof(pod));
+
+        // Ensure pod exists
+        if (!pods.TryGetValue(pod.PodId, out var existingPod))
+            throw new KeyNotFoundException($"Pod {pod.PodId} not found");
+
+        // Get current members for validation
+        var members = podMembers.TryGetValue(pod.PodId, out var memberList)
+            ? memberList
+            : new List<PodMember>();
+
+        // Validate updated pod
+        var validation = PodValidation.ValidatePod(pod, members);
+        if (!validation.IsValid)
+            throw new ArgumentException(validation.Error, nameof(pod));
+
+        // Store updated pod
+        pods[pod.PodId] = pod;
+
+        // Re-publish pod to DHT if publisher available and visibility allows
+        if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await podPublisher.UpdatePodAsync(pod, ct);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail pod update if publishing fails
+                    System.Diagnostics.Debug.WriteLine($"[PodService] Failed to update pod in DHT: {ex.Message}");
                 }
             }, ct);
         }
@@ -107,7 +198,7 @@ public class PodService : IPodService
     public async Task<bool> JoinAsync(string podId, PodMember member, CancellationToken ct = default)
     {
         if (!pods.TryGetValue(podId, out var pod)) return false;
-        
+
         if (!podMembers.TryGetValue(podId, out var members))
         {
             podMembers[podId] = new List<PodMember>();
@@ -118,6 +209,20 @@ public class PodService : IPodService
         if (members.Any(m => m.PeerId == member.PeerId))
         {
             return false;
+        }
+
+        // Validate member count limits for VPN pods
+        if (pod.Capabilities?.Contains(PodCapability.PrivateServiceGateway) == true)
+        {
+            var newMemberCount = members.Count + 1; // +1 for the member we're about to add
+            var maxMembers = pod.PrivateServicePolicy?.MaxMembers ?? 3;
+
+            if (newMemberCount > maxMembers)
+            {
+                // Log the rejection for audit purposes
+                System.Diagnostics.Debug.WriteLine($"[PodService] Rejected join for peer {member.PeerId}: would exceed max members ({maxMembers}) for VPN pod {podId}");
+                return false;
+            }
         }
 
         // Create signed membership record if signer is available
@@ -213,6 +318,236 @@ public class PodService : IPodService
         
         return false;
     }
+
+    // Channel management implementation
+    public async Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+    {
+        // Validate pod exists
+        if (!pods.ContainsKey(podId))
+        {
+            throw new ArgumentException($"Pod {podId} does not exist", nameof(podId));
+        }
+
+        // Generate channel ID if not provided
+        if (string.IsNullOrWhiteSpace(channel.ChannelId))
+        {
+            channel.ChannelId = $"channel:{Guid.NewGuid():N}";
+        }
+
+        // Validate channel data
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            throw new ArgumentException("Channel name is required", nameof(channel));
+        }
+
+        // Add channel to pod
+        var pod = pods[podId];
+        pod.Channels ??= new List<PodChannel>();
+        pod.Channels.Add(channel);
+
+        // Publish updated pod to DHT if listed
+        if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await podPublisher.PublishPodAsync(pod, ct);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the operation
+                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
+                }
+            }, ct);
+        }
+
+        return channel;
+    }
+
+    public async Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default)
+    {
+        // Validate pod exists
+        if (!pods.ContainsKey(podId))
+        {
+            return false;
+        }
+
+        var pod = pods[podId];
+        if (pod.Channels == null)
+        {
+            return false;
+        }
+
+        var channelIndex = pod.Channels.FindIndex(c => c.ChannelId == channelId);
+        if (channelIndex == -1)
+        {
+            return false;
+        }
+
+        // Don't allow deletion of system channels (like "general")
+        var channel = pod.Channels[channelIndex];
+        if (channel.Kind == PodChannelKind.General && channel.Name.ToLowerInvariant() == "general")
+        {
+            throw new InvalidOperationException("Cannot delete the default general channel");
+        }
+
+        // Remove channel
+        pod.Channels.RemoveAt(channelIndex);
+
+        // Publish updated pod to DHT if listed
+        if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await podPublisher.PublishPodAsync(pod, ct);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the operation
+                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
+                }
+            }, ct);
+        }
+
+        return true;
+    }
+
+    public async Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default)
+    {
+        if (!pods.ContainsKey(podId))
+        {
+            return null;
+        }
+
+        var pod = pods[podId];
+        return pod.Channels?.FirstOrDefault(c => c.ChannelId == channelId);
+    }
+
+    public async Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default)
+    {
+        if (!pods.ContainsKey(podId))
+        {
+            return Array.Empty<PodChannel>();
+        }
+
+        var pod = pods[podId];
+        return (IReadOnlyList<PodChannel>)(pod.Channels ?? new List<PodChannel>());
+    }
+
+    public async Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+    {
+        // Validate pod exists
+        if (!pods.ContainsKey(podId))
+        {
+            return false;
+        }
+
+        var pod = pods[podId];
+        if (pod.Channels == null)
+        {
+            return false;
+        }
+
+        var existingChannel = pod.Channels.FirstOrDefault(c => c.ChannelId == channel.ChannelId);
+        if (existingChannel == null)
+        {
+            return false;
+        }
+
+        // Validate channel data
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            throw new ArgumentException("Channel name is required", nameof(channel));
+        }
+
+        // Don't allow changing system channels to non-general kinds
+        if (existingChannel.Kind == PodChannelKind.General &&
+            existingChannel.Name.ToLowerInvariant() == "general" &&
+            (channel.Kind != PodChannelKind.General || channel.Name.ToLowerInvariant() != "general"))
+        {
+            throw new InvalidOperationException("Cannot modify the default general channel");
+        }
+
+        // Update channel
+        var index = pod.Channels.IndexOf(existingChannel);
+        pod.Channels[index] = channel;
+
+        // Publish updated pod to DHT if listed
+        if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await podPublisher.PublishPodAsync(pod, ct);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the operation
+                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
+                }
+            }, ct);
+        }
+
+        return true;
+    }
+
+    // Content linking implementation
+    public async Task<ContentValidationResult> ValidateContentLinkAsync(string contentId, CancellationToken ct = default)
+    {
+        if (ContentLinkService == null)
+        {
+            // If no content service available, only do basic format validation
+            var isValid = !string.IsNullOrWhiteSpace(contentId) &&
+                         contentId.StartsWith("content:", StringComparison.OrdinalIgnoreCase);
+
+            return new ContentValidationResult(
+                IsValid: isValid,
+                ContentId: contentId,
+                ErrorMessage: isValid ? null : "Invalid content ID format or content link service unavailable");
+        }
+
+        return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
+    }
+
+    public async Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default)
+    {
+        // Validate content link if specified
+        if (!string.IsNullOrWhiteSpace(pod.FocusContentId))
+        {
+            var validation = await ValidateContentLinkAsync(pod.FocusContentId, ct);
+            if (!validation.IsValid)
+            {
+                throw new ArgumentException($"Invalid content link: {validation.ErrorMessage}", nameof(pod));
+            }
+
+            // Enhance pod name with content metadata if available
+            if (validation.Metadata != null && string.IsNullOrWhiteSpace(pod.Name))
+            {
+                pod.Name = $"{validation.Metadata.Artist} - {validation.Metadata.Title}";
+            }
+
+            // Add content-based tags
+            pod.Tags ??= new List<string>();
+            if (validation.Metadata != null)
+            {
+                if (!pod.Tags.Contains($"content:{validation.Metadata.Domain}"))
+                {
+                    pod.Tags.Add($"content:{validation.Metadata.Domain}");
+                }
+                if (!pod.Tags.Contains($"type:{validation.Metadata.Type}"))
+                {
+                    pod.Tags.Add($"type:{validation.Metadata.Type}");
+                }
+            }
+        }
+
+        // Create the pod normally
+        return await CreateAsync(pod, ct);
+    }
 }
 
 /// <summary>
@@ -230,6 +565,9 @@ public interface IPodMessaging
 public class PodMessaging : IPodMessaging
 {
     private readonly IPodService podService;
+    private readonly IPodMembershipVerifier membershipVerifier;
+    private readonly IPodMessageRouter messageRouter;
+    private readonly IMessageSigner messageSigner;
     private readonly ISoulseekChatBridge chatBridge;
     private readonly Microsoft.Extensions.Logging.ILogger<PodMessaging> logger;
     private readonly Mesh.IMeshSyncService meshSync;
@@ -243,6 +581,9 @@ public class PodMessaging : IPodMessaging
 
     public PodMessaging(
         IPodService podService,
+        IPodMembershipVerifier membershipVerifier,
+        IPodMessageRouter messageRouter,
+        IMessageSigner messageSigner,
         ISoulseekChatBridge chatBridge,
         Microsoft.Extensions.Logging.ILogger<PodMessaging> logger,
         Mesh.IMeshSyncService meshSync = null,
@@ -250,6 +591,9 @@ public class PodMessaging : IPodMessaging
         Mesh.Overlay.IOverlayClient overlayClient = null)
     {
         this.podService = podService;
+        this.membershipVerifier = membershipVerifier;
+        this.messageRouter = messageRouter;
+        this.messageSigner = messageSigner;
         this.chatBridge = chatBridge;
         this.logger = logger;
         this.meshSync = meshSync;
@@ -286,16 +630,9 @@ public class PodMessaging : IPodMessaging
             seenMessageIds.Add(message.MessageId);
         }
 
-        // 3. Extract podId from channelId (format: "podId:channelId")
-        var channelParts = message.ChannelId.Split(':', 2);
-        if (channelParts.Length != 2)
-        {
-            logger.LogWarning("[PodMessaging] Invalid channelId format: {ChannelId} (expected podId:channelId)", message.ChannelId);
-            return false;
-        }
-
-        var podId = channelParts[0];
-        var channelIdOnly = channelParts[1];
+        // 3. Get podId and channelId from message (HARDENING: no more parsing)
+        var podId = message.PodId;
+        var channelIdOnly = message.ChannelId;
 
         var pod = await podService.GetPodAsync(podId, ct);
         if (pod == null)
@@ -304,32 +641,45 @@ public class PodMessaging : IPodMessaging
             return false;
         }
 
-        var channel = pod.Channels.FirstOrDefault(c => c.ChannelId == message.ChannelId);
+        var channel = pod.Channels.FirstOrDefault(c => c.ChannelId == channelIdOnly);
         if (channel == null)
         {
-            logger.LogWarning("[PodMessaging] Channel {ChannelId} not found in pod {PodId}", message.ChannelId, pod.PodId);
+            logger.LogWarning("[PodMessaging] Channel {ChannelId} not found in pod {PodId}", channelIdOnly, pod.PodId);
             return false;
         }
 
-        // 4. Membership verification
-        var members = await podService.GetMembersAsync(pod.PodId, ct);
-        var senderIsMember = members.Any(m => m.PeerId == message.SenderPeerId && !m.IsBanned);
-        if (!senderIsMember)
+        // 4. Comprehensive membership and message verification
+        var messageVerification = await membershipVerifier.VerifyMessageAsync(message, ct);
+        if (!messageVerification.IsValid)
         {
-            logger.LogWarning("[PodMessaging] Rejecting message from non-member {PeerId} in pod {PodId}",
-                message.SenderPeerId, pod.PodId);
+            var reasons = new List<string>();
+            if (!messageVerification.IsFromValidMember) reasons.Add("not a valid member");
+            if (!messageVerification.IsNotBanned) reasons.Add("banned");
+            if (!messageVerification.HasValidSignature) reasons.Add("invalid signature");
+
+            logger.LogWarning("[PodMessaging] Rejecting message {MessageId} from {PeerId}: {Reasons}",
+                message.MessageId, message.SenderPeerId, string.Join(", ", reasons));
             return false;
         }
 
-        // 5. Signature validation (Ed25519)
-        if (!await ValidateMessageSignatureAsync(message, pod.PodId, ct))
+        logger.LogDebug("[PodMessaging] Message {MessageId} passed verification (member: {IsMember}, not banned: {NotBanned}, signature: {SignatureValid})",
+            message.MessageId, messageVerification.IsFromValidMember, messageVerification.IsNotBanned, messageVerification.HasValidSignature);
+
+        // 5. Verify message signature
+        var signatureValid = await messageSigner.VerifyMessageAsync(message, ct);
+        if (!signatureValid)
         {
             logger.LogWarning("[PodMessaging] Rejecting message {MessageId} with invalid signature", message.MessageId);
             return false;
         }
 
+        logger.LogDebug("[PodMessaging] Message {MessageId} signature verified", message.MessageId);
+
+        // 6. Get pod members for routing
+        var members = await podService.GetMembersAsync(pod.PodId, ct);
+
         // 6. Store message
-        var storageKey = $"{pod.PodId}:{message.ChannelId}";
+        var storageKey = $"{podId}:{channelIdOnly}"; // HARDENING: Use short channelId
         lock (storageLock)
         {
             if (!messageStorage.TryGetValue(storageKey, out var messages))
@@ -353,8 +703,8 @@ public class PodMessaging : IPodMessaging
         // 7. Forward to Soulseek room if channel is bound (mirror mode)
         _ = chatBridge.ForwardPodToSoulseekAsync(message.ChannelId, message);
 
-        // 8. Route message to pod members via mesh transport (decentralized routing)
-        _ = RouteMessageToMembersAsync(message, pod.PodId, members, ct);
+        // 8. Route message to pod members via decentralized overlay network
+        _ = messageRouter.RouteMessageAsync(message, ct);
 
         return true;
     }
@@ -530,8 +880,17 @@ public class PodMessaging : IPodMessaging
 
     private static string BuildSignablePayload(PodMessage message)
     {
-        // Build deterministic payload for signing
-        return $"{message.MessageId}|{message.ChannelId}|{message.SenderPeerId}|{message.Body}|{message.TimestampUnixMs}";
+        // Build deterministic payload for signing based on signature version
+        if (message.SigVersion == 0)
+        {
+            // Legacy format: MessageId|ChannelId|SenderPeerId|Body|TimestampUnixMs
+            return $"{message.MessageId}|{message.ChannelId}|{message.SenderPeerId}|{message.Body}|{message.TimestampUnixMs}";
+        }
+        else
+        {
+            // Version 1: include PodId so signatures bind to pod+channel
+            return $"{message.MessageId}|{message.PodId}|{message.ChannelId}|{message.SenderPeerId}|{message.Body}|{message.TimestampUnixMs}";
+        }
     }
 }
 
@@ -746,15 +1105,16 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
             // Check if user is a pod member (they might have joined with their Soulseek username)
             // This is a simplified lookup - in production would query all pods or use DHT
-            // For now, create a deterministic mapping
-            peerId = $"bridge:{soulseekUsername}";
-            
-            // Store bidirectional mapping
+            // For now, create a deterministic mapping that doesn't leak external identities
+            var rawPeerId = $"bridge:{soulseekUsername}";
+            peerId = IdentitySeparationEnforcer.SanitizePodPeerId(rawPeerId);
+
+            // Store bidirectional mapping (raw bridge ID for reverse lookup, sanitized for pod use)
             soulseekToPodMapping[soulseekUsername] = peerId;
             podToSoulseekMapping[peerId] = soulseekUsername;
-            
-            logger.LogDebug("[ChatBridge] Created identity mapping: Soulseek {Username} <-> Pod {PeerId}",
-                soulseekUsername, peerId);
+
+            logger.LogDebug("[ChatBridge] Created identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
+                LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), peerId);
             
             return peerId;
         }
@@ -776,8 +1136,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             soulseekToPodMapping[soulseekUsername] = podPeerId;
             podToSoulseekMapping[podPeerId] = soulseekUsername;
             
-            logger.LogInformation("[ChatBridge] Registered identity mapping: Soulseek {Username} <-> Pod {PeerId}",
-                soulseekUsername, podPeerId);
+            logger.LogInformation("[ChatBridge] Registered identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
+                LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), podPeerId);
         }
     }
 
@@ -814,8 +1174,9 @@ public class SoulseekChatBridge : ISoulseekChatBridge
                 return false;
             }
 
-            // Format message with prefix
-            var formattedMessage = $"[Pod:{soulseekUsername}] {messageBody}";
+            // Format message with prefix (sanitize external identity)
+            var sanitizedUsername = LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername);
+            var formattedMessage = $"[Pod:{sanitizedUsername}] {messageBody}";
 
             await soulseekClient.SendRoomMessageAsync(binding.RoomName, formattedMessage);
 

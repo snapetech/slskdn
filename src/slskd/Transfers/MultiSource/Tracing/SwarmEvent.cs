@@ -1,3 +1,7 @@
+// <copyright file="SwarmEvent.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.Tracing
 {
     using System;
@@ -55,20 +59,3 @@ namespace slskd.Transfers.MultiSource.Tracing
         Ipfs,
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

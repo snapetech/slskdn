@@ -1,4 +1,4 @@
-﻿// <copyright file="UsersController.cs" company="slskd Team">
+// <copyright file="UsersController.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -46,18 +46,26 @@ namespace slskd.Users.API
         /// <param name="soulseekClient"></param>
         /// <param name="browseTracker"></param>
         /// <param name="userService"></param>
+        /// <param name="safetyLimiter">The Soulseek safety limiter (H-08).</param>
         /// <param name="optionsSnapshot"></param>
-        public UsersController(ISoulseekClient soulseekClient, IBrowseTracker browseTracker, IUserService userService, IOptionsSnapshot<Options> optionsSnapshot)
+        public UsersController(
+            ISoulseekClient soulseekClient,
+            IBrowseTracker browseTracker,
+            IUserService userService,
+            slskd.Common.Security.ISoulseekSafetyLimiter safetyLimiter,
+            IOptionsSnapshot<Options> optionsSnapshot)
         {
             Client = soulseekClient;
             BrowseTracker = browseTracker;
             Users = userService;
+            SafetyLimiter = safetyLimiter;
             OptionsSnapshot = optionsSnapshot;
         }
 
         private IBrowseTracker BrowseTracker { get; }
         private ISoulseekClient Client { get; }
         private IUserService Users { get; }
+        private slskd.Common.Security.ISoulseekSafetyLimiter SafetyLimiter { get; }
         private IOptionsSnapshot<Options> OptionsSnapshot { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<UsersController>();
 
@@ -103,6 +111,13 @@ namespace slskd.Users.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            // H-08: Check Soulseek safety caps before initiating browse
+            if (!SafetyLimiter.TryConsumeBrowse("user"))
+            {
+                Log.Warning("[SAFETY] Browse rejected for user='{Username}': Rate limit exceeded", username);
+                return StatusCode(429, "Browse rate limit exceeded. See Soulseek safety configuration.");
             }
 
             try
@@ -235,6 +250,25 @@ namespace slskd.Users.API
             {
                 return NotFound(ex.Message);
             }
+        }
+
+        /// <summary>
+        ///     Retrieves the group for the specified <paramref name="username"/>.
+        /// </summary>
+        /// <param name="username">The username of the user.</param>
+        /// <returns></returns>
+        [HttpGet("{username}/group")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(string), 200)]
+        public IActionResult Group([FromRoute, Required] string username)
+        {
+            if (Program.IsRelayAgent)
+            {
+                return Forbid();
+            }
+
+            var group = Users.GetGroup(username);
+            return Ok(group);
         }
     }
 }

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# slskdN pre-installation script for Synology Package Center
+# This script runs before package installation
+
+# Exit on any error
+set -e
+
+# Source common functions
+. "$(dirname "$0")"/common
+
+# Log function for preinst
+log_step "slskdN pre-installation started"
+
+# Check system requirements
+log_step "Checking system requirements..."
+
+# Check if .NET runtime is available or if we need to install it
+if ! command -v dotnet >/dev/null 2>&1; then
+    log_step "Warning: .NET runtime not found. Package includes .NET runtime."
+fi
+
+# Check available disk space (require at least 1GB)
+REQUIRED_SPACE=1048576  # 1GB in KB
+AVAILABLE_SPACE=$(df /volume1 | tail -1 | awk '{print $4}')
+
+if [ "$AVAILABLE_SPACE" -lt "$REQUIRED_SPACE" ]; then
+    log_error "Insufficient disk space. Required: 1GB, Available: $((AVAILABLE_SPACE/1024))MB"
+    exit 1
+fi
+
+# Check if required ports are available
+check_port 5030 "slskdN Web UI"
+check_port 2234 "Soulseek Network"
+
+# Create package user if it doesn't exist
+if ! synouser --get "$PACKAGE_USER" >/dev/null 2>&1; then
+    log_step "Creating package user: $PACKAGE_USER"
+    synouser --add "$PACKAGE_USER" "" "" 0 "" 0
+fi
+
+# Create package group if it doesn't exist
+if ! synogroup --get "$PACKAGE_GROUP" >/dev/null 2>&1; then
+    log_step "Creating package group: $PACKAGE_GROUP"
+    synogroup --add "$PACKAGE_GROUP"
+fi
+
+log_step "Pre-installation completed successfully"
+
+

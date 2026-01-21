@@ -1,3 +1,7 @@
+// <copyright file="BrainzClient.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Integrations.Brainz;
 
 /// <summary>
@@ -16,19 +20,3 @@ public class BrainzClient : IBrainzClient
         return Task.FromResult<string?>(null);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,7 @@
+// <copyright file="MeshHealthController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using slskd.Mesh.Health;
@@ -23,19 +27,3 @@ public class MeshHealthController : ControllerBase
         return Ok(snap);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

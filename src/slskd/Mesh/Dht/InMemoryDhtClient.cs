@@ -1,3 +1,7 @@
+// <copyright file="InMemoryDhtClient.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Linq;
@@ -18,13 +22,23 @@ public class InMemoryDhtClient : IDhtClient
     private readonly ConcurrentDictionary<string, List<DhtValue>> store = new();
     private readonly byte[] selfId;
     private readonly int maxReplicas;
+    private readonly MeshStatsCollector? statsCollector;
 
-    public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, IOptions<MeshOptions> options)
+    public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, IOptions<MeshOptions> options, MeshStatsCollector? statsCollector = null)
     {
+        logger.LogInformation("[InMemoryDhtClient] Constructor called");
         this.logger = logger;
+        this.statsCollector = statsCollector;
+        logger.LogInformation("[InMemoryDhtClient] Generating random node ID...");
         selfId = RandomNodeId();
+        logger.LogInformation("[InMemoryDhtClient] Creating KademliaRoutingTable...");
         routing = new KademliaRoutingTable(selfId);
+        logger.LogInformation("[InMemoryDhtClient] KademliaRoutingTable created");
         maxReplicas = 20; // align with k
+
+        // RpcClient will be set later to avoid circular dependency
+        RpcClient = null!;
+        logger.LogInformation("[InMemoryDhtClient] Constructor completed");
     }
 
     /// <summary>
@@ -32,8 +46,21 @@ public class InMemoryDhtClient : IDhtClient
     /// </summary>
     public int GetNodeCount() => routing.Count;
 
+    /// <summary>
+    /// Gets the Kademlia RPC client for advanced DHT operations.
+    /// </summary>
+    public KademliaRpcClient RpcClient { get; private set; }
+
+    /// <summary>
+    /// Gets routing table statistics.
+    /// </summary>
+    public RoutingTableStats GetRoutingTableStats() => routing.GetStats();
+
     public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct = default)
     {
+        statsCollector?.RecordDhtOperation();
+        statsCollector?.UpdateRoutingTableSize(routing.GetStats().TotalNodes);
+
         var now = DateTimeOffset.UtcNow;
         var expires = now.AddSeconds(Math.Clamp(ttlSeconds, 60, 3600));
         var keyHex = ToHex(key);
@@ -65,6 +92,7 @@ public class InMemoryDhtClient : IDhtClient
 
     public Task<byte[]?> GetAsync(byte[] key, CancellationToken ct = default)
     {
+        statsCollector?.RecordDhtOperation();
         var keyHex = ToHex(key);
         if (!store.TryGetValue(keyHex, out var list))
         {
@@ -99,9 +127,18 @@ public class InMemoryDhtClient : IDhtClient
     /// <summary>
     /// Add a known peer to the routing table (best effort).
     /// </summary>
+    public async Task AddNodeAsync(byte[] nodeId, string address)
+    {
+        await routing.TouchAsync(nodeId, address);
+    }
+
+    /// <summary>
+    /// Synchronous version for backward compatibility.
+    /// </summary>
     public void AddNode(byte[] nodeId, string address)
     {
-        routing.Touch(nodeId, address);
+        var task = AddNodeAsync(nodeId, address);
+        task.GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -161,19 +198,3 @@ public class InMemoryDhtClient : IDhtClient
         public DateTimeOffset ExpiresAt { get; set; }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

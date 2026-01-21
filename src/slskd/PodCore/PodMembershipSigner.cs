@@ -1,3 +1,7 @@
+// <copyright file="PodMembershipSigner.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.PodCore;
 
 using System;
@@ -185,19 +189,3 @@ public class SignedMembershipRecord
     public string PublicKey { get; set; } = string.Empty; // Base64 Ed25519 public key
     public string Signature { get; set; } = string.Empty; // Base64 Ed25519 signature
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

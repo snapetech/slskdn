@@ -1,0 +1,57 @@
+#!/bin/sh
+
+# slskdN start/stop/status script for Synology Package Center
+
+# Source common functions
+. "$(dirname "$0")"/common
+
+SERVICE_SCRIPT="/usr/local/etc/rc.d/slskdn.sh"
+
+case "$1" in
+    start)
+        log_step "Starting slskdN service..."
+        if [ -x "$SERVICE_SCRIPT" ]; then
+            "$SERVICE_SCRIPT" start
+            log_step "slskdN service started"
+        else
+            log_error "Service script not found: $SERVICE_SCRIPT"
+            exit 1
+        fi
+        ;;
+    stop)
+        log_step "Stopping slskdN service..."
+        if [ -x "$SERVICE_SCRIPT" ]; then
+            "$SERVICE_SCRIPT" stop
+            log_step "slskdN service stopped"
+        else
+            log_error "Service script not found: $SERVICE_SCRIPT"
+            exit 1
+        fi
+        ;;
+    status)
+        if [ -x "$SERVICE_SCRIPT" ]; then
+            if "$SERVICE_SCRIPT" status >/dev/null 2>&1; then
+                echo "running"
+                exit 0
+            else
+                echo "stopped"
+                exit 1
+            fi
+        else
+            echo "not_installed"
+            exit 1
+        fi
+        ;;
+    restart)
+        log_step "Restarting slskdN service..."
+        $0 stop
+        sleep 2
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+
+

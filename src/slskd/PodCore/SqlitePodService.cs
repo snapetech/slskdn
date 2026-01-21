@@ -30,22 +30,27 @@ namespace slskd.PodCore
     /// </summary>
     public class SqlitePodService : IPodService
     {
-        private readonly PodDbContext dbContext;
+        private readonly IDbContextFactory<PodDbContext> dbFactory;
         private readonly IPodPublisher podPublisher;
         private readonly IPodMembershipSigner membershipSigner;
         private readonly ILogger<SqlitePodService> logger;
+        private readonly IServiceScopeFactory? scopeFactory;
 
-        public SqlitePodService(
-            PodDbContext dbContext,
-            IPodPublisher podPublisher,
-            IPodMembershipSigner membershipSigner,
-            ILogger<SqlitePodService> logger)
-        {
-            this.dbContext = dbContext;
-            this.podPublisher = podPublisher;
-            this.membershipSigner = membershipSigner;
-            this.logger = logger;
-        }
+    public SqlitePodService(
+        IDbContextFactory<PodDbContext> dbFactory,
+        IPodPublisher podPublisher,
+        IPodMembershipSigner membershipSigner,
+        ILogger<SqlitePodService> logger,
+        IServiceScopeFactory? scopeFactory = null)
+    {
+        this.dbFactory = dbFactory;
+        this.podPublisher = podPublisher;
+        this.membershipSigner = membershipSigner;
+        this.logger = logger;
+        this.scopeFactory = scopeFactory;
+    }
+
+    private IContentLinkService? ContentLinkService => scopeFactory?.CreateScope().ServiceProvider.GetService<IContentLinkService>();
 
         public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
         {
@@ -66,7 +71,8 @@ namespace slskd.PodCore
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
 
             // SECURITY: Use transaction for atomicity
-            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
             try
             {
                 var entity = new PodEntity
@@ -80,8 +86,8 @@ namespace slskd.PodCore
                     ExternalBindings = System.Text.Json.JsonSerializer.Serialize(pod.ExternalBindings ?? new List<ExternalBinding>()),
                 };
 
-                dbContext.Pods.Add(entity);
-                await dbContext.SaveChangesAsync(ct);
+                db.Pods.Add(entity);
+                await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
                 // SECURITY: Don't log sensitive pod details
@@ -113,9 +119,64 @@ namespace slskd.PodCore
             }
         }
 
+        public async Task<Pod> UpdateAsync(Pod pod, CancellationToken ct = default)
+        {
+            // SECURITY: Validate input
+            var (isValid, error) = PodValidation.ValidatePod(pod);
+            if (!isValid)
+            {
+                logger.LogWarning("Pod update rejected: {Reason}", error);
+                throw new ArgumentException(error, nameof(pod));
+            }
+
+            if (string.IsNullOrWhiteSpace(pod.PodId))
+            {
+                throw new ArgumentException("PodId is required for update", nameof(pod));
+            }
+
+            // SECURITY: Sanitize inputs
+            pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+
+            // SECURITY: Use transaction for atomicity
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                var existingEntity = await db.Pods.FirstOrDefaultAsync(p => p.PodId == pod.PodId, ct);
+                if (existingEntity == null)
+                {
+                    throw new KeyNotFoundException($"Pod with ID {pod.PodId} not found");
+                }
+
+                // Update entity properties
+                existingEntity.Name = pod.Name;
+                existingEntity.Description = pod.Description;
+                existingEntity.IsPublic = pod.IsPublic;
+                existingEntity.MaxMembers = pod.MaxMembers;
+                existingEntity.AllowGuests = pod.AllowGuests;
+                existingEntity.RequireApproval = pod.RequireApproval;
+                existingEntity.UpdatedAt = DateTimeOffset.UtcNow;
+
+                await db.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                // Publish update
+                await podPublisher.PublishAsync(pod, ct);
+
+                return pod;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error updating pod {PodId}", pod.PodId);
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        }
+
         public async Task<IReadOnlyList<Pod>> ListAsync(CancellationToken ct = default)
         {
-            var entities = await dbContext.Pods.ToListAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var entities = await db.Pods.ToListAsync(ct);
             return entities.Select(EntityToPod).ToList();
         }
 
@@ -130,7 +191,8 @@ namespace slskd.PodCore
 
             try
             {
-                var entity = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+                await using var db = await dbFactory.CreateDbContextAsync(ct);
+                var entity = await db.Pods.FindAsync(new object[] { podId }, ct);
                 return entity == null ? null : EntityToPod(entity);
             }
             catch (Exception ex)
@@ -142,7 +204,8 @@ namespace slskd.PodCore
 
         public async Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default)
         {
-            var entities = await dbContext.Members
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var entities = await db.Members
                 .Where(m => m.PodId == podId && !m.IsBanned)
                 .ToListAsync(ct);
 
@@ -157,7 +220,8 @@ namespace slskd.PodCore
 
         public async Task<IReadOnlyList<SignedMembershipRecord>> GetMembershipHistoryAsync(string podId, CancellationToken ct = default)
         {
-            var entities = await dbContext.MembershipRecords
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var entities = await db.MembershipRecords
                 .Where(r => r.PodId == podId)
                 .OrderBy(r => r.TimestampUnixMs)
                 .ToListAsync(ct);
@@ -189,17 +253,18 @@ namespace slskd.PodCore
             }
 
             // SECURITY: Use transaction
-            using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
             try
             {
-                var pod = await dbContext.Pods.FindAsync(new object[] { podId }, ct);
+                var pod = await db.Pods.FindAsync(new object[] { podId }, ct);
                 if (pod == null)
                 {
                     logger.LogWarning("Attempted to join non-existent pod");
                     return false;
                 }
 
-                var existingMember = await dbContext.Members
+                var existingMember = await db.Members
                     .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == member.PeerId, ct);
 
                 if (existingMember != null)
@@ -223,7 +288,7 @@ namespace slskd.PodCore
                     IsBanned = false,
                 };
 
-                dbContext.Members.Add(memberEntity);
+                db.Members.Add(memberEntity);
 
                 // Add membership record
                 var membershipRecord = new SignedMembershipRecordEntity
@@ -235,8 +300,8 @@ namespace slskd.PodCore
                     Signature = string.Empty, // Will be populated by signing service
                 };
 
-                dbContext.MembershipRecords.Add(membershipRecord);
-                await dbContext.SaveChangesAsync(ct);
+                db.MembershipRecords.Add(membershipRecord);
+                await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
                 logger.LogInformation("User joined pod successfully");
@@ -252,7 +317,8 @@ namespace slskd.PodCore
 
         public async Task<bool> LeaveAsync(string podId, string peerId, CancellationToken ct = default)
         {
-            var member = await dbContext.Members
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var member = await db.Members
                 .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == peerId, ct);
 
             if (member == null)
@@ -261,7 +327,7 @@ namespace slskd.PodCore
                 return false;
             }
 
-            dbContext.Members.Remove(member);
+            db.Members.Remove(member);
 
             // Add membership record
             var membershipRecord = new SignedMembershipRecordEntity
@@ -273,8 +339,8 @@ namespace slskd.PodCore
                 Signature = string.Empty,
             };
 
-            dbContext.MembershipRecords.Add(membershipRecord);
-            await dbContext.SaveChangesAsync(ct);
+            db.MembershipRecords.Add(membershipRecord);
+            await db.SaveChangesAsync(ct);
 
             logger.LogInformation("User {PeerId} left pod {PodId}", peerId, podId);
             return true;
@@ -282,7 +348,8 @@ namespace slskd.PodCore
 
         public async Task<bool> BanAsync(string podId, string peerId, CancellationToken ct = default)
         {
-            var member = await dbContext.Members
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var member = await db.Members
                 .FirstOrDefaultAsync(m => m.PodId == podId && m.PeerId == peerId, ct);
 
             if (member == null)
@@ -303,8 +370,8 @@ namespace slskd.PodCore
                 Signature = string.Empty,
             };
 
-            dbContext.MembershipRecords.Add(membershipRecord);
-            await dbContext.SaveChangesAsync(ct);
+            db.MembershipRecords.Add(membershipRecord);
+            await db.SaveChangesAsync(ct);
 
             logger.LogInformation("User {PeerId} banned from pod {PodId}", peerId, podId);
             return true;
@@ -339,6 +406,252 @@ namespace slskd.PodCore
                     ExternalBindings = new List<ExternalBinding>(),
                 };
             }
+        }
+
+        // Channel management implementation
+        public async Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+        {
+            // Verify pod exists
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var podEntity = await db.Pods.FindAsync(new object[] { podId }, ct);
+            if (podEntity == null)
+            {
+                throw new ArgumentException($"Pod {podId} does not exist", nameof(podId));
+            }
+
+            // Generate channel ID if not provided
+            if (string.IsNullOrWhiteSpace(channel.ChannelId))
+            {
+                channel.ChannelId = $"channel:{Guid.NewGuid():N}";
+            }
+
+            // Validate channel data
+            if (string.IsNullOrWhiteSpace(channel.Name))
+            {
+                throw new ArgumentException("Channel name is required", nameof(channel));
+            }
+
+            // Load current pod data
+            var pod = await GetPodAsync(podId, ct);
+            if (pod == null)
+            {
+                throw new ArgumentException($"Pod {podId} does not exist", nameof(podId));
+            }
+
+            // Add channel
+            pod.Channels ??= new List<PodChannel>();
+            pod.Channels.Add(channel);
+
+            // Update database
+            podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
+            await db.SaveChangesAsync(ct);
+
+            // Publish updated pod to DHT if listed
+            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await podPublisher.PublishPodAsync(pod, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to publish pod update to DHT");
+                    }
+                }, ct);
+            }
+
+            logger.LogInformation("Created channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
+            return channel;
+        }
+
+        public async Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default)
+        {
+            // Verify pod exists
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var podEntity = await db.Pods.FindAsync(new object[] { podId }, ct);
+            if (podEntity == null)
+            {
+                return false;
+            }
+
+            // Load current pod data
+            var pod = await GetPodAsync(podId, ct);
+            if (pod?.Channels == null)
+            {
+                return false;
+            }
+
+            var channelIndex = pod.Channels.FindIndex(c => c.ChannelId == channelId);
+            if (channelIndex == -1)
+            {
+                return false;
+            }
+
+            // Don't allow deletion of system channels
+            var channel = pod.Channels[channelIndex];
+            if (channel.Kind == PodChannelKind.General && channel.Name.ToLowerInvariant() == "general")
+            {
+                throw new InvalidOperationException("Cannot delete the default general channel");
+            }
+
+            // Remove channel
+            pod.Channels.RemoveAt(channelIndex);
+
+            // Update database
+            podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
+            await db.SaveChangesAsync(ct);
+
+            // Publish updated pod to DHT if listed
+            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await podPublisher.PublishPodAsync(pod, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to publish pod update to DHT");
+                    }
+                }, ct);
+            }
+
+            logger.LogInformation("Deleted channel {ChannelId} from pod {PodId}", channelId, podId);
+            return true;
+        }
+
+        public async Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default)
+        {
+            var pod = await GetPodAsync(podId, ct);
+            return pod?.Channels?.FirstOrDefault(c => c.ChannelId == channelId);
+        }
+
+        public async Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default)
+        {
+            var pod = await GetPodAsync(podId, ct);
+            return (IReadOnlyList<PodChannel>)(pod?.Channels ?? new List<PodChannel>());
+        }
+
+        public async Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+        {
+            // Verify pod exists
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var podEntity = await db.Pods.FindAsync(new object[] { podId }, ct);
+            if (podEntity == null)
+            {
+                return false;
+            }
+
+            // Load current pod data
+            var pod = await GetPodAsync(podId, ct);
+            if (pod?.Channels == null)
+            {
+                return false;
+            }
+
+            var existingChannel = pod.Channels.FirstOrDefault(c => c.ChannelId == channel.ChannelId);
+            if (existingChannel == null)
+            {
+                return false;
+            }
+
+            // Validate channel data
+            if (string.IsNullOrWhiteSpace(channel.Name))
+            {
+                throw new ArgumentException("Channel name is required", nameof(channel));
+            }
+
+            // Don't allow changing system channels
+            if (existingChannel.Kind == PodChannelKind.General &&
+                existingChannel.Name.ToLowerInvariant() == "general" &&
+                (channel.Kind != PodChannelKind.General || channel.Name.ToLowerInvariant() != "general"))
+            {
+                throw new InvalidOperationException("Cannot modify the default general channel");
+            }
+
+            // Update channel
+            var index = pod.Channels.IndexOf(existingChannel);
+            pod.Channels[index] = channel;
+
+            // Update database
+            podEntity.Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels);
+            await db.SaveChangesAsync(ct);
+
+            // Publish updated pod to DHT if listed
+            if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await podPublisher.PublishPodAsync(pod, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to publish pod update to DHT");
+                    }
+                }, ct);
+            }
+
+            logger.LogInformation("Updated channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
+            return true;
+        }
+
+        // Content linking implementation
+        public async Task<ContentValidationResult> ValidateContentLinkAsync(string contentId, CancellationToken ct = default)
+        {
+            if (ContentLinkService == null)
+            {
+                // If no content service available, only do basic format validation
+                var isValid = !string.IsNullOrWhiteSpace(contentId) &&
+                             contentId.StartsWith("content:", StringComparison.OrdinalIgnoreCase);
+
+                return new ContentValidationResult(
+                    IsValid: isValid,
+                    ContentId: contentId,
+                    ErrorMessage: isValid ? null : "Invalid content ID format or content link service unavailable");
+            }
+
+            return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
+        }
+
+        public async Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default)
+        {
+            // Validate content link if specified
+            if (!string.IsNullOrWhiteSpace(pod.FocusContentId))
+            {
+                var validation = await ValidateContentLinkAsync(pod.FocusContentId, ct);
+                if (!validation.IsValid)
+                {
+                    throw new ArgumentException($"Invalid content link: {validation.ErrorMessage}", nameof(pod));
+                }
+
+                // Enhance pod name with content metadata if available
+                if (validation.Metadata != null && string.IsNullOrWhiteSpace(pod.Name))
+                {
+                    pod.Name = $"{validation.Metadata.Artist} - {validation.Metadata.Title}";
+                }
+
+                // Add content-based tags
+                pod.Tags ??= new List<string>();
+                if (validation.Metadata != null)
+                {
+                    if (!pod.Tags.Contains($"content:{validation.Metadata.Domain}"))
+                    {
+                        pod.Tags.Add($"content:{validation.Metadata.Domain}");
+                    }
+                    if (!pod.Tags.Contains($"type:{validation.Metadata.Type}"))
+                    {
+                        pod.Tags.Add($"type:{validation.Metadata.Type}");
+                    }
+                }
+            }
+
+            // Create the pod normally
+            return await CreateAsync(pod, ct);
         }
     }
 }

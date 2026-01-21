@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tc.v1.common.lib.chart.names.fullname" . }}
+  labels:
+    {{- include "tc.v1.common.lib.metadata.allLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.service.main.ports.main.port }}
+      targetPort: {{ .Values.service.main.ports.main.targetPort }}
+      protocol: {{ .Values.service.main.ports.main.protocol }}
+      name: main
+    {{- if .Values.service.https.enabled }}
+    - port: {{ .Values.service.https.ports.https.port }}
+      targetPort: {{ .Values.service.https.ports.https.targetPort }}
+      protocol: {{ .Values.service.https.ports.https.protocol }}
+      name: https
+    {{- end }}
+  selector:
+    {{- include "tc.v1.common.lib.metadata.selectorLabels" . | nindent 4 }}
+
+

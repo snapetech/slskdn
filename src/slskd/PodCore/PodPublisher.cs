@@ -1,3 +1,7 @@
+// <copyright file="PodPublisher.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.PodCore;
 
 using System;
@@ -17,6 +21,16 @@ public interface IPodPublisher
     /// Publishes a pod's metadata to the DHT.
     /// </summary>
     Task PublishPodAsync(Pod pod, CancellationToken ct = default);
+
+    /// <summary>
+    /// Publishes a pod's metadata to the DHT (alias for PublishPodAsync).
+    /// </summary>
+    Task PublishAsync(Pod pod, CancellationToken ct = default) => PublishPodAsync(pod, ct);
+
+    /// <summary>
+    /// Updates a pod's metadata in the DHT (alias for PublishPodAsync).
+    /// </summary>
+    Task UpdatePodAsync(Pod pod, CancellationToken ct = default) => PublishPodAsync(pod, ct);
 
     /// <summary>
     /// Removes a pod's metadata from the DHT (unpublish).
@@ -62,6 +76,13 @@ public class PodPublisher : IPodPublisher
         if (pod.Visibility != PodVisibility.Listed)
         {
             logger.LogDebug("[PodPublisher] Skipping publish for unlisted pod {PodId}", pod.PodId);
+            return;
+        }
+
+        // HARDENING: Never publish DM pods, even if marked as listed
+        if (pod.Tags?.Contains("dm") == true)
+        {
+            logger.LogWarning("[PodPublisher] Blocking publish attempt for DM pod {PodId}", pod.PodId);
             return;
         }
 
@@ -278,19 +299,3 @@ public class PodMetadata
     public int ChannelCount { get; set; }
     public long PublishedAt { get; set; } // Unix timestamp in milliseconds
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

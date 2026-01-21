@@ -20,7 +20,7 @@ public class SwarmRequestBtFallbackTests : IClassFixture<SignalSystemTestFixture
         this.fixture = fixture;
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement proper signal delivery verification - requires full mesh/channel setup")]
     public async Task RequestBtFallback_ShouldSendSignal_WhenTransferFails()
     {
         // Arrange
@@ -58,12 +58,14 @@ public class SwarmRequestBtFallbackTests : IClassFixture<SignalSystemTestFixture
         await signalBus.SendAsync(signal);
 
         // Assert
-        // Signal should be received (if channel handler is registered)
-        // In a real test, we'd verify the signal was delivered to the target peer
-        Assert.True(true); // Placeholder - actual delivery depends on channel handlers
+        // TODO: Verify signal delivery through mesh/channel infrastructure
+        // - Signal should be queued for delivery
+        // - Channel handlers should process the signal
+        // - Target peer should receive the signal
+        Assert.Fail("Test not implemented - requires full mesh/channel infrastructure setup");
     }
 
-    [Fact]
+    [Fact(Skip = "TODO: Implement swarm signal handler integration test - requires full swarm infrastructure")]
     public async Task RequestBtFallbackAck_ShouldBeReceived_WhenFallbackAccepted()
     {
         // Arrange
@@ -105,9 +107,11 @@ public class SwarmRequestBtFallbackTests : IClassFixture<SignalSystemTestFixture
         }
 
         // Assert
-        // In a real scenario, SwarmSignalHandlers would process the request and send an ack
-        // For now, we verify the handler is registered and can receive signals
-        Assert.True(true); // Placeholder
+        // TODO: Verify swarm handler processes request and sends acknowledgment
+        // - SwarmSignalHandlers should handle the request
+        // - BitTorrent backend should be invoked for fallback
+        // - Acknowledgment signal should be sent back
+        Assert.Fail("Test not implemented - requires full swarm and BitTorrent backend integration");
     }
 }
 

@@ -1,4 +1,4 @@
-﻿// <copyright file="FileService.cs" company="slskd Team">
+// <copyright file="FileService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -50,6 +50,24 @@ namespace slskd.Files
 
         private ILogger Log { get; } = Serilog.Log.ForContext<FileService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+
+        /// <summary>
+        ///     Computes the SHA256 hash of a file.
+        /// </summary>
+        /// <param name="filename">The fully qualified filename.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>The hex-encoded SHA256 hash.</returns>
+        /// <remarks>
+        ///     Added for T-MCP02 (moderation integration).
+        ///     Uses SHA256 for content identification.
+        /// </remarks>
+        public virtual async Task<string> ComputeHashAsync(string filename, System.Threading.CancellationToken cancellationToken = default)
+        {
+            using var stream = File.OpenRead(filename);
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hashBytes = await sha256.ComputeHashAsync(stream, cancellationToken);
+            return Convert.ToHexString(hashBytes);
+        }
 
         /// <summary>
         ///     Resolves an instance of <see cref="FileInfo"/> for the specified <paramref name="filename"/>, following

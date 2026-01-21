@@ -9,7 +9,9 @@ export const getStats = async () => {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to get mesh transport stats: ${response.statusText}`);
+    throw new Error(
+      `Failed to get mesh transport stats: ${response.statusText}`,
+    );
   }
 
   return response.json();

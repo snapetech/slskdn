@@ -9,8 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using slskd.Common.Security;
+using slskd.Mesh;
 
 /// <summary>
 /// API controller for security monitoring and management.
@@ -22,16 +25,28 @@ public class SecurityController : ControllerBase
 {
     private readonly SecurityServices? _security;
     private readonly ISecurityEventSink? _eventSink;
+    private readonly AdversarialOptions? _adversarialOptions;
+    private readonly AnonymityTransportSelector? _transportSelector;
+    private readonly Mesh.MeshCircuitBuilder? _circuitBuilder;
+    private readonly Mesh.IMeshPeerManager? _peerManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurityController"/> class.
     /// </summary>
     public SecurityController(
         SecurityServices? security = null,
-        ISecurityEventSink? eventSink = null)
+        ISecurityEventSink? eventSink = null,
+        AdversarialOptions? adversarialOptions = null,
+        AnonymityTransportSelector? transportSelector = null,
+        Mesh.MeshCircuitBuilder? circuitBuilder = null,
+        Mesh.IMeshPeerManager? peerManager = null)
     {
         _security = security;
         _eventSink = eventSink ?? security?.EventSink;
+        _adversarialOptions = adversarialOptions;
+        _transportSelector = transportSelector;
+        _circuitBuilder = circuitBuilder;
+        _peerManager = peerManager;
     }
 
     /// <summary>
@@ -99,9 +114,9 @@ public class SecurityController : ControllerBase
             return BadRequest("Invalid IP address");
         }
 
-        var duration = request.Duration.HasValue
-            ? TimeSpan.FromMinutes(request.Duration.Value)
-            : (TimeSpan?)null;
+        // Compute duration with precedence: Duration (TimeSpan) first, then DurationMinutes, then null
+        var duration = request.Duration 
+            ?? (request.DurationMinutes.HasValue ? TimeSpan.FromMinutes(request.DurationMinutes.Value) : null);
 
         _security?.ViolationTracker?.BanIp(ip, request.Reason ?? "Manual ban", duration, request.Permanent);
 
@@ -154,9 +169,9 @@ public class SecurityController : ControllerBase
             return BadRequest("Username is required");
         }
 
-        var duration = request.Duration.HasValue
-            ? TimeSpan.FromMinutes(request.Duration.Value)
-            : (TimeSpan?)null;
+        // Compute duration with precedence: Duration (TimeSpan) first, then DurationMinutes, then null
+        var duration = request.Duration 
+            ?? (request.DurationMinutes.HasValue ? TimeSpan.FromMinutes(request.DurationMinutes.Value) : null);
 
         _security?.ViolationTracker?.BanUsername(request.Username, request.Reason ?? "Manual ban", duration, request.Permanent);
 
@@ -214,7 +229,7 @@ public class SecurityController : ControllerBase
             return BadRequest("Score must be between 0 and 100");
         }
 
-        _security?.PeerReputation?.SetScore(username, request.Score, request.Reason ?? "Manual adjustment");
+        _security?.PeerReputation?.SetScore(username, (int)request.Score, request.Reason ?? "Manual adjustment");
 
         _eventSink?.Report(SecurityEvent.Create(
             SecurityEventType.TrustChange,
@@ -307,10 +322,13 @@ public class SecurityController : ControllerBase
     [HttpPut("disclosure/{username}")]
     public ActionResult SetTrustTier(string username, [FromBody] SetTrustTierRequest request)
     {
-        if (!Enum.TryParse<TrustTier>(request.Tier, true, out var tier))
+        // Validate numeric tier value is a defined enum member
+        if (!Enum.IsDefined(typeof(TrustTier), request.Tier))
         {
             return BadRequest("Invalid trust tier");
         }
+
+        var tier = (TrustTier)request.Tier;
 
         _security?.AsymmetricDisclosure?.SetTrustTier(username, tier, request.Reason ?? "Manual override");
 
@@ -352,110 +370,226 @@ public class SecurityController : ControllerBase
         var anomalies = _security?.ParanoidMode?.GetRecentAnomalies(count) ?? Array.Empty<ServerAnomaly>();
         return Ok(anomalies);
     }
+    public ActionResult<AdversarialOptions> GetAdversarialSettings()
+    {
+        if (_adversarialOptions == null)
+        {
+            return NotFound("Adversarial features are not configured");
+        }
+
+        return Ok(_adversarialOptions);
+    }
+
+    [HttpGet("tor/status")]
+    public ActionResult<AnonymityTransportStatus> GetTorStatus()
+    {
+        var torTransport = _transportSelector?.GetTorTransport();
+        if (torTransport == null)
+        {
+            return NotFound("Tor transport is not configured or available");
+        }
+
+        var status = torTransport.GetStatus();
+        return Ok(status);
+    }
+
+    [HttpPost("tor/test")]
+    public async Task<ActionResult<AnonymityTransportStatus>> TestTorConnectivity()
+    {
+        var torTransport = _transportSelector?.GetTorTransport();
+        if (torTransport == null)
+        {
+            return NotFound("Tor transport is not configured or available");
+        }
+
+        try
+        {
+            await torTransport.IsAvailableAsync();
+            var status = torTransport.GetStatus();
+            return Ok(status);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Tor connectivity test failed: {ex.Message}");
+        }
+    }
+
+    [HttpPut("adversarial")]
+    public ActionResult UpdateAdversarialSettings([FromBody] AdversarialOptions settings)
+    {
+        // NOTE: In a real implementation, this would persist the settings
+        // For now, just validate the input
+        if (settings == null)
+        {
+            return BadRequest("Settings cannot be null");
+        }
+
+        // Basic validation
+        if (settings.Privacy?.Padding?.BucketSizes != null &&
+            settings.Privacy.Padding.BucketSizes.Any(size => size <= 0))
+        {
+            return BadRequest("Bucket sizes must be positive");
+        }
+
+        // TODO: Implement persistence and runtime configuration updates
+        return Ok(new { message = "Adversarial settings updated (persistence not yet implemented)" });
+    }
+
+    [HttpGet("adversarial/stats")]
+    public ActionResult<AdversarialStats> GetAdversarialStats()
+    {
+        return Ok(new AdversarialStats
+        {
+            Enabled = _adversarialOptions?.Enabled ?? false,
+            Profile = (_adversarialOptions?.Profile ?? AdversarialProfile.Disabled).ToString(),
+            PrivacyEnabled = _adversarialOptions?.Privacy?.Enabled ?? false,
+            AnonymityEnabled = _adversarialOptions?.Anonymity?.Enabled ?? false,
+            TransportEnabled = _adversarialOptions?.Transport?.Enabled ?? false,
+            OnionRoutingEnabled = _adversarialOptions?.OnionRouting?.Enabled ?? false,
+            CensorshipResistanceEnabled = _adversarialOptions?.CensorshipResistance?.Enabled ?? false,
+            PlausibleDeniabilityEnabled = _adversarialOptions?.PlausibleDeniability?.Enabled ?? false,
+        });
+    }
+
+    [HttpGet("transports/status")]
+    public ActionResult<TransportSelectorStatus> GetTransportStatus()
+    {
+        if (_transportSelector == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Transport selector not available");
+        }
+
+        return Ok(_transportSelector.GetSelectorStatus());
+    }
+
+    [HttpGet("transports")]
+    public ActionResult<Dictionary<AnonymityTransportType, AnonymityTransportStatus>> GetAllTransportStatuses()
+    {
+        if (_transportSelector == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Transport selector not available");
+        }
+
+        return Ok(_transportSelector.GetAllStatuses());
+    }
+
+    [HttpPost("transports/test")]
+    public async Task<ActionResult> TestTransportConnectivity()
+    {
+        if (_transportSelector == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Transport selector not available");
+        }
+
+        try
+        {
+            await _transportSelector.TestConnectivityAsync();
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode((int)HttpStatusCode.InternalServerError, $"Connectivity test failed: {ex.Message}");
+        }
+    }
+
+    [HttpGet("circuits/stats")]
+    public ActionResult<CircuitStatistics> GetCircuitStats()
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        return Ok(_circuitBuilder.GetStatistics());
+    }
+
+    [HttpGet("circuits")]
+    public ActionResult<List<CircuitInfo>> GetActiveCircuits()
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        var circuits = _circuitBuilder.GetActiveCircuits();
+        return Ok(circuits.Select(c => c.GetInfo()).ToList());
+    }
+
+    [HttpPost("circuits")]
+    public async Task<ActionResult<CircuitInfo>> BuildCircuit([FromBody] BuildCircuitRequest request)
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        // Validate TargetPeerId is provided
+        if (string.IsNullOrWhiteSpace(request.TargetPeerId))
+        {
+            return BadRequest("TargetPeerId is required");
+        }
+
+        // Compute circuit length with precedence: Length (nullable) first, then CircuitLength, default to 3
+        var circuitLength = request.Length ?? request.CircuitLength;
+
+        try
+        {
+            var circuit = await _circuitBuilder.BuildCircuitAsync(
+                request.TargetPeerId,
+                circuitLength);
+
+            return Ok(circuit.GetInfo());
+        }
+        catch (Exception ex)
+        {
+            return StatusCode((int)HttpStatusCode.BadRequest, $"Circuit building failed: {ex.Message}");
+        }
+    }
+
+    [HttpDelete("circuits/{circuitId}")]
+    public ActionResult DestroyCircuit(string circuitId)
+    {
+        if (_circuitBuilder == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        _circuitBuilder.DestroyCircuit(circuitId);
+        return Ok();
+    }
+
+    [HttpGet("peers/stats")]
+    public ActionResult<PeerStatistics> GetPeerStats()
+    {
+        if (_peerManager == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Peer manager not available");
+        }
+
+        return Ok(_peerManager.GetStatistics());
+    }
+
+    [HttpGet("peers")]
+    public async Task<ActionResult<List<PeerInfo>>> GetPeers()
+    {
+        if (_peerManager == null)
+        {
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Peer manager not available");
+        }
+
+        var peers = await _peerManager.GetAvailablePeersAsync();
+        return Ok(peers.Select(p => new PeerInfo
+        {
+            PeerId = p.PeerId,
+            Addresses = p.Addresses.Select(a => a.ToString()).ToList(),
+            LastSeen = p.LastSeen,
+            TrustScore = p.TrustScore,
+            LatencyMs = p.LatencyMs,
+            BandwidthMbps = p.BandwidthMbps,
+            SupportsOnionRouting = p.SupportsOnionRouting,
+            Version = p.Version,
+            QualityScore = p.GetQualityScore()
+        }).ToList());
+    }
+
 }
-
-/// <summary>
-/// Security dashboard overview.
-/// </summary>
-public sealed class SecurityDashboard
-{
-    /// <summary>Gets or sets event statistics.</summary>
-    public SecurityEventStats? EventStats { get; set; }
-
-    /// <summary>Gets or sets network guard statistics.</summary>
-    public NetworkGuardStats? NetworkGuardStats { get; set; }
-
-    /// <summary>Gets or sets violation statistics.</summary>
-    public ViolationStats? ViolationStats { get; set; }
-
-    /// <summary>Gets or sets reputation statistics.</summary>
-    public ReputationStats? ReputationStats { get; set; }
-
-    /// <summary>Gets or sets paranoid mode statistics.</summary>
-    public ParanoidStats? ParanoidStats { get; set; }
-
-    /// <summary>Gets or sets fingerprint detection statistics.</summary>
-    public ReconnaissanceStats? FingerprintStats { get; set; }
-
-    /// <summary>Gets or sets honeypot statistics.</summary>
-    public HoneypotStats? HoneypotStats { get; set; }
-
-    /// <summary>Gets or sets canary statistics.</summary>
-    public CanaryStats? CanaryStats { get; set; }
-
-    /// <summary>Gets or sets entropy statistics.</summary>
-    public EntropyStats? EntropyStats { get; set; }
-
-    /// <summary>Gets or sets consensus statistics.</summary>
-    public ConsensusStats? ConsensusStats { get; set; }
-
-    /// <summary>Gets or sets verification statistics.</summary>
-    public VerificationStats? VerificationStats { get; set; }
-
-    /// <summary>Gets or sets disclosure statistics.</summary>
-    public DisclosureStats? DisclosureStats { get; set; }
-
-    /// <summary>Gets or sets temporal consistency statistics.</summary>
-    public TemporalStats? TemporalStats { get; set; }
-}
-
-/// <summary>
-/// Request to ban an IP.
-/// </summary>
-public sealed class BanIpRequest
-{
-    /// <summary>Gets or sets the IP address.</summary>
-    public required string IpAddress { get; set; }
-
-    /// <summary>Gets or sets the reason.</summary>
-    public string? Reason { get; set; }
-
-    /// <summary>Gets or sets duration in minutes.</summary>
-    public int? Duration { get; set; }
-
-    /// <summary>Gets or sets whether permanent.</summary>
-    public bool Permanent { get; set; }
-}
-
-/// <summary>
-/// Request to ban a username.
-/// </summary>
-public sealed class BanUsernameRequest
-{
-    /// <summary>Gets or sets the username.</summary>
-    public required string Username { get; set; }
-
-    /// <summary>Gets or sets the reason.</summary>
-    public string? Reason { get; set; }
-
-    /// <summary>Gets or sets duration in minutes.</summary>
-    public int? Duration { get; set; }
-
-    /// <summary>Gets or sets whether permanent.</summary>
-    public bool Permanent { get; set; }
-}
-
-/// <summary>
-/// Request to set reputation.
-/// </summary>
-public sealed class SetReputationRequest
-{
-    /// <summary>Gets or sets the score (0-100).</summary>
-    public required int Score { get; set; }
-
-    /// <summary>Gets or sets the reason.</summary>
-    public string? Reason { get; set; }
-}
-
-/// <summary>
-/// Request to set trust tier.
-/// </summary>
-public sealed class SetTrustTierRequest
-{
-    /// <summary>Gets or sets the tier name.</summary>
-    public required string Tier { get; set; }
-
-    /// <summary>Gets or sets the reason.</summary>
-    public string? Reason { get; set; }
-}
-

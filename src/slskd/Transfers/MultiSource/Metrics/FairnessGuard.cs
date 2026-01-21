@@ -1,3 +1,7 @@
+// <copyright file="FairnessGuard.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.Metrics
 {
     using System.Threading;
@@ -114,20 +118,3 @@ namespace slskd.Transfers.MultiSource.Metrics
         public double MaxOverlayToSoulseekUploadRatio { get; init; } = 3.0;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

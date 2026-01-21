@@ -1,6 +1,12 @@
+// <copyright file="MeshStatsCollector.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh;
 
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Threading;
 
 /// <summary>
 /// Aggregates transport statistics from mesh services for diagnostics.
@@ -13,13 +19,32 @@ public class MeshStatsCollector
     private readonly Lazy<Overlay.QuicOverlayServer> overlayServer;
     private readonly Lazy<Overlay.QuicOverlayClient> overlayClient;
 
+    // Statistics tracking
+    private long messagesSent;
+    private long messagesReceived;
+    private long dhtOperations;
+    private long peerChurnEvents;
+    private readonly Stopwatch dhtOpsTimer = new();
+    private int routingTableSize;
+    private int bootstrapPeers;
+
+    // Public methods for tracking statistics
+    public void RecordMessageSent() => Interlocked.Increment(ref messagesSent);
+    public void RecordMessageReceived() => Interlocked.Increment(ref messagesReceived);
+    public void RecordDhtOperation() => Interlocked.Increment(ref dhtOperations);
+    public void RecordPeerChurn() => Interlocked.Increment(ref peerChurnEvents);
+    public void UpdateRoutingTableSize(int size) => routingTableSize = size;
+    public void UpdateBootstrapPeers(int count) => bootstrapPeers = count;
+
     public MeshStatsCollector(
         ILogger<MeshStatsCollector> logger,
         IServiceProvider serviceProvider)
     {
+        logger.LogInformation("[MeshStatsCollector] Constructor called");
         this.logger = logger;
         
         // Use Lazy to avoid circular dependencies and handle optional services
+        logger.LogInformation("[MeshStatsCollector] Creating lazy service resolvers...");
         this.natDetector = new Lazy<INatDetector>(() => 
             serviceProvider.GetService(typeof(INatDetector)) as INatDetector);
         this.dhtClient = new Lazy<Dht.InMemoryDhtClient>(() => 
@@ -28,29 +53,40 @@ public class MeshStatsCollector
             serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.QuicOverlayServer);
         this.overlayClient = new Lazy<Overlay.QuicOverlayClient>(() => 
             serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.QuicOverlayClient);
+        logger.LogInformation("[MeshStatsCollector] Constructor completed");
     }
 
     /// <summary>
     /// Gets current mesh transport statistics.
     /// </summary>
-    public MeshTransportStats GetStats()
+        public async Task<MeshTransportStats> GetStatsAsync()
     {
         try
         {
             var dhtNodes = 0;
             var overlayConnections = 0;
             var natType = NatType.Unknown;
+            var totalPeers = 0;
+            double dhtOpsPerSecond = 0.0;
 
-            // DHT node count
+            // DHT statistics
             if (dhtClient.Value != null)
             {
                 try
                 {
                     dhtNodes = dhtClient.Value.GetNodeCount();
+                    totalPeers = dhtNodes; // For now, total peers = DHT nodes
+
+                    // Calculate DHT operations per second
+                    var elapsedSeconds = dhtOpsTimer.Elapsed.TotalSeconds;
+                    if (elapsedSeconds > 0)
+                    {
+                        dhtOpsPerSecond = dhtOperations / elapsedSeconds;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug(ex, "Failed to get DHT node count");
+                    logger.LogDebug(ex, "Failed to get DHT statistics");
                 }
             }
 
@@ -79,16 +115,26 @@ public class MeshStatsCollector
                 }
             }
 
-            // NAT type
+            // NAT type - perform detection if not already known
             if (natDetector.Value is StunNatDetector stunDetector)
             {
                 try
                 {
-                    natType = stunDetector.LastDetectedType;
+                    // If we don't have a cached result, perform detection
+                    if (stunDetector.LastDetectedType == NatType.Unknown)
+                    {
+                        logger.LogDebug("Performing NAT detection for mesh stats");
+                        natType = await stunDetector.DetectAsync();
+                    }
+                    else
+                    {
+                        natType = stunDetector.LastDetectedType;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug(ex, "Failed to get NAT type");
+                    logger.LogDebug(ex, "Failed to detect NAT type");
+                    natType = NatType.Unknown;
                 }
             }
 
@@ -96,7 +142,14 @@ public class MeshStatsCollector
                 ActiveDhtSessions: dhtNodes,
                 ActiveOverlaySessions: overlayConnections,
                 ActiveMirroredSessions: 0, // Not implemented yet
-                DetectedNatType: natType);
+                DetectedNatType: natType,
+                TotalPeers: totalPeers,
+                MessagesSent: messagesSent,
+                MessagesReceived: messagesReceived,
+                DhtOperationsPerSecond: dhtOpsPerSecond,
+                RoutingTableSize: routingTableSize,
+                BootstrapPeers: bootstrapPeers,
+                PeerChurnEvents: peerChurnEvents);
         }
         catch (Exception ex)
         {

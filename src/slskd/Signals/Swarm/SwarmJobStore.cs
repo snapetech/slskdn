@@ -1,3 +1,7 @@
+// <copyright file="SwarmJobStore.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals.Swarm;
 
 using System.Collections.Concurrent;

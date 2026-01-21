@@ -1,3 +1,7 @@
+// <copyright file="TrafficAccountingService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Transfers.MultiSource.Metrics
 {
     using System.Threading;
@@ -41,20 +45,3 @@ namespace slskd.Transfers.MultiSource.Metrics
             hashDb.GetTrafficTotalsAsync(ct);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,0 +1,39 @@
+# Development configuration for slskdn
+# DO NOT USE IN PRODUCTION
+#
+# Required environment variables:
+#   SLSKD_API_KEY - API key for authentication
+#
+# Optional environment variables (override defaults via CLI or env):
+#   SLSKD_SLSK_USERNAME - Soulseek username
+#   SLSKD_SLSK_PASSWORD - Soulseek password
+
+soulseek:
+  # Set via: --slsk-username or SLSKD_SLSK_USERNAME env var
+  listen_port: 51399
+
+web:
+  port: 5099
+  https:
+    disabled: true
+  authentication:
+    # API key must be set via SLSKD_API_KEY environment variable
+    disabled: true
+
+directories:
+  downloads: /tmp/slskdn/downloads
+  incomplete: /tmp/slskdn/incomplete
+
+global:
+  download:
+    auto_replace_stuck: false
+    auto_replace_threshold: 5
+    auto_replace_interval: 60
+
+shares: []
+
+debug: true
+
+security:
+  enabled: true
+  profile: Standard

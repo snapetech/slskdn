@@ -1,3 +1,7 @@
+// <copyright file="LabelPresence.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Integrations.MusicBrainz.Models
 {
     /// <summary>
@@ -12,20 +16,3 @@ namespace slskd.Integrations.MusicBrainz.Models
         public int ReleaseCount { get; init; }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

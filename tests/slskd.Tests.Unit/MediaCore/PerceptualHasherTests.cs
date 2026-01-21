@@ -51,6 +51,173 @@ public class PerceptualHasherTests
     }
 
     [Fact]
+    public void ComputeAudioHash_ChromaPrintAlgorithm_ReturnsValidResult()
+    {
+        // Arrange
+        var samples = GenerateSineWave(44100, 1.0f, 440);
+
+        // Act
+        var result = hasher.ComputeAudioHash(samples, 44100, PerceptualHashAlgorithm.Chromaprint);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("ChromaPrint", result.Algorithm);
+        Assert.NotNull(result.Hex);
+        Assert.True(result.NumericHash.HasValue);
+        Assert.Equal(16, result.Hex.Length); // 64-bit hash as hex
+    }
+
+    [Fact]
+    public void ComputeAudioHash_SpectralAlgorithm_ReturnsValidResult()
+    {
+        // Arrange
+        var samples = GenerateSineWave(44100, 1.0f, 440);
+
+        // Act
+        var result = hasher.ComputeAudioHash(samples, 44100, PerceptualHashAlgorithm.Spectral);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Spectral", result.Algorithm);
+        Assert.NotNull(result.Hex);
+        Assert.True(result.NumericHash.HasValue);
+    }
+
+    [Fact]
+    public void ComputeImageHash_PHashAlgorithm_ReturnsValidResult()
+    {
+        // Arrange
+        var pixels = GenerateTestImagePixels(32, 32); // 32x32 RGBA image
+        var width = 32;
+        var height = 32;
+
+        // Act
+        var result = hasher.ComputeImageHash(pixels, width, height, PerceptualHashAlgorithm.PHash);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("PHash", result.Algorithm);
+        Assert.NotNull(result.Hex);
+        Assert.True(result.NumericHash.HasValue);
+    }
+
+    [Fact]
+    public void ComputeImageHash_EmptyPixels_ReturnsValidResult()
+    {
+        // Act
+        var result = hasher.ComputeImageHash(Array.Empty<byte>(), 0, 0, PerceptualHashAlgorithm.PHash);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("PHash", result.Algorithm);
+        // Should handle empty input gracefully
+    }
+
+    [Fact]
+    public void AreSimilar_IdenticalHashes_ReturnsTrue()
+    {
+        // Arrange
+        var hash = 0x123456789ABCDEF0UL;
+
+        // Act
+        var result = hasher.AreSimilar(hash, hash);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void AreSimilar_CompletelyDifferentHashes_ReturnsFalse()
+    {
+        // Arrange
+        var hash1 = 0xFFFFFFFFFFFFFFFFUL;
+        var hash2 = 0x0000000000000000UL;
+
+        // Act
+        var result = hasher.AreSimilar(hash1, hash2);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void AreSimilar_SimilarHashes_ReturnsTrue()
+    {
+        // Arrange - hashes that differ by only a few bits
+        var hash1 = 0x123456789ABCDEF0UL;
+        var hash2 = 0x123456789ABCDEF1UL; // Only 1 bit different
+
+        // Act
+        var result = hasher.AreSimilar(hash1, hash2, threshold: 0.9);
+
+        // Assert
+        Assert.True(result);
+    }
+
+
+    [Fact]
+    public void Similarity_CompletelyDifferentHashes_ReturnsZero()
+    {
+        // Arrange
+        var hash1 = 0xFFFFFFFFFFFFFFFFUL;
+        var hash2 = 0x0000000000000000UL;
+
+        // Act
+        var similarity = hasher.Similarity(hash1, hash2);
+
+        // Assert
+        Assert.Equal(0.0, similarity);
+    }
+
+    [Theory]
+    [InlineData(PerceptualHashAlgorithm.Chromaprint)]
+    [InlineData(PerceptualHashAlgorithm.PHash)]
+    [InlineData(PerceptualHashAlgorithm.Spectral)]
+    public void ComputeAudioHash_AllAlgorithms_Supported(PerceptualHashAlgorithm algorithm)
+    {
+        // Arrange
+        var samples = GenerateSineWave(44100, 1.0f, 440);
+
+        // Act
+        var result = hasher.ComputeAudioHash(samples, 44100, algorithm);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(algorithm.ToString(), result.Algorithm);
+    }
+
+    [Theory]
+    [InlineData(PerceptualHashAlgorithm.PHash)]
+    public void ComputeImageHash_AllAlgorithms_Supported(PerceptualHashAlgorithm algorithm)
+    {
+        // Arrange
+        var pixels = GenerateTestImagePixels(32, 32);
+
+        // Act
+        var result = hasher.ComputeImageHash(pixels, 32, 32, algorithm);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(algorithm.ToString(), result.Algorithm);
+    }
+
+
+    private static byte[] GenerateTestImagePixels(int width, int height)
+    {
+        var pixels = new byte[width * height * 4]; // RGBA
+
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            pixels[i] = (byte)(i % 256);     // R
+            pixels[i + 1] = (byte)((i + 85) % 256);  // G
+            pixels[i + 2] = (byte)((i + 170) % 256); // B
+            pixels[i + 3] = 255;             // A
+        }
+
+        return pixels;
+    }
+
+    [Fact]
     public void HammingDistance_OneBitDifferent_ReturnsOne()
     {
         var hash1 = 0b0000000000000000UL;

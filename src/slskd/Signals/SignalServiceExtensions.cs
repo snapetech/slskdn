@@ -1,3 +1,7 @@
+// <copyright file="SignalServiceExtensions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -110,19 +114,3 @@ public static class SignalServiceExtensions
         await swarmHandlers.InitializeAsync(cancellationToken);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

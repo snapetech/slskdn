@@ -1,0 +1,172 @@
+# Default values for slskdN Helm chart
+# This file contains the default configuration values for deploying slskdN on TrueNAS SCALE
+
+# TrueCharts specific configuration
+TC: true
+
+# Image configuration
+image:
+  repository: slskd/slskdn
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Service configuration
+service:
+  main:
+    ports:
+      main:
+        port: 5030
+        targetPort: 5030
+        protocol: HTTP
+  # Optional: HTTPS service
+  https:
+    enabled: false
+    ports:
+      https:
+        enabled: true
+        port: 5031
+        targetPort: 5031
+        protocol: HTTPS
+
+# Persistence configuration
+persistence:
+  config:
+    enabled: true
+    mountPath: /app/config
+    type: hostPath
+    hostPath: "{{ .Values.hostPath }}/config"
+  downloads:
+    enabled: true
+    mountPath: /app/downloads
+    type: hostPath
+    hostPath: "{{ .Values.hostPath }}/downloads"
+  shares:
+    enabled: true
+    mountPath: /app/shared
+    type: hostPath
+    hostPath: "{{ .Values.hostPath }}/shared"
+  incomplete:
+    enabled: true
+    mountPath: /app/incomplete
+    type: hostPath
+    hostPath: "{{ .Values.hostPath }}/incomplete"
+
+# Host path configuration (required for TrueNAS SCALE)
+hostPath: "/mnt/{{ .Release.Namespace }}/slskdn"
+
+# Environment variables
+env:
+  # Basic configuration
+  SLSKD_USERNAME: ""
+  SLSKD_PASSWORD: ""
+  SLSKD_LISTEN_PORT: "5030"
+
+  # Data directories
+  SLSKD_SHARED_DIR: "/app/shared"
+  SLSKD_DOWNLOADS_DIR: "/app/downloads"
+  SLSKD_INCOMPLETE_DIR: "/app/incomplete"
+
+  # Web UI
+  SLSKD_WEBUI: "true"
+  SLSKD_WEBUI_HTTPS: "false"
+
+  # Soulseek network
+  SLSKD_SOULSEEK_NO_LISTEN_PORT: "false"
+  SLSKD_SOULSEEK_LISTEN_PORT: "2234"
+
+  # Security
+  SLSKD_API_KEYS: ""
+  SLSKD_API_REQUIRE_KEYS: "false"
+
+  # Mesh configuration (VPN networking)
+  SLSKD_MESH_ENABLED: "false"
+  SLSKD_MESH_PEER_ID: ""
+  SLSKD_MESH_PARENT: ""
+  SLSKD_MESH_NETWORK_NAME: ""
+  SLSKD_MESH_NETWORK_PASSWORD: ""
+
+  # VPN/Pod configuration
+  SLSKD_PODCORE_ENABLED: "false"
+  SLSKD_PODCORE_PEER_ID: ""
+  SLSKD_PODCORE_NETWORK_NAME: ""
+
+  # Tor/I2P configuration for VPN
+  SLSKD_TRANSPORTS_TOR_ENABLED: "false"
+  SLSKD_TRANSPORTS_I2P_ENABLED: "false"
+  SLSKD_TRANSPORTS_RELAY_ENABLED: "false"
+
+  # Privacy layer (traffic analysis protection)
+  SLSKD_PRIVACY_ENABLED: "false"
+  SLSKD_PRIVACY_MESSAGE_PADDING: "false"
+  SLSKD_PRIVACY_TIMING_OBFUSCATION: "false"
+  SLSKD_PRIVACY_MESSAGE_BATCHING: "false"
+
+  # Performance
+  SLSKD_GLOBAL_UPLOAD_SPEED_LIMIT: "0"
+  SLSKD_GLOBAL_DOWNLOAD_SPEED_LIMIT: "0"
+
+  # Logging
+  SLSKD_LOG_LEVEL: "info"
+  SLSKD_LOG_FILTER: ""
+
+# Pod configuration
+podOptions:
+  dnsPolicy: ClusterFirst
+
+# Security context
+securityContext:
+  privileged: false
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 568
+  runAsGroup: 568
+  fsGroup: 568
+  fsGroupChangePolicy: OnRootMismatch
+  supplementalGroups: []
+
+# Container security context
+containerSecurityContext:
+  privileged: false
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 568
+  runAsGroup: 568
+
+# Resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Node selector (optional)
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Ingress configuration (optional)
+ingress:
+  main:
+    enabled: false
+    hosts:
+      - host: slskdn.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+    #  - secretName: slskdn-tls
+    #    hosts:
+    #      - slskdn.local
+
+# Portal configuration for TrueNAS SCALE
+portal:
+  enabled: true
+
+# Additional TrueCharts configuration
+scaleGPU: ""
+ixChart: true

@@ -1,3 +1,7 @@
+// <copyright file="DataOverlayOptions.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Mesh.Overlay;
 
 /// <summary>
@@ -11,32 +15,4 @@ public class DataOverlayOptions
     public int MaxConcurrentStreams { get; set; } = 8;
     public int ReceiveBufferBytes { get; set; } = 512 * 1024;
     public int SendBufferBytes { get; set; } = 512 * 1024;
-
-    /// <summary>Path to persist the data plane TLS certificate (PFX).</summary>
-    public string TlsCertPath { get; set; } = "mesh-overlay-data.pfx";
-
-    /// <summary>Password for the data plane TLS certificate (optional).</summary>
-    public string? TlsCertPassword { get; set; }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

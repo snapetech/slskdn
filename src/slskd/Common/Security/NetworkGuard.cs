@@ -88,7 +88,7 @@ public sealed class NetworkGuard : IDisposable
         var tracker = _connectionTrackers.GetOrAdd(remoteIp, _ => new ConnectionTracker());
         if (tracker.ActiveConnections >= MaxConnectionsPerIp)
         {
-            _logger.LogWarning("Connection rejected from {Ip}: per-IP limit reached ({Count}/{Max})", remoteIp, tracker.ActiveConnections, MaxConnectionsPerIp);
+            _logger.LogWarning("Connection rejected from {SanitizedIp}: per-IP limit reached ({Count}/{Max})", LoggingSanitizer.SanitizeIpAddress(remoteIp), tracker.ActiveConnections, MaxConnectionsPerIp);
             return false;
         }
 
@@ -114,7 +114,12 @@ public sealed class NetworkGuard : IDisposable
 
         Interlocked.Increment(ref _globalConnectionCount);
 
-        _logger.LogDebug("Connection registered: {Id} from {Ip} (now {Count} from this IP)", connectionId, remoteIp, tracker.ActiveConnections);
+        // Only log connection registration for non-private IPs to reduce noise from localhost
+        // Private IPs are typically the web UI and generate many connections
+        if (!IsPrivateOrLocalIp(remoteIp))
+        {
+            _logger.LogDebug("Connection registered: {Id} from {Ip} (now {Count} from this IP)", connectionId, remoteIp, tracker.ActiveConnections);
+        }
 
         return connectionId;
     }
@@ -154,7 +159,11 @@ public sealed class NetworkGuard : IDisposable
             while (Interlocked.CompareExchange(ref _globalConnectionCount, newValue, current) != current);
         }
 
-        _logger.LogDebug("Connection unregistered: {Id} from {Ip} (removed: {Removed})", connectionId, remoteIp, wasRemoved);
+        // Only log connection unregistration for non-private IPs to reduce noise from localhost
+        if (!IsPrivateOrLocalIp(remoteIp))
+        {
+            _logger.LogDebug("Connection unregistered: {Id} from {Ip} (removed: {Removed})", connectionId, remoteIp, wasRemoved);
+        }
     }
 
     /// <summary>
@@ -325,6 +334,80 @@ public sealed class NetworkGuard : IDisposable
         {
             _logger.LogDebug("Cleaned up {Conn} connection trackers, {Rate} rate trackers", toRemove.Count, rateToRemove.Count);
         }
+    }
+
+    /// <summary>
+    /// Check if an IP address is a private/local address.
+    /// Used to reduce logging noise from localhost connections.
+    /// </summary>
+    private static bool IsPrivateOrLocalIp(IPAddress ip)
+    {
+        // Handle IPv4-mapped IPv6 addresses
+        if (ip.IsIPv4MappedToIPv6)
+        {
+            ip = ip.MapToIPv4();
+        }
+
+        // Loopback (127.x.x.x or ::1)
+        if (IPAddress.IsLoopback(ip))
+        {
+            return true;
+        }
+
+        // IPv4 private ranges
+        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            var bytes = ip.GetAddressBytes();
+
+            // 10.0.0.0/8
+            if (bytes[0] == 10)
+            {
+                return true;
+            }
+
+            // 172.16.0.0/12
+            if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+            {
+                return true;
+            }
+
+            // 192.168.0.0/16
+            if (bytes[0] == 192 && bytes[1] == 168)
+            {
+                return true;
+            }
+
+            // 169.254.0.0/16 (link-local)
+            if (bytes[0] == 169 && bytes[1] == 254)
+            {
+                return true;
+            }
+        }
+
+        // IPv6 private ranges
+        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        {
+            // Link-local (fe80::/10)
+            if (ip.IsIPv6LinkLocal)
+            {
+                return true;
+            }
+
+            // Site-local (deprecated but still used) (fec0::/10)
+            if (ip.IsIPv6SiteLocal)
+            {
+                return true;
+            }
+
+            // Unique local addresses (fc00::/7)
+            var bytes = ip.GetAddressBytes();
+            if ((bytes[0] & 0xfe) == 0xfc)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <inheritdoc/>

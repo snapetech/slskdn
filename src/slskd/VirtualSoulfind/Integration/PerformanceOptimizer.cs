@@ -1,3 +1,7 @@
+// <copyright file="PerformanceOptimizer.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.Integration;
 
 using slskd.VirtualSoulfind.ShadowIndex;
@@ -100,19 +104,3 @@ public class PerformanceOptimizer : IPerformanceOptimizer
         };
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,7 @@
+// <copyright file="ReportsController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="ReportsController.cs" company="slskdN">
 //     Copyright (c) slskdN. All rights reserved.
 //

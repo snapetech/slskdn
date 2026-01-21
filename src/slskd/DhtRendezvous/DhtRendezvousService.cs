@@ -88,43 +88,51 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     public int DiscoveredPeerCount => _discoveredPeers.Values.Count;
     public int ActiveMeshConnections => _registry.Count;
     
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
         {
             _logger.LogInformation("DHT rendezvous is disabled");
-            return;
+            return base.StartAsync(cancellationToken);
         }
         
         _logger.LogInformation("Starting DHT rendezvous service with MonoTorrent DHT");
         
-        try
+        // Start the background service immediately to avoid blocking other hosted services
+        _ = base.StartAsync(cancellationToken).ContinueWith(_ =>
         {
-            // Initialize MonoTorrent DHT
-            await InitializeDhtAsync(cancellationToken);
-            
-            // Detect beacon capability
-            IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken);
-            
-            if (IsBeaconCapable)
+            // Initialize DHT in the background (non-blocking)
+            _ = Task.Run(async () =>
             {
-                _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
-                await _overlayServer.StartAsync(cancellationToken);
-            }
-            else
-            {
-                _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
-            }
-            
-            _startedAt = DateTimeOffset.UtcNow;
-            
-            await base.StartAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start DHT rendezvous service");
-            throw;
-        }
+                try
+                {
+                    // Initialize MonoTorrent DHT
+                    await InitializeDhtAsync(cancellationToken);
+                    
+                    // Detect beacon capability
+                    IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken);
+                    
+                    if (IsBeaconCapable)
+                    {
+                        _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
+                        await _overlayServer.StartAsync(cancellationToken);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
+                    }
+                    
+                    _startedAt = DateTimeOffset.UtcNow;
+                    _logger.LogInformation("DHT rendezvous service initialization complete");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize DHT rendezvous service in background");
+                }
+            }, cancellationToken);
+        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+        
+        return Task.CompletedTask;
     }
     
     public override async Task StopAsync(CancellationToken cancellationToken = default)
@@ -166,10 +174,26 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Wait for DHT initialization to complete (it's running in background from StartAsync)
+        _logger.LogInformation("Waiting for DHT initialization to complete...");
+        var initTimeout = TimeSpan.FromSeconds(60);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        
+        while (_dhtEngine == null && sw.Elapsed < initTimeout && !stoppingToken.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+        }
+        
+        if (_dhtEngine == null)
+        {
+            _logger.LogWarning("DHT initialization did not complete within timeout, continuing anyway");
+            return;
+        }
+        
         // Wait for DHT to bootstrap
         _logger.LogInformation("Waiting for DHT to bootstrap...");
         var bootstrapTimeout = TimeSpan.FromSeconds(30);
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        sw.Restart();
         
         while (_dhtEngine?.State != DhtState.Ready && sw.Elapsed < bootstrapTimeout && !stoppingToken.IsCancellationRequested)
         {

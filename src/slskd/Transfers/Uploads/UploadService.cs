@@ -1,3 +1,7 @@
+// <copyright file="UploadService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="UploadService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
@@ -159,8 +163,11 @@ namespace slskd.Transfers.Uploads
             IShareService shareService,
             IRelayService relayService,
             IDbContextFactory<TransfersDbContext> contextFactory,
-            EventBus eventBus)
+            EventBus eventBus,
+            IScheduledRateLimitService scheduledRateLimitService = null)
         {
+            var log = Serilog.Log.ForContext<UploadService>();
+            log.Information("[UploadService] Constructor called");
             Files = fileService;
             Users = userService;
             Client = soulseekClient;
@@ -170,8 +177,11 @@ namespace slskd.Transfers.Uploads
             OptionsMonitor = optionsMonitor;
             EventBus = eventBus;
 
-            Governor = new UploadGovernor(userService, optionsMonitor);
+            log.Information("[UploadService] Creating UploadGovernor...");
+            Governor = new UploadGovernor(userService, optionsMonitor, scheduledRateLimitService);
+            log.Information("[UploadService] Creating UploadQueue...");
             Queue = new UploadQueue(userService, optionsMonitor);
+            log.Information("[UploadService] Constructor completed");
         }
 
         /// <summary>

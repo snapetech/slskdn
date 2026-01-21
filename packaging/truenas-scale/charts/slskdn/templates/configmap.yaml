@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tc.v1.common.lib.chart.names.fullname" . }}-config
+  labels:
+    {{- include "tc.v1.common.lib.metadata.allLabels" . | nindent 4 }}
+data:
+  # Additional configuration can be added here
+  # For example, custom application.yml or other config files
+  README: |
+    slskdN Configuration
+
+    This ConfigMap can be used to provide additional configuration files
+    for slskdN. The application will automatically load configuration from
+    the config mount path.
+
+    For more information about configuration options, see:
+    https://github.com/slskd/slskd/wiki/Configuration
+
+

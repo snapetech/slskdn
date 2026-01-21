@@ -1,0 +1,280 @@
+# TrueCharts questions.yaml for slskdN
+# This file provides UI configuration for TrueNAS SCALE
+
+groups:
+  - name: "App Configuration"
+    description: "Configure the slskdN application"
+  - name: "VPN & Mesh Networking"
+    description: "Configure advanced VPN and mesh networking features"
+
+questions:
+  - variable: hostPath
+    label: "Host Path"
+    description: "Path on the host where slskdN data will be stored"
+    schema:
+      type: string
+      default: "/mnt/{{ .Release.Namespace }}/slskdn"
+      required: true
+
+  - variable: env/SLSKD_USERNAME
+    label: "Soulseek Username"
+    description: "Your Soulseek network username"
+    schema:
+      type: string
+      required: true
+      private: true
+
+  - variable: env/SLSKD_PASSWORD
+    label: "Soulseek Password"
+    description: "Your Soulseek network password"
+    schema:
+      type: string
+      required: true
+      private: true
+
+  - variable: env/SLSKD_LISTEN_PORT
+    label: "Web UI Port"
+    description: "Port for the web interface (default: 5030)"
+    schema:
+      type: int
+      default: 5030
+      min: 1
+      max: 65535
+
+  - variable: env/SLSKD_SOULSEEK_LISTEN_PORT
+    label: "Soulseek Listen Port"
+    description: "Port for Soulseek network connections (default: 2234)"
+    schema:
+      type: int
+      default: 2234
+      min: 1
+      max: 65535
+
+  - variable: env/SLSKD_API_KEYS
+    label: "API Keys"
+    description: "Comma-separated list of API keys for REST API access"
+    schema:
+      type: string
+      private: true
+
+  - variable: env/SLSKD_API_REQUIRE_KEYS
+    label: "Require API Keys"
+    description: "Require API keys for REST API access"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_GLOBAL_UPLOAD_SPEED_LIMIT
+    label: "Upload Speed Limit (KB/s)"
+    description: "Global upload speed limit (0 = unlimited)"
+    schema:
+      type: int
+      default: 0
+      min: 0
+
+  - variable: env/SLSKD_GLOBAL_DOWNLOAD_SPEED_LIMIT
+    label: "Download Speed Limit (KB/s)"
+    description: "Global download speed limit (0 = unlimited)"
+    schema:
+      type: int
+      default: 0
+      min: 0
+
+  - variable: env/SLSKD_LOG_LEVEL
+    label: "Log Level"
+    description: "Logging verbosity level"
+    schema:
+      type: string
+      default: "info"
+      enum:
+        - value: "trace"
+          description: "Most verbose"
+        - value: "debug"
+          description: "Verbose debugging"
+        - value: "info"
+          description: "Normal operation"
+        - value: "warn"
+          description: "Warnings only"
+        - value: "error"
+          description: "Errors only"
+        - value: "fatal"
+          description: "Critical errors only"
+
+  # VPN & Mesh Networking Configuration
+  - variable: env/SLSKD_MESH_ENABLED
+    label: "Enable Mesh Networking"
+    description: "Enable advanced mesh networking for VPN and decentralized features"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_MESH_PEER_ID
+    label: "Mesh Peer ID"
+    description: "Unique identifier for this peer in the mesh network"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: string
+      show_if: [["env/SLSKD_MESH_ENABLED", "=", true]]
+
+  - variable: env/SLSKD_MESH_NETWORK_NAME
+    label: "Mesh Network Name"
+    description: "Name of the mesh network to join"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: string
+      show_if: [["env/SLSKD_MESH_ENABLED", "=", true]]
+
+  - variable: env/SLSKD_MESH_NETWORK_PASSWORD
+    label: "Mesh Network Password"
+    description: "Password for the mesh network (leave empty for public networks)"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: string
+      private: true
+      show_if: [["env/SLSKD_MESH_ENABLED", "=", true]]
+
+  - variable: env/SLSKD_PODCORE_ENABLED
+    label: "Enable Pod Core (VPN)"
+    description: "Enable pod-based VPN functionality for secure private networking"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_PODCORE_PEER_ID
+    label: "Pod Peer ID"
+    description: "Unique identifier for pod networking"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: string
+      show_if: [["env/SLSKD_PODCORE_ENABLED", "=", true]]
+
+  - variable: env/SLSKD_TRANSPORTS_TOR_ENABLED
+    label: "Enable Tor Transport"
+    description: "Enable Tor SOCKS5 transport for anonymous networking"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_TRANSPORTS_I2P_ENABLED
+    label: "Enable I2P Transport"
+    description: "Enable I2P transport for anonymous networking"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_TRANSPORTS_RELAY_ENABLED
+    label: "Enable Relay Transport"
+    description: "Enable relay-only transport for network-restricted environments"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_PRIVACY_ENABLED
+    label: "Enable Privacy Layer"
+    description: "Enable traffic analysis protection (padding, timing obfuscation)"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+
+  - variable: env/SLSKD_PRIVACY_MESSAGE_PADDING
+    label: "Message Padding"
+    description: "Pad messages to fixed sizes to prevent size-based traffic analysis"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+      show_if: [["env/SLSKD_PRIVACY_ENABLED", "=", true]]
+
+  - variable: env/SLSKD_PRIVACY_TIMING_OBFUSCATION
+    label: "Timing Obfuscation"
+    description: "Add random delays to prevent timing-based traffic analysis"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+      show_if: [["env/SLSKD_PRIVACY_ENABLED", "=", true]]
+
+  - variable: env/SLSKD_PRIVACY_MESSAGE_BATCHING
+    label: "Message Batching"
+    description: "Batch messages together to reduce traffic patterns"
+    group: "VPN & Mesh Networking"
+    schema:
+      type: boolean
+      default: false
+      show_if: [["env/SLSKD_PRIVACY_ENABLED", "=", true]]
+
+  - variable: image
+    label: "Image Configuration"
+    schema:
+      type: dict
+      attrs:
+        - variable: repository
+          label: "Repository"
+          schema:
+            type: string
+            default: "slskd/slskdn"
+        - variable: tag
+          label: "Tag"
+          schema:
+            type: string
+            default: "latest"
+
+  - variable: service
+    label: "Service Configuration"
+    schema:
+      type: dict
+      attrs:
+        - variable: main
+          label: "Main Service"
+          schema:
+            type: dict
+            attrs:
+              - variable: ports
+                label: "Ports"
+                schema:
+                  type: dict
+                  attrs:
+                    - variable: main
+                      label: "HTTP Port"
+                      schema:
+                        type: dict
+                        attrs:
+                          - variable: port
+                            label: "Port"
+                            schema:
+                              type: int
+                              default: 5030
+
+  - variable: ingress
+    label: "Ingress Configuration"
+    schema:
+      type: dict
+      attrs:
+        - variable: main
+          label: "Main Ingress"
+          schema:
+            type: dict
+            attrs:
+              - variable: enabled
+                label: "Enable Ingress"
+                schema:
+                  type: boolean
+                  default: false
+              - variable: hosts
+                label: "Hosts"
+                schema:
+                  type: list
+                  items:
+                    type: dict
+                    attrs:
+                      - variable: host
+                        label: "Host"
+                        schema:
+                          type: string
+                          default: "slskdn.local"

@@ -1,0 +1,178 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# files
+[*.cs]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# Code style rules aligned with docs/engineering-standards.md
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# Use language keywords instead of framework type names for type references
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+
+# Naming conventions
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+
+# Use PascalCase for class names
+dotnet_naming_rule.class_name_style.severity = suggestion
+dotnet_naming_rule.class_name_style.symbols = class
+dotnet_naming_rule.class_name_style.style = pascal_case_style
+
+# Use PascalCase for method names
+dotnet_naming_rule.method_name_style.severity = suggestion
+dotnet_naming_rule.method_name_style.symbols = method
+dotnet_naming_rule.method_name_style.style = pascal_case_style
+
+# Use camelCase for local variables and parameters
+dotnet_naming_rule.local_variable_style.severity = suggestion
+dotnet_naming_rule.local_variable_style.symbols = local
+dotnet_naming_rule.local_variable_style.style = camel_case_style
+
+dotnet_naming_rule.parameter_style.severity = suggestion
+dotnet_naming_rule.parameter_style.symbols = parameter
+dotnet_naming_rule.parameter_style.style = camel_case_style
+
+# Symbols
+dotnet_naming_symbols.class.applicable_kinds = class,struct,interface,enum
+dotnet_naming_symbols.class.applicable_accessibilities = public,internal,private,protected,protected_internal
+
+dotnet_naming_symbols.method.applicable_kinds = method
+dotnet_naming_symbols.method.applicable_accessibilities = public,internal,private,protected,protected_internal
+
+dotnet_naming_symbols.local.applicable_kinds = local
+dotnet_naming_symbols.local.applicable_accessibilities = *
+
+dotnet_naming_symbols.parameter.applicable_kinds = parameter
+dotnet_naming_symbols.parameter.applicable_accessibilities = *
+
+# C# code style rules
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Prefer method-like constructs to have a block body
+csharp_style_expression_bodied_methods = false:none
+csharp_style_expression_bodied_constructors = false:none
+csharp_style_expression_bodied_operators = false:none
+
+# Prefer property-like constructs to have an expression-body
+csharp_style_expression_bodied_properties = true:none
+csharp_style_expression_bodied_indexers = true:none
+csharp_style_expression_bodied_accessors = true:none
+
+# Suggest more modern language features when available
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_inlined_variable_declaration = true:suggestion
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:suggestion
+
+# Null-checking preferences
+csharp_style_conditional_delegate_call = true:suggestion
+
+# Modifier preferences
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:suggestion
+
+# Expression-level preferences
+csharp_style_deconstructed_variable_declaration = true:suggestion
+csharp_style_pattern_local_over_anonymous_function = true:suggestion
+
+# Field preferences
+csharp_style_readonly_field = true:suggestion
+
+# Suppress warnings for specific rules that conflict with our patterns
+dotnet_diagnostic.SL001.severity = none  # Allow single-line declarations
+dotnet_diagnostic.SL002.severity = none  # Allow multiple blank lines
+
+# Custom analyzer rules (H-CODE02)
+dotnet_diagnostic.SLKDN001.severity = error    # Blocking async calls
+dotnet_diagnostic.SLKDN002.severity = warning  # Dangerous API usage
+dotnet_diagnostic.SLKDN003.severity = error    # SQL injection risk
+dotnet_diagnostic.SLKDN004.severity = warning  # Missing null checks
+dotnet_diagnostic.SLKDN005.severity = warning  # Empty catch blocks
+dotnet_diagnostic.SLKDN006.severity = warning  # Inefficient string concat
+
+# Additional Roslyn analyzers
+dotnet_diagnostic.CA2007.severity = warning  # Consider calling ConfigureAwait on await
+dotnet_diagnostic.CA2016.severity = warning  # Forward CancellationToken parameter
+dotnet_diagnostic.CA2200.severity = error    # Rethrow to preserve stack details
+dotnet_diagnostic.CA2201.severity = error    # Exception type not specific enough
+dotnet_diagnostic.CA2208.severity = error    # Instantiate argument exceptions correctly
+
+# Security analyzers
+dotnet_diagnostic.CA3001.severity = error    # Review code for SQL injection vulnerabilities
+dotnet_diagnostic.CA3002.severity = error    # Review code for XSS vulnerabilities
+dotnet_diagnostic.CA3003.severity = error    # Review code for file path injection vulnerabilities
+dotnet_diagnostic.CA3004.severity = error    # Review code for information disclosure vulnerabilities
+dotnet_diagnostic.CA3005.severity = error    # Review code for LDAP injection vulnerabilities
+dotnet_diagnostic.CA3006.severity = error    # Review code for process command injection vulnerabilities
+
+# Performance analyzers
+dotnet_diagnostic.CA1805.severity = info     # Do not initialize unnecessarily
+dotnet_diagnostic.CA1825.severity = info     # Avoid zero-length array allocations
+dotnet_diagnostic.CA1826.severity = info     # Use property instead of Linq method
+dotnet_diagnostic.CA1827.severity = info     # Do not use Count() when Any() can be used
+dotnet_diagnostic.CA1828.severity = info     # Do not use CountAsync() when AnyAsync() can be used
+dotnet_diagnostic.CA1829.severity = info     # Use Length/Count property instead of Count() method
+
+# Reliability analyzers
+dotnet_diagnostic.CA2000.severity = warning  # Dispose objects before losing scope
+dotnet_diagnostic.CA2002.severity = warning  # Do not lock on objects with weak identity
+dotnet_diagnostic.CA2012.severity = warning  # Use ValueTasks correctly
+
+# Design analyzers
+dotnet_diagnostic.CA1040.severity = info     # Avoid empty interfaces
+dotnet_diagnostic.CA1051.severity = info     # Do not declare visible instance fields
+dotnet_diagnostic.CA1052.severity = info     # Static holder types should be sealed
+dotnet_diagnostic.CA1054.severity = info     # URI parameters should not be strings
+dotnet_diagnostic.CA1055.severity = info     # URI return values should not be strings
+dotnet_diagnostic.CA1056.severity = info     # URI properties should not be strings
+
+# Usage analyzers
+dotnet_diagnostic.CA2207.severity = info     # Initialize value type static fields inline
+dotnet_diagnostic.CA2211.severity = warning  # Non-constant fields should not be visible
+dotnet_diagnostic.CA2214.severity = info     # Do not call overridable methods in constructors
+dotnet_diagnostic.CA2217.severity = info     # Do not mark enums with FlagsAttribute
+
+# Documentation analyzers
+dotnet_diagnostic.CA1200.severity = info     # Avoid using cref tags with a prefix
+
+# Additional custom rules for slskdN
+# These would be implemented in our custom analyzer
+dotnet_diagnostic.SL001.severity = none      # Allow single-line property declarations
+dotnet_diagnostic.SL002.severity = none      # Allow multiple blank lines for readability
+
+# File header requirements
+file_header_template = Copyright (c) slskdN Team. All rights reserved.
+
+# XML documentation requirements
+dotnet_diagnostic.CS1591.severity = warning  # Missing XML comment for publicly visible type or member
+
+# StyleCop rules aligned with our standards
+dotnet_diagnostic.SA0001.severity = none     # XML comment analysis disabled (we use our own)
+dotnet_diagnostic.SA1101.severity = none     # Prefix local calls with this
+dotnet_diagnostic.SA1124.severity = none     # Do not use regions
+dotnet_diagnostic.SA1200.severity = none     # Using directives should be placed within namespace
+dotnet_diagnostic.SA1309.severity = none     # Field names should not begin with underscore
+dotnet_diagnostic.SA1402.severity = none     # File may only contain a single type
+dotnet_diagnostic.SA1600.severity = warning  # Elements should be documented
+dotnet_diagnostic.SA1633.severity = error    # File should have header
+
+

@@ -1,3 +1,7 @@
+// <copyright file="ISecurityPolicyEngine.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Security;
 
 public record SecurityContext(string PeerId, string? ContentId = null, string? Operation = null);
@@ -18,19 +22,3 @@ public interface ISecurityPolicy
 {
     Task<SecurityDecision> EvaluateAsync(SecurityContext context, CancellationToken ct = default);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

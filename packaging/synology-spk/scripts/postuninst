@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# slskdN post-uninstallation script for Synology Package Center
+# This script runs after package removal
+
+# Source common functions
+. "$(dirname "$0")"/common
+
+log_step "slskdN post-uninstallation started"
+
+# Note: This script runs after the package files are removed
+# We can only clean up external resources here
+
+# Remove systemd service file if it exists
+SERVICE_FILE="/usr/local/etc/rc.d/slskdn.sh"
+if [ -f "$SERVICE_FILE" ]; then
+    rm -f "$SERVICE_FILE"
+    log_step "Removed service file: $SERVICE_FILE"
+fi
+
+# Remove PID file if it exists
+PID_FILE="/var/packages/slskdn/var/slskdn.pid"
+if [ -f "$PID_FILE" ]; then
+    rm -f "$PID_FILE"
+    log_step "Removed PID file: $PID_FILE"
+fi
+
+# Note: User data directories are preserved for safety
+# Users can manually remove them if desired
+
+log_step "Post-uninstallation completed"
+log_step ""
+log_step "slskdN has been uninstalled."
+log_step ""
+log_step "📁 User data preserved at: /var/packages/slskdn/shares/slskdn/"
+log_step "   Remove this directory manually if you want to delete all data."
+log_step ""
+log_step "To reinstall later, download the SPK from:"
+log_step "https://github.com/slskd/slskd/releases"
+
+

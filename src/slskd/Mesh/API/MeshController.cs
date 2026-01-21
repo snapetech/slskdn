@@ -39,14 +39,17 @@ namespace slskd.Mesh.API
         /// </summary>
         public MeshController(
             IMeshSyncService meshSync,
-            MeshStatsCollector transportStatsCollector)
+            MeshStatsCollector transportStatsCollector,
+            INatDetector natDetector)
         {
             MeshSync = meshSync;
             TransportStatsCollector = transportStatsCollector;
+            NatDetector = natDetector;
         }
 
         private IMeshSyncService MeshSync { get; }
         private MeshStatsCollector TransportStatsCollector { get; }
+        private INatDetector NatDetector { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<MeshController>();
 
         /// <summary>
@@ -64,10 +67,10 @@ namespace slskd.Mesh.API
         /// </summary>
         [HttpGet("transport")]
         [Authorize(Policy = AuthPolicy.Any)]
-        public IActionResult GetTransportStats()
+        public async Task<IActionResult> GetTransportStats()
         {
-            var stats = TransportStatsCollector.GetStats();
-            
+            var stats = await TransportStatsCollector.GetStatsAsync();
+
             // Return in format expected by frontend
             return Ok(new
             {
@@ -75,6 +78,34 @@ namespace slskd.Mesh.API
                 overlay = stats.ActiveOverlaySessions,
                 natType = stats.DetectedNatType.ToString()
             });
+        }
+
+        /// <summary>
+        ///     Performs NAT type detection using STUN.
+        /// </summary>
+        [HttpPost("nat/detect")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> DetectNatType()
+        {
+            try
+            {
+                var natType = await NatDetector.DetectAsync();
+                return Ok(new
+                {
+                    type = natType.ToString().ToLowerInvariant(),
+                    detected = natType != NatType.Unknown
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "NAT detection failed");
+                return Ok(new
+                {
+                    type = "unknown",
+                    detected = false,
+                    error = ex.Message
+                });
+            }
         }
 
         /// <summary>

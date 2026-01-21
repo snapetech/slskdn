@@ -1,4 +1,8 @@
-﻿// <copyright file="Application.cs" company="slskd Team">
+// <copyright file="Application.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+// <copyright file="Application.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -28,6 +32,7 @@ namespace slskd
     using System.Net;
     using System.Net.Sockets;
     using System.Reflection;
+    using System.Text.Json;
     using System.Runtime;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
@@ -44,11 +49,13 @@ namespace slskd
     using slskd.Files;
     using slskd.Integrations.Pushbullet;
     using slskd.Messaging;
+    using slskd.PodCore;
     using slskd.Relay;
     using slskd.Search;
     using slskd.Shares;
     using slskd.Telemetry;
     using slskd.Transfers;
+    using slskd.Transfers.API;
     using slskd.Users;
     using Soulseek;
     using Soulseek.Diagnostics;
@@ -101,8 +108,13 @@ namespace slskd
             IRelayService relayService,
             IHubContext<ApplicationHub> applicationHub,
             IHubContext<LogsHub> logHub,
-            Events.EventBus eventBus)
+            IHubContext<Transfers.API.TransfersHub> transfersHub,
+            Events.EventBus eventBus,
+            IServiceProvider serviceProvider,
+            IServiceScopeFactory serviceScopeFactory)
         {
+            Log.Information("[Application] Constructor called");
+            Log.Information("[Application] Setting up event handlers...");
             Console.CancelKeyPress += (_, args) =>
             {
                 ShuttingDown = true;
@@ -165,9 +177,12 @@ namespace slskd
             Relay.StateMonitor.OnChange(relayState => State.SetValue(state => state with { Relay = relayState.Current }));
 
             LogHub = logHub;
+            TransfersHub = transfersHub;
             Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
 
             EventBus = eventBus;
+            ServiceProvider = serviceProvider;
+            ServiceScopeFactory = serviceScopeFactory;
 
             Client = soulseekClient;
 
@@ -198,10 +213,12 @@ namespace slskd
 
             ConnectionWatchdog = connectionWatchdog;
 
+            Log.Information("[Application] Registering clock events...");
             Clock.EveryMinute += Clock_EveryMinute;
             Clock.EveryFiveMinutes += Clock_EveryFiveMinutes;
             Clock.EveryThirtyMinutes += Clock_EveryThirtyMinutes;
             Clock.EveryHour += Clock_EveryHour;
+            Log.Information("[Application] Constructor completed");
         }
 
         /// <summary>
@@ -231,6 +248,7 @@ namespace slskd
         private ITransferService Transfers { get; init; }
         private IHubContext<ApplicationHub> ApplicationHub { get; set; }
         private IHubContext<LogsHub> LogHub { get; set; }
+        private IHubContext<Transfers.API.TransfersHub> TransfersHub { get; set; }
         private Events.EventBus EventBus { get; set; }
         private IUserService Users { get; set; }
         private IShareService Shares { get; set; }
@@ -241,6 +259,8 @@ namespace slskd
         private IReadOnlyList<Guid> ActiveDownloadIdsAtPreviousShutdown { get; set; } = [];
         private Options.FlagsOptions Flags { get; set; }
         private IReadOnlyList<string> ExcludedSearchPhrases { get; set; } = [];
+        private IServiceProvider ServiceProvider { get; set; }
+        private IServiceScopeFactory ServiceScopeFactory { get; set; }
 
         public void CollectGarbage()
         {
@@ -311,10 +331,29 @@ namespace slskd
             }
         }
 
-        async Task IHostedService.StartAsync(CancellationToken cancellationToken)
+        Task IHostedService.StartAsync(CancellationToken cancellationToken)
         {
+            Log.Information("[Application] StartAsync called - beginning startup sequence");
             Log.Information("Application started");
 
+            // Start the actual initialization in the background to avoid blocking other hosted services
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await InitializeApplicationAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to initialize application in background task");
+                }
+            }, cancellationToken);
+            
+            return Task.CompletedTask;
+        }
+
+        private async Task InitializeApplicationAsync(CancellationToken cancellationToken)
+        {
             Log.Debug("Cleaning up any dangling records");
 
             // if the application shut down "uncleanly", transfers may need to be cleaned up. we deliberately don't allow these
@@ -496,6 +535,59 @@ namespace slskd
                 {
                     ConnectionWatchdog.Start();
                 }
+            }
+
+            // Register mesh services for DHT operations (non-blocking - run after startup completes)
+            _ = RegisterMeshServicesAsync(cancellationToken).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    Log.Error(task.Exception?.GetBaseException(), "Failed to register mesh services in background");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
+            
+            Log.Information("[Application] Initialization complete");
+        }
+
+        private async Task RegisterMeshServicesAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Register DHT mesh service for FIND_NODE, FIND_VALUE, and PING RPCs
+                var router = ServiceProvider.GetService<Mesh.ServiceFabric.MeshServiceRouter>();
+                if (router != null)
+                {
+                    var dhtService = ServiceProvider.GetService<Mesh.ServiceFabric.Services.DhtMeshService>();
+                    if (dhtService != null)
+                    {
+                        router.RegisterService(dhtService);
+                        Log.Information("Registered DHT mesh service for Kademlia RPC operations");
+                    }
+                    else
+                    {
+                        Log.Warning("DhtMeshService not available for registration");
+                    }
+
+                    // Register hole punch mesh service for NAT traversal
+                    var holePunchService = ServiceProvider.GetService<Mesh.ServiceFabric.Services.HolePunchMeshService>();
+                    if (holePunchService != null)
+                    {
+                        router.RegisterService(holePunchService);
+                        Log.Information("Registered hole punch mesh service for NAT traversal");
+                    }
+                    else
+                    {
+                        Log.Warning("HolePunchMeshService not available for registration");
+                    }
+                }
+                else
+                {
+                    Log.Warning("MeshServiceRouter not available for service registration");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to register mesh services");
             }
         }
 
@@ -978,7 +1070,7 @@ namespace slskd
         {
             if (Users.IsBlacklisted(args.Username))
             {
-                Log.Debug("Ignored private message from blacklisted user {Username}: {Message}", args.Username, args.Message);
+                Log.Debug("Ignored private message from blacklisted user {Username}", args.Username);
                 return;
             }
             else
@@ -986,11 +1078,123 @@ namespace slskd
                 // todo: raise blacklisted message event?
             }
 
+            // HARDENING: Handle PODMSG group pod messages
+            if (args.Message.StartsWith("PODMSG:", StringComparison.Ordinal))
+            {
+                _ = Task.Run(() => HandlePodMessageAsync(args.Username, args.Message));
+                return; // Don't process as regular PM
+            }
+
             Messaging.Conversations.HandleMessageAsync(args.Username, PrivateMessage.FromEventArgs(args));
 
             if (!args.Replayed)
             {
                 _ = Notifications.SendPrivateMessageAsync(args.Username, args.Message);
+            }
+        }
+
+        /// <summary>
+        /// Handles inbound pod messages received via private messages.
+        /// </summary>
+        private async Task HandlePodMessageAsync(string username, string message)
+        {
+            try
+            {
+                // HARDENING: Enforce maximum message size before parsing (16KB limit)
+                const int MaxMessageSize = 16 * 1024;
+                if (message.Length > MaxMessageSize)
+                {
+                    Log.Warning("Pod message from {Username} exceeds size limit ({Size} > {MaxSize})",
+                        username, message.Length, MaxMessageSize);
+                    return;
+                }
+
+                // Extract JSON payload after "PODMSG:" prefix
+                if (!message.StartsWith("PODMSG:", StringComparison.Ordinal) || message.Length <= "PODMSG:".Length)
+                {
+                    Log.Warning("Invalid PODMSG format from {Username}", username);
+                    return;
+                }
+
+                var jsonPayload = message.Substring("PODMSG:".Length);
+
+                // HARDENING: Enforce JSON payload size limit (12KB for actual JSON)
+                const int MaxJsonSize = 12 * 1024;
+                if (jsonPayload.Length > MaxJsonSize)
+                {
+                    Log.Warning("Pod message JSON payload from {Username} exceeds size limit ({Size} > {MaxSize})",
+                        username, jsonPayload.Length, MaxJsonSize);
+                    return;
+                }
+
+                // Parse PodMessage from JSON with strict options
+                var options = new JsonSerializerOptions
+                {
+                    MaxDepth = 3, // Prevent deep nesting attacks
+                    AllowTrailingCommas = false,
+                    ReadCommentHandling = JsonCommentHandling.Disallow
+                };
+
+                var podMessage = JsonSerializer.Deserialize<PodCore.PodMessage>(jsonPayload, options);
+                if (podMessage == null)
+                {
+                    Log.Warning("Failed to parse pod message JSON from {Username}", username);
+                    return;
+                }
+
+                // HARDENING: Validate sender matches the message sender peer ID
+                var expectedPeerId = $"bridge:{username}";
+                if (podMessage.SenderPeerId != expectedPeerId)
+                {
+                    Log.Warning("Pod message sender validation failed: expected {Expected}, got {Actual} from {Username}",
+                        expectedPeerId, podMessage.SenderPeerId, username);
+                    return;
+                }
+
+                // HARDENING: Additional validation - ensure PodId and ChannelId are present and valid
+                if (string.IsNullOrWhiteSpace(podMessage.PodId) || string.IsNullOrWhiteSpace(podMessage.ChannelId))
+                {
+                    Log.Warning("Pod message missing required PodId or ChannelId from {Username}", username);
+                    return;
+                }
+
+                if (!PodCore.PodValidation.IsValidPodId(podMessage.PodId) || !PodCore.PodValidation.IsValidChannelId(podMessage.ChannelId))
+                {
+                    Log.Warning("Pod message contains invalid PodId or ChannelId from {Username}", username);
+                    return;
+                }
+
+                // Store via IPodMessaging (using IServiceScopeFactory since IPodMessaging is Scoped)
+                if (ServiceScopeFactory != null)
+                {
+                    using var scope = ServiceScopeFactory.CreateScope();
+                    var podMessaging = scope.ServiceProvider.GetService<PodCore.IPodMessaging>();
+                    if (podMessaging != null)
+                    {
+                        var stored = await podMessaging.SendAsync(podMessage);
+                        if (stored)
+                        {
+                            Log.Debug("Stored pod message {MessageId} from {Username} in pod {PodId} channel {ChannelId}",
+                                podMessage.MessageId, username, podMessage.PodId, podMessage.ChannelId);
+                        }
+                        else
+                        {
+                            Log.Warning("Failed to store pod message {MessageId} from {Username}", podMessage.MessageId, username);
+                        }
+                    }
+                    else
+                    {
+                        Log.Warning("IPodMessaging service not available, pod message {MessageId} from {Username} was not stored", podMessage.MessageId, username);
+                    }
+                }
+                else
+                {
+                    Log.Warning("ServiceScopeFactory not available, pod message {MessageId} from {Username} was not stored", podMessage.MessageId, username);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error handling pod message from {Username}", username);
             }
         }
 
@@ -1239,6 +1443,10 @@ namespace slskd
             var completed = xfer.State.HasFlag(TransferStates.Completed);
 
             Log.Information($"[{direction}] [{user}/{file}] {oldState} => {state}{(completed ? $" ({xfer.BytesTransferred}/{xfer.Size} = {xfer.PercentComplete}%) @ {xfer.AverageSpeed.SizeSuffix()}/s" : string.Empty)}");
+
+            // Broadcast transfer activity to connected clients
+            var activity = TransferActivity.FromTransferStateChange(xfer, oldState);
+            _ = TransferHubExtensions.EmitTransferActivityAsync(TransfersHub, activity);
 
             if (xfer.Direction == TransferDirection.Upload && xfer.State.HasFlag(TransferStates.Completed | TransferStates.Succeeded) && args.Transfer.AverageSpeed > 0)
             {

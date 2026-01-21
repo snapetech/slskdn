@@ -45,12 +45,8 @@ namespace slskd.PodCore
             PodMessage message,
             CancellationToken ct = default)
         {
-            // Extract podId and channelId from message
-            // Since the interface signature doesn't include them, we need to parse from MessageId or add them to PodMessage
-            // For now, let's assume they're embedded or we modify the call site
-            // TEMPORARY FIX: This needs the interface updated or message to carry pod/channel info
-            logger.LogWarning("SendAsync called without podId/channelId - interface mismatch needs fix");
-            return false;
+            // HARDENING: Use PodId and ChannelId directly from message
+            return await SendMessageAsync(message.PodId, message.ChannelId, message, ct);
         }
 
         public async Task<bool> SendMessageAsync(
@@ -113,6 +109,7 @@ namespace slskd.PodCore
                     SenderPeerId = message.SenderPeerId,
                     Body = message.Body,
                     Signature = message.Signature,
+                    SigVersion = message.SigVersion,
                 };
 
                 dbContext.Messages.Add(entity);
@@ -180,10 +177,14 @@ namespace slskd.PodCore
 
                 return entities.Select(e => new PodMessage
                 {
+                    MessageId = Guid.NewGuid().ToString("N"), // Generate ID for compatibility
+                    PodId = e.PodId,
+                    ChannelId = e.ChannelId,
                     TimestampUnixMs = e.TimestampUnixMs,
                     SenderPeerId = e.SenderPeerId,
                     Body = e.Body,
                     Signature = e.Signature,
+                    SigVersion = e.SigVersion,
                 }).ToList();
             }
             catch (Exception ex)
@@ -275,6 +276,7 @@ namespace slskd.PodCore
                     SenderPeerId = message.SenderPeerId,
                     Body = message.Body,
                     Signature = message.Signature,
+                    SigVersion = message.SigVersion,
                 };
 
                 dbContext.Messages.Add(entity);

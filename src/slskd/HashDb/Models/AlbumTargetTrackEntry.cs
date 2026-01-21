@@ -43,6 +43,21 @@ namespace slskd.HashDb.Models
         ///     Gets or sets the primary ISRC.
         /// </summary>
         public string Isrc { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the genre.
+        /// </summary>
+        public string? Genre { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the release year.
+        /// </summary>
+        public int? Year { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the Discogs ID.
+        /// </summary>
+        public string? DiscogsId { get; set; }
     }
 }
 

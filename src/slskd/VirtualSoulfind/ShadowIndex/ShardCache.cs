@@ -1,3 +1,7 @@
+// <copyright file="ShardCache.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 using System.Collections.Concurrent;
@@ -67,19 +71,3 @@ public class ShardCache : IShardCache
 
     private static string GetCacheKey(string mbid) => $"vsf:shard:{mbid}";
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

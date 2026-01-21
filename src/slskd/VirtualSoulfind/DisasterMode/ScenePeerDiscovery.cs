@@ -1,3 +1,7 @@
+// <copyright file="ScenePeerDiscovery.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.DisasterMode;
 
 using slskd.VirtualSoulfind.Scenes;
@@ -100,19 +104,3 @@ public class ScenePeerDiscovery : IScenePeerDiscovery
         return await DiscoverPeersAsync(ct);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

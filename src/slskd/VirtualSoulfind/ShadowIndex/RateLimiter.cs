@@ -1,3 +1,7 @@
+// <copyright file="RateLimiter.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 using System.Collections.Concurrent;
@@ -99,19 +103,3 @@ public class ShadowIndexOptions
     /// </summary>
     public int CacheTTLMinutes { get; set; } = 10;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

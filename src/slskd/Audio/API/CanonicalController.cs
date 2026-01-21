@@ -1,3 +1,7 @@
+// <copyright file="CanonicalController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Audio.API
 {
     using System.Collections.Generic;
@@ -27,20 +31,3 @@ namespace slskd.Audio.API
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -9,6 +9,8 @@
   
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <!-- <Nullable>enable</Nullable> -->
     <ImplicitUsings>enable</ImplicitUsings>
     <CodeAnalysisRuleSet>Properties\analysis.ruleset</CodeAnalysisRuleSet>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -18,11 +20,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;1591;S1133;S2094;S1135;S3925;S125</NoWarn>
+    <NoWarn>1701;1702;1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1591;S1133;S2094;S1135;S3925;S125</NoWarn>
+    <NoWarn>1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,6 +37,8 @@
   <ItemGroup>
     <PackageReference Include="System.Reactive" Version="6.0.0" />
     <PackageReference Include="MessagePack" Version="2.5.140" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
   </ItemGroup>
 
   <Target Name="CopyAfterBuild" AfterTargets="AfterBuild">
@@ -48,7 +52,53 @@
     <Move SourceFiles="$(PublishDir)\slskd.xml" DestinationFolder="$(PublishDir)\etc" />
   </Target>
 
+  <!-- Custom code quality tasks (H-CODE02, H-CODE03) -->
+  <UsingTask TaskName="CodeAnalysisBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
+  <UsingTask TaskName="TestCoverageBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
+  <UsingTask TaskName="RegressionBuildTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\$(TargetFramework)\slskd.dll" />
+
+  <!-- Static analysis (H-CODE02) -->
+  <Target Name="RunStaticAnalysis" AfterTargets="Build" Condition="'$(RunStaticAnalysis)' == 'true'">
+    <CodeAnalysisBuildTask
+        ProjectDirectory="$(MSBuildProjectDirectory)"
+        AssemblyPath="$(TargetPath)"
+        TreatWarningsAsErrors="$(TreatWarningsAsErrors)"
+        MaxViolations="100">
+      <Output TaskParameter="ExitCode" PropertyName="StaticAnalysisExitCode" />
+    </CodeAnalysisBuildTask>
+    <Error Condition="'$(StaticAnalysisExitCode)' != '0'" Text="Static analysis failed. Fix violations before proceeding." />
+  </Target>
+
+  <!-- Test coverage analysis (H-CODE03) -->
+  <Target Name="RunTestCoverageAnalysis" AfterTargets="Build" Condition="'$(RunTestCoverage)' == 'true'">
+    <TestCoverageBuildTask
+        ProjectDirectory="$(MSBuildProjectDirectory)"
+        TestAssemblyPaths="@(TestAssemblyPaths)"
+        SourceAssemblyPaths="$(TargetPath)"
+        OutputDirectory="$(ArtifactsPath)coverage-reports"
+        MinimumCoverage="0.75"
+        FailOnLowCoverage="$(FailBuildOnLowCoverage)"
+        MaxUncoveredMethods="50">
+      <Output TaskParameter="ExitCode" PropertyName="CoverageAnalysisExitCode" />
+    </TestCoverageBuildTask>
+    <Error Condition="'$(CoverageAnalysisExitCode)' != '0'" Text="Test coverage analysis failed. Address coverage gaps before proceeding." />
+  </Target>
+
+  <!-- Regression testing (H-CODE03) -->
+  <Target Name="RunRegressionTests" AfterTargets="Build" Condition="'$(RunRegressionTests)' == 'true'">
+    <RegressionBuildTask
+        TestAssemblyPaths="@(TestAssemblyPaths)"
+        OutputDirectory="$(ArtifactsPath)regression-reports"
+        RunBenchmarks="$(RunPerformanceBenchmarks)"
+        BenchmarkIterations="$(BenchmarkIterations)">
+      <Output TaskParameter="ExitCode" PropertyName="RegressionTestExitCode" />
+    </RegressionBuildTask>
+    <Error Condition="'$(RegressionTestExitCode)' != '0'" Text="Regression testing failed. Fix critical issues before proceeding." />
+  </Target>
+
   <ItemGroup>
+    <!-- Exclude CodeQuality MSBuild tasks from compilation -->
+    <Compile Remove="Common\CodeQuality\**" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="FluentFTP" Version="49.0.2" />

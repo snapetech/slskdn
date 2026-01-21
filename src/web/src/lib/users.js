@@ -27,3 +27,7 @@ export const getDirectoryContents = async ({ username, directory }) => {
     })
   ).data;
 };
+
+export const getGroup = ({ username }) => {
+  return api.get(`/users/${encodeURIComponent(username)}/group`);
+};

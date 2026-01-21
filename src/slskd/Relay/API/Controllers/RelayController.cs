@@ -1,4 +1,8 @@
-﻿// <copyright file="RelayController.cs" company="slskd Team">
+// <copyright file="RelayController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+// <copyright file="RelayController.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -49,20 +53,24 @@ namespace slskd.Relay
         ///     Initializes a new instance of the <see cref="RelayController"/> class.
         /// </summary>
         /// <param name="relayService"></param>
+        /// <param name="shareRepository">The share repository for content moderation checks.</param>
         /// <param name="optionsMonitor"></param>
         /// <param name="optionsAtStartup"></param>
         public RelayController(
             IRelayService relayService,
+            IShareRepository shareRepository,
             IOptionsMonitor<Options> optionsMonitor,
             OptionsAtStartup optionsAtStartup)
         {
             Relay = relayService;
+            ShareRepository = shareRepository;
             OptionsMonitor = optionsMonitor;
             OptionsAtStartup = optionsAtStartup;
         }
 
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayController>();
         private IRelayService Relay { get; }
+        private IShareRepository ShareRepository { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
@@ -108,7 +116,7 @@ namespace slskd.Relay
         /// <returns></returns>
         [HttpGet("controller/downloads/{token}")]
         [Authorize(Policy = AuthPolicy.ApiKeyOnly, Roles = AuthRole.Any)]
-        public IActionResult DownloadFile([FromRoute] string token)
+        public async Task<IActionResult> DownloadFile([FromRoute] string token)
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
             {
@@ -145,6 +153,22 @@ namespace slskd.Relay
             }
 
             var sourceFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
+
+            // H-MCP01: Check if content is advertisable before serving via relay
+            // Use ListContentItemsForFile to check all content items associated with this file
+            var contentItems = ShareRepository.ListContentItemsForFile(filename);
+            if (contentItems.Any())
+            {
+                // If any content items exist, at least one must be advertisable
+                var hasAdvertisable = contentItems.Any(item => item.IsAdvertisable);
+                if (!hasAdvertisable)
+                {
+                    Log.Warning(
+                        "[SECURITY] MCP blocked relay download | Filename={Filename} | Reason=Content not advertisable",
+                        filename);
+                    return Unauthorized();
+                }
+            }
 
             Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", agentName, guid, filename);
 
@@ -233,6 +257,16 @@ namespace slskd.Relay
                 {
                     Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
                     return Unauthorized();
+                }
+
+                // H-MCP01: Check if filename indicates acceptable content before relay upload
+                // Note: Full moderation happens at destination, but we can do basic filename checks
+                if (string.IsNullOrEmpty(filename) || filename.Contains("..") || Path.GetInvalidFileNameChars().Any(c => filename.Contains(c)))
+                {
+                    Log.Warning(
+                        "[SECURITY] MCP blocked relay upload | Filename={Filename} | Reason=Invalid filename",
+                        filename);
+                    return BadRequest("Invalid filename");
                 }
 
                 Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", agentName, guid, filename);

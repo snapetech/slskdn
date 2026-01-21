@@ -1,3 +1,7 @@
+// <copyright file="MeshSignalChannelHandler.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 namespace slskd.Signals;
 
 using System.Text.Json;
@@ -166,19 +170,3 @@ public class SlskdnSignalMessage
     public string Body { get; set; } = string.Empty; // JSON-serialized signal body
     public TimeSpan Ttl { get; set; }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

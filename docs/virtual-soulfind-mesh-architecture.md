@@ -1,5 +1,9 @@
 # Virtual Soulfind Mesh Architecture
 
+> **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
+
+---
+
 ## 1. Purpose & Scope
 
 This document describes a **decentralized "Virtual Soulfind" plane** that runs on top of slskdn's existing:

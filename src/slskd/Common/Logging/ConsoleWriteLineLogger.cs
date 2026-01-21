@@ -1,3 +1,7 @@
+// <copyright file="ConsoleWriteLineLogger.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 ﻿// <copyright file="ConsoleWriteLineLogger.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
@@ -18,15 +22,19 @@
 namespace slskd
 {
     using System;
+    using Serilog.Core;
     using Serilog.Events;
 
     /// <summary>
     ///     Logs messages to stdout via <see cref="Console.WriteLine(string)"/>.
     /// </summary>
-    public class ConsoleWriteLineLogger : Serilog.ILogger
+    /// <remarks>
+    ///     This is a Serilog sink used for bootstrap logging before the full logger is initialized.
+    /// </remarks>
+    public class ConsoleWriteLineLogger : ILogEventSink
     {
         /// <inheritdoc/>
-        public void Write(LogEvent logEvent)
+        public void Emit(LogEvent logEvent)
         {
             try
             {
