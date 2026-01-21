@@ -34,6 +34,24 @@ const Searches = ({ server } = {}) => {
   const history = useHistory();
   const location = useLocation();
   const match = useRouteMatch();
+  const { id: searchId } = useParams();
+
+  // Handle URL query parameters for predictable search URLs
+  useEffect(() => {
+    const urlParameters = new URLSearchParams(location.search);
+    const queryParameter = urlParameters.get('q');
+
+    if (queryParameter && !creating && !searchId) {
+      // Automatically create a search from the URL query parameter
+      create({
+        navigate: false,
+        search: decodeURIComponent(queryParameter),
+      }).then(() => {
+        // Clear the query parameter from the URL after creating the search
+        history.replace({ search: '' });
+      });
+    }
+  }, [location.search, creating, searchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onConnecting = () => {
     setConnecting(true);
@@ -209,23 +227,6 @@ const Searches = ({ server } = {}) => {
   if (error) {
     return <ErrorSegment caption={error?.message ?? error} />;
   }
-
-  // Handle URL query parameters for predictable search URLs
-  useEffect(() => {
-    const urlParameters = new URLSearchParams(location.search);
-    const queryParameter = urlParameters.get('q');
-
-    if (queryParameter && !creating && !searchId) {
-      // Automatically create a search from the URL query parameter
-      create({
-        navigate: false,
-        search: decodeURIComponent(queryParameter),
-      }).then(() => {
-        // Clear the query parameter from the URL after creating the search
-        history.replace({ search: '' });
-      });
-    }
-  }, [location.search, creating, searchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // if searchId is not null, there's an id in the route.
   // display the details for the search, if there is one

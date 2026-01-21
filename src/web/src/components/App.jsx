@@ -11,7 +11,6 @@ import Browse from './Browse/Browse';
 import Chat from './Chat/Chat';
 import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
-import PortForwarding from './PortForwarding/PortForwarding';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
 import {
@@ -22,7 +21,6 @@ import {
 import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
 import System from './System/System';
-import TrafficTicker from './TrafficTicker/TrafficTicker';
 import Transfers from './Transfers/Transfers';
 import Users from './Users/Users';
 import Wishlist from './Wishlist/Wishlist';
@@ -437,12 +435,6 @@ class App extends Component {
                     Rooms
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/port-forwarding`}>
-                  <Menu.Item>
-                    <Icon name="exchange" />
-                    Port Forwarding
-                  </Menu.Item>
-                </Link>
                 <Link to={`${urlBase}/chat`}>
                   <Menu.Item>
                     <Icon name="comment" />
@@ -581,9 +573,7 @@ class App extends Component {
             </Menu>
           </Sidebar>
           <Sidebar.Pusher className="app-content">
-            {session.isLoggedIn() || isPassthroughEnabled() ? (
-              <SlskdnStatusBar />
-            ) : null}
+            {session.isLoggedIn() || isPassthroughEnabled() ? <SlskdnStatusBar /> : null}
             <AppContext.Provider
               // eslint-disable-next-line no-warning-comments
               // TODO: needs useMemo, but class component. yolo for now.
@@ -659,12 +649,8 @@ class App extends Component {
                   />
                   <Route
                     path={`${urlBase}/pods/:podId?/channels/:channelId?`}
-                    render={(props) => this.withTokenCheck(<Pods {...props} />)}
-                  />
-                  <Route
-                    path={`${urlBase}/port-forwarding`}
                     render={(props) =>
-                      this.withTokenCheck(<PortForwarding {...props} />)
+                      this.withTokenCheck(<Pods {...props} />)
                     }
                   />
                   <Route
@@ -678,7 +664,6 @@ class App extends Component {
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
-                          <TrafficTicker />
                           <Transfers
                             {...props}
                             direction="upload"
@@ -692,7 +677,6 @@ class App extends Component {
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
-                          <TrafficTicker />
                           <Transfers
                             {...props}
                             direction="download"

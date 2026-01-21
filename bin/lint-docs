@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Docs lint: Ensure documentation claims match implementation reality.
+
+set -e
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ERRORS=0
+
+echo "🔍 Checking documentation for false claims..."
+
+# Check 1: Don't claim "certificate pinning" unless actual pinning code exists
+if grep -riq "certificate pinning" "$REPO_ROOT/README.md" "$REPO_ROOT/docs/" 2>/dev/null; then
+    if ! grep -q "CertificatePins.ComputeSpkiSha256" "$REPO_ROOT/src/slskd/Mesh/Security/CertificatePins.cs" 2>/dev/null; then
+        echo "❌ ERROR: Docs claim 'certificate pinning' but CertificatePins.cs missing or incomplete"
+        ERRORS=$((ERRORS + 1))
+    else
+        echo "✅ Certificate pinning claims validated (CertificatePins.cs exists)"
+    fi
+fi
+
+# Check 2: Don't claim "QUIC" with pinning unless actual validation callback exists
+if grep -riq "QUIC.*pinning\|pinning.*QUIC" "$REPO_ROOT/README.md" "$REPO_ROOT/docs/" 2>/dev/null; then
+    if grep -q "RemoteCertificateValidationCallback.*=>.*true" "$REPO_ROOT/src/slskd/Mesh/Overlay/QuicOverlayClient.cs" 2>/dev/null; then
+        echo "❌ ERROR: Docs claim QUIC pinning but QuicOverlayClient still has '=> true' callback"
+        ERRORS=$((ERRORS + 1))
+    else
+        echo "✅ QUIC pinning claims validated (no blind acceptance in QuicOverlayClient.cs)"
+    fi
+fi
+
+# Check 3: Don't claim "peer identity" or "stable PeerId" unless IdentityKeyStore exists
+if grep -riq "stable.*peer.*id\|cryptographic.*identity" "$REPO_ROOT/README.md" "$REPO_ROOT/docs/" 2>/dev/null; then
+    if [ ! -f "$REPO_ROOT/src/slskd/Mesh/Security/IdentityKeyStore.cs" ]; then
+        echo "❌ ERROR: Docs claim stable peer identity but IdentityKeyStore.cs missing"
+        ERRORS=$((ERRORS + 1))
+    else
+        echo "✅ Stable peer identity claims validated (IdentityKeyStore.cs exists)"
+    fi
+fi
+
+# Check 4: Warn about protocol format mismatches (e.g., "newline JSON" vs MessagePack)
+if grep -riq "newline.*json.*control\|control.*newline.*json" "$REPO_ROOT/README.md" "$REPO_ROOT/docs/" 2>/dev/null; then
+    if grep -q "MessagePackSerializer" "$REPO_ROOT/src/slskd/Mesh/Overlay/ControlEnvelope.cs" 2>/dev/null; then
+        echo "⚠️  WARNING: Docs mention 'newline JSON' but control envelopes use MessagePack"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+if [ $ERRORS -eq 0 ]; then
+    echo ""
+    echo "✅ All documentation claims validated!"
+    exit 0
+else
+    echo ""
+    echo "❌ Found $ERRORS documentation issue(s)"
+    exit 1
+fi
+

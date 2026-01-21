@@ -1,4 +1,4 @@
-import { urlBase } from '../config';
+import { apiBaseUrl, urlBase } from '../config';
 import * as session from './session';
 
 const baseUrl = `${urlBase}/api/v0/mediacore/contentid`;
