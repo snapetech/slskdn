@@ -248,9 +248,9 @@ Access at http://localhost:5030
 For latest experimental features:
 
 <!-- BEGIN_DEV_BUILD -->
-**[Development Build dev-1769029894 →](https://github.com/snapetech/slskdn/releases/tag/dev-1769029894)** 
+**[Development Build dev-1769038166 →](https://github.com/snapetech/slskdn/releases/tag/dev-1769038166)** 
 
-Version: `0.24.1-dev-91769029946` | Branch: `experimental/whatAmIThinking` 
+Version: `0.24.1-dev-91769038193` | Branch: `experimental/whatAmIThinking` 
 
 ```bash
 # Arch Linux (AUR)
