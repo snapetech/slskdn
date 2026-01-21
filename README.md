@@ -159,16 +159,18 @@ Download files from multiple peers simultaneously for faster, more reliable tran
 - **SHA-256 verification** ensures content integrity
 - **Network-friendly** — distributes load instead of hammering single users
 
-📖 **[Full network impact analysis](docs/multipart-downloads.md)**
+📖 **Design docs**: [Network impact analysis](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Roadmap](docs/multi-swarm-roadmap.md) • [Rescue mode](docs/phase2-rescue-mode-design.md) • [Scheduling](docs/phase2-swarm-scheduling-design.md)
 
 ### 🌐 DHT Peer Discovery & Mesh Networking
 Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
-- **DHT bootstrap** — 60+ bootstrap nodes for peer discovery
+- **DHT bootstrap** — Bootstrap nodes for peer discovery
 - **Mesh overlay network** — TLS-encrypted P2P connections
 - **Hash database sync** — Epidemic protocol for content verification database
 - **Peer greeting service** — Auto-discovery and handshake
 - **NAT detection** — UPnP/NAT-PMP port mapping
 - **Live status bar** — Real-time DHT nodes, mesh peers, hash counts in UI footer
+
+📖 **Design docs**: [MeshCore research](docs/phase8-meshcore-research.md) • [Mesh architecture](docs/virtual-soulfind-mesh-architecture.md)
 
 ### 🔒 Security Hardening
 Zero-trust security framework with defense-in-depth:
@@ -182,6 +184,8 @@ Zero-trust security framework with defense-in-depth:
 - **ByzantineConsensus** — 2/3+1 voting for multi-source verification
 - **Security dashboard** — Real-time monitoring in Web UI (System → Security tab)
 
+📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [Guidelines](SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
+
 ### 🎵 MusicBrainz Integration & Library Health
 Automated metadata enrichment and quality assurance.
 - **MusicBrainz Client** — Query recordings, releases, artists
@@ -192,6 +196,8 @@ Automated metadata enrichment and quality assurance.
 - **Library Health Scanner** — Detects transcodes, quality issues, missing tracks
 - **Remediation Service** — Auto-fix via automatic re-download of better quality
 
+📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md)
+
 ### 📦 Pod System (Decentralized Communities)
 Topic-based micro-communities over the mesh overlay.
 - **Pod creation/management** — Private, Unlisted, or Listed visibility
@@ -201,6 +207,8 @@ Topic-based micro-communities over the mesh overlay.
 - **Gold Star Club** — Auto-join pod for first 1000 users
 - **Pod APIs** — Full REST API for pod operations
 
+📖 **Design docs**: [PodCore research](docs/phase10-podcore-research.md) • [Chat bridge](docs/design/pods-soulseek-chat-bridge.md) • [Gold Star Club](docs/design/gold-star-club.md) • [API design](docs/pod-api-design.md)
+
 ### 🎭 VirtualSoulfind & Shadow Index
 Decentralized content discovery without relying solely on the Soulseek network.
 - **Shadow Index** — Decentralized MBID→peers mapping
@@ -209,6 +217,8 @@ Decentralized content discovery without relying solely on the Soulseek network.
 - **Disaster Mode** — Mesh-only operation when Soulseek unavailable
 - **Scene System** — Topic-based micro-networks for niche content
 
+📖 **Design docs**: [VirtualSoulfind v2](docs/virtualsoulfind-v2-design.md) • [Implementation design](docs/phase6-virtual-soulfind-implementation-design.md) • [User guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Content domains](VIRTUALSOULFIND-CONTENT-DOMAINS.md)
+
 ### 🔧 Service Fabric
 Generic service layer for mesh-based applications.
 - **Service descriptors** — Signed Ed25519 descriptors for service discovery
@@ -216,6 +226,8 @@ Generic service layer for mesh-based applications.
 - **Service router** — Routes requests to service providers
 - **HTTP gateway** — API key + CSRF authentication for services
 - **Service wrappers** — Pods, VirtualSoulfind, introspection wrapped as services
+
+📖 **Design docs**: [Service Fabric tasks](SERVICE_FABRIC_TASKS.md) • [Security audit](T-SF05-AUDIT.md) • [How it works](HOW-IT-WORKS.md)
 
 ---
 
@@ -533,19 +545,6 @@ If you're reading this code, you should assume that:
 - ✅ The final form of the project reflects human judgment, testing, and ongoing maintenance
 
 > **In other words: this is an AI-assisted project, not an AI-generated one.**
-
----
-
-## 📈 Development Statistics
-
-**Based on slskd 0.24.1** with extensive enhancements:
-
-- **Commits ahead**: 4,473+ commits
-- **New systems**: 7 major subsystems (Mesh, Swarm, Security, Pods, MediaCore, VirtualSoulfind, Service Fabric)
-- **New features**: 127+ individual features
-- **Test coverage**: 543 tests passing (92% success rate)
-- **Documentation**: 100+ markdown files
-- **Files changed**: 450+ files
 
 ---
 
