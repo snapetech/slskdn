@@ -335,7 +335,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
+
       - name: Download from Dev Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -657,7 +657,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
+
       - name: Download from Dev Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -745,7 +745,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
+
       - name: Download from Dev Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -870,7 +870,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
+
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
@@ -910,7 +910,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
+
       - name: Download from Dev Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
