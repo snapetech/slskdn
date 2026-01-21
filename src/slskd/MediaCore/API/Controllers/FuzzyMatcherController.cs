@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 
 namespace slskd.MediaCore.API.Controllers;
 
+using slskd.Core.Security;
+
 /// <summary>
 /// Fuzzy content matching API controller.
 /// </summary>

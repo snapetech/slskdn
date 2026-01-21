@@ -15,7 +15,7 @@ const getCsrfToken = () => {
   for (let cookie of cookies) {
     cookie = cookie.trim();
     if (cookie.indexOf(name) === 0) {
-      return cookie.substring(name.length);
+      return cookie.slice(name.length);
     }
   }
   return null;
@@ -35,7 +35,7 @@ api.interceptors.request.use((config) => {
   const needsCsrf = ['post', 'put', 'delete', 'patch'].includes(
     (config.method || '').toLowerCase(),
   );
-  
+
   if (needsCsrf) {
     const csrfToken = getCsrfToken();
     if (csrfToken) {

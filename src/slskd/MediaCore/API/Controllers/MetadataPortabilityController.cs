@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace slskd.MediaCore.API.Controllers;
 
+using slskd.Core.Security;
+
 /// <summary>
 /// Metadata portability API controller.
 /// </summary>

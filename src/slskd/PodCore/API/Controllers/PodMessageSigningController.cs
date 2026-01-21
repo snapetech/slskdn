@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 namespace slskd.PodCore.API.Controllers;
 
+using slskd.Core.Security;
+
 /// <summary>
 /// Pod message signing API controller.
 /// </summary>

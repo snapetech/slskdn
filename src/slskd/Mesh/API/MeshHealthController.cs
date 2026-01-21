@@ -8,6 +8,8 @@ using slskd.Mesh.Health;
 
 namespace slskd.Mesh.API;
 
+using slskd.Core.Security;
+
 [ApiController]
 [Route("api/v0/mesh/health")]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

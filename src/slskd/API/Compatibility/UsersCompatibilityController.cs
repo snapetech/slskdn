@@ -4,6 +4,8 @@
 
 namespace slskd.API.Compatibility;
 
+using slskd.Core.Security;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

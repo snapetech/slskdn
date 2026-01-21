@@ -5,6 +5,8 @@
 
 namespace slskd.Common.Security.API;
 
+using slskd.Core.Security;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;

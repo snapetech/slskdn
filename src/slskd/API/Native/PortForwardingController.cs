@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 
 namespace slskd.API.Native;
 
+using slskd.Core.Security;
+
 /// <summary>
 /// Controller for managing local port forwarding through VPN tunnels.
 /// </summary>

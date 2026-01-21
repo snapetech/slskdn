@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 namespace slskd.MediaCore.API.Controllers;
 
+using slskd.Core.Security;
+
 /// <summary>
 /// MediaCore statistics API controller.
 /// </summary>

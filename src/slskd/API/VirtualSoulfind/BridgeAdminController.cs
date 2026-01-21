@@ -4,6 +4,8 @@
 
 namespace slskd.API.VirtualSoulfind;
 
+using slskd.Core.Security;
+
 using Microsoft.AspNetCore.Mvc;
 using slskd.VirtualSoulfind.Bridge;
 

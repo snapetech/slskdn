@@ -27,6 +27,8 @@ using System.Threading.Tasks;
 
 namespace slskd.API.Mesh;
 
+using slskd.Core.Security;
+
 /// <summary>
 /// HTTP gateway for mesh services.
 /// Exposes mesh service calls via HTTP API for local/external clients.

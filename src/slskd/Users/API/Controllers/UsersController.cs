@@ -30,7 +30,6 @@ namespace slskd.Users.API
     using slskd.Core.Security;
 
     using Soulseek;
-    using slskd.Core.Security;
 
     /// <summary>
     ///     Users.

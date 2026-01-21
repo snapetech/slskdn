@@ -4,6 +4,8 @@
 
 namespace slskd.PodCore.API.Controllers;
 
+using slskd.Core.Security;
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
