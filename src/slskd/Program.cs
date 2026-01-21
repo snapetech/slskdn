@@ -1095,13 +1095,51 @@ namespace slskd
                 options.UseSqlite($"Data Source={podDbPath}");
             });
 
-            // Ensure pod database is created with secure permissions
+            // Ensure pod database is created with secure permissions and migrations
             using (var podContext = new PodCore.PodDbContext(
                 new DbContextOptionsBuilder<PodCore.PodDbContext>()
                     .UseSqlite($"Data Source={podDbPath}")
                     .Options))
             {
                 podContext.Database.EnsureCreated();
+                
+                // Apply schema migrations for existing databases (synchronous since we're in ConfigureServices)
+                try
+                {
+                    var connection = podContext.Database.GetDbConnection();
+                    if (connection.State != System.Data.ConnectionState.Open)
+                    {
+                        connection.Open();
+                    }
+                    
+                    // Check if AllowGuests column exists, if not add it
+                    using var checkCmd = connection.CreateCommand();
+                    checkCmd.CommandText = "PRAGMA table_info(Pods)";
+                    using var reader = checkCmd.ExecuteReader();
+                    var hasAllowGuests = false;
+                    while (reader.Read())
+                    {
+                        if (reader.GetString(1) == "AllowGuests")
+                        {
+                            hasAllowGuests = true;
+                            break;
+                        }
+                    }
+                    reader.Close();
+                    
+                    if (!hasAllowGuests)
+                    {
+                        Log.Information("[PodDb] Adding missing AllowGuests column to Pods table");
+                        using var alterCmd = connection.CreateCommand();
+                        alterCmd.CommandText = "ALTER TABLE Pods ADD COLUMN AllowGuests INTEGER NOT NULL DEFAULT 0";
+                        alterCmd.ExecuteNonQuery();
+                        Log.Information("[PodDb] AllowGuests column added successfully");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "[PodDb] Could not apply schema migration (database may be new or already up to date)");
+                }
                 
                 // SECURITY: Set restrictive file permissions on the database (Unix/Linux only)
                 if (System.IO.File.Exists(podDbPath))
