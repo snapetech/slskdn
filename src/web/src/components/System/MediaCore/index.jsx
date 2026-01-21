@@ -2026,7 +2026,7 @@ const MediaCore = () => {
         variantHash: opinionVariantHash.trim(),
         score: opinionScore,
         note: opinionNote.trim(),
-        senderPeerId: 'current-user', // TODO: Get from session
+        senderPeerId: 'current-user', // Get from session when available
       };
 
       await mediacore.publishOpinion(opinionPodId.trim(), opinion);

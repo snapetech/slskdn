@@ -573,7 +573,9 @@ class App extends Component {
             </Menu>
           </Sidebar>
           <Sidebar.Pusher className="app-content">
-            {session.isLoggedIn() || isPassthroughEnabled() ? <SlskdnStatusBar /> : null}
+            {session.isLoggedIn() || isPassthroughEnabled() ? (
+              <SlskdnStatusBar />
+            ) : null}
             <AppContext.Provider
               // eslint-disable-next-line no-warning-comments
               // TODO: needs useMemo, but class component. yolo for now.
@@ -649,9 +651,7 @@ class App extends Component {
                   />
                   <Route
                     path={`${urlBase}/pods/:podId?/channels/:channelId?`}
-                    render={(props) =>
-                      this.withTokenCheck(<Pods {...props} />)
-                    }
+                    render={(props) => this.withTokenCheck(<Pods {...props} />)}
                   />
                   <Route
                     path={`${urlBase}/rooms`}
