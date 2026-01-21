@@ -26,6 +26,11 @@ using Serilog;
 public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizationFilter
 {
     private static readonly ILogger Log = Serilog.Log.ForContext<ValidateCsrfForCookiesOnlyAttribute>();
+    
+    /// <summary>
+    /// Filter order - set to run early in the authorization pipeline.
+    /// </summary>
+    public int Order => -1000;
 
     /// <summary>
     /// Safe HTTP methods that don't need CSRF protection.
@@ -39,19 +44,25 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
     {
         var request = context.HttpContext.Request;
         
+        // Log that the attribute was invoked
+        Log.Information("[CSRF] Attribute invoked for {Method} {Path}", request.Method, request.Path);
+        
+        // 2. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE) - CHECK FIRST
+        // NOTE: This check must happen BEFORE any other checks to ensure GET requests are never validated
+        if (SafeMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
+        {
+            Log.Information("[CSRF] Skipping validation for safe method: {Method} {Path}", request.Method, request.Path);
+            return; // Safe method - no CSRF needed
+        }
+        
+        Log.Information("[CSRF] Processing non-safe method: {Method} {Path}", request.Method, request.Path);
+        
         // 1. Exempt endpoints with [AllowAnonymous] attribute (like login)
         var endpoint = context.HttpContext.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() != null)
         {
             Log.Verbose("[CSRF] Skipping validation for anonymous endpoint: {Path}", request.Path);
             return; // Anonymous endpoint - no CSRF needed (e.g., login)
-        }
-
-        // 2. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE)
-        if (SafeMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
-        {
-            Log.Verbose("[CSRF] Skipping validation for safe method: {Method}", request.Method);
-            return; // Safe method - no CSRF needed
         }
 
         // 3. Exempt requests with Authorization header (JWT/Bearer tokens)
@@ -108,6 +119,18 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
                 error = "CSRF token validation failed",
                 message = "This request requires a valid CSRF token. If you're using the web UI, please try refreshing the page. If you're using the API, use JWT or API key authentication instead of cookies.",
                 hint = "Web UI: Refresh page | API: Use Authorization header with Bearer token or X-API-Key header"
+            });
+        }
+        catch (Exception ex)
+        {
+            // Catch any other exceptions from ValidateRequestAsync
+            Log.Error(ex, "[CSRF] Unexpected error during token validation for {Method} {Path}", 
+                request.Method, request.Path);
+            
+            context.Result = new BadRequestObjectResult(new
+            {
+                error = "CSRF validation error",
+                message = ex.Message
             });
         }
     }

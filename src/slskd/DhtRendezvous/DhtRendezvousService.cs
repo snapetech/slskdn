@@ -86,8 +86,14 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         _logger.LogInformation("Starting DHT rendezvous service with MonoTorrent DHT");
         
         // Start the background service immediately to avoid blocking other hosted services
-        _ = base.StartAsync(cancellationToken).ContinueWith(_ =>
+        _ = base.StartAsync(cancellationToken).ContinueWith(startTask =>
         {
+            if (startTask.IsFaulted)
+            {
+                _logger.LogError(startTask.Exception?.GetBaseException(), "Failed to start base DHT rendezvous service");
+                return;
+            }
+            
             // Initialize DHT in the background (non-blocking)
             _ = Task.Run(async () =>
             {
@@ -112,11 +118,21 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                     _startedAt = DateTimeOffset.UtcNow;
                     _logger.LogInformation("DHT rendezvous service initialization complete");
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("DHT rendezvous service initialization cancelled");
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to initialize DHT rendezvous service in background");
                 }
-            }, cancellationToken);
+            }, cancellationToken).ContinueWith(initTask =>
+            {
+                if (initTask.IsFaulted)
+                {
+                    _logger.LogError(initTask.Exception?.GetBaseException(), "DHT initialization task failed");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
         
         return Task.CompletedTask;

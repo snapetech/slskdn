@@ -551,7 +551,15 @@ namespace slskd
             {
                 if (task.IsFaulted)
                 {
-                    Log.Error(task.Exception?.GetBaseException(), "Failed to register mesh services in background");
+                    var baseException = task.Exception?.GetBaseException();
+                    if (baseException is OperationCanceledException)
+                    {
+                        Log.Information("Mesh service registration cancelled");
+                    }
+                    else
+                    {
+                        Log.Error(baseException, "Failed to register mesh services in background");
+                    }
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
             

@@ -57,11 +57,21 @@ namespace slskd.Mesh.Realm
                     await _realmService.InitializeAsync(cancellationToken);
                     _logger.LogInformation("[RealmHostedService] Realm initialization complete.");
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("[RealmHostedService] Realm initialization cancelled");
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "[RealmHostedService] FAILED to initialize realm");
                 }
-            }, cancellationToken);
+            }, cancellationToken).ContinueWith(task =>
+            {
+                if (task.IsFaulted && task.Exception?.GetBaseException() is not OperationCanceledException)
+                {
+                    _logger.LogError(task.Exception?.GetBaseException(), "[RealmHostedService] Unobserved exception in realm initialization");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
             
             return Task.CompletedTask;
         }

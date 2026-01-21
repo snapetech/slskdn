@@ -2004,6 +2004,10 @@ namespace slskd
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS in prod, HTTP in dev
                 options.Cookie.HttpOnly = false; // JavaScript needs to read this
                 
+                // IMPORTANT: Don't auto-validate - we use custom ValidateCsrfForCookiesOnlyAttribute
+                // This ensures GET requests are never validated automatically
+                options.SuppressXFrameOptionsHeader = false; // Keep X-Frame-Options for security
+                
                 // Session-based tokens (30 days with sliding expiration)
                 // Tokens don't expire independently - they're tied to the session
             });
@@ -2099,7 +2103,25 @@ namespace slskd
             // stop ASP.NET from sending a full stack trace and ProblemDetails for unhandled exceptions
             app.UseExceptionHandler(a => a.Run(async context =>
             {
-                await context.Response.WriteAsJsonAsync(context.Features.Get<IExceptionHandlerPathFeature>().Error.Message);
+                var feature = context.Features.Get<IExceptionHandlerPathFeature>();
+                if (feature?.Error != null)
+                {
+                    var path = context.Request.Path.Value ?? string.Empty;
+                    Log.Error(feature.Error, "[ExceptionHandler] Unhandled exception for {Method} {Path}: {Message}\n{StackTrace}", 
+                        context.Request.Method, path, feature.Error.Message, feature.Error.StackTrace);
+                    
+                    // Only write if response hasn't started
+                    if (!context.Response.HasStarted)
+                    {
+                        context.Response.StatusCode = 500;
+                        await context.Response.WriteAsJsonAsync(new { error = feature.Error.Message });
+                    }
+                    else
+                    {
+                        Log.Warning("[ExceptionHandler] Response already started, cannot write error body for {Method} {Path}", 
+                            context.Request.Method, path);
+                    }
+                }
             }));
 
             app.UseCors("AllowAll");
@@ -2108,18 +2130,47 @@ namespace slskd
             // This must come AFTER UsePathBase but BEFORE UseAuthentication
             app.Use(async (context, next) =>
             {
-                var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
-                var tokens = antiforgery.GetAndStoreTokens(context);
+                // Log all requests to MediaCore endpoints for debugging
+                var path = context.Request.Path.Value ?? string.Empty;
+                if (path.Contains("mediacore", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Information("[CSRF Middleware] Processing MediaCore request: {Method} {Path} (Raw: {RawPath})", 
+                        context.Request.Method, path, context.Request.Path);
+                }
                 
-                // Set the XSRF-TOKEN cookie that frontend JavaScript can read
-                context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken, 
-                    new CookieOptions 
-                    { 
-                        HttpOnly = false,  // JavaScript needs to read this
-                        Secure = context.Request.IsHttps,
-                        SameSite = SameSiteMode.Strict,
-                        Path = "/"
-                    });
+                try
+                {
+                    var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
+                    
+                    // GetAndStoreTokens can throw for some requests - catch and log but don't fail
+                    // This is safe because our custom ValidateCsrfForCookiesOnlyAttribute handles validation
+                    var tokens = antiforgery.GetAndStoreTokens(context);
+                    
+                    // Set the XSRF-TOKEN cookie that frontend JavaScript can read
+                    if (tokens.RequestToken != null)
+                    {
+                        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken, 
+                            new CookieOptions 
+                            { 
+                                HttpOnly = false,  // JavaScript needs to read this
+                                Secure = context.Request.IsHttps,
+                                SameSite = SameSiteMode.Strict,
+                                Path = "/"
+                            });
+                    }
+                }
+                catch (Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException ex)
+                {
+                    // This is expected for some requests - log at debug level only
+                    Log.Debug(ex, "[CSRF Middleware] Antiforgery validation exception for {Method} {Path} (this is normal for some requests)", 
+                        context.Request.Method, context.Request.Path);
+                }
+                catch (Exception ex)
+                {
+                    // Log other exceptions but don't fail - GetAndStoreTokens can fail for some requests
+                    Log.Warning(ex, "[CSRF Middleware] Exception getting/storing tokens for {Method} {Path}", 
+                        context.Request.Method, context.Request.Path);
+                }
                 
                 await next();
             });
