@@ -3,7 +3,6 @@
 // </copyright>
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,8 +16,8 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/mediacore/stats")]
 [ApiController]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
-    [Microsoft.AspNetCore.Antiforgery.IgnoreAntiforgeryToken] // Explicitly ignore built-in antiforgery for GET requests
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[IgnoreAntiforgeryToken] // Explicitly ignore built-in antiforgery for GET requests
 public class MediaCoreStatsController : ControllerBase
 {
     private readonly ILogger<MediaCoreStatsController> _logger;
