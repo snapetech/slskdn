@@ -77,7 +77,7 @@ ENV SHELL=/usr/bin/bash \
   SLSKD_DOCKER_BUILD_DATE=$BUILD_DATE
 
 LABEL org.opencontainers.image.title=slskd \
-  org.opencontainers.image.description="A modern client-server application for the Soulseek file sharing network" \
+  org.opencontainers.image.description="🔋 The batteries included fork of slskd with 24+ new features: decentralized pods, content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist, security hardening" \
   org.opencontainers.image.authors="slskd Team" \
   org.opencontainers.image.vendor="slskd Team" \
   org.opencontainers.image.licenses=AGPL-3.0 \

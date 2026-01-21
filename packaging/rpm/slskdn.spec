@@ -1,7 +1,7 @@
 Name:           slskdn
 Version:        0.24.1.slskdn.7
 Release:        1%{?dist}
-Summary:        🔋 The batteries included, EXPERIMENTAL fork of slskd
+Summary:        🔋 The batteries included fork of slskd with 24+ new features
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn
@@ -25,20 +25,39 @@ Conflicts:      slskd
 Obsoletes:      slskd < %{version}
 
 %description
-The batteries included, **EXPERIMENTAL** fork of slskd. Feature-rich,
-including wishlist, smart ranking, tabbed browsing, notifications,
-and more. Modern web UI for the Soulseek community service network.
+The batteries included fork of slskd with 24+ new features: decentralized pods,
+content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
+security hardening.
 
-Features include:
-- Wishlist with auto-download
-- Smart source ranking based on speed, queue, and history
-- Tabbed user browsing with persistent sessions
-- Multi-select folder downloads with checkboxes
-- Configurable search page size
-- Max file size filter
-- Delete files on disk when removing downloads
-- Push notifications (Pushbullet, Ntfy, Pushover)
-- PWA support for mobile
+Stable Features (17):
+- Auto-replace stuck downloads - Automatically finds and switches to working sources
+- Wishlist/background search - Never miss rare content with automated searches
+- Smart source ranking - Intelligent scoring based on speed, queue, and history
+- Tabbed browsing - Browse multiple users simultaneously with persistent state
+- User notes & ratings - Color-coded ratings and persistent notes for users
+- Push notifications - Ntfy and Pushover support for messages and mentions
+- Multi-select folder downloads - Download multiple folders with checkbox selection
+- Advanced search filters - Visual filter editor with bitrate, duration, file size
+- PWA/mobile support - Install as standalone app on iOS/Android
+- Delete files on disk - Remove downloads and delete files in one action
+- Block users from results - Hide specific users from search results
+- Save search filters - Persistent filter preferences across sessions
+- Chat room improvements - Right-click context menu for browse/chat/notes
+- Multiple download destinations - Configure multiple folders with routing
+- Download history badges - Visual indicators for successful download history
+- Clear all searches - One-click cleanup of search history
+- Configurable search page size - 25 to 500 results per page
+
+Experimental Features (7):
+- Decentralized pod communities - Private micro-communities over mesh overlay with DHT discovery
+- Content validation - Byzantine consensus & proof-of-storage with cryptographic commitments
+- Multi-source swarm downloads - Download files from multiple peers simultaneously with SHA-256 verification
+- DHT mesh networking - BitTorrent DHT peer discovery with TLS-encrypted mesh overlay
+- Security hardening - CSRF protection, NetworkGuard rate limiting, PathGuard traversal prevention
+- MusicBrainz integration - Metadata enrichment, library health scanning, AcoustID fingerprinting
+- Service fabric - Generic mesh service layer for decentralized applications
+
+Modern web UI for the Soulseek network. Drop-in replacement for slskd.
 
 %prep
 %setup -q -c

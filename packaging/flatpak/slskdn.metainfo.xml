@@ -4,27 +4,40 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <name>slskdN</name>
-  <summary>A decentralized mesh community service for Soulseek with VPN and advanced networking</summary>
+  <summary>🔋 The batteries included fork of slskd with 24+ new features</summary>
 
   <description>
     <p>
-      slskdN is a modern, private, decentralized mesh community service for Soulseek,
-      written in C#. It's a fork of the original slskd project with enhanced features including:
+      The batteries included fork of slskd with 24+ new features: decentralized pods,
+      content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
+      security hardening.
     </p>
+    <p>Stable Features (17):</p>
     <ul>
-      <li>Pod-scoped VPN for secure private networking between trusted community members</li>
-      <li>Multi-source content delivery from multiple community peers simultaneously</li>
-      <li>Decentralized mesh overlay network for peer discovery and community coordination</li>
-      <li>Advanced search with MusicBrainz integration for content discovery</li>
-      <li>Privacy features with Tor/I2P transport support and traffic analysis protection</li>
-      <li>Enterprise-grade security with certificate pinning and rate limiting</li>
-      <li>Modern web interface for easy management and VPN configuration</li>
-      <li>RESTful API for automation and community service integration</li>
-      <li>Anonymous transports (WebSocket, HTTP tunnel, Obfs4, Meek)</li>
+      <li>Auto-replace stuck downloads - Automatically finds and switches to working sources</li>
+      <li>Wishlist/background search - Never miss rare content with automated searches</li>
+      <li>Smart source ranking - Intelligent scoring based on speed, queue, and history</li>
+      <li>Tabbed browsing - Browse multiple users simultaneously with persistent state</li>
+      <li>User notes &amp; ratings - Color-coded ratings and persistent notes for users</li>
+      <li>Push notifications - Ntfy and Pushover support for messages and mentions</li>
+      <li>Multi-select folder downloads - Download multiple folders with checkbox selection</li>
+      <li>Advanced search filters - Visual filter editor with bitrate, duration, file size</li>
+      <li>PWA/mobile support - Install as standalone app on iOS/Android</li>
+      <li>Plus: Delete files on disk, block users, save filters, chat improvements, and more</li>
+    </ul>
+    <p>Experimental Features (7):</p>
+    <ul>
+      <li>Decentralized pod communities - Private micro-communities over mesh overlay with DHT discovery</li>
+      <li>Content validation - Byzantine consensus &amp; proof-of-storage with cryptographic commitments</li>
+      <li>Multi-source swarm downloads - Download files from multiple peers simultaneously with SHA-256 verification</li>
+      <li>DHT mesh networking - BitTorrent DHT peer discovery with TLS-encrypted mesh overlay</li>
+      <li>Security hardening - CSRF protection, NetworkGuard rate limiting, PathGuard traversal prevention</li>
+      <li>MusicBrainz integration - Metadata enrichment, library health scanning, AcoustID fingerprinting</li>
+      <li>Service fabric - Generic mesh service layer for decentralized applications</li>
     </ul>
     <p>
-      slskdN prioritizes user privacy and network health while providing enterprise-grade
-      security features and VPN capabilities for secure, private decentralized community services.
+      Modern web UI for the Soulseek network. Drop-in replacement for slskd, preserves
+      existing configuration.
     </p>
   </description>
 

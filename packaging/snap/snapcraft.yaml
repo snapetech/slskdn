@@ -1,10 +1,11 @@
 name: slskdn
 base: core22
 version: '0.24.1-slskdn.32'
-summary: Batteries-included Soulseek web client
+summary: 🔋 The batteries included fork of slskd with 24+ new features
 description: |
-  An experimental fork of slskd exploring advanced download features,
-  protocol extensions, and network enhancements for Soulseek.
+  The batteries included fork of slskd with 24+ new features: decentralized pods,
+  content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
+  security hardening. Modern web UI for the Soulseek network.
 grade: stable
 confinement: strict
 architectures:

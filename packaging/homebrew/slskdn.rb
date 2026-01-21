@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Slskdn < Formula
-  desc "Soulseek Network Client - Next Generation"
+  desc "🔋 The batteries included fork of slskd with 24+ new features"
   homepage "https://github.com/slskd/slskd"
   url "https://github.com/slskd/slskd/releases/download/v0.0.1/slskd-0.0.1-osx-x64.tar.gz"
   sha256 "PLACEHOLDER_SHA256" # Will be updated with actual release

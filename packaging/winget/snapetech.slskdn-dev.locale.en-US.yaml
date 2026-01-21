@@ -10,20 +10,24 @@ PackageName: slskdN (Development)
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Batteries-included Soulseek web client (Development Build)
+ShortDescription: 🔋 The batteries included fork of slskd with 24+ new features [EXPERIMENTAL]
 Description: |-
-  slskdN is an experimental fork of slskd exploring advanced download features,
-  protocol extensions, and network enhancements for Soulseek.
+  The batteries included fork of slskd with 24+ new features: decentralized pods,
+  content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
+  security hardening.
   
   ⚠️ WARNING: This is an unstable development build from the experimental branch.
   It includes cutting-edge features that may contain bugs.
   
-  Features in development builds:
+  Key features:
+  - Decentralized pod communities
+  - Byzantine consensus & proof-of-storage content validation
   - Multi-source swarm downloads
-  - DHT mesh network with content verification
-  - BitTorrent DHT rendezvous for peer discovery
-  - TLS-secured mesh connections
-  - Distributed hash database with mesh sync
+  - DHT mesh networking with TLS
+  - CSRF protection & security hardening
+  - MusicBrainz integration
+  - Auto-replace stuck downloads
+  - Wishlist/background search
   
   For stable releases, install 'snapetech.slskdn' instead.
 Moniker: slskdn-dev
