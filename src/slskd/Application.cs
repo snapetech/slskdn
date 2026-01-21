@@ -308,6 +308,15 @@ namespace slskd
                     repository: Program.AppName,
                     userAgent: $"{Program.AppName} v{Program.FullVersion}");
 
+                // Skip comparison if the returned version string contains dev/canary markers
+                var latestVersionString = latestVersion.ToString();
+                if (latestVersionString.Contains("-dev-", StringComparison.OrdinalIgnoreCase) ||
+                    latestVersionString.Contains("-canary-", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Information("Latest release is a dev/canary build ({LatestVersion}), skipping version comparison", latestVersionString);
+                    return;
+                }
+
                 if (latestVersion > Version.Parse(Program.SemanticVersion))
                 {
                     State.SetValue(state => state with { Version = state.Version with { Latest = latestVersion.ToString(), IsUpdateAvailable = true } });
@@ -321,9 +330,9 @@ namespace slskd
             }
             catch (FormatException ex)
             {
-                Log.Warning("Failed to parse latest version string: {Message}", ex.Message);
+                Log.Debug("Failed to parse latest version string (this is normal for dev/experimental builds): {Message}", ex.Message);
 
-                // Ignore parse errors to avoid noisy warnings on malformed tags
+                // Ignore parse errors to avoid noisy warnings on malformed tags (normal for dev builds)
             }
             catch (Exception ex)
             {
