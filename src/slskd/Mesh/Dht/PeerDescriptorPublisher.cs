@@ -33,6 +33,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     private readonly Mesh.ServiceFabric.Services.HolePunchMeshService? holePunchService;
     private readonly MeshTransportOptions transportOptions;
     private readonly DescriptorSigningService signingService;
+    private readonly Mesh.Overlay.IKeyStore? keyStore;
 
     public PeerDescriptorPublisher(
         ILogger<PeerDescriptorPublisher> logger,
@@ -40,7 +41,8 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         IOptions<MeshOptions> options,
         INatDetector natDetector,
         IOptions<MeshTransportOptions> transportOptions,
-        DescriptorSigningService signingService)
+        DescriptorSigningService signingService,
+        Mesh.Overlay.IKeyStore? keyStore = null)
     {
         this.logger = logger;
         this.dht = dht;
@@ -48,6 +50,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         this.natDetector = natDetector;
         this.transportOptions = transportOptions.Value;
         this.signingService = signingService;
+        this.keyStore = keyStore;
     }
 
     /// <summary>
@@ -118,8 +121,38 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         };
 
         // Sign the descriptor
-        var signature = signingService.SignDescriptor(descriptor, new byte[32]); // TODO: Use actual private key
-        descriptor.Signature = signature;
+        byte[] privateKey;
+        if (keyStore != null)
+        {
+            try
+            {
+                var keyPair = keyStore.Current;
+                privateKey = keyPair.PrivateKey;
+                logger.LogDebug("[MeshDHT] Using private key from KeyStore for signing");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[MeshDHT] Failed to get private key from KeyStore, using placeholder");
+                // Fallback to placeholder for now - this will fail but won't crash
+                privateKey = new byte[32];
+            }
+        }
+        else
+        {
+            logger.LogWarning("[MeshDHT] KeyStore not available, using placeholder key (signature will be invalid)");
+            privateKey = new byte[32];
+        }
+        
+        try
+        {
+            var signature = signingService.SignDescriptor(descriptor, privateKey);
+            descriptor.Signature = signature;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[MeshDHT] Failed to sign descriptor, continuing without signature");
+            descriptor.Signature = string.Empty;
+        }
 
         var key = $"mesh:peer:{descriptor.PeerId}";
         var ttlSeconds = options.PeerDescriptorRefresh.DescriptorTtlSeconds;

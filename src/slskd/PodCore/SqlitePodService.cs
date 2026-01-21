@@ -34,22 +34,23 @@ namespace slskd.PodCore
         private readonly IPodPublisher podPublisher;
         private readonly IPodMembershipSigner membershipSigner;
         private readonly ILogger<SqlitePodService> logger;
+        private readonly IServiceScopeFactory? scopeFactory;
 
     public SqlitePodService(
         IDbContextFactory<PodDbContext> dbFactory,
         IPodPublisher podPublisher,
         IPodMembershipSigner membershipSigner,
         ILogger<SqlitePodService> logger,
-        IContentLinkService contentLinkService = null)
+        IServiceScopeFactory? scopeFactory = null)
     {
         this.dbFactory = dbFactory;
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
         this.logger = logger;
-        ContentLinkService = contentLinkService;
+        this.scopeFactory = scopeFactory;
     }
 
-    private IContentLinkService ContentLinkService { get; }
+    private IContentLinkService? ContentLinkService => scopeFactory?.CreateScope().ServiceProvider.GetService<IContentLinkService>();
 
         public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
         {

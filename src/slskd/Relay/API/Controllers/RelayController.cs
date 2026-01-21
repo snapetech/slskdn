@@ -154,16 +154,21 @@ namespace slskd.Relay
 
             var sourceFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
 
-            // TODO: H-MCP01: Check if content is advertisable before serving via relay
-            // Need to implement async FindContentItem or make it sync
-            // var contentItem = await ShareRepository.FindContentItem(filename, filename.Length);
-            // if (contentItem == null || contentItem.IsAdvertisable == false)
-            // {
-            //     Log.Warning(
-            //         "[SECURITY] MCP blocked relay download | Filename={Filename} | Reason=Content not advertisable",
-            //         filename);
-            //     return Unauthorized();
-            // }
+            // H-MCP01: Check if content is advertisable before serving via relay
+            // Use ListContentItemsForFile to check all content items associated with this file
+            var contentItems = ShareRepository.ListContentItemsForFile(filename);
+            if (contentItems.Any())
+            {
+                // If any content items exist, at least one must be advertisable
+                var hasAdvertisable = contentItems.Any(item => item.IsAdvertisable);
+                if (!hasAdvertisable)
+                {
+                    Log.Warning(
+                        "[SECURITY] MCP blocked relay download | Filename={Filename} | Reason=Content not advertisable",
+                        filename);
+                    return Unauthorized();
+                }
+            }
 
             Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", agentName, guid, filename);
 

@@ -640,12 +640,26 @@ namespace slskd.Shares
                 { "filenames_content", "CREATE TABLE 'filenames_content'(id INTEGER PRIMARY KEY, c0)" },
                 { "filenames_docsize", "CREATE TABLE 'filenames_docsize'(id INTEGER PRIMARY KEY, sz BLOB)" },
                 { "filenames_config", "CREATE TABLE 'filenames_config'(k PRIMARY KEY, v) WITHOUT ROWID" },
-                { "files", "CREATE TABLE files (maskedFilename TEXT PRIMARY KEY, originalFilename TEXT NOT NULL, size BIGINT NOT NULL, touchedAt TEXT NOT NULL, code INTEGER DEFAULT 1 NOT NULL, extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL)" },
+                { "files", "CREATE TABLE files (maskedFilename TEXT PRIMARY KEY, originalFilename TEXT NOT NULL, size BIGINT NOT NULL, touchedAt TEXT NOT NULL, code INTEGER DEFAULT 1 NOT NULL, extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL, isBlocked INTEGER DEFAULT 0 NOT NULL, isQuarantined INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT)" },
             };
 
             try
             {
                 Log.Debug("Validating shares database with connection string {String}", ConnectionString);
+                
+                // Check if isBlocked and isQuarantined columns exist, add them if missing (migration)
+                using var migrationConn = GetConnection();
+                try
+                {
+                    migrationConn.ExecuteNonQuery("SELECT isBlocked FROM files LIMIT 1");
+                }
+                catch
+                {
+                    Log.Information("Adding isBlocked, isQuarantined, and moderationReason columns to files table (migration)");
+                    migrationConn.ExecuteNonQuery("ALTER TABLE files ADD COLUMN isBlocked INTEGER DEFAULT 0 NOT NULL");
+                    migrationConn.ExecuteNonQuery("ALTER TABLE files ADD COLUMN isQuarantined INTEGER DEFAULT 0 NOT NULL");
+                    migrationConn.ExecuteNonQuery("ALTER TABLE files ADD COLUMN moderationReason TEXT");
+                }
 
                 using var conn = new SqliteConnection(ConnectionString);
                 conn.Open();

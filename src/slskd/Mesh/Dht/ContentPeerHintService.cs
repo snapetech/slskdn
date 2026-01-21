@@ -25,8 +25,10 @@ public class ContentPeerHintService : BackgroundService, IContentPeerHintService
 
     public ContentPeerHintService(ILogger<ContentPeerHintService> logger, IContentPeerPublisher publisher)
     {
+        logger.LogInformation("[ContentPeerHintService] Constructor called");
         this.logger = logger;
         this.publisher = publisher;
+        logger.LogInformation("[ContentPeerHintService] Constructor completed");
     }
 
     public bool Enqueue(string contentId)
@@ -36,6 +38,7 @@ public class ContentPeerHintService : BackgroundService, IContentPeerHintService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[ContentPeerHintService] ExecuteAsync called");
         await foreach (var contentId in queue.Reader.ReadAllAsync(stoppingToken))
         {
             try

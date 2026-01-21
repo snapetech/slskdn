@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Net;
+using slskd.Mesh.Dht;
 
 namespace slskd.Mesh.Transport;
 
@@ -46,7 +47,7 @@ public class TransportSelector
     /// <returns>The selected transport and established connection stream.</returns>
     public async Task<(ITransportDialer Transport, Stream Stream)> SelectAndConnectAsync(
         string targetPeerId,
-        MeshPeerDescriptor remoteDescriptor,
+        Dht.MeshPeerDescriptor remoteDescriptor,
         TransportScope preferredScope = TransportScope.Control,
         string? isolationKey = null,
         CancellationToken cancellationToken = default)
@@ -72,7 +73,7 @@ public class TransportSelector
     /// <returns>The selected transport and established connection stream.</returns>
     public async Task<(ITransportDialer Transport, Stream Stream)> SelectAndConnectWithPinsAsync(
         string targetPeerId,
-        MeshPeerDescriptor remoteDescriptor,
+        Dht.MeshPeerDescriptor remoteDescriptor,
         IEnumerable<string> certificatePins,
         TransportScope preferredScope = TransportScope.Control,
         string? isolationKey = null,
@@ -87,7 +88,7 @@ public class TransportSelector
     /// </summary>
     public async Task<(ITransportDialer Transport, Stream Stream)> SelectAndConnectWithPinsAndPolicyAsync(
         string targetPeerId,
-        MeshPeerDescriptor remoteDescriptor,
+        Dht.MeshPeerDescriptor remoteDescriptor,
         IEnumerable<string> certificatePins,
         string? podId,
         TransportScope preferredScope = TransportScope.Control,
@@ -204,77 +205,6 @@ public class TransportSelector
 
         throw new InvalidOperationException($"All transport candidates failed for peer {targetPeerId}");
     }
-    {
-        if (string.IsNullOrWhiteSpace(targetPeerId))
-        {
-            throw new ArgumentException("Target peer ID cannot be null or empty", nameof(targetPeerId));
-        }
-
-        if (remoteDescriptor == null)
-        {
-            throw new ArgumentNullException(nameof(remoteDescriptor));
-        }
-
-        _logger.LogDebug("Selecting transport for peer {PeerId} with {EndpointCount} endpoints",
-            targetPeerId, remoteDescriptor.TransportEndpoints.Count);
-
-        // Get available transport endpoints for the target
-        var candidates = GetCandidateEndpoints(remoteDescriptor, preferredScope);
-        if (!candidates.Any())
-        {
-            throw new InvalidOperationException($"No compatible transport endpoints found for peer {targetPeerId}");
-        }
-
-        // Sort candidates by preference (lower preference value = more preferred)
-        var orderedCandidates = candidates
-            .OrderBy(ep => ep.Preference)
-            .ThenBy(ep => ep.Cost)
-            .ToList();
-
-        _logger.LogDebug("Trying {Count} transport candidates for peer {PeerId}: {Candidates}",
-            orderedCandidates.Count, targetPeerId,
-            string.Join(", ", orderedCandidates.Select(ep => $"{ep.TransportType}:{ep.Host}:{ep.Port}")));
-
-        // Try each candidate in order
-        foreach (var endpoint in orderedCandidates)
-        {
-            var dialer = GetDialerForEndpoint(endpoint);
-            if (dialer == null)
-            {
-                _logger.LogDebug("No dialer available for {TransportType}, skipping", endpoint.TransportType);
-                continue;
-            }
-
-            // Check if dialer is available
-            if (!await dialer.IsAvailableAsync(cancellationToken))
-            {
-                _logger.LogDebug("Dialer for {TransportType} not available, skipping", endpoint.TransportType);
-                continue;
-            }
-
-            try
-            {
-                _logger.LogInformation("Attempting connection to peer {PeerId} via {TransportType}://{Host}:{Port}",
-                    targetPeerId, endpoint.TransportType, endpoint.Host, endpoint.Port);
-
-                var stream = await dialer.DialAsync(endpoint, isolationKey, cancellationToken);
-
-                _logger.LogInformation("Successfully connected to peer {PeerId} using {TransportType}",
-                    targetPeerId, endpoint.TransportType);
-
-                return (dialer, stream);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to connect to peer {PeerId} via {TransportType}://{Host}:{Port}",
-                    targetPeerId, endpoint.TransportType, endpoint.Host, endpoint.Port);
-
-                // Continue to next candidate
-            }
-        }
-
-        throw new InvalidOperationException($"All transport candidates failed for peer {targetPeerId}");
-    }
 
     /// <summary>
     /// Gets the best transport endpoint for a peer without establishing a connection.
@@ -282,7 +212,7 @@ public class TransportSelector
     /// <param name="remoteDescriptor">The remote peer's descriptor.</param>
     /// <param name="preferredScope">Preferred scope (Control or Data).</param>
     /// <returns>The best available endpoint, or null if none found.</returns>
-    public TransportEndpoint? GetBestEndpoint(MeshPeerDescriptor remoteDescriptor, TransportScope preferredScope = TransportScope.Control)
+    public TransportEndpoint? GetBestEndpoint(Dht.MeshPeerDescriptor remoteDescriptor, TransportScope preferredScope = TransportScope.Control)
     {
         var candidates = GetCandidateEndpoints(remoteDescriptor, preferredScope);
         return candidates
@@ -298,7 +228,7 @@ public class TransportSelector
     /// <param name="preferredScope">Preferred scope (Control or Data).</param>
     /// <param name="policy">The applicable transport policy (optional).</param>
     /// <returns>List of compatible transport endpoints.</returns>
-    public List<TransportEndpoint> GetCandidateEndpoints(MeshPeerDescriptor remoteDescriptor, TransportScope preferredScope, TransportPolicy? policy = null)
+    public List<TransportEndpoint> GetCandidateEndpoints(Dht.MeshPeerDescriptor remoteDescriptor, TransportScope preferredScope, TransportPolicy? policy = null)
     {
         if (remoteDescriptor.TransportEndpoints == null || !remoteDescriptor.TransportEndpoints.Any())
         {
@@ -365,7 +295,7 @@ public class TransportSelector
         return true;
     }
 
-    private List<TransportEndpoint> GetLegacyEndpoints(MeshPeerDescriptor descriptor)
+    private List<TransportEndpoint> GetLegacyEndpoints(Dht.MeshPeerDescriptor descriptor)
     {
         // Convert legacy string endpoints to TransportEndpoint objects
         // This provides backward compatibility with existing descriptors
@@ -449,7 +379,7 @@ public class TransportSelector
     /// <param name="podId">The pod ID (optional).</param>
     /// <param name="preferredScope">The preferred scope.</param>
     /// <returns>True if connection should fail closed (no compatible transports available).</returns>
-    public bool ShouldFailClosed(string targetPeerId, MeshPeerDescriptor remoteDescriptor, string? podId = null, TransportScope preferredScope = TransportScope.Control)
+    public bool ShouldFailClosed(string targetPeerId, Dht.MeshPeerDescriptor remoteDescriptor, string? podId = null, TransportScope preferredScope = TransportScope.Control)
     {
         var policy = _policyManager.GetApplicablePolicy(targetPeerId, podId);
         if (policy == null || !policy.DisableClearnet)

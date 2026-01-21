@@ -25,9 +25,11 @@ public class CircuitMaintenanceService : BackgroundService
         MeshCircuitBuilder circuitBuilder,
         IMeshPeerManager peerManager)
     {
+        logger.LogInformation("[CircuitMaintenanceService] Constructor called");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _circuitBuilder = circuitBuilder ?? throw new ArgumentNullException(nameof(circuitBuilder));
         _peerManager = peerManager ?? throw new ArgumentNullException(nameof(peerManager));
+        logger.LogInformation("[CircuitMaintenanceService] Constructor completed");
     }
 
     /// <summary>
@@ -37,6 +39,7 @@ public class CircuitMaintenanceService : BackgroundService
     /// <returns>A task representing the background operation.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("[CircuitMaintenanceService] ExecuteAsync called");
         _logger.LogInformation("Circuit maintenance service started");
 
         while (!stoppingToken.IsCancellationRequested)

@@ -38,18 +38,32 @@ namespace slskd.Mesh.Realm
         }
 
         /// <inheritdoc/>
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             // Only initialize if we have multiple realms configured
             var realms = _config.CurrentValue.Realms ?? Array.Empty<RealmConfig>();
             if (realms.Length == 0)
             {
                 _logger.LogDebug("[MultiRealmHostedService] Skipping initialization - no realms configured");
-                return;
+                return Task.CompletedTask;
             }
 
-            _logger.LogInformation("[MultiRealmHostedService] Initializing multi-realm service with {Count} realms", realms.Length);
-            await _multiRealmService.InitializeAsync(cancellationToken);
+            // Initialize in background to avoid blocking other hosted services
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    _logger.LogInformation("[MultiRealmHostedService] Initializing multi-realm service with {Count} realms", realms.Length);
+                    await _multiRealmService.InitializeAsync(cancellationToken);
+                    _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization complete.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[MultiRealmHostedService] FAILED to initialize multi-realm service");
+                }
+            }, cancellationToken);
+            
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>

@@ -5,6 +5,7 @@
 namespace slskd.VirtualSoulfind.Core.GenericFile
 {
     using System;
+    using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -67,9 +68,17 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
             {
                 // For GenericFile domain, we create items on-demand
                 // In a full implementation, this might check a cache or database for existing items
+                // SECURITY: Extract only filename to prevent path traversal or full path exposure
+                var safeFilename = Path.GetFileName(filename);
+                if (string.IsNullOrWhiteSpace(safeFilename))
+                {
+                    _logger.LogWarning("Invalid filename provided (empty after path extraction): {OriginalFilename}", filename);
+                    return null;
+                }
+
                 var fileMetadata = new LocalFileMetadata
                 {
-                    Id = filename,  // Use filename as ID (not full path for security)
+                    Id = safeFilename,  // Use filename only (not full path for security)
                     SizeBytes = sizeBytes,
                     PrimaryHash = primaryHash
                 };

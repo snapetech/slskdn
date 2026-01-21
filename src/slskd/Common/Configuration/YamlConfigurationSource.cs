@@ -24,8 +24,10 @@ namespace slskd.Configuration
     using System;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.FileProviders;
+    using Microsoft.Extensions.FileProviders.Physical;
     using YamlDotNet.Core;
     using YamlDotNet.RepresentationModel;
 
@@ -118,15 +120,65 @@ namespace slskd.Configuration
                 // to get "stuck" when the config is reloaded
                 Data.Clear();
 
-                using var reader = new StreamReader(stream);
+                // WORKAROUND: PhysicalFileProvider may cache file content, causing stale data.
+                // Always read the file directly from disk to bypass any caching issues.
+                string? filePath = null;
+                if (Source is YamlConfigurationSource yamlSource && !string.IsNullOrEmpty(yamlSource.Path))
+                {
+                    // Try to resolve the full path from the file provider
+                    if (yamlSource.FileProvider is PhysicalFileProvider physicalProvider)
+                    {
+                        var fileInfo = physicalProvider.GetFileInfo(yamlSource.Path);
+                        if (fileInfo.Exists && !string.IsNullOrEmpty(fileInfo.PhysicalPath))
+                        {
+                            filePath = fileInfo.PhysicalPath;
+                        }
+                    }
 
-                var yaml = new YamlStream();
-                yaml.Load(reader);
+                    // Fallback: try to construct path from file provider root
+                    if (string.IsNullOrEmpty(filePath) && yamlSource.FileProvider is PhysicalFileProvider physicalProvider2)
+                    {
+                        var root = physicalProvider2.Root;
+                        filePath = Path.Combine(root, yamlSource.Path);
+                    }
+                }
 
-                if (yaml.Documents.Count > 0)
+                Stream? actualStream = stream;
+                MemoryStream? memoryStream = null;
+                try
+                {
+                    // FIX: PhysicalFileProvider may cache file content, causing stale data when files are modified.
+                    // Read the file directly from disk to ensure we always get the latest content.
+                    if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+                    {
+                        var fileContent = File.ReadAllText(filePath);
+                        // DEBUG: Log what we're reading for security section
+                        if (fileContent.Contains("security:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var securityMatch = System.Text.RegularExpressions.Regex.Match(fileContent, @"security:\s*\n\s*enabled:\s*(\w+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline);
+                            if (securityMatch.Success)
+                            {
+                                System.Console.WriteLine($"[YamlConfigurationProvider] DEBUG - Found security.enabled = '{securityMatch.Groups[1].Value}' in file: {filePath}");
+                            }
+                        }
+                        memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(fileContent));
+                        actualStream = memoryStream;
+                    }
+
+                    using var reader = new StreamReader(actualStream);
+
+                    var yaml = new YamlStream();
+                    yaml.Load(reader);
+
+                    if (yaml.Documents.Count > 0)
                 {
                     var rootNode = (YamlMappingNode)yaml.Documents[0].RootNode;
                     Traverse(rootNode, Namespace);
+                    }
+                }
+                finally
+                {
+                    memoryStream?.Dispose();
                 }
             }
             catch (YamlException e)
@@ -145,15 +197,19 @@ namespace slskd.Configuration
 
                 if (value != null)
                 {
-                    Data[Normalize(path)] = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                    var normalizedPath = Normalize(path);
+                    var storedValue = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                    Data[normalizedPath] = storedValue;
                 }
             }
             else if (root is YamlMappingNode map)
             {
                 foreach (var node in map.Children)
                 {
-                    var key = Normalize(((YamlScalarNode)node.Key).Value);
-                    Traverse(node.Value, path == null ? key : ConfigurationPath.Combine(path, key));
+                    var rawKey = ((YamlScalarNode)node.Key).Value;
+                    var key = Normalize(rawKey);
+                    var nextPath = path == null ? key : ConfigurationPath.Combine(path, key);
+                    Traverse(node.Value, nextPath);
                 }
             }
             else if (root is YamlSequenceNode sequence)

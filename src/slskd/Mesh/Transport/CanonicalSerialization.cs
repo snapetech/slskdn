@@ -118,7 +118,7 @@ public static class CanonicalSerialization
 /// Fields are ordered to ensure deterministic serialization.
 /// </summary>
 [MessagePackObject]
-internal class CanonicalDescriptor
+public class CanonicalDescriptor
 {
     [Key(0)] public string PeerId { get; set; } = string.Empty;
     [Key(1)] public long SequenceNumber { get; set; }
@@ -138,7 +138,7 @@ internal class CanonicalDescriptor
 /// Canonical representation of a transport endpoint.
 /// </summary>
 [MessagePackObject]
-internal class CanonicalTransportEndpoint
+public class CanonicalTransportEndpoint
 {
     [Key(0)] public TransportType TransportType { get; set; }
     [Key(1)] public string Host { get; set; } = string.Empty;

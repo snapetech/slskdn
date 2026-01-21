@@ -28,13 +28,16 @@ public class UdpOverlayServer : BackgroundService
         IOptions<OverlayOptions> options,
         IControlDispatcher dispatcher)
     {
+        logger.LogInformation("[UdpOverlayServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
+        logger.LogInformation("[UdpOverlayServer] Constructor completed");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[UdpOverlayServer] ExecuteAsync called");
         try
         {
             if (!options.Enable)

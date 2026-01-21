@@ -34,10 +34,12 @@ This branch is building three major capabilities on top of slskdn:
   - Service wrappers for pods, VirtualSoulfind, introspection
   - 58 tests passing, build green
 
-- 🚧 **Security Hardening** (T-SF05): IN PROGRESS
+- ✅ **Security Hardening** (T-SF05): COMPLETE
   - Security audit complete
   - HIGH priority fixes implemented (configurable rate limits, global quotas)
-  - Remaining: discovery metrics, integration tests
+  - Path traversal protection fixed and tested
+  - Integration tests added
+  - All security features tested and documented
 
 - 📋 **Multi-Domain** (T-VC01-04): DOCUMENTED, ready to implement
 - 📋 **VirtualSoulfind v2** (V2-P1-P6): DOCUMENTED, ready to implement

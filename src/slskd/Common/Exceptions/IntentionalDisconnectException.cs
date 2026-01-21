@@ -1,7 +1,6 @@
 // <copyright file="IntentionalDisconnectException.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 ﻿// <copyright file="IntentionalDisconnectException.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //

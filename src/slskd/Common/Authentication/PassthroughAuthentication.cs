@@ -67,6 +67,16 @@ namespace slskd.Authentication
 
             return Task.FromResult(AuthenticateResult.Success(ticket));
         }
+
+        /// <summary>
+        ///     Handles authentication challenges by returning success (no challenge needed for passthrough).
+        /// </summary>
+        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            // For passthrough authentication, we always succeed, so no challenge is needed
+            // Return success instead of challenge to prevent 401 responses
+            return HandleAuthenticateAsync();
+        }
     }
 
     /// <summary>

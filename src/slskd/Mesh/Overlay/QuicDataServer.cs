@@ -29,12 +29,15 @@ public class QuicDataServer : BackgroundService
         ILogger<QuicDataServer> logger,
         IOptions<DataOverlayOptions> options)
     {
+        logger.LogInformation("[QuicDataServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
+        logger.LogInformation("[QuicDataServer] Constructor completed");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[QuicDataServer] ExecuteAsync called");
         if (!options.Enable)
         {
             logger.LogInformation("[Overlay-QUIC-DATA] Disabled by configuration");

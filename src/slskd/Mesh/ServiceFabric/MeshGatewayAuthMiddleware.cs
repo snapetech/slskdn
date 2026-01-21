@@ -44,10 +44,13 @@ public class MeshGatewayAuthMiddleware
             return;
         }
 
-        // Skip if gateway is disabled (endpoints shouldn't be registered, but double-check)
+        // CRITICAL: Check if gateway is disabled FIRST, before any other checks
+        // This must be the very first check to ensure we return 404, not 400/403
         if (!_options.Enabled)
         {
+            _logger.LogDebug("[GatewayAuth] Mesh gateway is disabled, returning 404 for {Path}", context.Request.Path);
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new { error = "mesh_gateway_disabled" });
             return;
         }
@@ -96,6 +99,8 @@ public class MeshGatewayAuthMiddleware
         }
 
         // Check Origin header if present (helps prevent CSRF)
+        // NOTE: Only check origin if gateway is enabled (already checked above)
+        // This prevents origin checks from running when gateway is disabled
         if (context.Request.Headers.TryGetValue("Origin", out var origin))
         {
             var originStr = origin.ToString();

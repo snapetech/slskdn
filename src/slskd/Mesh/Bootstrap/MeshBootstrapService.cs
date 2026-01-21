@@ -24,13 +24,16 @@ public class MeshBootstrapService : BackgroundService
         IPeerDescriptorPublisher publisher,
         IOptions<MeshOptions> options)
     {
+        logger.LogInformation("[MeshBootstrapService] Constructor called");
         this.logger = logger;
         this.publisher = publisher;
         this.options = options.Value;
+        logger.LogInformation("[MeshBootstrapService] Constructor completed");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[MeshBootstrapService] ExecuteAsync called");
         logger.LogInformation("[MeshBootstrap] Starting service (refresh interval: {Minutes} minutes, bootstrap nodes: {Count})", 
             refreshInterval.TotalMinutes, options.BootstrapNodes.Count);
         

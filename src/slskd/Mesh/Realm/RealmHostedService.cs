@@ -34,19 +34,24 @@ namespace slskd.Mesh.Realm
         }
 
         /// <inheritdoc/>
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            try
+            // Initialize in background to avoid blocking other hosted services
+            _ = Task.Run(async () =>
             {
-                _logger.LogInformation("[RealmHostedService] Starting realm initialization...");
-                await _realmService.InitializeAsync(cancellationToken);
-                _logger.LogInformation("[RealmHostedService] Realm initialization complete.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[RealmHostedService] FAILED to initialize realm");
-                throw;
-            }
+                try
+                {
+                    _logger.LogInformation("[RealmHostedService] Starting realm initialization...");
+                    await _realmService.InitializeAsync(cancellationToken);
+                    _logger.LogInformation("[RealmHostedService] Realm initialization complete.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[RealmHostedService] FAILED to initialize realm");
+                }
+            }, cancellationToken);
+            
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>

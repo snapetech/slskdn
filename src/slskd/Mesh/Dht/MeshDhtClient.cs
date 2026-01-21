@@ -4,6 +4,7 @@
 
 using MessagePack;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using slskd.VirtualSoulfind.ShadowIndex;
 using System.Security.Cryptography;
 using System.Text;
@@ -34,13 +35,15 @@ public class MeshDhtClient : IMeshDhtClient
 {
     private readonly ILogger<MeshDhtClient> logger;
     private readonly IDhtClient inner;
-    private readonly DhtService? dhtService;
+    private readonly Lazy<DhtService?> dhtService;
 
-    public MeshDhtClient(ILogger<MeshDhtClient> logger, IDhtClient inner, DhtService? dhtService = null)
+    public MeshDhtClient(ILogger<MeshDhtClient> logger, IDhtClient inner, IServiceProvider? serviceProvider = null)
     {
         this.logger = logger;
         this.inner = inner;
-        this.dhtService = dhtService;
+        // Use Lazy to break circular dependency: DhtService depends on KademliaRpcClient which depends on IMeshServiceClient
+        // which depends on IMeshServiceDirectory which depends on IMeshDhtClient (this) which would depend on DhtService
+        this.dhtService = new Lazy<DhtService?>(() => serviceProvider?.GetService<DhtService>());
     }
 
     public async Task PutAsync(string key, object value, int ttlSeconds, CancellationToken ct = default)
@@ -72,9 +75,9 @@ public class MeshDhtClient : IMeshDhtClient
     public async Task<IReadOnlyList<KNode>> FindNodesAsync(byte[] targetId, int count = 20, CancellationToken ct = default)
     {
         // Use distributed DHT service if available
-        if (dhtService != null)
+        if (dhtService.Value != null)
         {
-            return await dhtService.FindNodeAsync(targetId, ct);
+            return await dhtService.Value.FindNodeAsync(targetId, ct);
         }
 
         // Fallback to local routing table
@@ -90,9 +93,9 @@ public class MeshDhtClient : IMeshDhtClient
     public async Task<IReadOnlyList<byte[]>> FindValueAsync(byte[] key, CancellationToken ct = default)
     {
         // Use distributed DHT service if available
-        if (dhtService != null)
+        if (dhtService.Value != null)
         {
-            var result = await dhtService.FindValueAsync(key, ct);
+            var result = await dhtService.Value.FindValueAsync(key, ct);
             if (result.Found && result.Value != null)
             {
                 return new List<byte[]> { result.Value };

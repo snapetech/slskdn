@@ -110,8 +110,11 @@ namespace slskd
             IHubContext<LogsHub> logHub,
             IHubContext<Transfers.API.TransfersHub> transfersHub,
             Events.EventBus eventBus,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IServiceScopeFactory serviceScopeFactory)
         {
+            Log.Information("[Application] Constructor called");
+            Log.Information("[Application] Setting up event handlers...");
             Console.CancelKeyPress += (_, args) =>
             {
                 ShuttingDown = true;
@@ -179,6 +182,7 @@ namespace slskd
 
             EventBus = eventBus;
             ServiceProvider = serviceProvider;
+            ServiceScopeFactory = serviceScopeFactory;
 
             Client = soulseekClient;
 
@@ -209,10 +213,12 @@ namespace slskd
 
             ConnectionWatchdog = connectionWatchdog;
 
+            Log.Information("[Application] Registering clock events...");
             Clock.EveryMinute += Clock_EveryMinute;
             Clock.EveryFiveMinutes += Clock_EveryFiveMinutes;
             Clock.EveryThirtyMinutes += Clock_EveryThirtyMinutes;
             Clock.EveryHour += Clock_EveryHour;
+            Log.Information("[Application] Constructor completed");
         }
 
         /// <summary>
@@ -254,6 +260,7 @@ namespace slskd
         private Options.FlagsOptions Flags { get; set; }
         private IReadOnlyList<string> ExcludedSearchPhrases { get; set; } = [];
         private IServiceProvider ServiceProvider { get; set; }
+        private IServiceScopeFactory ServiceScopeFactory { get; set; }
 
         public void CollectGarbage()
         {
@@ -324,10 +331,29 @@ namespace slskd
             }
         }
 
-        async Task IHostedService.StartAsync(CancellationToken cancellationToken)
+        Task IHostedService.StartAsync(CancellationToken cancellationToken)
         {
+            Log.Information("[Application] StartAsync called - beginning startup sequence");
             Log.Information("Application started");
 
+            // Start the actual initialization in the background to avoid blocking other hosted services
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await InitializeApplicationAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to initialize application in background task");
+                }
+            }, cancellationToken);
+            
+            return Task.CompletedTask;
+        }
+
+        private async Task InitializeApplicationAsync(CancellationToken cancellationToken)
+        {
             Log.Debug("Cleaning up any dangling records");
 
             // if the application shut down "uncleanly", transfers may need to be cleaned up. we deliberately don't allow these
@@ -511,8 +537,16 @@ namespace slskd
                 }
             }
 
-            // Register mesh services for DHT operations
-            await RegisterMeshServicesAsync(cancellationToken);
+            // Register mesh services for DHT operations (non-blocking - run after startup completes)
+            _ = RegisterMeshServicesAsync(cancellationToken).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    Log.Error(task.Exception?.GetBaseException(), "Failed to register mesh services in background");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
+            
+            Log.Information("[Application] Initialization complete");
         }
 
         private async Task RegisterMeshServicesAsync(CancellationToken cancellationToken)
@@ -1130,19 +1164,33 @@ namespace slskd
                     return;
                 }
 
-                // TODO: Fix DI access - need to inject IPodMessaging into Application class
-                // Store via IPodMessaging
-                // var podMessaging = Program.ServiceProvider.GetRequiredService<PodCore.IPodMessaging>();
-                // var stored = await podMessaging.SendAsync(podMessage);
-                // if (stored)
-                // {
-                    Log.Debug("Stored pod message {MessageId} from {Username} in pod {PodId} channel {ChannelId}",
-                        "pending", username, podMessage.PodId, podMessage.ChannelId);
-                // }
-                // else
-                // {
-                //    Log.Warning("Failed to store pod message {MessageId} from {Username}", podMessage.MessageId, username);
-                // }
+                // Store via IPodMessaging (using IServiceScopeFactory since IPodMessaging is Scoped)
+                if (ServiceScopeFactory != null)
+                {
+                    using var scope = ServiceScopeFactory.CreateScope();
+                    var podMessaging = scope.ServiceProvider.GetService<PodCore.IPodMessaging>();
+                    if (podMessaging != null)
+                    {
+                        var stored = await podMessaging.SendAsync(podMessage);
+                        if (stored)
+                        {
+                            Log.Debug("Stored pod message {MessageId} from {Username} in pod {PodId} channel {ChannelId}",
+                                podMessage.MessageId, username, podMessage.PodId, podMessage.ChannelId);
+                        }
+                        else
+                        {
+                            Log.Warning("Failed to store pod message {MessageId} from {Username}", podMessage.MessageId, username);
+                        }
+                    }
+                    else
+                    {
+                        Log.Warning("IPodMessaging service not available, pod message {MessageId} from {Username} was not stored", podMessage.MessageId, username);
+                    }
+                }
+                else
+                {
+                    Log.Warning("ServiceScopeFactory not available, pod message {MessageId} from {Username} was not stored", podMessage.MessageId, username);
+                }
             }
             catch (Exception ex)
             {

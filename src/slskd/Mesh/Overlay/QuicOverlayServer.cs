@@ -33,9 +33,11 @@ public class QuicOverlayServer : BackgroundService
         IOptions<OverlayOptions> options,
         IControlDispatcher dispatcher)
     {
+        logger.LogInformation("[QuicOverlayServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
+        logger.LogInformation("[QuicOverlayServer] Constructor completed");
     }
 
     /// <summary>
@@ -45,6 +47,7 @@ public class QuicOverlayServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("[QuicOverlayServer] ExecuteAsync called");
         if (!options.Enable)
         {
             logger.LogInformation("[Overlay-QUIC] Disabled by configuration");

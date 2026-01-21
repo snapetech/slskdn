@@ -419,6 +419,12 @@ namespace slskd
         public Signals.SignalSystemOptions SignalSystem { get; init; } = new Signals.SignalSystemOptions();
 
         /// <summary>
+        ///     Gets or sets security configuration options.
+        /// </summary>
+        [Validate]
+        public Common.Security.SecurityOptions Security { get; init; } = new Common.Security.SecurityOptions();
+
+        /// <summary>
         ///     Handles top-level validation that doesn't fit anywhere else.
         /// </summary>
         /// <param name="validationContext"></param>

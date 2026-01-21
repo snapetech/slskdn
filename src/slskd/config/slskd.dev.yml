@@ -36,4 +36,4 @@ debug: true
 
 security:
   enabled: true
-  profile: Maximum  # Test with Maximum security profile
+  profile: Standard

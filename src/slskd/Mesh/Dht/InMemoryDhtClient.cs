@@ -26,14 +26,19 @@ public class InMemoryDhtClient : IDhtClient
 
     public InMemoryDhtClient(ILogger<InMemoryDhtClient> logger, IOptions<MeshOptions> options, MeshStatsCollector? statsCollector = null)
     {
+        logger.LogInformation("[InMemoryDhtClient] Constructor called");
         this.logger = logger;
         this.statsCollector = statsCollector;
+        logger.LogInformation("[InMemoryDhtClient] Generating random node ID...");
         selfId = RandomNodeId();
+        logger.LogInformation("[InMemoryDhtClient] Creating KademliaRoutingTable...");
         routing = new KademliaRoutingTable(selfId);
+        logger.LogInformation("[InMemoryDhtClient] KademliaRoutingTable created");
         maxReplicas = 20; // align with k
 
         // RpcClient will be set later to avoid circular dependency
         RpcClient = null!;
+        logger.LogInformation("[InMemoryDhtClient] Constructor completed");
     }
 
     /// <summary>
