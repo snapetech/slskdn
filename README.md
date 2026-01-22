@@ -159,7 +159,7 @@ Download files from multiple peers simultaneously for faster, more reliable tran
 - **SHA-256 verification** ensures content integrity
 - **Network-friendly** — distributes load instead of hammering single users
 
-📖 **Design docs**: [Network impact analysis](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Implementation guide](docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md) • [Roadmap](docs/multi-swarm-roadmap.md)
+📖 **Design docs**: [Network impact analysis](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Roadmap](docs/multi-swarm-roadmap.md) • [Rescue mode](docs/phase2-rescue-mode-design.md) • [Scheduling](docs/phase2-swarm-scheduling-design.md)
 
 ### 🌐 DHT Peer Discovery & Mesh Networking
 Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
@@ -171,7 +171,7 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 - **Live status bar** — Real-time DHT nodes, mesh peers, hash counts in UI footer
 
 
-📖 **Design docs**: [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) • [MeshCore Research](docs/phase8-meshcore-research.md) • [Mesh Architecture](docs/virtual-soulfind-mesh-architecture.md)
+📖 **Design docs**: [MeshCore research](docs/phase8-meshcore-research.md) • [Mesh architecture](docs/virtual-soulfind-mesh-architecture.md)
 
 ### 🔒 Security Hardening
 Zero-trust security framework with defense-in-depth:
@@ -186,7 +186,7 @@ Zero-trust security framework with defense-in-depth:
 - **Security dashboard** — Real-time monitoring in Web UI (System → Security tab)
 
 
-📖 **Design docs**: [Security Implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [CSRF Testing Guide](docs/security/CSRF_TESTING_GUIDE.md) • [Security Comparison](docs/security/SECURITY_COMPARISON_ANALYSIS.md) • [Hardening Roadmap](docs/SECURITY_HARDENING_ROADMAP.md)
+📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [Guidelines](SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
 
 ### 🎵 MusicBrainz Integration & Library Health
 Automated metadata enrichment and quality assurance.
@@ -199,7 +199,7 @@ Automated metadata enrichment and quality assurance.
 - **Remediation Service** — Auto-fix via automatic re-download of better quality
 
 
-📖 **Design docs**: [MusicBrainz Integration](docs/MUSICBRAINZ_INTEGRATION.md)
+📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md)
 
 ### 📦 Pod System (Decentralized Communities)
 Topic-based micro-communities over the mesh overlay.
@@ -211,7 +211,7 @@ Topic-based micro-communities over the mesh overlay.
 - **Pod APIs** — Full REST API for pod operations
 
 
-📖 **Design docs**: [PodCore Research](docs/phase10-podcore-research.md) • [Pod API Design](docs/pod-api-design.md) • [Chat Bridge](docs/design/pods-soulseek-chat-bridge.md) • [Gold Star Club](docs/pod-f1000-social-hub-design.md)
+📖 **Design docs**: [PodCore research](docs/phase10-podcore-research.md) • [Chat bridge](docs/design/pods-soulseek-chat-bridge.md) • [Gold Star Club](docs/design/gold-star-club.md) • [API design](docs/pod-api-design.md)
 
 ### 🎭 VirtualSoulfind & Shadow Index
 Decentralized content discovery without relying solely on the Soulseek network.
@@ -222,7 +222,7 @@ Decentralized content discovery without relying solely on the Soulseek network.
 - **Scene System** — Topic-based micro-networks for niche content
 
 
-📖 **Design docs**: [VirtualSoulfind v2 Design](docs/virtualsoulfind-v2-design.md) • [Implementation Design](docs/phase6-virtual-soulfind-implementation-design.md) • [User Guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Mesh Architecture](docs/virtual-soulfind-mesh-architecture.md)
+📖 **Design docs**: [VirtualSoulfind v2](docs/virtualsoulfind-v2-design.md) • [Implementation design](docs/phase6-virtual-soulfind-implementation-design.md) • [User guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Content domains](VIRTUALSOULFIND-CONTENT-DOMAINS.md)
 
 ### 🔧 Service Fabric
 Generic service layer for mesh-based applications.
@@ -233,7 +233,7 @@ Generic service layer for mesh-based applications.
 - **Service wrappers** — Pods, VirtualSoulfind, introspection wrapped as services
 
 
-📖 **Design docs**: [Service Fabric Tasks](SERVICE_FABRIC_TASKS.md)
+📖 **Design docs**: [Service Fabric tasks](SERVICE_FABRIC_TASKS.md) • [Security audit](T-SF05-AUDIT.md) • [How it works](HOW-IT-WORKS.md)
 
 ---
 
