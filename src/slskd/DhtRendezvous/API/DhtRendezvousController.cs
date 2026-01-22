@@ -353,6 +353,7 @@ public sealed class MeshPeerInfoResponse
     public DateTimeOffset ConnectedAt { get; init; }
     public DateTimeOffset LastActivity { get; init; }
     public string? CertificateThumbprint { get; init; }
+    public int? Version { get; init; }
 }
 
 public sealed class OverlayStatsResponse

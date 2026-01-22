@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Common.Security;
 
 /// <summary>
 ///     Pads outbound messages to the next configured bucket size using random bytes.
@@ -19,23 +20,78 @@ public class MessagePadder : IMessagePadder
 
     private readonly ILogger<MessagePadder> logger;
     private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
+    private readonly IOptionsMonitor<slskd.Common.Security.AdversarialOptions>? adversarialOptions;
 
-    public MessagePadder(ILogger<MessagePadder> logger, IOptionsMonitor<slskd.Options> optionsMonitor)
+    public MessagePadder(
+        ILogger<MessagePadder> logger,
+        IOptionsMonitor<slskd.Options> optionsMonitor,
+        IOptionsMonitor<slskd.Common.Security.AdversarialOptions>? adversarialOptions = null)
     {
         this.logger = logger;
         this.optionsMonitor = optionsMonitor;
+        this.adversarialOptions = adversarialOptions;
     }
 
-    public byte[] Pad(ReadOnlyMemory<byte> payload)
+    public byte[] Pad(byte[] message)
     {
-        var options = optionsMonitor.CurrentValue.Adversarial.Privacy;
+        if (message == null)
+            throw new ArgumentNullException(nameof(message));
+        
+        return Pad(new ReadOnlyMemory<byte>(message));
+    }
 
-        if (!options.EnablePadding || payload.Length == 0)
+    public byte[] Pad(byte[] message, int targetSize)
+    {
+        if (message == null)
+            throw new ArgumentNullException(nameof(message));
+        
+        if (targetSize <= message.Length)
+            return message;
+        
+        var padded = new byte[targetSize];
+        var span = padded.AsSpan();
+        message.AsSpan().CopyTo(span);
+        
+        var paddingSpan = span.Slice(message.Length);
+        RandomNumberGenerator.Fill(paddingSpan);
+        
+        return padded;
+    }
+
+    public byte[] Unpad(byte[] paddedMessage)
+    {
+        // This implementation doesn't track original size, so we can't unpad
+        // In a real implementation, you'd need to store the original size
+        throw new NotImplementedException("Unpad is not implemented for this padder");
+    }
+
+    public int GetBucketSize(int messageLength)
+    {
+        var adversarialOpts = adversarialOptions?.CurrentValue;
+        var privacyOptions = adversarialOpts?.Privacy;
+        var paddingOptions = privacyOptions?.Padding;
+        
+        if (paddingOptions == null || !paddingOptions.Enabled)
+            return messageLength;
+        
+        var configuredBucket = paddingOptions.BucketSizes?.FirstOrDefault(b => b >= messageLength) ?? 0;
+        return ResolveBucketSize(configuredBucket, messageLength);
+    }
+
+    private byte[] Pad(ReadOnlyMemory<byte> payload)
+    {
+        var adversarialOpts = adversarialOptions?.CurrentValue;
+        var privacyOptions = adversarialOpts?.Privacy;
+        var paddingOptions = privacyOptions?.Padding;
+
+        if (paddingOptions == null || !paddingOptions.Enabled || payload.Length == 0)
         {
             return payload.ToArray();
         }
 
-        var bucketSize = ResolveBucketSize(options.PaddingBucketBytes, payload.Length);
+        // Use first bucket size from BucketSizes list, or default
+        var configuredBucket = paddingOptions.BucketSizes?.FirstOrDefault(b => b >= payload.Length) ?? 0;
+        var bucketSize = ResolveBucketSize(configuredBucket, payload.Length);
         if (bucketSize <= payload.Length)
         {
             return payload.ToArray();

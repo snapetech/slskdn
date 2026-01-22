@@ -237,12 +237,14 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             .Where(c => c.Username is not null)
             .Select(c => new MeshPeerInfo
             {
-                Username = c.Username!,
+                MeshPeerId = c.ConnectionId, // Use connection ID as mesh peer ID
+                Username = c.Username,
                 Endpoint = c.RemoteEndPoint,
                 Features = c.Features,
                 ConnectedAt = c.ConnectedAt,
                 LastActivity = c.LastActivity,
                 CertificateThumbprint = c.CertificateThumbprint,
+                PeerVersion = null, // TODO: Add PeerVersion to MeshOverlayConnection
             })
             .ToList();
     }
