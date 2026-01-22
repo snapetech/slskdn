@@ -1272,9 +1272,16 @@ jobs:
           
           # Version for main
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
+          RELEASE_VERSION="${{ needs.parse.outputs.version }}"
           
           # Update version
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          
+          # Update source URL to use actual release asset name (slskdn-main-linux-x64.zip)
+          # The template has: slskdn-${pkgver//.slskdn/-slskdn}-linux-x64.zip
+          # But actual asset is: slskdn-main-linux-x64.zip
+          sed -i "s|slskdn-\${pkgver//\\.slskdn/-slskdn}-linux-x64.zip|slskdn-main-linux-x64.zip|g" PKGBUILD
+          sed -i "s|\${pkgver//\\.slskdn/-slskdn}|${RELEASE_VERSION}|g" PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
