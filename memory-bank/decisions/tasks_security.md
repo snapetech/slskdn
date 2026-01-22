@@ -1238,7 +1238,7 @@ services.AddSingleton<IValidateOptions<MeshGatewayOptions>, MeshGatewayOptionsVa
 **Files**: 
 - `docs/DHT_RENDEZVOUS_DESIGN.md`
 - `docs/IMPLEMENTATION_ROADMAP.md`
-- `docs/MULTI_SOURCE_DOWNLOADS.md`
+- `docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md`
 - `docs/SECURITY_HARDENING_ROADMAP.md`
 - `docs/SECURITY_IMPLEMENTATION_SPECS.md`
 - `FEATURES_IN_MERGED_BUILD.md`

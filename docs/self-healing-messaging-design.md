@@ -241,4 +241,4 @@ As per `replication-policy-design.md`, replication for messaging is:
 - `docs/realm-design.md` - Realm isolation
 - `docs/federation-security-hardening.md` - Security requirements
 - `docs/pod-f1000-social-hub-design.md` - ChatModule, ForumModule baseline
-- `TASK_STATUS_DASHBOARD.md` - T-SELFHEAL-01 task
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-SELFHEAL-01 task

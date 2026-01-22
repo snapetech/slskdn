@@ -94,8 +94,8 @@ cat FINAL_PLANNING_SUMMARY.md  # Big picture (10 min)
 
 ### 2. Current Status
 ```bash
-cat TASK_STATUS_DASHBOARD.md  # Progress tracking
-cat SESSION_STATUS_2025-12-11.md  # Latest work
+cat docs/archive/status/TASK_STATUS_DASHBOARD.md  # Progress tracking
+cat docs/archive/sessions/SESSION_STATUS_2025-12-11.md  # Latest work
 ```
 
 ### 3. Architecture
@@ -105,7 +105,7 @@ cat VISUAL_ARCHITECTURE_GUIDE.md  # System design
 
 ### 4. Implementation Guide
 ```bash
-cat COMPLETE_PLANNING_INDEX.md  # Navigation map
+cat docs/archive/planning/COMPLETE_PLANNING_INDEX.md  # Navigation map
 ```
 
 ---
@@ -412,7 +412,7 @@ git commit -m "fix(mesh): correct quarantine sliding window logic"
 
 ### Check Overall Progress
 ```bash
-cat docs/TASK_STATUS_DASHBOARD.md
+cat docs/archive/status/TASK_STATUS_DASHBOARD.md
 ```
 
 ### Current Status
@@ -517,10 +517,10 @@ Phase 12:    slskdn + Privacy → Secure P2P
 
 ### Documentation
 - **This file**: `docs/AI_START_HERE.md`
-- **Task dashboard**: `docs/TASK_STATUS_DASHBOARD.md`
+- **Task dashboard**: `docs/archive/status/TASK_STATUS_DASHBOARD.md`
 - **Security status**: `docs/security/SECURITY_IMPLEMENTATION_STATUS_2025-12-11.md`
-- **Audit report**: `docs/AUDIT_CONSOLIDATED_2025-12-11.md`
-- **Session status**: `docs/SESSION_STATUS_2025-12-11.md`
+- **Audit report**: `docs/archive/audits/AUDIT_CONSOLIDATED_2025-12-11.md`
+- **Session status**: `docs/archive/sessions/SESSION_STATUS_2025-12-11.md`
 
 ### Memory Bank
 - **Tasks**: `memory-bank/tasks.md` (SOURCE OF TRUTH)

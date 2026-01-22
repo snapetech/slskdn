@@ -572,5 +572,5 @@ Actual F1000 registry, transfer tooling, and governance feeds can be implemented
 - `docs/moderation-v1-design.md` - MCP design and hardening
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `docs/social-federation-design.md` - ActivityPub integration
-- `TASK_STATUS_DASHBOARD.md` - T-F1000-01 through T-F1000-06 tasks
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-F1000-01 through T-F1000-06 tasks
 

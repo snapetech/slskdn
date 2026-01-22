@@ -370,7 +370,7 @@ This document defines concrete security and hardening requirements for all **fed
 - `docs/replication-policy-design.md` - Replication policy and security
 - `docs/moderation-v1-design.md` - MCP integration requirements
 - `docs/security-hardening-guidelines.md` - Global security principles
-- `TASK_STATUS_DASHBOARD.md` - T-FED-SEC-01 through T-FED-SEC-05 tasks
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-FED-SEC-01 through T-FED-SEC-05 tasks
 
 ---
 

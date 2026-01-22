@@ -234,5 +234,5 @@ We leave hooks for future `Chunked` replication:
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `docs/f1000-governance-design.md` - Governance replication use-case
 - `docs/moderation-v1-design.md` - Moderation list replication use-case
-- `TASK_STATUS_DASHBOARD.md` - T-RES-03 task
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-RES-03 task
 

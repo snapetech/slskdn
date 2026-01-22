@@ -612,7 +612,7 @@ The result: A network that's **smarter, faster, fairer, and unstoppable**.
 
 **Want technical details?** → Read `FINAL_PLANNING_SUMMARY.md`  
 **Want to implement?** → Read `docs/AI_START_HERE.md`  
-**Want to understand phases?** → Read `COMPLETE_PLANNING_INDEX.md`
+**Want to understand phases?** → Read `docs/archive/planning/COMPLETE_PLANNING_INDEX.md`
 
 **Just want to understand the vision?** → You just did! 🎉
 

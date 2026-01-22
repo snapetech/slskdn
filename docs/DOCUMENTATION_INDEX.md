@@ -12,17 +12,17 @@
 
 ### For Humans
 - **`FINAL_PLANNING_SUMMARY.md`** ← Project overview
-- **`TASK_STATUS_DASHBOARD.md`** ← Progress dashboard
+- **`docs/archive/status/TASK_STATUS_DASHBOARD.md`** ← Progress dashboard
 - **`README.md`** ← User documentation
 
 ---
 
 ## 📊 Status & Progress
 
-- **`TASK_STATUS_DASHBOARD.md`** - Visual progress by phase
-- **`SESSION_STATUS_2025-12-11.md`** - Latest session summary
+- **`docs/archive/status/TASK_STATUS_DASHBOARD.md`** - Visual progress by phase
+- **`docs/archive/sessions/SESSION_STATUS_2025-12-11.md`** - Latest session summary
 - **`SESSION_SUMMARY.md`** - Historical session notes
-- **`AUDIT_CONSOLIDATED_2025-12-11.md`** - All audit findings combined
+- **`docs/archive/audits/AUDIT_CONSOLIDATED_2025-12-11.md`** - All audit findings combined
 - **`DEVELOPMENT_HISTORY.md`** - Release history
 
 ---
@@ -70,7 +70,7 @@
 ## 🔍 Audit Reports
 
 ### Consolidated
-- **`AUDIT_CONSOLIDATED_2025-12-11.md`** ← All phases combined
+- **`docs/archive/audits/AUDIT_CONSOLIDATED_2025-12-11.md`** ← All phases combined
 
 ### By Phase
 - **`PHASES_1_7_COMPREHENSIVE_STUB_AUDIT.md`** - 36+ issues
@@ -113,7 +113,7 @@
 - **`soulbeet-integration-overview.md`** - Integration overview
 
 ### Features
-- **`MULTI_SOURCE_DOWNLOADS.md`** - Multi-source feature
+- **`docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md`** - Multi-source feature
 - **`multipart-downloads.md`** - Multipart downloads
 - **`VIRTUAL_SOULFIND_USER_GUIDE.md`** - User guide
 
@@ -156,7 +156,7 @@ Historical documents (timestamped versions):
 1. Read `AI_START_HERE.md`
 2. Read `FINAL_PLANNING_SUMMARY.md`
 3. Read `VISUAL_ARCHITECTURE_GUIDE.md`
-4. Check `TASK_STATUS_DASHBOARD.md`
+4. Check `docs/archive/status/TASK_STATUS_DASHBOARD.md`
 
 ### Starting Implementation?
 1. Read `AI_START_HERE.md`
@@ -167,7 +167,7 @@ Historical documents (timestamped versions):
 ### Reviewing Security?
 1. Read `security/SECURITY_IMPLEMENTATION_STATUS_2025-12-11.md`
 2. Check `security/database-poisoning-tasks.md`
-3. Review `AUDIT_CONSOLIDATED_2025-12-11.md`
+3. Review `docs/archive/audits/AUDIT_CONSOLIDATED_2025-12-11.md`
 
 ### Need Architecture Info?
 1. Read `VISUAL_ARCHITECTURE_GUIDE.md`

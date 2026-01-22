@@ -752,7 +752,7 @@ Streaming: Track 5 (Blue in Green)
 - [BRAINZ_PROTOCOL_SPEC.md](./BRAINZ_PROTOCOL_SPEC.md) - Control-plane message formats
 - [BRAINZ_CHUNK_TRANSFER.md](./BRAINZ_CHUNK_TRANSFER.md) - Data-plane chunk protocol
 - [BRAINZ_STATE_MACHINES.md](./BRAINZ_STATE_MACHINES.md) - Downloader/uploader state machines
-- [MULTI_SOURCE_DOWNLOADS.md](./MULTI_SOURCE_DOWNLOADS.md) - Current multi-source implementation
+- [MULTI_SOURCE_DOWNLOADS.md](./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md) - Current multi-source implementation
 - [DHT_RENDEZVOUS_DESIGN.md](./DHT_RENDEZVOUS_DESIGN.md) - DHT mesh overlay design
 - [HASHDB_SCHEMA.md](./HASHDB_SCHEMA.md) - Database schema and migrations
 

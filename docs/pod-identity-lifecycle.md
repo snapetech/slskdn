@@ -636,7 +636,7 @@ public interface IAdminService
 
 ## 10. Implementation Tasks
 
-Add to `TASK_STATUS_DASHBOARD.md`:
+Add to `docs/archive/status/TASK_STATUS_DASHBOARD.md`:
 
 ### T-POD01: Pod Identity Management Service
 
@@ -849,7 +849,7 @@ All operations require admin auth + confirmation.
 - `docs/moderation-v1-design.md` § 14 - MCP Security Model
 - `docs/security-hardening-guidelines.md` § 15 - Identity Separation
 - `docs/social-federation-design.md` - ActivityPub identity management
-- `TASK_STATUS_DASHBOARD.md` - T-POD01-03, H-POD01 tasks
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-POD01-03, H-POD01 tasks
 
 ---
 
@@ -1074,5 +1074,5 @@ Cross-realm migration MUST respect the following security constraints:
 - `docs/realm-design.md` - Realm isolation and cross-realm bridging
 - `docs/social-federation-design.md` - ActivityPub "move" semantics
 - `docs/f1000-governance-design.md` - Governance identities (realm-agnostic)
-- `TASK_STATUS_DASHBOARD.md` - T-REALM-MIG-01 task
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-REALM-MIG-01 task
 

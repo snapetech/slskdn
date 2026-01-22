@@ -217,7 +217,7 @@ Skipped:   16 (3%)
 
 **Project Documentation**:
 - `docs/PROJECT_COMPLETION_STATUS_2025-12-11.md` - Comprehensive status
-- `docs/TASK_STATUS_DASHBOARD.md` - Task tracking
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - Task tracking
 - `docs/TEST_COVERAGE_SPRINT_2025-12-10.md` - Test sprint details
 - `docs/COMPLETION_SUMMARY_2025-12-10.md` - Sprint summary
 - `docs/AI_START_HERE.md` - AI assistant guide

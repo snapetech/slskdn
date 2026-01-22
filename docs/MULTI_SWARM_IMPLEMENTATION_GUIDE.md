@@ -4,7 +4,7 @@
 > **Branch**: `experimental/brainz`  
 > **Last Updated**: 2025-12-09
 
-This document provides concrete GitHub issues for implementing the multi-swarm + MBID intelligence features outlined in [MULTI_SWARM_ROADMAP.md](./MULTI_SWARM_ROADMAP.md).
+This document provides concrete GitHub issues for implementing the multi-swarm + MBID intelligence features outlined in [MULTI_SWARM_ROADMAP.md](./docs/archive/duplicates/MULTI_SWARM_ROADMAP.md).
 
 Each issue is designed to be copy-pasted directly into `snapetech/slskdn` as a backlog item.
 
@@ -1280,12 +1280,12 @@ Provide a minimal UI/CLI output that shows how playback-aware swarming is perfor
 
 ## Related Documentation
 
-- [MULTI_SWARM_ROADMAP.md](./MULTI_SWARM_ROADMAP.md) - High-level feature roadmap
+- [MULTI_SWARM_ROADMAP.md](./docs/archive/duplicates/MULTI_SWARM_ROADMAP.md) - High-level feature roadmap
 - [MUSICBRAINZ_INTEGRATION.md](./MUSICBRAINZ_INTEGRATION.md) - MBID/fingerprinting design
 - [BRAINZ_PROTOCOL_SPEC.md](./BRAINZ_PROTOCOL_SPEC.md) - Control-plane messages
 - [BRAINZ_CHUNK_TRANSFER.md](./BRAINZ_CHUNK_TRANSFER.md) - Data-plane chunk protocol
 - [BRAINZ_STATE_MACHINES.md](./BRAINZ_STATE_MACHINES.md) - Downloader/uploader state machines
-- [MULTI_SOURCE_DOWNLOADS.md](./MULTI_SOURCE_DOWNLOADS.md) - Current multi-source implementation
+- [MULTI_SOURCE_DOWNLOADS.md](./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md) - Current multi-source implementation
 - [DHT_RENDEZVOUS_DESIGN.md](./DHT_RENDEZVOUS_DESIGN.md) - DHT mesh overlay
 - [HASHDB_SCHEMA.md](./HASHDB_SCHEMA.md) - Database schema
 

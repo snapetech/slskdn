@@ -785,7 +785,7 @@ public sealed record ChunkRequestHints
 ## References
 
 - [BRAINZ_PROTOCOL_SPEC.md](./BRAINZ_PROTOCOL_SPEC.md) - Control-plane messages
-- [MULTI_SOURCE_DOWNLOADS.md](./MULTI_SOURCE_DOWNLOADS.md) - Multi-source swarm design
+- [MULTI_SOURCE_DOWNLOADS.md](./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md) - Multi-source swarm design
 - [RFC 7233](https://tools.ietf.org/html/rfc7233) - HTTP Range Requests (inspiration)
 
 ---

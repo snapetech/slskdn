@@ -298,4 +298,4 @@ Attachments are scoped to a small, bounded "file service" per pod.
 - `docs/realm-design.md` - Realm isolation and cross-realm federation
 - `docs/federation-security-hardening.md` - Security requirements for federation
 - `docs/self-healing-messaging-design.md` - Self-healing and resilient channels
-- `TASK_STATUS_DASHBOARD.md` - T-MSG-RT-01, T-MSG-RT-02, T-SEARCH-01, T-ORG-01, T-ATTACH-01 tasks
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-MSG-RT-01, T-MSG-RT-02, T-SEARCH-01, T-ORG-01, T-ATTACH-01 tasks

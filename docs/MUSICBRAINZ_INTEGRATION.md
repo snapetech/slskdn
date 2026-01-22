@@ -1200,7 +1200,7 @@ With 3 cache nodes:
 - [AcoustID Web Service](https://acoustid.org/webservice)
 - [Discogs API](https://www.discogs.com/developers)
 - [BitTorrent DHT Protocol (BEP 5)](http://www.bittorrent.org/beps/bep_0005.html)
-- [slskdn Multi-Source Design](./MULTI_SOURCE_DOWNLOADS.md)
+- [slskdn Multi-Source Design](./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md)
 - [slskdn DHT Rendezvous Design](./DHT_RENDEZVOUS_DESIGN.md)
 
 ---

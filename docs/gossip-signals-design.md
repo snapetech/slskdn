@@ -249,5 +249,5 @@ Gossip feeds can be published via:
 - `docs/moderation-v1-design.md` - MCP design (AbuseFeed consumer)
 - `docs/f1000-governance-design.md` - Governance feeds
 - `docs/security-hardening-guidelines.md` - Global security principles
-- `TASK_STATUS_DASHBOARD.md` - T-RES-04, T-RES-05 tasks
+- `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-RES-04, T-RES-05 tasks
 

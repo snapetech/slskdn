@@ -176,7 +176,7 @@
 - **Architecture**: TCP tunnels over authenticated overlay, pod-scoped policies, strict quotas, minimal logging
 - **Integration Points**: PodCore extension, ServiceFabric service, WebGUI management, existing overlay transport
 - **Task Status Updated**: Added Phase 14 to `memory-bank/tasks.md` with full task definitions
-- **Dashboard Updated**: Added Phase 14 summary to `docs/TASK_STATUS_DASHBOARD.md` with counts and percentages
+- **Dashboard Updated**: Added Phase 14 summary to `docs/archive/status/TASK_STATUS_DASHBOARD.md` with counts and percentages
 - **Next Steps**: Begin implementation with T-1400 (Pod Policy Model & Persistence)
 
 ### T-1313: Mesh Unit Tests (Gap Task - P1)

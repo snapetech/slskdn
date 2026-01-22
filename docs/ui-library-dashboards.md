@@ -225,7 +225,7 @@ The dashboards are intended to be extensible:
 
 ## Implementation Tasks
 
-See `TASK_STATUS_DASHBOARD.md`:
+See `docs/archive/status/TASK_STATUS_DASHBOARD.md`:
 
 - **T-UI01**: Library Overview Endpoints (Multi-Domain)
 - **T-UI02**: Music Library Views

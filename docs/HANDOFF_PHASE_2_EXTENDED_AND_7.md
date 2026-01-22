@@ -49,7 +49,7 @@ I've completed comprehensive planning for both, creating:
    - Key innovations explained
    - Impact on overall roadmap
 
-4. **`docs/COMPLETE_PLANNING_INDEX_V2.md`** (~4,000 lines)
+4. **`docs/archive/planning/COMPLETE_PLANNING_INDEX_V2.md`** (~4,000 lines)
    - Updated comprehensive index
    - All 21 documents mapped
    - All 127 tasks catalogued
@@ -326,7 +326,7 @@ With Phase 7:
 - `docs/phase2-advanced-fingerprinting-design.md` - Phase 2-Extended specification
 - `docs/phase7-testing-strategy-soulfind.md` - Phase 7 specification
 - `docs/PHASE_2_EXTENDED_AND_7_SUMMARY.md` - This summary
-- `docs/COMPLETE_PLANNING_INDEX_V2.md` - Updated master index
+- `docs/archive/planning/COMPLETE_PLANNING_INDEX_V2.md` - Updated master index
 
 ### Updated Core Files
 - `memory-bank/tasks.md` - Now includes T-420 to T-430, T-900 to T-915

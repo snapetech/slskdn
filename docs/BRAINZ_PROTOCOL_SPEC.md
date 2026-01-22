@@ -842,7 +842,7 @@ Next iteration should define:
 - [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API)
 - [Chromaprint](https://oxygene.sk/2011/01/how-does-chromaprint-work/)
 - [AcoustID](https://acoustid.org/webservice)
-- [slskdn Multi-Source Design](./MULTI_SOURCE_DOWNLOADS.md)
+- [slskdn Multi-Source Design](./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md)
 - [slskdn DHT Rendezvous](./DHT_RENDEZVOUS_DESIGN.md)
 
 ---

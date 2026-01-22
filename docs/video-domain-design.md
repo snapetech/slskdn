@@ -264,7 +264,7 @@ All remote API calls and mesh interactions MUST respect:
 
 ## Implementation Tasks
 
-See `TASK_STATUS_DASHBOARD.md`:
+See `docs/archive/status/TASK_STATUS_DASHBOARD.md`:
 
 - **T-VID01**: Video Domain Types & Provider Interfaces
 - **T-VID02**: Video Metadata Extraction & Scanner Integration
