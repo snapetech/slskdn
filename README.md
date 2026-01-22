@@ -273,7 +273,7 @@ sudo apt install slskdn-dev
 # Docker
 docker pull ghcr.io/snapetech/slskdn:dev
 ```
-<!-- END_DEV_BUILD -->bash
+<!-- END_DEV_BUILD -->
 
 
 
