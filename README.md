@@ -277,6 +277,7 @@ docker pull ghcr.io/snapetech/slskdn:dev
 
 
 
+
 ### Homebrew (macOS/Linux)
 Install the pre-built binary:
 ```bash
