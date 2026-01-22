@@ -302,72 +302,6 @@ jobs:
           prerelease: false
           files: slskdn-dev-*.zip
 
-      - name: Delete Previous Dev Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Delete the old dev release if it exists
-          gh release delete dev --yes --repo ${{ github.repository }} 2>/dev/null || true
-          git push origin :refs/tags/dev 2>/dev/null || true
-
-      - name: Create Dev Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: dev
-          name: "🧪 Development Build"
-          body: |
-            ## Development Build
-            
-            **Version:** ${{ needs.build.outputs.version }}
-            **Branch:** experimental/whatAmIThinking
-            **Commit:** ${{ needs.build.outputs.short_sha }}
-            **Built:** ${{ github.event.head_commit.timestamp }}
-            
-            ### ⚠️ Warning
-            This is an **unstable development build** from the experimental branch.
-            It includes cutting-edge features that may contain bugs.
-            
-            ### Downloads
-            - **Linux x64**: `slskdn-dev-linux-x64.zip`
-            - **Windows x64**: `slskdn-dev-win-x64.zip`
-            - **macOS x64** (Intel): `slskdn-dev-osx-x64.zip`
-            - **macOS ARM64** (Apple Silicon): `slskdn-dev-osx-arm64.zip`
-            
-            ### Features in this build:
-            - 🔀 **Multi-source swarm downloads** - Download from multiple peers simultaneously
-            - 🌐 **DHT mesh network** - Distributed hash table for content verification
-            - 🔗 **BitTorrent DHT rendezvous** - Peer discovery via mainline DHT
-            - 🔒 **TLS overlay protocol** - Secure mesh connections
-            - 📊 **Hash database** - Local SQLite with mesh sync
-            
-            ### Install
-            ```bash
-            # Arch Linux (AUR)
-            yay -S slskdn-dev
-            
-            # Fedora/RHEL (COPR)
-            sudo dnf copr enable slskdn/slskdn-dev
-            sudo dnf install slskdn-dev
-            
-            # Ubuntu/Debian (PPA)
-            sudo add-apt-repository ppa:keefshape/slskdn
-            sudo apt update
-            sudo apt install slskdn-dev
-            
-            # Windows (Chocolatey)
-            choco install slskdn --pre
-            
-            # macOS (Homebrew)
-            brew install snapetech/slskdn/slskdn-dev
-            
-            # Snap
-            sudo snap install slskdn --edge
-            
-            # Docker
-            docker pull ghcr.io/snapetech/slskdn:dev
-            ```
-          prerelease: true
-          files: slskdn-dev-*.zip
 
   aur:
     name: Publish to AUR
@@ -381,8 +315,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Download from the dev release we just created
-          gh release download dev \
+          # Download from the timestamped release we just created
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
 
@@ -508,8 +442,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Download all dev build artifacts from the floating dev release
-          gh release download dev \
+          # Download all dev build artifacts from the timestamped release
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-*.zip"
           
@@ -622,8 +556,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Download Windows x64 build from dev release
-          gh release download dev `
+          # Download Windows x64 build from timestamped release
+          gh release download ${{ github.ref_name }} `
             --repo ${{ github.repository }} `
             --pattern "slskdn-dev-windows-x64.zip"
           
@@ -659,7 +593,7 @@ jobs:
           
           # Convert version for Winget (dots only)
           $WINGET_VERSION = "${{ needs.build.outputs.dev_version }}" -replace '-','.'
-          $WIN_URL = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-windows-x64.zip"
+          $WIN_URL = "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-windows-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
           
           bash packaging/scripts/update-winget-manifests.sh `
@@ -699,7 +633,7 @@ jobs:
           Write-Host "   snapetech.slskdn-dev version ${{ needs.build.outputs.dev_version }}"
           Write-Host ""
           Write-Host "Or use WingetCreate CLI:"
-          Write-Host "wingetcreate update snapetech.slskdn-dev -u https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-windows-x64.zip -v ${{ needs.build.outputs.dev_version }}"
+          Write-Host "wingetcreate update snapetech.slskdn-dev -u https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-windows-x64.zip -v ${{ needs.build.outputs.dev_version }}"
         shell: pwsh
 
   copr:
@@ -714,7 +648,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download dev \
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
 
@@ -802,7 +736,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download dev \
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
           unzip slskdn-dev-linux-x64.zip -d publish-linux-x64
@@ -967,7 +901,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download dev \
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
           unzip slskdn-dev-linux-x64.zip -d slskdn-build
@@ -1010,7 +944,7 @@ jobs:
       - name: Upload .deb to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: dev
+          tag_name: ${{ github.ref_name }}
           files: ${{ env.DEB_FILE }}
 
   snap:
@@ -1024,7 +958,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download dev \
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
       
@@ -1061,7 +995,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download dev `
+          gh release download ${{ github.ref_name }} `
             --repo ${{ github.repository }} `
             --pattern "slskdn-dev-win-x64.zip"
       
@@ -1070,7 +1004,7 @@ jobs:
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
           $Version = "${{ needs.build.outputs.dev_version }}"
-          $Url = "https://github.com/${{ github.repository }}/releases/download/dev/slskdn-dev-win-x64.zip"
+          $Url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-dev-win-x64.zip -Algorithm SHA256).Hash
           (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
@@ -1088,7 +1022,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download dev \
+          gh release download ${{ github.ref_name }} \
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-*.zip"
         
@@ -1108,20 +1042,20 @@ jobs:
             homepage "https://github.com/snapetech/slskdn"
             license "AGPL-3.0-or-later"
             version "${VERSION}"
-            url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip"
+            url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-linux-x64.zip"
             sha256 "${SHA_LINUX}"
             on_macos do
               on_arm do
-                url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-osx-arm64.zip"
+                url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-osx-arm64.zip"
                 sha256 "${SHA_MAC_ARM}"
               end
               on_intel do
-                url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-osx-x64.zip"
+                url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-osx-x64.zip"
                 sha256 "${SHA_MAC_X64}"
               end
             end
             on_linux do
-              url "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip"
+              url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-linux-x64.zip"
               sha256 "${SHA_LINUX}"
             end
             conflicts_with "slskdn", because: "both install slskdn binary"
