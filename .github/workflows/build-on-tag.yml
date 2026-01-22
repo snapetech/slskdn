@@ -1630,9 +1630,38 @@ jobs:
           choco pack
           
           # Push to stable channel (no --prerelease flag)
-          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          # Retry on timeout (Chocolatey sometimes has 504 errors)
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
           
-          Write-Host "✅ Published to Chocolatey (stable channel)"
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+              choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY 2>&1 | Tee-Object -Variable pushOutput
+              if ($LASTEXITCODE -eq 0) {
+                $success = $true
+                Write-Host "✅ Published to Chocolatey (stable channel)"
+              } elseif ($pushOutput -match "504|Gateway Timeout|timeout") {
+                $retryCount++
+                if ($retryCount -lt $maxRetries) {
+                  Write-Host "⚠️ Chocolatey timeout (attempt $retryCount/$maxRetries), retrying in 10 seconds..."
+                  Start-Sleep -Seconds 10
+                } else {
+                  Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts (likely transient), but package was built successfully"
+                  exit 0  # Don't fail the build for transient Chocolatey issues
+                }
+              } else {
+                Write-Host "❌ Chocolatey push failed with error"
+                exit 1
+              }
+            } catch {
+              $retryCount++
+              if ($retryCount -ge $maxRetries) {
+                Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts"
+                exit 0  # Don't fail the build for transient Chocolatey issues
+              }
+            }
+          }
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1754,8 +1783,13 @@ jobs:
 
       - name: Checkout Master for Winget
         run: |
+          # Handle case-insensitive filesystem on Windows
           git fetch origin master
-          git checkout master
+          git checkout -f master 2>&1 | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            # Try with different case or create branch
+            git checkout -b master origin/master 2>&1 | Out-Null
+          }
         shell: pwsh
 
       - name: Update Winget Manifests
@@ -1822,8 +1856,11 @@ jobs:
           
           unzip slskdn-main-linux-x64.zip -d slskdn_dist
           
-          # Update snapcraft.yaml
-          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+          # Get absolute path for snapcraft source
+          ABS_DIST_PATH=$(realpath slskdn_dist)
+          
+          # Update snapcraft.yaml - use absolute path for source
+          sed -i "s|source: .*|source: $ABS_DIST_PATH|" packaging/snap/snapcraft.yaml
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
@@ -1835,6 +1872,12 @@ jobs:
           # Verify we're in the right directory and file exists
           if [ ! -f "snapcraft.yaml" ]; then
             echo "❌ snapcraft.yaml not found in packaging/snap/"
+            exit 1
+          fi
+          
+          # Verify source path exists
+          if [ ! -d "$ABS_DIST_PATH" ]; then
+            echo "❌ Source directory $ABS_DIST_PATH not found!"
             exit 1
           fi
           
