@@ -274,7 +274,6 @@ sudo apt install slskdn-dev
 docker pull ghcr.io/snapetech/slskdn:dev
 ```
 <!-- END_DEV_BUILD -->bash
-yay -S slskdn-dev          # Latest dev build
 sudo systemctl enable --now slskd
 ```
 
