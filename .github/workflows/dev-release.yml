@@ -302,7 +302,6 @@ jobs:
             - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn-dev && sudo dnf install slskdn-dev`
             - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn-dev`
             - Docker: `docker pull ghcr.io/snapetech/slskdn:dev-latest`
-            - Windows: `choco install slskdn --pre`
             - macOS: `brew install snapetech/slskdn/slskdn-dev`
             
             **Direct Download**: Extract the zip for your platform and run the binary
@@ -957,71 +956,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: ${{ env.DEB_FILE }}
 
-  snap:
-    name: Publish to Snap (Edge)
-    runs-on: ubuntu-latest
-    needs: [build, release]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download from Dev Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download ${{ github.ref_name }} \
-            --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-linux-x64.zip"
-      
-      - name: Build and Push
-        env: { SNAPCRAFT_STORE_CREDENTIALS: "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" }
-        if: "${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}"
-        run: |
-          unzip slskdn-dev-linux-x64.zip -d slskdn_dist
-          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
-          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
-          sed -i "s|version: .*|version: '${{ needs.build.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
-          sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
-          
-          # Install Snapcraft
-          sudo snap install snapcraft --classic
-          
-          # Build in destructive mode (no container needed)
-          cd packaging/snap
-          snapcraft --destructive-mode
-          
-          # Publish
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
-          snapcraft login --with snap.login
-          snapcraft upload --release=edge *.snap
-
-  chocolatey:
-    name: Publish to Chocolatey (Pre)
-    runs-on: windows-latest
-    needs: [build, release]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download from Dev Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download ${{ github.ref_name }} `
-            --repo ${{ github.repository }} `
-            --pattern "slskdn-dev-win-x64.zip"
-      
-      - name: Pack and Push
-        env: { CHOCO_API_KEY: "${{ secrets.CHOCO_API_KEY }}" }
-        if: "${{ env.CHOCO_API_KEY != '' }}"
-        run: |
-          $Version = "${{ needs.build.outputs.dev_version }}"
-          $Url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
-          $Checksum = (Get-FileHash slskdn-dev-win-x64.zip -Algorithm SHA256).Hash
-          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
-          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
-          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
-          cd packaging/chocolatey
-          choco pack
-          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
 
   homebrew:
     name: Update Homebrew Tap (Dev)
@@ -1083,7 +1017,7 @@ jobs:
   notify:
     name: Notify
     runs-on: ubuntu-latest
-    needs: [build, release, aur, copr, ppa, docker, packages, nix, winget, snap, chocolatey, homebrew]
+    needs: [build, release, aur, copr, ppa, docker, packages, nix, winget, homebrew]
     if: always()
     steps:
       - name: Summary
@@ -1102,8 +1036,6 @@ jobs:
           echo "- Packages (.deb/.rpm): ${{ needs.packages.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Nix Flake: ${{ needs.nix.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Winget: ${{ needs.winget.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Snap (Edge): ${{ needs.snap.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Chocolatey (Pre): ${{ needs.chocolatey.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Homebrew Tap: ${{ needs.homebrew.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Install Commands" >> $GITHUB_STEP_SUMMARY
