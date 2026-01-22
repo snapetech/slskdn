@@ -1784,10 +1784,11 @@ jobs:
       - name: Checkout Master for Winget
         run: |
           # Handle case-insensitive filesystem on Windows
-          git fetch origin master
+          # Fetch only master branch to avoid case-sensitivity conflicts
+          git fetch origin +refs/heads/master:refs/remotes/origin/master
           git checkout -f master 2>&1 | Out-Null
           if ($LASTEXITCODE -ne 0) {
-            # Try with different case or create branch
+            # Try creating branch from remote
             git checkout -b master origin/master 2>&1 | Out-Null
           }
         shell: pwsh
