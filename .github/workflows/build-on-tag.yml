@@ -1457,11 +1457,33 @@ jobs:
             echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
             exit 0
           fi
-          ls -la *.changes || true
+          
+          # Check if a newer version already exists in PPA
+          # Extract version from changelog
+          VERSION="${{ needs.parse.outputs.version }}"
+          DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')
           CHANGES_FILE=$(find . -name "slskdn_*.changes" -type f | head -1)
+          
+          if [ -z "$CHANGES_FILE" ]; then
+            echo "⚠️ No changes file found, skipping PPA upload"
+            exit 0
+          fi
+          
           echo "Found changes file: $CHANGES_FILE"
-          dput slskdn-ppa "$CHANGES_FILE"
-          echo "✅ Uploaded to PPA: slskdn"
+          echo "Attempting to upload version: ${DEB_VERSION}"
+          
+          # Try to upload - if it fails due to version being older, that's expected
+          if dput slskdn-ppa "$CHANGES_FILE" 2>&1 | tee /tmp/dput_output.log; then
+            echo "✅ Uploaded to PPA: slskdn"
+          else
+            if grep -q "Version older than that in the archive" /tmp/dput_output.log; then
+              echo "⚠️ Version ${DEB_VERSION} is older than what's already in PPA - skipping upload (this is expected if a newer version was already published)"
+              exit 0
+            else
+              echo "❌ PPA upload failed with unexpected error"
+              exit 1
+            fi
+          fi
 
   docker-main:
     name: Build and Push Docker (Main)
@@ -1622,6 +1644,11 @@ jobs:
         run: |
           nix flake check --no-build || echo "⚠️ Flake check failed (non-fatal)"
 
+      - name: Checkout Master for Nix
+        run: |
+          git fetch origin master
+          git checkout master
+
       - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
@@ -1664,11 +1691,14 @@ jobs:
           "win_x64_sha=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         shell: pwsh
 
-      - name: Update Winget Manifests
+      - name: Checkout Master for Winget
         run: |
           git fetch origin master
-          git reset --hard origin/master
-          
+          git checkout master
+        shell: pwsh
+
+      - name: Update Winget Manifests
+        run: |
           $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
           $VERSION = "${{ needs.parse.outputs.version }}"
