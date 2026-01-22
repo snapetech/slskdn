@@ -274,8 +274,8 @@ sudo apt install slskdn-dev
 docker pull ghcr.io/snapetech/slskdn:dev
 ```
 <!-- END_DEV_BUILD -->bash
-sudo systemctl enable --now slskd
-```
+
+
 
 ### Homebrew (macOS/Linux)
 Install the pre-built binary:
