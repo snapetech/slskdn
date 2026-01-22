@@ -238,7 +238,7 @@ Generic service layer for mesh-based applications.
 ---
 
 ## Quick Start
-Getting started is simple—we don't believe in gatekeeping.
+Getting started is simple.
 
 ### Arch Linux (AUR)
 **Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
