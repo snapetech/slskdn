@@ -46,15 +46,15 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 ---
 
-### 🔄 Phase 2: Smart Automation
+### ✅ Phase 2: Smart Automation (DONE)
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Wishlist/Background Search** | HIGH | slskd #957 Open | Save searches that run periodically. Auto-download when matches found. Desktop clients have had this for 20 years. |
-| **Auto-Retry Failed Downloads** | HIGH | slskd #959 Open | Automatic retries with configurable attempts and delays. Our auto-replace goes beyond this. |
-| **Scheduled Rate Limits** | MEDIUM | slskd #985 Open | Day/night upload/download speed schedules. Like qBittorrent's scheduler. |
-| **Auto-Clear Uploads/Downloads** | MEDIUM | Implemented | Already in slskd 0.21+ but we can extend with more granular controls. |
-| **Download Queue Position Polling** | LOW | slskd #921 Open | Auto-refresh queue positions for all queued files. |
+| **Wishlist/Background Search** | HIGH | slskd #957 Open | ✅ Done - Save searches that run periodically. Auto-download when matches found. Desktop clients have had this for 20 years. |
+| **Auto-Retry Failed Downloads** | HIGH | slskd #959 Open | ✅ Done - Automatic retries with configurable attempts and delays. Our auto-replace goes beyond this. |
+| **Scheduled Rate Limits** | MEDIUM | slskd #985 Open | ✅ Done (T-002, 2025-12-12) - Day/night upload/download speed schedules. Like qBittorrent's scheduler. |
+| **Auto-Clear Uploads/Downloads** | MEDIUM | Implemented | ✅ Done - Already in slskd 0.21+ but we can extend with more granular controls. |
+| **Download Queue Position Polling** | LOW | slskd #921 Open | ✅ Done (T-003, 2025-12-12) - Auto-refresh queue positions for all queued files. |
 
 ---
 
@@ -72,22 +72,22 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 ---
 
-### 👥 Phase 4: User Management
+### 🟡 Phase 4: User Management (75% Complete)
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Block Users from Search Results** | HIGH | slskd #1379 Open | Hide fake/scam users from ever appearing. |
-| **Visual Group Indicators** | MEDIUM | slskd #745 Open | Icons in search results for users in your groups. |
+| **Block Users from Search Results** | HIGH | slskd #1379 Open | ✅ Done - Hide fake/scam users from ever appearing. |
+| **Visual Group Indicators** | MEDIUM | slskd #745 Open | ✅ Done (T-004, 2025-12-12) - Icons in search results for users in your groups. |
 | **File Type Restrictions per Group** | MEDIUM | slskd #1033 Open | Only share certain file types with certain groups. |
 | **Download Quotas per Group** | LOW | slskd #388 Closed | Limit downloads per user/group by count or size. |
 
 ---
 
-### 📊 Phase 5: Dashboard & Statistics
+### 🟡 Phase 5: Dashboard & Statistics (20% Complete)
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Traffic Ticker** | MEDIUM | slskd discussion #547 | Real-time upload/download activity feed in the UI. |
+| **Traffic Ticker** | MEDIUM | slskd discussion #547 | ✅ Done (T-005, 2025-12-12) - Real-time upload/download activity feed in the UI. |
 | **Transfer Statistics API** | MEDIUM | slskd #1023 Open | Aggregate stats endpoint for widgets (homepage dashboards). |
 | **Prometheus Metrics UI** | LOW | slskd #609 Open | View metrics graphs without external Prometheus setup. |
 | **Who's Browsing/Downloading** | LOW | slskd #258 Open | See who's viewing your profile or downloading your files. |
@@ -117,11 +117,12 @@ Not everyone wants to write Python scripts, set up cron jobs, or integrate third
 
 ---
 
-### 🎨 Phase 8: UI Polish
+### 🟡 Phase 8: UI Polish (85% Complete)
 
 | Feature | Priority | slskd Status | Description |
 |---------|----------|--------------|-------------|
-| **Dark Mode** | HIGH | slskd #832 Closed | Native dark theme (currently relies on browser extensions). |
+| **Dark Mode** | HIGH | slskd #832 Closed | ✅ Done - Native dark theme (currently relies on browser extensions). |
+| **Persistent Room/Chat Tabs** | HIGH | - | ✅ Done (T-001, 2025-12-12) - Tabbed interface for rooms/chat like Browse tabs. |
 | **Download Sorting** | MEDIUM | slskd discussion #1534 | Sort downloads/uploads by various criteria. |
 | **Create Chat Rooms** | LOW | slskd #1258 Open | Create public/private rooms from UI. |
 | **Predictable Search URLs** | LOW | slskd #1170 Open | Bookmarkable search URLs for browser integration. |

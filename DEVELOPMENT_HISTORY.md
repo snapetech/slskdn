@@ -7,13 +7,13 @@
 | Phase | Name | Status | Completion |
 |-------|------|--------|------------|
 | 1 | Download Reliability | ✅ Complete | 100% |
-| 2 | Smart Automation | 🟡 Mostly Done | 80% |
+| 2 | Smart Automation | ✅ Complete | 100% |
 | 3 | Search Intelligence | 🟡 Mostly Done | 60% |
-| 4 | User Management | 🟡 Partial | 50% |
-| 5 | Dashboard & Statistics | ❌ Pending | 0% |
+| 4 | User Management | 🟡 Mostly Done | 75% |
+| 5 | Dashboard & Statistics | 🟡 Partial | 20% |
 | 6 | Download Organization | 🟡 Mostly Done | 75% |
 | 7 | Integrations | 🟡 Partial | 30% |
-| 8 | UI Polish | 🟡 Mostly Done | 70% |
+| 8 | UI Polish | 🟡 Mostly Done | 85% |
 | 9 | Infrastructure & Packaging | ✅ Complete | 100% |
 
 ---
@@ -27,15 +27,15 @@
 
 ---
 
-## 🟡 Phase 2: Smart Automation (80% Complete)
+## ✅ Phase 2: Smart Automation (Complete)
 
 | Feature | Status | Release | Notes |
 |---------|--------|---------|-------|
 | Wishlist/Background Search | ✅ Done | .2 | Save searches, auto-run, auto-download |
 | Auto-Retry Failed Downloads | ✅ Done | .1 | Via auto-replace feature |
 | Auto-Clear Uploads/Downloads | ✅ Done | upstream | Already in slskd 0.21+ |
-| Scheduled Rate Limits | ❌ Pending | - | Day/night speed schedules |
-| Download Queue Position Polling | ❌ Pending | - | Auto-refresh queue positions |
+| Scheduled Rate Limits | ✅ Done | 2025-12-12 | Day/night speed schedules (T-002) |
+| Download Queue Position Polling | ✅ Done | 2025-12-12 | Auto-refresh queue positions (T-003) |
 
 ---
 
@@ -55,23 +55,23 @@
 
 ---
 
-## 🟡 Phase 4: User Management (50% Complete)
+## 🟡 Phase 4: User Management (75% Complete)
 
 | Feature | Status | Release | Notes |
 |---------|--------|---------|-------|
 | Block Users from Search Results | ✅ Done | .5 | Hide blocked users toggle |
 | User Notes & Ratings | ✅ Done | .6 | Personal notes per user |
-| Visual Group Indicators | ❌ Pending | - | Icons for group members |
+| Visual Group Indicators | ✅ Done | 2025-12-12 | Icons for group members (T-004) |
 | File Type Restrictions per Group | ❌ Pending | - | Share specific types to groups |
 | Download Quotas per Group | ❌ Pending | - | Limit downloads per user/group |
 
 ---
 
-## ❌ Phase 5: Dashboard & Statistics (0% Complete)
+## 🟡 Phase 5: Dashboard & Statistics (20% Complete)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Traffic Ticker | ❌ Pending | Real-time activity feed |
+| Traffic Ticker | ✅ Done | Real-time activity feed (T-005, 2025-12-12) |
 | Transfer Statistics API | ❌ Pending | Aggregate stats endpoint |
 | Prometheus Metrics UI | ❌ Pending | Built-in metrics graphs |
 | Who's Browsing/Downloading | ❌ Pending | See who's viewing you |
@@ -112,7 +112,7 @@
 | LRU Cache for Browse State | ✅ Done | .14 | Prevents localStorage bloat |
 | Create Chat Rooms | ❌ Pending | - | Create rooms from UI |
 | Predictable Search URLs | ❌ Pending | - | Bookmarkable searches |
-| Persistent Room/Chat Tabs | ❌ Pending | - | Like Browse tabs |
+| Persistent Room/Chat Tabs | ✅ Done | 2025-12-12 | Like Browse tabs (T-001) |
 
 ---
 
