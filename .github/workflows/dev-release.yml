@@ -66,6 +66,13 @@ jobs:
           
           echo "📦 Building version: ${DEV_VERSION} (commit: ${SHORT_SHA})"
 
+      - name: Clean Frontend Build
+        working-directory: src/web
+        run: |
+          # Remove old build artifacts to ensure fresh build
+          rm -rf build node_modules/.cache
+          echo "✅ Cleaned old build artifacts"
+
       - name: Build Frontend
         working-directory: src/web
         run: |
