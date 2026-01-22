@@ -376,7 +376,7 @@ dotnet run --project src/slskd/slskd.csproj
 | **Pod communities** | ❌ | ✅ 🧪 |
 | **VirtualSoulfind v2** | ❌ | ✅ 🧪 |
 | **Service fabric** | ❌ | ✅ 🧪 |
-| Open to community feedback | 🔒 | ✅ |
+| Open to community feedback | ✅ | ✅ |
 
 🧪 = Experimental feature (available in dev builds)
 
