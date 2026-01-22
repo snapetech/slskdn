@@ -13,6 +13,7 @@ Group=slskd
 ExecStart=/usr/lib/slskd/slskd
 WorkingDirectory=/var/lib/slskd
 Environment="HOME=/var/lib/slskd"
+Environment="DOTNET_ROOT=/usr/share/dotnet"
 Restart=on-failure
 RestartSec=10
 
