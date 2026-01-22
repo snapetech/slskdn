@@ -259,10 +259,20 @@ Version: `0.24.1-dev-91769043447` | Branch: `experimental/whatAmIThinking`
 
 ```bash
 # Arch Linux (AUR)
-yay -S slskdn-dev          # Latest dev build
-sudo systemctl enable --now slskd
-```
+yay -S slskdn-dev
 
+# Fedora/RHEL (COPR)
+sudo dnf copr enable slskdn/slskdn-dev
+sudo dnf install slskdn-dev
+
+# Ubuntu/Debian (PPA)
+sudo add-apt-repository ppa:keefshape/slskdn
+sudo apt update
+sudo apt install slskdn-dev
+
+# Docker
+docker pull ghcr.io/snapetech/slskdn:dev
+```
 <!-- END_DEV_BUILD -->bash
 yay -S slskdn-dev          # Latest dev build
 sudo systemctl enable --now slskd
