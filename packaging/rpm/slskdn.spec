@@ -29,7 +29,7 @@ The batteries included fork of slskd with 24+ new features: decentralized pods,
 content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
 security hardening.
 
-Stable Features (17):
+Stable Features:
 - Auto-replace stuck downloads - Automatically finds and switches to working sources
 - Wishlist/background search - Never miss rare content with automated searches
 - Smart source ranking - Intelligent scoring based on speed, queue, and history
@@ -47,13 +47,14 @@ Stable Features (17):
 - Download history badges - Visual indicators for successful download history
 - Clear all searches - One-click cleanup of search history
 - Configurable search page size - 25 to 500 results per page
+- Multi-source swarm downloads - Download from multiple peers simultaneously
+- DHT mesh networking - Decentralized peer discovery and mesh overlay
+- CSRF protection - Full CSRF token validation for web UI
+- Security hardening - NetworkGuard, fingerprint detection, security profiles
 
-Experimental Features (7):
+Advanced Features:
 - Decentralized pod communities - Private micro-communities over mesh overlay with DHT discovery
 - Content validation - Byzantine consensus & proof-of-storage with cryptographic commitments
-- Multi-source swarm downloads - Download files from multiple peers simultaneously with SHA-256 verification
-- DHT mesh networking - BitTorrent DHT peer discovery with TLS-encrypted mesh overlay
-- Security hardening - CSRF protection, NetworkGuard rate limiting, PathGuard traversal prevention
 - MusicBrainz integration - Metadata enrichment, library health scanning, AcoustID fingerprinting
 - Service fabric - Generic mesh service layer for decentralized applications
 

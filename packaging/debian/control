@@ -23,12 +23,12 @@ Description: 🔋 The batteries included fork of slskd with 24+ new features
  Stable Features: Auto-replace stuck downloads, wishlist/background search,
  smart source ranking, tabbed browsing, user notes & ratings, push notifications,
  multi-select folder downloads, advanced search filters, PWA/mobile support,
- delete files on disk, block users, save filters, chat improvements.
+ delete files on disk, block users, save filters, chat improvements, multi-source
+ swarm downloads, DHT mesh networking with TLS, CSRF protection & security
+ hardening.
  .
- Experimental Features: Decentralized pod communities, Byzantine consensus &
- proof-of-storage content validation, multi-source swarm downloads, DHT mesh
- networking with TLS, CSRF protection & security hardening, MusicBrainz
- integration, service fabric.
+ Advanced Features: Decentralized pod communities, Byzantine consensus &
+ proof-of-storage content validation, MusicBrainz integration, service fabric.
  .
  Drop-in replacement for slskd, preserves existing configuration.
 

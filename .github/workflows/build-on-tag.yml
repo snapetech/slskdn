@@ -988,6 +988,18 @@ jobs:
             - ✅ **Max File Size Filter** — Skip the bloated ones
             - ✅ **Delete Files on Remove** — Tidy up properly
             
+            ### Advanced Networking & Downloads
+            - ✅ **Multi-Source Swarm Downloads** — Download from multiple peers simultaneously for faster transfers
+            - ✅ **DHT Mesh Networking** — Decentralized peer discovery and mesh overlay network
+            - ✅ **BitTorrent DHT Rendezvous** — Find peers across the network using DHT
+            - ✅ **TLS-Secured Mesh Connections** — Encrypted peer-to-peer mesh communication
+            
+            ### Security Hardening
+            - ✅ **CSRF Protection** — Full CSRF token validation for web UI
+            - ✅ **NetworkGuard** — Advanced network security and threat detection
+            - ✅ **Fingerprint Detection** — Reconnaissance and port scanning detection
+            - ✅ **Security Profiles** — Standard, Maximum, and Paranoid security modes
+            
             ### UI Enhancements  
             - ✅ **Tabbed User Browsing** — Multiple users, proper tabs
             - ✅ **Folder Checkboxes** — Select what you want, sensibly
@@ -1110,6 +1122,9 @@ jobs:
             cd aur-pkg-source
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn.git
+            # Create initial commit on master branch for new repos
+            git commit --allow-empty -m "Initial commit"
+            git branch -M master
           }
 
       - name: Update PKGBUILD (Source)
@@ -1157,6 +1172,11 @@ jobs:
           git config user.email "slskdn@proton.me"
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
+          
+          # AUR repos use master branch - ensure it exists
+          if ! git show-ref --verify --quiet refs/heads/master; then
+            git branch -M master || git checkout -b master
+          fi
           git push origin master || git push --set-upstream origin master
           
           echo "✅ Pushed to AUR: slskdn (source)"
@@ -1173,6 +1193,9 @@ jobs:
             cd aur-pkg-bin
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn-bin.git
+            # Create initial commit on master branch for new repos
+            git commit --allow-empty -m "Initial commit"
+            git branch -M master
           }
 
       - name: Update PKGBUILD (Binary)
@@ -1220,6 +1243,11 @@ jobs:
           git config user.email "slskdn@proton.me"
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
+          
+          # AUR repos use master branch - ensure it exists
+          if ! git show-ref --verify --quiet refs/heads/master; then
+            git branch -M master || git checkout -b master
+          fi
           git push origin master || git push --set-upstream origin master
           
           echo "✅ Pushed to AUR: slskdn-bin (binary)"
@@ -1268,6 +1296,9 @@ jobs:
           
           # Update version
           sed -i "s/^Version:.*/Version:        ${RPM_VERSION}/" ~/rpmbuild/SPECS/slskdn.spec
+          
+          # Update Source0 to use the actual release asset name (slskdn-main-linux-x64.zip)
+          sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-linux-x64.zip|" ~/rpmbuild/SPECS/slskdn.spec
           
           cat ~/rpmbuild/SPECS/slskdn.spec | head -30
 
@@ -1528,7 +1559,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Install Nix
@@ -1614,7 +1645,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Download from Release
@@ -1677,7 +1708,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref }}
 
       - name: Download from Release
         env:
