@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+
+PackageIdentifier: snapetech.slskdn-dev
+PackageVersion: 0.24.1.dev.20251209.222346
+PackageLocale: en-US
+Publisher: slskdN Team
+PublisherUrl: https://github.com/snapetech
+PublisherSupportUrl: https://github.com/snapetech/slskdn/issues
+PackageName: slskdN (Development)
+PackageUrl: https://github.com/snapetech/slskdn
+License: AGPL-3.0-or-later
+LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
+ShortDescription: 🔋 The batteries included fork of slskd with 24+ new features [EXPERIMENTAL]
+Description: |-
+  The batteries included fork of slskd with 24+ new features: decentralized pods,
+  content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
+  security hardening.
+  
+  ⚠️ WARNING: This is an unstable development build from the experimental branch.
+  It includes cutting-edge features that may contain bugs.
+  
+  Key features:
+  - Decentralized pod communities
+  - Byzantine consensus & proof-of-storage content validation
+  - Multi-source swarm downloads
+  - DHT mesh networking with TLS
+  - CSRF protection & security hardening
+  - MusicBrainz integration
+  - Auto-replace stuck downloads
+  - Wishlist/background search
+  
+  For stable releases, install 'snapetech.slskdn' instead.
+Moniker: slskdn-dev
+Tags:
+  - soulseek
+  - p2p
+  - community-service
+  - music
+  - experimental
+ReleaseNotes: |-
+  Development Build 0.24.1-dev-20251209-222346
+  
+  This build includes experimental features from the multi-source-swarm branch.
+  See https://github.com/snapetech/slskdn/releases/tag/dev for details.
+ReleaseNotesUrl: https://github.com/snapetech/slskdn/releases/tag/dev
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
+
