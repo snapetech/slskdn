@@ -17,7 +17,7 @@ namespace slskd.Mesh.Realm.Migration
     ///     Provides tooling for realm migration operations.
     /// </summary>
     /// <remarks>
-    ///     T-REALM-05: Realm Change & Migration Guardrails - provides safe migration tooling
+    ///     T-REALM-05 Realm Change and Migration Guardrails - provides safe migration tooling
     ///     for transitioning between realms with data export/import capabilities.
     /// </remarks>
     public class RealmMigrationTool

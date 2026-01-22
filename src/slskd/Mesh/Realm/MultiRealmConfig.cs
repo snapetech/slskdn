@@ -14,7 +14,7 @@ namespace slskd.Mesh.Realm
     ///     Multi-realm configuration for pods participating in multiple realms.
     /// </summary>
     /// <remarks>
-    ///     T-REALM-02: MultiRealmConfig & Bridge Skeleton.
+    ///     T-REALM-02 MultiRealmConfig and Bridge Skeleton.
     ///     Enables controlled cross-realm communication through explicit bridging.
     /// </remarks>
     public class MultiRealmConfig

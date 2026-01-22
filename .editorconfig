@@ -125,12 +125,12 @@ dotnet_diagnostic.CA3005.severity = error    # Review code for LDAP injection vu
 dotnet_diagnostic.CA3006.severity = error    # Review code for process command injection vulnerabilities
 
 # Performance analyzers
-dotnet_diagnostic.CA1805.severity = info     # Do not initialize unnecessarily
-dotnet_diagnostic.CA1825.severity = info     # Avoid zero-length array allocations
-dotnet_diagnostic.CA1826.severity = info     # Use property instead of Linq method
-dotnet_diagnostic.CA1827.severity = info     # Do not use Count() when Any() can be used
-dotnet_diagnostic.CA1828.severity = info     # Do not use CountAsync() when AnyAsync() can be used
-dotnet_diagnostic.CA1829.severity = info     # Use Length/Count property instead of Count() method
+dotnet_diagnostic.CA1805.severity = suggestion     # Do not initialize unnecessarily
+dotnet_diagnostic.CA1825.severity = suggestion     # Avoid zero-length array allocations
+dotnet_diagnostic.CA1826.severity = suggestion     # Use property instead of Linq method
+dotnet_diagnostic.CA1827.severity = suggestion     # Do not use Count() when Any() can be used
+dotnet_diagnostic.CA1828.severity = suggestion     # Do not use CountAsync() when AnyAsync() can be used
+dotnet_diagnostic.CA1829.severity = suggestion     # Use Length/Count property instead of Count() method
 
 # Reliability analyzers
 dotnet_diagnostic.CA2000.severity = warning  # Dispose objects before losing scope
@@ -138,21 +138,21 @@ dotnet_diagnostic.CA2002.severity = warning  # Do not lock on objects with weak 
 dotnet_diagnostic.CA2012.severity = warning  # Use ValueTasks correctly
 
 # Design analyzers
-dotnet_diagnostic.CA1040.severity = info     # Avoid empty interfaces
-dotnet_diagnostic.CA1051.severity = info     # Do not declare visible instance fields
-dotnet_diagnostic.CA1052.severity = info     # Static holder types should be sealed
-dotnet_diagnostic.CA1054.severity = info     # URI parameters should not be strings
-dotnet_diagnostic.CA1055.severity = info     # URI return values should not be strings
-dotnet_diagnostic.CA1056.severity = info     # URI properties should not be strings
+dotnet_diagnostic.CA1040.severity = suggestion     # Avoid empty interfaces
+dotnet_diagnostic.CA1051.severity = suggestion     # Do not declare visible instance fields
+dotnet_diagnostic.CA1052.severity = suggestion     # Static holder types should be sealed
+dotnet_diagnostic.CA1054.severity = suggestion     # URI parameters should not be strings
+dotnet_diagnostic.CA1055.severity = suggestion     # URI return values should not be strings
+dotnet_diagnostic.CA1056.severity = suggestion     # URI properties should not be strings
 
 # Usage analyzers
-dotnet_diagnostic.CA2207.severity = info     # Initialize value type static fields inline
+dotnet_diagnostic.CA2207.severity = suggestion     # Initialize value type static fields inline
 dotnet_diagnostic.CA2211.severity = warning  # Non-constant fields should not be visible
-dotnet_diagnostic.CA2214.severity = info     # Do not call overridable methods in constructors
-dotnet_diagnostic.CA2217.severity = info     # Do not mark enums with FlagsAttribute
+dotnet_diagnostic.CA2214.severity = suggestion     # Do not call overridable methods in constructors
+dotnet_diagnostic.CA2217.severity = suggestion     # Do not mark enums with FlagsAttribute
 
 # Documentation analyzers
-dotnet_diagnostic.CA1200.severity = info     # Avoid using cref tags with a prefix
+dotnet_diagnostic.CA1200.severity = suggestion     # Avoid using cref tags with a prefix
 
 # Additional custom rules for slskdN
 # These would be implemented in our custom analyzer

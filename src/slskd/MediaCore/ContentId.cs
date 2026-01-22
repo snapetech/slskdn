@@ -8,7 +8,7 @@ namespace slskd.MediaCore;
 
 /// <summary>
 /// Represents a parsed ContentID with domain, type, and identifier components.
-/// Format: content:<domain>:<type>:<id>
+/// Format: content:domain:type:id
 /// </summary>
 public record ContentId(string Domain, string Type, string Id)
 {

@@ -15,7 +15,7 @@ namespace slskd.Mesh.Realm.Migration
     ///     Validates and provides guardrails for realm configuration changes.
     /// </summary>
     /// <remarks>
-    ///     T-REALM-05: Realm Change & Migration Guardrails - ensures safe realm transitions
+    ///     T-REALM-05 Realm Change and Migration Guardrails - ensures safe realm transitions
     ///     with warnings, confirmations, and documented expectations.
     /// </remarks>
     public class RealmChangeValidator

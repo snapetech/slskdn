@@ -110,7 +110,7 @@ public record DescriptorUpdateResult(
     string? ErrorMessage = null);
 
 /// <summary>
-//// Result of a republish operation.
+/// Result of a republish operation.
 /// </summary>
 public record RepublishResult(
     int TotalChecked,
