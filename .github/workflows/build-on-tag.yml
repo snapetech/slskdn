@@ -963,6 +963,18 @@ jobs:
 
       # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
       # Build was triggered by build-main-VERSION tag, but release uses traditional format
+      # Note: The release tag must exist - create it if it doesn't
+      - name: Ensure Release Tag Exists
+        run: |
+          RELEASE_TAG="${{ needs.parse.outputs.version }}"
+          if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Creating release tag: $RELEASE_TAG"
+            git tag "$RELEASE_TAG"
+            git push origin "$RELEASE_TAG"
+          else
+            echo "Release tag $RELEASE_TAG already exists"
+          fi
+
       - name: Create Main Release
         uses: softprops/action-gh-release@v2
         with:
