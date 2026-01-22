@@ -316,7 +316,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     
     private void OnPeersFound(object? sender, PeersFoundEventArgs e)
     {
-        _logger.LogInformation("[DHT EVENT] OnPeersFound fired - InfoHash: {Hash}, Peer count: {Count}, IsOurs: {IsOurs}", 
+        _logger.LogDebug("[DHT EVENT] OnPeersFound fired - InfoHash: {Hash}, Peer count: {Count}, IsOurs: {IsOurs}", 
             e.InfoHash, e.Peers.Count, IsOurRendezvousHash(e.InfoHash));
         
         // Check if this is for one of our rendezvous infohashes
@@ -325,7 +325,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             return;
         }
         
-        _logger.LogInformation("DHT found {Count} peers for rendezvous hash {Hash}", 
+        _logger.LogDebug("DHT found {Count} peers for rendezvous hash {Hash}", 
             e.Peers.Count, e.InfoHash);
         
         foreach (var peerInfo in e.Peers)

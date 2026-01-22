@@ -328,6 +328,14 @@ namespace slskd
                     Log.Information("Version {CurrentVersion} is up to date.", Program.SemanticVersion);
                 }
             }
+            catch (GitHubException ex) when (ex.InnerException is FormatException)
+            {
+                // FormatException from Version.Parse() is wrapped in GitHubException
+                // This is normal for dev/experimental builds with non-standard version strings
+                Log.Debug("Failed to parse latest version string (this is normal for dev/experimental builds): {Message}", ex.InnerException?.Message ?? ex.Message);
+
+                // Ignore parse errors to avoid noisy warnings on malformed tags (normal for dev builds)
+            }
             catch (FormatException ex)
             {
                 Log.Debug("Failed to parse latest version string (this is normal for dev/experimental builds): {Message}", ex.Message);
@@ -599,7 +607,8 @@ namespace slskd
                 }
                 else
                 {
-                    Log.Warning("MeshServiceRouter not available for service registration");
+                    // This may be expected during startup if router isn't initialized yet
+                    Log.Debug("MeshServiceRouter not available for service registration");
                 }
             }
             catch (Exception ex)

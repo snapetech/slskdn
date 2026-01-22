@@ -63,7 +63,9 @@ public class ScriptService
 
             if (string.IsNullOrEmpty(DefaultExecutable))
             {
-                Log.Warning("Unable to determine default script executable ($SHELL is missing or blank); any user-defined scripts that do not specify an executable will fail");
+                // This is expected when running as a systemd service (no $SHELL env var)
+                // Only log at Debug level to avoid noise
+                Log.Debug("Unable to determine default script executable ($SHELL is missing or blank); any user-defined scripts that do not specify an executable will fail");
             }
         }
 

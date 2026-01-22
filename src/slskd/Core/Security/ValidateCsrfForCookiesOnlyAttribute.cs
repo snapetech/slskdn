@@ -44,18 +44,18 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
     {
         var request = context.HttpContext.Request;
         
-        // Log that the attribute was invoked
-        Log.Information("[CSRF] Attribute invoked for {Method} {Path}", request.Method, request.Path);
+        // Log that the attribute was invoked (Debug level to reduce noise)
+        Log.Debug("[CSRF] Attribute invoked for {Method} {Path}", request.Method, request.Path);
         
         // 2. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE) - CHECK FIRST
         // NOTE: This check must happen BEFORE any other checks to ensure GET requests are never validated
         if (SafeMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
         {
-            Log.Information("[CSRF] Skipping validation for safe method: {Method} {Path}", request.Method, request.Path);
+            Log.Debug("[CSRF] Skipping validation for safe method: {Method} {Path}", request.Method, request.Path);
             return; // Safe method - no CSRF needed
         }
         
-        Log.Information("[CSRF] Processing non-safe method: {Method} {Path}", request.Method, request.Path);
+        Log.Debug("[CSRF] Processing non-safe method: {Method} {Path}", request.Method, request.Path);
         
         // 1. Exempt endpoints with [AllowAnonymous] attribute (like login)
         var endpoint = context.HttpContext.GetEndpoint();
