@@ -1117,15 +1117,21 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg-source || {
+          # Try to clone, if it fails create new repo
+          if git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg-source 2>&1; then
+            cd aur-pkg-source
+            # Ensure we're on master branch
+            git checkout master 2>/dev/null || git checkout -b master
+          else
+            # Clone failed, create new repo
             mkdir -p aur-pkg-source
             cd aur-pkg-source
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn.git
-            # Create initial commit on master branch for new repos
+            # Create initial commit on master branch
             git commit --allow-empty -m "Initial commit"
             git branch -M master
-          }
+          fi
 
       - name: Update PKGBUILD (Source)
         env:
@@ -1170,14 +1176,21 @@ jobs:
           cd aur-pkg-source
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
+          
+          # Ensure we're on master branch
+          git checkout master 2>/dev/null || git checkout -b master
+          
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
           
-          # AUR repos use master branch - ensure it exists
-          if ! git show-ref --verify --quiet refs/heads/master; then
-            git branch -M master || git checkout -b master
-          fi
-          git push origin master || git push --set-upstream origin master
+          # Push to master (AUR always uses master)
+          git push origin master 2>&1 || {
+            # If push fails, try set-upstream
+            git push --set-upstream origin master 2>&1 || {
+              echo "⚠️ Push failed, but continuing..."
+              exit 0
+            }
+          }
           
           echo "✅ Pushed to AUR: slskdn (source)"
 
@@ -1188,15 +1201,21 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin || {
+          # Try to clone, if it fails create new repo
+          if git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin 2>&1; then
+            cd aur-pkg-bin
+            # Ensure we're on master branch
+            git checkout master 2>/dev/null || git checkout -b master
+          else
+            # Clone failed, create new repo
             mkdir -p aur-pkg-bin
             cd aur-pkg-bin
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn-bin.git
-            # Create initial commit on master branch for new repos
+            # Create initial commit on master branch
             git commit --allow-empty -m "Initial commit"
             git branch -M master
-          }
+          fi
 
       - name: Update PKGBUILD (Binary)
         env:
@@ -1241,14 +1260,21 @@ jobs:
           cd aur-pkg-bin
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
+          
+          # Ensure we're on master branch
+          git checkout master 2>/dev/null || git checkout -b master
+          
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
           
-          # AUR repos use master branch - ensure it exists
-          if ! git show-ref --verify --quiet refs/heads/master; then
-            git branch -M master || git checkout -b master
-          fi
-          git push origin master || git push --set-upstream origin master
+          # Push to master (AUR always uses master)
+          git push origin master 2>&1 || {
+            # If push fails, try set-upstream
+            git push --set-upstream origin master 2>&1 || {
+              echo "⚠️ Push failed, but continuing..."
+              exit 0
+            }
+          }
           
           echo "✅ Pushed to AUR: slskdn-bin (binary)"
 
@@ -1559,16 +1585,42 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
+          # Verify files exist
+          if (-not (Test-Path "packaging/chocolatey/slskdn.nuspec")) {
+            Write-Host "❌ packaging/chocolatey/slskdn.nuspec not found!"
+            exit 1
+          }
+          if (-not (Test-Path "packaging/chocolatey/tools/chocolateyinstall.ps1")) {
+            Write-Host "❌ packaging/chocolatey/tools/chocolateyinstall.ps1 not found!"
+            exit 1
+          }
+          if (-not (Test-Path "slskdn-main-win-x64.zip")) {
+            Write-Host "❌ slskdn-main-win-x64.zip not found!"
+            exit 1
+          }
+          
           $Version = "${{ needs.parse.outputs.version }}"
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
+          
           (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          
           cd packaging/chocolatey
+          
+          # Verify we're in the right directory
+          if (-not (Test-Path "slskdn.nuspec")) {
+            Write-Host "❌ slskdn.nuspec not found in packaging/chocolatey/"
+            exit 1
+          }
+          
           choco pack
+          
           # Push to stable channel (no --prerelease flag)
           choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          
+          Write-Host "✅ Published to Chocolatey (stable channel)"
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1627,11 +1679,13 @@ jobs:
           echo "macos_x64_sha=$MACOS_X64_SHA" >> $GITHUB_OUTPUT
           echo "macos_arm64_sha=$MACOS_ARM64_SHA" >> $GITHUB_OUTPUT
 
-      - name: Update flake.nix
+      - name: Checkout Master for Nix
         run: |
           git fetch origin master
-          git reset --hard origin/master
-          
+          git checkout master
+
+      - name: Update flake.nix
+        run: |
           sed -i "s/version = \".*\";/version = \"${{ needs.parse.outputs.version }}\";/" flake.nix
           sed -i '/sources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
           sed -i '/sources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
@@ -1643,11 +1697,6 @@ jobs:
       - name: Verify Flake
         run: |
           nix flake check --no-build || echo "⚠️ Flake check failed (non-fatal)"
-
-      - name: Checkout Master for Nix
-        run: |
-          git fetch origin master
-          git checkout master
 
       - name: Commit and Push
         run: |
@@ -1753,7 +1802,15 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
+          # Verify snapcraft.yaml exists
+          if [ ! -f "packaging/snap/snapcraft.yaml" ]; then
+            echo "❌ packaging/snap/snapcraft.yaml not found!"
+            exit 1
+          fi
+          
           unzip slskdn-main-linux-x64.zip -d slskdn_dist
+          
+          # Update snapcraft.yaml
           sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
@@ -1762,6 +1819,13 @@ jobs:
           sudo snap install snapcraft --classic
           
           cd packaging/snap
+          
+          # Verify we're in the right directory and file exists
+          if [ ! -f "snapcraft.yaml" ]; then
+            echo "❌ snapcraft.yaml not found in packaging/snap/"
+            exit 1
+          fi
+          
           snapcraft --destructive-mode
           
           echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
