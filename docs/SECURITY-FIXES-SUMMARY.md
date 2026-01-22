@@ -152,9 +152,9 @@ Tested with all security profiles:
 - `tests/slskd.Tests.Integration/Security/HttpSecurityMiddlewareIntegrationTests.cs` - New integration tests
 
 ### Documentation
-- `docs/SECURITY-CONFIGURATION.md` - Updated
-- `docs/SECURITY-TEST-RESULTS.md` - New
-- `docs/SECURITY-FIXES-SUMMARY.md` - This document
+- `docs/archive/duplicates/SECURITY-CONFIGURATION.md` - Updated
+- `docs/archive/duplicates/SECURITY-TEST-RESULTS.md` - New
+- `docs/archive/duplicates/SECURITY-FIXES-SUMMARY.md` - This document
 
 ## Next Steps
 
@@ -177,6 +177,6 @@ Tested with all security profiles:
 
 ## References
 
-- [SECURITY-CONFIGURATION.md](./SECURITY-CONFIGURATION.md) - Configuration guide
-- [SECURITY-TEST-RESULTS.md](./SECURITY-TEST-RESULTS.md) - Test results
+- [SECURITY-CONFIGURATION.md](./docs/archive/duplicates/SECURITY-CONFIGURATION.md) - Configuration guide
+- [SECURITY-TEST-RESULTS.md](./docs/archive/duplicates/SECURITY-TEST-RESULTS.md) - Test results
 - [COMPILE_FIX_FOLLOWUP.md](../COMPILE_FIX_FOLLOWUP.md) - Original task list
