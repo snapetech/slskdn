@@ -159,7 +159,7 @@ Download files from multiple peers simultaneously for faster, more reliable tran
 - **SHA-256 verification** ensures content integrity
 - **Network-friendly** — distributes load instead of hammering single users
 
-📖 **[Full network impact analysis](docs/multipart-downloads.md)**
+📖 **Design docs**: [Network impact analysis](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Implementation guide](docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md) • [Roadmap](docs/multi-swarm-roadmap.md)
 
 ### 🌐 DHT Peer Discovery & Mesh Networking
 Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
@@ -169,6 +169,9 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 - **Peer greeting service** — Auto-discovery and handshake
 - **NAT detection** — UPnP/NAT-PMP port mapping
 - **Live status bar** — Real-time DHT nodes, mesh peers, hash counts in UI footer
+
+
+📖 **Design docs**: [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) • [MeshCore Research](docs/phase8-meshcore-research.md) • [Mesh Architecture](docs/virtual-soulfind-mesh-architecture.md)
 
 ### 🔒 Security Hardening
 Zero-trust security framework with defense-in-depth:
@@ -182,6 +185,9 @@ Zero-trust security framework with defense-in-depth:
 - **ByzantineConsensus** — 2/3+1 voting for multi-source verification
 - **Security dashboard** — Real-time monitoring in Web UI (System → Security tab)
 
+
+📖 **Design docs**: [Security Implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [CSRF Testing Guide](docs/security/CSRF_TESTING_GUIDE.md) • [Security Comparison](docs/security/SECURITY_COMPARISON_ANALYSIS.md) • [Hardening Roadmap](docs/SECURITY_HARDENING_ROADMAP.md)
+
 ### 🎵 MusicBrainz Integration & Library Health
 Automated metadata enrichment and quality assurance.
 - **MusicBrainz Client** — Query recordings, releases, artists
@@ -192,6 +198,9 @@ Automated metadata enrichment and quality assurance.
 - **Library Health Scanner** — Detects transcodes, quality issues, missing tracks
 - **Remediation Service** — Auto-fix via automatic re-download of better quality
 
+
+📖 **Design docs**: [MusicBrainz Integration](docs/MUSICBRAINZ_INTEGRATION.md)
+
 ### 📦 Pod System (Decentralized Communities)
 Topic-based micro-communities over the mesh overlay.
 - **Pod creation/management** — Private, Unlisted, or Listed visibility
@@ -201,6 +210,9 @@ Topic-based micro-communities over the mesh overlay.
 - **Gold Star Club** — Auto-join pod for first 1000 users
 - **Pod APIs** — Full REST API for pod operations
 
+
+📖 **Design docs**: [PodCore Research](docs/phase10-podcore-research.md) • [Pod API Design](docs/pod-api-design.md) • [Chat Bridge](docs/design/pods-soulseek-chat-bridge.md) • [Gold Star Club](docs/pod-f1000-social-hub-design.md)
+
 ### 🎭 VirtualSoulfind & Shadow Index
 Decentralized content discovery without relying solely on the Soulseek network.
 - **Shadow Index** — Decentralized MBID→peers mapping
@@ -209,6 +221,9 @@ Decentralized content discovery without relying solely on the Soulseek network.
 - **Disaster Mode** — Mesh-only operation when Soulseek unavailable
 - **Scene System** — Topic-based micro-networks for niche content
 
+
+📖 **Design docs**: [VirtualSoulfind v2 Design](docs/virtualsoulfind-v2-design.md) • [Implementation Design](docs/phase6-virtual-soulfind-implementation-design.md) • [User Guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Mesh Architecture](docs/virtual-soulfind-mesh-architecture.md)
+
 ### 🔧 Service Fabric
 Generic service layer for mesh-based applications.
 - **Service descriptors** — Signed Ed25519 descriptors for service discovery
@@ -216,6 +231,9 @@ Generic service layer for mesh-based applications.
 - **Service router** — Routes requests to service providers
 - **HTTP gateway** — API key + CSRF authentication for services
 - **Service wrappers** — Pods, VirtualSoulfind, introspection wrapped as services
+
+
+📖 **Design docs**: [Service Fabric Tasks](SERVICE_FABRIC_TASKS.md)
 
 ---
 
