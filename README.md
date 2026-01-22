@@ -251,7 +251,19 @@ Access at http://localhost:5030
 
 ### Development Builds
 For latest experimental features:
+
+<!-- BEGIN_DEV_BUILD -->
+**[Development Build experimental/whatAmIThinking →](https://github.com/snapetech/slskdn/releases/tag/experimental/whatAmIThinking)** 
+
+Version: `0.24.1-dev-91769043447` | Branch: `experimental/whatAmIThinking` 
+
 ```bash
+# Arch Linux (AUR)
+yay -S slskdn-dev          # Latest dev build
+sudo systemctl enable --now slskd
+```
+
+<!-- END_DEV_BUILD -->bash
 yay -S slskdn-dev          # Latest dev build
 sudo systemctl enable --now slskd
 ```
