@@ -346,11 +346,11 @@ dotnet run --project src/slskd/slskd.csproj
 | Smart source ranking | ❌ | ✅ |
 | User notes & ratings | ❌ | ✅ |
 | PWA support | ❌ | ✅ |
-| **Multi-source downloads** | ❌ | ✅ 🧪 |
-| **DHT mesh networking** | ❌ | ✅ 🧪 |
-| **Security hardening** | ❌ | ✅ 🧪 |
-| **MusicBrainz integration** | ❌ | ✅ 🧪 |
-| **Library health scanner** | ❌ | ✅ 🧪 |
+| **Multi-source downloads** | ❌ | ✅ |
+| **DHT mesh networking** | ❌ | ✅ |
+| **Security hardening** | ❌ | ✅ |
+| **MusicBrainz integration** | ❌ | ✅ |
+| **Library health scanner** | ❌ | ✅ |
 | **Pod communities** | ❌ | ✅ 🧪 |
 | **VirtualSoulfind v2** | ❌ | ✅ 🧪 |
 | **Service fabric** | ❌ | ✅ 🧪 |
