@@ -342,13 +342,13 @@ Comprehensive documentation is available for all features:
 
 ### Design Documents
 - [Multi-Source Downloads](docs/multipart-downloads.md) - Network impact analysis and architecture
-- [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) - Peer discovery architecture (if exists)
-- [Security Implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) - Security feature details (if exists)
-- [CSRF Testing Guide](docs/security/CSRF_TESTING_GUIDE.md) - CSRF protection testing (if exists)
+- [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) - Peer discovery architecture
+- [Security Implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) - Security feature details
+- [CSRF Testing Guide](docs/security/CSRF_TESTING_GUIDE.md) - CSRF protection testing
 
 ### Implementation Guides
-- [How It Works](HOW-IT-WORKS.md) - Technical architecture and design (if exists)
-- [Features Overview](FEATURES.md) - Complete feature list (if exists)
+- [How It Works](HOW-IT-WORKS.md) - Technical architecture and design
+- [Features Overview](FEATURES.md) - Complete feature list
 
 ### User Guides
 - [Configuration](docs/config.md) - All configuration options
