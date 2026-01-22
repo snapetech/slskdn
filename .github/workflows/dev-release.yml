@@ -428,6 +428,17 @@ jobs:
             git remote add origin ssh://aur@aur.archlinux.org/slskdn-dev.git
           }
 
+      - name: Ensure Master Branch
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
+          
+          cd aur-pkg
+          # Ensure we're on master branch (AUR requires master branch)
+          # If master exists, checkout it; otherwise create it
+          git checkout master 2>/dev/null || git checkout -b master || true
+
       - name: Update PKGBUILD
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
