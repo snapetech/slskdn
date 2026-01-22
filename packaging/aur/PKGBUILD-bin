@@ -20,7 +20,7 @@ backup=('etc/slskd/slskd.yml')
 options=('!strip')
 install=slskd.install
 source=(
-    "https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-${pkgver//.slskdn/-slskdn}-linux-x64.zip"
+    "https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"
     "slskd.service"
     "slskd.yml"
     "slskd.sysusers"
