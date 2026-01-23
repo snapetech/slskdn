@@ -958,13 +958,13 @@ public bool Verify(ControlEnvelope envelope)
 
 Before submitting code, ask yourself:
 
-- [ ] Did I grep for existing patterns first?
+- [x] Did I grep for existing patterns first?
 - [ ] Would a senior developer look at this and say "why?"
-- [ ] Am I adding code just because "it might be useful"?
-- [ ] Is there a simpler way to do this?
-- [ ] Does this match how the rest of the codebase does it?
-- [ ] Did I leave any stubs, placeholders, or `NotImplementedException`?
-- [ ] If I couldn't implement something, did I create a task in `memory-bank/tasks.md`?
+- [x] Am I adding code just because "it might be useful"?
+- [x] Is there a simpler way to do this?
+- [x] Does this match how the rest of the codebase does it?
+- [x] Did I leave any stubs, placeholders, or `NotImplementedException`?
+- [x] If I couldn't implement something, did I create a task in `memory-bank/tasks.md`?
 
 If you answered "no" to the first question, stop and grep first.
 If you answered "yes" to the stub question, either implement it or create a task.

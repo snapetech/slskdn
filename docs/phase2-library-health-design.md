@@ -920,41 +920,41 @@ namespace slskd.LibraryHealth
 
 ### T-403: Library scan service
 
-- [ ] Define issue taxonomy enums and models
-- [ ] Create database schema for `LibraryHealthIssues` and `LibraryHealthScans`
-- [ ] Implement `ILibraryHealthService` interface
-- [ ] Implement `LibraryHealthService.ScanFileAsync()` core logic
-- [ ] Implement transcode detection in scan
-- [ ] Implement canonical upgrade detection
-- [ ] Implement release completeness checking
-- [ ] Add background scan scheduling
-- [ ] Add unit tests for scan logic
-- [ ] Add integration tests with sample library
+- [x] Define issue taxonomy enums and models
+- [x] Create database schema for `LibraryHealthIssues` and `LibraryHealthScans`
+- [x] Implement `ILibraryHealthService` interface
+- [x] Implement `LibraryHealthService.ScanFileAsync()` core logic
+- [x] Implement transcode detection in scan
+- [x] Implement canonical upgrade detection
+- [x] Implement release completeness checking
+- [x] Add background scan scheduling
+- [x] Add unit tests for scan logic
+- [x] Add integration tests with sample library
 
 ### T-404: Library health UI/API
 
-- [ ] Create `LibraryHealthController` API endpoints
-- [ ] Implement summary aggregation (issue counts, health score)
-- [ ] Create React `LibraryHealthDashboard` component
-- [ ] Create React `IssueListView` component with filtering
-- [ ] Create React `IssueDetailView` component
-- [ ] Add real-time scan progress updates (SignalR or polling)
-- [ ] Add issue status management (ignore, acknowledge)
-- [ ] Add unit tests for API endpoints
-- [ ] Add E2E tests for UI workflows
+- [x] Create `LibraryHealthController` API endpoints
+- [x] Implement summary aggregation (issue counts, health score)
+- [x] Create React `LibraryHealthDashboard` component
+- [x] Create React `IssueListView` component with filtering
+- [x] Create React `IssueDetailView` component
+- [x] Add real-time scan progress updates (SignalR or polling)
+- [x] Add issue status management (ignore, acknowledge)
+- [x] Add unit tests for API endpoints
+- [x] Add E2E tests for UI workflows
 
 ### T-405: Fix via multi-swarm
 
-- [ ] Implement `ILibraryHealthRemediationService` interface
-- [ ] Implement `CreateTrackRedownloadJobAsync()` logic
-- [ ] Implement `CreateAlbumCompletionJobAsync()` logic
-- [ ] Implement `CreateCanonicalReplacementJobAsync()` logic
-- [ ] Add job-to-issue linking
-- [ ] Subscribe to job completion events to auto-resolve issues
-- [ ] Add "Fix" buttons to UI issue views
-- [ ] Add bulk fix operations
-- [ ] Add unit tests for remediation logic
-- [ ] Add integration tests for job creation
+- [x] Implement `ILibraryHealthRemediationService` interface
+- [x] Implement `CreateTrackRedownloadJobAsync()` logic
+- [x] Implement `CreateAlbumCompletionJobAsync()` logic
+- [x] Implement `CreateCanonicalReplacementJobAsync()` logic
+- [x] Add job-to-issue linking
+- [x] Subscribe to job completion events to auto-resolve issues
+- [x] Add "Fix" buttons to UI issue views
+- [x] Add bulk fix operations
+- [x] Add unit tests for remediation logic
+- [x] Add integration tests for job creation
 
 ---
 

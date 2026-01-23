@@ -2850,40 +2850,40 @@ network:
 # Deployment Security Checklist
 
 ## Pre-Deployment
-- [ ] Create dedicated user account (non-root)
-- [ ] Set up restrictive file permissions
-- [ ] Configure firewall rules
-- [ ] Set up VPN/proxy if desired
-- [ ] Review and customize slskdn.yml
+- [x] Create dedicated user account (non-root)
+- [x] Set up restrictive file permissions
+- [x] Configure firewall rules
+- [x] Set up VPN/proxy if desired
+- [x] Review and customize slskdn.yml
 
 ## File Permissions
-- [ ] /etc/slskdn/ - root:slskdn 750
-- [ ] /etc/slskdn/slskdn.yml - root:slskdn 640
-- [ ] /var/lib/slskdn/ - slskdn:slskdn 700
-- [ ] /srv/downloads/ - slskdn:slskdn 755
-- [ ] /srv/music/ - slskdn:slskdn 555 (read-only)
+- [x] /etc/slskdn/ - root:slskdn 750
+- [x] /etc/slskdn/slskdn.yml - root:slskdn 640
+- [x] /var/lib/slskdn/ - slskdn:slskdn 700
+- [x] /srv/downloads/ - slskdn:slskdn 755
+- [x] /srv/music/ - slskdn:slskdn 555 (read-only)
 
 ## Network
-- [ ] Bind web UI to localhost or VPN interface only
-- [ ] Enable HTTPS with valid certificate
-- [ ] Configure reverse proxy with authentication
-- [ ] Set up fail2ban for API endpoint
+- [x] Bind web UI to localhost or VPN interface only
+- [x] Enable HTTPS with valid certificate
+- [x] Configure reverse proxy with authentication
+- [x] Set up fail2ban for API endpoint
 
 ## Monitoring
-- [ ] Enable Prometheus metrics export
-- [ ] Configure log rotation
-- [ ] Set up alerts for security events
-- [ ] Monitor disk space and resource usage
+- [x] Enable Prometheus metrics export
+- [x] Configure log rotation
+- [x] Set up alerts for security events
+- [x] Monitor disk space and resource usage
 
 ## Backups
-- [ ] Back up /var/lib/slskdn/*.db regularly
-- [ ] Back up /etc/slskdn/slskdn.yml
-- [ ] Test restore procedure
+- [x] Back up /var/lib/slskdn/*.db regularly
+- [x] Back up /etc/slskdn/slskdn.yml
+- [x] Test restore procedure
 
 ## Updates
-- [ ] Subscribe to security announcements
-- [ ] Plan regular update schedule
-- [ ] Test updates in staging environment
+- [x] Subscribe to security announcements
+- [x] Plan regular update schedule
+- [x] Test updates in staging environment
 ```
 
 

@@ -42,14 +42,14 @@
 ### Phase 1: Pre-Merge Preparation
 
 #### 1.1 Code Verification
-- [ ] Verify all tests pass on whatAmIThinking branch
-- [ ] Confirm AUR build works (✅ Already verified)
-- [ ] Verify frontend builds without errors (✅ Already verified)
-- [ ] Check for any broken links in codebase
-- [ ] Verify all dependencies are correct
+- [x] Verify all tests pass on whatAmIThinking branch
+- [x] Confirm AUR build works (✅ Already verified)
+- [x] Verify frontend builds without errors (✅ Already verified)
+- [x] Check for any broken links in codebase
+- [x] Verify all dependencies are correct
 
 #### 1.2 Task Status Reconciliation
-- [ ] Update `memory-bank/tasks.md`:
+- [x] Update `memory-bank/tasks.md`:
   - Mark T-001 through T-005 as ✅ Complete
   - Update status from "Not started" to "Done"
   - Add completion dates from git log
@@ -65,74 +65,74 @@
   - Remove from "Pending" sections
 
 #### 1.3 Feature Status Updates
-- [ ] Review experimental features and determine which are production-ready:
+- [x] Review experimental features and determine which are production-ready:
   - **Multi-Source Downloads**: ✅ Production-ready (remove 🧪 marker)
   - **DHT Mesh Networking**: ✅ Production-ready (remove 🧪 marker)
   - **Security Hardening**: ✅ Production-ready (remove 🧪 marker, CSRF is stable)
   - **CSRF Protection**: ✅ Production-ready (fully implemented and tested)
-- [ ] Update comparison table in README to remove 🧪 markers for stable features
-- [ ] Update feature descriptions to reflect production status
+- [x] Update comparison table in README to remove 🧪 markers for stable features
+- [x] Update feature descriptions to reflect production status
 
 ---
 
 ### Phase 2: README Merge & Cleanup
 
 #### 2.1 README Structure Merge
-- [ ] **Base structure**: Use master README as baseline (cleaner, more concise)
-- [ ] **Feature sections**: Merge detailed feature descriptions from whatAmIThinking
-- [ ] **Experimental section**: 
+- [x] **Base structure**: Use master README as baseline (cleaner, more concise)
+- [x] **Feature sections**: Merge detailed feature descriptions from whatAmIThinking
+- [x] **Experimental section**: 
   - Move production-ready features out of experimental section
   - Keep only truly experimental features (if any remain)
   - Update branch reference from `experimental/merge` → `experimental/whatAmIThinking` (or remove if graduating)
-- [ ] **Links to design docs**: 
+- [x] **Links to design docs**: 
   - Add links to all relevant design documents
   - Link to historical documentation where appropriate
   - Ensure all feature descriptions link to detailed docs
 
 #### 2.2 README Content Updates
-- [ ] **Feature count**: Update "24+ new features" to accurate count
-- [ ] **Version info**: Update base version references
-- [ ] **Installation**: Ensure all package manager instructions are current
-- [ ] **Quick Start**: Keep concise, link to detailed docs
-- [ ] **Comparison table**: 
+- [x] **Feature count**: Update "24+ new features" to accurate count
+- [x] **Version info**: Update base version references
+- [x] **Installation**: Ensure all package manager instructions are current
+- [x] **Quick Start**: Keep concise, link to detailed docs
+- [x] **Comparison table**: 
   - Remove 🧪 markers from production features
   - Ensure all features are accurately represented
-- [ ] **Configuration**: Merge config examples, ensure accuracy
+- [x] **Configuration**: Merge config examples, ensure accuracy
 
 #### 2.3 README Link Audit
-- [ ] Add links to design documents:
+- [x] Add links to design documents:
   - Multi-source downloads: `docs/multipart-downloads.md`
   - DHT/Mesh: `docs/DHT_RENDEZVOUS_DESIGN.md` (if exists)
   - Security: `docs/security/SECURITY_IMPLEMENTATION_SPECS.md` (if exists)
   - CSRF: `docs/security/CSRF_TESTING_GUIDE.md` (if exists)
-- [ ] Add links to historical docs:
+- [x] Add links to historical docs:
   - Development history: `DEVELOPMENT_HISTORY.md`
   - Fork vision: `FORK_VISION.md`
   - Features: `FEATURES.md` (if exists)
-- [ ] Verify all existing links work
-- [ ] Add "Documentation" section with index
+- [x] Verify all existing links work
+- [x] Add "Documentation" section with index
 
 ---
 
 ### Phase 3: Documentation Cleanup & Organization
 
 #### 3.1 Documentation Audit
-- [ ] **Review all 140 new docs files** in whatAmIThinking:
+- [x] **Review all 140 new docs files** in whatAmIThinking:
   - Identify which are design docs (keep)
   - Identify which are planning/audit docs (archive or consolidate)
   - Identify which are duplicates (remove)
   - Identify which are outdated (update or remove)
-- [ ] **Create documentation index**:
+- [x] **Create documentation index**:
   - `docs/README.md` should list all design docs
   - Group by category (Design, Security, Implementation, Historical)
   - Add descriptions for each doc
-- [ ] **Consolidate audit/planning docs**:
+- [x] **Consolidate audit/planning docs**:
   - Many files like `AUDIT_*.md`, `COMPLETE_*.md`, `PLANNING_*.md` may be historical
   - Decide: archive to `docs/archive/` or consolidate into single historical doc
   - Keep only current/relevant planning docs
 
 #### 3.2 Documentation Structure
-- [ ] **Organize docs/ directory**:
+- [x] **Organize docs/ directory**:
   ```
   docs/
   ├── README.md (index)
@@ -148,18 +148,18 @@
   ├── historical/ (archived planning/audit docs)
   └── [existing docs: build.md, config.md, etc.]
   ```
-- [ ] **Update all doc links** in README and other docs to reflect new structure
+- [x] **Update all doc links** in README and other docs to reflect new structure
 
 #### 3.3 Documentation Content Updates
-- [ ] **Remove outdated references**:
+- [x] **Remove outdated references**:
   - Remove references to "experimental/merge" branch
   - Update branch references to current state
   - Remove "future" language for implemented features
-- [ ] **Add missing documentation**:
+- [x] **Add missing documentation**:
   - Ensure all major features have design docs
   - Add implementation guides where needed
   - Add user guides for complex features
-- [ ] **Update status markers**:
+- [x] **Update status markers**:
   - Change "planned" → "implemented" where appropriate
   - Change "experimental" → "stable" where appropriate
   - Update completion percentages
@@ -169,27 +169,27 @@
 ### Phase 4: Code Merge Strategy
 
 #### 4.1 Merge Approach
-- [ ] **Strategy**: Merge whatAmIThinking → master (not rebase, preserve history)
-- [ ] **Conflict resolution plan**:
+- [x] **Strategy**: Merge whatAmIThinking → master (not rebase, preserve history)
+- [x] **Conflict resolution plan**:
   - README: Use whatAmIThinking version (more complete)
   - Config files: Merge both, prefer whatAmIThinking
   - Code: Prefer whatAmIThinking (it's the working version)
-- [ ] **Pre-merge checklist**:
-  - [ ] All tests pass
-  - [ ] No critical bugs
-  - [ ] Documentation updated
-  - [ ] Task statuses updated
-  - [ ] README merged and cleaned
+- [x] **Pre-merge checklist**:
+  - [x] All tests pass
+  - [x] No critical bugs
+  - [x] Documentation updated
+  - [x] Task statuses updated
+  - [x] README merged and cleaned
 
 #### 4.2 Post-Merge Tasks
-- [ ] **Update CI/CD workflows**:
+- [x] **Update CI/CD workflows**:
   - Ensure main branch builds work
   - Update version numbers
   - Update package descriptions
-- [ ] **Update branch protection**:
+- [x] **Update branch protection**:
   - Ensure main branch is protected
   - Update required checks
-- [ ] **Tag release**:
+- [x] **Tag release**:
   - Create stable release tag
   - Update release notes
   - Publish to all package managers
@@ -199,110 +199,110 @@
 ### Phase 5: Documentation Link Updates
 
 #### 5.1 README Links
-- [ ] Add "Documentation" section with:
+- [x] Add "Documentation" section with:
   - Design Documents
   - Implementation Guides  
   - Security Documentation
   - Historical Documentation
   - User Guides
-- [ ] Link each feature to its design doc
-- [ ] Add "See Also" sections where relevant
+- [x] Link each feature to its design doc
+- [x] Add "See Also" sections where relevant
 
 #### 5.2 Cross-Document Links
-- [ ] Update all internal doc links to reflect new structure
-- [ ] Add "Related Documents" sections
-- [ ] Create documentation index/map
-- [ ] Ensure all design docs link back to README
+- [x] Update all internal doc links to reflect new structure
+- [x] Add "Related Documents" sections
+- [x] Create documentation index/map
+- [x] Ensure all design docs link back to README
 
 #### 5.3 External Links
-- [ ] Verify all external links (GitHub, Discord, etc.)
-- [ ] Update package manager badges/links
-- [ ] Ensure all release links are current
+- [x] Verify all external links (GitHub, Discord, etc.)
+- [x] Update package manager badges/links
+- [x] Ensure all release links are current
 
 ---
 
 ### Phase 6: Task & Status File Updates
 
 #### 6.1 memory-bank/tasks.md
-- [ ] Merge comprehensive tasks.md from whatAmIThinking (387 tasks, 78% complete)
-- [ ] Update all T-001 through T-005 to ✅ Complete
-- [ ] Add completion dates from git log
+- [x] Merge comprehensive tasks.md from whatAmIThinking (387 tasks, 78% complete)
+- [x] Update all T-001 through T-005 to ✅ Complete
+- [x] Add completion dates from git log
 - [ ] Reconcile with DEVELOPMENT_HISTORY.md
-- [ ] Update "Last updated" date
+- [x] Update "Last updated" date
 
 #### 6.2 DEVELOPMENT_HISTORY.md
-- [ ] Update Phase 2: 80% → 100% (T-002, T-003 done)
-- [ ] Update Phase 3: 60% → 60% (no new completions)
-- [ ] Update Phase 4: 50% → 75% (T-004 done)
-- [ ] Update Phase 5: 0% → 20% (T-005 done)
-- [ ] Update Phase 1: Add T-001 if missing
-- [ ] Update "Last updated" date to current
+- [x] Update Phase 2: 80% → 100% (T-002, T-003 done)
+- [x] Update Phase 3: 60% → 60% (no new completions)
+- [x] Update Phase 4: 50% → 75% (T-004 done)
+- [x] Update Phase 5: 0% → 20% (T-005 done)
+- [x] Update Phase 1: Add T-001 if missing
+- [x] Update "Last updated" date to current
 
 #### 6.3 FORK_VISION.md
-- [ ] Mark completed features as ✅ Done
-- [ ] Remove from "Pending" sections
-- [ ] Update completion percentages
-- [ ] Add links to implementation docs
+- [x] Mark completed features as ✅ Done
+- [x] Remove from "Pending" sections
+- [x] Update completion percentages
+- [x] Add links to implementation docs
 
 #### 6.4 TODO.md
-- [ ] Review and update
-- [ ] Remove completed items
-- [ ] Add new priorities if needed
-- [ ] Link to tasks.md for detailed tracking
+- [x] Review and update
+- [x] Remove completed items
+- [x] Add new priorities if needed
+- [x] Link to tasks.md for detailed tracking
 
 ---
 
 ### Phase 7: Feature Graduation (Experimental → Stable)
 
 #### 7.1 Features to Graduate
-- [ ] **Multi-Source Downloads**:
+- [x] **Multi-Source Downloads**:
   - Remove 🧪 marker from README
   - Update comparison table
   - Move from "Experimental" to main "Features" section
   - Add to DEVELOPMENT_HISTORY.md as complete
-- [ ] **DHT Mesh Networking**:
+- [x] **DHT Mesh Networking**:
   - Remove 🧪 marker
   - Update status to stable
   - Add design doc links
-- [ ] **Security Hardening**:
+- [x] **Security Hardening**:
   - Remove 🧪 marker (CSRF is production-ready)
   - Update to reflect full implementation
   - Link to security documentation
-- [ ] **CSRF Protection**:
+- [x] **CSRF Protection**:
   - Mark as stable (fully implemented and tested)
   - Add to main features list
   - Link to CSRF testing guide
 
 #### 7.2 Update Package Descriptions
-- [ ] Remove "EXPERIMENTAL" markers where features are stable
-- [ ] Update feature counts
-- [ ] Ensure descriptions match README
+- [x] Remove "EXPERIMENTAL" markers where features are stable
+- [x] Update feature counts
+- [x] Ensure descriptions match README
 
 ---
 
 ### Phase 8: Final Cleanup
 
 #### 8.1 Remove Obsolete Files
-- [ ] Identify and remove:
+- [x] Identify and remove:
   - Duplicate documentation
   - Outdated planning docs (or archive)
   - Temporary/scratch files
   - Build artifacts in wrong locations
-- [ ] Archive historical docs to `docs/archive/` or `docs/historical/`
+- [x] Archive historical docs to `docs/archive/` or `docs/historical/`
 
 #### 8.2 Consolidate Documentation
-- [ ] Merge similar docs where appropriate
-- [ ] Create master documentation index
-- [ ] Ensure no orphaned docs
+- [x] Merge similar docs where appropriate
+- [x] Create master documentation index
+- [x] Ensure no orphaned docs
 
 #### 8.3 Final Verification
-- [ ] All links work
-- [ ] All features documented
-- [ ] All tasks statuses accurate
-- [ ] README is complete and accurate
-- [ ] No broken references
-- [ ] Version numbers consistent
-- [ ] Branch references updated
+- [x] All links work
+- [x] All features documented
+- [x] All tasks statuses accurate
+- [x] README is complete and accurate
+- [x] No broken references
+- [x] Version numbers consistent
+- [x] Branch references updated
 
 ---
 
@@ -330,16 +330,16 @@
 
 ## 🎯 Success Criteria
 
-- [ ] All code from whatAmIThinking merged to main
-- [ ] README is complete, accurate, and well-linked
-- [ ] All task statuses reflect reality
-- [ ] All features properly documented with links
-- [ ] No experimental markers on stable features
-- [ ] Documentation is organized and navigable
-- [ ] All links work
-- [ ] Build works on main branch
-- [ ] Package descriptions updated
-- [ ] Release created and published
+- [x] All code from whatAmIThinking merged to main
+- [x] README is complete, accurate, and well-linked
+- [x] All task statuses reflect reality
+- [x] All features properly documented with links
+- [x] No experimental markers on stable features
+- [x] Documentation is organized and navigable
+- [x] All links work
+- [x] Build works on main branch
+- [x] Package descriptions updated
+- [x] Release created and published
 
 ---
 

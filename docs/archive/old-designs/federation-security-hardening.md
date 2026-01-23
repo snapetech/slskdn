@@ -378,16 +378,16 @@ This document defines concrete security and hardening requirements for all **fed
 
 **Before federation features go live:**
 
-- [ ] All inbound AP requests authenticated and validated
-- [ ] All outbound AP requests respect blocklists and quotas
-- [ ] Federation mode defaults to `Hermit` or `Off`
-- [ ] Realm trust model enforces governance root validation
-- [ ] Bridge disabled by default, dangerous flows always denied
-- [ ] Gossip feeds strip PII, enforce size limits, treat as untrusted hints
-- [ ] Replication strictly whitelisted, quotas enforced, MCP-gated
-- [ ] All federation content eligible for MCP checks
-- [ ] Comprehensive logging without secrets/PII
-- [ ] Metrics for abuse detection in place
-- [ ] Default configs conservative, enabling federation requires explicit action
+- [x] All inbound AP requests authenticated and validated
+- [x] All outbound AP requests respect blocklists and quotas
+- [x] Federation mode defaults to `Hermit` or `Off`
+- [x] Realm trust model enforces governance root validation
+- [x] Bridge disabled by default, dangerous flows always denied
+- [x] Gossip feeds strip PII, enforce size limits, treat as untrusted hints
+- [x] Replication strictly whitelisted, quotas enforced, MCP-gated
+- [x] All federation content eligible for MCP checks
+- [x] Comprehensive logging without secrets/PII
+- [x] Metrics for abuse detection in place
+- [x] Default configs conservative, enabling federation requires explicit action
 
 **Security Review Required**: Before merging any federation implementation to production branch.

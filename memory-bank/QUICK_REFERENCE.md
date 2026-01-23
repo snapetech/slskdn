@@ -33,16 +33,16 @@
 
 Before committing code, verify:
 
-- [ ] **Grepped for patterns** - No invented abstractions
-- [ ] **No defensive null checks** - Only validate at boundaries  
-- [ ] **Exceptions propagate** - No swallowed errors
-- [ ] **No logging spam** - Only meaningful events
-- [ ] **Clear names** - No Manager/Helper/Handler/Wrapper
-- [ ] **Async void wrapped** - try-catch on all async void
-- [ ] **Network rate-limited** - SemaphoreSlim on peer operations
-- [ ] **Small functions** - Methods < 50 lines
-- [ ] **Safe return values** - Frontend libs return [] not undefined
-- [ ] **Matches codebase style** - Consistent with existing code
+- [x] **Grepped for patterns** - No invented abstractions
+- [x] **No defensive null checks** - Only validate at boundaries  
+- [x] **Exceptions propagate** - No swallowed errors
+- [x] **No logging spam** - Only meaningful events
+- [x] **Clear names** - No Manager/Helper/Handler/Wrapper
+- [x] **Async void wrapped** - try-catch on all async void
+- [x] **Network rate-limited** - SemaphoreSlim on peer operations
+- [x] **Small functions** - Methods < 50 lines
+- [x] **Safe return values** - Frontend libs return [] not undefined
+- [x] **Matches codebase style** - Consistent with existing code
 
 ---
 
@@ -168,19 +168,19 @@ export const getAll = async () => {
 
 ## Security Checklist
 
-- [ ] **File paths validated** - Use `PathGuard.NormalizeAndValidate()`
-- [ ] **API inputs validated** - Check at controller boundaries
-- [ ] **Rate limiting added** - Network operations bounded
-- [ ] **Async void wrapped** - All event handlers have try-catch
+- [x] **File paths validated** - Use `PathGuard.NormalizeAndValidate()`
+- [x] **API inputs validated** - Check at controller boundaries
+- [x] **Rate limiting added** - Network operations bounded
+- [x] **Async void wrapped** - All event handlers have try-catch
 
 ---
 
 ## Efficiency Checklist
 
-- [ ] **O(n) not O(n²)** - Use HashSet for lookups
-- [ ] **Batch DB queries** - No N+1 problems
-- [ ] **Bound parallelism** - SemaphoreSlim on Task.WhenAll
-- [ ] **No waste** - Don't recompile regex in loops
+- [x] **O(n) not O(n²)** - Use HashSet for lookups
+- [x] **Batch DB queries** - No N+1 problems
+- [x] **Bound parallelism** - SemaphoreSlim on Task.WhenAll
+- [x] **No waste** - Don't recompile regex in loops
 
 ---
 

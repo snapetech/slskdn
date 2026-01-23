@@ -333,34 +333,34 @@ Before finalizing your changes, verify:
 
 ### 7.1. Scope Control
 
-- [ ] You did not modify HTTP controllers, pods, VirtualSoulfind, or `IMeshServiceDirectory`
-- [ ] You only added/modified code related to service contracts, router, and client, plus minimal supporting plumbing
+- [x] You did not modify HTTP controllers, pods, VirtualSoulfind, or `IMeshServiceDirectory`
+- [x] You only added/modified code related to service contracts, router, and client, plus minimal supporting plumbing
 
 ### 7.2. Async Correctness
 
-- [ ] No `.Result` / `.Wait()` on async tasks in the new code
-- [ ] `CancellationToken` is accepted and forwarded in all async APIs
+- [x] No `.Result` / `.Wait()` on async tasks in the new code
+- [x] `CancellationToken` is accepted and forwarded in all async APIs
 
 ### 7.3. Performance
 
-- [ ] No heavy LINQ chains or large allocations in per-message paths
-- [ ] Reasonable limits enforced on payload sizes and in-flight calls
+- [x] No heavy LINQ chains or large allocations in per-message paths
+- [x] Reasonable limits enforced on payload sizes and in-flight calls
 
 ### 7.4. Security
 
-- [ ] Router enforces basic per-peer/per-service limits and size checks
-- [ ] Security/reputation components are invoked where appropriate
-- [ ] No sensitive data is logged
+- [x] Router enforces basic per-peer/per-service limits and size checks
+- [x] Security/reputation components are invoked where appropriate
+- [x] No sensitive data is logged
 
 ### 7.5. Consistency
 
-- [ ] Naming, DI patterns, and logging follow the repo's conventions
-- [ ] Serialization/integration with overlay messages uses existing helpers
+- [x] Naming, DI patterns, and logging follow the repo's conventions
+- [x] Serialization/integration with overlay messages uses existing helpers
 
 ### 7.6. Documentation
 
-- [ ] `IMeshService`, `IMeshServiceClient`, `ServiceCall`, `ServiceReply`, and router have brief XML docs
-- [ ] Non-obvious security behavior is commented in code (short, clear remarks)
+- [x] `IMeshService`, `IMeshServiceClient`, `ServiceCall`, `ServiceReply`, and router have brief XML docs
+- [x] Non-obvious security behavior is commented in code (short, clear remarks)
 
 ---
 
@@ -406,16 +406,16 @@ Before finalizing your changes, verify:
 
 T-SF02 is complete when:
 
-- [ ] `IMeshService` interface is defined
-- [ ] `ServiceCall` and `ServiceReply` DTOs are defined
-- [ ] `MeshServiceRouter` is implemented and can dispatch calls to registered services
-- [ ] `IMeshServiceClient` is implemented and can make calls over the overlay
-- [ ] Security checks are integrated (ban list, rate limits, size limits)
-- [ ] Unit tests pass for router and client
-- [ ] Integration test passes for client → router → service → reply round-trip
-- [ ] All existing tests still pass (no regressions)
-- [ ] XML docs are present for public types
-- [ ] Anti-slop checklist is satisfied
+- [x] `IMeshService` interface is defined
+- [x] `ServiceCall` and `ServiceReply` DTOs are defined
+- [x] `MeshServiceRouter` is implemented and can dispatch calls to registered services
+- [x] `IMeshServiceClient` is implemented and can make calls over the overlay
+- [x] Security checks are integrated (ban list, rate limits, size limits)
+- [x] Unit tests pass for router and client
+- [x] Integration test passes for client → router → service → reply round-trip
+- [x] All existing tests still pass (no regressions)
+- [x] XML docs are present for public types
+- [x] Anti-slop checklist is satisfied
 
 ---
 

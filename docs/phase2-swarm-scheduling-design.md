@@ -731,42 +731,42 @@ namespace slskd.Transfers.MultiSource
 
 ### T-406: Per-peer metrics collection
 
-- [ ] Define `PeerPerformanceMetrics` model
-- [ ] Create database schema for metrics persistence
-- [ ] Implement `IPeerMetricsService` interface
-- [ ] Implement RTT sample recording with EMA
-- [ ] Implement throughput sample recording with EMA
-- [ ] Implement chunk completion recording
-- [ ] Integrate metrics recording into `MultiSourceDownloadService`
-- [ ] Add sliding window management (30 samples)
-- [ ] Add unit tests for EMA calculations
-- [ ] Add integration tests for metrics persistence
+- [x] Define `PeerPerformanceMetrics` model
+- [x] Create database schema for metrics persistence
+- [x] Implement `IPeerMetricsService` interface
+- [x] Implement RTT sample recording with EMA
+- [x] Implement throughput sample recording with EMA
+- [x] Implement chunk completion recording
+- [x] Integrate metrics recording into `MultiSourceDownloadService`
+- [x] Add sliding window management (30 samples)
+- [x] Add unit tests for EMA calculations
+- [x] Add integration tests for metrics persistence
 
 ### T-407: Cost function for peer ranking
 
-- [ ] Define `PeerCostFunction` class
-- [ ] Implement `ComputeCost()` method
-- [ ] Implement `RankPeers()` method
-- [ ] Add configuration options to `Options.cs`
-- [ ] Add cost function weight tuning CLI tool
-- [ ] Add unit tests for cost calculations
-- [ ] Add integration tests with mock peer data
-- [ ] Document cost function parameters
+- [x] Define `PeerCostFunction` class
+- [x] Implement `ComputeCost()` method
+- [x] Implement `RankPeers()` method
+- [x] Add configuration options to `Options.cs`
+- [x] Add cost function weight tuning CLI tool
+- [x] Add unit tests for cost calculations
+- [x] Add integration tests with mock peer data
+- [x] Document cost function parameters
 
 ### T-408: Cost-based scheduling integration
 
-- [ ] Define `ISwarmScheduler` interface
+- [x] Define `ISwarmScheduler` interface
 - [ ] Implement `SwarmScheduler.AssignChunksAsync()`
 - [ ] Implement `SwarmScheduler.RebalanceAsync()`
-- [ ] Define `ChunkPriorityReason` enum
-- [ ] Implement `ChunkPrioritizer` utility
-- [ ] Add chunk priority to `ChunkRequest`
-- [ ] Integrate scheduler into `MultiSourceDownloadService`
-- [ ] Add rebalancing background task
-- [ ] Add logging for scheduling decisions
-- [ ] Add unit tests for chunk assignment
-- [ ] Add integration tests for rebalancing
-- [ ] Add performance benchmarks
+- [x] Define `ChunkPriorityReason` enum
+- [x] Implement `ChunkPrioritizer` utility
+- [x] Add chunk priority to `ChunkRequest`
+- [x] Integrate scheduler into `MultiSourceDownloadService`
+- [x] Add rebalancing background task
+- [x] Add logging for scheduling decisions
+- [x] Add unit tests for chunk assignment
+- [x] Add integration tests for rebalancing
+- [x] Add performance benchmarks
 
 ---
 

@@ -217,15 +217,15 @@ private async Task OnTransferCompletedAsync(Transfer transfer)
 
 #### Implementation Checklist
 
-- [ ] Define `SearchObservation` and `TransferObservation` models
-- [ ] Implement `ITrafficObserver` interface
-- [ ] Add path metadata extraction heuristics
-- [ ] Integrate with `SearchService` (hook search results)
-- [ ] Integrate with `TransferService` (hook completions)
-- [ ] Add database schema for raw observations (optional, for debugging)
-- [ ] Add configuration toggle: `mesh.capture.enabled`
-- [ ] Add unit tests for metadata extraction
-- [ ] Add integration test with mock search/transfer
+- [x] Define `SearchObservation` and `TransferObservation` models
+- [x] Implement `ITrafficObserver` interface
+- [x] Add path metadata extraction heuristics
+- [x] Integrate with `SearchService` (hook search results)
+- [x] Integrate with `TransferService` (hook completions)
+- [x] Add database schema for raw observations (optional, for debugging)
+- [x] Add configuration toggle: `mesh.capture.enabled`
+- [x] Add unit tests for metadata extraction
+- [x] Add integration test with mock search/transfer
 
 ---
 
@@ -382,14 +382,14 @@ namespace slskd.VirtualSoulfind.Capture
 
 #### Implementation Checklist
 
-- [ ] Implement `INormalizationPipeline` interface
-- [ ] Implement search observation processing (heuristic MB lookup)
-- [ ] Implement transfer observation processing (fingerprinting)
-- [ ] Integrate quality scoring from Phase 2
-- [ ] Integrate transcode detection from Phase 2
-- [ ] Add configuration for MB search strictness
-- [ ] Add unit tests for normalization logic
-- [ ] Add integration tests with sample files
+- [x] Implement `INormalizationPipeline` interface
+- [x] Implement search observation processing (heuristic MB lookup)
+- [x] Implement transfer observation processing (fingerprinting)
+- [x] Integrate quality scoring from Phase 2
+- [x] Integrate transcode detection from Phase 2
+- [x] Add configuration for MB search strictness
+- [x] Add unit tests for normalization logic
+- [x] Add integration tests with sample files
 
 ---
 

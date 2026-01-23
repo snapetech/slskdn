@@ -52,13 +52,13 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
   - snapcraft.yaml at `packaging/snap/`
 - [x] **NixOS/Nix** - Growing declarative Linux distro ✅
   - flake.nix at root
-- [ ] **Portainer Templates** - Docker GUI users
+- [x] **Portainer Templates** - Docker GUI users
   - JSON template, easy to add
-- [ ] **QNAP App Center** - Another NAS vendor
+- [x] **QNAP App Center** - Another NAS vendor
   - QPKG format
 - [ ] **Helm Charts** (Kubernetes) - K8s deployments
   - For enterprise/homelab K8s users
-- [ ] **OpenMediaVault Plugins** - Debian-based NAS
+- [x] **OpenMediaVault Plugins** - Debian-based NAS
   - OMV plugin format
 
 ### 🟢 Low Priority / Nice to Have
@@ -66,9 +66,9 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
   - nuspec at `packaging/chocolatey/slskdn.nuspec`
 - [x] **Winget** (Windows) - Microsoft's package manager ✅
   - Manifests at `packaging/winget/`
-- [ ] **Scoop** (Windows) - Alternative Windows PM
-- [ ] **AppImage** (Linux) - Portable Linux apps
-- [ ] **FreeBSD Ports** - BSD systems
+- [x] **Scoop** (Windows) - Alternative Windows PM
+- [x] **AppImage** (Linux) - Portable Linux apps
+- [x] **FreeBSD Ports** - BSD systems
 - [ ] **Proxmox LXC Templates** - Proxmox users
 
 ### Implementation Notes

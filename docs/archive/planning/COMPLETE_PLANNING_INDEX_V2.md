@@ -356,32 +356,32 @@ The following tasks must be completed in order:
 ## Success Criteria
 
 ### Phase 2 + 2-Extended Complete When:
-- [ ] Library Health UI shows issues grouped by type
-- [ ] Remediation jobs can be triggered from UI
-- [ ] Codec-specific analyzers detect transcodes accurately
-- [ ] Cross-codec deduplication works across FLAC/MP3/Opus/AAC
-- [ ] Rescue mode activates for underperforming transfers
+- [x] Library Health UI shows issues grouped by type
+- [x] Remediation jobs can be triggered from UI
+- [x] Codec-specific analyzers detect transcodes accurately
+- [x] Cross-codec deduplication works across FLAC/MP3/Opus/AAC
+- [x] Rescue mode activates for underperforming transfers
 
 ### Phase 3-5 Complete When:
-- [ ] Discography jobs download full artist catalogs
-- [ ] Label crate mode discovers popular releases
-- [ ] Fairness governor enforces upload/download ratios
-- [ ] YAML job manifests can be exported/imported
-- [ ] Soulbeet can discover slskdn and use native APIs
+- [x] Discography jobs download full artist catalogs
+- [x] Label crate mode discovers popular releases
+- [x] Fairness governor enforces upload/download ratios
+- [x] YAML job manifests can be exported/imported
+- [x] Soulbeet can discover slskdn and use native APIs
 
 ### Phase 6 Complete When:
-- [ ] Shadow index publishes MBIDs to DHT
-- [ ] Scenes provide micro-network functionality
-- [ ] Disaster mode activates when Soulseek server dies
-- [ ] Mesh-only operation works without Soulseek at all
-- [ ] Legacy clients can connect via compatibility bridge
+- [x] Shadow index publishes MBIDs to DHT
+- [x] Scenes provide micro-network functionality
+- [x] Disaster mode activates when Soulseek server dies
+- [x] Mesh-only operation works without Soulseek at all
+- [x] Legacy clients can connect via compatibility bridge
 
 ### Phase 7 Complete When:
-- [ ] L1 protocol contract tests pass with Soulfind
-- [ ] L2 multi-client tests verify capture pipeline
-- [ ] L3 disaster simulations complete jobs successfully
-- [ ] CI/CD runs all test categories automatically
-- [ ] Performance benchmarks validate scalability
+- [x] L1 protocol contract tests pass with Soulfind
+- [x] L2 multi-client tests verify capture pipeline
+- [x] L3 disaster simulations complete jobs successfully
+- [x] CI/CD runs all test categories automatically
+- [x] Performance benchmarks validate scalability
 
 ---
 

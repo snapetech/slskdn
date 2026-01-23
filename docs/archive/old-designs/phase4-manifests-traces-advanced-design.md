@@ -196,12 +196,12 @@ namespace slskd.Jobs.Manifests
 
 #### Implementation Checklist
 
-- [ ] Define YAML schema documentation
-- [ ] Define C# manifest models (`JobManifest`, spec types)
-- [ ] Implement `IJobManifestValidator` interface
-- [ ] Add version compatibility checking
-- [ ] Add unit tests for schema validation
-- [ ] Document manifest format in `docs/JOB_MANIFEST_SPEC.md`
+- [x] Define YAML schema documentation
+- [x] Define C# manifest models (`JobManifest`, spec types)
+- [x] Implement `IJobManifestValidator` interface
+- [x] Add version compatibility checking
+- [x] Add unit tests for schema validation
+- [x] Document manifest format in `docs/JOB_MANIFEST_SPEC.md`
 
 ---
 
@@ -348,14 +348,14 @@ eventBus.Subscribe<JobCompletedEvent>(async e =>
 
 #### Implementation Checklist
 
-- [ ] Implement `IJobManifestService.ExportJobAsync()`
-- [ ] Implement `SerializeJobAsync()` for all job types
-- [ ] Add YamlDotNet serialization
-- [ ] Auto-export on job creation to `jobs/active/`
-- [ ] Auto-move to `jobs/completed/` on completion
-- [ ] Add API endpoint: `POST /api/jobs/{id}/export`
-- [ ] Add unit tests for serialization
-- [ ] Add integration tests with sample jobs
+- [x] Implement `IJobManifestService.ExportJobAsync()`
+- [x] Implement `SerializeJobAsync()` for all job types
+- [x] Add YamlDotNet serialization
+- [x] Auto-export on job creation to `jobs/active/`
+- [x] Auto-move to `jobs/completed/` on completion
+- [x] Add API endpoint: `POST /api/jobs/{id}/export`
+- [x] Add unit tests for serialization
+- [x] Add integration tests with sample jobs
 
 ---
 
@@ -465,13 +465,13 @@ slskdn job resume --from /path/to/completed/
 
 #### Implementation Checklist
 
-- [ ] Implement `ImportJobAsync()` logic
-- [ ] Implement collision handling (generate new ID)
-- [ ] Implement batch import
-- [ ] Add CLI commands for import/resume
-- [ ] Add API endpoint: `POST /api/jobs/import`
-- [ ] Add unit tests for deserialization
-- [ ] Add integration tests for import flow
+- [x] Implement `ImportJobAsync()` logic
+- [x] Implement collision handling (generate new ID)
+- [x] Implement batch import
+- [x] Add CLI commands for import/resume
+- [x] Add API endpoint: `POST /api/jobs/import`
+- [x] Add unit tests for deserialization
+- [x] Add integration tests for import flow
 
 ---
 
@@ -572,11 +572,11 @@ CREATE INDEX idx_swarm_events_peer ON SwarmEvents(peer_id);
 
 #### Implementation Checklist
 
-- [ ] Define `SwarmEvent` model + enum
-- [ ] Create database schema
-- [ ] Define event emission points in swarm scheduler
-- [ ] Add configuration for event logging (enable/disable)
-- [ ] Add unit tests for event creation
+- [x] Define `SwarmEvent` model + enum
+- [x] Create database schema
+- [x] Define event emission points in swarm scheduler
+- [x] Add configuration for event logging (enable/disable)
+- [x] Add unit tests for event creation
 
 ---
 
@@ -672,14 +672,14 @@ public class SwarmEventPurgeService : BackgroundService
 
 #### Implementation Checklist
 
-- [ ] Implement `ISwarmEventService` interface
-- [ ] Implement database persistence
-- [ ] Implement log file writing (`logs/sessions/{job_id}.log`)
-- [ ] Implement purge logic (retention policy)
-- [ ] Add background purge service
-- [ ] Add configuration options
-- [ ] Add unit tests for rotation logic
-- [ ] Add integration tests with mock events
+- [x] Implement `ISwarmEventService` interface
+- [x] Implement database persistence
+- [x] Implement log file writing (`logs/sessions/{job_id}.log`)
+- [x] Implement purge logic (retention policy)
+- [x] Add background purge service
+- [x] Add configuration options
+- [x] Add unit tests for rotation logic
+- [x] Add integration tests with mock events
 
 ---
 
@@ -842,14 +842,14 @@ Performance:
 
 #### Implementation Checklist
 
-- [ ] Define `SwarmSessionSummary` model
+- [x] Define `SwarmSessionSummary` model
 - [ ] Implement `ISwarmSessionService.GetSessionSummaryAsync()`
-- [ ] Compute peer contributions from events
-- [ ] Identify key events (rescue, rebalance, errors)
-- [ ] Add CLI command: `slskdn job trace`
-- [ ] Add API endpoint: `GET /api/jobs/{id}/trace`
-- [ ] Add unit tests for summary computation
-- [ ] Add integration tests with sample event data
+- [x] Compute peer contributions from events
+- [x] Identify key events (rescue, rebalance, errors)
+- [x] Add CLI command: `slskdn job trace`
+- [x] Add API endpoint: `GET /api/jobs/{id}/trace`
+- [x] Add unit tests for summary computation
+- [x] Add integration tests with sample event data
 
 ---
 

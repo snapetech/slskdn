@@ -640,38 +640,38 @@ audio:
 
 ### T-400: Local quality scoring for AudioVariant
 
-- [ ] Define `AudioVariant` model in `src/slskd/Audio/AudioVariant.cs`
-- [ ] Define `CodecProfile` model in `src/slskd/Audio/CodecProfile.cs`
-- [ ] Implement `QualityScorer` in `src/slskd/Audio/QualityScorer.cs`
-- [ ] Implement `TranscodeDetector` in `src/slskd/Audio/TranscodeDetector.cs`
-- [ ] Extend HashDb schema with variant columns (migration)
-- [ ] Update `HashDbService` to persist variant metadata
-- [ ] Add unit tests for scoring algorithms
-- [ ] Add integration tests with sample audio files
+- [x] Define `AudioVariant` model in `src/slskd/Audio/AudioVariant.cs`
+- [x] Define `CodecProfile` model in `src/slskd/Audio/CodecProfile.cs`
+- [x] Implement `QualityScorer` in `src/slskd/Audio/QualityScorer.cs`
+- [x] Implement `TranscodeDetector` in `src/slskd/Audio/TranscodeDetector.cs`
+- [x] Extend HashDb schema with variant columns (migration)
+- [x] Update `HashDbService` to persist variant metadata
+- [x] Add unit tests for scoring algorithms
+- [x] Add integration tests with sample audio files
 
 ### T-401: Canonical stats aggregation
 
-- [ ] Define `CanonicalStats` model in `src/slskd/Audio/CanonicalStats.cs`
-- [ ] Create `CanonicalStats` database table (migration)
-- [ ] Implement `ICanonicalStatsService` interface
-- [ ] Implement `CanonicalStatsService` in `src/slskd/Audio/CanonicalStatsService.cs`
-- [ ] Register service in `Program.cs` DI
-- [ ] Add background job for periodic stats recomputation
-- [ ] Add API endpoint: `GET /api/audio/canonical/{recordingId}` for debugging
-- [ ] Add unit tests for aggregation logic
-- [ ] Add integration tests with mock HashDb data
+- [x] Define `CanonicalStats` model in `src/slskd/Audio/CanonicalStats.cs`
+- [x] Create `CanonicalStats` database table (migration)
+- [x] Implement `ICanonicalStatsService` interface
+- [x] Implement `CanonicalStatsService` in `src/slskd/Audio/CanonicalStatsService.cs`
+- [x] Register service in `Program.cs` DI
+- [x] Add background job for periodic stats recomputation
+- [x] Add API endpoint: `GET /api/audio/canonical/{recordingId}` for debugging
+- [x] Add unit tests for aggregation logic
+- [x] Add integration tests with mock HashDb data
 
 ### T-402: Canonical-aware download selection
 
-- [ ] Extend `MultiSourceDownloadService` with canonical selection
-- [ ] Implement `SelectCanonicalSourcesAsync()` method
-- [ ] Implement `ShouldSkipDownloadAsync()` method
-- [ ] Add configuration options to `Options.cs`
-- [ ] Update `ContentVerificationService` to include codec profile metadata
-- [ ] Add logging for canonical selection decisions
-- [ ] Update album completion UI to show canonical status
-- [ ] Add unit tests for source selection logic
-- [ ] Add integration tests for download skip logic
+- [x] Extend `MultiSourceDownloadService` with canonical selection
+- [x] Implement `SelectCanonicalSourcesAsync()` method
+- [x] Implement `ShouldSkipDownloadAsync()` method
+- [x] Add configuration options to `Options.cs`
+- [x] Update `ContentVerificationService` to include codec profile metadata
+- [x] Add logging for canonical selection decisions
+- [x] Update album completion UI to show canonical status
+- [x] Add unit tests for source selection logic
+- [x] Add integration tests for download skip logic
 
 ---
 

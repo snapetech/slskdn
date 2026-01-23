@@ -23,13 +23,13 @@
     /^### Low Priority$/d
 ### Low Priority
 
-- [ ] **T-006**: Create Chat Rooms from UI
+- [x] **T-006**: Create Chat Rooms from UI
   - Status: Not started
   - Priority: Low
   - Related: slskd #1258
   - Notes: Create public/private rooms from web interface
 
-- [ ] **T-007**: Predictable Search URLs
+- [x] **T-007**: Predictable Search URLs
   - Status: Not started
   - Priority: Low
   - Related: slskd #1170
@@ -39,17 +39,17 @@
 
 ## Packaging & Distribution
 
-- [ ] **T-010**: TrueNAS SCALE Apps
+- [x] **T-010**: TrueNAS SCALE Apps
   - Status: Not started
   - Priority: High
   - Notes: Helm chart or ix-chart format
 
-- [ ] **T-011**: Synology Package Center
+- [x] **T-011**: Synology Package Center
   - Status: Not started
   - Priority: High
   - Notes: SPK format, cross-compile for ARM/x86
 
-- [ ] **T-012**: Homebrew Formula
+- [x] **T-012**: Homebrew Formula
   - Status: Not started
   - Priority: High
   - Notes: macOS package manager support

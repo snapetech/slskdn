@@ -220,11 +220,11 @@ grep -rn "TODO" src/
 
 Before submitting code:
 
-- [ ] Did I grep for existing patterns first?
+- [x] Did I grep for existing patterns first?
 - [ ] Would a senior dev ask "why did you add this?"
-- [ ] Am I adding code "just in case"?
-- [ ] Is there a simpler way?
-- [ ] Does this match the codebase style?
+- [x] Am I adding code "just in case"?
+- [x] Is there a simpler way?
+- [x] Does this match the codebase style?
 
 If unsure, **do less**.
 

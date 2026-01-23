@@ -1,6 +1,6 @@
 # Security Tasks: Trust Model & Cryptographic Identity Fixes
 
-**Branch**: `experimental/whatAmIThinking`
+**Branch**: `master`
 **Priority**: P0 (Security Critical)
 **Goal**: Fix trust-model and security logic failures in mesh overlay system
 
@@ -1395,17 +1395,17 @@ chmod +x bin/docs-lint
 
 ## Completion Criteria
 
-- [ ] All unit tests pass
-- [ ] All integration tests pass
-- [ ] QUIC connections use persistent certs
-- [ ] QUIC connections enforce SPKI pinning
-- [ ] Control envelopes authenticated against peer keys (not self-asserted)
-- [ ] Replay attacks blocked
-- [ ] PeerId is stable and cryptographically derived
-- [ ] Descriptors are signed and verified
-- [ ] Docs match implementation
-- [ ] CI enforces docs accuracy
-- [ ] No TODO placeholders remain
+- [x] All unit tests pass
+- [x] All integration tests pass
+- [x] QUIC connections use persistent certs
+- [x] QUIC connections enforce SPKI pinning
+- [x] Control envelopes authenticated against peer keys (not self-asserted)
+- [x] Replay attacks blocked
+- [x] PeerId is stable and cryptographically derived
+- [x] Descriptors are signed and verified
+- [x] Docs match implementation
+- [x] CI enforces docs accuracy
+- [x] No TODO placeholders remain
 
 ---
 

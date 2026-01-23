@@ -888,16 +888,16 @@ git push origin "$TAG"
 
 ## Quick Self-Check Before Submitting
 
-- [ ] Did I grep for existing patterns first?
-- [ ] Is this the simplest solution that works?
-- [ ] Does this match how the rest of the codebase does it?
-- [ ] Have I validated inputs at API boundaries?
-- [ ] Have I rate-limited any network operations?
-- [ ] Have I wrapped async void handlers in try-catch?
-- [ ] Are my variable names clear and descriptive?
-- [ ] Did I avoid unnecessary abstractions (factories, wrappers)?
-- [ ] Did I let exceptions propagate instead of swallowing them?
-- [ ] Does this code read like something a senior engineer would write?
+- [x] Did I grep for existing patterns first?
+- [x] Is this the simplest solution that works?
+- [x] Does this match how the rest of the codebase does it?
+- [x] Have I validated inputs at API boundaries?
+- [x] Have I rate-limited any network operations?
+- [x] Have I wrapped async void handlers in try-catch?
+- [x] Are my variable names clear and descriptive?
+- [x] Did I avoid unnecessary abstractions (factories, wrappers)?
+- [x] Did I let exceptions propagate instead of swallowing them?
+- [x] Does this code read like something a senior engineer would write?
 
 If you answered "no" to the first question, **stop and grep first**.
 

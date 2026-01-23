@@ -252,12 +252,12 @@ Add tests to ensure:
 
 **MANDATORY**: Verify these requirements from `MCP-HARDENING.md`:
 
-- [ ] No raw hashes in logs (use 8-char prefix max for debugging)
-- [ ] No full filesystem paths in logs (filename only)
-- [ ] Evidence keys are opaque identifiers (not raw data)
-- [ ] Failsafe mode configured (default: "block")
-- [ ] Configuration validation at startup
-- [ ] Security tests for logging (verify no leaks)
+- [x] No raw hashes in logs (use 8-char prefix max for debugging)
+- [x] No full filesystem paths in logs (filename only)
+- [x] Evidence keys are opaque identifiers (not raw data)
+- [x] Failsafe mode configured (default: "block")
+- [x] Configuration validation at startup
+- [x] Security tests for logging (verify no leaks)
 
 ---
 
@@ -374,12 +374,12 @@ Use a fake `IModerationProvider` in tests to control verdicts.
 
 **MANDATORY**: Verify these requirements from `MCP-HARDENING.md`:
 
-- [ ] Hash handling: Never log full hash (Section 1.1)
-- [ ] Path sanitization: Only filename or internal ID (Section 1.2)
-- [ ] Logging format: `[SECURITY] MCP blocked file | InternalId={Id} | Reason={Reason}`
-- [ ] Metrics: No sensitive data in labels (Section 7.1)
-- [ ] Work budget: External moderation consumes budget (Section 2.1)
-- [ ] Security tests: Verify no hash/path leaks (Section 6.1)
+- [x] Hash handling: Never log full hash (Section 1.1)
+- [x] Path sanitization: Only filename or internal ID (Section 1.2)
+- [x] Logging format: `[SECURITY] MCP blocked file | InternalId={Id} | Reason={Reason}`
+- [x] Metrics: No sensitive data in labels (Section 7.1)
+- [x] Work budget: External moderation consumes budget (Section 2.1)
+- [x] Security tests: Verify no hash/path leaks (Section 6.1)
 
 ---
 
@@ -499,11 +499,11 @@ Use fakes for `IModerationProvider` and VirtualSoulfind's item DB in tests.
 
 **MANDATORY**: Verify these requirements from `MCP-HARDENING.md`:
 
-- [ ] Content relay: Check `IsAdvertisable` before ANY file I/O (Section 4)
-- [ ] Peer reporting: Call `ReportPeerAsync` for blocked content requests (Section 5)
-- [ ] Logging: No content IDs that could identify files (Section 1.4)
-- [ ] Metrics: Track relay rejections without exposing content details
-- [ ] Security tests: Verify relay rejects non-advertisable content (Section 6.1)
+- [x] Content relay: Check `IsAdvertisable` before ANY file I/O (Section 4)
+- [x] Peer reporting: Call `ReportPeerAsync` for blocked content requests (Section 5)
+- [x] Logging: No content IDs that could identify files (Section 1.4)
+- [x] Metrics: Track relay rejections without exposing content details
+- [x] Security tests: Verify relay rejects non-advertisable content (Section 6.1)
 
 ---
 
@@ -634,13 +634,13 @@ Use fakes/mocks for planner and mesh context in tests.
 
 **MANDATORY**: Verify these requirements from `MCP-HARDENING.md` Section 3:
 
-- [ ] Sybil resistance: Rate limit peer events (max 10/min) (Section 3.1)
-- [ ] Peer ID hashing: `HashPeerId()` for all logging (Section 3.1)
-- [ ] Encrypted storage: Use `IDataProtectionProvider` (Section 3.2)
-- [ ] Reputation decay: Exponential decay over 30 days (Section 3.1)
-- [ ] Auto-ban threshold: Configurable weighted score
-- [ ] Logging: `[SECURITY] Peer auto-banned | PeerHash={Hash} | Score={Score}`
-- [ ] Security tests: Verify event flooding prevention (Section 6.1)
+- [x] Sybil resistance: Rate limit peer events (max 10/min) (Section 3.1)
+- [x] Peer ID hashing: `HashPeerId()` for all logging (Section 3.1)
+- [x] Encrypted storage: Use `IDataProtectionProvider` (Section 3.2)
+- [x] Reputation decay: Exponential decay over 30 days (Section 3.1)
+- [x] Auto-ban threshold: Configurable weighted score
+- [x] Logging: `[SECURITY] Peer auto-banned | PeerHash={Hash} | Score={Score}`
+- [x] Security tests: Verify event flooding prevention (Section 6.1)
 
 ---
 

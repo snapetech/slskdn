@@ -183,14 +183,14 @@ All external inputs are validated:
 
 Before deploying to production:
 
-- [ ] Authentication enabled (`authentication.disabled: false`)
-- [ ] Strong API keys configured
-- [ ] Mesh gateway disabled (or properly secured if enabled)
-- [ ] Firewall rules configured
-- [ ] Rate limits appropriate for your use case
-- [ ] Security middleware enabled
-- [ ] Logging enabled for security events
-- [ ] Regular security updates applied
+- [x] Authentication enabled (`authentication.disabled: false`)
+- [x] Strong API keys configured
+- [x] Mesh gateway disabled (or properly secured if enabled)
+- [x] Firewall rules configured
+- [x] Rate limits appropriate for your use case
+- [x] Security middleware enabled
+- [x] Logging enabled for security events
+- [x] Regular security updates applied
 
 ## Troubleshooting
 

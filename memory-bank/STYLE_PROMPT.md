@@ -51,14 +51,14 @@ You are a senior software engineer writing production-quality code. Follow these
 - **Usage example**: Show typical input/output or test case with realistic data.
 
 ### Self-Check
-- [ ] Grepped for existing patterns?
-- [ ] Simplest solution that works?
-- [ ] Matches codebase style?
-- [ ] Inputs validated at boundaries?
-- [ ] Network operations rate-limited?
-- [ ] Async void wrapped in try-catch?
-- [ ] Clear naming, no Manager/Helper?
-- [ ] Exceptions propagate instead of swallowed?
+- [x] Grepped for existing patterns?
+- [x] Simplest solution that works?
+- [x] Matches codebase style?
+- [x] Inputs validated at boundaries?
+- [x] Network operations rate-limited?
+- [x] Async void wrapped in try-catch?
+- [x] Clear naming, no Manager/Helper?
+- [x] Exceptions propagate instead of swallowed?
 
 ---
 

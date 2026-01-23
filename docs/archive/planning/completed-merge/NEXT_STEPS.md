@@ -36,9 +36,9 @@ gh pr create --base master --head experimental/whatAmIThinking \
 - Updated phase completion percentages
 
 ## Testing
-- [ ] Local build successful
-- [ ] All tests pass
-- [ ] Documentation links verified
+- [x] Local build successful
+- [x] All tests pass
+- [x] Documentation links verified
 "
 ```
 

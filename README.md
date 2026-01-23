@@ -253,9 +253,9 @@ Access at http://localhost:5030
 For latest experimental features:
 
 <!-- BEGIN_DEV_BUILD -->
-**[Development Build experimental/whatAmIThinking →](https://github.com/snapetech/slskdn/releases/tag/experimental/whatAmIThinking)** 
+**[Development Build master →](https://github.com/snapetech/slskdn/releases/tag/master)** 
 
-Version: `0.24.1-dev-91769043447` | Branch: `experimental/whatAmIThinking` 
+Version: `0.24.1-dev-91769043447` | Branch: `master` 
 
 ```bash
 # Arch Linux (AUR)
@@ -461,7 +461,7 @@ Detailed documentation for configuration options can be found [here](https://git
 
 ## Experimental Feature Status
 
-Features in the `experimental/whatAmIThinking` branch:
+Features in the `master` branch:
 
 | Feature Category | Status | Notes |
 |------------------|--------|-------|

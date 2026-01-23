@@ -740,15 +740,15 @@ Keep tests minimal but targeted, aligned with existing test patterns.
 
 Before you consider T-SF05 done:
 
-- [ ] You only tightened and integrated security/limits; you did not redesign protocols
-- [ ] All new limits are configurable, with safe defaults
-- [ ] No new PII is added to descriptors, responses, or logs
-- [ ] No `.Result` / `.Wait()` in new async code
-- [ ] Tests cover at least the most obvious abuse cases
-- [ ] Rate limiting integrated with existing systems where possible
-- [ ] Violation tracking integrated with SecurityCore
-- [ ] All config keys documented
-- [ ] All existing tests still pass
+- [x] You only tightened and integrated security/limits; you did not redesign protocols
+- [x] All new limits are configurable, with safe defaults
+- [x] No new PII is added to descriptors, responses, or logs
+- [x] No `.Result` / `.Wait()` in new async code
+- [x] Tests cover at least the most obvious abuse cases
+- [x] Rate limiting integrated with existing systems where possible
+- [x] Violation tracking integrated with SecurityCore
+- [x] All config keys documented
+- [x] All existing tests still pass
 
 ---
 
@@ -1602,14 +1602,14 @@ The service fabric layer is fully implemented and documented:
 
 Before saying T-SF06 is done:
 
-- [ ] Docs match actual code and config; no hand-wavey pseudo-APIs
-- [ ] Examples are minimal, not entire frameworks
-- [ ] No behavior changes were introduced as part of "writing docs"
-- [ ] No new dependencies for examples unless absolutely trivial and justified
-- [ ] Comments are clear and correct; no misleading statements
-- [ ] All examples compile/run successfully
-- [ ] Documentation reviewed for accuracy
-- [ ] Links work and point to correct files
+- [x] Docs match actual code and config; no hand-wavey pseudo-APIs
+- [x] Examples are minimal, not entire frameworks
+- [x] No behavior changes were introduced as part of "writing docs"
+- [x] No new dependencies for examples unless absolutely trivial and justified
+- [x] Comments are clear and correct; no misleading statements
+- [x] All examples compile/run successfully
+- [x] Documentation reviewed for accuracy
+- [x] Links work and point to correct files
 
 ---
 
@@ -2157,14 +2157,14 @@ Use existing patterns for testing logging/metrics if they exist; otherwise, keep
 
 Before you consider T-SF07 done:
 
-- [ ] Metrics use the same framework and style as existing ones
-- [ ] Cardinality is controlled (no unbounded labels like full peer IDs)
-- [ ] No blocking or heavy work is done in the path of metrics emission
-- [ ] Logs are informative but not excessive or privacy-violating
-- [ ] No behavior changes were accidentally introduced as part of adding metrics/logging
-- [ ] All metrics have clear descriptions
-- [ ] All metrics follow naming conventions
-- [ ] Tests verify metrics are emitted correctly
+- [x] Metrics use the same framework and style as existing ones
+- [x] Cardinality is controlled (no unbounded labels like full peer IDs)
+- [x] No blocking or heavy work is done in the path of metrics emission
+- [x] Logs are informative but not excessive or privacy-violating
+- [x] No behavior changes were accidentally introduced as part of adding metrics/logging
+- [x] All metrics have clear descriptions
+- [x] All metrics follow naming conventions
+- [x] Tests verify metrics are emitted correctly
 
 ---
 
@@ -2244,13 +2244,13 @@ Observability complete.
 
 When all three tasks are complete:
 
-- [ ] Service fabric is hardened against abuse (T-SF05)
-- [ ] Developers can implement new services (T-SF06)
-- [ ] Operators have visibility into fabric health (T-SF07)
-- [ ] All documentation is accurate and complete
-- [ ] All examples work correctly
-- [ ] All metrics are useful and non-invasive
-- [ ] Security, privacy, and quality maintained throughout
+- [x] Service fabric is hardened against abuse (T-SF05)
+- [x] Developers can implement new services (T-SF06)
+- [x] Operators have visibility into fabric health (T-SF07)
+- [x] All documentation is accurate and complete
+- [x] All examples work correctly
+- [x] All metrics are useful and non-invasive
+- [x] Security, privacy, and quality maintained throughout
 
 ---
 

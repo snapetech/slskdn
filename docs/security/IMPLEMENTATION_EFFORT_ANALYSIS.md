@@ -1,6 +1,6 @@
 # Implementation Effort Analysis: slskdN Security Recommendations
 
-**Branch**: `experimental/whatAmIThinking`  
+**Branch**: `master`  
 **Date**: January 21, 2026
 
 ---
@@ -20,10 +20,10 @@
 ## 1. Report Path Traversal to Upstream (2-4 hours)
 
 ### Tasks:
-- [ ] Create minimal proof-of-concept exploit
-- [ ] Write responsible disclosure report
-- [ ] Contact upstream maintainer (jpdillingham)
-- [ ] Offer PathGuard as a solution (optional PR)
+- [x] Create minimal proof-of-concept exploit
+- [x] Write responsible disclosure report
+- [x] Contact upstream maintainer (jpdillingham)
+- [x] Offer PathGuard as a solution (optional PR)
 
 ### Effort Breakdown:
 ```
@@ -146,10 +146,10 @@ Add API key requirement to all state-changing endpoints (similar to Service Fabr
 ### Tasks:
 
 #### A. Update README.md (2-3 hours)
-- [ ] Add "Security Features" section
-- [ ] Clarify which features fix upstream bugs
-- [ ] Clarify which features protect new additions
-- [ ] Add links to security documentation
+- [x] Add "Security Features" section
+- [x] Clarify which features fix upstream bugs
+- [x] Clarify which features protect new additions
+- [x] Add links to security documentation
 
 **Template**:
 ```markdown
@@ -176,9 +176,9 @@ Standard security policy file:
 - Responsible disclosure policy
 
 #### C. Update Existing Security Docs (4-6 hours)
-- [ ] `SECURITY-GUIDELINES.md` - Add CSRF guidelines
-- [ ] `docs/SECURITY_IMPLEMENTATION_SPECS.md` - Document CSRF implementation
-- [ ] `docs/security/SECURITY_COMPARISON_ANALYSIS.md` - Already done ✅
+- [x] `SECURITY-GUIDELINES.md` - Add CSRF guidelines
+- [x] `docs/SECURITY_IMPLEMENTATION_SPECS.md` - Document CSRF implementation
+- [x] `docs/security/SECURITY_COMPARISON_ANALYSIS.md` - Already done ✅
 
 #### D. Add Security Dashboard Documentation (2-3 hours)
 Document the Security tab in the Web UI:

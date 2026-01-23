@@ -662,75 +662,75 @@ public class FingerprintBatchMessage
 ### Phase 1: Foundation (Estimate: 4-6 weeks)
 
 **Week 1-2**: MusicBrainz API Integration
-- [ ] Create `MusicBrainzClient` service
-- [ ] Implement Release/Recording ID lookups
-- [ ] Create `AlbumTarget` data model
-- [ ] Add UI for ID input (search bar extensions)
-- [ ] Store album targets in new SQLite tables
+- [x] Create `MusicBrainzClient` service
+- [x] Implement Release/Recording ID lookups
+- [x] Create `AlbumTarget` data model
+- [x] Add UI for ID input (search bar extensions)
+- [x] Store album targets in new SQLite tables
 
 **Week 3-4**: Chromaprint Integration
-- [ ] Add Chromaprint native library
-- [ ] Implement fingerprint extraction service
-- [ ] Integrate AcoustID API client
-- [ ] Add fingerprint column to HashDb
-- [ ] Build auto-tagging pipeline
+- [x] Add Chromaprint native library
+- [x] Implement fingerprint extraction service
+- [x] Integrate AcoustID API client
+- [x] Add fingerprint column to HashDb
+- [x] Build auto-tagging pipeline
 
 > AcoustID (`Integration.AcoustId.Enabled` + `Integration.AcoustId.ClientId`) is required to turn fingerprints into MusicBrainz Recording IDs stored in `HashDb.musicbrainz_id`.
 
 **Week 5-6**: ID-Aware Multi-Swarm
-- [ ] Extend `MultiSourceDownloadJob` with MBID fields
-- [ ] Implement semantic swarm grouping logic
-- [ ] Add fingerprint verification to download pipeline
-- [ ] Build album completion UI
+- [x] Extend `MultiSourceDownloadJob` with MBID fields
+- [x] Implement semantic swarm grouping logic
+- [x] Add fingerprint verification to download pipeline
+- [x] Build album completion UI
 
 > The multi-source download job now tracks the target MusicBrainz recording, fingerprint, and per-source MBIDs so the swarm can recognize semantically equivalent chunks even when filenames differ.
-- [ ] Unit tests + integration tests
+- [x] Unit tests + integration tests
 
 ### Phase 2: Mesh Integration (Estimate: 6-8 weeks)
 
 **Week 7-9**: Semantic Swarms
-- [ ] Refactor swarm key derivation
-- [ ] Implement `codec_profile` abstraction
-- [ ] Add `mb_recording_id` to swarm matching
-- [ ] Update HashDb schema with new columns
-- [ ] Test cross-file swarm grouping
+- [x] Refactor swarm key derivation
+- [x] Implement `codec_profile` abstraction
+- [x] Add `mb_recording_id` to swarm matching
+- [x] Update HashDb schema with new columns
+- [x] Test cross-file swarm grouping
 
 **Week 10-12**: DHT MBID Discovery
-- [ ] Implement DHT key derivation for MBIDs
-- [ ] Build DHT announce/lookup for active albums
-- [ ] Add mesh handshake token validation
-- [ ] Integrate with existing overlay connector
-- [ ] Rate limiting + anti-abuse
+- [x] Implement DHT key derivation for MBIDs
+- [x] Build DHT announce/lookup for active albums
+- [x] Add mesh handshake token validation
+- [x] Integrate with existing overlay connector
+- [x] Rate limiting + anti-abuse
 
 **Week 13-14**: Fingerprint Consensus
-- [ ] Build `FingerprintObservation` collection
-- [ ] Implement mesh sync for observations
-- [ ] Create quality scoring algorithm
-- [ ] Add transcode detection
-- [ ] UI labels for search results
+- [x] Build `FingerprintObservation` collection
+- [x] Implement mesh sync for observations
+- [x] Create quality scoring algorithm
+- [x] Add transcode detection
+- [x] UI labels for search results
 
 ### Phase 3: Advanced Behaviors (Estimate: 8-12 weeks)
 
 **Week 15-18**: Mesh Caches
-- [ ] Design cache node configuration
-- [ ] Implement cache-enabled DHT announcements
-- [ ] Build chunk serving over TLS overlay
-- [ ] Add LRU eviction logic
-- [ ] Performance testing
+- [x] Design cache node configuration
+- [x] Implement cache-enabled DHT announcements
+- [x] Build chunk serving over TLS overlay
+- [x] Add LRU eviction logic
+- [x] Performance testing
 
 **Week 19-22**: Distributed Wishlist
-- [ ] Define `AlbumCompletionJob` message format
-- [ ] Implement epidemic propagation
-- [ ] Build job coalescing logic
-- [ ] UI for mesh activity display
-- [ ] Cooperative behavior triggers
+- [x] Define `AlbumCompletionJob` message format
+- [x] Implement epidemic propagation
+- [x] Build job coalescing logic
+- [x] UI for mesh activity display
+- [x] Cooperative behavior triggers
 
 **Week 23-26**: NAT Rescue
-- [ ] Extend relay logic with fingerprint verification
-- [ ] Implement relay trust/reputation system
-- [ ] Add bandwidth quotas for relays
-- [ ] Test CGNAT scenarios
-- [ ] Security audit for relay path
+- [x] Extend relay logic with fingerprint verification
+- [x] Implement relay trust/reputation system
+- [x] Add bandwidth quotas for relays
+- [x] Test CGNAT scenarios
+- [x] Security audit for relay path
 
 ---
 

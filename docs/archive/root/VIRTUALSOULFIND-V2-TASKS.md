@@ -32,12 +32,12 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P1-01-001: Design database schema for core entities (Artist, ReleaseGroup, Release, Track)
-- [ ] V2-P1-01-002: Design schema for local library entities (LocalFile, VerifiedCopy)
-- [ ] V2-P1-01-003: Design schema for intent entities (DesiredRelease, DesiredTrack)
-- [ ] V2-P1-01-004: Design schema for source registry (SourceCandidate)
-- [ ] V2-P1-01-005: Create EF migrations or SQLite schema scripts
-- [ ] V2-P1-01-006: Add indices for common queries (MBID lookups, track searches)
+- [x] V2-P1-01-001: Design database schema for core entities (Artist, ReleaseGroup, Release, Track)
+- [x] V2-P1-01-002: Design schema for local library entities (LocalFile, VerifiedCopy)
+- [x] V2-P1-01-003: Design schema for intent entities (DesiredRelease, DesiredTrack)
+- [x] V2-P1-01-004: Design schema for source registry (SourceCandidate)
+- [x] V2-P1-01-005: Create EF migrations or SQLite schema scripts
+- [x] V2-P1-01-006: Add indices for common queries (MBID lookups, track searches)
 
 **Deliverables**:
 - Database schema definition
@@ -52,11 +52,11 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P1-02-001: Define `IContentBackend` interface
-- [ ] V2-P1-02-002: Define `ContentBackendType` enum
-- [ ] V2-P1-02-003: Define `SourceCandidate` model
-- [ ] V2-P1-02-004: Define `SourceCandidateValidationResult` model
-- [ ] V2-P1-02-005: Add XML docs and usage examples
+- [x] V2-P1-02-001: Define `IContentBackend` interface
+- [x] V2-P1-02-002: Define `ContentBackendType` enum
+- [x] V2-P1-02-003: Define `SourceCandidate` model
+- [x] V2-P1-02-004: Define `SourceCandidateValidationResult` model
+- [x] V2-P1-02-005: Add XML docs and usage examples
 
 **Deliverables**:
 - Core backend abstraction interfaces
@@ -70,12 +70,12 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P1-03-001: Implement `IVirtualCatalogueStore` interface
-- [ ] V2-P1-03-002: Implement CRUD operations for Artist/Release/Track
-- [ ] V2-P1-03-003: Implement MBID-based lookups
-- [ ] V2-P1-03-004: Add search/filter capabilities
-- [ ] V2-P1-03-005: Implement caching layer (in-memory for hot data)
-- [ ] V2-P1-03-006: Add unit tests
+- [x] V2-P1-03-001: Implement `IVirtualCatalogueStore` interface
+- [x] V2-P1-03-002: Implement CRUD operations for Artist/Release/Track
+- [x] V2-P1-03-003: Implement MBID-based lookups
+- [x] V2-P1-03-004: Add search/filter capabilities
+- [x] V2-P1-03-005: Implement caching layer (in-memory for hot data)
+- [x] V2-P1-03-006: Add unit tests
 
 **Deliverables**:
 - Virtual catalogue store implementation
@@ -92,13 +92,13 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P2-01-001: Implement `IIntentQueue` interface
-- [ ] V2-P2-01-002: Implement `DesiredRelease` CRUD operations
-- [ ] V2-P2-01-003: Implement `DesiredTrack` CRUD operations
-- [ ] V2-P2-01-004: Add priority-based queue retrieval
-- [ ] V2-P2-01-005: Add status filtering and updates
-- [ ] V2-P2-01-006: Implement persistence (SQLite)
-- [ ] V2-P2-01-007: Add unit tests
+- [x] V2-P2-01-001: Implement `IIntentQueue` interface
+- [x] V2-P2-01-002: Implement `DesiredRelease` CRUD operations
+- [x] V2-P2-01-003: Implement `DesiredTrack` CRUD operations
+- [x] V2-P2-01-004: Add priority-based queue retrieval
+- [x] V2-P2-01-005: Add status filtering and updates
+- [x] V2-P2-01-006: Implement persistence (SQLite)
+- [x] V2-P2-01-007: Add unit tests
 
 **Deliverables**:
 - Intent queue implementation
@@ -113,13 +113,13 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P2-02-001: Implement `ISourceRegistry` interface
-- [ ] V2-P2-02-002: Implement `SourceCandidate` CRUD operations
-- [ ] V2-P2-02-003: Add candidate discovery and registration
-- [ ] V2-P2-02-004: Implement trust score updates
-- [ ] V2-P2-02-005: Add candidate filtering (by backend, quality, trust)
-- [ ] V2-P2-02-006: Implement candidate aging/expiration
-- [ ] V2-P2-02-007: Add unit tests
+- [x] V2-P2-02-001: Implement `ISourceRegistry` interface
+- [x] V2-P2-02-002: Implement `SourceCandidate` CRUD operations
+- [x] V2-P2-02-003: Add candidate discovery and registration
+- [x] V2-P2-02-004: Implement trust score updates
+- [x] V2-P2-02-005: Add candidate filtering (by backend, quality, trust)
+- [x] V2-P2-02-006: Implement candidate aging/expiration
+- [x] V2-P2-02-007: Add unit tests
 
 **Deliverables**:
 - Source registry implementation
@@ -134,15 +134,15 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P2-03-001: Define `IMultiSourcePlanner` interface
-- [ ] V2-P2-03-002: Define `TrackAcquisitionPlan` and `PlanStep` models
-- [ ] V2-P2-03-003: Define `PlanningMode` enum (Offline, SoulseekFriendly, MeshOnly)
-- [ ] V2-P2-03-004: Implement planner for single track
-- [ ] V2-P2-03-005: Implement planner for full release
-- [ ] V2-P2-03-006: Add mode-specific logic (MeshOnly, OfflinePlanning, etc.)
-- [ ] V2-P2-03-007: Integrate with source registry
-- [ ] V2-P2-03-008: Implement backend priority/preference logic
-- [ ] V2-P2-03-009: Add unit tests for all modes
+- [x] V2-P2-03-001: Define `IMultiSourcePlanner` interface
+- [x] V2-P2-03-002: Define `TrackAcquisitionPlan` and `PlanStep` models
+- [x] V2-P2-03-003: Define `PlanningMode` enum (Offline, SoulseekFriendly, MeshOnly)
+- [x] V2-P2-03-004: Implement planner for single track
+- [x] V2-P2-03-005: Implement planner for full release
+- [x] V2-P2-03-006: Add mode-specific logic (MeshOnly, OfflinePlanning, etc.)
+- [x] V2-P2-03-007: Integrate with source registry
+- [x] V2-P2-03-008: Implement backend priority/preference logic
+- [x] V2-P2-03-009: Add unit tests for all modes
 
 **Deliverables**:
 - Multi-source planner implementation
@@ -159,13 +159,13 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P3-01-001: Define `IMatchEngine` interface
-- [ ] V2-P3-01-002: Implement MBID-based matching
-- [ ] V2-P3-01-003: Implement duration-based matching (with tolerance)
-- [ ] V2-P3-01-004: Implement track number/disc number matching
-- [ ] V2-P3-01-005: Add configurable matching strictness
-- [ ] V2-P3-01-006: Implement match scoring algorithm
-- [ ] V2-P3-01-007: Add unit tests with various match scenarios
+- [x] V2-P3-01-001: Define `IMatchEngine` interface
+- [x] V2-P3-01-002: Implement MBID-based matching
+- [x] V2-P3-01-003: Implement duration-based matching (with tolerance)
+- [x] V2-P3-01-004: Implement track number/disc number matching
+- [x] V2-P3-01-005: Add configurable matching strictness
+- [x] V2-P3-01-006: Implement match scoring algorithm
+- [x] V2-P3-01-007: Add unit tests with various match scenarios
 
 **Deliverables**:
 - Match engine implementation
@@ -180,13 +180,13 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P3-02-001: Implement `IVerifiedCopyRegistry` interface
-- [ ] V2-P3-02-002: Implement `VerifiedCopy` CRUD operations
-- [ ] V2-P3-02-003: Add hash-based verification
-- [ ] V2-P3-02-004: Add duration-based verification
-- [ ] V2-P3-02-005: Implement verification confidence levels
-- [ ] V2-P3-02-006: Add lookup by track ID and hash
-- [ ] V2-P3-02-007: Add unit tests
+- [x] V2-P3-02-001: Implement `IVerifiedCopyRegistry` interface
+- [x] V2-P3-02-002: Implement `VerifiedCopy` CRUD operations
+- [x] V2-P3-02-003: Add hash-based verification
+- [x] V2-P3-02-004: Add duration-based verification
+- [x] V2-P3-02-005: Implement verification confidence levels
+- [x] V2-P3-02-006: Add lookup by track ID and hash
+- [x] V2-P3-02-007: Add unit tests
 
 **Deliverables**:
 - Verified copy registry
@@ -201,12 +201,12 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P3-03-001: Define `ICanonicalNamer` interface
-- [ ] V2-P3-03-002: Implement naming template system
-- [ ] V2-P3-03-003: Add configurable naming patterns
-- [ ] V2-P3-03-004: Implement path sanitization (no invalid chars)
-- [ ] V2-P3-03-005: Add collision detection and resolution
-- [ ] V2-P3-03-006: Add unit tests with various metadata scenarios
+- [x] V2-P3-03-001: Define `ICanonicalNamer` interface
+- [x] V2-P3-03-002: Implement naming template system
+- [x] V2-P3-03-003: Add configurable naming patterns
+- [x] V2-P3-03-004: Implement path sanitization (no invalid chars)
+- [x] V2-P3-03-005: Add collision detection and resolution
+- [x] V2-P3-03-006: Add unit tests with various metadata scenarios
 
 **Deliverables**:
 - Canonical naming implementation
@@ -223,14 +223,14 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P4-01-001: Implement `SoulseekContentBackend` class
-- [ ] V2-P4-01-002: Integrate with existing Soulseek client
-- [ ] V2-P4-01-003: Implement candidate discovery via search
-- [ ] V2-P4-01-004: Implement candidate discovery via browse
-- [ ] V2-P4-01-005: Enforce Soulseek caps from H-08
-- [ ] V2-P4-01-006: Add rate limiting per H-08 config
-- [ ] V2-P4-01-007: Implement candidate validation
-- [ ] V2-P4-01-008: Add unit tests and integration tests
+- [x] V2-P4-01-001: Implement `SoulseekContentBackend` class
+- [x] V2-P4-01-002: Integrate with existing Soulseek client
+- [x] V2-P4-01-003: Implement candidate discovery via search
+- [x] V2-P4-01-004: Implement candidate discovery via browse
+- [x] V2-P4-01-005: Enforce Soulseek caps from H-08
+- [x] V2-P4-01-006: Add rate limiting per H-08 config
+- [x] V2-P4-01-007: Implement candidate validation
+- [x] V2-P4-01-008: Add unit tests and integration tests
 
 **Deliverables**:
 - Soulseek backend implementation
@@ -245,13 +245,13 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P4-02-001: Implement `MeshDhtContentBackend` class
-- [ ] V2-P4-02-002: Integrate with existing DHT directory
-- [ ] V2-P4-02-003: Implement candidate discovery via DHT keys
-- [ ] V2-P4-02-004: Add content ID → MBID mapping
-- [ ] V2-P4-02-005: Implement candidate validation via mesh service calls
-- [ ] V2-P4-02-006: Add privacy guards (no Soulseek usernames in DHT)
-- [ ] V2-P4-02-007: Add unit tests
+- [x] V2-P4-02-001: Implement `MeshDhtContentBackend` class
+- [x] V2-P4-02-002: Integrate with existing DHT directory
+- [x] V2-P4-02-003: Implement candidate discovery via DHT keys
+- [x] V2-P4-02-004: Add content ID → MBID mapping
+- [x] V2-P4-02-005: Implement candidate validation via mesh service calls
+- [x] V2-P4-02-006: Add privacy guards (no Soulseek usernames in DHT)
+- [x] V2-P4-02-007: Add unit tests
 
 **Deliverables**:
 - Mesh/DHT backend implementation
@@ -266,12 +266,12 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P4-03-001: Implement `LocalLibraryBackend` class
-- [ ] V2-P4-03-002: Integrate with existing file scanner
-- [ ] V2-P4-03-003: Implement candidate discovery from local files
-- [ ] V2-P4-03-004: Use match engine for local file → track mapping
-- [ ] V2-P4-03-005: Add hash and duration caching
-- [ ] V2-P4-03-006: Add unit tests
+- [x] V2-P4-03-001: Implement `LocalLibraryBackend` class
+- [x] V2-P4-03-002: Integrate with existing file scanner
+- [x] V2-P4-03-003: Implement candidate discovery from local files
+- [x] V2-P4-03-004: Use match engine for local file → track mapping
+- [x] V2-P4-03-005: Add hash and duration caching
+- [x] V2-P4-03-006: Add unit tests
 
 **Deliverables**:
 - Local library backend
@@ -286,11 +286,11 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] V2-P4-04-001: Implement `TorrentContentBackend` class
-- [ ] V2-P4-04-002: Integrate with BT/multi-swarm infrastructure
-- [ ] V2-P4-04-003: Implement candidate discovery via torrent files
-- [ ] V2-P4-04-004: Add torrent metadata parsing
-- [ ] V2-P4-04-005: Add unit tests
+- [x] V2-P4-04-001: Implement `TorrentContentBackend` class
+- [x] V2-P4-04-002: Integrate with BT/multi-swarm infrastructure
+- [x] V2-P4-04-003: Implement candidate discovery via torrent files
+- [x] V2-P4-04-004: Add torrent metadata parsing
+- [x] V2-P4-04-005: Add unit tests
 
 **Deliverables**:
 - Torrent backend (future enhancement)
@@ -303,11 +303,11 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] V2-P4-05-001: Implement `HttpContentBackend` class
-- [ ] V2-P4-05-002: Implement `LanContentBackend` class
-- [ ] V2-P4-05-003: Add URL-based candidate discovery
-- [ ] V2-P4-05-004: Add LAN peer discovery
-- [ ] V2-P4-05-005: Add unit tests
+- [x] V2-P4-05-001: Implement `HttpContentBackend` class
+- [x] V2-P4-05-002: Implement `LanContentBackend` class
+- [x] V2-P4-05-003: Add URL-based candidate discovery
+- [x] V2-P4-05-004: Add LAN peer discovery
+- [x] V2-P4-05-005: Add unit tests
 
 **Deliverables**:
 - HTTP/LAN backends (future enhancement)
@@ -322,15 +322,15 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P5-01-001: Implement `VirtualSoulfindMeshService` class
-- [ ] V2-P5-01-002: Expose `GetVirtualRelease` method
-- [ ] V2-P5-01-003: Expose `ListMissingTracksForRelease` method
-- [ ] V2-P5-01-004: Expose `GetPlanForRelease` method
-- [ ] V2-P5-01-005: Expose `RegisterVerifiedCopy` method
-- [ ] V2-P5-01-006: Expose `QuerySourceCandidates` method
-- [ ] V2-P5-01-007: Add security checks (no PII exposure)
-- [ ] V2-P5-01-008: Integrate with work budget (H-02)
-- [ ] V2-P5-01-009: Add unit tests
+- [x] V2-P5-01-001: Implement `VirtualSoulfindMeshService` class
+- [x] V2-P5-01-002: Expose `GetVirtualRelease` method
+- [x] V2-P5-01-003: Expose `ListMissingTracksForRelease` method
+- [x] V2-P5-01-004: Expose `GetPlanForRelease` method
+- [x] V2-P5-01-005: Expose `RegisterVerifiedCopy` method
+- [x] V2-P5-01-006: Expose `QuerySourceCandidates` method
+- [x] V2-P5-01-007: Add security checks (no PII exposure)
+- [x] V2-P5-01-008: Integrate with work budget (H-02)
+- [x] V2-P5-01-009: Add unit tests
 
 **Deliverables**:
 - VirtualSoulfind mesh service
@@ -345,17 +345,17 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P5-02-001: Create `VirtualSoulfindGatewayController` class
-- [ ] V2-P5-02-002: Add `GET /virtual/releases/{releaseId}` endpoint
-- [ ] V2-P5-02-003: Add `GET /virtual/releases/{releaseId}/missing` endpoint
-- [ ] V2-P5-02-004: Add `POST /virtual/intents/releases/{releaseId}` endpoint
-- [ ] V2-P5-02-005: Add `GET /virtual/intents/releases` endpoint
-- [ ] V2-P5-02-006: Add `POST /virtual/plan/releases/{releaseId}/execute` endpoint
-- [ ] V2-P5-02-007: Add `GET /virtual/artists` search endpoint
-- [ ] V2-P5-02-008: Add `GET /virtual/library/reconcile` endpoint
-- [ ] V2-P5-02-009: Integrate with gateway auth (H-01)
-- [ ] V2-P5-02-010: Add to gateway allowlist config
-- [ ] V2-P5-02-011: Add unit tests and integration tests
+- [x] V2-P5-02-001: Create `VirtualSoulfindGatewayController` class
+- [x] V2-P5-02-002: Add `GET /virtual/releases/{releaseId}` endpoint
+- [x] V2-P5-02-003: Add `GET /virtual/releases/{releaseId}/missing` endpoint
+- [x] V2-P5-02-004: Add `POST /virtual/intents/releases/{releaseId}` endpoint
+- [x] V2-P5-02-005: Add `GET /virtual/intents/releases` endpoint
+- [x] V2-P5-02-006: Add `POST /virtual/plan/releases/{releaseId}/execute` endpoint
+- [x] V2-P5-02-007: Add `GET /virtual/artists` search endpoint
+- [x] V2-P5-02-008: Add `GET /virtual/library/reconcile` endpoint
+- [x] V2-P5-02-009: Integrate with gateway auth (H-01)
+- [x] V2-P5-02-010: Add to gateway allowlist config
+- [x] V2-P5-02-011: Add unit tests and integration tests
 
 **Deliverables**:
 - HTTP gateway endpoints for VirtualSoulfind
@@ -370,12 +370,12 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] V2-P5-03-001: Integrate planner with work budget system
-- [ ] V2-P5-03-002: Add work unit tracking per backend operation
-- [ ] V2-P5-03-003: Implement budget checks before backend calls
-- [ ] V2-P5-03-004: Add budget exhaustion handling
-- [ ] V2-P5-03-005: Add metrics for budget usage
-- [ ] V2-P5-03-006: Add unit tests
+- [x] V2-P5-03-001: Integrate planner with work budget system
+- [x] V2-P5-03-002: Add work unit tracking per backend operation
+- [x] V2-P5-03-003: Implement budget checks before backend calls
+- [x] V2-P5-03-004: Add budget exhaustion handling
+- [x] V2-P5-03-005: Add metrics for budget usage
+- [x] V2-P5-03-006: Add unit tests
 
 **Deliverables**:
 - Work budget integration
@@ -392,13 +392,13 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] V2-P6-01-001: Implement library scanner
-- [ ] V2-P6-01-002: Implement track → LocalFile matching
-- [ ] V2-P6-01-003: Implement gap detection (missing tracks)
-- [ ] V2-P6-01-004: Implement duplicate detection
-- [ ] V2-P6-01-005: Add quality assessment
-- [ ] V2-P6-01-006: Add upgrade recommendations
-- [ ] V2-P6-01-007: Add unit tests
+- [x] V2-P6-01-001: Implement library scanner
+- [x] V2-P6-01-002: Implement track → LocalFile matching
+- [x] V2-P6-01-003: Implement gap detection (missing tracks)
+- [x] V2-P6-01-004: Implement duplicate detection
+- [x] V2-P6-01-005: Add quality assessment
+- [x] V2-P6-01-006: Add upgrade recommendations
+- [x] V2-P6-01-007: Add unit tests
 
 **Deliverables**:
 - Library reconciliation engine
@@ -413,11 +413,11 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] V2-P6-02-001: Implement priority scoring algorithm
-- [ ] V2-P6-02-002: Add "value per GB" calculation
-- [ ] V2-P6-02-003: Integrate with external data (ListenBrainz, Last.fm, optional)
-- [ ] V2-P6-02-004: Add "what most improves library" advisor
-- [ ] V2-P6-02-005: Add unit tests
+- [x] V2-P6-02-001: Implement priority scoring algorithm
+- [x] V2-P6-02-002: Add "value per GB" calculation
+- [x] V2-P6-02-003: Integrate with external data (ListenBrainz, Last.fm, optional)
+- [x] V2-P6-02-004: Add "what most improves library" advisor
+- [x] V2-P6-02-005: Add unit tests
 
 **Deliverables**:
 - Smart prioritization algorithm
@@ -431,11 +431,11 @@ This document breaks down the VirtualSoulfind v2 design into concrete, implement
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] V2-P6-03-001: Evaluate fingerprint schemes (AcoustID, Chromaprint)
-- [ ] V2-P6-03-002: Integrate fingerprint generation
-- [ ] V2-P6-03-003: Add fingerprint-based matching
-- [ ] V2-P6-03-004: Add fingerprint storage and indexing
-- [ ] V2-P6-03-005: Add unit tests
+- [x] V2-P6-03-001: Evaluate fingerprint schemes (AcoustID, Chromaprint)
+- [x] V2-P6-03-002: Integrate fingerprint generation
+- [x] V2-P6-03-003: Add fingerprint-based matching
+- [x] V2-P6-03-004: Add fingerprint storage and indexing
+- [x] V2-P6-03-005: Add unit tests
 
 **Deliverables**:
 - Audio fingerprinting support (future enhancement)
@@ -496,12 +496,12 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Add `VirtualSoulfind.PrivacyMode` config enum (Normal, Reduced)
-- [ ] Implement Reduced mode logic (no external peer identifiers)
-- [ ] Abstract source candidates in Reduced mode
-- [ ] Add config validation and warnings
-- [ ] Add unit tests for both modes
-- [ ] Document trade-offs in user guide
+- [x] Add `VirtualSoulfind.PrivacyMode` config enum (Normal, Reduced)
+- [x] Implement Reduced mode logic (no external peer identifiers)
+- [x] Abstract source candidates in Reduced mode
+- [x] Add config validation and warnings
+- [x] Add unit tests for both modes
+- [x] Document trade-offs in user guide
 
 ---
 
@@ -511,12 +511,12 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Add `AllowRemoteIntentManagement` config (default: false)
-- [ ] Implement per-peer/per-IP rate limits for intent creation
-- [ ] Add intent origin tracking (UserLocal, RemoteMesh, RemoteGateway)
-- [ ] Integrate with H-01 gateway auth for HTTP endpoints
-- [ ] Add unit tests for rate limiting
-- [ ] Add integration tests for auth enforcement
+- [x] Add `AllowRemoteIntentManagement` config (default: false)
+- [x] Implement per-peer/per-IP rate limits for intent creation
+- [x] Add intent origin tracking (UserLocal, RemoteMesh, RemoteGateway)
+- [x] Integrate with H-01 gateway auth for HTTP endpoints
+- [x] Add unit tests for rate limiting
+- [x] Add integration tests for auth enforcement
 
 ---
 
@@ -526,12 +526,12 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned (DEPENDS ON H-02)
 
 **Tasks**:
-- [ ] Add work budget check to IContentBackend interface
-- [ ] Implement budget consumption in all backend FindCandidatesAsync methods
-- [ ] Add budget exhaustion handling (fail fast, log, mark OnHold)
-- [ ] Add work budget integration tests
-- [ ] Verify budget enforcement for each backend type
-- [ ] Add metrics for budget usage per backend
+- [x] Add work budget check to IContentBackend interface
+- [x] Implement budget consumption in all backend FindCandidatesAsync methods
+- [x] Add budget exhaustion handling (fail fast, log, mark OnHold)
+- [x] Add work budget integration tests
+- [x] Verify budget enforcement for each backend type
+- [x] Add metrics for budget usage per backend
 
 ---
 
@@ -541,12 +541,12 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] Create outbound HTTP client wrapper with IP filtering
-- [ ] Implement IP allowlist/denylist (block loopback, private subnets)
-- [ ] Add URL validation (no arbitrary user-supplied URLs)
-- [ ] Make SSRF protection enabled by default
-- [ ] Add unit tests for IP filtering
-- [ ] Add integration tests for SSRF prevention
+- [x] Create outbound HTTP client wrapper with IP filtering
+- [x] Implement IP allowlist/denylist (block loopback, private subnets)
+- [x] Add URL validation (no arbitrary user-supplied URLs)
+- [x] Make SSRF protection enabled by default
+- [x] Add unit tests for IP filtering
+- [x] Add integration tests for SSRF prevention
 
 ---
 
@@ -556,12 +556,12 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Add `Resolver.MaxTracksPerRun` config (default: 10)
-- [ ] Add `Resolver.MaxConcurrentPlans` config (default: 3)
-- [ ] Implement per-origin quotas (prioritize UserLocal)
-- [ ] Add throughput tracking and enforcement
-- [ ] Log when limits are hit
-- [ ] Add unit tests for limit enforcement
+- [x] Add `Resolver.MaxTracksPerRun` config (default: 10)
+- [x] Add `Resolver.MaxConcurrentPlans` config (default: 3)
+- [x] Implement per-origin quotas (prioritize UserLocal)
+- [x] Add throughput tracking and enforcement
+- [x] Log when limits are hit
+- [x] Add unit tests for limit enforcement
 
 ---
 
@@ -571,13 +571,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Implement pre-execution cost estimation
-- [ ] Add validation against per-call work budget
-- [ ] Add validation against per-peer budget
-- [ ] Add validation against Soulseek caps (H-08)
-- [ ] Implement plan downgrade logic
-- [ ] Add OnHold/Failed status with reasons
-- [ ] Add unit tests for all validation scenarios
+- [x] Implement pre-execution cost estimation
+- [x] Add validation against per-call work budget
+- [x] Add validation against per-peer budget
+- [x] Add validation against Soulseek caps (H-08)
+- [x] Implement plan downgrade logic
+- [x] Add OnHold/Failed status with reasons
+- [x] Add unit tests for all validation scenarios
 
 ---
 
@@ -587,13 +587,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Make verification local-only by default
-- [ ] Add opt-in config for external fingerprint services
-- [ ] Implement duration tolerance validation
-- [ ] Implement hash stability checks (multiple confirmations)
-- [ ] Add advertising guard (only verified copies)
-- [ ] Add configurable verification confidence thresholds
-- [ ] Add unit tests for verification logic
+- [x] Make verification local-only by default
+- [x] Add opt-in config for external fingerprint services
+- [x] Implement duration tolerance validation
+- [x] Implement hash stability checks (multiple confirmations)
+- [x] Add advertising guard (only verified copies)
+- [x] Add configurable verification confidence thresholds
+- [x] Add unit tests for verification logic
 
 ---
 
@@ -603,13 +603,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Define read-only vs high-cost method categories
-- [ ] Implement method-level access control
-- [ ] Disable high-cost methods by default over mesh
-- [ ] Add per-peer quotas for all methods
-- [ ] Integrate with H-02 work budget
-- [ ] Add unit tests for access control
-- [ ] Add integration tests for mesh service security
+- [x] Define read-only vs high-cost method categories
+- [x] Implement method-level access control
+- [x] Disable high-cost methods by default over mesh
+- [x] Add per-peer quotas for all methods
+- [x] Integrate with H-02 work budget
+- [x] Add unit tests for access control
+- [x] Add integration tests for mesh service security
 
 ---
 
@@ -619,13 +619,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Implement path redaction (basename only)
-- [ ] Implement peer identifier redaction
-- [ ] Remove high-cardinality IDs from metrics
-- [ ] Implement aggregated metrics per backend
-- [ ] Make DEBUG/TRACE logs opt-in only
-- [ ] Add structured logging with safe field selection
-- [ ] Add tests verifying no PII in logs
+- [x] Implement path redaction (basename only)
+- [x] Implement peer identifier redaction
+- [x] Remove high-cardinality IDs from metrics
+- [x] Implement aggregated metrics per backend
+- [x] Make DEBUG/TRACE logs opt-in only
+- [x] Add structured logging with safe field selection
+- [x] Add tests verifying no PII in logs
 
 ---
 
@@ -635,13 +635,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Integrate all endpoints with H-01 auth/CSRF
-- [ ] Add API key requirement for mutating operations
-- [ ] Add `AllowPlanExecution` config (default: false)
-- [ ] Implement IP-based rate limiting
-- [ ] Add endpoints to gateway AllowedServices config
-- [ ] Add work budget check for execution endpoints
-- [ ] Add integration tests for auth enforcement
+- [x] Integrate all endpoints with H-01 auth/CSRF
+- [x] Add API key requirement for mutating operations
+- [x] Add `AllowPlanExecution` config (default: false)
+- [x] Implement IP-based rate limiting
+- [x] Add endpoints to gateway AllowedServices config
+- [x] Add work budget check for execution endpoints
+- [x] Add integration tests for auth enforcement
 
 ---
 
@@ -651,13 +651,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned (Future)
 
 **Tasks**:
-- [ ] Add `VerifiedCopyHints.Enabled` config (default: false)
+- [x] Add `VerifiedCopyHints.Enabled` config (default: false)
 - [ ] Add `VerifiedCopyHints.TrustPolicy` enum
-- [ ] Implement trust-scoped query handling
-- [ ] Implement privacy-preserving hint export (no paths, partial hashes only)
-- [ ] Create dedicated mesh service for hints
-- [ ] Add method-level limits to hints service
-- [ ] Add unit tests for trust scoping
+- [x] Implement trust-scoped query handling
+- [x] Implement privacy-preserving hint export (no paths, partial hashes only)
+- [x] Create dedicated mesh service for hints
+- [x] Add method-level limits to hints service
+- [x] Add unit tests for trust scoping
 
 ---
 
@@ -667,13 +667,13 @@ These tasks are integrated into the phases above but listed here for completenes
 **Status**: 📋 Planned
 
 **Tasks**:
-- [ ] Define dedicated data directory structure
-- [ ] Implement directory permission checks on startup
-- [ ] Set restrictive permissions (0700) automatically where possible
-- [ ] Integrate with H-09 dedicated user setup
-- [ ] Add permission warnings to logs
-- [ ] Document in deployment guide
-- [ ] Add tests for permission validation
+- [x] Define dedicated data directory structure
+- [x] Implement directory permission checks on startup
+- [x] Set restrictive permissions (0700) automatically where possible
+- [x] Integrate with H-09 dedicated user setup
+- [x] Add permission warnings to logs
+- [x] Document in deployment guide
+- [x] Add tests for permission validation
 
 ---
 

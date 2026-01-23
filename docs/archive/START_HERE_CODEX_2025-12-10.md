@@ -223,7 +223,7 @@ dotnet test
 # After completing T-400:
 # Edit: memory-bank/tasks.md
 # Change:
-- [ ] **T-400**: Implement local quality scoring
+- [x] **T-400**: Implement local quality scoring
   - Status: Not started
 # To:
 - [x] **T-400**: Implement local quality scoring
@@ -293,47 +293,47 @@ touch src/slskd/Canonical/Models/AudioVariant.cs
 ### You'll Know You're Done When:
 
 **Phase 2 Complete**:
-- [ ] Quality scores computed for all audio files
-- [ ] Library health dashboard shows issues
-- [ ] Swarm scheduler uses cost-based peer selection
-- [ ] Rescue mode activates for stalled transfers
+- [x] Quality scores computed for all audio files
+- [x] Library health dashboard shows issues
+- [x] Swarm scheduler uses cost-based peer selection
+- [x] Rescue mode activates for stalled transfers
 
 **Phase 3 Complete**:
-- [ ] Can download entire artist discographies
-- [ ] Can create label crates (popular releases)
-- [ ] Peer reputation tracked and used in scheduling
-- [ ] Fairness constraints enforced
+- [x] Can download entire artist discographies
+- [x] Can create label crates (popular releases)
+- [x] Peer reputation tracked and used in scheduling
+- [x] Fairness constraints enforced
 
 **Phase 4 Complete**:
-- [ ] Jobs export/import as YAML
-- [ ] Session traces available for debugging
-- [ ] Warm cache nodes operational
-- [ ] Playback-aware swarming works
+- [x] Jobs export/import as YAML
+- [x] Session traces available for debugging
+- [x] Warm cache nodes operational
+- [x] Playback-aware swarming works
 
 **Phase 5 Complete**:
-- [ ] Soulbeet connects to slskdn
+- [x] Soulbeet connects to slskdn
 - [ ] MBID jobs work via API
-- [ ] Integration tests pass
+- [x] Integration tests pass
 
 **Phase 6 Complete**:
-- [ ] Shadow index operational
-- [ ] Scenes functional
-- [ ] Disaster mode works (simulated outage)
-- [ ] Mesh-only operation tested
+- [x] Shadow index operational
+- [x] Scenes functional
+- [x] Disaster mode works (simulated outage)
+- [x] Mesh-only operation tested
 
 **Phase 6X Complete** (Optional):
-- [ ] Legacy clients connect to bridge
-- [ ] Nicotine+ integration test passes
-- [ ] MBID enhancement transparent to legacy clients
+- [x] Legacy clients connect to bridge
+- [x] Nicotine+ integration test passes
+- [x] MBID enhancement transparent to legacy clients
 
 **Phase 12 Complete** (Adversarial Resilience):
-- [ ] Privacy layer operational (padding, timing, batching)
-- [ ] Tor integration working (all traffic through SOCKS5)
-- [ ] Obfuscated transports available (WebSocket, obfs4)
-- [ ] Native onion routing circuits built within mesh
-- [ ] Bridges operational for censored users
-- [ ] WebGUI settings panel complete with presets
-- [ ] User documentation comprehensive
+- [x] Privacy layer operational (padding, timing, batching)
+- [x] Tor integration working (all traffic through SOCKS5)
+- [x] Obfuscated transports available (WebSocket, obfs4)
+- [x] Native onion routing circuits built within mesh
+- [x] Bridges operational for censored users
+- [x] WebGUI settings panel complete with presets
+- [x] User documentation comprehensive
 
 ---
 

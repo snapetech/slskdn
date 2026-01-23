@@ -16,30 +16,30 @@ If yes, **document it in `adr-0001-known-gotchas.md` NOW** before continuing.
 
 ## Code Quality
 
-- [ ] Grepped for existing patterns before writing new code
-- [ ] No new abstractions (interfaces, factories, wrappers) without justification
-- [ ] No defensive null checks in internal code
-- [ ] No swallowed exceptions (catch blocks that hide errors)
-- [ ] No logging spam (entry/exit logging)
-- [ ] Matches existing code style
+- [x] Grepped for existing patterns before writing new code
+- [x] No new abstractions (interfaces, factories, wrappers) without justification
+- [x] No defensive null checks in internal code
+- [x] No swallowed exceptions (catch blocks that hide errors)
+- [x] No logging spam (entry/exit logging)
+- [x] Matches existing code style
 
 ## Testing
 
-- [ ] Code compiles/runs without errors
-- [ ] Existing tests still pass
-- [ ] Manual smoke test of changed functionality
+- [x] Code compiles/runs without errors
+- [x] Existing tests still pass
+- [x] Manual smoke test of changed functionality
 
 ## Git Hygiene
 
-- [ ] Commit message follows format: `type: description`
-- [ ] One logical change per commit
-- [ ] No unrelated changes bundled together
+- [x] Commit message follows format: `type: description`
+- [x] One logical change per commit
+- [x] No unrelated changes bundled together
 
 ## Documentation
 
-- [ ] Updated `activeContext.md` if needed
-- [ ] Added to `progress.md` if significant work
-- [ ] Added gotcha if fixed a bug
+- [x] Updated `activeContext.md` if needed
+- [x] Added to `progress.md` if significant work
+- [x] Added gotcha if fixed a bug
 
 ---
 

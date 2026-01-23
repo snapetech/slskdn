@@ -1,7 +1,7 @@
 # CSRF Protection Testing Guide
 
 **Feature**: CSRF Protection for slskdN  
-**Branch**: `experimental/whatAmIThinking`  
+**Branch**: `master`  
 **Status**: ✅ **Implemented and Tested** (Commit: fc715979)
 
 ---

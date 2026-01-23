@@ -656,42 +656,42 @@ Before you consider the task done, check:
 
 ### 9.1. Scope Control
 
-- [ ] You only changed pods/VirtualSoulfind/mesh-stats code and the new services' wiring
-- [ ] You did NOT touch HTTP controllers or the core DHT service-descriptor infrastructure beyond necessary registration
+- [x] You only changed pods/VirtualSoulfind/mesh-stats code and the new services' wiring
+- [x] You did NOT touch HTTP controllers or the core DHT service-descriptor infrastructure beyond necessary registration
 
 ### 9.2. Behavior Parity
 
-- [ ] Existing pod/chat behavior still works the same from the user perspective
-- [ ] VirtualSoulfind still uses the same DHT keyspaces and semantics
-- [ ] No functional regressions
+- [x] Existing pod/chat behavior still works the same from the user perspective
+- [x] VirtualSoulfind still uses the same DHT keyspaces and semantics
+- [x] No functional regressions
 
 ### 9.3. Security & Privacy
 
-- [ ] No new PII in service descriptors or DHT values
-- [ ] No logs that dump message contents or full MBID lists unnecessarily
-- [ ] Rate limits and basic checks are in place for service calls
-- [ ] Existing security checks are preserved
+- [x] No new PII in service descriptors or DHT values
+- [x] No logs that dump message contents or full MBID lists unnecessarily
+- [x] Rate limits and basic checks are in place for service calls
+- [x] Existing security checks are preserved
 
 ### 9.4. Code Quality
 
-- [ ] `IMeshService` implementations are small, focused adapters (not bloated)
-- [ ] No `.Result` / `.Wait()` on async calls
-- [ ] No gratuitous large allocations or heavy LINQ in hot paths
-- [ ] Error handling is robust (no crashes on malformed input)
+- [x] `IMeshService` implementations are small, focused adapters (not bloated)
+- [x] No `.Result` / `.Wait()` on async calls
+- [x] No gratuitous large allocations or heavy LINQ in hot paths
+- [x] Error handling is robust (no crashes on malformed input)
 
 ### 9.5. Consistency
 
-- [ ] Naming and structure match the rest of the project
-- [ ] XML docs exist for new public types/methods
-- [ ] Non-obvious security behavior is briefly commented
-- [ ] DI patterns followed
+- [x] Naming and structure match the rest of the project
+- [x] XML docs exist for new public types/methods
+- [x] Non-obvious security behavior is briefly commented
+- [x] DI patterns followed
 
 ### 9.6. Testing
 
-- [ ] Unit tests added for each service
-- [ ] Integration tests added where practical
-- [ ] All existing tests still pass
-- [ ] No test regressions
+- [x] Unit tests added for each service
+- [x] Integration tests added where practical
+- [x] All existing tests still pass
+- [x] No test regressions
 
 ---
 

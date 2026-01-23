@@ -192,26 +192,26 @@ This feature **replaces** the current auto-replace system:
 ## Implementation Phases
 
 ### Phase 1: Verification Service
-- [ ] Create `IContentVerificationService`
-- [ ] Implement 64KB chunk download
-- [ ] SHA256 hashing
-- [ ] Source grouping by hash
+- [x] Create `IContentVerificationService`
+- [x] Implement 64KB chunk download
+- [x] SHA256 hashing
+- [x] Source grouping by hash
 
 ### Phase 2: Chunked Download Manager
 - [ ] Create `IChunkedDownloadService`
-- [ ] Chunk allocation algorithm
-- [ ] Parallel download orchestration
-- [ ] Chunk assembly
+- [x] Chunk allocation algorithm
+- [x] Parallel download orchestration
+- [x] Chunk assembly
 
 ### Phase 3: Integration
-- [ ] Replace auto-replace toggle with multi-source toggle
-- [ ] UI for source verification status
-- [ ] Progress indicators per chunk
+- [x] Replace auto-replace toggle with multi-source toggle
+- [x] UI for source verification status
+- [x] Progress indicators per chunk
 
 ### Phase 4: Resilience
-- [ ] Handle source failures mid-download
-- [ ] Chunk reassignment
-- [ ] Resume from partial state
+- [x] Handle source failures mid-download
+- [x] Chunk reassignment
+- [x] Resume from partial state
 
 ## Risks & Mitigations
 

@@ -256,17 +256,17 @@ sudo systemctl start slskd
 ## Next Steps
 
 ### Integration Tasks
-- [ ] Wire security services into existing transfer handlers
-- [ ] Add security event logging to overlay connections
-- [ ] Integrate PeerReputation with source ranking
-- [ ] Add PathGuard validation to download paths
-- [ ] Enable ContentSafety verification on completed downloads
+- [x] Wire security services into existing transfer handlers
+- [x] Add security event logging to overlay connections
+- [x] Integrate PeerReputation with source ranking
+- [x] Add PathGuard validation to download paths
+- [x] Enable ContentSafety verification on completed downloads
 
 ### Future Enhancements
-- [ ] Persistent storage for ViolationTracker/PeerReputation
-- [ ] Web UI for security monitoring
-- [ ] Export security events to external SIEM
-- [ ] Automated threat response rules
+- [x] Persistent storage for ViolationTracker/PeerReputation
+- [x] Web UI for security monitoring
+- [x] Export security events to external SIEM
+- [x] Automated threat response rules
 
 ---
 

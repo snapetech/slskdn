@@ -76,14 +76,14 @@ CREATE INDEX idx_rg_type ON ReleaseGroups(type);
 
 #### Implementation Checklist
 
-- [ ] Define `ArtistReleaseGraph` and related models
-- [ ] Create database schema + migration
-- [ ] Implement `IArtistReleaseGraphService` interface
-- [ ] Implement cache-first fetch logic (7-day cache)
-- [ ] Implement MusicBrainz API integration (respect 1 req/sec limit)
-- [ ] Implement artist search functionality
-- [ ] Add unit tests for cache expiration
-- [ ] Add integration tests with MB API
+- [x] Define `ArtistReleaseGraph` and related models
+- [x] Create database schema + migration
+- [x] Implement `IArtistReleaseGraphService` interface
+- [x] Implement cache-first fetch logic (7-day cache)
+- [x] Implement MusicBrainz API integration (respect 1 req/sec limit)
+- [x] Implement artist search functionality
+- [x] Add unit tests for cache expiration
+- [x] Add integration tests with MB API
 
 ---
 
@@ -163,13 +163,13 @@ namespace slskd.Integrations.MusicBrainz
 
 #### Implementation Checklist
 
-- [ ] Define `DiscographyProfile` enum + `DiscographyProfileFilter`
-- [ ] Implement `IDiscographyProfileService` interface
-- [ ] Implement profile filter logic (type, date, country)
-- [ ] Implement "best release" selection per release group
-- [ ] Add configuration for custom profile definitions
-- [ ] Add unit tests for profile filters
-- [ ] Add integration tests with sample artist graphs
+- [x] Define `DiscographyProfile` enum + `DiscographyProfileFilter`
+- [x] Implement `IDiscographyProfileService` interface
+- [x] Implement profile filter logic (type, date, country)
+- [x] Implement "best release" selection per release group
+- [x] Add configuration for custom profile definitions
+- [x] Add unit tests for profile filters
+- [x] Add integration tests with sample artist graphs
 
 ---
 
@@ -233,15 +233,15 @@ CREATE TABLE DiscographyReleaseJobs (
 
 #### Implementation Checklist
 
-- [ ] Define `DiscographyJob` model + database schema
-- [ ] Implement `IDiscographyJobService` interface
-- [ ] Implement job planning (resolve discography → create sub-jobs)
-- [ ] Subscribe to release job completion events
-- [ ] Aggregate progress from sub-jobs
-- [ ] Add API endpoint: `POST /api/jobs/discography`
-- [ ] Add API endpoint: `GET /api/jobs/{id}` (generic for all job types)
-- [ ] Add unit tests for job planning
-- [ ] Add integration tests for job execution
+- [x] Define `DiscographyJob` model + database schema
+- [x] Implement `IDiscographyJobService` interface
+- [x] Implement job planning (resolve discography → create sub-jobs)
+- [x] Subscribe to release job completion events
+- [x] Aggregate progress from sub-jobs
+- [x] Add API endpoint: `POST /api/jobs/discography`
+- [x] Add API endpoint: `GET /api/jobs/{id}` (generic for all job types)
+- [x] Add unit tests for job planning
+- [x] Add integration tests for job execution
 
 ---
 
@@ -321,15 +321,15 @@ namespace slskd.Mesh
 
 #### Implementation Checklist
 
-- [ ] Define `LabelPresenceStats` model
-- [ ] Create database schema for label tracking
-- [ ] Implement `ILabelPresenceService` interface
-- [ ] Integrate with mesh sync to collect label data
-- [ ] Implement label popularity computation
-- [ ] Add background job to update stats from mesh
-- [ ] Add API endpoint: `GET /api/labels/{labelId}/stats`
-- [ ] Add unit tests for stats aggregation
-- [ ] Add integration tests with mock mesh data
+- [x] Define `LabelPresenceStats` model
+- [x] Create database schema for label tracking
+- [x] Implement `ILabelPresenceService` interface
+- [x] Integrate with mesh sync to collect label data
+- [x] Implement label popularity computation
+- [x] Add background job to update stats from mesh
+- [x] Add API endpoint: `GET /api/labels/{labelId}/stats`
+- [x] Add unit tests for stats aggregation
+- [x] Add integration tests with mock mesh data
 
 ---
 
@@ -420,13 +420,13 @@ namespace slskd.Jobs
 
 #### Implementation Checklist
 
-- [ ] Define `LabelCrateJob` model + database schema
-- [ ] Implement `ILabelCrateJobService` interface
-- [ ] Implement job creation with popularity-based selection
-- [ ] Subscribe to release job completion events
-- [ ] Add API endpoint: `POST /api/jobs/label-crate`
-- [ ] Add unit tests for label crate job planning
-- [ ] Add integration tests for job execution
+- [x] Define `LabelCrateJob` model + database schema
+- [x] Implement `ILabelCrateJobService` interface
+- [x] Implement job creation with popularity-based selection
+- [x] Subscribe to release job completion events
+- [x] Add API endpoint: `POST /api/jobs/label-crate`
+- [x] Add unit tests for label crate job planning
+- [x] Add integration tests for job execution
 
 ---
 
@@ -484,13 +484,13 @@ CREATE INDEX idx_reputation_success ON PeerReputation(chunks_successful);
 
 #### Implementation Checklist
 
-- [ ] Define `PeerReputationMetrics` model
-- [ ] Create database schema
-- [ ] Implement metric collection hooks in chunk transfers
-- [ ] Add temporal decay (older events weighted less)
-- [ ] Ensure reputation is NEVER shared/published
-- [ ] Add unit tests for metric updates
-- [ ] Add integration tests with mock transfers
+- [x] Define `PeerReputationMetrics` model
+- [x] Create database schema
+- [x] Implement metric collection hooks in chunk transfers
+- [x] Add temporal decay (older events weighted less)
+- [x] Ensure reputation is NEVER shared/published
+- [x] Add unit tests for metric updates
+- [x] Add integration tests with mock transfers
 
 ---
 
@@ -542,12 +542,12 @@ namespace slskd.Mesh.Reputation
 
 #### Implementation Checklist
 
-- [ ] Implement `ReputationScorer` class
-- [ ] Add temporal decay logic
-- [ ] Add confidence adjustment for new peers
-- [ ] Add configuration for weights + decay parameters
-- [ ] Add unit tests for scoring algorithm
-- [ ] Add tests for edge cases (new peer, old data)
+- [x] Implement `ReputationScorer` class
+- [x] Add temporal decay logic
+- [x] Add confidence adjustment for new peers
+- [x] Add configuration for weights + decay parameters
+- [x] Add unit tests for scoring algorithm
+- [x] Add tests for edge cases (new peer, old data)
 
 ---
 
@@ -603,13 +603,13 @@ namespace slskd.Transfers.MultiSource
 
 #### Implementation Checklist
 
-- [ ] Extend `SwarmScheduler` with reputation integration
-- [ ] Add reputation cost component to cost function
-- [ ] Implement peer quarantine for low reputation
-- [ ] Add configuration for reputation threshold
-- [ ] Add logging for reputation-based decisions
-- [ ] Add unit tests for reputation integration
-- [ ] Add integration tests with mock reputation data
+- [x] Extend `SwarmScheduler` with reputation integration
+- [x] Add reputation cost component to cost function
+- [x] Implement peer quarantine for low reputation
+- [x] Add configuration for reputation threshold
+- [x] Add logging for reputation-based decisions
+- [x] Add unit tests for reputation integration
+- [x] Add integration tests with mock reputation data
 
 ---
 
@@ -666,13 +666,13 @@ CREATE INDEX idx_traffic_window ON TrafficStats(window_start, window_end);
 
 #### Implementation Checklist
 
-- [ ] Define `TrafficStats` model
-- [ ] Create database schema
-- [ ] Hook into transfer completion events to update stats
-- [ ] Implement rolling window (last 24h, last 7d, last 30d)
-- [ ] Add API endpoint: `GET /api/mesh/traffic-stats`
-- [ ] Add unit tests for stat aggregation
-- [ ] Add integration tests with mock transfers
+- [x] Define `TrafficStats` model
+- [x] Create database schema
+- [x] Hook into transfer completion events to update stats
+- [x] Implement rolling window (last 24h, last 7d, last 30d)
+- [x] Add API endpoint: `GET /api/mesh/traffic-stats`
+- [x] Add unit tests for stat aggregation
+- [x] Add integration tests with mock transfers
 
 ---
 
@@ -766,13 +766,13 @@ namespace slskd.Mesh.Fairness
 
 #### Implementation Checklist
 
-- [ ] Implement `IFairnessGovernor` interface
-- [ ] Implement constraint checking logic
-- [ ] Implement throttling/preference adjustment actions
-- [ ] Add background enforcement task (runs every 10 minutes)
-- [ ] Add configuration options
-- [ ] Add unit tests for constraint enforcement
-- [ ] Add integration tests with mock traffic data
+- [x] Implement `IFairnessGovernor` interface
+- [x] Implement constraint checking logic
+- [x] Implement throttling/preference adjustment actions
+- [x] Add background enforcement task (runs every 10 minutes)
+- [x] Add configuration options
+- [x] Add unit tests for constraint enforcement
+- [x] Add integration tests with mock traffic data
 
 ---
 
@@ -851,12 +851,12 @@ const ContributionSummary = () => {
 
 #### Implementation Checklist
 
-- [ ] Create React `ContributionSummary` component
-- [ ] Add to Settings or Dashboard page
-- [ ] Add API endpoint: `GET /api/mesh/traffic-stats`
-- [ ] Add time window selector (24h, 7d, 30d)
-- [ ] Add chart visualization (optional)
-- [ ] Add E2E tests for UI
+- [x] Create React `ContributionSummary` component
+- [x] Add to Settings or Dashboard page
+- [x] Add API endpoint: `GET /api/mesh/traffic-stats`
+- [x] Add time window selector (24h, 7d, 30d)
+- [x] Add chart visualization (optional)
+- [x] Add E2E tests for UI
 
 ---
 

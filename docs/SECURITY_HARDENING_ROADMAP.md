@@ -205,17 +205,17 @@ Treat every byte from server/peers as hostile.
 
 #### Requirements
 
-- [ ] **Strict Message Decoding**
+- [x] **Strict Message Decoding**
   - Verify lengths before allocation
   - Enforce upper bounds on all collections (max search results, max path length, max folder depth)
   - Drop or quarantine messages that violate spec instead of trying to be tolerant
 
-- [ ] **Enhanced Rate Limiting**
+- [x] **Enhanced Rate Limiting**
   - Per-peer message rate caps
   - Backoff when flooded with search results, queue updates, or chat spam
   - Sliding windows for bytes/sec and msgs/sec per peer
 
-- [ ] **Connection Hard Caps**
+- [x] **Connection Hard Caps**
   - Max concurrent incoming connections
   - Max queued upload/download requests per peer and globally
   - Connection aging (new connections get less trust)
@@ -251,19 +251,19 @@ public class NetworkGuard
 
 #### Requirements
 
-- [ ] **PathGuard Utility**
+- [x] **PathGuard Utility**
   - Hard enforce all shared files live under configured root
   - Reject paths containing `..` components
   - Reject absolute paths from peer input
   - Reject paths exceeding configured length
   - Normalize Unicode to prevent homoglyph attacks
 
-- [ ] **Download Sandboxing**
+- [x] **Download Sandboxing**
   - Force all downloads into dedicated download root
   - No peer-supplied relative paths can escape that root
   - Sanitize filenames (remove special chars, limit length)
 
-- [ ] **Systemd Hardening Documentation**
+- [x] **Systemd Hardening Documentation**
   - `ProtectHome`, `ProtectSystem=strict`
   - `ReadWritePaths` only for media roots
   - `NoNewPrivileges=yes`, `PrivateTmp=yes`
@@ -305,17 +305,17 @@ public static class PathGuard
 
 #### Requirements
 
-- [ ] **Metadata Minimizer**
+- [x] **Metadata Minimizer**
   - Strip or randomize optional metadata
   - Don't send rich OS/host/client identifiers beyond what's necessary
   - Avoid embedding local folder names that leak real names or machine layout
 
-- [ ] **Minimal Profile Mode**
+- [x] **Minimal Profile Mode**
   - Very short, generic user description
   - No auto-joining public rooms on startup
   - Per-session random client instance ID
 
-- [ ] **Configuration Options**
+- [x] **Configuration Options**
   ```yaml
   privacy:
     minimize_metadata: true
@@ -336,17 +336,17 @@ public static class PathGuard
 
 #### Requirements
 
-- [ ] **Magic Byte Verification**
+- [x] **Magic Byte Verification**
   - Sniff first 4-8 bytes of completed downloads
   - Match against known signatures (FLAC, MP3, OGG, ZIP, EXE, MKV)
   - Flag files where extension ≠ magic bytes
 
-- [ ] **Quarantine System**
+- [x] **Quarantine System**
   - Auto-quarantine suspicious files
   - Move to quarantine folder or warn user
   - Mark as `Suspicious` in database
 
-- [ ] **Extension/Content Mismatch Detection**
+- [x] **Extension/Content Mismatch Detection**
   - If you request `.flac` and first bytes look like EXE/PE/ELF/ZIP, flag it
   - Default refusal to serve or auto-open suspicious files
 
@@ -398,24 +398,24 @@ public class ContentSafetyService
 
 #### Requirements
 
-- [ ] **PeerProfile Record**
+- [x] **PeerProfile Record**
   - `MalformedMessageCount`
   - `AbortedTransfers`
   - `SuccessfulTransfers`
   - `FirstSeen`, `LastSeen`
   - `ProtocolViolations`
 
-- [ ] **Scoring Heuristic**
+- [x] **Scoring Heuristic**
   ```
   score = base + α*successes - β*failures - γ*malformed - δ*violations
   ```
 
-- [ ] **Score-Based Actions**
+- [x] **Score-Based Actions**
   - Avoid low-score peers for multi-source unless no alternative
   - Auto-block worst offenders
   - Soft-ban threshold with automatic expiry
 
-- [ ] **Event Integration**
+- [x] **Event Integration**
   - Update on `OnTransferStarted`, `OnTransferAborted`, `OnMessageParseError`
   - Decay scores over time (recent behavior weighted more)
 
@@ -457,12 +457,12 @@ public class PeerReputationService
 
 #### Requirements
 
-- [ ] **Pre-Transfer Commitment**
+- [x] **Pre-Transfer Commitment**
   - Peer commits to `Hash(content_hash || nonce)` before transfer starts
   - Reveals `content_hash` and `nonce` after commitment
   - If actual file doesn't match, they provably lied
 
-- [ ] **Evidence Generation**
+- [x] **Evidence Generation**
   - Commitment + reveal provides cryptographic proof of malicious intent
   - Can be shared with mesh peers as irrefutable evidence
 
@@ -510,19 +510,19 @@ public class CommitmentService
 
 #### Requirements
 
-- [ ] **Random Byte Range Challenge**
+- [x] **Random Byte Range Challenge**
   - Request arbitrary byte ranges (e.g., bytes 847293-847392)
   - Legitimate peer serves instantly
   - Faker must store whole file or be exposed
 
-- [ ] **Challenge-Response Protocol**
+- [x] **Challenge-Response Protocol**
   ```
   You: "CHALLENGE: SHA256 of bytes [random_start, random_start+1024]"
   Peer: "RESPONSE: <hash>"
   You: (verify after download, or against known good)
   ```
 
-- [ ] **Pre-Download Filtering**
+- [x] **Pre-Download Filtering**
   - Challenge cheaply before committing to full download
   - Especially useful for large files from unknown peers
 
@@ -570,16 +570,16 @@ public class StorageProofService
 
 #### Requirements
 
-- [ ] **N-of-M Verification**
+- [x] **N-of-M Verification**
   - Require majority agreement on chunk content
   - If 3 sources give chunk A and 1 gives chunk B, accept A
   - Automatically identify the lying source
 
-- [ ] **Redundant Fetching for Critical Chunks**
+- [x] **Redundant Fetching for Critical Chunks**
   - First/last chunks, file headers: always get from multiple sources
   - Compare before accepting
 
-- [ ] **Merkle Tree Cross-Verification**
+- [x] **Merkle Tree Cross-Verification**
   - Build Merkle tree of file
   - Each peer provides tree root at start
   - Any single chunk verifiable against tree
@@ -631,18 +631,18 @@ public class ByzantineDownloader
 
 #### Requirements
 
-- [ ] **Random Verification Intensity**
+- [x] **Random Verification Intensity**
   - Some chunks: full SHA256 verification
   - Some chunks: quick CRC checks
   - Some chunks: spot-checks of specific byte ranges
   - **Peers never know which chunks will be scrutinized**
 
-- [ ] **Hidden Challenge Points**
+- [x] **Hidden Challenge Points**
   - Randomly request same chunk from multiple peers
   - Compare responses - divergence indicates malice
   - Vary which peers get challenged
 
-- [ ] **Reputation-Adaptive**
+- [x] **Reputation-Adaptive**
   - New peers: 100% verification
   - Established peers: probabilistic (unknown probability)
   - Suspicious peers: hidden increased scrutiny
@@ -663,17 +663,17 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **File Fingerprint History**
+- [x] **File Fingerprint History**
   - Record `(filename, size, directory_structure, first_seen, last_seen)` per peer
   - A FLAC file that changes size is suspicious
   - High churn = possible bot or compromised account
 
-- [ ] **Structural Stability Score**
+- [x] **Structural Stability Score**
   - Legitimate shares tend to be stable
   - Folder structures that constantly reorganize suggest manipulation
   - Files appearing/disappearing repeatedly are suspicious
 
-- [ ] **Metadata Drift Detection**
+- [x] **Metadata Drift Detection**
   - Same filename, different sizes over time = red flag
   - Inconsistent bitrates for "same" album = possible fakes
 
@@ -689,16 +689,16 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **Per-Request Watermarking**
+- [x] **Per-Request Watermarking**
   - For media files, introduce imperceptible modifications
   - Each peer gets slightly different version, cryptographically tied to identity
   - LSB changes in audio, invisible metadata in images
 
-- [ ] **Provenance Tracking**
+- [x] **Provenance Tracking**
   - If watermarked file shows up elsewhere, identify which peer leaked
   - Store watermark→peer mapping in encrypted local database
 
-- [ ] **Trust Violation Detection**
+- [x] **Trust Violation Detection**
   - Identify peers who redistribute "private" shares
   - Build evidence for blocklisting without reputation hearsay
 
@@ -714,17 +714,17 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **Paginated Share Responses**
+- [x] **Paginated Share Responses**
   - Don't send entire share list in one message
   - Paginate with delays between pages
   - Makes enumeration attacks slow and detectable
 
-- [ ] **Trust-Gated Visibility**
+- [x] **Trust-Gated Visibility**
   - New peers see only subset of shares
   - Full visibility unlocks with established trust
   - "Premium" shares visible only to high-trust peers
 
-- [ ] **Query Rate Limiting**
+- [x] **Query Rate Limiting**
   - Cap how fast any peer can browse shares
   - Exponential backoff for repeated queries
   - Prevents automated scraping
@@ -743,12 +743,12 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **Unusual Message Sequence Detection**
+- [x] **Unusual Message Sequence Detection**
   - Normal clients follow predictable patterns
   - Scanners send unusual sequences to probe
   - Track message ordering, flag deviations
 
-- [ ] **Timing Analysis**
+- [x] **Timing Analysis**
   - Automated tools probe at regular intervals
   - Legitimate peers have natural timing variance
   - Flag suspiciously regular patterns
@@ -775,12 +775,12 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
   - Predict what it should tell you next
   - Large deviations = possible manipulation
 
-- [ ] **State Checksums**
+- [x] **State Checksums**
   - Periodically request state checksums
   - Store expected checksum based on messages received
   - Mismatch indicates bug, MITM, or manipulation
 
-- [ ] **Mesh Cross-Reference**
+- [x] **Mesh Cross-Reference**
   - Cross-reference server state with mesh peers
   - If server tells you X and mesh tells you Y, investigate
 
@@ -796,16 +796,16 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **Honeypot Overlay Ports**
+- [x] **Honeypot Overlay Ports**
   - Open additional ports that look like overlay ports
   - Any traffic to them is definitionally suspicious
   - Log connection details for threat intelligence
 
-- [ ] **Decoy API Endpoints**
+- [x] **Decoy API Endpoints**
   - `/api/v0/admin/debug/dump` - anyone accessing is probing
   - Return plausible-looking fake data to waste attacker time
 
-- [ ] **Canary Files in Shares**
+- [x] **Canary Files in Shares**
   - Place files with attractive names: `passwords.txt`, `private_keys.txt`
   - Track who requests them
   - Automatic reputation penalty
@@ -822,12 +822,12 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **Entropy Pool Monitoring**
+- [x] **Entropy Pool Monitoring**
   - Track available system entropy
   - Alert if entropy drops dangerously low
   - Never perform crypto operations with weak randomness
 
-- [ ] **Nonce Uniqueness Verification**
+- [x] **Nonce Uniqueness Verification**
   - Track all nonces generated (bloom filter)
   - Detect accidental reuse (catastrophic for many protocols)
   - Alert on suspicious patterns
@@ -844,17 +844,17 @@ Adversaries can't optimize attacks against unknown verification. This is **game-
 
 #### Requirements
 
-- [ ] **Server Action Logging UI**
+- [x] **Server Action Logging UI**
   - Shows raw categories of server actions
   - Search result counts, unexpected disconnects
   - Suspicious server messages (invalid IPs, absurd ports)
 
-- [ ] **Client-Side Constraints**
+- [x] **Client-Side Constraints**
   - Limit max search results accepted per query
   - Ignore IPs in unexpected private ranges
   - Ignore ports outside safe range
 
-- [ ] **Server Failsafe**
+- [x] **Server Failsafe**
   - If server sends burst of nonsense, back off rather than crash
   - Rate limit server message acceptance
 

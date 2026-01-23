@@ -340,22 +340,22 @@ class ServiceMetrics
 ## Test Coverage Needed (T-SF05-006)
 
 ### Abuse Scenarios
-- [ ] Peer sends 1000 calls/min (should trigger rate limit)
-- [ ] Peer sends calls to 10 different services (should trigger global quota)
-- [ ] Peer sends 10MB payload (should reject)
-- [ ] Peer sends malformed ServiceCall (should reject safely)
-- [ ] Peer enumerates all service names (should log warning)
+- [x] Peer sends 1000 calls/min (should trigger rate limit)
+- [x] Peer sends calls to 10 different services (should trigger global quota)
+- [x] Peer sends 10MB payload (should reject)
+- [x] Peer sends malformed ServiceCall (should reject safely)
+- [x] Peer enumerates all service names (should log warning)
 
 ### Failure Scenarios
-- [ ] Service throws exception (should return error, not crash)
-- [ ] Service times out (should cancel and return timeout error)
-- [ ] Service returns null (should handle gracefully)
-- [ ] ViolationTracker throws (should log warning, continue)
+- [x] Service throws exception (should return error, not crash)
+- [x] Service times out (should cancel and return timeout error)
+- [x] Service returns null (should handle gracefully)
+- [x] ViolationTracker throws (should log warning, continue)
 
 ### Integration Scenarios
-- [ ] Banned peer calls service (should reject via NetworkGuardPolicy)
-- [ ] Low-reputation peer calls service (should have stricter limits)
-- [ ] High-reputation peer calls service (should have looser limits)
+- [x] Banned peer calls service (should reject via NetworkGuardPolicy)
+- [x] Low-reputation peer calls service (should have stricter limits)
+- [x] High-reputation peer calls service (should have looser limits)
 
 ---
 

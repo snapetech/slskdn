@@ -318,11 +318,11 @@ Add tests to verify:
 
 ### 9. Anti-Slop Checklist
 
-- [ ] Movie and Tv domains added without changing existing domains
-- [ ] Types compile and pass tests
-- [ ] Stub providers registered in DI
-- [ ] No external API calls yet (T-VID03)
-- [ ] No scanner integration yet (T-VID02)
+- [x] Movie and Tv domains added without changing existing domains
+- [x] Types compile and pass tests
+- [x] Stub providers registered in DI
+- [x] No external API calls yet (T-VID03)
+- [x] No scanner integration yet (T-VID02)
 
 ---
 

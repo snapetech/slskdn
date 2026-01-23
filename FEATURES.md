@@ -2,7 +2,7 @@
 
 **slskdn** - Soulseek client with mesh networking, multi-domain content acquisition, and service fabric
 
-> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) with experimental mesh networking and advanced features. See [README.md](README.md#acknowledgments) for full attribution.
+> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) with mesh networking and advanced features. See [README.md](README.md#acknowledgments) for full attribution.
 
 ---
 
@@ -332,38 +332,38 @@ TrustedRelay:
 - [x] HTTP gateway with auth (T-SF04 + H-01)
 
 ### Phase 2: Security Hardening 🚧 IN PROGRESS
-- [ ] Security review and tightening (T-SF05)
-- [ ] Developer docs and examples (T-SF06)
-- [ ] Metrics and observability (T-SF07)
-- [ ] Work budget implementation (H-02) **CRITICAL**
-- [ ] Soulseek safety caps (H-08) **CRITICAL**
+- [x] Security review and tightening (T-SF05)
+- [x] Developer docs and examples (T-SF06)
+- [x] Metrics and observability (T-SF07)
+- [x] Work budget implementation (H-02) **CRITICAL**
+- [x] Soulseek safety caps (H-08) **CRITICAL**
 
 ### Phase 3: Multi-Domain Foundation
-- [ ] Domain abstraction (T-VC01)
-- [ ] Music domain provider (T-VC02)
-- [ ] GenericFile domain provider (T-VC03)
-- [ ] Domain-aware planner + Soulseek gating (T-VC04)
+- [x] Domain abstraction (T-VC01)
+- [x] Music domain provider (T-VC02)
+- [x] GenericFile domain provider (T-VC03)
+- [x] Domain-aware planner + Soulseek gating (T-VC04)
 
 ### Phase 4: VirtualSoulfind v2
-- [ ] Data model and catalogue store (V2-P1)
-- [ ] Intent queue and planner (V2-P2)
-- [ ] Match and verification engine (V2-P3)
-- [ ] Backend implementations (V2-P4)
-- [ ] Integration and work budget (V2-P5)
-- [ ] Advanced features (V2-P6)
+- [x] Data model and catalogue store (V2-P1)
+- [x] Intent queue and planner (V2-P2)
+- [x] Match and verification engine (V2-P3)
+- [x] Backend implementations (V2-P4)
+- [x] Integration and work budget (V2-P5)
+- [x] Advanced features (V2-P6)
 
 ### Phase 5: Proxy/Relay Services
-- [ ] Define primitives (T-PR01)
-- [ ] Catalogue fetch service (T-PR02)
-- [ ] Content relay service (T-PR03)
-- [ ] Trusted relay service (T-PR04)
-- [ ] Hardening and policy (H-PR05)
+- [x] Define primitives (T-PR01)
+- [x] Catalogue fetch service (T-PR02)
+- [x] Content relay service (T-PR03)
+- [x] Trusted relay service (T-PR04)
+- [x] Hardening and policy (H-PR05)
 
 ### Phase 6: Testing & Hardening
-- [ ] Comprehensive testing (T-TEST-01 through T-TEST-07)
-- [ ] Remaining hardening tasks (H-03 through H-07, H-09, H-10)
-- [ ] Security audit and penetration testing
-- [ ] Performance optimization
+- [x] Comprehensive testing (T-TEST-01 through T-TEST-07)
+- [x] Remaining hardening tasks (H-03 through H-07, H-09, H-10)
+- [x] Security audit and penetration testing
+- [x] Performance optimization
 
 ---
 
@@ -381,7 +381,7 @@ git clone https://github.com/snapetech/slskdn.git
 cd slskdn
 
 # Checkout experimental branch
-git checkout experimental/whatAmIThinking
+git checkout master
 
 # Build
 dotnet build
@@ -450,7 +450,7 @@ See LICENSE file for details.
 ## Status
 
 **Current Version**: 0.x.x (experimental)  
-**Branch**: experimental/whatAmIThinking  
+**Branch**: master  
 **Status**: Active development  
 **Production Ready**: No (experimental features)
 

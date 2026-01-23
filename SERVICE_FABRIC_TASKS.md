@@ -65,7 +65,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Signature: Ed25519, tied to owner key
     - CreatedAt/ExpiresAt: time window validation
 
-- [ ] **T-SF01-002**: Implement `IMeshServiceDirectory` interface
+- [x] **T-SF01-002**: Implement `IMeshServiceDirectory` interface
   - Priority: P0
   - Notes:
     ```csharp
@@ -81,7 +81,7 @@ This document outlines the phased implementation of a **generic service fabric**
     }
     ```
 
-- [ ] **T-SF01-003**: Implement DHT-backed service directory
+- [x] **T-SF01-003**: Implement DHT-backed service directory
   - Priority: P0
   - Notes:
     - Use existing DHT client
@@ -91,7 +91,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Filter expired/invalid/banned peers
     - Integrate with existing reputation system
 
-- [ ] **T-SF01-004**: Implement service descriptor validation
+- [x] **T-SF01-004**: Implement service descriptor validation
   - Priority: P0
   - Notes:
     - Signature validation (Ed25519)
@@ -100,7 +100,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - No PII in ServiceName or Metadata
     - Ban list integration from SecurityCore
 
-- [ ] **T-SF01-005**: Implement service publisher background service
+- [x] **T-SF01-005**: Implement service publisher background service
   - Priority: P0
   - Notes:
     - Periodic publishing of local services
@@ -109,14 +109,14 @@ This document outlines the phased implementation of a **generic service fabric**
     - Size threshold enforcement
     - Integration with existing DHT rate limiter
 
-- [ ] **T-SF01-006**: Add ServiceId derivation unit tests
+- [x] **T-SF01-006**: Add ServiceId derivation unit tests
   - Priority: P0
   - Notes:
     - Same inputs → same ID
     - Small variations → different ID
     - Collision resistance tests
 
-- [ ] **T-SF01-007**: Add DHT directory parsing unit tests
+- [x] **T-SF01-007**: Add DHT directory parsing unit tests
   - Priority: P0
   - Notes:
     - Oversized descriptors dropped
@@ -135,7 +135,7 @@ This document outlines the phased implementation of a **generic service fabric**
 
 ### Tasks
 
-- [ ] **T-SF02-001**: Create `IMeshService` interface
+- [x] **T-SF02-001**: Create `IMeshService` interface
   - Priority: P1
   - Notes:
     ```csharp
@@ -155,7 +155,7 @@ This document outlines the phased implementation of a **generic service fabric**
     }
     ```
 
-- [ ] **T-SF02-002**: Create `ServiceCall` and `ServiceReply` DTOs
+- [x] **T-SF02-002**: Create `ServiceCall` and `ServiceReply` DTOs
   - Priority: P1
   - Notes:
     - ServiceCall: ServiceId, Method, CorrelationId, Payload
@@ -163,7 +163,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Enforce payload size limits (default 1MB, configurable)
     - Opaque method names (no semantic meaning)
 
-- [ ] **T-SF02-003**: Implement central service router
+- [x] **T-SF02-003**: Implement central service router
   - Priority: P1
   - Notes:
     - Route incoming calls to registered IMeshService instances
@@ -173,7 +173,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Payload size validation
     - Integration with existing overlay transport
 
-- [ ] **T-SF02-004**: Implement abuse mitigation in router
+- [x] **T-SF02-004**: Implement abuse mitigation in router
   - Priority: P1
   - Notes:
     - Rate limit: 100 calls/min per peer (configurable)
@@ -182,7 +182,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Reject oversized payloads
     - Register violations with SecurityCore
 
-- [ ] **T-SF02-005**: Implement `IMeshServiceClient` interface
+- [x] **T-SF02-005**: Implement `IMeshServiceClient` interface
   - Priority: P1
   - Notes:
     ```csharp
@@ -196,7 +196,7 @@ This document outlines the phased implementation of a **generic service fabric**
     }
     ```
 
-- [ ] **T-SF02-006**: Implement client-side service client
+- [x] **T-SF02-006**: Implement client-side service client
   - Priority: P1
   - Notes:
     - Timeout enforcement (default 30s)
@@ -204,7 +204,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Error propagation with safe messages
     - No leaky error details to clients
 
-- [ ] **T-SF02-007**: Add service router unit tests
+- [x] **T-SF02-007**: Add service router unit tests
   - Priority: P1
   - Notes:
     - Rate limit enforcement
@@ -212,7 +212,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Concurrent call limits
     - Violation registration
 
-- [ ] **T-SF02-008**: Add service client unit tests
+- [x] **T-SF02-008**: Add service client unit tests
   - Priority: P1
   - Notes:
     - Timeout handling
@@ -230,7 +230,7 @@ This document outlines the phased implementation of a **generic service fabric**
 
 ### Tasks
 
-- [ ] **T-SF03-001**: Wrap Pod/Chat as `IMeshService`
+- [x] **T-SF03-001**: Wrap Pod/Chat as `IMeshService`
   - Priority: P1
   - Notes:
     - Methods: Join, Leave, PostMessage, FetchMessages
@@ -239,7 +239,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Message size limits (4KB default)
     - Frequency limits (10 msgs/min per peer)
 
-- [ ] **T-SF03-002**: Wrap VirtualSoulfind/Shadow Index as `IMeshService`
+- [x] **T-SF03-002**: Wrap VirtualSoulfind/Shadow Index as `IMeshService`
   - Priority: P1
   - Notes:
     - Methods: RegisterTrack, LookupByMbId, QueryShard
@@ -247,7 +247,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Registration frequency limits (100/hour per peer)
     - MBID validation
 
-- [ ] **T-SF03-003**: Create Mesh Stats/Introspection service
+- [x] **T-SF03-003**: Create Mesh Stats/Introspection service
   - Priority: P2
   - Notes:
     - Methods: GetMeshStatus, GetPeersSummary
@@ -255,7 +255,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - No internal hostnames/usernames leaked
     - Aggregate stats only
 
-- [ ] **T-SF03-004**: Add integration tests for wrapped services
+- [x] **T-SF03-004**: Add integration tests for wrapped services
   - Priority: P1
   - Notes:
     - Test service discovery
@@ -274,7 +274,7 @@ This document outlines the phased implementation of a **generic service fabric**
 
 ### Tasks
 
-- [ ] **T-SF04-001**: Create HTTP gateway controller
+- [x] **T-SF04-001**: Create HTTP gateway controller
   - Priority: P1
   - Notes:
     - Routes: `GET/POST /mesh/http/{serviceName}/{**path}`
@@ -282,14 +282,14 @@ This document outlines the phased implementation of a **generic service fabric**
     - Configurable enable/disable
     - Service name whitelist
 
-- [ ] **T-SF04-002**: Implement service resolution in gateway
+- [x] **T-SF04-002**: Implement service resolution in gateway
   - Priority: P1
   - Notes:
     - Use IMeshServiceDirectory to find services
     - Pick descriptor (random or highest reputation)
     - Return 503 if no services available
 
-- [ ] **T-SF04-003**: Implement request/response mapping
+- [x] **T-SF04-003**: Implement request/response mapping
   - Priority: P1
   - Notes:
     - HTTP method/path/headers → ServiceCall payload
@@ -297,14 +297,14 @@ This document outlines the phased implementation of a **generic service fabric**
     - No full error stack traces exposed
     - Log full errors server-side only
 
-- [ ] **T-SF04-004**: Add gateway security gating
+- [x] **T-SF04-004**: Add gateway security gating
   - Priority: P1
   - Notes:
     - Reject if gateway disabled
     - Reject if service not whitelisted
     - No request body logging by default (opt-in)
 
-- [ ] **T-SF04-005**: Implement WebSocket gateway (optional)
+- [x] **T-SF04-005**: Implement WebSocket gateway (optional)
   - Priority: P2
   - Notes:
     - Route: `GET /mesh/ws/{serviceName}/{channel}`
@@ -312,7 +312,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Bidirectional frame bridging
     - Only if clean with existing infra
 
-- [ ] **T-SF04-006**: Add gateway configuration options
+- [x] **T-SF04-006**: Add gateway configuration options
   - Priority: P1
   - Notes:
     - Enable/disable gateway
@@ -320,7 +320,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Verbose logging (opt-in, default off)
     - Port binding (default localhost:5030)
 
-- [ ] **T-SF04-007**: Add gateway unit tests
+- [x] **T-SF04-007**: Add gateway unit tests
   - Priority: P1
   - Notes:
     - Request mapping
@@ -328,7 +328,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Security gating
     - Service resolution
 
-- [ ] **T-SF04-008**: Add gateway integration tests
+- [x] **T-SF04-008**: Add gateway integration tests
   - Priority: P1
   - Notes:
     - End-to-end HTTP → mesh service call
@@ -346,14 +346,14 @@ This document outlines the phased implementation of a **generic service fabric**
 
 ### Tasks
 
-- [ ] **T-SF05-001**: Audit existing security subsystems
+- [x] **T-SF05-001**: Audit existing security subsystems
   - Priority: P0
   - Notes:
     - Locate guard, violation tracker, reputation storage
     - Understand ban list integration
     - Document security hook points
 
-- [ ] **T-SF05-002**: Implement incoming call security checks
+- [x] **T-SF05-002**: Implement incoming call security checks
   - Priority: P0
   - Notes:
     - Check ban/quarantine status
@@ -361,21 +361,21 @@ This document outlines the phased implementation of a **generic service fabric**
     - Check payload size
     - Register violations on failure
 
-- [ ] **T-SF05-003**: Implement outgoing discovery security
+- [x] **T-SF05-003**: Implement outgoing discovery security
   - Priority: P1
   - Notes:
     - Prefer high-reputation peers
     - Skip banned/low-reputation peers
     - Weight by reputation score
 
-- [ ] **T-SF05-004**: Add security logging for service calls
+- [x] **T-SF05-004**: Add security logging for service calls
   - Priority: P1
   - Notes:
     - Log: service name, method, peer ID, status, error category
     - No full payload logging
     - High-level security events only
 
-- [ ] **T-SF05-005**: Add security metrics tracking
+- [x] **T-SF05-005**: Add security metrics tracking
   - Priority: P2
   - Notes:
     - Rejected oversized payloads
@@ -383,7 +383,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Signature validation failures
     - Per-service violation counts
 
-- [ ] **T-SF05-006**: Add security unit tests
+- [x] **T-SF05-006**: Add security unit tests
   - Priority: P1
   - Notes:
     - Ban list enforcement
@@ -402,7 +402,7 @@ This document outlines the phased implementation of a **generic service fabric**
 
 ### Tasks
 
-- [ ] **T-SF06-001**: Add service fabric unit test suite
+- [x] **T-SF06-001**: Add service fabric unit test suite
   - Priority: P1
   - Notes:
     - ServiceId derivation
@@ -411,7 +411,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Rate limiting
     - Security checks
 
-- [ ] **T-SF06-002**: Add service fabric integration tests
+- [x] **T-SF06-002**: Add service fabric integration tests
   - Priority: P1
   - Notes:
     - Node A publishes service
@@ -419,14 +419,14 @@ This document outlines the phased implementation of a **generic service fabric**
     - Node B calls service
     - End-to-end call flow
 
-- [ ] **T-SF06-003**: Verify backward compatibility tests pass
+- [x] **T-SF06-003**: Verify backward compatibility tests pass
   - Priority: P0
   - Notes:
     - All existing tests still pass
     - No regressions in Soulseek protocol
     - No regressions in DHT/mesh/security
 
-- [ ] **T-SF06-004**: Write service fabric architecture doc
+- [x] **T-SF06-004**: Write service fabric architecture doc
   - Priority: P1
   - Notes:
     - Overview of service fabric layer
@@ -434,7 +434,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - Security model
     - Privacy considerations
 
-- [ ] **T-SF06-005**: Write service fabric API documentation
+- [x] **T-SF06-005**: Write service fabric API documentation
   - Priority: P2
   - Notes:
     - IMeshServiceDirectory usage
@@ -442,7 +442,7 @@ This document outlines the phased implementation of a **generic service fabric**
     - HTTP gateway usage
     - Configuration options
 
-- [ ] **T-SF06-006**: Write service fabric security guide
+- [x] **T-SF06-006**: Write service fabric security guide
   - Priority: P1
   - Notes:
     - Threat model
@@ -457,41 +457,41 @@ This document outlines the phased implementation of a **generic service fabric**
 Run this before each commit:
 
 1. **Diff Scope**
-   - [ ] Changes limited to task requirements
-   - [ ] No random reformatting or renaming
-   - [ ] Focused, meaningful diffs
+   - [x] Changes limited to task requirements
+   - [x] No random reformatting or renaming
+   - [x] Focused, meaningful diffs
 
 2. **Async Correctness**
-   - [ ] No `.Result` / `.Wait()` in hot paths
-   - [ ] CancellationToken plumbed through
-   - [ ] ConfigureAwait(false) used appropriately
+   - [x] No `.Result` / `.Wait()` in hot paths
+   - [x] CancellationToken plumbed through
+   - [x] ConfigureAwait(false) used appropriately
 
 3. **Error Handling & Logging**
-   - [ ] Network/IO calls in try/catch
-   - [ ] Clear logs, safe responses
-   - [ ] No leaking stack traces outward
-   - [ ] No swallowed exceptions
+   - [x] Network/IO calls in try/catch
+   - [x] Clear logs, safe responses
+   - [x] No leaking stack traces outward
+   - [x] No swallowed exceptions
 
 4. **Performance & Allocations**
-   - [ ] No heavy LINQ in critical loops
-   - [ ] No repeated allocations in hot paths
-   - [ ] Payload size limits enforced
+   - [x] No heavy LINQ in critical loops
+   - [x] No repeated allocations in hot paths
+   - [x] Payload size limits enforced
 
 5. **Security & Privacy**
-   - [ ] No PII leaks in descriptors/logs
-   - [ ] DHT data validated (size, signature, timestamps)
-   - [ ] DoS controls added for new vectors
+   - [x] No PII leaks in descriptors/logs
+   - [x] DHT data validated (size, signature, timestamps)
+   - [x] DoS controls added for new vectors
 
 6. **Consistency**
-   - [ ] Naming/style matches project
-   - [ ] DI patterns followed
-   - [ ] Config patterns followed
-   - [ ] Crypto/logging/serialization helpers reused
+   - [x] Naming/style matches project
+   - [x] DI patterns followed
+   - [x] Config patterns followed
+   - [x] Crypto/logging/serialization helpers reused
 
 7. **Documentation**
-   - [ ] New public types have XML docs
-   - [ ] Security/privacy rules commented
-   - [ ] New config options documented
+   - [x] New public types have XML docs
+   - [x] Security/privacy rules commented
+   - [x] New config options documented
 
 ---
 
@@ -532,47 +532,47 @@ Run this before each commit:
 ## Success Criteria
 
 ### Phase 1 (T-SF01) Complete When:
-- [ ] MeshServiceDescriptor types exist with validation
-- [ ] IMeshServiceDirectory interface defined
-- [ ] DHT-backed directory implementation works
-- [ ] Unit tests pass for ID derivation and validation
-- [ ] No existing functionality broken
+- [x] MeshServiceDescriptor types exist with validation
+- [x] IMeshServiceDirectory interface defined
+- [x] DHT-backed directory implementation works
+- [x] Unit tests pass for ID derivation and validation
+- [x] No existing functionality broken
 
 ### Phase 2 (T-SF02) Complete When:
-- [ ] IMeshService interface defined
-- [ ] Service router functional with abuse controls
-- [ ] IMeshServiceClient can make calls
-- [ ] Unit tests pass for routing and limits
-- [ ] Integration test: Node A → Node B service call works
+- [x] IMeshService interface defined
+- [x] Service router functional with abuse controls
+- [x] IMeshServiceClient can make calls
+- [x] Unit tests pass for routing and limits
+- [x] Integration test: Node A → Node B service call works
 
 ### Phase 3 (T-SF03) Complete When:
-- [ ] Pods/chat accessible via service layer
-- [ ] VirtualSoulfind accessible via service layer
-- [ ] Stats/introspection service working
-- [ ] Existing functionality still works via old paths
-- [ ] Integration tests pass
+- [x] Pods/chat accessible via service layer
+- [x] VirtualSoulfind accessible via service layer
+- [x] Stats/introspection service working
+- [x] Existing functionality still works via old paths
+- [x] Integration tests pass
 
 ### Phase 4 (T-SF04) Complete When:
-- [ ] HTTP gateway accepts requests
-- [ ] Service resolution working
-- [ ] Request/response mapping correct
-- [ ] Security gating enforced
-- [ ] Integration test: HTTP → mesh service works
+- [x] HTTP gateway accepts requests
+- [x] Service resolution working
+- [x] Request/response mapping correct
+- [x] Security gating enforced
+- [x] Integration test: HTTP → mesh service works
 
 ### Phase 5 (T-SF05) Complete When:
-- [ ] Ban list integration working
-- [ ] Rate limits enforced
-- [ ] Reputation-aware discovery working
-- [ ] Security violations registered correctly
-- [ ] Metrics tracking implemented
+- [x] Ban list integration working
+- [x] Rate limits enforced
+- [x] Reputation-aware discovery working
+- [x] Security violations registered correctly
+- [x] Metrics tracking implemented
 
 ### Phase 6 (T-SF06) Complete When:
-- [ ] All unit tests pass
-- [ ] All integration tests pass
-- [ ] Backward compatibility verified
-- [ ] Architecture doc written
-- [ ] Security guide written
-- [ ] Ready for production use
+- [x] All unit tests pass
+- [x] All integration tests pass
+- [x] Backward compatibility verified
+- [x] Architecture doc written
+- [x] Security guide written
+- [x] Ready for production use
 
 ---
 

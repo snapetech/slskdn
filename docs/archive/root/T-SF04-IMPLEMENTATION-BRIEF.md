@@ -747,40 +747,40 @@ Before you consider T-SF04 done, check:
 
 ### 9.1. Scope Control
 
-- [ ] Only HTTP gateway (and optional WS) was touched
-- [ ] Core service fabric, DHT, and mesh routing weren't redesigned
-- [ ] No changes to existing HTTP APIs
+- [x] Only HTTP gateway (and optional WS) was touched
+- [x] Core service fabric, DHT, and mesh routing weren't redesigned
+- [x] No changes to existing HTTP APIs
 
 ### 9.2. Safety
 
-- [ ] Gateway is disabled by default (`Enabled = false`)
-- [ ] Binding is localhost only by default
-- [ ] Service allowlist is enforced
-- [ ] Body size limits exist and are wired to config
-- [ ] Timeout limits exist and are wired to config
-- [ ] Rate limiting is implemented (or integrated with existing system)
+- [x] Gateway is disabled by default (`Enabled = false`)
+- [x] Binding is localhost only by default
+- [x] Service allowlist is enforced
+- [x] Body size limits exist and are wired to config
+- [x] Timeout limits exist and are wired to config
+- [x] Rate limiting is implemented (or integrated with existing system)
 
 ### 9.3. Code Quality
 
-- [ ] No `.Result` / `.Wait()` on async calls
-- [ ] DI and logging use existing patterns
-- [ ] No giant controllers full of business logic
-- [ ] Mapping logic is small and tidy
-- [ ] Error handling is robust
+- [x] No `.Result` / `.Wait()` on async calls
+- [x] DI and logging use existing patterns
+- [x] No giant controllers full of business logic
+- [x] Mapping logic is small and tidy
+- [x] Error handling is robust
 
 ### 9.4. Privacy
 
-- [ ] No full body logging by default
-- [ ] No injection of PII into responses or logs
-- [ ] Safe error messages (no stack traces to clients)
-- [ ] `LogBodies` option clearly marked as unsafe
+- [x] No full body logging by default
+- [x] No injection of PII into responses or logs
+- [x] Safe error messages (no stack traces to clients)
+- [x] `LogBodies` option clearly marked as unsafe
 
 ### 9.5. Documentation
 
-- [ ] XML docs or summary comments for new controller endpoints
-- [ ] Config keys documented
-- [ ] Security considerations documented in code comments
-- [ ] README or docs updated with gateway usage examples
+- [x] XML docs or summary comments for new controller endpoints
+- [x] Config keys documented
+- [x] Security considerations documented in code comments
+- [x] README or docs updated with gateway usage examples
 
 ---
 
@@ -832,24 +832,24 @@ Before you consider T-SF04 done, check:
 
 T-SF04 is complete when:
 
-- [ ] Reconnaissance complete: web host, auth, and service fabric wiring documented
-- [ ] `MeshGatewayConfig` implemented with all required options
-- [ ] HTTP endpoints implemented: `POST/GET /mesh/http/{serviceName}/{**path}`
-- [ ] Gateway guards implemented: enabled check, localhost check, allowlist check
-- [ ] Request → ServiceCall mapping implemented with safe serialization
-- [ ] Service resolution implemented via `IMeshServiceDirectory`
-- [ ] `IMeshServiceClient` integration working
-- [ ] ServiceReply → HTTP response mapping implemented
-- [ ] Security hardening complete: localhost-only, allowlist, rate limits, size limits
-- [ ] Safe error handling with no internal details leaked
-- [ ] Privacy-conscious logging (no bodies by default)
-- [ ] WebSocket support implemented (if feasible) OR TODO marker added
-- [ ] Unit tests pass for all gateway functionality
-- [ ] Integration tests pass (end-to-end HTTP → mesh service)
-- [ ] All existing tests still pass (no regressions)
-- [ ] XML docs present for public APIs
-- [ ] Anti-slop checklist satisfied
-- [ ] README/docs updated with usage examples
+- [x] Reconnaissance complete: web host, auth, and service fabric wiring documented
+- [x] `MeshGatewayConfig` implemented with all required options
+- [x] HTTP endpoints implemented: `POST/GET /mesh/http/{serviceName}/{**path}`
+- [x] Gateway guards implemented: enabled check, localhost check, allowlist check
+- [x] Request → ServiceCall mapping implemented with safe serialization
+- [x] Service resolution implemented via `IMeshServiceDirectory`
+- [x] `IMeshServiceClient` integration working
+- [x] ServiceReply → HTTP response mapping implemented
+- [x] Security hardening complete: localhost-only, allowlist, rate limits, size limits
+- [x] Safe error handling with no internal details leaked
+- [x] Privacy-conscious logging (no bodies by default)
+- [x] WebSocket support implemented (if feasible) OR TODO marker added
+- [x] Unit tests pass for all gateway functionality
+- [x] Integration tests pass (end-to-end HTTP → mesh service)
+- [x] All existing tests still pass (no regressions)
+- [x] XML docs present for public APIs
+- [x] Anti-slop checklist satisfied
+- [x] README/docs updated with usage examples
 
 ---
 

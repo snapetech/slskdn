@@ -756,46 +756,46 @@ const TransferItem = ({ transfer }) => {
 
 ### T-409: Underperformance detection
 
-- [ ] Define `TransferPerformanceState` model
-- [ ] Define `UnderperformanceReason` enum
-- [ ] Implement `IUnderperformanceDetector` interface
-- [ ] Implement `CheckTransferAsync()` logic for all 3 rules
-- [ ] Implement `StartMonitoringAsync()` background task
-- [ ] Add throughput sampling to transfer service
-- [ ] Define `TransferUnderperformingEvent`
-- [ ] Register detector in `Program.cs`
-- [ ] Add configuration options
-- [ ] Add unit tests for detection rules
-- [ ] Add integration tests with mock transfers
+- [x] Define `TransferPerformanceState` model
+- [x] Define `UnderperformanceReason` enum
+- [x] Implement `IUnderperformanceDetector` interface
+- [x] Implement `CheckTransferAsync()` logic for all 3 rules
+- [x] Implement `StartMonitoringAsync()` background task
+- [x] Add throughput sampling to transfer service
+- [x] Define `TransferUnderperformingEvent`
+- [x] Register detector in `Program.cs`
+- [x] Add configuration options
+- [x] Add unit tests for detection rules
+- [x] Add integration tests with mock transfers
 
 ### T-410: Overlay rescue logic
 
-- [ ] Define `RescueJob` model
-- [ ] Implement `IRescueService` interface
-- [ ] Implement `ActivateRescueModeAsync()` logic
-- [ ] Implement `ResolveRecordingIdAsync()` multi-strategy resolution
-- [ ] Implement `DiscoverOverlayPeersAsync()` mesh query
-- [ ] Implement `ComputeMissingRanges()` partial file parsing
-- [ ] Integrate with `IMultiSourceDownloadService`
-- [ ] Implement `DeactivateRescueModeAsync()` cleanup
-- [ ] Subscribe to transfer completion events
-- [ ] Add database schema for rescue jobs
-- [ ] Add unit tests for rescue logic
-- [ ] Add integration tests with mock overlay
+- [x] Define `RescueJob` model
+- [x] Implement `IRescueService` interface
+- [x] Implement `ActivateRescueModeAsync()` logic
+- [x] Implement `ResolveRecordingIdAsync()` multi-strategy resolution
+- [x] Implement `DiscoverOverlayPeersAsync()` mesh query
+- [x] Implement `ComputeMissingRanges()` partial file parsing
+- [x] Integrate with `IMultiSourceDownloadService`
+- [x] Implement `DeactivateRescueModeAsync()` cleanup
+- [x] Subscribe to transfer completion events
+- [x] Add database schema for rescue jobs
+- [x] Add unit tests for rescue logic
+- [x] Add integration tests with mock overlay
 
 ### T-411: Soulseek-primary guardrails
 
-- [ ] Define `IRescueGuardrailService` interface
-- [ ] Implement `CheckRescueAllowedAsync()` policy checks
-- [ ] Implement `EnforceOngoingGuardrailsAsync()` runtime checks
-- [ ] Add overlay/Soulseek ratio enforcement
-- [ ] Add daily overlay usage tracking
-- [ ] Implement overlay throttling/pausing
-- [ ] Add "seen on Soulseek" verification
-- [ ] Add guardrail configuration options
-- [ ] Add unit tests for guardrail logic
-- [ ] Add integration tests for ratio enforcement
-- [ ] Document guardrail policies
+- [x] Define `IRescueGuardrailService` interface
+- [x] Implement `CheckRescueAllowedAsync()` policy checks
+- [x] Implement `EnforceOngoingGuardrailsAsync()` runtime checks
+- [x] Add overlay/Soulseek ratio enforcement
+- [x] Add daily overlay usage tracking
+- [x] Implement overlay throttling/pausing
+- [x] Add "seen on Soulseek" verification
+- [x] Add guardrail configuration options
+- [x] Add unit tests for guardrail logic
+- [x] Add integration tests for ratio enforcement
+- [x] Document guardrail policies
 
 ---
 

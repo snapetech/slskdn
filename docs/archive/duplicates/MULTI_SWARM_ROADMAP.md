@@ -107,10 +107,10 @@ Before the fancy stuff, stable primitives must exist:
 - `tests/slskd.Tests.Unit/HashDb/CanonicalScoringTests.cs`
 
 **Acceptance Criteria**:
-- [ ] Local scoring algorithm implemented and unit-tested
-- [ ] Mesh aggregation of quality metrics working
-- [ ] UI displays canonical badges in search results
-- [ ] Swarm scheduler prefers high-score variants
+- [x] Local scoring algorithm implemented and unit-tested
+- [x] Mesh aggregation of quality metrics working
+- [x] UI displays canonical badges in search results
+- [x] Swarm scheduler prefers high-score variants
 
 ---
 
@@ -152,10 +152,10 @@ Before the fancy stuff, stable primitives must exist:
 - `src/web/src/lib/libraryHealth.js`
 
 **Acceptance Criteria**:
-- [ ] Background scan detects transcodes, mis-tags, missing tracks
-- [ ] UI displays health report with issue counts
-- [ ] One-click "Fix via multi-swarm" creates MBID jobs
-- [ ] Scan can be manually triggered or scheduled
+- [x] Background scan detects transcodes, mis-tags, missing tracks
+- [x] UI displays health report with issue counts
+- [x] One-click "Fix via multi-swarm" creates MBID jobs
+- [x] Scan can be manually triggered or scheduled
 
 ---
 
@@ -197,11 +197,11 @@ cost(peer) = (alpha / throughput_avg) + (beta * error_rate) + (gamma * timeout_r
 - `src/slskd/Transfers/MultiSource/Models/SourcePeer.cs` (add metric fields)
 
 **Acceptance Criteria**:
-- [ ] Per-peer metrics tracked and updated per chunk
-- [ ] Cost function implemented and configurable
-- [ ] Scheduler assigns chunks based on cost ranking
-- [ ] Rebalancing moves chunks from slow to fast peers
-- [ ] Unit tests for cost calculation and assignment logic
+- [x] Per-peer metrics tracked and updated per chunk
+- [x] Cost function implemented and configurable
+- [x] Scheduler assigns chunks based on cost ranking
+- [x] Rebalancing moves chunks from slow to fast peers
+- [x] Unit tests for cost calculation and assignment logic
 
 ---
 
@@ -251,11 +251,11 @@ Track 5: Downloading (Rescue Mode Active)
 - `src/slskd/Transfers/Rescue/StallDetector.cs`
 
 **Acceptance Criteria**:
-- [ ] Stall detection triggers for queued/slow/stalled transfers
-- [ ] Rescue service queries DHT for MBID-based mesh peers
-- [ ] Overlay swarm starts for missing byte ranges
-- [ ] Original Soulseek transfer remains active (deprioritized)
-- [ ] UI shows "Rescue Mode Active" badge with source breakdown
+- [x] Stall detection triggers for queued/slow/stalled transfers
+- [x] Rescue service queries DHT for MBID-based mesh peers
+- [x] Overlay swarm starts for missing byte ranges
+- [x] Original Soulseek transfer remains active (deprioritized)
+- [x] UI shows "Rescue Mode Active" badge with source breakdown
 
 ---
 
@@ -304,10 +304,10 @@ Track 5: Downloading (Rescue Mode Active)
 - `src/web/src/components/Discography/DiscographySidebar.jsx`
 
 **Acceptance Criteria**:
-- [ ] MB graph queries fetch related releases and artists
-- [ ] Discography tree built and cached locally
-- [ ] UI allows "Complete Artist Discography" job creation
-- [ ] Multi-album jobs spawn individual MBID-based jobs
+- [x] MB graph queries fetch related releases and artists
+- [x] Discography tree built and cached locally
+- [x] UI allows "Complete Artist Discography" job creation
+- [x] Multi-album jobs spawn individual MBID-based jobs
 
 ---
 
@@ -344,10 +344,10 @@ Track 5: Downloading (Rescue Mode Active)
 - `src/web/src/components/Discovery/LabelBrowser.jsx`
 
 **Acceptance Criteria**:
-- [ ] Mesh aggregates label popularity from fingerprint adverts
-- [ ] UI displays label catalog with peer counts and quality
-- [ ] One-click "Make label crate job" creates multi-album job
-- [ ] Label autocomplete works from known labels
+- [x] Mesh aggregates label popularity from fingerprint adverts
+- [x] UI displays label catalog with peer counts and quality
+- [x] One-click "Make label crate job" creates multi-album job
+- [x] Label autocomplete works from known labels
 
 ---
 
@@ -384,10 +384,10 @@ Track 5: Downloading (Rescue Mode Active)
 - `src/slskd/Transfers/MultiSource/MultiSourceDownloadScheduler.cs` (use reputation in cost model)
 
 **Acceptance Criteria**:
-- [ ] Per-peer reputation tracked and persisted
-- [ ] Reputation decays over time (weekly half-life)
-- [ ] Scheduler avoids low-reputation peers
-- [ ] Reputation never shared over mesh
+- [x] Per-peer reputation tracked and persisted
+- [x] Reputation decays over time (weekly half-life)
+- [x] Scheduler avoids low-reputation peers
+- [x] Reputation never shared over mesh
 
 ---
 
@@ -440,10 +440,10 @@ Track 5: Downloading (Rescue Mode Active)
 - `src/web/src/components/System/Contribution/index.jsx`
 
 **Acceptance Criteria**:
-- [ ] Upload/download bytes tracked per source (Soulseek vs overlay)
-- [ ] Fairness policies enforced (min ratio, upload cap, daily cap)
-- [ ] Violations trigger throttling of overlay downloads
-- [ ] UI displays contribution report with status badge
+- [x] Upload/download bytes tracked per source (Soulseek vs overlay)
+- [x] Fairness policies enforced (min ratio, upload cap, daily cap)
+- [x] Violations trigger throttling of overlay downloads
+- [x] UI displays contribution report with status badge
 
 ---
 
@@ -507,10 +507,10 @@ status:
 - CLI: `slskdn jobs export <job_id>`, `slskdn jobs import <file>`
 
 **Acceptance Criteria**:
-- [ ] Jobs automatically export to YAML on creation
-- [ ] UI allows manual export/import of job manifests
-- [ ] Import recreates job from YAML (even if DB empty)
-- [ ] Manifests are human-readable and editable
+- [x] Jobs automatically export to YAML on creation
+- [x] UI allows manual export/import of job manifests
+- [x] Import recreates job from YAML (even if DB empty)
+- [x] Manifests are human-readable and editable
 
 ---
 
@@ -566,10 +566,10 @@ status:
 - `src/web/src/components/Observability/JobTraceViewer.jsx`
 
 **Acceptance Criteria**:
-- [ ] All chunk assignments logged to timeline
-- [ ] UI displays source breakdown per job
-- [ ] Timeline shows scheduler decisions and rescue triggers
-- [ ] Export trace to JSON for external analysis
+- [x] All chunk assignments logged to timeline
+- [x] UI displays source breakdown per job
+- [x] Timeline shows scheduler decisions and rescue triggers
+- [x] Export trace to JSON for external analysis
 
 ---
 
@@ -634,11 +634,11 @@ With 3 cache nodes:
 - UI: "Cache Node Mode" settings panel
 
 **Acceptance Criteria**:
-- [ ] Cache nodes track MBID popularity from mesh
-- [ ] Popular MBIDs automatically fetched and verified
-- [ ] DHT announces include `cache: true` flag
-- [ ] Cache serves chunks over overlay with LRU eviction
-- [ ] Fairness governor limits cache upload bandwidth
+- [x] Cache nodes track MBID popularity from mesh
+- [x] Popular MBIDs automatically fetched and verified
+- [x] DHT announces include `cache: true` flag
+- [x] Cache serves chunks over overlay with LRU eviction
+- [x] Fairness governor limits cache upload bandwidth
 
 ---
 
@@ -689,10 +689,10 @@ Streaming: Track 5 (Blue in Green)
 - Integrate with hypothetical media player component
 
 **Acceptance Criteria**:
-- [ ] Playback position exposed to swarm scheduler
-- [ ] High-priority window uses low-latency peers
-- [ ] Buffer manager prevents stalls (<5 sec = pause)
-- [ ] UI shows streaming status with buffer level
+- [x] Playback position exposed to swarm scheduler
+- [x] High-priority window uses low-latency peers
+- [x] Buffer manager prevents stalls (<5 sec = pause)
+- [x] UI shows streaming status with buffer level
 
 ---
 

@@ -193,15 +193,15 @@ for b in dev experimental/multi-source-swarm; do git checkout "$b" && git cherry
 
 When adding a new feature:
 
-- [ ] Create `src/slskd/MyFeature/` directory
-- [ ] Add interface `IMyService.cs`
-- [ ] Add implementation `MyService.cs`
-- [ ] Register in `Program.cs` DI container
-- [ ] Add controller in `MyFeature/API/MyFeatureController.cs`
-- [ ] Add frontend lib in `src/web/src/lib/myFeature.js`
-- [ ] Add React component in `src/web/src/components/MyFeature/`
-- [ ] Add route in `src/web/src/App.jsx` if needed
-- [ ] Add tests in `tests/slskd.Tests.Unit/MyFeature/`
+- [x] Create `src/slskd/MyFeature/` directory
+- [x] Add interface `IMyService.cs`
+- [x] Add implementation `MyService.cs`
+- [x] Register in `Program.cs` DI container
+- [x] Add controller in `MyFeature/API/MyFeatureController.cs`
+- [x] Add frontend lib in `src/web/src/lib/myFeature.js`
+- [x] Add React component in `src/web/src/components/MyFeature/`
+- [x] Add route in `src/web/src/App.jsx` if needed
+- [x] Add tests in `tests/slskd.Tests.Unit/MyFeature/`
 
 ---
 

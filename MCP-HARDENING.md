@@ -1053,56 +1053,56 @@ public class McpAuditLogger
 Before shipping any MCP code, verify:
 
 ### Privacy
-- [ ] No raw hashes in logs or metrics
-- [ ] No full filesystem paths in logs
-- [ ] No external usernames/IPs in logs
-- [ ] Evidence keys are opaque identifiers
-- [ ] Peer IDs are hashed for logging
+- [x] No raw hashes in logs or metrics
+- [x] No full filesystem paths in logs
+- [x] No external usernames/IPs in logs
+- [x] Evidence keys are opaque identifiers
+- [x] Peer IDs are hashed for logging
 
 ### External Services
-- [ ] SSRF protection via domain allowlist
-- [ ] Request size limits enforced
-- [ ] Timeouts configured
-- [ ] Work budget integration
-- [ ] No sensitive data in external requests
+- [x] SSRF protection via domain allowlist
+- [x] Request size limits enforced
+- [x] Timeouts configured
+- [x] Work budget integration
+- [x] No sensitive data in external requests
 
 ### Hash Blocklist
-- [ ] Timing attack mitigation (bloom filter)
-- [ ] Constant-time comparisons where possible
-- [ ] Secure loading from trusted sources only
-- [ ] Size bounds validation
+- [x] Timing attack mitigation (bloom filter)
+- [x] Constant-time comparisons where possible
+- [x] Secure loading from trusted sources only
+- [x] Size bounds validation
 
 ### Peer Reputation
-- [ ] Sybil resistance (rate limiting)
-- [ ] Reputation decay implemented
-- [ ] Auto-ban thresholds configurable
-- [ ] Encrypted persistence
-- [ ] No external identifiers stored
+- [x] Sybil resistance (rate limiting)
+- [x] Reputation decay implemented
+- [x] Auto-ban thresholds configurable
+- [x] Encrypted persistence
+- [x] No external identifiers stored
 
 ### Configuration
-- [ ] Secure defaults (MCP enabled, blocklist disabled)
-- [ ] Validation at startup
-- [ ] Failsafe mode configured
-- [ ] HTTPS-only for remote sources
+- [x] Secure defaults (MCP enabled, blocklist disabled)
+- [x] Validation at startup
+- [x] Failsafe mode configured
+- [x] HTTPS-only for remote sources
 
 ### Error Handling
-- [ ] Graceful degradation on provider failure
-- [ ] Failsafe mode respected
-- [ ] No data leaks in error messages
-- [ ] All exceptions caught and logged safely
+- [x] Graceful degradation on provider failure
+- [x] Failsafe mode respected
+- [x] No data leaks in error messages
+- [x] All exceptions caught and logged safely
 
 ### Testing
-- [ ] Security tests for logging (no leaks)
-- [ ] SSRF protection tests
-- [ ] Rate limiting tests
-- [ ] Failsafe mode tests
-- [ ] Timing attack resistance tests
+- [x] Security tests for logging (no leaks)
+- [x] SSRF protection tests
+- [x] Rate limiting tests
+- [x] Failsafe mode tests
+- [x] Timing attack resistance tests
 
 ### Observability
-- [ ] Metrics exposed (no sensitive labels)
-- [ ] Health checks implemented
-- [ ] Audit log for security events
-- [ ] Dashboard for MCP status
+- [x] Metrics exposed (no sensitive labels)
+- [x] Health checks implemented
+- [x] Audit log for security events
+- [x] Dashboard for MCP status
 
 ---
 

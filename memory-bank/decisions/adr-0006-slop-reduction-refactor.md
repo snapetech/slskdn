@@ -221,19 +221,19 @@ grep -rn "useState\|useEffect" src/web/src/components/System/Security/ src/web/s
 
 For each file in fork-specific directories:
 
-- [ ] Remove unnecessary interfaces (single implementation)
-- [ ] Remove defensive null checks (internal code)
-- [ ] Remove logging spam (entry/exit, verbose info)
-- [ ] Fix swallowed exceptions
-- [ ] Add path validation for file operations
-- [ ] Add input validation at API boundaries
-- [ ] Wrap async void in try-catch
-- [ ] Batch database operations
-- [ ] Bound parallel operations with SemaphoreSlim
+- [x] Remove unnecessary interfaces (single implementation)
+- [x] Remove defensive null checks (internal code)
+- [x] Remove logging spam (entry/exit, verbose info)
+- [x] Fix swallowed exceptions
+- [x] Add path validation for file operations
+- [x] Add input validation at API boundaries
+- [x] Wrap async void in try-catch
+- [x] Batch database operations
+- [x] Bound parallel operations with SemaphoreSlim
 - [ ] Remove dead code
-- [ ] Break down large methods
-- [ ] Use StringBuilder for string building
-- [ ] Defer LINQ materialization
+- [x] Break down large methods
+- [x] Use StringBuilder for string building
+- [x] Defer LINQ materialization
 
 ---
 

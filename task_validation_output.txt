@@ -1,0 +1,308 @@
+================================================================================
+TASK VALIDATION SCRIPT
+================================================================================
+
+Found 232 markdown files
+
+Scanning for unchecked tasks...
+Found 1955 unchecked tasks/todos
+
+================================================================================
+VALIDATING TASKS
+================================================================================
+
+Progress: 50/1955 (2%)
+
+Progress: 100/1955 (5%)
+
+Progress: 150/1955 (7%)
+
+Progress: 200/1955 (10%)
+
+Progress: 250/1955 (12%)
+
+Progress: 300/1955 (15%)
+
+Progress: 350/1955 (17%)
+
+Progress: 400/1955 (20%)
+
+Progress: 450/1955 (23%)
+
+Progress: 500/1955 (25%)
+
+Progress: 550/1955 (28%)
+
+Progress: 600/1955 (30%)
+
+Progress: 650/1955 (33%)
+
+Progress: 700/1955 (35%)
+
+Progress: 750/1955 (38%)
+
+Progress: 800/1955 (40%)
+
+Progress: 850/1955 (43%)
+
+Progress: 900/1955 (46%)
+
+Progress: 950/1955 (48%)
+
+Progress: 1000/1955 (51%)
+
+Progress: 1050/1955 (53%)
+
+Progress: 1100/1955 (56%)
+
+Progress: 1150/1955 (58%)
+
+Progress: 1200/1955 (61%)
+
+Progress: 1250/1955 (63%)
+
+Progress: 1300/1955 (66%)
+
+Progress: 1350/1955 (69%)
+
+Progress: 1400/1955 (71%)
+
+Progress: 1450/1955 (74%)
+
+Progress: 1500/1955 (76%)
+
+Progress: 1550/1955 (79%)
+
+Progress: 1600/1955 (81%)
+
+Progress: 1650/1955 (84%)
+
+Progress: 1700/1955 (86%)
+
+Progress: 1750/1955 (89%)
+
+Progress: 1800/1955 (92%)
+
+Progress: 1850/1955 (94%)
+
+Progress: 1900/1955 (97%)
+
+Progress: 1950/1955 (99%)
+
+================================================================================
+SUMMARY
+================================================================================
+
+Total tasks: 1955
+Likely complete: 1925
+Pending: 30
+
+Results saved to: task_validation_results.json
+
+================================================================================
+LIKELY COMPLETE TASKS (should be checked)
+================================================================================
+
+./DEVELOPMENT_HISTORY.md:174
+  ## Pending Features (TODO)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:80
+  - **ContentDomain Enum**: Music, GenericFile, (future: Movies, TV, Books)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:84
+  - Future domains: custom matching logic per domain
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:335
+  - [ ] Security review and tightening (T-SF05)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:336
+  - [ ] Developer docs and examples (T-SF06)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:337
+  - [ ] Metrics and observability (T-SF07)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:338
+  - [ ] Work budget implementation (H-02) **CRITICAL**
+  ✓ Found in commits
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:339
+  - [ ] Soulseek safety caps (H-08) **CRITICAL**
+  ✓ Found in commits
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:342
+  - [ ] Domain abstraction (T-VC01)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:343
+  - [ ] Music domain provider (T-VC02)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:344
+  - [ ] GenericFile domain provider (T-VC03)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:345
+  - [ ] Domain-aware planner + Soulseek gating (T-VC04)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:348
+  - [ ] Data model and catalogue store (V2-P1)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:349
+  - [ ] Intent queue and planner (V2-P2)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:350
+  - [ ] Match and verification engine (V2-P3)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:351
+  - [ ] Backend implementations (V2-P4)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:352
+  - [ ] Integration and work budget (V2-P5)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:353
+  - [ ] Advanced features (V2-P6)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:356
+  - [ ] Define primitives (T-PR01)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:357
+  - [ ] Catalogue fetch service (T-PR02)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:358
+  - [ ] Content relay service (T-PR03)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:359
+  - [ ] Trusted relay service (T-PR04)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:360
+  - [ ] Hardening and policy (H-PR05)
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:363
+  - [ ] Comprehensive testing (T-TEST-01 through T-TEST-07)
+  ✓ Found in commits
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:364
+  - [ ] Remaining hardening tasks (H-03 through H-07, H-09, H-10)
+  ✓ Found in commits
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:365
+  - [ ] Security audit and penetration testing
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:366
+  - [ ] Performance optimization
+  ✓ Code evidence: ['has_implementation']
+
+./FEATURES.md:467
+  **Planned**:
+  ✓ Code evidence: ['has_implementation']
+
+./FORK_VISION.md:219
+  | **Soulbeet API Bridge** | 📋 Phase 5 Planned | Compatibility layer for external music apps, native 
+  ✓ Code evidence: ['has_implementation']
+
+./FORK_VISION.md:220
+  | **Virtual Soulfind Bridge** | 📋 Phase 6 Planned | Protocol-level compatibility with legacy Soulsee
+  ✓ Code evidence: ['has_implementation']
+
+./FORK_VISION.md:319
+  ContentDomain Domain;     // Audio, (future: other media types)
+  ✓ Code evidence: ['has_implementation']
+
+./FORK_VISION.md:325
+  - Domain-specific cores: AudioCore (others possible in future)
+  ✓ Code evidence: ['has_implementation']
+
+./FORK_VISION.md:451
+  **Future Domain Expansion**:
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:45
+  - [ ] Verify all tests pass on whatAmIThinking branch
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:46
+  - [ ] Confirm AUR build works (✅ Already verified)
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:47
+  - [ ] Verify frontend builds without errors (✅ Already verified)
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:48
+  - [ ] Check for any broken links in codebase
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:49
+  - [ ] Verify all dependencies are correct
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:52
+  - [ ] Update `memory-bank/tasks.md`:
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:68
+  - [ ] Review experimental features and determine which are production-ready:
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:73
+  - [ ] Update comparison table in README to remove 🧪 markers for stable features
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:74
+  - [ ] Update feature descriptions to reflect production status
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:81
+  - [ ] **Base structure**: Use master README as baseline (cleaner, more concise)
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:82
+  - [ ] **Feature sections**: Merge detailed feature descriptions from whatAmIThinking
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:83
+  - [ ] **Experimental section**:
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:87
+  - [ ] **Links to design docs**:
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:93
+  - [ ] **Feature count**: Update "24+ new features" to accurate count
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:94
+  - [ ] **Version info**: Update base version references
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:95
+  - [ ] **Installation**: Ensure all package manager instructions are current
+  ✓ Code evidence: ['has_implementation']
+
+./GRADUATION_TO_MAIN_PLAN.md:96
+  - [ ] **Quick Start**: Keep concise, link to detailed docs
+  ✓ Code evidence: ['has_implementation']

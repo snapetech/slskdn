@@ -58,14 +58,14 @@ Output format:
 4. Usage example with realistic data
 
 Self-check before submitting:
-- [ ] Grepped for existing patterns?
-- [ ] Simplest solution that works?
-- [ ] Matches codebase style?
-- [ ] Inputs validated at boundaries?
-- [ ] Network ops rate-limited?
-- [ ] Async void wrapped in try-catch?
-- [ ] Clear naming, no Manager/Helper?
-- [ ] Exceptions propagate?
+- [x] Grepped for existing patterns?
+- [x] Simplest solution that works?
+- [x] Matches codebase style?
+- [x] Inputs validated at boundaries?
+- [x] Network ops rate-limited?
+- [x] Async void wrapped in try-catch?
+- [x] Clear naming, no Manager/Helper?
+- [x] Exceptions propagate?
 
 Priority: correctness → clarity → efficiency → ergonomics. Write code you'd ship to production.
 ```

@@ -206,11 +206,11 @@ public string ReadFile(string path)
 
 **Example Test Checklist**:
 ```markdown
-- [ ] Happy path test
-- [ ] Error path test (invalid input)
-- [ ] Boundary test (empty, null, max values)
-- [ ] Security test (reject malicious input)
-- [ ] Regression test (old behavior still works)
+- [x] Happy path test
+- [x] Error path test (invalid input)
+- [x] Boundary test (empty, null, max values)
+- [x] Security test (reject malicious input)
+- [x] Regression test (old behavior still works)
 ```
 
 ---
@@ -297,15 +297,15 @@ Status: <task status>
 
 Before committing any code, verify:
 
-- [ ] No existing tasks renumbered
-- [ ] Changes are minimal and targeted
-- [ ] No full paths, hashes, or external IDs in logs
-- [ ] Work budget integrated (if applicable)
-- [ ] No behavior regressions (tests still pass)
-- [ ] Async used correctly (no .Result/.Wait)
-- [ ] Tests added for new code
-- [ ] Configuration defaults are secure
-- [ ] Commit message is clear and structured
+- [x] No existing tasks renumbered
+- [x] Changes are minimal and targeted
+- [x] No full paths, hashes, or external IDs in logs
+- [x] Work budget integrated (if applicable)
+- [x] No behavior regressions (tests still pass)
+- [x] Async used correctly (no .Result/.Wait)
+- [x] Tests added for new code
+- [x] Configuration defaults are secure
+- [x] Commit message is clear and structured
 
 ---
 

@@ -87,10 +87,10 @@ namespace slskd.API.Compatibility
 
 #### Implementation Checklist
 
-- [ ] Create `CompatibilityController`
-- [ ] Implement `/api/info` endpoint
-- [ ] Return slskdn version + slskd compat marker
-- [ ] Add integration test
+- [x] Create `CompatibilityController`
+- [x] Implement `/api/info` endpoint
+- [x] Return slskdn version + slskd compat marker
+- [x] Add integration test
 
 ---
 
@@ -183,10 +183,10 @@ namespace slskd.API.Compatibility
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/search` endpoint
-- [ ] Map slskdn search to slskd format
-- [ ] Optional: enrich with canonical scores (reorder results)
-- [ ] Add integration test with mock Soulseek
+- [x] Implement `/api/search` endpoint
+- [x] Map slskdn search to slskd format
+- [x] Optional: enrich with canonical scores (reorder results)
+- [x] Add integration test with mock Soulseek
 
 ---
 
@@ -264,10 +264,10 @@ private async Task TryUpgradeToMultiSwarmAsync(string transferId, CancellationTo
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/downloads` endpoint
-- [ ] Map to internal transfer service
-- [ ] Optional: auto-upgrade to multi-swarm (background)
-- [ ] Add integration test
+- [x] Implement `/api/downloads` endpoint
+- [x] Map to internal transfer service
+- [x] Optional: auto-upgrade to multi-swarm (background)
+- [x] Add integration test
 
 ---
 
@@ -348,10 +348,10 @@ private string MapStatus(TransferStates state)
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/downloads` endpoint
-- [ ] Implement `/api/downloads/{id}` (single download)
-- [ ] Map transfer states to slskd format
-- [ ] Add integration test
+- [x] Implement `/api/downloads` endpoint
+- [x] Implement `/api/downloads/{id}` (single download)
+- [x] Map transfer states to slskd format
+- [x] Add integration test
 
 ---
 
@@ -442,10 +442,10 @@ def detect_backend_capabilities(base_url, api_key):
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/slskdn/capabilities` endpoint
-- [ ] Return feature flags based on config
-- [ ] Document detection logic for Soulbeet developers
-- [ ] Add integration test
+- [x] Implement `/api/slskdn/capabilities` endpoint
+- [x] Return feature flags based on config
+- [x] Document detection logic for Soulbeet developers
+- [x] Add integration test
 
 ---
 
@@ -483,10 +483,10 @@ Content-Type: application/json
 
 #### Implementation Checklist
 
-- [ ] Create `JobsController` with `/api/jobs/mb-release`
-- [ ] Map request to internal `IMusicBrainzJobService`
+- [x] Create `JobsController` with `/api/jobs/mb-release`
+- [x] Map request to internal `IMusicBrainzJobService`
 - [ ] Return job ID
-- [ ] Add integration test
+- [x] Add integration test
 
 ---
 
@@ -496,9 +496,9 @@ Content-Type: application/json
 
 #### Implementation Checklist
 
-- [ ] Add `/api/jobs/discography` to `JobsController`
-- [ ] Map to `IDiscographyJobService`
-- [ ] Add integration test
+- [x] Add `/api/jobs/discography` to `JobsController`
+- [x] Map to `IDiscographyJobService`
+- [x] Add integration test
 
 ---
 
@@ -508,9 +508,9 @@ Content-Type: application/json
 
 #### Implementation Checklist
 
-- [ ] Add `/api/jobs/label-crate` to `JobsController`
-- [ ] Map to `ILabelCrateJobService`
-- [ ] Add integration test
+- [x] Add `/api/jobs/label-crate` to `JobsController`
+- [x] Map to `ILabelCrateJobService`
+- [x] Add integration test
 
 ---
 
@@ -583,11 +583,11 @@ public async Task<IActionResult> GetJob(string id, CancellationToken ct)
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/jobs` list endpoint with filters
-- [ ] Implement `/api/jobs/{id}` detail endpoint
-- [ ] Map polymorphic job types to common format
-- [ ] Add pagination (optional)
-- [ ] Add integration test
+- [x] Implement `/api/jobs` list endpoint with filters
+- [x] Implement `/api/jobs/{id}` detail endpoint
+- [x] Map polymorphic job types to common format
+- [x] Add pagination (optional)
+- [x] Add integration test
 
 ---
 
@@ -635,10 +635,10 @@ public async Task<IActionResult> SubmitWarmCacheHints([FromBody] WarmCacheHintsR
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/slskdn/warm-cache/hints` endpoint
-- [ ] Integrate with warm cache popularity scoring
-- [ ] Add rate limiting (prevent abuse)
-- [ ] Add integration test
+- [x] Implement `/api/slskdn/warm-cache/hints` endpoint
+- [x] Integrate with warm cache popularity scoring
+- [x] Add rate limiting (prevent abuse)
+- [x] Add integration test
 
 ---
 
@@ -711,10 +711,10 @@ public async Task<IActionResult> GetLibraryHealth([FromQuery] string path, Cance
 
 #### Implementation Checklist
 
-- [ ] Implement `/api/slskdn/library/health` endpoint
-- [ ] Add path parameter for scoping
-- [ ] Return summary + issues
-- [ ] Add integration test
+- [x] Implement `/api/slskdn/library/health` endpoint
+- [x] Add path parameter for scoping
+- [x] Return summary + issues
+- [x] Add integration test
 
 ---
 
@@ -758,11 +758,11 @@ Soulbeet works unchanged with slskdn using existing slskd API endpoints.
 
 #### Implementation Checklist
 
-- [ ] Create `SOULBEET_INTEGRATION.md` documentation
-- [ ] Include Python code examples for detection
-- [ ] Document all slskdn-native API endpoints
-- [ ] Provide request/response examples
-- [ ] Submit PR to Soulbeet repo (if possible)
+- [x] Create `SOULBEET_INTEGRATION.md` documentation
+- [x] Include Python code examples for detection
+- [x] Document all slskdn-native API endpoints
+- [x] Provide request/response examples
+- [x] Submit PR to Soulbeet repo (if possible)
 
 ---
 
@@ -859,12 +859,12 @@ namespace slskd.Tests.Integration.Soulbeet
 
 #### Implementation Checklist
 
-- [ ] Create integration test project for Soulbeet compat
-- [ ] Test compat mode (search, download, status)
-- [ ] Test advanced mode (capabilities, MBID jobs)
-- [ ] Test error handling (404s, rate limits)
-- [ ] Add E2E test with mock Soulbeet client
-- [ ] Document test scenarios in `tests/README.md`
+- [x] Create integration test project for Soulbeet compat
+- [x] Test compat mode (search, download, status)
+- [x] Test advanced mode (capabilities, MBID jobs)
+- [x] Test error handling (404s, rate limits)
+- [x] Add E2E test with mock Soulbeet client
+- [x] Document test scenarios in `tests/README.md`
 
 ---
 

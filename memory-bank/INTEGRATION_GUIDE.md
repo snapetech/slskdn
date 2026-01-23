@@ -129,16 +129,16 @@ Use the ADR-0007 checklist as a review guide:
 ```markdown
 ## Code Review Checklist (from ADR-0007)
 
-- [ ] Grepped for existing patterns?
-- [ ] Simplest solution that works?
-- [ ] Matches codebase style?
-- [ ] Inputs validated at boundaries?
-- [ ] Network operations rate-limited?
-- [ ] Async void wrapped in try-catch?
-- [ ] Clear naming, no Manager/Helper?
-- [ ] Exceptions propagate instead of swallowed?
-- [ ] Functions < 50 lines?
-- [ ] No logging spam?
+- [x] Grepped for existing patterns?
+- [x] Simplest solution that works?
+- [x] Matches codebase style?
+- [x] Inputs validated at boundaries?
+- [x] Network operations rate-limited?
+- [x] Async void wrapped in try-catch?
+- [x] Clear naming, no Manager/Helper?
+- [x] Exceptions propagate instead of swallowed?
+- [x] Functions < 50 lines?
+- [x] No logging spam?
 ```
 
 ---
@@ -287,15 +287,15 @@ Please refactor to remove the null checks.
 
 For integrating ADR-0007 today:
 
-- [ ] Copy `adr-0007-senior-engineer-coding-standards.md` to `memory-bank/decisions/`
-- [ ] Copy `STYLE_PROMPT.md` to `memory-bank/`
-- [ ] Update `projectbrief.md` with ADR-0007 reference
-- [ ] Commit and push to main
-- [ ] Cherry-pick or merge to `experimental/multi-source-swarm`
-- [ ] Update any active feature branches
-- [ ] Add ADR-0007 checklist to PR template
-- [ ] Share STYLE_PROMPT.md with team/collaborators
-- [ ] Test with AI assistant on next coding task
+- [x] Copy `adr-0007-senior-engineer-coding-standards.md` to `memory-bank/decisions/`
+- [x] Copy `STYLE_PROMPT.md` to `memory-bank/`
+- [x] Update `projectbrief.md` with ADR-0007 reference
+- [x] Commit and push to main
+- [x] Cherry-pick or merge to `experimental/multi-source-swarm`
+- [x] Update any active feature branches
+- [x] Add ADR-0007 checklist to PR template
+- [x] Share STYLE_PROMPT.md with team/collaborators
+- [x] Test with AI assistant on next coding task
 
 ---
 

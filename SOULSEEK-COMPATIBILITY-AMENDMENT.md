@@ -606,22 +606,22 @@ Add to every task's anti-slop checklist:
 
 ### Soulseek Compatibility Checklist
 
-- [ ] No changes to Soulseek wire protocol
-- [ ] No injection of experimental frames into Soulseek messages
-- [ ] Turbo features ONLY use non-Soulseek transports (mesh/DHT/BT)
-- [ ] Soulseek rate limits are separate and never loosened for turbo
-- [ ] No Soulseek usernames in DHT/service descriptors
-- [ ] No Soulseek room names in DHT
-- [ ] No other users' IPs or paths in DHT
-- [ ] Graceful degradation to Soulseek-only mode works
-- [ ] `LegacySoulseekMode` flag respected (all mesh features disabled)
-- [ ] `MeshTurboEnabled` flag only affects non-Soulseek paths
-- [ ] Soulseek metrics tracked separately
-- [ ] No multiplicative amplification of Soulseek traffic
-- [ ] Fallback to Soulseek is throttled and rate-limited
-- [ ] One identity = one honest Soulseek participant
-- [ ] Slot/queue semantics not bypassed
-- [ ] Soulseek treated as first-class, never degraded
+- [x] No changes to Soulseek wire protocol
+- [x] No injection of experimental frames into Soulseek messages
+- [x] Turbo features ONLY use non-Soulseek transports (mesh/DHT/BT)
+- [x] Soulseek rate limits are separate and never loosened for turbo
+- [x] No Soulseek usernames in DHT/service descriptors
+- [x] No Soulseek room names in DHT
+- [x] No other users' IPs or paths in DHT
+- [x] Graceful degradation to Soulseek-only mode works
+- [x] `LegacySoulseekMode` flag respected (all mesh features disabled)
+- [x] `MeshTurboEnabled` flag only affects non-Soulseek paths
+- [x] Soulseek metrics tracked separately
+- [x] No multiplicative amplification of Soulseek traffic
+- [x] Fallback to Soulseek is throttled and rate-limited
+- [x] One identity = one honest Soulseek participant
+- [x] Slot/queue semantics not bypassed
+- [x] Soulseek treated as first-class, never degraded
 
 ---
 

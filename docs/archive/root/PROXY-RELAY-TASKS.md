@@ -201,11 +201,11 @@ Add tests to verify:
 
 #### 8. Anti-Slop Checklist for T-PR01
 
-- [ ] No generic host:port + byte stream CONNECT interface in this task
-- [ ] Messages are **content- and intent-level**, not raw socket-level
-- [ ] All new services are wired into the existing fabric, but actual behavior is stubbed out
-- [ ] Service kinds properly enumerated and registered
-- [ ] Tests pass for message serialization and stub behavior
+- [x] No generic host:port + byte stream CONNECT interface in this task
+- [x] Messages are **content- and intent-level**, not raw socket-level
+- [x] All new services are wired into the existing fabric, but actual behavior is stubbed out
+- [x] Service kinds properly enumerated and registered
+- [x] Tests pass for message serialization and stub behavior
 
 ---
 
@@ -342,12 +342,12 @@ Add tests:
 
 #### 9. Anti-Slop Checklist for T-PR02
 
-- [ ] Service is a **whitelisted metadata fetcher**, not a generic HTTP proxy
-- [ ] HTTP requests use SSRF-safe client and respect work budgets and per-peer limits
-- [ ] Defaults are conservative: limited domains, small max body, short timeouts
-- [ ] Caching layer prevents redundant external fetches
-- [ ] Cache hits don't consume network work budget
-- [ ] Tests cover domain allowlist, method restrictions, caching, budgets, SSRF
+- [x] Service is a **whitelisted metadata fetcher**, not a generic HTTP proxy
+- [x] HTTP requests use SSRF-safe client and respect work budgets and per-peer limits
+- [x] Defaults are conservative: limited domains, small max body, short timeouts
+- [x] Caching layer prevents redundant external fetches
+- [x] Cache hits don't consume network work budget
+- [x] Tests cover domain allowlist, method restrictions, caching, budgets, SSRF
 
 ---
 
@@ -480,12 +480,12 @@ Add tests:
 
 #### 9. Anti-Slop Checklist for T-PR03
 
-- [ ] Relay never reads arbitrary paths from requests; everything goes through VirtualSoulfind's content mapping
-- [ ] Only verified/advertisable content is served
-- [ ] Work budgets and stream caps are enforced
-- [ ] Content IDs are opaque and mapped internally (no path injection)
-- [ ] Chunk integrity hashes optional but supported
-- [ ] Tests cover mapping, limits, budgets, negative cases
+- [x] Relay never reads arbitrary paths from requests; everything goes through VirtualSoulfind's content mapping
+- [x] Only verified/advertisable content is served
+- [x] Work budgets and stream caps are enforced
+- [x] Content IDs are opaque and mapped internally (no path injection)
+- [x] Chunk integrity hashes optional but supported
+- [x] Tests cover mapping, limits, budgets, negative cases
 
 ---
 
@@ -600,12 +600,12 @@ Add tests:
 
 #### 7. Anti-Slop Checklist for T-PR04
 
-- [ ] No generic host:port connection is implemented
-- [ ] Only trusted peers can relay through you
-- [ ] Only allowed internal services can be reached via this relay
-- [ ] Work budgets and tunnel caps are enforced
-- [ ] Tunnel lifecycle properly managed (open/data/close)
-- [ ] Tests cover trust enforcement, target allowlist, caps, round trip
+- [x] No generic host:port connection is implemented
+- [x] Only trusted peers can relay through you
+- [x] Only allowed internal services can be reached via this relay
+- [x] Work budgets and tunnel caps are enforced
+- [x] Tunnel lifecycle properly managed (open/data/close)
+- [x] Tests cover trust enforcement, target allowlist, caps, round trip
 
 ---
 
@@ -699,11 +699,11 @@ Ensure integration tests (or higher-level tests) cover:
 
 #### 6. Anti-Slop Checklist for H-PR05
 
-- [ ] No newly introduced service can be abused as a general SOCKS/HTTP proxy
-- [ ] Defaults are conservative and documented
-- [ ] Operators can clearly turn things off or restrict them without diving into code
-- [ ] Metrics and logging respect privacy (no URL leaks, no high-cardinality labels)
-- [ ] Integration tests verify work budget and quota enforcement
+- [x] No newly introduced service can be abused as a general SOCKS/HTTP proxy
+- [x] Defaults are conservative and documented
+- [x] Operators can clearly turn things off or restrict them without diving into code
+- [x] Metrics and logging respect privacy (no URL leaks, no high-cardinality labels)
+- [x] Integration tests verify work budget and quota enforcement
 
 ---
 
@@ -875,28 +875,28 @@ All metrics:
 ## Success Criteria
 
 ### Functional
-- [ ] Can fetch MusicBrainz metadata through mesh peer
-- [ ] Can serve verified content chunks to requesting peer
-- [ ] Can relay requests between two trusted nodes
-- [ ] All features respect work budgets and quotas
+- [x] Can fetch MusicBrainz metadata through mesh peer
+- [x] Can serve verified content chunks to requesting peer
+- [x] Can relay requests between two trusted nodes
+- [x] All features respect work budgets and quotas
 
 ### Security
-- [ ] No generic proxy behavior possible
-- [ ] All allowlists enforced correctly
-- [ ] SSRF protection verified
-- [ ] Work budget integration verified
-- [ ] Trusted relay requires explicit trust
+- [x] No generic proxy behavior possible
+- [x] All allowlists enforced correctly
+- [x] SSRF protection verified
+- [x] Work budget integration verified
+- [x] Trusted relay requires explicit trust
 
 ### Performance
-- [ ] Catalogue fetch caching reduces external requests by >80%
-- [ ] Content chunk relay adds <50ms latency vs direct
-- [ ] Trusted relay adds <100ms latency vs direct
+- [x] Catalogue fetch caching reduces external requests by >80%
+- [x] Content chunk relay adds <50ms latency vs direct
+- [x] Trusted relay adds <100ms latency vs direct
 
 ### Quality
-- [ ] All tests pass (unit + integration + abuse scenarios)
-- [ ] Documentation complete
-- [ ] Metrics and logging in place
-- [ ] No linter errors
+- [x] All tests pass (unit + integration + abuse scenarios)
+- [x] Documentation complete
+- [x] Metrics and logging in place
+- [x] No linter errors
 
 ---
 

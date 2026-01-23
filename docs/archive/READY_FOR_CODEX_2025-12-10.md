@@ -62,7 +62,7 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 **Task Spec** (from `memory-bank/tasks.md`):
 ```
-- [ ] **T-420**: Extend AudioVariant model with codec-specific fields
+- [x] **T-420**: Extend AudioVariant model with codec-specific fields
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
@@ -89,7 +89,7 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 **Task Spec** (from `memory-bank/tasks.md`):
 ```
-- [ ] **T-500**: Build MB artist release graph service
+- [x] **T-500**: Build MB artist release graph service
   - Status: Not started
   - Priority: P1
   - Branch: experimental/brainz
