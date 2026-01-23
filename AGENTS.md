@@ -161,6 +161,48 @@ See `memory-bank/decisions/adr-0003-anti-slop-rules.md` for the full list.
 
 ---
 
+## 🚨 CRITICAL: Build Process - Tag-Only Builds
+
+**DO NOT trigger builds by pushing code. Builds ONLY happen on tags.**
+
+### Build System Rules
+
+1. **NO automatic builds on code pushes** - The CI workflow does NOT run on pushes to master
+2. **Builds ONLY trigger on tags** - You must create a tag to trigger a build
+3. **DO NOT modify workflows** to add automatic builds - this is intentional
+4. **DO NOT create tags** unless explicitly asked by the user
+
+### How Builds Work
+
+**CI Workflow (`ci.yml`):**
+- Triggers: **Tags only** (version tags, `build-dev-*`, `build-main-*`)
+- Also runs on: Pull requests (for testing) and manual `workflow_dispatch`
+- Does: Build, test, publish binaries, Docker (only on tags)
+
+**Build on Tag (`build-on-tag.yml`):**
+- Triggers: `build-dev-*` or `build-main-*` tags
+- Does: Full release build with packages (AUR, COPR, PPA, etc.)
+
+**Dev Release (`dev-release.yml`):**
+- Triggers: `dev-*` tags
+- Does: Dev package builds (AUR, COPR)
+
+### To Trigger a Build (Only if User Requests)
+
+```bash
+# Main/stable release
+git tag build-main-0.24.1-slskdn.41
+git push origin build-main-0.24.1-slskdn.41
+
+# Dev release
+git tag build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)
+git push origin $(git describe --tags --abbrev=0)
+```
+
+**Never create tags automatically** - always wait for explicit user instruction.
+
+---
+
 ## Quick Reference
 
 | Action | Command |
@@ -170,6 +212,47 @@ See `memory-bank/decisions/adr-0003-anti-slop-rules.md` for the full list.
 | Run tests | `dotnet test` |
 | Lint | `./bin/lint` |
 | Build release | `./bin/build` |
+
+## 🏗️ Build and Release Process
+
+### ⚠️ CRITICAL: Builds Only Happen on Tags
+
+**DO NOT trigger builds by pushing code. Builds ONLY happen when you create a tag.**
+
+The CI workflow (`ci.yml`) is configured to:
+- ✅ **Run on tags only**: `build-main-*`, `build-dev-*`, or version tags
+- ✅ **Run on pull requests**: For testing/validation
+- ✅ **Run on manual dispatch**: Via GitHub UI
+- ❌ **DOES NOT run on pushes to master**: Code updates do NOT trigger builds
+
+### How to Trigger a Build
+
+**For stable releases (main channel):**
+```bash
+git tag build-main-0.24.1-slskdn.41
+git push origin build-main-0.24.1-slskdn.41
+```
+
+**For dev releases:**
+```bash
+git tag build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)
+git push origin build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)
+```
+
+### Build Workflows
+
+1. **CI Workflow** (`ci.yml`): Builds, tests, publishes binaries, Docker (only on tags)
+2. **Build on Tag** (`build-on-tag.yml`): Full release with packages (AUR, COPR, PPA, etc.)
+3. **Dev Release** (`dev-release.yml`): Dev package builds (AUR, COPR)
+
+### What NOT to Do
+
+- ❌ **DO NOT** push code expecting a build to happen automatically
+- ❌ **DO NOT** modify workflows to trigger on branch pushes
+- ❌ **DO NOT** create tags unless you actually want a build/release
+- ✅ **DO** create tags explicitly when you want to build/release
+
+See `memory-bank/decisions/adr-0005-tagging-system.md` for detailed tag format and channel information.
 
 | File | Purpose |
 |------|---------|

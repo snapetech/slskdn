@@ -2,7 +2,18 @@
 
 **Status:** Active  
 **Date:** 2025-12-13  
+**Updated:** 2026-01-23  
 **Context:** Multi-channel CI/CD for dev and stable releases
+
+---
+
+## ⚠️ CRITICAL: Builds Only on Tags
+
+**The CI workflow does NOT run on code pushes to master. Builds ONLY happen when you create a tag.**
+
+- ❌ **DO NOT** expect builds to happen automatically when pushing code
+- ❌ **DO NOT** modify workflows to trigger on branch pushes
+- ✅ **DO** create tags explicitly when you want to build/release
 
 ---
 
@@ -66,7 +77,23 @@ git push origin "build-main-${VERSION}"
 
 ## Workflow Logic
 
-The CI workflow (`build-on-tag.yml`) parses the tag:
+### CI Workflow (`ci.yml`)
+
+**Triggers:**
+- ✅ **Tags only**: Version tags, `build-dev-*`, `build-main-*`
+- ✅ **Pull requests**: For testing (does not publish)
+- ✅ **Manual dispatch**: `workflow_dispatch`
+- ❌ **NO pushes to master**: Intentionally disabled to prevent unwanted builds
+
+**Jobs:**
+- `build`: Always runs (builds and tests)
+- `publish`: Only on tags (publishes binaries)
+- `docker`: Only on tags (builds Docker images)
+- `release`: Only on tags (creates GitHub release)
+
+### Build on Tag Workflow (`build-on-tag.yml`)
+
+The build-on-tag workflow parses the tag:
 
 1. **Parse step** extracts `channel` and `version`
 2. **Build** runs for all channels (frontend + 6 platform binaries as `.zip`)

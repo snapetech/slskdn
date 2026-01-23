@@ -184,6 +184,38 @@ export const getAll = async () => {
 
 ---
 
+## 🚨 CRITICAL: Build Process
+
+**Builds ONLY happen on tags. NO automatic builds on code pushes.**
+
+### Build Rules
+- ❌ **DO NOT** expect builds on code pushes to master
+- ❌ **DO NOT** modify workflows to trigger on branch pushes
+- ✅ **DO** create tags explicitly when user requests a build
+- ✅ **DO** wait for explicit user instruction before creating tags
+
+### CI Workflow Triggers
+- ✅ Tags: `build-main-*`, `build-dev-*`, version tags
+- ✅ Pull requests: For testing (does not publish)
+- ✅ Manual dispatch: `workflow_dispatch`
+- ❌ **NOT on pushes to master**: Intentionally disabled
+
+### To Trigger a Build (Only if User Requests)
+```bash
+# Main/stable release
+git tag build-main-0.24.1-slskdn.41
+git push origin build-main-0.24.1-slskdn.41
+
+# Dev release
+VERSION="0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)"
+git tag "build-dev-${VERSION}"
+git push origin "build-dev-${VERSION}"
+```
+
+See `memory-bank/decisions/adr-0005-tagging-system.md` for complete details.
+
+---
+
 ## CLI Shortcuts
 
 ```bash

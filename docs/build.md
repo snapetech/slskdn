@@ -67,6 +67,67 @@ Linux ([musl libc](https://wiki.musl-libc.org/projects-using-musl) distros like 
 
 If your platform is missing, review the automated build configuration in the `.github` directory for more info.
 
+---
+
+## CI/CD Build Process
+
+**IMPORTANT:** Builds only happen on tags, not on code pushes.
+
+### Build Triggers
+
+The CI workflow (`ci.yml`) is configured to:
+- ✅ **Run on tags**: Version tags, `build-dev-*`, `build-main-*`
+- ✅ **Run on pull requests**: For testing (does not publish)
+- ✅ **Run on manual dispatch**: `workflow_dispatch`
+- ❌ **NOT run on pushes to master**: Prevents unwanted builds on documentation/code updates
+
+### Triggering a Build
+
+To trigger a build, create and push a tag:
+
+```bash
+# Main/stable release
+git tag build-main-0.24.1-slskdn.41
+git push origin build-main-0.24.1-slskdn.41
+
+# Dev release
+VERSION="0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)"
+git tag "build-dev-${VERSION}"
+git push origin "build-dev-${VERSION}"
+```
+
+See `memory-bank/decisions/adr-0005-tagging-system.md` for complete tag format details.
+
+---
+
+## Automated Builds (CI/CD)
+
+### ⚠️ Important: Builds Only Happen on Tags
+
+**The CI workflow does NOT automatically build on code pushes. Builds ONLY happen when you create a tag.**
+
+### How to Trigger a Build
+
+**For stable releases:**
+```bash
+git tag build-main-0.24.1-slskdn.41
+git push origin build-main-0.24.1-slskdn.41
+```
+
+**For dev releases:**
+```bash
+git tag build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)
+git push origin build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)
+```
+
+### Build Workflows
+
+- **CI Workflow** (`ci.yml`): Runs on tags only (not on code pushes)
+- **Build on Tag** (`build-on-tag.yml`): Full release with packages
+- **Dev Release** (`dev-release.yml`): Dev package builds
+
+See `memory-bank/decisions/adr-0005-tagging-system.md` for detailed tag format and channel information.
+
 ## Hard Way
 
 Your best bet will be to review the scripts in the `/bin` directory, but if your goal is to do this the hard way you've probably seen those and don't trust them for some reason.
