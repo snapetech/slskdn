@@ -149,15 +149,12 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
         var searchResult = await searchResponse.Content.ReadFromJsonAsync<SearchResponse>();
         Assert.NotNull(searchResult?.Results);
 
-        // Simulate having results (in real scenario, mock Soulseek would provide)
-        if (searchResult.Results.Count == 0)
-        {
-            // Skip if no mock results available
-            return;
-        }
+        // Use first real result or a synthetic one when stub search returns empty
+        var firstResult = searchResult.Results.Count > 0
+            ? searchResult.Results[0]
+            : new SearchResultItem("test_user", 0, new List<FileItem> { new FileItem("test/Test Album.flac", 0, 0, null, "flac") });
 
         // 2. Download
-        var firstResult = searchResult.Results[0];
         var downloadResponse = await client.PostAsJsonAsync("/api/downloads", new
         {
             items = new[]
