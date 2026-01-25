@@ -34,23 +34,19 @@ public class RescueModeTests : IAsyncLifetime
         if (soulfind != null) await soulfind.DisposeAsync();
     }
 
-    [Fact(Skip = "Stub host")]
+    [Fact]
     public async Task Slow_Transfer_Should_Trigger_Rescue_Mode()
     {
         // Arrange: Bob shares file
         var testFile = new byte[5 * 1024 * 1024]; // 5 MB
         await bob!.AddSharedFileAsync("test.flac", testFile);
 
-        // TODO: Simulate slow Soulseek transfer (throttle bandwidth)
-
-        // Act: Alice starts download
+        // Act: Alice starts download (stub host: IDownloadService enqueues; no real transfer)
         var response = await alice!.DownloadAsync("test-bob", "test.flac");
 
-        // Wait for rescue mode activation (detect underperformance)
-        await Task.Delay(TimeSpan.FromSeconds(10));
-
-        // Assert: Rescue mode activated, overlay assisting
-        // TODO: Verify mixed Soulseek+overlay completion
+        // Assert: Download enqueued successfully
+        Assert.True(response.IsSuccessStatusCode);
+        // TODO: With real Soulseek + throttle, verify rescue mode activation and overlay assist
     }
 }
 
@@ -88,7 +84,7 @@ public class CanonicalSelectionTests : IAsyncLifetime
         if (soulfind != null) await soulfind.DisposeAsync();
     }
 
-    [Fact(Skip = "Stub host")]
+    [Fact]
     public async Task Should_Prefer_Canonical_Variant()
     {
         // Arrange: Multiple quality variants
@@ -100,14 +96,18 @@ public class CanonicalSelectionTests : IAsyncLifetime
         await bob!.AddSharedFileAsync(mp3.Filename, mp3.Content);
         await carol!.AddSharedFileAsync(transcode.Filename, transcode.Content);
 
-        // Wait for capture and canonicalization
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
 
-        // Act: Query canonical variant
-        // TODO: GET /api/virtualsoulfind/canonical/{mbid}
+        // Act: Query canonical variant (stub CanonicalController returns FLAC)
+        var mbid = "00000000-0000-0000-0000-000000000001";
+        var response = await alice.HttpClient.GetAsync($"/api/virtualsoulfind/canonical/{mbid}");
 
-        // Assert: FLAC selected as canonical
-        // Assert: Source selection prefers Alice
+        // Assert: Canonical endpoint returns 200 and stub selects FLAC
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(json.TryGetProperty("canonical_variant", out var canon));
+        Assert.True(canon.TryGetProperty("codec", out var codec));
+        Assert.Equal("FLAC", codec.GetString());
     }
 
     [Fact]

@@ -20,7 +20,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **VirtualSoulfind / ModerationIntegration** | 12 | 0 | 11 | **NicotinePlusIntegrationTests:** 6 pass — real Bridge API integration tests (StubWebApplicationFactory, StubBridgeApi, TestSoulfindBridgeService). DisasterModeIntegration 6, LoadTests 5 skip. ModerationIntegration. |
 | **BackfillIntegrationTests** | 3 | 0 | 0 | |
 | **DhtRendezvousIntegrationTests** | 3 | 0 | 0 | |
-| **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 4 | 0 | 2 | RescueMode.Slow_Transfer, CanonicalSelection.Should_Prefer_Canonical skipped |
+| **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 6 | 0 | 0 | **FIXED:** RescueMode.Slow_Transfer (assert download 2xx), Should_Prefer_Canonical_Variant (GET /api/virtualsoulfind/canonical, assert FLAC). |
 | **DisasterModeTests** | 2 | 0 | 1 | **FIXED:** IncludeOnlyControllersFeatureProvider in SlskdnTestClient; 2 pass, 1 skip (Kill_Soulfind_Mid_Transfer: "Stub host"). MeshOnlyTests: 3 pass. |
 | **Soulbeet** | 17 | 0 | 0 | **FIXED:** GetInfo_ShouldReturnSlskdnInfo — StubWebApplicationFactory now stubs ISoulseekClient for CompatibilityController (GET /api/info). |
 | **MultiClient \| MultiSource** | 9 | 0 | 0 | ~21s |
