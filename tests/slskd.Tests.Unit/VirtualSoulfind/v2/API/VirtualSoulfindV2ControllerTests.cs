@@ -67,10 +67,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         [Fact]
         public async Task EnqueueTrack_ValidRequest_ReturnsCreated()
         {
-            // Arrange
             var trackId = ContentItemId.NewId().ToString();
             var request = new EnqueueTrackRequest
             {
+                Domain = ContentDomain.Music,
                 TrackId = trackId,
                 Priority = IntentPriority.High,
             };
@@ -86,10 +86,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
             };
 
             _mockIntentQueue
-                .Setup(q => q.EnqueueTrackAsync(trackId, IntentPriority.High, null, It.IsAny<CancellationToken>()))
+                .Setup(q => q.EnqueueTrackAsync(request.Domain, request.TrackId, request.Priority, request.ParentDesiredReleaseId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedIntent);
 
-            // Act
             var result = await _controller.EnqueueTrack(request, CancellationToken.None);
 
             // Assert
@@ -124,7 +123,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
             };
 
             _mockIntentQueue
-                .Setup(q => q.EnqueueReleaseAsync(releaseId, IntentPriority.Normal, IntentMode.Wanted, null, It.IsAny<CancellationToken>()))
+                .Setup(q => q.EnqueueReleaseAsync(releaseId, IntentPriority.Normal, IntentMode.Wanted, request.Notes, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedIntent);
 
             // Act

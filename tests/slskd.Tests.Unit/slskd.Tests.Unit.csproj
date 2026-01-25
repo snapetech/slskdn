@@ -32,7 +32,6 @@
     <Compile Remove="Mesh\ServiceFabric\DestinationAllowlistTests.cs" />
     <!-- Additional deferrals: API/model mismatches (LocalFileMetadata, PodMessage, PodChannel, Pod, PodPrivateServicePolicy, etc.), missing types (PodIdFactory, ConversationPodCoordinator, LlmModeration*, ModerationVerdict), TorSocksTransport/RateLimiter/Options API changes. -->
     <!-- Further deferrals: PodValidation/PodPrivateServicePolicy/Options/APIs changed; RealmConfig, TransportType, BridgeFlowTypes, SourceCandidate, MultiSourcePlanner/IntentQueue/ModerationDecision/AudioTags; ConnectionThrottler RateLimiter type. -->
-    <Compile Remove="VirtualSoulfind\v2\API\VirtualSoulfindV2ControllerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
