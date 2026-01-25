@@ -96,6 +96,16 @@
 - **Build:** `dotnet build tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj` — **0 errors** (warnings only). Previous “30 build errors / does not build” was outdated.
 - **40-fixes-plan.md Deferred table:** Row updated: Build OK; full `dotnet test` can time out — use `--filter "FullyQualifiedName~MediaCore"` for shorter runs; MediaCore 22 pass. Action: runtime/skip audit; optionally stabilize full-suite (filters, timeouts).
 
+### slskd.Tests.Unit: AsyncRulesTests + IpldMapperTests fixes
+- **Status**: ✅ **COMPLETED**
+- **AsyncRulesTests.ValidateCancellationHandlingAsync_WithIgnoredCancellation_ReturnsFalse:** Op delay 200ms matched `timeout*2`, causing race. Increased to 500ms so `delayTask` reliably wins and returns false.
+- **IpldMapperTests:** (1) AddLinksAsync/UnregisteredContentId: mock `IsContentIdRegisteredAsync` (not `IsRegisteredAsync`). (2) FindInboundLinksAsync: implementation only scans `_outgoingLinks`; test pre-populates via AddLinksAsync and asserts source in result; removed incorrect `FindByDomainAsync` Verify.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **2257 pass, 0 fail, 0 skip.**
+
+### slskd.Tests.Integration: runtime/skip audit
+- **Status**: ✅ **COMPLETED**
+- **Audit:** `docs/dev/slskd-tests-integration-audit.md`. Filtered runs: MediaCore 22; Mesh 28 pass / 1 fail (NatTraversal_SymmetricFallback); PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterMode, Features|Backfill|DhtRendezvous, Soulbeet|MultiClient|… timeout. 40-fixes Deferred row updated with audit summary and actions.
+
 ---
 
 ## 2026-01-24

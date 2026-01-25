@@ -36,11 +36,11 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         [Fact]
         public async Task ValidateCancellationHandlingAsync_WithIgnoredCancellation_ReturnsFalse()
         {
-            // Arrange
+            // Arrange: op ignores ct and runs longer than timeout*2 so delayTask (timeout*2) wins
+            // and we correctly detect "does not respect cancellation"
             async Task TestOperationAsync(CancellationToken ct)
             {
-                // Ignore cancellation token
-                await Task.Delay(200);
+                await Task.Delay(500);
             }
 
             // Act

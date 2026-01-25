@@ -10,6 +10,7 @@ using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -37,14 +38,14 @@ public class IpldMapperTests
             new IpldLink(IpldLinkNames.Artist, "content:audio:artist:mb-abc123")
         };
 
-        _registryMock.Setup(r => r.IsRegisteredAsync(contentId, default))
+        _registryMock.Setup(r => r.IsContentIdRegisteredAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         // Act
         await _mapper.AddLinksAsync(contentId, links);
 
         // Assert - mainly that it doesn't throw
-        _registryMock.Verify(r => r.IsRegisteredAsync(contentId, default), Times.Once);
+        _registryMock.Verify(r => r.IsContentIdRegisteredAsync(contentId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public class IpldMapperTests
         var contentId = "content:unknown:id";
         var links = new[] { new IpldLink("parent", "content:other:id") };
 
-        _registryMock.Setup(r => r.IsRegisteredAsync(contentId, default))
+        _registryMock.Setup(r => r.IsContentIdRegisteredAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         // Act & Assert
@@ -108,19 +109,21 @@ public class IpldMapperTests
     [Fact]
     public async Task FindInboundLinksAsync_ValidTarget_ReturnsInboundLinks()
     {
-        // Arrange
+        // Arrange: FindInboundLinksAsync scans _outgoingLinks only; pre-populate via AddLinksAsync
+        var sourceContentId = "content:audio:track:mb-12345";
         var targetContentId = "content:audio:album:mb-67890";
         var linkName = IpldLinkNames.Album;
 
-        _registryMock.Setup(r => r.FindByDomainAsync("audio", default))
-            .ReturnsAsync(new[] { "content:audio:track:mb-12345" });
+        _registryMock.Setup(r => r.IsContentIdRegisteredAsync(sourceContentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        await _mapper.AddLinksAsync(sourceContentId, new[] { new IpldLink(linkName, targetContentId) });
 
         // Act
         var result = await _mapper.FindInboundLinksAsync(targetContentId, linkName);
 
         // Assert
         Assert.NotNull(result);
-        _registryMock.Verify(r => r.FindByDomainAsync("audio", default), Times.Once);
+        Assert.Contains(sourceContentId, result);
     }
 
     [Fact]

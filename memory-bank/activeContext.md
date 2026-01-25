@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: 40-fixes Deferred: slskd.Tests.Integration row updated (done).
+- **Current Task**: Unit (AsyncRules, IpldMapper) + Integration audit (done).
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Updated `docs/dev/40-fixes-plan.md` Deferred table (Integration: build OK, full-suite timeout note, MediaCore 22 pass); `memory-bank/progress.md`. **Next:** slskd.Tests.Unit Phase 2–6; Integration runtime/skip audit; or other 40-fixes / tasks.
+- **Last Activity**: Unit 2257 pass (AsyncRules flake fix, IpldMapper IsContentIdRegisteredAsync/FindInboundLinksAsync). Integration audit: `docs/dev/slskd-tests-integration-audit.md`; 40-fixes Deferred updated. **Next:** Fix MeshIntegrationTests.NatTraversal_SymmetricFallback; run slow Integration filters in smaller chunks; or other 40-fixes.
 
 ---
 

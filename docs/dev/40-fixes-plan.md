@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| **slskd.Tests.Integration** | **Build: OK** (0 errors). Full `dotnet test` for Integration can time out; use `--filter "FullyQualifiedName~MediaCore"` (or similar) for shorter runs. MediaCore: 22 pass. Remaining: runtime/skip audit for other areas; optionally stabilize full-suite (filters, timeouts). | Run filtered subsets to confirm pass/skip; fix or `Compile Remove` any runtime failures; document or fix full-suite timeout if needed. |
+| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; Mesh 28 pass / 1 fail (NatTraversal_SymmetricFallback); PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterMode, Features\|Backfill\|DhtRendezvous, Soulbeet\|MultiClient\|… timeout. See `docs/dev/slskd-tests-integration-audit.md`. | Fix or skip NatTraversal_SymmetricFallback; run slow filters in smaller chunks or with higher timeout; review VirtualSoulfind skips. |
 
 
 ---
