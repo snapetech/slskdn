@@ -150,6 +150,9 @@ export SLSKDN_TEST_KEEP_ARTIFACTS=1
 
 ## Troubleshooting
 
+### Build errors (API/type drift)
+As of 2026-01, this project has ~30 build errors (ObfuscatedTransportIntegration, ModerationIntegration, TorIntegration, PerformanceBenchmarks; types/options renamed or missing: WebSocketOptions, HttpTunnelOptions, Obfs4Options, MeekOptions, IContentBackend, ContentDescriptor.Filename, PlanStatus.Success, TestContext, etc.). `dotnet test` at solution root and `./bin/build --dotnet-only` will fail at the Integration step until tests are aligned with current slskd APIs. See `docs/dev/40-fixes-plan.md` § Deferred.
+
 ### Soulfind Not Found
 1. Check `SOULFIND_PATH` environment variable
 2. Install from: https://github.com/slskd/soulfind
