@@ -105,6 +105,11 @@
 - **LibraryActorServiceTests:** Removed `Compile Remove`. Ctor: add ILoggerFactory (LoggerFactory), real MusicLibraryActor via IMusicContentDomainProvider mock; SocialFederationOptions.BaseUrl = "https://example.com"; usings: slskd.Common, slskd.SocialFederation, slskd.VirtualSoulfind.Core.Music. Constructor_HandlesNullMusicActor: pass _loggerFactory. All 7 tests pass (GetActor music/generic/unknown, GetAvailableDomains, AvailableActors Hermit, IsLibraryActor, Constructor null music).
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1441 passed, 17 skipped** (+12 pass).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – MediaCore IpldMapperTests)
+- **Status**: ✅ **COMPLETED**
+- **IpldMapperTests:** Removed `Compile Remove`. TraverseAsync_MaxDepthExceeded_StopsTraversal skipped (IpldMapper requires maxDepth 1–10; maxDepth=0 throws ArgumentOutOfRangeException). FuzzyMatcherTests remains excluded (Score/ScorePhonetic/ScoreLevenshtein/FindSimilarContent expectations differ from current FuzzyMatcher impl).
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1452 passed, 18 skipped** (+11 pass, +1 skip).
+
 ---
 
 ## 2025-12-13

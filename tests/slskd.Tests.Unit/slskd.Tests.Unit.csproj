@@ -54,7 +54,6 @@
     <Compile Remove="Integrations\MusicBrainz\MusicBrainzControllerTests.cs" />
     <Compile Remove="MediaCore\ContentIdRegistryTests.cs" />
     <Compile Remove="MediaCore\FuzzyMatcherTests.cs" />
-    <Compile Remove="MediaCore\IpldMapperTests.cs" />
     <Compile Remove="MediaCore\MetadataPortabilityTests.cs" />
     <Compile Remove="Mesh\CensorshipSimulationServiceTests.cs" />
     <Compile Remove="Mesh\CircuitMaintenanceServiceTests.cs" />

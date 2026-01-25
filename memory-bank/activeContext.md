@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled SocialFederation LibraryActorServiceTests (Phase 5); slskd.Tests.Unit 1441 pass, 17 skipped. Next: Phase 5 (FederationService, MediaCore) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
+- **Last Activity**: Re-enabled MediaCore IpldMapperTests (Phase 5); slskd.Tests.Unit 1452 pass, 18 skipped. FuzzyMatcherTests remains excluded (Score/ScorePhonetic/FindSimilar expectations differ from impl). Next: Phase 5 (FederationService, MediaCore MetadataPortability) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
 
 ---
 
