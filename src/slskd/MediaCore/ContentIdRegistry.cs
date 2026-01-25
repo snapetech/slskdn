@@ -19,8 +19,8 @@ public class ContentIdRegistry : IContentIdRegistry
     // externalId -> contentId mapping
     private readonly ConcurrentDictionary<string, string> _externalToContent = new();
 
-    // contentId -> List<externalId> reverse mapping
-    private readonly ConcurrentDictionary<string, ConcurrentBag<string>> _contentToExternal = new();
+    // contentId -> set of externalId (values ignored) for reverse lookup; supports remove on overwrite
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _contentToExternal = new();
 
     /// <inheritdoc/>
     public async Task RegisterAsync(string externalId, string contentId, CancellationToken cancellationToken = default)
@@ -31,15 +31,19 @@ public class ContentIdRegistry : IContentIdRegistry
         if (string.IsNullOrWhiteSpace(contentId))
             throw new ArgumentException("Content ID cannot be empty", nameof(contentId));
 
+        // If overwriting a mapping to a different contentId, remove externalId from the old contentId's set
+        if (_externalToContent.TryGetValue(externalId, out var oldContentId) && oldContentId != contentId &&
+            _contentToExternal.TryGetValue(oldContentId, out var oldSet))
+        {
+            oldSet.TryRemove(externalId, out _);
+        }
+
         // Register external -> content mapping
         _externalToContent[externalId] = contentId;
 
         // Register reverse mapping
-        var externalIds = _contentToExternal.GetOrAdd(contentId, _ => new ConcurrentBag<string>());
-        if (!externalIds.Contains(externalId))
-        {
-            externalIds.Add(externalId);
-        }
+        var externalIds = _contentToExternal.GetOrAdd(contentId, _ => new ConcurrentDictionary<string, byte>());
+        externalIds.TryAdd(externalId, 0);
 
         await Task.CompletedTask;
     }
@@ -62,7 +66,7 @@ public class ContentIdRegistry : IContentIdRegistry
 
         if (_contentToExternal.TryGetValue(contentId, out var externalIds))
         {
-            return await Task.FromResult(externalIds.ToArray());
+            return await Task.FromResult(externalIds.Keys.ToArray());
         }
 
         return Array.Empty<string>();
@@ -82,11 +86,11 @@ public class ContentIdRegistry : IContentIdRegistry
     {
         var totalMappings = _externalToContent.Count;
 
-        // Count mappings by domain (extract domain from external ID format)
+        // Count mappings by domain (extract domain from contentId, e.g. content:audio:track:id -> "audio")
         var mappingsByDomain = new Dictionary<string, int>();
-        foreach (var externalId in _externalToContent.Keys)
+        foreach (var contentId in _externalToContent.Values)
         {
-            var domain = ExtractDomain(externalId);
+            var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
             mappingsByDomain.TryGetValue(domain, out var count);
             mappingsByDomain[domain] = count + 1;
         }
@@ -142,15 +146,6 @@ public class ContentIdRegistry : IContentIdRegistry
         }
 
         return await Task.FromResult(results.Distinct().ToArray());
-    }
-
-    /// <summary>
-    /// Extract domain from external ID (e.g., "mb:recording:123" -> "mb").
-    /// </summary>
-    private static string ExtractDomain(string externalId)
-    {
-        var colonIndex = externalId.IndexOf(':');
-        return colonIndex > 0 ? externalId.Substring(0, colonIndex) : "unknown";
     }
 
     /// <summary>

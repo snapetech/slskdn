@@ -52,7 +52,6 @@
     <Compile Remove="Audio\CanonicalStatsServiceTests.cs" />
     <Compile Remove="HashDb\HashDbServiceTests.cs" />
     <Compile Remove="Integrations\MusicBrainz\MusicBrainzControllerTests.cs" />
-    <Compile Remove="MediaCore\ContentIdRegistryTests.cs" />
     <Compile Remove="MediaCore\FuzzyMatcherTests.cs" />
     <Compile Remove="Mesh\CensorshipSimulationServiceTests.cs" />
     <Compile Remove="Mesh\CircuitMaintenanceServiceTests.cs" />

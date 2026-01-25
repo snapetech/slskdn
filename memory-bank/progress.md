@@ -115,6 +115,11 @@
 - **MetadataPortabilityTests:** Confirmed re-enabled (not in `Compile Remove`). All 12 tests pass (Roundtrip_*, ValidateStructure_*, ValidateVersion_*, portability/version/domain checks).
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1464 passed, 18 skipped** (+12 pass).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – MediaCore ContentIdRegistryTests)
+- **Status**: ✅ **COMPLETED**
+- **ContentIdRegistryTests:** Removed `Compile Remove`. **ContentIdRegistry** changes: (1) `GetStatsAsync` derives domain from contentId via `ContentIdParser.GetDomain` (not externalId) to match `FindByDomainAsync` and tests; (2) `RegisterAsync` overwrite: when externalId moves to a new contentId, remove it from the old contentId's reverse set—replaced `ConcurrentBag` with `ConcurrentDictionary<string,byte>` for `_contentToExternal` to support `TryRemove`; (3) removed unused `ExtractDomain`. All 18 tests pass.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1482 passed, 18 skipped** (+18 pass).
+
 ---
 
 ## 2025-12-13
