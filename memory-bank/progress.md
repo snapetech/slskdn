@@ -85,6 +85,12 @@
 - **SecurityUtilsTests.RandomDelayAsync_ValidRange_CompletesWithinExpectedTime:** Upper bound relaxed from `maxDelay + 20` (70ms) to `maxDelay + 250` (300ms) to avoid CI flakiness when system is under load; test still asserts completion and minimum delay.
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1381 passed, 16 skipped**. slskd.Tests 45 pass, 1 skipped.
 
+### slskd.Tests.Unit Re-enablement (Phase 4 – Mesh ServiceFabric): DhtMeshServiceDirectoryTests, RouterStatsTests
+- **Status**: ✅ **COMPLETED**
+- **DhtMeshServiceDirectoryTests:** Removed `Compile Remove`. Tests use `DhtMeshServiceDirectory`, `IMeshDhtClient`, `IMeshServiceDescriptorValidator`, `MeshServiceFabricOptions`, `MeshServiceDescriptor`; all 7 tests pass (FindByNameAsync, FindByIdAsync, oversize/parse/validation behavior).
+- **RouterStatsTests:** Removed `Compile Remove`. Tests use `MeshServiceRouter`, `RouterStats`, `GetStats()`, `CircuitBreakers`, `WorkBudgetMetrics`; all 3 tests pass (GetStats_ReturnsBasicMetrics, GetStats_IncludesWorkBudgetMetrics, GetStats_TracksCircuitBreakerState).
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1391 passed, 16 skipped** (+10).
+
 ---
 
 ## 2025-12-13

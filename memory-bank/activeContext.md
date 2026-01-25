@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: NSec.Cryptography 24.2.0→24.4.0 (clear NU1603); SecurityUtilsTests.RandomDelayAsync_ValidRange upper bound 70ms→250ms to avoid CI flake; slskd.Tests.Unit 1381 pass, 16 skipped. Next: Phase 3 PodCore (MembershipGateTests, etc.) or Phase 4 Mesh per `docs/dev/40-fixes-plan.md` § slskd.Tests.Unit Re-enablement Plan.
+- **Last Activity**: Re-enabled DhtMeshServiceDirectoryTests and RouterStatsTests (Phase 4 Mesh ServiceFabric); slskd.Tests.Unit 1391 pass, 16 skipped. Next: Phase 3 PodCore or Phase 4 (MeshServiceRouterTests, MeshGatewayAuthMiddlewareTests, etc.) per `docs/dev/40-fixes-plan.md`.
 
 ---
 
