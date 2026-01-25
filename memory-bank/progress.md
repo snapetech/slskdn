@@ -120,6 +120,11 @@
 - **ContentIdRegistryTests:** Removed `Compile Remove`. **ContentIdRegistry** changes: (1) `GetStatsAsync` derives domain from contentId via `ContentIdParser.GetDomain` (not externalId) to match `FindByDomainAsync` and tests; (2) `RegisterAsync` overwrite: when externalId moves to a new contentId, remove it from the old contentId's reverse set—replaced `ConcurrentBag` with `ConcurrentDictionary<string,byte>` for `_contentToExternal` to support `TryRemove`; (3) removed unused `ExtractDomain`. All 18 tests pass.
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1482 passed, 18 skipped** (+18 pass).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – HashDb HashDbServiceTests)
+- **Status**: ✅ **COMPLETED**
+- **HashDbServiceTests:** Removed `Compile Remove`. Tests use `new HashDbService(testDir)` with only appDirectory (all other ctor args optional). Covers: ctor/DB init, GetStats, peer management (GetOrCreate, Touch, UpdatePeerCapabilities), FLAC inventory (Upsert, GetFlacEntry, GetFlacEntriesBySize, GetUnhashed, UpdateFlacHash, MarkFlacHashFailed), AlbumTarget (Upsert, GetAlbumTargets), hash storage (Store, Lookup, LookupByRecordingId, LookupBySize, StoreHashFromVerification, IncrementUseCount), mesh sync (GetEntriesSinceSeq, MergeEntriesFromMesh, UpdatePeerLastSeqSeen), backfill (GetBackfillCandidates, IncrementPeerBackfillCount), FlacInventoryEntry/HashDbEntry helpers. All 32 tests pass.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1513 passed, 18 skipped, 1 failed** (+32 pass; 1 pre-existing: SecurityUtilsTests.ConstantTimeEquals_TimingAttackResistance timing heuristic).
+
 ---
 
 ## 2025-12-13

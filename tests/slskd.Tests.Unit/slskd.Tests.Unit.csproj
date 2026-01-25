@@ -50,7 +50,6 @@
     <Compile Remove="PodCore\PrivateGatewayMeshServiceTests.cs" />
     <!-- Further deferrals: PodValidation/PodPrivateServicePolicy/Options/APIs changed; RealmConfig, TransportType, BridgeFlowTypes, SourceCandidate, MultiSourcePlanner/IntentQueue/ModerationDecision/AudioTags; ConnectionThrottler RateLimiter type. -->
     <Compile Remove="Audio\CanonicalStatsServiceTests.cs" />
-    <Compile Remove="HashDb\HashDbServiceTests.cs" />
     <Compile Remove="Integrations\MusicBrainz\MusicBrainzControllerTests.cs" />
     <Compile Remove="MediaCore\FuzzyMatcherTests.cs" />
     <Compile Remove="Mesh\CensorshipSimulationServiceTests.cs" />

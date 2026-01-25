@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled MediaCore ContentIdRegistryTests (Phase 5); ContentIdRegistry GetStatsAsync/FindByDomain domain-from-contentId and overwrite cleanup. slskd.Tests.Unit **1482 pass, 18 skipped**. Next: Phase 5 (FederationService, CanonicalStatsService, HashDbService) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
+- **Last Activity**: Re-enabled HashDb HashDbServiceTests (Phase 5); slskd.Tests.Unit **1513 pass, 18 skipped** (1 flaky: SecurityUtilsTests.ConstantTimeEquals_TimingAttackResistance). Next: Phase 5 (FederationService, CanonicalStatsService, MusicBrainzController) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
 
 ---
 
