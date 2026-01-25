@@ -50,7 +50,6 @@
     <Compile Remove="PodCore\PrivateGatewayMeshServiceTests.cs" />
     <!-- Further deferrals: PodValidation/PodPrivateServicePolicy/Options/APIs changed; RealmConfig, TransportType, BridgeFlowTypes, SourceCandidate, MultiSourcePlanner/IntentQueue/ModerationDecision/AudioTags; ConnectionThrottler RateLimiter type. -->
     <Compile Remove="MediaCore\FuzzyMatcherTests.cs" />
-    <Compile Remove="Mesh\CensorshipSimulationServiceTests.cs" />
     <Compile Remove="Mesh\CircuitMaintenanceServiceTests.cs" />
     <Compile Remove="Mesh\DomainFrontedTransportTests.cs" />
     <Compile Remove="Mesh\MeshSyncSecurityTests.cs" />

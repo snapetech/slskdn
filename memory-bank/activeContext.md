@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled Audio CanonicalStatsServiceTests and Integrations MusicBrainzControllerTests (Phase 5); slskd.Tests.Unit **1517 pass, 18 skipped**. Next: Phase 5 (FederationService) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
+- **Last Activity**: Re-enabled Mesh CensorshipSimulationServiceTests (Phase 4); slskd.Tests.Unit **1521 pass, 18 skipped**. Next: FederationService (ResolveInboxUrlsAsync/Public), DestinationAllowlist, CircuitMaintenance, or Phase 3 PodCore.
 
 ---
 

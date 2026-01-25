@@ -135,6 +135,11 @@
 - **MusicBrainzControllerTests:** Removed `Compile Remove`. Tests: ResolveTarget_WithReleaseId_UpsertsAlbum (mocks IMusicBrainzClient.GetReleaseAsync, verifies UpsertAlbumTargetAsync and Ok+MusicBrainzTargetResponse); GetAlbumCompletion_ReturnsCompletionSummaries (mocks GetAlbumTargetsAsync, GetAlbumTracksAsync, LookupHashesByRecordingIdAsync, verifies AlbumCompletionResponse.Albums with CompletedTracks and HashMatch.FlacKey). Program.IsRelayAgent is false in test process. All 2 tests pass.
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1517 passed, 18 skipped** (+2 pass).
 
+### slskd.Tests.Unit Re-enablement (Phase 4 – Mesh CensorshipSimulationServiceTests)
+- **Status**: ✅ **COMPLETED**
+- **CensorshipSimulationServiceTests:** Removed `Compile Remove`. Tests use a local stub `CensorshipSimulationService` and `INetworkSimulator` defined in the test file; all 4 tests are placeholders (Assert.True with "not yet implemented" messages). Constructor_WithValidParameters_CreatesInstance, SimulateCensorship_SuccessfullyBlocksConnections, TestCircumventionTechniques_ValidatesEffectiveness, GetSimulationResults_ReturnsDetailedReport.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1521 passed, 18 skipped** (+4 pass).
+
 ---
 
 ## 2025-12-13
