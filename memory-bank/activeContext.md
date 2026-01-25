@@ -5,6 +5,14 @@
 
 ---
 
+## ⚠️ WORK DIRECTORY (do not use /home/keith/Code/cursor)
+
+**Project root: `/home/keith/Documents/code/slskdn`**
+
+All `git`, `dotnet`, and file paths in this repo are under this directory. The `cursor` folder under `/home/keith/Code/` is a different project (LiteLLM/Cursor API switcher).
+
+---
+
 ## 🚨 Before Ending Your Session
 
 **Did you fix any bugs? Document them in `adr-0001-known-gotchas.md` NOW.**
