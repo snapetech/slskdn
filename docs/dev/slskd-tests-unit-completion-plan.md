@@ -208,7 +208,7 @@ For any of the above: if a **type or API does not exist** in the app, **Discuss:
 | **CircuitMaintenanceServiceTests** | ~~ExecuteAsync_TestsCircuitBuildingWhenNoActiveCircuitsAndEnoughPeers~~ | **FIXED.** Real MeshCircuitBuilder; GetCircuitPeersAsync returns 1 peer; verify Once. |
 | **Phase8MeshTests** | ~~MeshHealthCheck_AssessesHealth~~ | **FIXED.** Real MeshStatsCollector. |
 | **IpldMapperTests** | ~~TraverseAsync_MaxDepthExceeded_StopsTraversal~~ | **FIXED.** Test uses maxDepth:1; VisitedNodes/stop-at-limit. |
-| **WorkRefTests** | FromMusicItem_CreatesValidWorkRef | ContentDomain.MusicContentItem removed; needs MusicItem from VirtualSoulfind. |
+| **WorkRefTests** | ~~FromMusicItem_CreatesValidWorkRef~~ | **FIXED.** MusicItem.FromTrackEntry(AlbumTargetTrackEntry) and WorkRef.FromMusicItem exist; test runs, 15 WorkRefTests pass, 0 skip. |
 | **PodPolicyEnforcementTests** | ~~ValidatePod_PrivateServiceGateway_ExceedsCurrentMembers_Fails~~ | **FIXED.** Test uses 4 members, MaxMembers=3; ValidateCapabilities fails. |
 | **LocalPortForwarderTests** | ~~6~~ | **FIXED.** RecordingMeshServiceClient; correct Payload (TunnelId/Accepted, Data); CreateTunnelRejected; Send/Receive/Close call service. |
 | **PerceptualHasherTests** | ~~ComputeHash_DifferentFrequencies_ProduceDifferentHashes~~ | **FIXED.** 440 vs 262 Hz; similarity &lt; 0.95. |
@@ -234,7 +234,7 @@ For any of the above: if a **type or API does not exist** in the app, **Discuss:
 
 ### Remaining — Compile Remove (as of last edit)
 
-**None.** The csproj has no `Compile Remove`; all listed test files build and run. Remaining work: reduce **skips** that require app changes (see Deferred): WorkRef FromMusicItem (1). **FIXED:** DeletePodAsync, Soulseek DM, PodDeletionCleansUpMessages, VpnPod_MaxMembers, Obfs4Transport, ActivityPubKeyStore, MembershipGate VPN.
+**None.** The csproj has no `Compile Remove`; all listed test files build and run. Remaining work: **none** (0 skips). **FIXED:** DeletePodAsync, Soulseek DM, PodDeletionCleansUpMessages, VpnPod_MaxMembers, Obfs4Transport, ActivityPubKeyStore, MembershipGate VPN, WorkRef FromMusicItem.
 
 ### Remaining — Phases
 

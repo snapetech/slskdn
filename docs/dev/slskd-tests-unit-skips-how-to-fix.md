@@ -107,11 +107,11 @@ Canonical list of `[Fact(Skip = "...")]` / `[Theory(Skip = "...")]` as of the la
 
 ---
 
-## 12. WorkRefTests (1 skip)
+## 12. WorkRefTests (0 skips)
 
 | Test | Reason | How to fix |
 |------|--------|------------|
-| `FromMusicItem_CreatesValidWorkRef` | `ContentDomain.MusicContentItem` removed; `WorkRef.FromMusicItem` expects `MusicItem` from VirtualSoulfind | **App:** Restore a `MusicItem`-like type (or `ContentDomain` for it) that `WorkRef.FromMusicItem` can use, or add `FromMusicItem(MusicItem)` in the layer that has `MusicItem`. **Test:** Build a `MusicItem` (or equivalent) and call `WorkRef.FromMusicItem`; assert the resulting `WorkRef` is valid. |
+| ~~`FromMusicItem_CreatesValidWorkRef`~~ | **FIXED.** `MusicItem.FromTrackEntry(AlbumTargetTrackEntry)` and `WorkRef.FromMusicItem(MusicItem, string)` exist; test builds `AlbumTargetTrackEntry`, calls `MusicItem.FromTrackEntry`, then `WorkRef.FromMusicItem`; 15 WorkRefTests pass, 0 skip. | — |
 
 ---
 
@@ -174,7 +174,8 @@ Those are covered in sections **4** and **3** respectively.
 
 ## Summary by fix type
 
-- **App required (or strongly suggested):** WorkRef FromMusicItem (1).  
+- **App required (or strongly suggested):** none.  
+- **FIXED (WorkRef FromMusicItem):** MusicItem.FromTrackEntry + WorkRef.FromMusicItem; 15 WorkRefTests pass, 0 skip.  
 - **FIXED (ActivityPubKeyStore):** All 8 — IEd25519KeyPairGenerator + FakeEd25519KeyPairGenerator.  
 - **FIXED (MembershipGateTests):** All 6 — create-then-join for VPN pods; 13 pass, 0 skip.  
 - **FIXED (PodsController/PodCoreIntegration):** DeletePod (2), Soulseek DM (2), PodDeletionCleansUpMessages (1), VpnPod_MaxMembers (1).  
