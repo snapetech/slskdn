@@ -156,7 +156,6 @@ namespace slskd.Tests.Unit.Transfers
         [Fact]
         public void GetEffectiveUploadSpeedLimit_Returns_DayLimit_When_Enabled_And_DayTime()
         {
-            // Arrange
             var options = new AppOptions()
             {
                 Global = new slskd.Options.GlobalOptions()
@@ -164,7 +163,7 @@ namespace slskd.Tests.Unit.Transfers
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
                         SpeedLimit = 1000, // Day limit
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = true,
                             NightStartHour = 22,
@@ -178,16 +177,11 @@ namespace slskd.Tests.Unit.Transfers
             var optionsMonitorMock = new Mock<IOptionsMonitor<AppOptions>>();
             optionsMonitorMock.Setup(m => m.CurrentValue).Returns(options);
 
-            var service = new ScheduledRateLimitService(optionsMonitorMock.Object);
-
-            // Mock DateTime.Now to be during day hours
             var dayTime = new DateTime(2025, 12, 13, 14, 0, 0); // 2:00 PM
-            using var _ = new DateTimeContext(dayTime);
+            var service = new ScheduledRateLimitService(optionsMonitorMock.Object, () => dayTime);
 
-            // Act
             var result = service.GetEffectiveUploadSpeedLimit();
 
-            // Assert
             Assert.Equal(1000, result); // Should return day limit
         }
 
@@ -232,14 +226,13 @@ namespace slskd.Tests.Unit.Transfers
         [Fact]
         public void IsNightTime_Returns_False_During_Day_Hours()
         {
-            // Arrange
             var options = new AppOptions()
             {
                 Global = new slskd.Options.GlobalOptions()
                 {
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = true,
                             NightStartHour = 22,
@@ -252,9 +245,6 @@ namespace slskd.Tests.Unit.Transfers
             var optionsMonitorMock = new Mock<IOptionsMonitor<AppOptions>>();
             optionsMonitorMock.Setup(m => m.CurrentValue).Returns(options);
 
-            var service = new ScheduledRateLimitService(optionsMonitorMock.Object);
-
-            // Test various day times
             var dayTimes = new[]
             {
                 new DateTime(2025, 12, 13, 6, 0, 0), // 6:00 AM (end)
@@ -265,7 +255,7 @@ namespace slskd.Tests.Unit.Transfers
 
             foreach (var dayTime in dayTimes)
             {
-                using var _ = new DateTimeContext(dayTime);
+                var service = new ScheduledRateLimitService(optionsMonitorMock.Object, () => dayTime);
                 Assert.False(service.IsNightTime(), $"Should be day time at {dayTime}");
             }
         }
