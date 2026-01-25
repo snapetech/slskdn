@@ -54,14 +54,16 @@
   - Priority: High
   - Notes: macOS package manager support
 
-- [ ] **T-013**: Flatpak (Flathub)
-  - Status: Not started
+- [x] **T-013**: Flatpak (Flathub)
+  - Status: Done (2026-01-25)
   - Priority: High
-  - Notes: Universal Linux packaging
+  - Notes: .NET 8.0.11 + slskdn-main-linux-x64 0.24.1-slskdn.40, slskdn.svg; placeholders replaced; build.sh, FLATHUB_SUBMISSION updated.
 
 ---
 
 ## Completed Tasks
+
+- [x] **T-013 (2026-01-25):** Flatpak: .NET 8.0.11 (dotnetcli.azureedge.net), slskdn 0.24.1-slskdn.40 `slskdn-main-linux-x64.zip`, slskdn.svg; placeholders replaced; build.sh (no prepare_icons), FLATHUB_SUBMISSION checklist updated.
 
 - [x] **chore (2026-01-25):** gitignore `mesh-overlay.key`, untrack; activeContext WORK DIRECTORY `/home/keith/Documents/code/slskdn`; completion-plan Phase 0 + Discuss first marked **DONE** (CodeQuality, ActivityPubKeyStore, CircuitMaintenance); DomainFrontedTransportTests DONE.
 

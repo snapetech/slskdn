@@ -31,31 +31,6 @@ check_prerequisites() {
     fi
 }
 
-# Convert SVG icon to PNG if needed
-prepare_icons() {
-    if command -v convert &> /dev/null; then
-        echo "🎨 Converting SVG icon to PNG..."
-        if [[ -f "slskdn.svg" && (! -f "slskdn.png" || slskdn.svg -nt slskdn.png) ]]; then
-            convert slskdn.svg -background transparent -size 512x512 slskdn.png
-            echo "✅ Icon converted"
-        fi
-    elif command -v inkscape &> /dev/null; then
-        echo "🎨 Converting SVG icon to PNG using inkscape..."
-        if [[ -f "slskdn.svg" && (! -f "slskdn.png" || slskdn.svg -nt slskdn.png) ]]; then
-            inkscape -w 512 -h 512 slskdn.svg -o slskdn.png
-            echo "✅ Icon converted"
-        fi
-    else
-        echo "⚠️ Warning: ImageMagick or Inkscape not found. Using placeholder icon."
-        if [[ ! -f "slskdn.png" ]]; then
-            echo "❌ slskdn.png not found. Please convert slskdn.svg to PNG format."
-            echo "   Using ImageMagick: convert slskdn.svg -background transparent -size 512x512 slskdn.png"
-            echo "   Using Inkscape: inkscape -w 512 -h 512 slskdn.svg -o slskdn.png"
-            exit 1
-        fi
-    fi
-}
-
 # Validate manifest
 validate_manifest() {
     echo "🔍 Validating manifest..."
@@ -66,17 +41,16 @@ validate_manifest() {
         echo "   Update these before Flathub submission"
     fi
 
-    # Check for placeholder URLs
+    # Check for placeholder slskd (upstream) URLs; we use snapetech/slskdn
     if grep -q "https://github.com/slskd/slskd/releases/download" "$MANIFEST_FILE"; then
-        echo "⚠️ Warning: Manifest contains placeholder download URLs"
-        echo "   Update these with real release URLs before submission"
+        echo "⚠️ Warning: Manifest contains slskd/slskd placeholder URL"
+        echo "   Use https://github.com/snapetech/slskdn/releases/..."
     fi
 }
 
 # Main build process
 main() {
     check_prerequisites
-    prepare_icons
     validate_manifest
 
     # Clean previous build

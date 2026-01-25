@@ -2,23 +2,20 @@
 
 Before submitting to Flathub, update `io.github.slskd.slskdn.yml` as follows.
 
-## 1. .NET 8.0 runtime
+## 1. .NET 8.0 runtime — ✅ done
 
-- Replace the `dotnet` module `sources[0].url` with the official .NET 8.0 runtime linux-x64 tarball from <https://dotnet.microsoft.com/download/dotnet/8.0> (e.g. `dotnet-runtime-8.0.x-linux-x64.tar.gz`).
-- Set `sources[0].sha256` to the correct checksum (or use `type: file` and `url` with checksum from the download page).
-- Alternatively, use `runtime/org.freedesktop.Sdk.Extension.dotnet8` if available in the Freedesktop runtime and adjust the `dotnet` module to install from there.
+- `dotnet` module uses `https://dotnetcli.azureedge.net/dotnet/Runtime/8.0.11/dotnet-runtime-8.0.11-linux-x64.tar.gz` with sha256. No `curl | tar`; Flatpak extracts the archive and build-commands copy into `/app/dotnet/`.
+- To bump: get tarball URL from <https://dotnet.microsoft.com/download/dotnet/8.0>, then `curl -sL <url> | sha256sum`.
 
-## 2. slskdn application
+## 2. slskdn application — ✅ done
 
-- Set `sources[0].url` for the `slskdn` module to a real release, e.g.  
-  `https://github.com/snapetech/slskdn/releases/download/TAG/slskdn-TAG-linux-x64.zip`  
-  (or `slskdn-dev-TAG-linux-x64.zip` for dev builds).
-- Set `sources[0].sha256` (replace `PLACEHOLDER_SHA256_UPDATE_WITH_REAL_RELEASE`).
-- Ensure `build-commands` copy the correct layout: the zip contains `slskd` (or `slskd.dll`), `wwwroot/`, and dependencies. The wrapper expects `slskd.dll` and `/app/dotnet/dotnet`; align paths if the publish layout differs.
+- `slskdn` module uses `https://github.com/snapetech/slskdn/releases/download/0.24.1-slskdn.40/slskdn-main-linux-x64.zip` with sha256.
+- Asset names from the GitHub API can differ from release notes: for 0.24.1-slskdn.40 the Linux x64 asset is `slskdn-main-linux-x64.zip`. Dev builds use `slskdn-dev-linux-x64.zip`.
+- Build-commands copy `slskd*`, `*.dll`, and `wwwroot/` into `/app/lib/slskdn/`. Wrapper runs `/app/dotnet/dotnet /app/lib/slskdn/slskd.dll`.
 
-## 3. slskdn.png
+## 3. Icon — ✅ done
 
-- The manifest references `slskdn.png` (512×512). Ensure it exists in `packaging/flatpak/` or the path in `sources` is correct.
+- Manifest uses `slskdn.svg` installed as `share/icons/hicolor/scalable/apps/io.github.slskd.slskdn.svg` (Icon=io.github.slskd.slskdn in desktop).
 
 ## 4. Build and test
 

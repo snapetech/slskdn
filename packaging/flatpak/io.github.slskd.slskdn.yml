@@ -44,14 +44,13 @@ modules:
     buildsystem: simple
     build-commands:
       - |
-        mkdir -p /app/dotnet
-        # Download and install .NET 8.0 runtime
-        curl -L https://download.visualstudio.microsoft.com/download/pr/8e3e4e7a-7c5f-4b7e-9b9d-4b2b9c5e8d8c/dotnet-runtime-8.0.0-linux-x64.tar.gz | tar -xz -C /app/dotnet
-        ln -s /app/dotnet/dotnet /app/bin/dotnet
+        mkdir -p /app/dotnet /app/bin
+        cp -r . /app/dotnet/
+        ln -sf /app/dotnet/dotnet /app/bin/dotnet
     sources:
       - type: archive
-        url: https://download.visualstudio.microsoft.com/download/pr/dotnet-runtime-8.0.0-linux-x64.tar.gz
-        sha256: PLACEHOLDER_SHA256_UPDATE_BEFORE_SUBMISSION
+        url: https://dotnetcli.azureedge.net/dotnet/Runtime/8.0.11/dotnet-runtime-8.0.11-linux-x64.tar.gz
+        sha256: b74a80654e9b9e698d455750c82f581c5149172f3a07593728acc98a2a21c395
 
   # slskdN application
   - name: slskdn
@@ -59,15 +58,16 @@ modules:
     build-commands:
       - |
         # Create directories
-        mkdir -p /app/bin
-        mkdir -p /app/lib/slskdn
+        mkdir -p /app/bin /app/lib/slskdn
         mkdir -p /app/share/applications
-        mkdir -p /app/share/icons/hicolor/512x512/apps
+        mkdir -p /app/share/icons/hicolor/scalable/apps
         mkdir -p /app/share/metainfo
 
-        # Install slskdN binary
-        cp slskd /app/lib/slskdn/
-        chmod +x /app/lib/slskdn/slskd
+        # Install slskdN (from slskdn-main-linux-x64.zip: slskd, slskd.dll, deps, wwwroot)
+        cp slskd* /app/lib/slskdn/ 2>/dev/null || true
+        cp *.dll /app/lib/slskdn/
+        cp -r wwwroot /app/lib/slskdn/
+        chmod +x /app/lib/slskdn/slskd 2>/dev/null || true
 
         # Create wrapper script
         cat > /app/bin/slskdn-wrapper << 'EOF'
@@ -143,19 +143,18 @@ modules:
 
         chmod +x /app/bin/slskdn-wrapper
 
-        # Install desktop file
+        # Install desktop file and metadata
         cp slskdn.desktop /app/share/applications/
         cp slskdn.metainfo.xml /app/share/metainfo/
 
-        # Install icon
-        cp slskdn.png /app/share/icons/hicolor/512x512/apps/
+        # Install icon (Icon=io.github.slskd.slskdn in desktop)
+        cp slskdn.svg /app/share/icons/hicolor/scalable/apps/io.github.slskd.slskdn.svg
 
     sources:
-      # slskdN binary (will be downloaded from releases)
-      # NOTE: Update URL and SHA256 before Flathub submission
+      # slskdN 0.24.1-slskdn.40 Linux x64 (snapetech; asset slskdn-main-linux-x64.zip)
       - type: archive
-        url: https://github.com/slskd/slskd/releases/download/v0.1.0/slskdn-0.1.0-linux-x64.tar.gz
-        sha256: PLACEHOLDER_SHA256_UPDATE_WITH_REAL_RELEASE
+        url: https://github.com/snapetech/slskdn/releases/download/0.24.1-slskdn.40/slskdn-main-linux-x64.zip
+        sha256: 72f06e4505cc1b8ec4e2b43602cb4bd768b89bc2b9d372de70c920aab42271b7
 
       # Desktop file
       - type: file
@@ -165,6 +164,6 @@ modules:
       - type: file
         path: slskdn.metainfo.xml
 
-      # Icon
+      # Icon (SVG for scalable/apps)
       - type: file
-        path: slskdn.png
+        path: slskdn.svg
