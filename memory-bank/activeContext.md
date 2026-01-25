@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: Integration NatTraversal_SymmetricFallback (done).
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: NatTraversal_SymmetricFallback fixed (relay URL must be IP; test uses relay://127.0.0.1:6000). Mesh Integration 29 pass. Audit + 40-fixes Deferred updated. **Next:** Run slow Integration filters in smaller chunks; review VirtualSoulfind skips; or other 40-fixes.
+- **Last Activity**: Integration granular timeout audit: DisasterModeTests and ProtocolContractTests hang; Backfill, DhtRendezvous, Features, Soulbeet, MultiClient|MultiSource, CoverTraffic, PortForwarding, Signals documented. Audit doc updated. **Next:** Debug DisasterMode/ProtocolContract hangs; review VirtualSoulfind skips; or other 40-fixes.
 
 ---
 

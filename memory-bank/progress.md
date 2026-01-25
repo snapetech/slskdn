@@ -112,6 +112,11 @@
 - **Change:** Test uses `relay://127.0.0.1:6000` so `TryParseRelay` succeeds; mock `IRelayClient.RelayAsync` returns true → `ConnectAsync` returns Success, UsedRelay, Reason=relay.
 - **Result:** Mesh Integration 29 pass, 0 fail. Audit and 40-fixes Deferred updated.
 
+### slskd.Tests.Integration: granular timeout audit
+- **Status**: ✅ **COMPLETED**
+- **Hang:** DisasterModeTests, ProtocolContractTests (run with higher timeout or debug).
+- **OK in smaller filters:** Backfill 3, DhtRendezvous 3, Features 4 pass/2 skip, Soulbeet 16/1 skip, MultiClient|MultiSource 9, CoverTraffic 3, PortForwarding 3. Signals 2 skip. `docs/dev/slskd-tests-integration-audit.md` updated with full table.
+
 ---
 
 ## 2026-01-24

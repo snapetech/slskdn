@@ -18,16 +18,24 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **Security** (folder) | 50 | 0 | 0 | Tor, Obfuscated, Censorship, Http, MeshGateway, SecurityMiddleware |
 | **SecurityIntegrationTests** | 12 | 0 | 0 | |
 | **VirtualSoulfind / ModerationIntegration** | 6 | 0 | 17 | DisasterModeIntegration, LoadTests, NicotinePlus, ModerationIntegration; many `[Fact(Skip)]` |
-| **DisasterModeTests** | — | — | — | **Timeout** (run hangs or very slow) |
-| **Features \| Backfill \| DhtRendezvous** | — | — | — | **Timeout** when run together |
-| **Soulbeet \| MultiClient \| MultiSource \| Protocol \| PortForwarding \| CoverTraffic \| Signals \| PerformanceBenchmarks** | — | — | — | **Timeout** when run together |
+| **BackfillIntegrationTests** | 3 | 0 | 0 | |
+| **DhtRendezvousIntegrationTests** | 3 | 0 | 0 | |
+| **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 4 | 0 | 2 | RescueMode.Slow_Transfer, CanonicalSelection.Should_Prefer_Canonical skipped |
+| **DisasterModeTests** | — | — | — | **Timeout** (run hangs) |
+| **Soulbeet** | 16 | 0 | 1 | SoulbeetCompatibility.GetInfo_ShouldReturnSlskdnInfo skipped |
+| **MultiClient \| MultiSource** | 9 | 0 | 0 | ~21s |
+| **ProtocolContractTests** | — | — | — | **Timeout** (run hangs) |
+| **CoverTrafficGeneratorIntegrationTests** | 3 | 0 | 0 | |
+| **Signals** (SwarmRequestBtFallback) | 0 | 0 | 2 | both skipped |
+| **PortForwardingIntegrationTests** | 3 | 0 | 0 | |
+| **PerformanceBenchmarks** | — | — | — | No match in Integration (may be in other project or excluded) |
 
 ---
 
 ## Actions
 
 1. **Mesh:** ~~Fix or skip `NatTraversal_SymmetricFallback`~~ **DONE.** Relay URL must be IP (TryParseRelay does not resolve hostnames); test now uses `relay://127.0.0.1:6000`. Mesh 29 pass.
-2. **Timeouts:** Run DisasterMode, Features, Backfill, DhtRendezvous, Soulbeet, MultiClient, MultiSource, Protocol, CoverTraffic, Signals, PerformanceBenchmarks in smaller filters or with increased timeout; fix or document any that hang.
+2. **Timeouts (granular 2026-01-25):** **DisasterModeTests** and **ProtocolContractTests** hang (run with higher timeout or debug). Backfill 3, DhtRendezvous 3, Features 4 pass/2 skip, Soulbeet 16/1 skip, MultiClient|MultiSource 9, CoverTraffic 3, PortForwarding 3, Signals 2 skip — all complete when run in smaller filters.
 3. **VirtualSoulfind skips:** Review 17 skipped tests; re-enable or document.
 
 ---
