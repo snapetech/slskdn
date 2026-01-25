@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: MediaCore: Chromaprint FFT + FuzzyMatcher ScorePerceptualAsync (done). Docs/tasks/memory updates.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Chromaprint FFT (MathNet, 24-bin chroma, DifferentContent un-skipped, PerceptualHasher 440vs880 test). FuzzyMatcher ScorePerceptualAsync → IDescriptorRetriever+IPerceptualHasher; FuzzyMatcherTests 35 pass. Updated progress.md, completion-plan, reenablement-execution-plan, skips-how-to-fix, tasks.md. **Next:** Commit in logical chunks (Chromaprint, FuzzyMatcher, docs) and push.
+- **Last Activity**: Committed (1) Chromaprint FFT + FuzzyMatcher code, (2) docs/memory; pushed dev/40-fixes. **Next:** IpldMapper TraverseAsync_MaxDepthExceeded; or slskd.Tests.Integration deferred (40-fixes Deferred table).
 
 ---
 
