@@ -77,6 +77,16 @@
 
 ---
 
+## 2026-01-24
+
+### dev/40-fixes: NSec, SecurityUtils flake, test baseline
+- **Status**: ✅ **COMPLETED**
+- **NSec.Cryptography:** Bumped `slskd.csproj` 24.2.0 → 24.4.0 to clear NU1603 (24.2.0 not found, 24.4.0 resolved).
+- **SecurityUtilsTests.RandomDelayAsync_ValidRange_CompletesWithinExpectedTime:** Upper bound relaxed from `maxDelay + 20` (70ms) to `maxDelay + 250` (300ms) to avoid CI flakiness when system is under load; test still asserts completion and minimum delay.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1381 passed, 16 skipped**. slskd.Tests 45 pass, 1 skipped.
+
+---
+
 ## 2025-12-13
 
 ### T-VC02: Music Domain Provider — Multi-Domain Core Implementation

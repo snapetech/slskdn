@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: slskd.Tests.Unit Re-enablement (Phase 1 done)
-- **Branch**: `master`
+- **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
+- **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled LocalPortForwarderTests (13 pass, 6 skipped), ContentDescriptorPublisherModerationTests (4 pass), RelayControllerModerationTests (4 pass). 561 pass, 7 skipped total. See `memory-bank/progress.md` and `docs/dev/40-fixes-plan.md` § slskd.Tests.Unit Re-enablement Plan.
+- **Last Activity**: NSec.Cryptography 24.2.0→24.4.0 (clear NU1603); SecurityUtilsTests.RandomDelayAsync_ValidRange upper bound 70ms→250ms to avoid CI flake; slskd.Tests.Unit 1381 pass, 16 skipped. Next: Phase 3 PodCore (MembershipGateTests, etc.) or Phase 4 Mesh per `docs/dev/40-fixes-plan.md` § slskd.Tests.Unit Re-enablement Plan.
 
 ---
 
