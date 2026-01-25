@@ -26,7 +26,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: 40-fixes test/docs follow-up.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Chocolatey (slskdn-main-win-x64) + AUR PKGBUILD / PKGBUILD-bin → 0.24.1-slskdn.40. **Next:** 40-fixes; tasks.md (T-006, T-007, Phase 14, T-404+); or packaging (winget snapetech.slskdn if separate from -dev; PKGBUILD-dev is CI‑updated).
+- **Last Activity**: RPM slskdn.spec + Debian changelog → 0.24.1-slskdn.40. **Next:** 40-fixes; tasks.md (T-006, T-007, Phase 14, T-404+); or packaging (TrueNAS/Synology if desired; winget -dev is CI).
 
 ---
 

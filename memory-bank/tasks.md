@@ -63,6 +63,8 @@
 
 ## Completed Tasks
 
+- [x] **chore (2026-01-25):** RPM slskdn.spec 0.24.1.slskdn.40, Source0→slskdn-main-linux-x64.zip. Debian changelog 0.24.1.slskdn.40-1.
+
 - [x] **chore (2026-01-25):** Chocolatey slskdn 0.24.1-slskdn.40 (slskdn-main-win-x64.zip, sha256). AUR PKGBUILD + PKGBUILD-bin pkgver 0.24.1.slskdn.40.
 
 - [x] **chore (2026-01-25):** Snap snapcraft.yaml → 0.24.1-slskdn.40 (slskdn-main-linux-x64.zip, sha256).

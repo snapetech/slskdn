@@ -1,11 +1,12 @@
 Name:           slskdn
-Version:        0.24.1.slskdn.7
+Version:        0.24.1.slskdn.40
 Release:        1%{?dist}
 Summary:        🔋 The batteries included fork of slskd with 24+ new features
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn
-Source0:        https://github.com/snapetech/slskdn/releases/download/%{version}/slskdn-%{version}-linux-x64.zip
+# Pre-built zip from GitHub releases (asset slskdn-main-linux-x64.zip). CI overwrites Version and Source0.
+Source0:        https://github.com/snapetech/slskdn/releases/download/0.24.1-slskdn.40/slskdn-main-linux-x64.zip
 Source1:        slskd.service
 Source2:        slskd.yml
 Source3:        slskd.conf
@@ -124,6 +125,9 @@ echo ""
 %dir %attr(755,slskd,slskd) %{_sharedstatedir}/slskd/incomplete
 
 %changelog
+* Sat Jan 25 2026 snapetech <slskdn@proton.me> - 0.24.1.slskdn.40-1
+- Bump to 0.24.1-slskdn.40 (slskdn-main-linux-x64.zip)
+
 * Sat Dec 06 2025 snapetech <slskdn@proton.me> - 0.24.1.slskdn.7-1
 - Fix race condition in SourceRankingService
 - Update branding
