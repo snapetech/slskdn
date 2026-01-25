@@ -93,12 +93,11 @@ public class EnforceInvalidConfigIntegrationTests
 
     /// <summary>
     /// Full host startup: run slskd as a subprocess with Enforce on and invalid config; assert exit 1
-    /// and that stderr/stdout contains the rule name. Requires no other slskd instance (mutex).
-    /// Skipped: config binding (slskd section / SLSKD_APP_DIR) in subprocess harness can prevent
-    /// Enforce from being applied; the process may block on app.Run() instead of exiting. Run
-    /// manually when validating the full host path.
+    /// and that stderr/stdout contains the rule name. Uses --config and YAML with web/diagnostics at root
+    /// (YamlConfigurationProvider prefixes with Namespace). Requires no other slskd instance (mutex).
+    /// Skip: mutex in shared/CI can block; run manually when no slskd is running.
     /// </summary>
-    [Fact(Skip = "Subprocess: config/mutex in harness can prevent Enforce; run manually when needed")]
+    [Fact(Skip = "Subprocess requires no other slskd instance (mutex). Run manually: dotnet test --filter Enforce_invalid_config_host_startup when clear.")]
     public async Task Enforce_invalid_config_host_startup_exits_nonzero_and_output_contains_rule_name()
     {
         var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
@@ -114,24 +113,25 @@ public class EnforceInvalidConfigIntegrationTests
         {
             Directory.CreateDirectory(tempDir);
             var yml = Path.Combine(tempDir, "slskd.yml");
+            // YamlConfigurationProvider prefixes with Namespace "slskd"; use web/diagnostics at root (not slskd:)
             await File.WriteAllTextAsync(yml, """
-                slskd:
-                  web:
-                    enforceSecurity: true
-                    allowRemoteNoAuth: false
-                    authentication:
-                      disabled: true
-                    port: 5000
-                  diagnostics:
-                    allowMemoryDump: false
+                web:
+                  enforceSecurity: true
+                  allowRemoteNoAuth: false
+                  authentication:
+                    disabled: true
+                  port: 5000
+                diagnostics:
+                  allowMemoryDump: false
                 """);
 
+            var configArg = $"--config \"{yml}\"";
             using var proc = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"run --project \"{slskdProj}\" -c Release --no-build",
+                    Arguments = $"run --project \"{slskdProj}\" -c Release --no-build -- {configArg}",
                     WorkingDirectory = repoRoot,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -155,7 +155,7 @@ public class EnforceInvalidConfigIntegrationTests
             var stderr = await errTask;
             var combined = stdout + "\n" + stderr;
 
-            Assert.True(exited && proc.ExitCode == 1, $"Expected exit code 1; got {proc.ExitCode}. stderr: {stderr}");
+            Assert.True(exited && proc.ExitCode == 1, $"Expected exit code 1; got {proc.ExitCode}. stdout+stderr: {combined}");
             Assert.Contains(HardeningValidator.RuleAuthDisabledNonLoopback, combined, StringComparison.Ordinal);
         }
         finally
