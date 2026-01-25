@@ -110,6 +110,11 @@
 - **IpldMapperTests:** Removed `Compile Remove`. TraverseAsync_MaxDepthExceeded_StopsTraversal skipped (IpldMapper requires maxDepth 1–10; maxDepth=0 throws ArgumentOutOfRangeException). FuzzyMatcherTests remains excluded (Score/ScorePhonetic/ScoreLevenshtein/FindSimilarContent expectations differ from current FuzzyMatcher impl).
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1452 passed, 18 skipped** (+11 pass, +1 skip).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – MediaCore MetadataPortabilityTests)
+- **Status**: ✅ **COMPLETED**
+- **MetadataPortabilityTests:** Confirmed re-enabled (not in `Compile Remove`). All 12 tests pass (Roundtrip_*, ValidateStructure_*, ValidateVersion_*, portability/version/domain checks).
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1464 passed, 18 skipped** (+12 pass).
+
 ---
 
 ## 2025-12-13
