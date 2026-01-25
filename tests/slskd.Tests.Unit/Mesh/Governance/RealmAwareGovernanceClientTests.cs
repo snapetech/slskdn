@@ -6,10 +6,13 @@ namespace slskd.Tests.Unit.Mesh.Governance
 {
     using System;
     using System.Linq;
+    using System.Security.Cryptography;
+    using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Mesh.Governance;
     using slskd.Mesh.Realm;
     using Xunit;
 
@@ -33,6 +36,17 @@ namespace slskd.Tests.Unit.Mesh.Governance
             return new RealmAwareGovernanceClient(_realmServiceMock.Object, _loggerMock.Object);
         }
 
+        /// <summary>
+        ///     Computes GovernanceDocument.Signature using the same HMAC as RealmAwareGovernanceClient.ValidateDocumentSignatureAsync
+        ///     (key "governance-signing-key", payload Id|Type|Version|Created:O|RealmId|Signer). Test-only.
+        /// </summary>
+        private static void SetValidSignature(GovernanceDocument doc)
+        {
+            var dataToSign = $"{doc.Id}|{doc.Type}|{doc.Version}|{doc.Created:O}|{doc.RealmId}|{doc.Signer}";
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes("governance-signing-key"));
+            doc.Signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToSign)));
+        }
+
         [Fact]
         public async Task ValidateDocumentForRealmAsync_WithValidDocument_ReturnsTrue()
         {
@@ -43,10 +57,11 @@ namespace slskd.Tests.Unit.Mesh.Governance
                 Id = "test-doc",
                 Type = "policy",
                 Version = 1,
+                Created = new DateTimeOffset(2020, 1, 15, 10, 0, 0, TimeSpan.Zero),
                 RealmId = "test-realm",
-                Signer = "trusted-signer",
-                Signature = "valid-signature" // This would be computed properly in real implementation
+                Signer = "trusted-signer"
             };
+            SetValidSignature(document);
 
             // Act
             var result = await client.ValidateDocumentForRealmAsync(document, "test-realm");
@@ -87,9 +102,11 @@ namespace slskd.Tests.Unit.Mesh.Governance
                 Id = "test-doc",
                 Type = "policy",
                 Version = 1,
+                Created = new DateTimeOffset(2020, 1, 15, 10, 0, 0, TimeSpan.Zero),
                 RealmId = "test-realm",
                 Signer = "untrusted-signer"
             };
+            SetValidSignature(document); // Pass structural + signature; fail at IsTrustedGovernanceRoot
 
             // Act
             var result = await client.ValidateDocumentForRealmAsync(document, "test-realm");

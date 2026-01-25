@@ -10,6 +10,7 @@ namespace slskd.Tests.Unit.Mesh.Realm
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Mesh.Realm;
     using Xunit;
 
     /// <summary>

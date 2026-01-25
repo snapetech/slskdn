@@ -30,7 +30,7 @@ public class MeshTransportServiceIntegrationTests : IDisposable
 
         _adversarialOptions = new AdversarialOptions
         {
-            AnonymityLayer = new AnonymityLayerOptions
+            Anonymity = new AnonymityLayerOptions
             {
                 Enabled = true,
                 Mode = AnonymityMode.Tor
@@ -69,7 +69,7 @@ public class MeshTransportServiceIntegrationTests : IDisposable
         optionsMock.Setup(o => o.Value).Returns(_meshOptions);
 
         var adversarialOptionsMock = new Mock<IOptions<AdversarialOptions>>();
-        adversarialOptionsMock.Setup(o => o.Value).Returns(new AdversarialOptions { AnonymityLayer = new AnonymityLayerOptions { Enabled = false } });
+        adversarialOptionsMock.Setup(o => o.Value).Returns(new AdversarialOptions { Anonymity = new AnonymityLayerOptions { Enabled = false } });
 
         var service = new MeshTransportService(_loggerMock.Object, optionsMock.Object, null, adversarialOptionsMock.Object);
 
@@ -93,7 +93,7 @@ public class MeshTransportServiceIntegrationTests : IDisposable
         adversarialOptionsMock.Setup(o => o.Value).Returns(_adversarialOptions);
 
         // Mock successful Tor transport selection
-        var torTransport = new TorSocksTransport(_adversarialOptions.AnonymityLayer.Tor, _loggerMock.Object);
+        var torTransport = new TorSocksTransport(_adversarialOptions.Anonymity.Tor, Mock.Of<ILogger<TorSocksTransport>>());
         _anonymitySelectorMock
             .Setup(s => s.SelectAndConnectAsync("peer123", null, "dummy-host", 0, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync((torTransport, Mock.Of<Stream>()));
@@ -145,7 +145,7 @@ public class MeshTransportServiceIntegrationTests : IDisposable
         var adversarialOptionsMock = new Mock<IOptions<AdversarialOptions>>();
         adversarialOptionsMock.Setup(o => o.Value).Returns(_adversarialOptions);
 
-        var torTransport = new TorSocksTransport(_adversarialOptions.AnonymityLayer.Tor, _loggerMock.Object);
+        var torTransport = new TorSocksTransport(_adversarialOptions.Anonymity.Tor, Mock.Of<ILogger<TorSocksTransport>>());
         _anonymitySelectorMock
             .Setup(s => s.SelectAndConnectAsync("peer123", "pod456", "dummy-host", 0, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync((torTransport, Mock.Of<Stream>()));
@@ -170,7 +170,7 @@ public class MeshTransportServiceIntegrationTests : IDisposable
 
         var directAnonymityOptions = new AdversarialOptions
         {
-            AnonymityLayer = new AnonymityLayerOptions
+            Anonymity = new AnonymityLayerOptions
             {
                 Enabled = true,
                 Mode = AnonymityMode.Direct

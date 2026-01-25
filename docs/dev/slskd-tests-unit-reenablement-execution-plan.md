@@ -254,6 +254,8 @@ For each excluded file in these areas:
 - Excluded list: `tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` — `Compile Remove` and comments.
 - Plan and blockers: `docs/dev/40-fixes-plan.md` § slskd.Tests.Unit Re-enablement Plan.
 - This execution plan: `docs/dev/slskd-tests-unit-reenablement-execution-plan.md`.
+- **LIFT vs REQUIREMENTS** (lazy vs needs-build-first): `docs/dev/slskd-tests-unit-lift-vs-requirements.md`.
+- **Completion plan (test-refactor first, Discuss: app where needed):** `docs/dev/slskd-tests-unit-completion-plan.md`.
 
 ---
 

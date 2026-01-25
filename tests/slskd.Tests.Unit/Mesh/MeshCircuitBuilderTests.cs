@@ -6,6 +6,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
+using slskd.Mesh;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;

@@ -9,6 +9,7 @@ namespace slskd.Tests.Unit.Mesh.Gossip
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Moq;
+    using slskd.Mesh.Gossip;
     using slskd.Mesh.Realm;
     using Xunit;
 
