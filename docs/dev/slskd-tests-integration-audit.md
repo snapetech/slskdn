@@ -1,7 +1,8 @@
 # slskd.Tests.Integration — Runtime Audit
 
 **Date:** 2026-01-25  
-**Build:** `dotnet build tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj -c Release` — **0 errors.**
+**Build:** `dotnet build tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj -c Release` — **0 errors.**  
+**Total:** 184 pass, 0 fail, 0 skip.
 
 Run filtered subsets to avoid full-suite timeout, e.g.:
 `dotnet test tests/slskd.Tests.Integration/... -c Release --no-build --filter "FullyQualifiedName~MediaCore"`
@@ -17,7 +18,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **PodCore** | 15 | 0 | 0 | PodCoreIntegration, PortForwarding |
 | **Security** (folder) | 50 | 0 | 0 | Tor, Obfuscated, Censorship, Http, MeshGateway, SecurityMiddleware |
 | **SecurityIntegrationTests** | 12 | 0 | 0 | |
-| **VirtualSoulfind / ModerationIntegration** | 23 | 0 | 0 | NicotinePlus 6, ModerationIntegration. **DisasterModeIntegrationTests** 6 pass (StubWebApplicationFactory smoke: disaster-mode/status, shadow-index). **LoadTests** 5 pass (placeholders run). |
+| **VirtualSoulfind / ModerationIntegration** | 23 | 0 | 0 | NicotinePlus 6, ModerationIntegration (LocalLibraryBackend assert, no skip). **DisasterModeIntegrationTests** 6 pass (StubWebApplicationFactory: disaster-mode/status, shadow-index). **LoadTests** 5 pass (HTTP smokes). **StubVirtualSoulfindServices** (StubDescriptorPublisher, StubPeerReputationStore, StubShareRepository). |
 | **BackfillIntegrationTests** | 3 | 0 | 0 | |
 | **DhtRendezvousIntegrationTests** | 3 | 0 | 0 | |
 | **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 6 | 0 | 0 | **FIXED:** RescueMode.Slow_Transfer (assert download 2xx), Should_Prefer_Canonical_Variant (GET /api/virtualsoulfind/canonical, assert FLAC). |
@@ -29,7 +30,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **Signals** (SwarmRequestBtFallback) | 2 | 0 | 0 | Un-skipped: SendAsync and OnSignalReceivedAsync smoke. |
 | **PortForwardingIntegrationTests** | 3 | 0 | 0 | |
 | **PerformanceBenchmarks** | 1 | 0 | 0 | RunBenchmarks: DhtQueryLatency smoke (full BenchmarkDotNet run manually). |
-| **LoadTests** | 5 | 0 | 0 | Un-skipped; placeholder bodies. |
+| **LoadTests** | 5 | 0 | 0 | HTTP smokes (disaster-mode/status, shadow-index); full load manual/nightly. |
 
 ---
 
@@ -46,7 +47,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | File | Count | Reason |
 |------|-------|--------|
 | **DisasterModeIntegrationTests** | 0 | 6 pass — StubWebApplicationFactory smoke (disaster-mode/status, shadow-index) |
-| **LoadTests** | 0 | 5 pass — placeholder bodies |
+| **LoadTests** | 0 | 5 pass — HTTP smokes (disaster-mode/status, shadow-index) |
 | **NicotinePlusIntegrationTests** | 0 | 6 pass — Bridge API (StubBridgeApi, TestSoulfindBridgeService) |
 
 ---
