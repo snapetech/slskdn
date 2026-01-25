@@ -89,7 +89,9 @@
 - **Status**: ✅ **COMPLETED**
 - **DhtMeshServiceDirectoryTests:** Removed `Compile Remove`. Tests use `DhtMeshServiceDirectory`, `IMeshDhtClient`, `IMeshServiceDescriptorValidator`, `MeshServiceFabricOptions`, `MeshServiceDescriptor`; all 7 tests pass (FindByNameAsync, FindByIdAsync, oversize/parse/validation behavior).
 - **RouterStatsTests:** Removed `Compile Remove`. Tests use `MeshServiceRouter`, `RouterStats`, `GetStats()`, `CircuitBreakers`, `WorkBudgetMetrics`; all 3 tests pass (GetStats_ReturnsBasicMetrics, GetStats_IncludesWorkBudgetMetrics, GetStats_TracksCircuitBreakerState).
-- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1391 passed, 16 skipped** (+10).
+- **MeshServiceRouterTests:** Removed `Compile Remove`. Tests use `MeshServiceRouter`, `RegisterService`/`UnregisterService`, `RouteAsync` (null, empty name, oversized payload, unregistered, registered, service throws); all 11 pass.
+- **MeshGatewayAuthMiddlewareTests:** Removed `Compile Remove`. Tests use `MeshGatewayAuthMiddleware`, `MeshGatewayOptions`, `InvokeAsync` (non-mesh path, disabled, 401/403, localhost CSRF, CORS, `MeshGatewayConfigValidator.GenerateSecureToken`, `MeshGatewayOptions.Validate`); all 11 pass.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1413 passed, 16 skipped** (+32).
 
 ---
 

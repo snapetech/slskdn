@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled DhtMeshServiceDirectoryTests and RouterStatsTests (Phase 4 Mesh ServiceFabric); slskd.Tests.Unit 1391 pass, 16 skipped. Next: Phase 3 PodCore or Phase 4 (MeshServiceRouterTests, MeshGatewayAuthMiddlewareTests, etc.) per `docs/dev/40-fixes-plan.md`.
+- **Last Activity**: Re-enabled MeshServiceRouterTests and MeshGatewayAuthMiddlewareTests (Phase 4 Mesh ServiceFabric); slskd.Tests.Unit 1413 pass, 16 skipped. Next: Phase 3 PodCore or Phase 4 (MeshServiceRouterSecurityTests, DestinationAllowlistTests, etc.) or Phase 5 per `docs/dev/40-fixes-plan.md`.
 
 ---
 

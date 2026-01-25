@@ -69,9 +69,7 @@
     <Compile Remove="Mesh\Realm\MultiRealmConfigTests.cs" />
     <Compile Remove="Mesh\Realm\RealmConfigTests.cs" />
     <Compile Remove="Mesh\Realm\RealmIsolationTests.cs" />
-    <Compile Remove="Mesh\ServiceFabric\MeshGatewayAuthMiddlewareTests.cs" />
     <Compile Remove="Mesh\ServiceFabric\MeshServiceRouterSecurityTests.cs" />
-    <Compile Remove="Mesh\ServiceFabric\MeshServiceRouterTests.cs" />
     <Compile Remove="PodCore\PodsControllerTests.cs" />
     <Compile Remove="VirtualSoulfind\Backends\LocalLibraryBackendModerationTests.cs" />
     <Compile Remove="VirtualSoulfind\Core\ContentDomainTests.cs" />
