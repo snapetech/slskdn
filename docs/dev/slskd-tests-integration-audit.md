@@ -36,7 +36,17 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 
 1. **Mesh:** ~~Fix or skip `NatTraversal_SymmetricFallback`~~ **DONE.** Relay URL must be IP (TryParseRelay does not resolve hostnames); test now uses `relay://127.0.0.1:6000`. Mesh 29 pass.
 2. **Timeouts (granular 2026-01-25):** **DisasterModeTests** (3) and **ProtocolContractTests** (6) **skipped** — IAsyncLifetime.InitializeAsync uses SlskdnTestClient.StartAsync; app host can hang when resolving real controller deps. MeshOnlyTests (3 pass) unaffected. Backfill, DhtRendezvous, Features, Soulbeet, MultiClient|MultiSource, CoverTraffic, PortForwarding, Signals complete in smaller filters.
-3. **VirtualSoulfind skips:** Review 17 skipped tests; re-enable or document.
+3. **VirtualSoulfind skips (17):** **Documented.** DisasterModeIntegrationTests 6 (TODO: Soulseek sim, DHT, shadow index, audit, health monitor, telemetry); LoadTests 5 (run manually); NicotinePlusIntegrationTests 6 (requires Nicotine+). No change—reasons clear.
+
+---
+
+## VirtualSoulfind skip breakdown (17)
+
+| File | Count | Reason |
+|------|-------|--------|
+| **DisasterModeIntegrationTests** | 6 | TODO: Soulseek sim, DHT, shadow index, audit infra, health monitor, telemetry |
+| **LoadTests** | 5 | Load test — run manually |
+| **NicotinePlusIntegrationTests** | 6 | Requires Nicotine+ installation |
 
 ---
 
