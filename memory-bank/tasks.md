@@ -63,6 +63,8 @@
 
 ## Completed Tasks
 
+- [x] **chore (2026-01-25):** Snap snapcraft.yaml → 0.24.1-slskdn.40 (slskdn-main-linux-x64.zip, sha256).
+
 - [x] **chore (2026-01-25):** slskd.Tests Enforce_invalid_config_host_startup un-skipped: mutex probe (avoid Program load), `dotnet slskd.dll`, soft-skip on "already running". 46 pass, 0 skip.
 
 - [x] **chore (2026-01-25):** Homebrew Formula/slskdn.rb → 0.24.1-slskdn.40 (slskdn-main-osx-arm64, -osx-x64, -linux-x64; SHA256 from GitHub API).
