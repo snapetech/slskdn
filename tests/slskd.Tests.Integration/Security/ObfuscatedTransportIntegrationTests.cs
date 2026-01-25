@@ -6,7 +6,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using slskd.Common.Security;
+using slskd.Mesh.Transport;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,12 +22,10 @@ namespace slskd.Tests.Integration.Security;
 public class ObfuscatedTransportIntegrationTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
-    private readonly ILogger _logger;
 
     public ObfuscatedTransportIntegrationTests(ITestOutputHelper output)
     {
         _output = output;
-        _logger = new XunitLogger(output);
     }
 
     public void Dispose()
@@ -39,19 +39,19 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
         // Arrange - Create a mock WebSocket server would be complex,
         // so we test the connection attempt and error handling
 
-        var options = new WebSocketOptions
+        var options = new WebSocketTransportOptions
         {
             ServerUrl = "ws://127.0.0.1:12345/nonexistent", // Non-existent server
             SubProtocol = "slskd-tunnel"
         };
 
-        using var transport = new WebSocketTransport(options, (ILogger<WebSocketTransport>)_logger);
+        var transport = new WebSocketTransport(options, new XunitLogger<WebSocketTransport>(_output));
 
         // Act & Assert
         var status = transport.GetStatus();
         Assert.Equal(0, status.TotalConnectionsAttempted);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, CancellationToken.None));
 
         status = transport.GetStatus();
         Assert.Equal(1, status.TotalConnectionsAttempted);
@@ -62,19 +62,19 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
     public async Task HttpTunnelTransport_ConnectionLifecycle_WorksCorrectly()
     {
         // Arrange
-        var options = new HttpTunnelOptions
+        var options = new HttpTunnelTransportOptions
         {
             ProxyUrl = "http://127.0.0.1:12345/nonexistent", // Non-existent server
             Method = "POST"
         };
 
-        using var transport = new HttpTunnelTransport(options, (ILogger<HttpTunnelTransport>)_logger);
+        var transport = new HttpTunnelTransport(options, new XunitLogger<HttpTunnelTransport>(_output));
 
         // Act & Assert
         var status = transport.GetStatus();
         Assert.Equal(0, status.TotalConnectionsAttempted);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, CancellationToken.None));
 
         status = transport.GetStatus();
         Assert.Equal(1, status.TotalConnectionsAttempted);
@@ -85,13 +85,13 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
     public async Task Obfs4Transport_WithoutObfs4Proxy_HandlesGracefully()
     {
         // Arrange
-        var options = new Obfs4Options
+        var options = new Obfs4TransportOptions
         {
             Obfs4ProxyPath = "/nonexistent/obfs4proxy",
             BridgeLines = new List<string> { "obfs4 192.0.2.1:443 test cert=test iat-mode=0" }
         };
 
-        using var transport = new Obfs4Transport(options, (ILogger<Obfs4Transport>)_logger);
+        var transport = new Obfs4Transport(options, new XunitLogger<Obfs4Transport>(_output));
 
         // Act
         var isAvailable = await transport.IsAvailableAsync();
@@ -106,19 +106,19 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
     public async Task MeekTransport_ConnectionLifecycle_WorksCorrectly()
     {
         // Arrange
-        var options = new MeekOptions
+        var options = new MeekTransportOptions
         {
             BridgeUrl = "http://127.0.0.1:12345/nonexistent", // Non-existent server
             FrontDomain = "www.example.com"
         };
 
-        using var transport = new MeekTransport(options, (ILogger<MeekTransport>)_logger);
+        var transport = new MeekTransport(options, new XunitLogger<MeekTransport>(_output));
 
         // Act & Assert
         var status = transport.GetStatus();
         Assert.Equal(0, status.TotalConnectionsAttempted);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, CancellationToken.None));
 
         status = transport.GetStatus();
         Assert.Equal(1, status.TotalConnectionsAttempted);
@@ -131,34 +131,35 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
         // Arrange - Create a selector with multiple transports that will fail
         var adversarialOptions = new AdversarialOptions
         {
-            AnonymityLayer = new AnonymityLayerOptions { Enabled = true, Mode = AnonymityMode.Direct }
+            Anonymity = new AnonymityLayerOptions { Enabled = true, Mode = AnonymityMode.Direct }
         };
 
         var selector = new AnonymityTransportSelector(
             adversarialOptions,
-            new Transport.TransportPolicyManager(),
-            (ILogger<AnonymityTransportSelector>)_logger);
+            new TransportPolicyManager(NullLogger<TransportPolicyManager>.Instance),
+            new XunitLogger<AnonymityTransportSelector>(_output),
+            NullLoggerFactory.Instance);
 
-        // Act & Assert - Should throw when all transports fail
-        await Assert.ThrowsAsync<Exception>(() =>
-            selector.SelectAndConnectAsync("peer123", null, "example.com", 80, null));
+        // Act & Assert - Should throw when all transports fail (InvalidOperationException when none available)
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            selector.SelectAndConnectAsync("peer123", null, "example.com", 80, null, CancellationToken.None));
     }
 
     [Fact]
     public async Task TransportStatus_UpdatesCorrectlyAcrossAttempts()
     {
         // Arrange
-        var options = new WebSocketOptions
+        var options = new WebSocketTransportOptions
         {
             ServerUrl = "ws://127.0.0.1:12345/nonexistent"
         };
 
-        using var transport = new WebSocketTransport(options, (ILogger<WebSocketTransport>)_logger);
+        var transport = new WebSocketTransport(options, new XunitLogger<WebSocketTransport>(_output));
 
         // Act - Multiple failed connection attempts
         for (int i = 0; i < 3; i++)
         {
-            await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+            await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, CancellationToken.None));
         }
 
         // Assert
@@ -172,17 +173,17 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
     public async Task IsolationKeys_CreateSeparateConnectionContexts()
     {
         // Arrange
-        var options = new HttpTunnelOptions
+        var options = new HttpTunnelTransportOptions
         {
             ProxyUrl = "http://127.0.0.1:12345/nonexistent"
         };
 
-        using var transport = new HttpTunnelTransport(options, (ILogger<HttpTunnelTransport>)_logger);
+        var transport = new HttpTunnelTransport(options, new XunitLogger<HttpTunnelTransport>(_output));
 
         // Act - Connect with different isolation keys (simulating different peers)
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer1"));
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer2"));
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer1")); // Same key again
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer1", CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer2", CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer1", CancellationToken.None)); // Same key again
 
         // Assert
         var status = transport.GetStatus();
@@ -192,23 +193,21 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
     [Fact]
     public async Task TransportDispose_CleansUpResources()
     {
-        // Arrange
+        // Arrange - WebSocketTransport does not implement IDisposable; we verify ConnectAsync completes
         var transport = new WebSocketTransport(
-            new WebSocketOptions { ServerUrl = "ws://127.0.0.1:12345/test" },
-            (ILogger<WebSocketTransport>)_logger);
+            new WebSocketTransportOptions { ServerUrl = "ws://127.0.0.1:12345/test" },
+            new XunitLogger<WebSocketTransport>(_output));
 
-        // Act - Use and dispose
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
-        transport.Dispose();
+        // Act - Connection attempt (expected to throw for non-existent server)
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, CancellationToken.None));
 
-        // Assert - Should not throw on dispose
-        // In a full test, we'd verify resources are cleaned up
+        // Assert - No Dispose; transport does not implement IDisposable
     }
 
     /// <summary>
     /// Xunit logger implementation for integration tests.
     /// </summary>
-    private class XunitLogger : ILogger
+    private class XunitLogger<T> : ILogger<T>
     {
         private readonly ITestOutputHelper _output;
 
@@ -217,7 +216,7 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             _output = output;
         }
 
-        public IDisposable BeginScope<TState>(TState state) => NullScope.Instance;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
 
         public bool IsEnabled(LogLevel logLevel) => true;
 
@@ -236,12 +235,6 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             public void Dispose() { }
         }
     }
-}
-
-// Extension methods for ILogger casting
-public static class LoggerExtensions
-{
-    public static ILogger<T> As<T>(this ILogger logger) => (ILogger<T>)logger;
 }
 
 
