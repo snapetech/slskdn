@@ -66,7 +66,7 @@ public class DisasterModeTests : IAsyncLifetime
         // TODO: Verify transfer completed via overlay
     }
 
-    [Fact(Skip = "IAsyncLifetime.InitializeAsync uses SlskdnTestClient.StartAsync which can hang when app host resolves real controller deps. See docs/dev/slskd-tests-integration-audit.")]
+    [Fact]
     public async Task Disaster_Mode_Search_Should_Use_Shadow_Index()
     {
         // Arrange: Populate shadow index while Soulfind running
@@ -90,7 +90,7 @@ public class DisasterModeTests : IAsyncLifetime
         // TODO: Verify results came from shadow index, not Soulseek
     }
 
-    [Fact(Skip = "IAsyncLifetime.InitializeAsync uses SlskdnTestClient.StartAsync which can hang when app host resolves real controller deps. See docs/dev/slskd-tests-integration-audit.")]
+    [Fact]
     public async Task Disaster_Mode_Recovery_Should_Deactivate_When_Soulfind_Returns()
     {
         // Arrange: Activate disaster mode

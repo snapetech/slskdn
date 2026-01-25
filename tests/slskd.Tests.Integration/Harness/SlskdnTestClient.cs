@@ -9,9 +9,12 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.Extensions.Options;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
 
 /// <summary>
 /// slskdn test client harness for isolated test instances.
@@ -119,22 +122,28 @@ public class SlskdnTestClient : IAsyncDisposable
         // Add stub LibraryHealthService (needs to return actual objects, not null)
         builder.Services.AddSingleton<global::slskd.LibraryHealth.ILibraryHealthService>(_ => 
             new StubLibraryHealthService());
+        // IDownloadService for DownloadsCompatibilityController
+        builder.Services.AddSingleton<global::slskd.Transfers.Downloads.IDownloadService, slskd.Tests.Integration.StubDownloadService>();
+        // IOptionsMonitor<Options> for Native LibraryHealthController (api/slskdn/library)
+        builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
+            new slskd.Tests.Integration.StaticOptionsMonitor<slskd.Options>(new slskd.Options()));
         
-        // Add real controllers (same as StubWebApplicationFactory)
+        // Add only the controllers needed for DisasterMode/ProtocolContract tests to avoid
+        // resolving the full slskd app's controller tree (which can hang on missing deps).
+        var slskdAssembly = typeof(global::slskd.API.Compatibility.SearchCompatibilityController).Assembly;
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
                 options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
             })
-            .AddApplicationPart(typeof(global::slskd.API.Compatibility.SearchCompatibilityController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.Compatibility.DownloadsCompatibilityController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.Compatibility.RoomsCompatibilityController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.Compatibility.ServerCompatibilityController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.Compatibility.UsersCompatibilityController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.DisasterModeController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.CanonicalController).Assembly)
-            .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.ShadowIndexController).Assembly);
+            .AddApplicationPart(slskdAssembly)
+            .ConfigureApplicationPartManager(manager =>
+            {
+                var existing = manager.FeatureProviders.OfType<ControllerFeatureProvider>().FirstOrDefault();
+                if (existing != null) manager.FeatureProviders.Remove(existing);
+                manager.FeatureProviders.Add(new IncludeOnlyControllersFeatureProvider());
+            });
 
         app = builder.Build();
         
@@ -164,22 +173,9 @@ public class SlskdnTestClient : IAsyncDisposable
         }));
         app.MapGet("/api/jobs/{id}", (string id) => Results.Ok(new { id, status = "completed" }));
         app.MapPost("/api/library/scan", () => Results.Ok(new { scan_id = Guid.NewGuid().ToString("N") }));
-        app.MapPost("/api/slskdn/library/remediate", (System.Text.Json.JsonElement body) =>
-        {
-            return Results.Ok(new { job_id = Guid.NewGuid().ToString("N") });
-        });
-        app.MapGet("/api/server/status", () => Results.Ok(new { connected = true, state = "logged_in", username = "test-user" }));
-        // Rooms endpoints handled by RoomsCompatibilityController
-        // app.MapPost("/api/rooms", ...) - removed to avoid conflict
-        // app.MapDelete("/api/rooms/{roomName}", ...) - removed to avoid conflict
-        app.MapGet("/api/users/{username}/browse", (string username) => Results.Ok(new { username, files = new List<object>() }));
-        app.MapGet("/api/virtualsoulfind/disaster-mode/status", () => Results.Ok(new { is_active = false, activated_at = (DateTimeOffset?)null, reason = (string?)null }));
-        app.MapGet("/api/virtualsoulfind/canonical/{mbid}", (string mbid) => Results.Ok(new { mbid, canonical_variant = new { codec = "FLAC", bitrate = 0, source = "test-peer" }, variants = new List<object>() }));
-        app.MapGet("/api/virtualsoulfind/shadow-index/{mbid}", (string mbid) => Results.Ok(new { mbid, variants = new List<object>() }));
-        app.MapPost("/api/search", (System.Text.Json.JsonElement body) => Results.Ok(new { SearchId = Guid.NewGuid().ToString("N"), Query = "test", Results = new List<object>() }));
-        app.MapPost("/api/downloads", (System.Text.Json.JsonElement body) => Results.Ok(new { DownloadIds = new[] { Guid.NewGuid().ToString("N") } }));
-        app.MapGet("/api/downloads", () => Results.Ok(new { Downloads = new List<object>() }));
-        app.MapGet("/api/downloads/{id}", (string id) => Results.Ok(new { Id = id, User = "test-user", RemotePath = "test/path", LocalPath = "/tmp", Status = "queued", Progress = 0.0 }));
+        // /api/server/status, /api/users/.../browse, /api/virtualsoulfind/disaster-mode/status,
+        // /api/virtualsoulfind/canonical/..., /api/virtualsoulfind/shadow-index/...,
+        // /api/search, /api/downloads, /api/rooms: handled by included controllers only.
 
         await app.StartAsync(ct);
 
@@ -251,7 +247,10 @@ public class SlskdnTestClient : IAsyncDisposable
     public async Task<HttpResponseMessage> DownloadAsync(string username, string filename, CancellationToken ct = default)
     {
         logger.LogDebug("[TEST-SLSKDN-API] Download: {Username}/{Filename}", username, filename);
-        return await HttpClient.PostAsJsonAsync("/api/downloads", new { username, filename }, ct);
+        return await HttpClient.PostAsJsonAsync("/api/downloads", new
+        {
+            Items = new[] { new { User = username, RemotePath = filename, TargetDir = "/tmp" } }
+        }, ct);
     }
 
     /// <summary>
@@ -297,8 +296,30 @@ public class SlskdnTestClient : IAsyncDisposable
 
     private static T CreateNullProxy<T>() where T : class
     {
-        // Use DispatchProxy like StubWebApplicationFactory does
         return DispatchProxy.Create<T, NullProxy<T>>();
+    }
+}
+
+/// <summary>Only exposes the controllers required for DisasterMode/ProtocolContract tests so the app host does not resolve the full slskd controller tree.</summary>
+internal sealed class IncludeOnlyControllersFeatureProvider : ControllerFeatureProvider
+{
+    private static readonly HashSet<Type> Include = new()
+    {
+        typeof(global::slskd.API.VirtualSoulfind.DisasterModeController),
+        typeof(global::slskd.API.Compatibility.SearchCompatibilityController),
+        typeof(global::slskd.API.Compatibility.DownloadsCompatibilityController),
+        typeof(global::slskd.API.Compatibility.RoomsCompatibilityController),
+        typeof(global::slskd.API.Compatibility.ServerCompatibilityController),
+        typeof(global::slskd.API.Compatibility.UsersCompatibilityController),
+        typeof(global::slskd.API.VirtualSoulfind.CanonicalController),
+        typeof(global::slskd.API.VirtualSoulfind.ShadowIndexController),
+        typeof(global::slskd.API.Native.LibraryHealthController)
+    };
+
+    protected override bool IsController(TypeInfo typeInfo)
+    {
+        if (!Include.Contains(typeInfo.AsType())) return false;
+        return base.IsController(typeInfo);
     }
 }
 
