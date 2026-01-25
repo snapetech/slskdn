@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Unit (AsyncRules, IpldMapper) + Integration audit (done).
+- **Current Task**: Integration NatTraversal_SymmetricFallback (done).
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Unit 2257 pass (AsyncRules flake fix, IpldMapper IsContentIdRegisteredAsync/FindInboundLinksAsync). Integration audit: `docs/dev/slskd-tests-integration-audit.md`; 40-fixes Deferred updated. **Next:** Fix MeshIntegrationTests.NatTraversal_SymmetricFallback; run slow Integration filters in smaller chunks; or other 40-fixes.
+- **Last Activity**: NatTraversal_SymmetricFallback fixed (relay URL must be IP; test uses relay://127.0.0.1:6000). Mesh Integration 29 pass. Audit + 40-fixes Deferred updated. **Next:** Run slow Integration filters in smaller chunks; review VirtualSoulfind skips; or other 40-fixes.
 
 ---
 

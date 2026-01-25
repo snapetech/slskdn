@@ -13,7 +13,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | Filter | Pass | Fail | Skip | Notes |
 |--------|------|------|------|-------|
 | **MediaCore** | 22 | 0 | 0 | CrossCodecMatching, MediaCoreIntegration, MediaCorePerformance |
-| **Mesh** | 28 | 1 | 0 | **Fail:** `MeshIntegrationTests.NatTraversal_SymmetricFallback` (Assert.True False @ line 305) |
+| **Mesh** | 29 | 0 | 0 | **FIXED:** `NatTraversal_SymmetricFallback` — relay URL was `relay://relay.example.com:6000`; `TryParseRelay` only accepts IPs. Switched to `relay://127.0.0.1:6000`. |
 | **PodCore** | 15 | 0 | 0 | PodCoreIntegration, PortForwarding |
 | **Security** (folder) | 50 | 0 | 0 | Tor, Obfuscated, Censorship, Http, MeshGateway, SecurityMiddleware |
 | **SecurityIntegrationTests** | 12 | 0 | 0 | |
@@ -26,7 +26,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 
 ## Actions
 
-1. **Mesh:** Fix or skip `NatTraversal_SymmetricFallback` (assert at `MeshIntegrationTests.cs:305`).
+1. **Mesh:** ~~Fix or skip `NatTraversal_SymmetricFallback`~~ **DONE.** Relay URL must be IP (TryParseRelay does not resolve hostnames); test now uses `relay://127.0.0.1:6000`. Mesh 29 pass.
 2. **Timeouts:** Run DisasterMode, Features, Backfill, DhtRendezvous, Soulbeet, MultiClient, MultiSource, Protocol, CoverTraffic, Signals, PerformanceBenchmarks in smaller filters or with increased timeout; fix or document any that hang.
 3. **VirtualSoulfind skips:** Review 17 skipped tests; re-enable or document.
 

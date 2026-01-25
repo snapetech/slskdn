@@ -293,10 +293,12 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         var natService = new NatTraversalService(logger, holePuncher.Object, relayClient.Object, options);
 
         // Act - Attempt connection through NAT
+        // NatTraversalService.TryParseRelay only supports IPs (no DNS); use 127.0.0.1 so parsing succeeds.
+        var relayUrl = "relay://127.0.0.1:6000";
         var endpoints = new List<string>
         {
-            "udp://192.168.1.100:5000",  // Local endpoint (fails)
-            "relay://relay.example.com:6000"  // Relay endpoint (succeeds)
+            "udp://192.168.1.100:5000",  // Hole punch fails (mock returns false)
+            relayUrl
         };
 
         var result = await natService.ConnectAsync("test-peer", endpoints, CancellationToken.None);
@@ -305,7 +307,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         Assert.True(result.Success);
         Assert.True(result.UsedRelay);
         Assert.Equal("relay", result.Reason);
-        Assert.Equal("relay://relay.example.com:6000", result.ChosenEndpoint);
+        Assert.Equal(relayUrl, result.ChosenEndpoint);
     }
 
     [Fact]

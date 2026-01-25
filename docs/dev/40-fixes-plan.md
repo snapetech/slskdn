@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; Mesh 28 pass / 1 fail (NatTraversal_SymmetricFallback); PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterMode, Features\|Backfill\|DhtRendezvous, Soulbeet\|MultiClient\|… timeout. See `docs/dev/slskd-tests-integration-audit.md`. | Fix or skip NatTraversal_SymmetricFallback; run slow filters in smaller chunks or with higher timeout; review VirtualSoulfind skips. |
+| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; **Mesh 29 pass** (NatTraversal_SymmetricFallback fixed: relay URL must be IP); PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterMode, Features\|Backfill\|DhtRendezvous, Soulbeet\|MultiClient\|… timeout. See `docs/dev/slskd-tests-integration-audit.md`. | Run slow filters in smaller chunks or with higher timeout; review VirtualSoulfind skips. |
 
 
 ---

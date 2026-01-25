@@ -106,6 +106,12 @@
 - **Status**: ✅ **COMPLETED**
 - **Audit:** `docs/dev/slskd-tests-integration-audit.md`. Filtered runs: MediaCore 22; Mesh 28 pass / 1 fail (NatTraversal_SymmetricFallback); PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterMode, Features|Backfill|DhtRendezvous, Soulbeet|MultiClient|… timeout. 40-fixes Deferred row updated with audit summary and actions.
 
+### slskd.Tests.Integration: NatTraversal_SymmetricFallback fixed
+- **Status**: ✅ **COMPLETED**
+- **Cause:** `NatTraversalService.TryParseRelay` uses `IPAddress.TryParse` only; `relay://relay.example.com:6000` failed to parse, so relay fallback was never tried.
+- **Change:** Test uses `relay://127.0.0.1:6000` so `TryParseRelay` succeeds; mock `IRelayClient.RelayAsync` returns true → `ConnectAsync` returns Success, UsedRelay, Reason=relay.
+- **Result:** Mesh Integration 29 pass, 0 fail. Audit and 40-fixes Deferred updated.
+
 ---
 
 ## 2026-01-24
