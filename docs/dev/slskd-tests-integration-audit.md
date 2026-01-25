@@ -38,7 +38,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 
 1. **Mesh:** ~~Fix or skip `NatTraversal_SymmetricFallback`~~ **DONE.** Relay URL must be IP (TryParseRelay does not resolve hostnames); test now uses `relay://127.0.0.1:6000`. Mesh 29 pass.
 2. **Timeouts:** ~~DisasterModeTests and ProtocolContractTests skipped~~ **DONE.** SlskdnTestClient IncludeOnlyControllersFeatureProvider; DisasterModeTests 3 pass, ProtocolContractTests 6 pass.
-3. **VirtualSoulfind skips:** ~~11 (DisasterModeIntegration 6, LoadTests 5)~~ **DONE.** All un-skipped: DisasterModeIntegrationTests 6 (StubWebApplicationFactory smoke), LoadTests 5 (placeholders), NicotinePlus 6 (Bridge API). **Zero [Fact(Skip)] in slskd.Tests.Integration.**
+3. **VirtualSoulfind skips:** ~~11 (DisasterModeIntegration 6, LoadTests 5)~~ **DONE.** All un-skipped: DisasterModeIntegrationTests 6 (StubWebApplicationFactory smoke), LoadTests 5 (HTTP smokes), NicotinePlus 6 (Bridge API). **Zero [Fact(Skip)] in slskd.Tests.Integration.**
 
 ---
 
