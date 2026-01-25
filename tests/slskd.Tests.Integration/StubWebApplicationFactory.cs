@@ -4,11 +4,15 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
+using Soulseek;
+using slskd.Transfers.Downloads;
+using Transfer = slskd.Transfers.Transfer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -31,7 +35,16 @@ using global::slskd.LibraryHealth;
 using global::slskd.Search;
 using global::slskd.Transfers;
 using global::slskd.Transfers.MultiSource.Caching;
-// using Soulseek; // Deferred - requires proper package reference
+using slskd.Common.Moderation;
+using slskd.MediaCore;
+using slskd.Shares;
+using slskd.VirtualSoulfind.v2.Backends;
+using slskd.VirtualSoulfind.v2.Catalogue;
+using slskd.VirtualSoulfind.v2.Intents;
+using slskd.VirtualSoulfind.v2.Planning;
+using slskd.VirtualSoulfind.v2.Sources;
+using slskd.VirtualSoulfind.Bridge;
+using slskd.Core;
 using OptionsModel = global::slskd.Options;
 
 /// <summary>
@@ -41,12 +54,12 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
 {
     protected override IHostBuilder CreateHostBuilder()
     {
-        // Use the solution root as content root - simpler and avoids path issues
-        var solutionRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var testContentRoot = Path.Combine(solutionRoot, "tests", "slskd.Tests.Integration");
-        
-        // Ensure the content root directory exists
-        Directory.CreateDirectory(testContentRoot);
+        // Content root: HostBuilder.CreateHostingEnvironment uses a path like solutionRoot/slskd.Tests.Integration.
+        // From bin/Release/net8.0 go up 5 levels to repo root (slskdn), then slskd.Tests.Integration.
+        var baseDir = AppContext.BaseDirectory;
+        var solutionRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", ".."));
+        var testContentRoot = Path.Combine(solutionRoot, "slskd.Tests.Integration");
+        System.IO.Directory.CreateDirectory(testContentRoot);
         
         // Manually create host builder to avoid default path inference issues
         return new HostBuilder()
@@ -140,16 +153,41 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         WarmCache = new global::slskd.WarmCacheOptions
                         {
                             Enabled = true
+                        },
+                        VirtualSoulfind = new VirtualSoulfindOptions
+                        {
+                            Bridge = new BridgeOptions { Enabled = true, Port = 2242 }
                         }
                     }))
                         .AddSingleton<IDiscographyJobService>(discographyService)
                         .AddSingleton<ILabelCrateJobService>(labelCrateService)
                         .AddSingleton<IJobServiceWithList>(new JobServiceListAdapter(discographyService, labelCrateService))
                         .AddSingleton<ILibraryHealthService, StubLibraryHealthService>()
+                        .AddSingleton<IDownloadService, StubDownloadService>()
                         .AddSingleton<ITransferService>(_ => NullProxy<ITransferService>.Create())
                         .AddSingleton<ISearchService>(_ => NullProxy<ISearchService>.Create())
                         .AddSingleton<IWarmCachePopularityService>(_ => NullProxy<IWarmCachePopularityService>.Create());
-                        // ISoulseekClient stub deferred - requires Soulseek package types
+
+                    // VirtualSoulfind / Moderation / MediaCore for ModerationIntegrationTests
+                    services.AddSingleton<IIntentQueue, InMemoryIntentQueue>();
+                    services.AddSingleton<IModerationProvider, NoopModerationProvider>();
+                    services.AddSingleton<IDescriptorPublisher, StubDescriptorPublisher>();
+                    services.AddSingleton<IContentIdRegistry, ContentIdRegistry>();
+                    services.AddOptions<MediaCoreOptions>();
+                    services.AddSingleton<IContentDescriptorPublisher, ContentDescriptorPublisher>();
+                    services.AddSingleton<ICatalogueStore, InMemoryCatalogueStore>();
+                    services.AddSingleton<ISourceRegistry, InMemorySourceRegistry>();
+                    services.AddSingleton<IPeerReputationStore, StubPeerReputationStore>();
+                    services.AddSingleton<PeerReputationService>();
+                    services.AddSingleton<IShareRepository, StubShareRepository>();
+                    services.AddSingleton<IContentBackend, LocalLibraryBackend>();
+                    services.AddSingleton<IPlanner, MultiSourcePlanner>();
+
+                    // Bridge (NicotinePlus / legacy client) — BridgeController, BridgeAdminController
+                    services.AddSingleton<StubBridgeApi>();
+                    services.AddSingleton<IBridgeApi>(sp => sp.GetRequiredService<StubBridgeApi>());
+                    services.AddSingleton<ISoulfindBridgeService, TestSoulfindBridgeService>();
+                    services.AddSingleton<IBridgeDashboard, BridgeDashboard>();
                 });
                 
                 webBuilder.Configure(app =>
@@ -291,6 +329,76 @@ internal class JobServiceListAdapter : global::slskd.API.Native.IJobServiceWithL
     public IReadOnlyList<global::slskd.Jobs.LabelCrateJob> GetAllLabelCrateJobs() => labelCrateService.GetAllJobs();
 }
 
+internal sealed class StubDownloadService : IDownloadService
+{
+    private readonly ConcurrentDictionary<Guid, Transfer> _storage = new();
+
+    public void AddOrSupersede(Transfer transfer)
+    {
+        _storage[transfer.Id] = transfer;
+    }
+
+    public Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size)> files, CancellationToken cancellationToken = default)
+    {
+        var enqueued = new List<Transfer>();
+        foreach (var (fn, size) in files)
+        {
+            var t = new Transfer
+            {
+                Id = Guid.NewGuid(),
+                Username = username ?? "",
+                Filename = fn ?? "",
+                Size = size,
+                Direction = Soulseek.TransferDirection.Download,
+                State = TransferStates.Queued,
+                BytesTransferred = 0,
+                AverageSpeed = 0,
+                RequestedAt = DateTime.UtcNow
+            };
+            _storage[t.Id] = t;
+            enqueued.Add(t);
+        }
+        return Task.FromResult((enqueued, new List<string>()));
+    }
+
+    public Transfer Find(Expression<Func<Transfer, bool>> expression)
+    {
+        var pred = expression.Compile();
+        foreach (var t in _storage.Values)
+            if (pred(t)) return t;
+        return null!;
+    }
+
+    public Task<int> GetPlaceInQueueAsync(Guid id) => Task.FromResult(0);
+
+    public List<Transfer> List(Expression<Func<Transfer, bool>>? expression = null, bool includeRemoved = false)
+    {
+        var list = includeRemoved ? _storage.Values.ToList() : _storage.Values.Where(t => !t.Removed).ToList();
+        if (expression != null)
+        {
+            var pred = expression.Compile();
+            list = list.Where(pred).ToList();
+        }
+        return list;
+    }
+
+    public int Prune(int age, TransferStates stateHasFlag = TransferStates.Completed) => 0;
+
+    public void Remove(Guid id, bool deleteFile = false)
+    {
+        if (_storage.TryGetValue(id, out var t)) t.Removed = true;
+    }
+
+    public bool TryCancel(Guid id) => false;
+
+    public bool TryFail(Guid id, Exception exception) => false;
+
+    public void Update(Transfer transfer)
+    {
+        _storage[transfer.Id] = transfer;
+    }
+}
+
 internal class StubLibraryHealthService : ILibraryHealthService
 {
     public Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default) => Task.FromResult(Guid.NewGuid().ToString("N"));
@@ -311,6 +419,54 @@ internal class StubLibraryHealthService : ILibraryHealthService
     public Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default) => Task.FromResult(Guid.NewGuid().ToString("N"));
 
     public Task<LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default) => Task.FromResult(new LibraryHealthSummary { LibraryPath = libraryPath ?? "(all)", TotalIssues = 0, IssuesOpen = 0, IssuesResolved = 0 });
+}
+
+/// <summary>Configurable bridge API for integration tests. Resolve as StubBridgeApi to seed SearchResults/Rooms.</summary>
+internal class StubBridgeApi : IBridgeApi
+{
+    public List<BridgeUser> SearchResults { get; set; } = new();
+    public List<BridgeRoom> Rooms { get; set; } = new();
+
+    public Task<BridgeSearchResult> SearchAsync(string query, CancellationToken ct = default) =>
+        Task.FromResult(new BridgeSearchResult { Query = query, Users = SearchResults });
+
+    public Task<string> DownloadAsync(string username, string filename, string? targetPath, CancellationToken ct = default) =>
+        Task.FromResult(Guid.NewGuid().ToString("N"));
+
+    public Task<List<BridgeRoom>> GetRoomsAsync(CancellationToken ct = default) =>
+        Task.FromResult(Rooms);
+}
+
+/// <summary>Bridge service that does not start a real soulfind process. For integration tests.</summary>
+internal class TestSoulfindBridgeService : ISoulfindBridgeService
+{
+    private bool _isRunning;
+    private DateTimeOffset? _startedAt;
+
+    public bool IsRunning => _isRunning;
+
+    public Task StartAsync(CancellationToken ct = default)
+    {
+        _isRunning = true;
+        _startedAt = DateTimeOffset.UtcNow;
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken ct = default)
+    {
+        _isRunning = false;
+        _startedAt = null;
+        return Task.CompletedTask;
+    }
+
+    public Task<BridgeHealthStatus> GetHealthAsync(CancellationToken ct = default) =>
+        Task.FromResult(new BridgeHealthStatus
+        {
+            IsHealthy = _isRunning,
+            Version = "1.0.0-test",
+            ActiveConnections = 0,
+            StartedAt = _startedAt ?? DateTimeOffset.MinValue
+        });
 }
 
 internal class NullProxy<T> : DispatchProxy where T : class

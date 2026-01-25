@@ -1,116 +1,157 @@
 namespace slskd.Tests.Integration.VirtualSoulfind;
 
+using System.Linq;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using slskd.Tests.Integration;
 using slskd.VirtualSoulfind.Bridge;
 
 /// <summary>
 /// Nicotine+ integration tests for bridge compatibility.
+/// Exercises the Bridge API used by Nicotine+ / legacy Soulseek clients.
 /// </summary>
-public class NicotinePlusIntegrationTests
+public class NicotinePlusIntegrationTests : IClassFixture<StubWebApplicationFactory>
 {
+    private readonly StubWebApplicationFactory _factory;
+
+    public NicotinePlusIntegrationTests(StubWebApplicationFactory factory)
+    {
+        _factory = factory;
+    }
+
     [Fact]
     public async Task NicotinePlus_ConnectToBridge_ShouldSucceed()
     {
-        // Arrange: Start bridge service
-        // Act: Connect Nicotine+ to localhost:2242
-        // Assert: Connection successful
+        using var client = _factory.CreateClient();
+        await _factory.Services.GetRequiredService<ISoulfindBridgeService>().StartAsync();
 
-        Assert.True(true); // Placeholder
-        await Task.CompletedTask;
+        var status = await client.GetAsync("/api/bridge/status");
+        status.EnsureSuccessStatusCode();
+        var health = await status.Content.ReadFromJsonAsync<BridgeHealthStatus>();
+        Assert.NotNull(health);
+        Assert.True(health.IsHealthy);
+        Assert.NotNull(health.Version);
     }
 
     [Fact]
     public async Task NicotinePlus_SearchViaBridge_ShouldReturnResults()
     {
-        // Arrange:
-        // - Bridge running
-        // - Shadow index populated with test data
-        // - Nicotine+ connected
+        var stub = _factory.Services.GetRequiredService<StubBridgeApi>();
+        stub.SearchResults = new List<BridgeUser>
+        {
+            new()
+            {
+                PeerId = "mesh-peer-1",
+                Username = "mesh-peer-1",
+                Files = new List<BridgeFile>
+                {
+                    new() { Path = "Daft Punk - Around The World.flac", SizeBytes = 12345678, MbRecordingId = "abc-123" }
+                }
+            }
+        };
 
-        // Act: Search for "Daft Punk Around The World"
-
-        // Assert:
-        // - Search returns mesh peers (mesh-peer-xxx usernames)
-        // - Results include synthesized filenames
-        // - File sizes and bitrates correct
-
-        Assert.True(true); // Placeholder
-        await Task.CompletedTask;
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/bridge/search", new { query = "Daft Punk Around The World" });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<BridgeSearchResult>();
+        Assert.NotNull(result);
+        Assert.Equal("Daft Punk Around The World", result.Query);
+        var user = Assert.Single(result.Users);
+        Assert.Equal("mesh-peer-1", user.PeerId);
+        Assert.Equal("mesh-peer-1", user.Username);
+        var file = Assert.Single(user.Files);
+        Assert.Equal("Daft Punk - Around The World.flac", file.Path);
+        Assert.Equal(12345678, file.SizeBytes);
     }
 
     [Fact]
     public async Task NicotinePlus_DownloadViaBridge_ShouldTransferFile()
     {
-        // Arrange:
-        // - Bridge running
-        // - Mesh transfer service active
-        // - Test file available in mesh
-
-        // Act: Download file via Nicotine+
-
-        // Assert:
-        // - Download starts
-        // - Progress updates received
-        // - File completes successfully
-        // - File hash matches
-
-        Assert.True(true); // Placeholder
-        await Task.CompletedTask;
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/bridge/download", new
+        {
+            username = "mesh-peer-1",
+            filename = "Artist - Track.flac",
+            targetPath = "/tmp"
+        });
+        response.EnsureSuccessStatusCode();
+        var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(doc.RootElement.TryGetProperty("transfer_id", out var tid));
+        Assert.Equal(JsonValueKind.String, tid.ValueKind);
+        Assert.False(string.IsNullOrEmpty(tid.GetString()));
     }
 
     [Fact]
     public async Task NicotinePlus_JoinRoomViaBridge_ShouldMapToScene()
     {
-        // Arrange:
-        // - Bridge running
-        // - Scene "warp" exists
+        var stub = _factory.Services.GetRequiredService<StubBridgeApi>();
+        stub.Rooms = new List<BridgeRoom>
+        {
+            new() { Name = "warp", MemberCount = 3 }
+        };
 
-        // Act: Join room "warp" in Nicotine+
-
-        // Assert:
-        // - Mapped to scene:label:warp-records
-        // - Room members show mesh peers
-        // - Chat messages proxied to overlay pubsub
-
-        Assert.True(true); // Placeholder
-        await Task.CompletedTask;
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/bridge/rooms");
+        response.EnsureSuccessStatusCode();
+        var wrapper = await response.Content.ReadFromJsonAsync<BridgeRoomsResponse>();
+        Assert.NotNull(wrapper);
+        var room = Assert.Single(wrapper.Rooms);
+        Assert.Equal("warp", room.Name);
+        Assert.Equal(3, room.MemberCount);
     }
 
     [Fact]
     public async Task NicotinePlus_DisasterMode_ShouldWorkTransparently()
     {
-        // Arrange:
-        // - Bridge running
-        // - Disaster mode activated (Soulseek unavailable)
-        // - Nicotine+ connected
+        using var client = _factory.CreateClient();
 
-        // Act:
-        // - Search for content
-        // - Download file
+        var searchRes = await client.PostAsJsonAsync("/api/bridge/search", new { query = "x" });
+        searchRes.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.OK, searchRes.StatusCode);
 
-        // Assert:
-        // - All operations use mesh only
-        // - No errors shown to user
-        // - Transparent failover
-
-        Assert.True(true); // Placeholder
-        await Task.CompletedTask;
+        var downloadRes = await client.PostAsJsonAsync("/api/bridge/download", new
+        {
+            username = "u",
+            filename = "f",
+            targetPath = "/tmp"
+        });
+        downloadRes.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.OK, downloadRes.StatusCode);
     }
 
     [Fact]
     public async Task NicotinePlus_MultipleClients_ShouldHandleConcurrency()
     {
-        // Arrange: 5 Nicotine+ clients connected to bridge
+        using var client = _factory.CreateClient();
 
-        // Act: All clients search and download simultaneously
+        var searchTasks = Enumerable.Range(0, 5)
+            .Select(_ => client.PostAsJsonAsync("/api/bridge/search", new { query = "concurrent" }));
+        var downloadTasks = Enumerable.Range(0, 5)
+            .Select(i => client.PostAsJsonAsync("/api/bridge/download", new
+            {
+                username = "u",
+                filename = $"f{i}.flac",
+                targetPath = "/tmp"
+            }));
 
-        // Assert:
-        // - Bridge handles concurrent connections
-        // - No conflicts or crashes
-        // - All transfers complete
+        var all = searchTasks.Concat(downloadTasks).ToArray();
+        var results = await Task.WhenAll(all);
 
-        Assert.True(true); // Placeholder
-        await Task.CompletedTask;
+        foreach (var r in results)
+        {
+            r.EnsureSuccessStatusCode();
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        }
+    }
+
+    private sealed class BridgeRoomsResponse
+    {
+        [JsonPropertyName("rooms")]
+        public List<BridgeRoom> Rooms { get; set; } = new();
     }
 }
 
@@ -145,13 +186,15 @@ public static class NicotinePlusTestingReadme
 
 ## Running Tests
 
-### Automated Tests (with Nicotine+ CLI)
+### Automated Tests (Bridge API)
+
+The `NicotinePlusIntegrationTests` exercise the Bridge HTTP API (search, download, rooms, status) using `StubWebApplicationFactory` with `StubBridgeApi` and `TestSoulfindBridgeService`. No real Nicotine+ or soulfind process is required.
 
 ```bash
-dotnet test --filter NicotinePlus --no-skip
+dotnet test --filter NicotinePlus
 ```
 
-### Manual Testing
+### Manual Testing with Nicotine+
 
 1. **Start slskdn**:
    ```bash
@@ -207,10 +250,9 @@ dotnet test --filter NicotinePlus --no-skip
 ## CI/CD
 
 Integration tests run in CI using:
-- Docker container with Nicotine+ CLI
-- Mock Soulseek server
-- Pre-populated shadow index test data
+- `StubWebApplicationFactory` with `StubBridgeApi` / `TestSoulfindBridgeService`
+- No external Nicotine+ or soulfind binary required
 
-See `.github/workflows/nicotine-tests.yml`
+See `.github/workflows` for test configuration.
 ";
 }
