@@ -125,6 +125,16 @@
 - **HashDbServiceTests:** Removed `Compile Remove`. Tests use `new HashDbService(testDir)` with only appDirectory (all other ctor args optional). Covers: ctor/DB init, GetStats, peer management (GetOrCreate, Touch, UpdatePeerCapabilities), FLAC inventory (Upsert, GetFlacEntry, GetFlacEntriesBySize, GetUnhashed, UpdateFlacHash, MarkFlacHashFailed), AlbumTarget (Upsert, GetAlbumTargets), hash storage (Store, Lookup, LookupByRecordingId, LookupBySize, StoreHashFromVerification, IncrementUseCount), mesh sync (GetEntriesSinceSeq, MergeEntriesFromMesh, UpdatePeerLastSeqSeen), backfill (GetBackfillCandidates, IncrementPeerBackfillCount), FlacInventoryEntry/HashDbEntry helpers. All 32 tests pass.
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1513 passed, 18 skipped, 1 failed** (+32 pass; 1 pre-existing: SecurityUtilsTests.ConstantTimeEquals_TimingAttackResistance timing heuristic).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – Audio CanonicalStatsServiceTests)
+- **Status**: ✅ **COMPLETED**
+- **CanonicalStatsServiceTests:** Removed `Compile Remove`. Single test `AggregateStats_Should_SelectBestVariant_ByQualityThenSeen`: mocks IHashDbService (GetVariantsByRecordingAsync, GetVariantsByRecordingAndProfileAsync, GetCanonicalStatsAsync, GetRecordingIdsWithVariantsAsync, GetCodecProfilesForRecordingAsync, UpsertCanonicalStatsAsync), verifies GetCanonicalVariantCandidatesAsync returns 3 candidates with v1 (lossless, highest quality) first.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1515 passed, 18 skipped** (+1 pass).
+
+### slskd.Tests.Unit Re-enablement (Phase 5 – Integrations MusicBrainzControllerTests)
+- **Status**: ✅ **COMPLETED**
+- **MusicBrainzControllerTests:** Removed `Compile Remove`. Tests: ResolveTarget_WithReleaseId_UpsertsAlbum (mocks IMusicBrainzClient.GetReleaseAsync, verifies UpsertAlbumTargetAsync and Ok+MusicBrainzTargetResponse); GetAlbumCompletion_ReturnsCompletionSummaries (mocks GetAlbumTargetsAsync, GetAlbumTracksAsync, LookupHashesByRecordingIdAsync, verifies AlbumCompletionResponse.Albums with CompletedTracks and HashMatch.FlacKey). Program.IsRelayAgent is false in test process. All 2 tests pass.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1517 passed, 18 skipped** (+2 pass).
+
 ---
 
 ## 2025-12-13
