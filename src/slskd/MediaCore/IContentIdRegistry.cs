@@ -48,6 +48,14 @@ public interface IContentIdRegistry
     Task<bool> IsRegisteredAsync(string externalId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Check if a content ID is registered (has at least one external ID mapping).
+    /// </summary>
+    /// <param name="contentId">The internal ContentID to check.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the content ID is registered, false otherwise.</returns>
+    Task<bool> IsContentIdRegisteredAsync(string contentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get registry statistics.
     /// </summary>
     /// <returns>Registry statistics including total mappings and domains.</returns>

@@ -125,7 +125,7 @@ public class MetadataPortability : IMetadataPortability
 
             try
             {
-                var exists = await _registry.IsRegisteredAsync(entry.ContentId, cancellationToken);
+                var exists = await _registry.IsContentIdRegisteredAsync(entry.ContentId, cancellationToken);
 
                 if (exists)
                 {
@@ -201,7 +201,7 @@ public class MetadataPortability : IMetadataPortability
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            var exists = await _registry.IsRegisteredAsync(entry.ContentId, cancellationToken);
+            var exists = await _registry.IsContentIdRegisteredAsync(entry.ContentId, cancellationToken);
             if (exists)
             {
                 var conflict = await AnalyzeConflictAsync(entry.ContentId, entry, cancellationToken);
@@ -339,13 +339,16 @@ public class MetadataPortability : IMetadataPortability
 
     private async Task ImportNewEntryAsync(MetadataEntry entry, CancellationToken cancellationToken)
     {
-        // In a real implementation, this would add to the registry/database
-        // For now, just log the operation
+        var parsed = ContentIdParser.Parse(entry.ContentId);
+        if (parsed != null)
+        {
+            var externalId = $"{parsed.Domain}:{parsed.Type}:{parsed.Id}";
+            await _registry.RegisterAsync(externalId, entry.ContentId, cancellationToken);
+        }
+
         _logger.LogInformation(
             "[MetadataPortability] Imported new entry for {ContentId}",
             entry.ContentId);
-
-        await Task.CompletedTask;
     }
 
     private async Task<ContentDescriptor> CombineAllMetadataAsync(

@@ -82,6 +82,15 @@ public class ContentIdRegistry : IContentIdRegistry
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsContentIdRegisteredAsync(string contentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(contentId))
+            return await Task.FromResult(false);
+
+        return await Task.FromResult(_contentToExternal.ContainsKey(contentId));
+    }
+
+    /// <inheritdoc/>
     public async Task<ContentIdRegistryStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         var totalMappings = _externalToContent.Count;

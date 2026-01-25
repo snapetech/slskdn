@@ -20,6 +20,8 @@ public class IpldMapper : IIpldMapper
 {
     private readonly IContentIdRegistry _registry;
     private readonly ILogger<IpldMapper> _logger;
+    private readonly Dictionary<string, List<IpldLink>> _outgoingLinks = new();
+    private readonly object _linksLock = new();
 
     public IpldMapper(
         IContentIdRegistry registry,
@@ -74,14 +76,22 @@ public class IpldMapper : IIpldMapper
             return;
 
         // Verify the contentId exists in registry
-        var exists = await _registry.IsRegisteredAsync(contentId, cancellationToken);
+        var exists = await _registry.IsContentIdRegisteredAsync(contentId, cancellationToken);
         if (!exists)
         {
             throw new InvalidOperationException($"ContentID '{contentId}' is not registered");
         }
 
-        // For now, we store links in memory within ContentDescriptor
-        // In a real implementation, this would be persisted to a database
+        lock (_linksLock)
+        {
+            if (!_outgoingLinks.TryGetValue(contentId, out var list))
+            {
+                list = new List<IpldLink>();
+                _outgoingLinks[contentId] = list;
+            }
+            list.AddRange(linksList);
+        }
+
         _logger.LogInformation(
             "[IPLD] Added {LinkCount} links to ContentID {ContentId}: {LinkNames}",
             linksList.Count, contentId, string.Join(", ", linksList.Select(l => l.Name)));
@@ -125,33 +135,16 @@ public class IpldMapper : IIpldMapper
 
         var inboundContentIds = new List<string>();
 
-        try
+        lock (_linksLock)
         {
-            // Get all content IDs (this is inefficient but works for the prototype)
-            var allContentIds = new List<string>();
-
-            // For each domain, get some sample content IDs
-            var domains = new[] { "audio", "video", "image", "text", "application" };
-            foreach (var domain in domains)
+            foreach (var kv in _outgoingLinks)
             {
-                var domainContent = await _registry.FindByDomainAsync(domain, cancellationToken);
-                allContentIds.AddRange(domainContent);
-            }
-
-            // Check each content for links to our target
-            foreach (var contentId in allContentIds.Distinct())
-            {
-                if (IsInboundLink(contentId, targetContentId, linkName))
-                {
-                    inboundContentIds.Add(contentId);
-                }
+                if (kv.Value.Any(l => l.Target == targetContentId && (linkName == null || l.Name == linkName)))
+                    inboundContentIds.Add(kv.Key);
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[IPLD] Error finding inbound links for {TargetContentId}", targetContentId);
-        }
 
+        await Task.CompletedTask;
         return inboundContentIds;
     }
 
@@ -304,8 +297,15 @@ public class IpldMapper : IIpldMapper
 
     private async Task<ContentGraphNode> CreateGraphNodeAsync(string contentId, CancellationToken cancellationToken)
     {
-        var outgoingLinks = await GenerateMockLinksAsync(contentId, cancellationToken);
-        var incomingLinks = await FindInboundLinksAsync(contentId, cancellationToken: cancellationToken);
+        List<IpldLink>? storedCopy = null;
+        lock (_linksLock)
+        {
+            if (_outgoingLinks.TryGetValue(contentId, out var stored) && stored.Count > 0)
+                storedCopy = stored.ToList();
+        }
+
+        var outgoingLinks = storedCopy ?? (await GenerateMockLinksAsync(contentId, cancellationToken)).ToList();
+        var incomingLinks = await FindInboundLinksAsync(contentId, linkName: null, cancellationToken);
 
         return new ContentGraphNode(
             ContentId: contentId,
