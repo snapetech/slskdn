@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Integration NatTraversal_SymmetricFallback (done).
+- **Current Task**: 40-fixes test/docs follow-up.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: DisasterModeTests (2) + ProtocolContractTests (6) skipped to prevent SlskdnTestClient.StartAsync hang in IAsyncLifetime. MeshOnlyTests 3 pass. Audit + 40-fixes updated. **Next:** Stub more controller deps in SlskdnTestClient to re-enable; review VirtualSoulfind skips; or other 40-fixes.
+- **Last Activity**: Enforce subprocess test —config, YAML shape (web/diagnostics at root), Skip (mutex). 40-fixes Deferred: slskd.Tests (45 pass, 1 skip). Integration 184 pass; Unit 2257; slskd.Tests 45 pass 1 skip. **Next:** Phase 0 (CodeQuality, ActivityPubKeyStore, CircuitMaintenance) or Phase 1+ unit completion-plan; or packaging/tasks from tasks.md.
 
 ---
 

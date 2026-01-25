@@ -129,6 +129,11 @@
 - **StubVirtualSoulfindServices:** Added (StubDescriptorPublisher, StubPeerReputationStore, StubShareRepository); ModerationIntegration LocalLibraryBackend assert instead of skip.
 - **Audit:** `docs/dev/slskd-tests-integration-audit.md` — 184 pass, 0 skip; LoadTests, StubVirtualSoulfind, ModerationIntegration notes. **40-fixes-plan.md** Deferred: slskd.Tests.Integration 184 pass.
 
+### slskd.Tests: Enforce subprocess test — --config, YAML shape, Skip (mutex)
+- **Status**: ✅ **COMPLETED**
+- **Enforce_invalid_config_host_startup:** Use `--config` for temp slskd.yml. YAML: `web` and `diagnostics` at root (YamlConfigurationProvider prefixes with Namespace `slskd`; `slskd:` at root produced `slskd:slskd:web` and OptionsAtStartup.Web did not bind). On failure, assert includes stdout+stderr. `[Fact(Skip)]` when subprocess requires no other slskd (mutex); run manually when clear. Test passes in isolation.
+- **40-fixes Deferred:** slskd.Tests row added: 45 pass, 1 skip (Enforce subprocess).
+
 ---
 
 ## 2026-01-24
