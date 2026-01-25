@@ -26,7 +26,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: 40-fixes test/docs follow-up.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: T-013 Flatpak **DONE** (dotnet 8.0.11, slskdn-main-linux-x64 0.24.1-slskdn.40, slskdn.svg; placeholders replaced). **Next:** Homebrew formula bump (0.24.1-slskdn.32 → 0.24.1-slskdn.40; asset names `slskdn-main-*-osx-*.zip` per GitHub API); 40-fixes Deferred (slskd.Tests 1 skip: Enforce_invalid_config_host_startup); or other tasks.md.
+- **Last Activity**: Homebrew Formula/slskdn.rb **bumped** to 0.24.1-slskdn.40 (slskdn-main-osx-arm64, slskdn-main-osx-x64, slskdn-main-linux-x64; SHA256 from GitHub API). **Next:** 40-fixes Deferred (slskd.Tests 1 skip: Enforce_invalid_config_host_startup); or other tasks.md.
 
 ---
 
