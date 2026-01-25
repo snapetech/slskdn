@@ -91,7 +91,8 @@
 - **RouterStatsTests:** Removed `Compile Remove`. Tests use `MeshServiceRouter`, `RouterStats`, `GetStats()`, `CircuitBreakers`, `WorkBudgetMetrics`; all 3 tests pass (GetStats_ReturnsBasicMetrics, GetStats_IncludesWorkBudgetMetrics, GetStats_TracksCircuitBreakerState).
 - **MeshServiceRouterTests:** Removed `Compile Remove`. Tests use `MeshServiceRouter`, `RegisterService`/`UnregisterService`, `RouteAsync` (null, empty name, oversized payload, unregistered, registered, service throws); all 11 pass.
 - **MeshGatewayAuthMiddlewareTests:** Removed `Compile Remove`. Tests use `MeshGatewayAuthMiddleware`, `MeshGatewayOptions`, `InvokeAsync` (non-mesh path, disabled, 401/403, localhost CSRF, CORS, `MeshGatewayConfigValidator.GenerateSecureToken`, `MeshGatewayOptions.Validate`); all 11 pass.
-- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1413 passed, 16 skipped** (+32).
+- **MeshServiceRouterSecurityTests:** Removed `Compile Remove`. Tests: GlobalRateLimit_BlocksExcessiveCalls, PerServiceRateLimit_BlocksExcessiveCalls, PayloadSizeLimit_RejectsOversizedPayload, CircuitBreaker_OpensAfter5ConsecutiveFailures, CircuitBreaker_ResetsAfterSuccessfulCall, ServiceTimeout_TriggersCircuitBreaker, MultiPeerIsolation_OnePeerRateLimitDoesNotAffectOthers; all 7 pass.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1420 passed, 16 skipped** (+39).
 
 ---
 
