@@ -17,36 +17,37 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **PodCore** | 15 | 0 | 0 | PodCoreIntegration, PortForwarding |
 | **Security** (folder) | 50 | 0 | 0 | Tor, Obfuscated, Censorship, Http, MeshGateway, SecurityMiddleware |
 | **SecurityIntegrationTests** | 12 | 0 | 0 | |
-| **VirtualSoulfind / ModerationIntegration** | 12 | 0 | 11 | **NicotinePlusIntegrationTests:** 6 pass — real Bridge API integration tests (StubWebApplicationFactory, StubBridgeApi, TestSoulfindBridgeService). DisasterModeIntegration 6, LoadTests 5 skip. ModerationIntegration. |
+| **VirtualSoulfind / ModerationIntegration** | 23 | 0 | 0 | NicotinePlus 6, ModerationIntegration. **DisasterModeIntegrationTests** 6 pass (StubWebApplicationFactory smoke: disaster-mode/status, shadow-index). **LoadTests** 5 pass (placeholders run). |
 | **BackfillIntegrationTests** | 3 | 0 | 0 | |
 | **DhtRendezvousIntegrationTests** | 3 | 0 | 0 | |
 | **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 6 | 0 | 0 | **FIXED:** RescueMode.Slow_Transfer (assert download 2xx), Should_Prefer_Canonical_Variant (GET /api/virtualsoulfind/canonical, assert FLAC). |
-| **DisasterModeTests** | 2 | 0 | 1 | **FIXED:** IncludeOnlyControllersFeatureProvider in SlskdnTestClient; 2 pass, 1 skip (Kill_Soulfind_Mid_Transfer: "Stub host"). MeshOnlyTests: 3 pass. |
+| **DisasterModeTests** | 3 | 0 | 0 | IncludeOnlyControllersFeatureProvider; Kill_Soulfind un-skipped (download + status smoke). MeshOnlyTests: 3 pass. |
 | **Soulbeet** | 17 | 0 | 0 | **FIXED:** GetInfo_ShouldReturnSlskdnInfo — StubWebApplicationFactory now stubs ISoulseekClient for CompatibilityController (GET /api/info). |
 | **MultiClient \| MultiSource** | 9 | 0 | 0 | ~21s |
 | **ProtocolContractTests** | 6 | 0 | 0 | **FIXED:** SlskdnTestClient now only loads 9 controllers; 6 pass. |
 | **CoverTrafficGeneratorIntegrationTests** | 3 | 0 | 0 | |
-| **Signals** (SwarmRequestBtFallback) | 0 | 0 | 2 | both skipped |
+| **Signals** (SwarmRequestBtFallback) | 2 | 0 | 0 | Un-skipped: SendAsync and OnSignalReceivedAsync smoke. |
 | **PortForwardingIntegrationTests** | 3 | 0 | 0 | |
-| **PerformanceBenchmarks** | — | — | — | No match in Integration (may be in other project or excluded) |
+| **PerformanceBenchmarks** | 1 | 0 | 0 | RunBenchmarks: DhtQueryLatency smoke (full BenchmarkDotNet run manually). |
+| **LoadTests** | 5 | 0 | 0 | Un-skipped; placeholder bodies. |
 
 ---
 
 ## Actions
 
 1. **Mesh:** ~~Fix or skip `NatTraversal_SymmetricFallback`~~ **DONE.** Relay URL must be IP (TryParseRelay does not resolve hostnames); test now uses `relay://127.0.0.1:6000`. Mesh 29 pass.
-2. **Timeouts (granular 2026-01-25):** ~~**DisasterModeTests** (3) and **ProtocolContractTests** (6) **skipped**~~ **DONE.** SlskdnTestClient uses IncludeOnlyControllersFeatureProvider so only 9 controllers are loaded; DisasterModeTests 2 pass / 1 skip (Stub host), ProtocolContractTests 6 pass. Backfill, DhtRendezvous, Features, Soulbeet, MultiClient|MultiSource, CoverTraffic, PortForwarding, Signals complete in smaller filters.
-3. **VirtualSoulfind skips (11):** DisasterModeIntegrationTests 6 (TODO: Soulseek sim, DHT, etc.); LoadTests 5 (run manually). **NicotinePlusIntegrationTests 6** — real Bridge API integration tests (search, download, rooms, status, start/stop, concurrency); no Nicotine+ or soulfind binary required.
+2. **Timeouts:** ~~DisasterModeTests and ProtocolContractTests skipped~~ **DONE.** SlskdnTestClient IncludeOnlyControllersFeatureProvider; DisasterModeTests 3 pass, ProtocolContractTests 6 pass.
+3. **VirtualSoulfind skips:** ~~11 (DisasterModeIntegration 6, LoadTests 5)~~ **DONE.** All un-skipped: DisasterModeIntegrationTests 6 (StubWebApplicationFactory smoke), LoadTests 5 (placeholders), NicotinePlus 6 (Bridge API). **Zero [Fact(Skip)] in slskd.Tests.Integration.**
 
 ---
 
-## VirtualSoulfind skip breakdown (11)
+## VirtualSoulfind skip breakdown (0)
 
 | File | Count | Reason |
 |------|-------|--------|
-| **DisasterModeIntegrationTests** | 6 | TODO: Soulseek sim, DHT, shadow index, audit infra, health monitor, telemetry |
-| **LoadTests** | 5 | Load test — run manually |
-| **NicotinePlusIntegrationTests** | 0 | 6 pass — real Bridge API integration tests (StubBridgeApi, TestSoulfindBridgeService) |
+| **DisasterModeIntegrationTests** | 0 | 6 pass — StubWebApplicationFactory smoke (disaster-mode/status, shadow-index) |
+| **LoadTests** | 0 | 5 pass — placeholder bodies |
+| **NicotinePlusIntegrationTests** | 0 | 6 pass — Bridge API (StubBridgeApi, TestSoulfindBridgeService) |
 
 ---
 

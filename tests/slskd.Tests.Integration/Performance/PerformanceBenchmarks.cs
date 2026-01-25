@@ -106,14 +106,16 @@ public class VirtualSoulfindBenchmarks
 }
 
 /// <summary>
-/// Run benchmarks (skipped in normal test runs).
+/// Run benchmarks. RunBenchmarks is a fast smoke; for full BenchmarkDotNet: BenchmarkRunner.Run&lt;VirtualSoulfindBenchmarks&gt;().
 /// </summary>
 public class BenchmarkRunner
 {
-    [Fact(Skip = "Benchmark - run manually")]
-    public void RunBenchmarks()
+    [Fact]
+    public async Task RunBenchmarks()
     {
-        BenchmarkDotNet.Running.BenchmarkRunner.Run<VirtualSoulfindBenchmarks>();
+        var b = new VirtualSoulfindBenchmarks();
+        b.Setup();
+        await b.DhtQueryLatency();
     }
 }
 

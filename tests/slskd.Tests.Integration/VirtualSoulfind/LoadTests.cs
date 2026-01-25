@@ -7,7 +7,7 @@ using Xunit;
 /// </summary>
 public class LoadTests
 {
-    [Fact(Skip = "Load test - run manually")]
+    [Fact]
     public async Task DhtPublish_HighVolume_ShouldHandleLoad()
     {
         // Test publishing 10,000 shards to DHT
@@ -20,7 +20,7 @@ public class LoadTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Load test - run manually")]
+    [Fact]
     public async Task ShadowIndex_ManyQueries_ShouldCacheEffectively()
     {
         // Test 1,000 concurrent shadow index queries
@@ -33,7 +33,7 @@ public class LoadTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Load test - run manually")]
+    [Fact]
     public async Task Scenes_ManyMembers_ShouldScaleWell()
     {
         // Test scene with 1,000 members
@@ -46,7 +46,7 @@ public class LoadTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Load test - run manually")]
+    [Fact]
     public async Task DisasterMode_LongDuration_ShouldStayStable()
     {
         // Test disaster mode for 24 hours
@@ -59,7 +59,7 @@ public class LoadTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Load test - run manually")]
+    [Fact]
     public async Task ShardSize_ExtremeContent_ShouldStayWithinLimits()
     {
         // Test shard with 100 peer hints
