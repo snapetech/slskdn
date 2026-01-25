@@ -4,17 +4,20 @@
 
 namespace slskd.Tests.Unit.VirtualSoulfind.Planning
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Moq;
+    using slskd.Common.Moderation;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
     using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.v2.Intents;
     using slskd.VirtualSoulfind.v2.Planning;
-    using slskd.VirtualSoulfind.v2.Resolution;
+    using slskd.VirtualSoulfind.v2.Sources;
     using Xunit;
 
     /// <summary>
@@ -22,75 +25,58 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
     /// </summary>
     public class MultiSourcePlannerDomainTests
     {
+        private const string TestTrackId = "550e8400-e29b-41d4-a716-446655440000";
+
         private readonly Mock<ICatalogueStore> _catalogueStoreMock = new();
-        private readonly Mock<IPlanner> _plannerMock = new();
-        private readonly Mock<IResolver> _resolverMock = new();
+        private readonly Mock<ISourceRegistry> _sourceRegistryMock = new();
+        private readonly Mock<IPeerReputationStore> _peerReputationStoreMock = new();
+
+        private static MultiSourcePlanner CreatePlanner(ICatalogueStore catalogue, ISourceRegistry sourceRegistry, IModerationProvider moderation, PeerReputationService peerRep, params IContentBackend[] backends)
+        {
+            return new MultiSourcePlanner(catalogue, sourceRegistry, backends, moderation, peerRep);
+        }
 
         [Fact]
         public async Task CreatePlanAsync_WithInvalidDomain_ReturnsFailedPlan()
         {
-            // Arrange
-            var planner = new MultiSourcePlanner(
-                _catalogueStoreMock.Object,
-                _plannerMock.Object,
-                _resolverMock.Object);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = CreatePlanner(_catalogueStoreMock.Object, _sourceRegistryMock.Object, new NoopModerationProvider(), peerRep);
 
-            var invalidDesiredTrack = new DesiredTrack
-            {
-                Domain = (ContentDomain)999, // Invalid domain
-                DesiredTrackId = "test-id",
-                TrackId = "test-track",
-                Status = IntentStatus.Pending
-            };
+            var invalidDesiredTrack = new DesiredTrack { Domain = (ContentDomain)999, DesiredTrackId = "test-id", TrackId = TestTrackId, Status = IntentStatus.Pending };
 
-            // Act
             var plan = await planner.CreatePlanAsync(invalidDesiredTrack);
 
-            // Assert
             Assert.Equal(PlanStatus.Failed, plan.Status);
             Assert.Contains("Domain validation failed", plan.ErrorMessage);
         }
 
         [Fact]
-        public async Task ApplyDomainRulesAndMode_SoulseekBackend_OnlyAllowedForMusicDomain()
+        public void ApplyDomainRulesAndMode_SoulseekBackend_OnlyAllowedForMusicDomain()
         {
-            // Arrange
-            var planner = new MultiSourcePlanner(
-                _catalogueStoreMock.Object,
-                _plannerMock.Object,
-                _resolverMock.Object);
+            _peerReputationStoreMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, _peerReputationStoreMock.Object);
+            var planner = CreatePlanner(_catalogueStoreMock.Object, _sourceRegistryMock.Object, new NoopModerationProvider(), peerRep);
 
             var candidates = new List<SourceCandidate>
             {
-                new SourceCandidate { Backend = ContentBackendType.Soulseek, Uri = "test://soulseek" },
-                new SourceCandidate { Backend = ContentBackendType.MeshDht, Uri = "test://mesh" },
-                new SourceCandidate { Backend = ContentBackendType.LocalLibrary, Uri = "test://local" }
+                new SourceCandidate { Backend = ContentBackendType.Soulseek, BackendRef = "slsk" },
+                new SourceCandidate { Backend = ContentBackendType.MeshDht, BackendRef = "mesh" },
+                new SourceCandidate { Backend = ContentBackendType.LocalLibrary, BackendRef = "local" }
             };
 
-            // Act - Music domain should allow Soulseek
-            var musicResults = planner.GetType()
-                .GetMethod("ApplyDomainRulesAndMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .Invoke(planner, new object[] { ContentDomain.Music, PlanningMode.SoulseekFriendly, candidates });
+            var method = typeof(MultiSourcePlanner).GetMethod("ApplyDomainRulesAndMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var musicResults = method.Invoke(planner, new object[] { ContentDomain.Music, PlanningMode.SoulseekFriendly, candidates });
+            var genericFileResults = method.Invoke(planner, new object[] { ContentDomain.GenericFile, PlanningMode.SoulseekFriendly, candidates });
 
-            // Act - GenericFile domain should filter out Soulseek
-            var genericFileResults = planner.GetType()
-                .GetMethod("ApplyDomainRulesAndMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .Invoke(planner, new object[] { ContentDomain.GenericFile, PlanningMode.SoulseekFriendly, candidates });
-
-            // Assert
-            var musicFiltered = musicResults as IEnumerable<SourceCandidate>;
-            var genericFiltered = genericFileResults as IEnumerable<SourceCandidate>;
+            var musicFiltered = (musicResults as IEnumerable<SourceCandidate>)?.ToList();
+            var genericFiltered = (genericFileResults as IEnumerable<SourceCandidate>)?.ToList();
 
             Assert.NotNull(musicFiltered);
             Assert.NotNull(genericFiltered);
-
-            // Music domain should include Soulseek
             Assert.Contains(musicFiltered, c => c.Backend == ContentBackendType.Soulseek);
-
-            // GenericFile domain should exclude Soulseek
             Assert.DoesNotContain(genericFiltered, c => c.Backend == ContentBackendType.Soulseek);
-
-            // Both should include non-Soulseek backends
             Assert.Contains(musicFiltered, c => c.Backend == ContentBackendType.MeshDht);
             Assert.Contains(musicFiltered, c => c.Backend == ContentBackendType.LocalLibrary);
             Assert.Contains(genericFiltered, c => c.Backend == ContentBackendType.MeshDht);
@@ -100,32 +86,18 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
         [Fact]
         public async Task CreatePlanAsync_UsesDomainFromDesiredTrack()
         {
-            // Arrange
-            var planner = new MultiSourcePlanner(
-                _catalogueStoreMock.Object,
-                _plannerMock.Object,
-                _resolverMock.Object);
+            _peerReputationStoreMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, _peerReputationStoreMock.Object);
+            var planner = CreatePlanner(_catalogueStoreMock.Object, _sourceRegistryMock.Object, new NoopModerationProvider(), peerRep);
 
-            // Setup catalogue to return a track
-            var testTrack = new VirtualTrack { Id = "test-track-id" };
-            _catalogueStoreMock
-                .Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(testTrack);
+            var testTrack = new Track { TrackId = TestTrackId, ReleaseId = "r1", TrackNumber = 1, Title = "Test", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            _catalogueStoreMock.Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(testTrack);
+            _sourceRegistryMock.Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<SourceCandidate>());
 
-            var desiredTrack = new DesiredTrack
-            {
-                Domain = ContentDomain.GenericFile, // Non-Music domain
-                DesiredTrackId = "test-id",
-                TrackId = "test-track",
-                Status = IntentStatus.Pending
-            };
+            var desiredTrack = new DesiredTrack { Domain = ContentDomain.GenericFile, DesiredTrackId = "test-id", TrackId = TestTrackId, Status = IntentStatus.Pending };
 
-            // Act
             var plan = await planner.CreatePlanAsync(desiredTrack);
 
-            // Assert
-            // The plan should be created (not fail due to domain validation)
-            // and the domain gating should be applied during planning
             Assert.NotEqual(PlanStatus.Failed, plan.Status);
         }
 
@@ -134,11 +106,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
         [InlineData(ContentDomain.GenericFile, false)] // GenericFile should not allow Soulseek
         public void DomainGating_EnforcesBackendRestrictions(ContentDomain domain, bool shouldAllowSoulseek)
         {
-            // Arrange
             var candidates = new List<SourceCandidate>
             {
-                new SourceCandidate { Backend = ContentBackendType.Soulseek, Uri = "test://soulseek" },
-                new SourceCandidate { Backend = ContentBackendType.MeshDht, Uri = "test://mesh" }
+                new SourceCandidate { Backend = ContentBackendType.Soulseek, BackendRef = "slsk" },
+                new SourceCandidate { Backend = ContentBackendType.MeshDht, BackendRef = "mesh" }
             };
 
             // Act

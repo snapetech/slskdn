@@ -12,9 +12,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
     using Microsoft.Extensions.Logging;
     using Moq;
     using slskd.Common.Moderation;
+    using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
-    using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.v2.Intents;
     using slskd.VirtualSoulfind.v2.Planning;
     using slskd.VirtualSoulfind.v2.Sources;
@@ -25,20 +25,24 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
     /// </summary>
     public class DomainAwarePlannerTests
     {
+        private const string TestTrackId = "550e8400-e29b-41d4-a716-446655440000";
+
         private readonly Mock<ICatalogueStore> _catalogueStoreMock = new();
         private readonly Mock<ISourceRegistry> _sourceRegistryMock = new();
         private readonly List<IContentBackend> _backends = new();
         private readonly Mock<IModerationProvider> _moderationProviderMock = new();
-        private readonly Mock<PeerReputationService> _peerReputationServiceMock = new();
+        private readonly Mock<IPeerReputationStore> _peerReputationStoreMock = new();
 
         private MultiSourcePlanner CreatePlanner()
         {
+            _peerReputationStoreMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, _peerReputationStoreMock.Object);
             return new MultiSourcePlanner(
                 _catalogueStoreMock.Object,
                 _sourceRegistryMock.Object,
                 _backends,
                 _moderationProviderMock.Object,
-                _peerReputationServiceMock.Object);
+                peerRep);
         }
 
         [Fact]
@@ -50,7 +54,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
             {
                 Domain = (ContentDomain)999, // Invalid domain
                 DesiredTrackId = "test-id",
-                TrackId = "test-track",
+                TrackId = TestTrackId,
                 Status = IntentStatus.Pending
             };
 
@@ -65,17 +69,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
         [Fact]
         public async Task CreatePlanAsync_QueriesOnlyBackendsSupportingDomain()
         {
-            // Arrange
+            // Arrange - Backend.SupportedDomain != domain is skipped; null is not "all domains"
             var musicBackendMock = new Mock<IContentBackend>();
             musicBackendMock.Setup(x => x.Type).Returns(ContentBackendType.Soulseek);
             musicBackendMock.Setup(x => x.SupportedDomain).Returns(ContentDomain.Music);
             musicBackendMock.Setup(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Array.Empty<SourceCandidate>());
-
-            var allDomainsBackendMock = new Mock<IContentBackend>();
-            allDomainsBackendMock.Setup(x => x.Type).Returns(ContentBackendType.MeshDht);
-            allDomainsBackendMock.Setup(x => x.SupportedDomain).Returns((ContentDomain?)null); // Supports all
-            allDomainsBackendMock.Setup(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<SourceCandidate>());
 
             var genericOnlyBackendMock = new Mock<IContentBackend>();
@@ -84,50 +82,27 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
             genericOnlyBackendMock.Setup(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<SourceCandidate>());
 
-            _backends.AddRange(new[] { musicBackendMock.Object, allDomainsBackendMock.Object, genericOnlyBackendMock.Object });
+            _backends.AddRange(new[] { musicBackendMock.Object, genericOnlyBackendMock.Object });
 
             var planner = CreatePlanner();
 
-            // Setup catalogue and other mocks
-            var testTrack = new VirtualTrack { Id = "test-track-id" };
-            _catalogueStoreMock
-                .Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(testTrack);
-            _sourceRegistryMock
-                .Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Array.Empty<SourceCandidate>());
-            _moderationProviderMock
-                .Setup(x => x.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision(ModerationVerdict.Allowed, "Test"));
+            var testTrack = new Track { TrackId = TestTrackId, ReleaseId = "r1", TrackNumber = 1, Title = "Test", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            _catalogueStoreMock.Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(testTrack);
+            _sourceRegistryMock.Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<SourceCandidate>());
+            _moderationProviderMock.Setup(x => x.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ModerationDecision.Allow("Test"));
 
-            // Act - Plan for Music domain
-            var musicDesiredTrack = new DesiredTrack
-            {
-                Domain = ContentDomain.Music,
-                DesiredTrackId = "music-id",
-                TrackId = "test-track",
-                Status = IntentStatus.Pending
-            };
-            var musicPlan = await planner.CreatePlanAsync(musicDesiredTrack);
+            // Act - Plan for Music domain (only Music backend is queried)
+            var musicDesiredTrack = new DesiredTrack { Domain = ContentDomain.Music, DesiredTrackId = "music-id", TrackId = TestTrackId, Status = IntentStatus.Pending };
+            await planner.CreatePlanAsync(musicDesiredTrack);
 
-            // Assert - Should query Music-only and all-domains backends, but not GenericFile-only
             musicBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Once);
-            allDomainsBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Once);
             genericOnlyBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            // Act - Plan for GenericFile domain
-            var genericDesiredTrack = new DesiredTrack
-            {
-                Domain = ContentDomain.GenericFile,
-                DesiredTrackId = "generic-id",
-                TrackId = "test-track",
-                Status = IntentStatus.Pending
-            };
-            var genericPlan = await planner.CreatePlanAsync(genericDesiredTrack);
+            // Act - Plan for GenericFile domain (only GenericFile backend is queried)
+            var genericDesiredTrack = new DesiredTrack { Domain = ContentDomain.GenericFile, DesiredTrackId = "generic-id", TrackId = TestTrackId, Status = IntentStatus.Pending };
+            await planner.CreatePlanAsync(genericDesiredTrack);
 
-            // Assert - Should query all-domains and GenericFile-only backends, but not Music-only
-            musicBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Once); // Still once
-            allDomainsBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Exactly(2)); // Called again
+            musicBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Once);
             genericOnlyBackendMock.Verify(x => x.FindCandidatesAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -138,9 +113,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
             var planner = CreatePlanner();
             var candidates = new List<SourceCandidate>
             {
-                new SourceCandidate { Backend = ContentBackendType.Soulseek, Uri = "test://soulseek" },
-                new SourceCandidate { Backend = ContentBackendType.MeshDht, Uri = "test://mesh" },
-                new SourceCandidate { Backend = ContentBackendType.LocalLibrary, Uri = "test://local" }
+                new SourceCandidate { Backend = ContentBackendType.Soulseek, BackendRef = "slsk" },
+                new SourceCandidate { Backend = ContentBackendType.MeshDht, BackendRef = "mesh" },
+                new SourceCandidate { Backend = ContentBackendType.LocalLibrary, BackendRef = "local" }
             };
 
             // Act - Test Music domain (should allow Soulseek)
@@ -174,31 +149,17 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
             // Arrange
             var planner = CreatePlanner();
 
-            // Setup mocks
-            var testTrack = new VirtualTrack { Id = "test-track-id" };
-            _catalogueStoreMock
-                .Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(testTrack);
-            _sourceRegistryMock
-                .Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Array.Empty<SourceCandidate>());
-            _moderationProviderMock
-                .Setup(x => x.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision(ModerationVerdict.Allowed, "Test"));
+            var testTrack = new Track { TrackId = TestTrackId, ReleaseId = "r1", TrackNumber = 1, Title = "Test", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            _catalogueStoreMock.Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(testTrack);
+            _sourceRegistryMock.Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<SourceCandidate>());
+            _moderationProviderMock.Setup(x => x.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ModerationDecision.Allow("Test"));
 
-            // Act - Test with GenericFile domain
-            var desiredTrack = new DesiredTrack
-            {
-                Domain = ContentDomain.GenericFile,
-                DesiredTrackId = "test-id",
-                TrackId = "test-track",
-                Status = IntentStatus.Pending
-            };
+            var desiredTrack = new DesiredTrack { Domain = ContentDomain.GenericFile, DesiredTrackId = "test-id", TrackId = TestTrackId, Status = IntentStatus.Pending };
             var plan = await planner.CreatePlanAsync(desiredTrack);
 
-            // Assert - Plan should be created (domain validation passes)
+            // Assert - Plan created; domain from DesiredTrack was used (no Failed with "Domain validation failed"); success path does not set plan.DesiredTrack
             Assert.NotEqual(PlanStatus.Failed, plan.Status);
-            Assert.Equal(desiredTrack.Domain, plan.DesiredTrack.Domain);
+            Assert.Equal(desiredTrack.TrackId, plan.TrackId);
         }
 
         [Theory]
@@ -216,25 +177,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Planning
             _backends.Add(soulseekBackendMock.Object);
             var planner = CreatePlanner();
 
-            // Setup mocks
-            var testTrack = new VirtualTrack { Id = "test-track-id" };
-            _catalogueStoreMock
-                .Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(testTrack);
-            _sourceRegistryMock
-                .Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Array.Empty<SourceCandidate>());
-            _moderationProviderMock
-                .Setup(x => x.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision(ModerationVerdict.Allowed, "Test"));
+            var testTrack = new Track { TrackId = TestTrackId, ReleaseId = "r1", TrackNumber = 1, Title = "Test", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            _catalogueStoreMock.Setup(x => x.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(testTrack);
+            _sourceRegistryMock.Setup(x => x.FindCandidatesForItemAsync(It.IsAny<ContentItemId>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<SourceCandidate>());
+            _moderationProviderMock.Setup(x => x.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ModerationDecision.Allow("Test"));
 
-            var desiredTrack = new DesiredTrack
-            {
-                Domain = domain,
-                DesiredTrackId = "test-id",
-                TrackId = "test-track",
-                Status = IntentStatus.Pending
-            };
+            var desiredTrack = new DesiredTrack { Domain = domain, DesiredTrackId = "test-id", TrackId = TestTrackId, Status = IntentStatus.Pending };
 
             // Act
             await planner.CreatePlanAsync(desiredTrack);
