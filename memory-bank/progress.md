@@ -77,6 +77,16 @@
 
 ---
 
+## 2026-01-25
+
+### slskd.Tests.Unit Re-enablement — COMPLETE (0 Compile Remove, 0 skips)
+- **Status**: ✅ **COMPLETED**
+- **Milestone:** No `Compile Remove` in slskd.Tests.Unit.csproj; no `[Fact(Skip)]`; **2255 pass, 0 skip.**
+- **Recent fixes (this session):** Obfs4TransportTests `IsAvailableAsync_VersionCheckFailure_ReturnsFalse` (IObfs4VersionChecker + path-that-exists); doc updates: WorkRef FromMusicItem FIXED (MusicItem.FromTrackEntry exists); RateLimitTimeout CleanupExpiredTunnels (3) FIXED (RunOneCleanupIterationAsync + reflection); 40-fixes deferred table cleared, slskd.Tests.Unit re-enablement moved to Completed.
+- **Docs:** `docs/dev/slskd-tests-unit-completion-plan.md`, `docs/dev/slskd-tests-unit-skips-how-to-fix.md`, `docs/dev/40-fixes-plan.md` (Deferred: slskd.Tests.Unit completed).
+
+---
+
 ## 2026-01-24
 
 ### dev/40-fixes: NSec, SecurityUtils flake, test baseline

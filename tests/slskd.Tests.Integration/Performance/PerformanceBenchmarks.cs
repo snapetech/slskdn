@@ -42,7 +42,7 @@ public class VirtualSoulfindBenchmarks
 
         if (result == null)
         {
-            throw new Exception("DHT query failed");
+            throw new InvalidOperationException("DHT query failed");
         }
     }
 
@@ -142,7 +142,7 @@ public static class PerformanceTestHelpers
     {
         if (elapsed > maxDuration)
         {
-            throw new Exception($"{operation} took {elapsed.TotalMilliseconds}ms (max: {maxDuration.TotalMilliseconds}ms)");
+            throw new InvalidOperationException($"{operation} took {elapsed.TotalMilliseconds}ms (max: {maxDuration.TotalMilliseconds}ms)");
         }
     }
 }

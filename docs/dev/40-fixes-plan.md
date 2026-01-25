@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| *None* | *Deferred table cleared; slskd.Tests.Unit re-enablement completed (0 Compile Remove, 0 skips; 2255 pass).* | — |
+| **slskd.Tests.Integration** | 30 build errors (CS/API: ObfuscatedTransportIntegration, ModerationIntegration, TorIntegration; types/options renamed or missing: WebSocketOptions, HttpTunnelOptions, Obfs4Options, MeekOptions, IContentBackend, ContentDescriptor.Filename, PlanStatus.Success, TestContext, etc.). CA2201 in PerformanceBenchmarks fixed (2→InvalidOperationException). | Align tests to current Mesh/Transport/VirtualSoulfind APIs; fix or `Compile Remove` failing tests. `dotnet test` at solution root fails for Integration when it does not build. |
 
 
 ---
