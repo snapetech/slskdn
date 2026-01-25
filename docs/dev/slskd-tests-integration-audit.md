@@ -2,7 +2,8 @@
 
 **Date:** 2026-01-25  
 **Build:** `dotnet build tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj -c Release` — **0 errors.**  
-**Total:** 184 pass, 0 fail, 0 skip.
+**Total:** 184 pass, 0 fail, 0 skip.  
+**Other:** slskd.Tests 45 pass, 1 skip (Enforce subprocess); slskd.Tests.Unit 2257 pass. See 40-fixes-plan Deferred.
 
 Run filtered subsets to avoid full-suite timeout, e.g.:
 `dotnet test tests/slskd.Tests.Integration/... -c Release --no-build --filter "FullyQualifiedName~MediaCore"`
