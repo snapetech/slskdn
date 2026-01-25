@@ -5,6 +5,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
+using slskd.Mesh;
 using slskd.Mesh.Transport;
 using Xunit;
 
@@ -14,6 +15,7 @@ public class AnonymityTransportSelectionTests : IDisposable
 {
     private readonly Mock<ILogger<AnonymityTransportSelector>> _selectorLoggerMock;
     private readonly Mock<ILogger<TransportPolicyManager>> _policyLoggerMock;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly TransportPolicyManager _policyManager;
     private readonly AdversarialOptions _adversarialOptions;
 
@@ -21,16 +23,17 @@ public class AnonymityTransportSelectionTests : IDisposable
     {
         _selectorLoggerMock = new Mock<ILogger<AnonymityTransportSelector>>();
         _policyLoggerMock = new Mock<ILogger<TransportPolicyManager>>();
+        _loggerFactory = LoggerFactory.Create(_ => { });
         _policyManager = new TransportPolicyManager(_policyLoggerMock.Object);
 
         _adversarialOptions = new AdversarialOptions
         {
-            AnonymityLayer = new AnonymityLayerOptions
+            Anonymity = new AnonymityLayerOptions
             {
                 Enabled = true,
                 Mode = AnonymityMode.Tor
             },
-            MeshTransport = new MeshTransportOptions
+            MeshTransportOptions = new MeshTransportOptions
             {
                 EnableDirect = true,
                 Tor = new TorTransportOptions { Enabled = true },
@@ -41,14 +44,14 @@ public class AnonymityTransportSelectionTests : IDisposable
 
     public void Dispose()
     {
-        // Cleanup if needed
+        (_loggerFactory as IDisposable)?.Dispose();
     }
 
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
         // Act & Assert - Should not throw
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
         Assert.NotNull(selector);
     }
 
@@ -57,7 +60,7 @@ public class AnonymityTransportSelectionTests : IDisposable
     {
         // Arrange
         var policy = new TransportPolicy { PreferPrivateTransports = true };
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act - Access private method via reflection for testing
         var method = typeof(AnonymityTransportSelector).GetMethod("GetTransportPriorityOrder",
@@ -75,7 +78,7 @@ public class AnonymityTransportSelectionTests : IDisposable
     {
         // Arrange
         var policy = new TransportPolicy { DisableClearnet = true };
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act
         var method = typeof(AnonymityTransportSelector).GetMethod("GetTransportPriorityOrder",
@@ -94,7 +97,7 @@ public class AnonymityTransportSelectionTests : IDisposable
         {
             AllowedTransportTypes = new List<TransportType> { TransportType.TorOnionQuic }
         };
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act
         var method = typeof(AnonymityTransportSelector).GetMethod("IsTransportAllowedByPolicy",
@@ -113,7 +116,7 @@ public class AnonymityTransportSelectionTests : IDisposable
         {
             AllowedTransportTypes = new List<TransportType> { TransportType.TorOnionQuic }
         };
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLogger.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act
         var method = typeof(AnonymityTransportSelector).GetMethod("IsTransportAllowedByPolicy",
@@ -128,7 +131,7 @@ public class AnonymityTransportSelectionTests : IDisposable
     public void GetTransportStatuses_ReturnsAllTransportStatuses()
     {
         // Arrange
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act
         var statuses = selector.GetTransportStatuses();
@@ -150,7 +153,7 @@ public class AnonymityTransportSelectionTests : IDisposable
         };
         _policyManager.AddOrUpdatePolicy(policy);
 
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act & Assert - Should not throw, even though transports aren't fully set up for testing
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -168,7 +171,7 @@ public class AnonymityTransportSelectionTests : IDisposable
         };
         _policyManager.AddOrUpdatePolicy(policy);
 
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act & Assert - Should attempt connection without Direct transport
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -187,7 +190,7 @@ public class AnonymityTransportSelectionTests : IDisposable
         };
         _policyManager.AddOrUpdatePolicy(restrictivePolicy);
 
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act - Check if Direct transport is allowed for this peer
         var method = typeof(AnonymityTransportSelector).GetMethod("IsTransportAllowedByPolicy",
@@ -225,7 +228,7 @@ public class AnonymityTransportSelectionTests : IDisposable
     public async Task TestConnectivityAsync_CompletesWithoutError()
     {
         // Arrange
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Act & Assert - Should complete without throwing
         await selector.TestConnectivityAsync();
@@ -235,7 +238,7 @@ public class AnonymityTransportSelectionTests : IDisposable
     public void TransportTypeMapping_CorrectlyMapsBetweenTypes()
     {
         // Arrange
-        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object);
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
 
         // Test mapping methods via reflection
         var mapToAnonymityMethod = typeof(AnonymityTransportSelector).GetMethod("MapTransportTypeToAnonymityType",

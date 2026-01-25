@@ -31,7 +31,7 @@ namespace slskd.Common.Moderation
     ///         - Peers (reputation and banning)
     ///     </para>
     ///     <para>
-    ///         🔒 MANDATORY: Read `MCP-HARDENING.md` before implementing!
+    ///         🔒 MANDATORY: Read `docs/MCP-HARDENING.md` before implementing!
     ///     </para>
     ///     <para>
     ///         Implementations typically delegate to sub-providers:

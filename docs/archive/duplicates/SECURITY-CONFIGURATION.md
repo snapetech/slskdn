@@ -237,5 +237,5 @@ If you discover a security vulnerability, please report it responsibly:
 ## Additional Resources
 
 - [Security Guidelines](./SECURITY-GUIDELINES.md) - Detailed security requirements
-- [Features](./FEATURES.md) - Feature overview and security considerations
+- [Features](../../FEATURES.md) - Feature overview and security considerations
 - [Testing Strategy](./TESTING-STRATEGY.md) - Security testing approach

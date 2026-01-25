@@ -165,6 +165,8 @@ public static class IpRangeClassifier
     /// <returns>True if the address should be blocked.</returns>
     public static bool IsBlocked(IPAddress ip)
     {
+        if (ip == null)
+            return false; // Cannot classify; do not block
         var classification = Classify(ip);
         return classification == IpClassification.Loopback ||
                classification == IpClassification.LinkLocal ||

@@ -76,7 +76,9 @@ public class BucketPadderTests : IDisposable
 
         // Assert
         Assert.Equal(1024, paddedMessage.Length);
-        Assert.Equal(originalMessage.Length, BitConverter.ToUInt16(paddedMessage, 1022)); // Length in big-endian
+        // Length is stored in last 2 bytes as big-endian
+        var storedLength = (ushort)((paddedMessage[1022] << 8) | paddedMessage[1023]);
+        Assert.Equal(originalMessage.Length, storedLength);
     }
 
     [Fact]

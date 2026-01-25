@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using slskd.Conversation;
+using slskd.Messaging;
 using slskd.PodCore;
 using System.Security.Claims;
 using Xunit;

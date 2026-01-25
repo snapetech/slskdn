@@ -7,6 +7,9 @@
 /src/slskd/wwwroot/
 /src/slskd/slskd.csproj.user
 /TestResults/
+/slskd.Tests/
+/tests/**/bin/
+/tests/**/obj/
 /dist/
 /logs/
 coverage.json

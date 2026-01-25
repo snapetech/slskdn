@@ -2,8 +2,13 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using System.Net;
+using Microsoft.Extensions.Logging;
+using Moq;
+using slskd.Mesh;
 using slskd.Mesh.Dht;
+using slskd.Mesh.Transport;
+using MeshPeerDescriptor = slskd.Mesh.Dht.MeshPeerDescriptor;
+using MeshRateLimiter = slskd.Mesh.Transport.RateLimiter;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
@@ -11,6 +16,10 @@ public class TransportSelectorTests
 {
     private readonly MeshTransportOptions _transportOptions;
     private readonly List<ITransportDialer> _dialers;
+    private readonly TransportPolicyManager _policyManager;
+    private readonly TransportDowngradeProtector _downgradeProtector;
+    private readonly ConnectionThrottler _connectionThrottler;
+    private readonly ILogger<TransportSelector> _logger;
     private readonly TransportSelector _selector;
 
     public TransportSelectorTests()
@@ -29,7 +38,19 @@ public class TransportSelectorTests
             new MockTransportDialer(TransportType.I2PQuic, false) // Unavailable
         };
 
-        _selector = new TransportSelector(_transportOptions, _dialers, null!);
+        _policyManager = new TransportPolicyManager(Mock.Of<ILogger<TransportPolicyManager>>());
+        _downgradeProtector = new TransportDowngradeProtector(Mock.Of<ILogger<TransportDowngradeProtector>>());
+        _connectionThrottler = new ConnectionThrottler(
+            new MeshRateLimiter(Mock.Of<ILogger<MeshRateLimiter>>()),
+            Mock.Of<ILogger<ConnectionThrottler>>());
+        _logger = Mock.Of<ILogger<TransportSelector>>();
+
+        _selector = new TransportSelector(_transportOptions, _dialers, _policyManager, _downgradeProtector, _connectionThrottler, _logger);
+    }
+
+    private TransportSelector CreateSelector(MeshTransportOptions options)
+    {
+        return new TransportSelector(options, _dialers, _policyManager, _downgradeProtector, _connectionThrottler, _logger);
     }
 
     [Fact]
@@ -63,7 +84,7 @@ public class TransportSelectorTests
     {
         // Arrange
         var options = new MeshTransportOptions { Tor = new TorTransportOptions { Enabled = false } };
-        var selector = new TransportSelector(options, _dialers, null!);
+        var selector = CreateSelector(options);
 
         var descriptor = new MeshPeerDescriptor
         {
@@ -160,7 +181,7 @@ public class TransportSelectorTests
     {
         // Arrange
         var options = new MeshTransportOptions { Tor = new TorTransportOptions { Enabled = false } };
-        var selector = new TransportSelector(options, _dialers, null!);
+        var selector = CreateSelector(options);
 
         var endpoint = new TransportEndpoint
         {
@@ -184,7 +205,7 @@ public class TransportSelectorTests
         {
             Tor = new TorTransportOptions { Enabled = true, AllowDataOverTor = false }
         };
-        var selector = new TransportSelector(options, _dialers, null!);
+        var selector = CreateSelector(options);
 
         var endpoint = new TransportEndpoint
         {
@@ -225,6 +246,9 @@ public class TransportSelectorTests
         {
             throw new NotImplementedException();
         }
+
+        public Task<Stream> DialWithPeerValidationAsync(TransportEndpoint endpoint, string peerId, string? isolationKey = null, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
 
         public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_isAvailable);

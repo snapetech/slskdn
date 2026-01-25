@@ -21,7 +21,7 @@ After completing task validation and updating checkboxes, we need to:
 - `NEXT_STEPS.md` - References old branch, merge complete
 
 ### Keep (Still Relevant)
-- `GRADUATION_STATUS.md` - Current status tracking
+- [GRADUATION_STATUS.md](GRADUATION_STATUS.md) - Current status tracking
 
 ---
 
@@ -29,12 +29,12 @@ After completing task validation and updating checkboxes, we need to:
 
 ### Branch Reference Updates (experimental/whatAmIThinking → master)
 - `README.md` - Update any remaining branch references
-- `FEATURES.md` - Update branch references
+- [FEATURES.md](../FEATURES.md) - Update branch references
 - `memory-bank/tasks.md` - Update branch references
 - `memory-bank/activeContext.md` - Update branch references
 - `memory-bank/progress.md` - Update branch references
 - `docs/security/*.md` - Check for outdated references
-- `SERVICE_FABRIC_TASKS.md` - Check for outdated references
+- [SERVICE_FABRIC_TASKS.md](../SERVICE_FABRIC_TASKS.md) - Check for outdated references
 
 ### Language Updates (experimental → stable)
 - Remove "experimental" markers from stable features

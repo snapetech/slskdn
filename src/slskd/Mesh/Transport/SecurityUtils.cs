@@ -154,6 +154,18 @@ public static class SecurityUtils
             return null;
         }
     }
+
+    /// <summary>
+    /// Safely parses a JSON payload with size and depth limits. See <see cref="PayloadParser.ParseJsonSafely{T}"/>.
+    /// </summary>
+    public static T? ParseJsonSafely<T>(string json, int maxSize = MaxRemotePayloadSize, int maxDepth = MaxParseDepth)
+        => PayloadParser.ParseJsonSafely<T>(json, maxSize, maxDepth);
+
+    /// <summary>
+    /// Safely parses a MessagePack payload with size limits. See <see cref="PayloadParser.ParseMessagePackSafely{T}"/>.
+    /// </summary>
+    public static T? ParseMessagePackSafely<T>(byte[] data, int maxSize = MaxRemotePayloadSize)
+        => PayloadParser.ParseMessagePackSafely<T>(data, maxSize);
 }
 
 /// <summary>
@@ -382,9 +394,8 @@ public static class PayloadParser
             throw new ArgumentException($"JSON payload exceeds maximum size of {maxSize} bytes", nameof(json));
         }
 
-        // Note: In production, you'd configure the JSON serializer with MaxDepth
-        // For now, we'll just check size and use standard deserialization
-        return System.Text.Json.JsonSerializer.Deserialize<T>(json);
+        var opts = new System.Text.Json.JsonSerializerOptions { MaxDepth = maxDepth };
+        return System.Text.Json.JsonSerializer.Deserialize<T>(json, opts);
     }
 
     /// <summary>

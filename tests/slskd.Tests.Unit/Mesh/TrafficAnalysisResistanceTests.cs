@@ -31,10 +31,7 @@ public class TrafficAnalysisResistanceTests
     {
         Assert.True(true, "Placeholder test - TrafficAnalysisResistanceTests.StatisticalAnalysis not yet implemented");
     }
-}
 
-public class TrafficAnalysisResistanceTests
-{
     public static bool ValidatePaddingObfuscation(byte[] originalData, byte[] paddedData)
     {
         throw new NotImplementedException("TrafficAnalysisResistanceTests not yet implemented");

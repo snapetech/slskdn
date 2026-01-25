@@ -28,10 +28,10 @@ namespace slskd.Tests.Unit.Common.Security
             // Arrange
             var identities = new Dictionary<string, string>
             {
-                ["mesh"] = "abc123def456",
+                ["mesh"] = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", // 64 chars: valid Mesh, >50 so not LocalUser, >30 so not Soulseek
                 ["soulseek"] = "user123",
                 ["pod"] = "pod:abc123def4567890",
-                ["localuser"] = "admin"
+                ["localuser"] = "admin@local"
             };
 
             // Act
@@ -97,7 +97,8 @@ namespace slskd.Tests.Unit.Common.Security
             Assert.Equal(2, result.UnsafeCount);
             Assert.Contains("bridge:user123", result.UnsafeIds);
             Assert.Contains("user@domain.com", result.UnsafeIds);
-            Assert.Equal(2, result.ViolationStats["Soulseek"]);
+            Assert.Equal(1, result.ViolationStats["Soulseek"]);   // bridge:user123
+            Assert.Equal(1, result.ViolationStats["LocalUser"]); // user@domain.com
         }
 
         [Fact]

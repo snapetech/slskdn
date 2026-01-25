@@ -2,6 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Privacy;

@@ -147,11 +147,16 @@
 #       password: ~
 #   url_base: /
 #   content_path: wwwroot
+#   enforce_security: false   # PR-01: when true, strict auth/CORS/startup checks; ModelState 400 when invalid
+#   allow_remote_no_auth: false  # when no-auth, allow non-loopback only if true
+#   max_request_body_size: 10485760  # PR-09: Kestrel Limits.MaxRequestBodySize in bytes; default 10 MB
 #   logging: false
 #   authentication:
 #     disabled: false
 #     username: slskd
 #     password: slskd
+#     passthrough:              # PR-03: when no-auth, AllowedCidrs can allow non-loopback in addition to loopback
+#       allowed_cidrs: ~        # optional; e.g. 127.0.0.1/32,::1/128
 #     jwt:
 #       key: ~
 #       ttl: 604800000
@@ -160,6 +165,20 @@
 #         key: <some example string between 16 and 255 characters>
 #         role: readonly # readonly, readwrite, administrator
 #         cidr: 0.0.0.0/0,::/0
+#   cors:
+#     enabled: false
+#     allowed_origins: []       # e.g. [https://app.example.com] when enabled; required when enabled
+#     allow_credentials: false
+#     allowed_headers: []       # empty = any
+#     allowed_methods: []       # empty = any
+#   rate_limiting:              # PR-09: HTTP rate limits (api, federation inbox, mesh gateway). Per-IP.
+#     enabled: true
+#     api_permit_limit: 200
+#     api_window_seconds: 60
+#     federation_permit_limit: 30
+#     federation_window_seconds: 60
+#     mesh_gateway_permit_limit: 60
+#     mesh_gateway_window_seconds: 60
 # retention:
 #   search: 10080 # 7 days, in minutes
 #   transfers:
@@ -179,6 +198,9 @@
 #   disk: false
 #   no_color: false
 #   loki: ~
+# diagnostics:
+#   allow_memory_dump: false   # when false, /api/v0/application/dump returns 404
+#   allow_remote_dump: false   # when false, dump allowed only from loopback (127.0.0.1, ::1)
 # metrics:
 #   enabled: false
 #   url: /metrics
@@ -186,6 +208,10 @@
 #     disabled: false
 #     username: slskd
 #     password: slskd
+# PodCore.Security (MessageSigner). PR-12. Binds to PodCore:Security.
+# PodCore:
+#   Security:
+#     SignatureMode: Off   # Off | Warn | Enforce
 # feature:
 #   swagger: false
 # security:
@@ -215,6 +241,11 @@
 #     enabled: true
 #     trusted_threshold: 70
 #     untrusted_threshold: 20
+#   adversarial:  # Security:Adversarial (privacy, padding, etc.)
+#     privacy:
+#       padding:
+#         max_unpadded_bytes: 0  # 0=default 1MB. PR-11 DoS limit for Unpad.
+#         max_padded_bytes: 0    # 0=default 2MB. PR-11 DoS limit for Unpad.
 # soulseek:
 #   address: vps.slsknet.org
 #   port: 2271
@@ -330,3 +361,8 @@
 #     notify_on_room_mention: true
 #     retry_attempts: 3
 #     cooldown_time: 900000
+# Mesh.Security (PR-01, §8). Binds to Mesh:Security when Mesh section is used.
+# mesh:
+#   security:
+#     enforceRemotePayloadLimits: true   # when true, enforce max size and safe deserialization on overlay/transport
+#     maxRemotePayloadSize: 1048576      # 1 MiB; max for remote JSON/MessagePack payloads

@@ -250,6 +250,14 @@ namespace slskd.PodCore
         }
 
         /// <summary>
+        /// Validates pod name (non-empty, within length).
+        /// </summary>
+        public static bool IsValidPodName(string? podName)
+        {
+            return !string.IsNullOrWhiteSpace(podName) && podName!.Trim().Length <= MaxPodNameLength;
+        }
+
+        /// <summary>
         /// Validates pod private service policy.
         /// </summary>
         public static (bool IsValid, string Error) ValidatePrivateServicePolicy(PodPrivateServicePolicy policy, List<PodMember> members)

@@ -2,10 +2,13 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Mesh;
+using slskd.Messaging;
 using slskd.PodCore;
 using Xunit;
 
@@ -51,8 +54,9 @@ public class ConversationPodCoordinatorTests : IDisposable
         var expectedPodId = PodIdFactory.ConversationPodId(new[] { "peer:mesh:self", "bridge:testuser" });
         var expectedChannelId = "dm";
 
-        _podServiceMock.Setup(x => x.PodExistsAsync(expectedPodId)).ReturnsAsync(false);
-        _podServiceMock.Setup(x => x.CreatePodAsync(It.IsAny<Pod>())).ReturnsAsync(expectedPodId);
+        _podServiceMock.Setup(x => x.GetPodAsync(expectedPodId, default)).ReturnsAsync((Pod?)null);
+        _podServiceMock.Setup(x => x.CreateAsync(It.IsAny<Pod>(), default)).Returns<Pod, CancellationToken>((p, _) => Task.FromResult(p));
+        _podServiceMock.Setup(x => x.JoinAsync(It.IsAny<string>(), It.IsAny<PodMember>(), default)).ReturnsAsync(true);
 
         // Act
         var result = await _coordinator.EnsureDirectMessagePodAsync(username);
@@ -60,14 +64,15 @@ public class ConversationPodCoordinatorTests : IDisposable
         // Assert
         Assert.Equal((expectedPodId, expectedChannelId), result);
 
-        _podServiceMock.Verify(x => x.PodExistsAsync(expectedPodId), Times.Once);
-        _podServiceMock.Verify(x => x.CreatePodAsync(It.Is<Pod>(p =>
+        _podServiceMock.Verify(x => x.GetPodAsync(expectedPodId, default), Times.Once);
+        _podServiceMock.Verify(x => x.CreateAsync(It.Is<Pod>(p =>
             p.PodId == expectedPodId &&
             p.Name == username &&
-            p.Visibility == Visibility.Private &&
+            p.Visibility == PodVisibility.Private &&
             p.Tags != null && p.Tags.Contains("dm") &&
             p.Channels != null && p.Channels.Any(c => c.ChannelId == "dm")
-        )), Times.Once);
+        ), default), Times.Once);
+        _podServiceMock.Verify(x => x.JoinAsync(It.IsAny<string>(), It.IsAny<PodMember>(), default), Times.Exactly(2));
     }
 
     [Fact]
@@ -78,7 +83,7 @@ public class ConversationPodCoordinatorTests : IDisposable
         var expectedPodId = PodIdFactory.ConversationPodId(new[] { "peer:mesh:self", "bridge:testuser" });
         var expectedChannelId = "dm";
 
-        _podServiceMock.Setup(x => x.PodExistsAsync(expectedPodId)).ReturnsAsync(true);
+        _podServiceMock.Setup(x => x.GetPodAsync(expectedPodId, default)).ReturnsAsync(new Pod { PodId = expectedPodId });
 
         // Act
         var result = await _coordinator.EnsureDirectMessagePodAsync(username);
@@ -86,8 +91,8 @@ public class ConversationPodCoordinatorTests : IDisposable
         // Assert
         Assert.Equal((expectedPodId, expectedChannelId), result);
 
-        _podServiceMock.Verify(x => x.PodExistsAsync(expectedPodId), Times.Once);
-        _podServiceMock.Verify(x => x.CreatePodAsync(It.IsAny<Pod>()), Times.Never);
+        _podServiceMock.Verify(x => x.GetPodAsync(expectedPodId, default), Times.Once);
+        _podServiceMock.Verify(x => x.CreateAsync(It.IsAny<Pod>(), default), Times.Never);
     }
 
     [Fact]
@@ -114,10 +119,11 @@ public class ConversationPodCoordinatorTests : IDisposable
         var expectedPodId = PodIdFactory.ConversationPodId(new[] { "peer:mesh:self", "bridge:testuser" });
 
         Pod? createdPod = null;
-        _podServiceMock.Setup(x => x.PodExistsAsync(expectedPodId)).ReturnsAsync(false);
-        _podServiceMock.Setup(x => x.CreatePodAsync(It.IsAny<Pod>()))
-            .Callback<Pod>(p => createdPod = p)
-            .ReturnsAsync(expectedPodId);
+        _podServiceMock.Setup(x => x.GetPodAsync(expectedPodId, default)).ReturnsAsync((Pod?)null);
+        _podServiceMock.Setup(x => x.CreateAsync(It.IsAny<Pod>(), default))
+            .Callback<Pod, CancellationToken>((p, _) => createdPod = p)
+            .Returns<Pod, CancellationToken>((p, _) => Task.FromResult(p));
+        _podServiceMock.Setup(x => x.JoinAsync(It.IsAny<string>(), It.IsAny<PodMember>(), default)).ReturnsAsync(true);
 
         // Act
         await _coordinator.EnsureDirectMessagePodAsync(username);
@@ -126,7 +132,7 @@ public class ConversationPodCoordinatorTests : IDisposable
         Assert.NotNull(createdPod);
         Assert.Equal(expectedPodId, createdPod!.PodId);
         Assert.Equal(username, createdPod.Name);
-        Assert.Equal(Visibility.Private, createdPod.Visibility);
+        Assert.Equal(PodVisibility.Private, createdPod.Visibility);
         Assert.Contains("dm", createdPod.Tags!);
 
         // Check channels
@@ -134,7 +140,7 @@ public class ConversationPodCoordinatorTests : IDisposable
         var dmChannel = createdPod.Channels!.FirstOrDefault(c => c.ChannelId == "dm");
         Assert.NotNull(dmChannel);
         Assert.Equal("DM", dmChannel!.Name);
-        Assert.Equal(ChannelKind.DirectMessage, dmChannel.Kind);
+        Assert.Equal(PodChannelKind.DirectMessage, dmChannel.Kind);
         Assert.Equal($"soulseek-dm:{username}", dmChannel.BindingInfo);
     }
 
@@ -145,30 +151,18 @@ public class ConversationPodCoordinatorTests : IDisposable
         var username = "testuser";
         var expectedPodId = PodIdFactory.ConversationPodId(new[] { "peer:mesh:self", "bridge:testuser" });
 
-        Pod? createdPod = null;
-        _podServiceMock.Setup(x => x.PodExistsAsync(expectedPodId)).ReturnsAsync(false);
-        _podServiceMock.Setup(x => x.CreatePodAsync(It.IsAny<Pod>()))
-            .Callback<Pod>(p => createdPod = p)
-            .ReturnsAsync(expectedPodId);
+        _podServiceMock.Setup(x => x.GetPodAsync(expectedPodId, default)).ReturnsAsync((Pod?)null);
+        _podServiceMock.Setup(x => x.CreateAsync(It.IsAny<Pod>(), default)).Returns<Pod, CancellationToken>((p, _) => Task.FromResult(p));
+        _podServiceMock.Setup(x => x.JoinAsync(It.IsAny<string>(), It.IsAny<PodMember>(), default)).ReturnsAsync(true);
 
         // Act
         await _coordinator.EnsureDirectMessagePodAsync(username);
 
-        // Assert
-        Assert.NotNull(createdPod);
-        Assert.NotNull(createdPod!.Members);
-
-        var selfMember = createdPod.Members!.FirstOrDefault(m => m.PeerId == "peer:mesh:self");
-        var otherMember = createdPod.Members!.FirstOrDefault(m => m.PeerId == "bridge:testuser");
-
-        Assert.NotNull(selfMember);
-        Assert.NotNull(otherMember);
-
-        Assert.Equal(PodRole.Owner, selfMember!.Role);
-        Assert.Equal(PodRole.Member, otherMember!.Role);
-
-        Assert.NotNull(selfMember.JoinedAt);
-        Assert.NotNull(otherMember.JoinedAt);
+        // Assert: coordinator adds self as Owner and remote as Member via JoinAsync
+        _podServiceMock.Verify(x => x.JoinAsync(expectedPodId, It.Is<PodMember>(m =>
+            m.PeerId == "peer:mesh:self" && m.Role == PodRoles.Owner && m.JoinedAt != null), default), Times.Once);
+        _podServiceMock.Verify(x => x.JoinAsync(expectedPodId, It.Is<PodMember>(m =>
+            m.PeerId == "bridge:testuser" && m.Role == PodRoles.Member && m.JoinedAt != null), default), Times.Once);
     }
 
     [Fact]
@@ -178,8 +172,8 @@ public class ConversationPodCoordinatorTests : IDisposable
         var username = "testuser";
         var expectedPodId = PodIdFactory.ConversationPodId(new[] { "peer:mesh:self", "bridge:testuser" });
 
-        _podServiceMock.Setup(x => x.PodExistsAsync(expectedPodId)).ReturnsAsync(false);
-        _podServiceMock.Setup(x => x.CreatePodAsync(It.IsAny<Pod>()))
+        _podServiceMock.Setup(x => x.GetPodAsync(expectedPodId, default)).ReturnsAsync((Pod?)null);
+        _podServiceMock.Setup(x => x.CreateAsync(It.IsAny<Pod>(), default))
             .ThrowsAsync(new InvalidOperationException("Creation failed"));
 
         // Act & Assert
@@ -194,8 +188,11 @@ public class ConversationPodCoordinatorTests : IDisposable
         var username = "testuser";
         var expectedPodId = PodIdFactory.ConversationPodId(new[] { "peer:mesh:self", "bridge:testuser" });
 
-        _podServiceMock.Setup(x => x.PodExistsAsync(expectedPodId)).ReturnsAsync(false);
-        _podServiceMock.Setup(x => x.CreatePodAsync(It.IsAny<Pod>())).ReturnsAsync(expectedPodId);
+        _podServiceMock.SetupSequence(x => x.GetPodAsync(expectedPodId, default))
+            .ReturnsAsync((Pod?)null)
+            .ReturnsAsync(new Pod { PodId = expectedPodId });
+        _podServiceMock.Setup(x => x.CreateAsync(It.IsAny<Pod>(), default)).Returns<Pod, CancellationToken>((p, _) => Task.FromResult(p));
+        _podServiceMock.Setup(x => x.JoinAsync(It.IsAny<string>(), It.IsAny<PodMember>(), default)).ReturnsAsync(true);
 
         // Act - Call multiple times
         var result1 = await _coordinator.EnsureDirectMessagePodAsync(username);
@@ -203,7 +200,7 @@ public class ConversationPodCoordinatorTests : IDisposable
 
         // Assert
         Assert.Equal(result1, result2);
-        _podServiceMock.Verify(x => x.CreatePodAsync(It.IsAny<Pod>()), Times.Once);
+        _podServiceMock.Verify(x => x.CreateAsync(It.IsAny<Pod>(), default), Times.Once);
     }
 
     [Fact]
@@ -215,5 +212,3 @@ public class ConversationPodCoordinatorTests : IDisposable
         // Assert - No exceptions thrown
     }
 }
-
-

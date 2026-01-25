@@ -5,8 +5,11 @@
 using MessagePack;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using slskd.Common.Security;
+using slskd.Mesh;
 using slskd.Mesh.ServiceFabric;
+using slskd.Mesh.Transport;
 using slskd.PodCore;
 using System;
 using System.Collections.Concurrent;
@@ -32,6 +35,7 @@ public class PrivateGatewayMeshService : IMeshService
     private readonly IPodService _podService;
     private readonly IServiceProvider _serviceProvider;
     private readonly DnsSecurityService _dnsSecurity;
+    private readonly int _maxPayload;
 
     // Active tunnels: tunnelId -> TunnelSession
     private readonly ConcurrentDictionary<string, TunnelSession> _activeTunnels = new();
@@ -51,12 +55,14 @@ public class PrivateGatewayMeshService : IMeshService
     public PrivateGatewayMeshService(
         ILogger<PrivateGatewayMeshService> logger,
         IPodService podService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger;
         _podService = podService;
         _serviceProvider = serviceProvider;
         _dnsSecurity = serviceProvider.GetRequiredService<DnsSecurityService>();
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? slskd.Mesh.Transport.SecurityUtils.MaxRemotePayloadSize;
 
         // Start cleanup task
         _ = Task.Run(CleanupExpiredTunnelsAsync);
@@ -116,8 +122,8 @@ public class PrivateGatewayMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        // Input validation and sanitization
-        var request = JsonSerializer.Deserialize<OpenTunnelRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<OpenTunnelRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null)
         {
             return new ServiceReply
@@ -484,7 +490,8 @@ public class PrivateGatewayMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<TunnelDataRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<TunnelDataRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.TunnelId))
         {
             return new ServiceReply
@@ -567,7 +574,8 @@ public class PrivateGatewayMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<GetTunnelDataRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<GetTunnelDataRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.TunnelId))
         {
             return new ServiceReply
@@ -672,7 +680,8 @@ public class PrivateGatewayMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<CloseTunnelRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<CloseTunnelRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.TunnelId))
         {
             return new ServiceReply

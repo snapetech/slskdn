@@ -34,10 +34,14 @@ namespace slskd.Transfers
     public class ScheduledRateLimitService : IScheduledRateLimitService
     {
         private readonly IOptionsMonitor<Options> _optionsMonitor;
+        private readonly Func<DateTime> _getNow;
 
-        public ScheduledRateLimitService(IOptionsMonitor<Options> optionsMonitor)
+        /// <param name="optionsMonitor">Options.</param>
+        /// <param name="getNow">Time provider for testing; when null, uses DateTime.Now.</param>
+        public ScheduledRateLimitService(IOptionsMonitor<Options> optionsMonitor, Func<DateTime>? getNow = null)
         {
             _optionsMonitor = optionsMonitor;
+            _getNow = getNow ?? (() => DateTime.Now);
         }
 
         /// <summary>
@@ -85,7 +89,7 @@ namespace slskd.Transfers
                 return false;
             }
 
-            var now = DateTime.Now;
+            var now = _getNow();
             var currentHour = now.Hour;
 
             var nightStart = scheduledLimits.NightStartHour;

@@ -108,7 +108,7 @@
 - [x] Add links to historical docs:
   - Development history: `DEVELOPMENT_HISTORY.md`
   - Fork vision: `FORK_VISION.md`
-  - Features: `FEATURES.md` (if exists)
+  - Features: [FEATURES.md](../../FEATURES.md) (if exists)
 - [x] Verify all existing links work
 - [x] Add "Documentation" section with index
 

@@ -186,7 +186,7 @@ Zero-trust security framework with defense-in-depth:
 - **Security dashboard** — Real-time monitoring in Web UI (System → Security tab)
 
 
-📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [Guidelines](SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
+📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [Guidelines](docs/SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
 
 ### 🎵 MusicBrainz Integration & Library Health
 Automated metadata enrichment and quality assurance.
@@ -222,7 +222,7 @@ Decentralized content discovery without relying solely on the Soulseek network.
 - **Scene System** — Topic-based micro-networks for niche content
 
 
-📖 **Design docs**: [VirtualSoulfind v2](docs/virtualsoulfind-v2-design.md) • [Implementation design](docs/phase6-virtual-soulfind-implementation-design.md) • [User guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Content domains](VIRTUALSOULFIND-CONTENT-DOMAINS.md)
+📖 **Design docs**: [VirtualSoulfind v2](docs/virtualsoulfind-v2-design.md) • [Implementation design](docs/phase6-virtual-soulfind-implementation-design.md) • [User guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Content domains](docs/VIRTUALSOULFIND-CONTENT-DOMAINS.md)
 
 ### 🔧 Service Fabric
 Generic service layer for mesh-based applications.
@@ -233,7 +233,7 @@ Generic service layer for mesh-based applications.
 - **Service wrappers** — Pods, VirtualSoulfind, introspection wrapped as services
 
 
-📖 **Design docs**: [Service Fabric tasks](SERVICE_FABRIC_TASKS.md) • [Security audit](T-SF05-AUDIT.md) • [How it works](HOW-IT-WORKS.md)
+📖 **Design docs**: [Service Fabric tasks](docs/SERVICE_FABRIC_TASKS.md) • [Security audit](docs/T-SF05-AUDIT.md) • [How it works](docs/HOW-IT-WORKS.md)
 
 ---
 
@@ -447,8 +447,8 @@ Detailed documentation for configuration options can be found [here](https://git
 
 | Document | Description |
 |----------|-------------|
-| [Features Overview](FEATURES.md) | Complete feature list and configuration |
-| [How It Works](HOW-IT-WORKS.md) | Technical architecture and design |
+| [Features Overview](docs/FEATURES.md) | Complete feature list and configuration |
+| [How It Works](docs/HOW-IT-WORKS.md) | Technical architecture and design |
 | [Multi-Source Downloads](docs/multipart-downloads.md) | Network impact analysis |
 | [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) | Peer discovery architecture |
 | [Security Specs](docs/SECURITY_IMPLEMENTATION_SPECS.md) | Security feature details |
@@ -501,9 +501,9 @@ cd src/web && npm install && npm start  # Frontend
 ```
 
 For experimental features, see:
-- [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md) - Security requirements
-- [CURSOR-WARNINGS.md](CURSOR-WARNINGS.md) - LLM implementation risk assessment
-- [SERVICE_FABRIC_TASKS.md](SERVICE_FABRIC_TASKS.md) - Task breakdowns
+- [SECURITY-GUIDELINES.md](docs/SECURITY-GUIDELINES.md) - Security requirements
+- [CURSOR-WARNINGS.md](docs/CURSOR-WARNINGS.md) - LLM implementation risk assessment
+- [SERVICE_FABRIC_TASKS.md](docs/SERVICE_FABRIC_TASKS.md) - Task breakdowns
 
 ---
 

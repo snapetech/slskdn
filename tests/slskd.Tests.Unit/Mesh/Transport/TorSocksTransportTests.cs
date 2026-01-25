@@ -2,6 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -190,9 +191,9 @@ public class TorSocksTransportTests : IDisposable
         var circuitPoolField = typeof(TorSocksTransport).GetField("_circuitPool",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        var circuitPool = circuitPoolField?.GetValue(transport) as System.Collections.Concurrent.ConcurrentDictionary<string, object>;
+        var circuitPool = circuitPoolField?.GetValue(transport);
 
-        // Assert - Circuit pool should exist
+        // Assert - Circuit pool should exist (runtime type is ConcurrentDictionary<string, IsolationCircuit>)
         Assert.NotNull(circuitPool);
     }
 

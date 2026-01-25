@@ -34,17 +34,41 @@ namespace slskd.Messaging
         /// </summary>
         /// <param name="userId1">First user ID.</param>
         /// <param name="userId2">Second user ID.</param>
-        /// <returns>A deterministic pod ID for the conversation.</returns>
+        /// <returns>A deterministic pod ID for the conversation (format: pod: + 32 hex chars).</returns>
         public static string ConversationPodId(string userId1, string userId2)
         {
             // Sort user IDs to ensure consistent pod ID regardless of order
             var users = new[] { userId1, userId2 };
             Array.Sort(users, StringComparer.Ordinal);
-            
+
             var input = $"conversation:{users[0]}:{users[1]}";
             using var sha = SHA256.Create();
             var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return $"pod:conv:{Convert.ToHexString(hash).Substring(0, 16).ToLowerInvariant()}";
+            var hex = Convert.ToHexString(hash).ToLowerInvariant();
+            return $"pod:{hex.Substring(0, 32)}";
+        }
+
+        /// <summary>
+        /// Generates a conversation-specific pod ID from an array of exactly two peer IDs.
+        /// </summary>
+        /// <param name="peerIds">Exactly two peer IDs (e.g. self and remote).</param>
+        /// <returns>A deterministic pod ID for the conversation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="peerIds"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="peerIds"/> does not have exactly two elements.</exception>
+        public static string ConversationPodId(string[] peerIds)
+        {
+            if (peerIds == null)
+                throw new ArgumentNullException(nameof(peerIds));
+            if (peerIds.Length != 2)
+                throw new ArgumentException("Exactly two peer IDs are required.", nameof(peerIds));
+            for (int i = 0; i < peerIds.Length; i++)
+            {
+                if (peerIds[i] == null)
+                    throw new ArgumentException("Peer IDs must be non-null.", nameof(peerIds));
+                if (string.IsNullOrWhiteSpace(peerIds[i]))
+                    throw new ArgumentException("Peer IDs must be non-empty.", nameof(peerIds));
+            }
+            return ConversationPodId(peerIds[0], peerIds[1]);
         }
     }
 }

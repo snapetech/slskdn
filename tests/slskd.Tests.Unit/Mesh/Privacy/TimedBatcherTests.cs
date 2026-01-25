@@ -130,17 +130,15 @@ public class TimedBatcherTests : IDisposable
     [Fact]
     public void GetBatch_WhenBatchReady_ReturnsMessages()
     {
-        // Arrange
+        // Arrange - fill to maxBatchSize so IsBatchReady is true (Flush only deactivates; it doesn't make GetBatch return)
+        var batcher = new TimedBatcher(_loggerMock.Object, 10.0, 2);
         var message1 = new byte[] { 1, 2, 3 };
         var message2 = new byte[] { 4, 5, 6 };
-        _batcher.AddMessage(message1);
-        _batcher.AddMessage(message2);
-
-        // Force batch ready
-        _batcher.Flush();
+        batcher.AddMessage(message1);
+        batcher.AddMessage(message2);
 
         // Act
-        var batch = _batcher.GetBatch();
+        var batch = batcher.GetBatch();
 
         // Assert
         Assert.NotNull(batch);
@@ -152,32 +150,32 @@ public class TimedBatcherTests : IDisposable
     [Fact]
     public void GetBatch_AfterGettingBatch_ClearsBatch()
     {
-        // Arrange
-        _batcher.AddMessage(new byte[] { 1 });
-        _batcher.Flush();
+        // Arrange - max 1 so one message makes batch ready; GetBatch consumes and clears
+        var batcher = new TimedBatcher(_loggerMock.Object, 10.0, 1);
+        batcher.AddMessage(new byte[] { 1 });
 
         // Act
-        var batch = _batcher.GetBatch();
-        var secondBatch = _batcher.GetBatch();
+        var batch = batcher.GetBatch();
+        var secondBatch = batcher.GetBatch();
 
         // Assert
         Assert.NotNull(batch);
         Assert.Null(secondBatch);
-        Assert.Equal(0, _batcher.CurrentBatchSize);
-        Assert.False(_batcher.HasBatch);
+        Assert.Equal(0, batcher.CurrentBatchSize);
+        Assert.False(batcher.HasBatch);
     }
 
     [Fact]
-    public void Flush_WhenBatchActive_ClearsBatch()
+    public void Flush_WhenBatchActive_DeactivatesBatch()
     {
         // Arrange
         _batcher.AddMessage(new byte[] { 1, 2, 3 });
 
-        // Act
+        // Act - Flush sets _isBatchActive=false; messages remain in queue until GetBatch when ready
         _batcher.Flush();
 
-        // Assert
-        Assert.True(_batcher.HasBatch);
+        // Assert - HasBatch is false (batch no longer active); queue unchanged
+        Assert.False(_batcher.HasBatch);
         Assert.Equal(1, _batcher.CurrentBatchSize);
     }
 
@@ -211,16 +209,14 @@ public class TimedBatcherTests : IDisposable
     }
 
     [Fact]
-    public void HasBatch_AfterFlush_ReturnsTrue()
+    public void HasBatch_WhenMaxReached_ReturnsTrue()
     {
-        // Arrange
-        _batcher.AddMessage(new byte[] { 1 });
-
-        // Act
-        _batcher.Flush();
+        // Arrange - max 1 so one message makes batch ready (Flush deactivates, it doesn't make HasBatch true)
+        var batcher = new TimedBatcher(_loggerMock.Object, 10.0, 1);
+        batcher.AddMessage(new byte[] { 1 });
 
         // Assert
-        Assert.True(_batcher.HasBatch);
+        Assert.True(batcher.HasBatch);
     }
 
     [Fact]

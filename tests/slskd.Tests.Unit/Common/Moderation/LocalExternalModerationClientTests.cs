@@ -14,6 +14,7 @@ namespace slskd.Tests.Unit.Common.Moderation
     using Microsoft.Extensions.Options;
     using Moq;
     using Moq.Protected;
+    using slskd.Common.Moderation;
     using Xunit;
 
     /// <summary>
@@ -49,7 +50,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         {
             // Arrange
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             var localResponse = new
             {
@@ -81,7 +82,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             });
 
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             var localResponse = new
             {
@@ -103,16 +104,16 @@ namespace slskd.Tests.Unit.Common.Moderation
         [Fact]
         public async Task AnalyzeFileAsync_WithRemoteDomain_ReturnsUnknown()
         {
-            // Arrange
+            // Arrange: for Local mode, only localhost, 127.0.0.1, ::1, local IPs, or AllowedDomains are valid. api.example.com is not in AllowedDomains.
             _optionsMock.Setup(x => x.CurrentValue).Returns(new ExternalModerationOptions
             {
                 Mode = "Local",
-                Endpoint = "http://api.example.com/api", // Remote domain not allowed for local mode
-                AllowedDomains = new[] { "api.example.com" } // Even if explicitly allowed
+                Endpoint = "http://api.example.com/api",
+                AllowedDomains = Array.Empty<string>()
             });
 
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             // Act
             var result = await client.AnalyzeFileAsync(file);
@@ -141,7 +142,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             });
 
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             var localResponse = new
             {
@@ -164,7 +165,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         {
             // Arrange
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash123456789", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash123456789", MediaInfo = "audio/mp3" };
 
             var capturedRequest = default(HttpRequestMessage);
             _httpHandlerMock.Protected()
@@ -199,7 +200,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         {
             // Arrange
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             SetupHttpResponse(null, HttpStatusCode.ServiceUnavailable);
 
@@ -221,7 +222,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             });
 
             var client = CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             // Act
             var result = await client.AnalyzeFileAsync(file);

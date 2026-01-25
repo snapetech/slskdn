@@ -8,12 +8,12 @@
 
 ### Phase 1: Pre-Merge Preparation ✅
 - [x] Updated `memory-bank/tasks.md` - Marked T-001 through T-005 as complete
-- [x] Updated `DEVELOPMENT_HISTORY.md` - Updated phase completion percentages:
+- [x] Updated [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md) - Updated phase completion percentages:
   - Phase 2: Smart Automation → 100% Complete
   - Phase 4: User Management → 75% Complete
   - Phase 5: Dashboard & Statistics → 20% Complete
   - Phase 8: UI Polish → 85% Complete
-- [x] Updated `FORK_VISION.md` - Marked completed features with task IDs and dates
+- [x] Updated [FORK_VISION.md](FORK_VISION.md) - Marked completed features with task IDs and dates
 
 ### Phase 2: README Updates ✅
 - [x] Removed experimental markers (🧪) from stable features
@@ -36,10 +36,10 @@ All documentation links in README.md point to files that exist in `whatAmIThinki
 - ✅ `docs/SECURITY_IMPLEMENTATION_SPECS.md`
 - ✅ `docs/security/CSRF_TESTING_GUIDE.md`
 - ✅ `docs/security/SECURITY_COMPARISON_ANALYSIS.md`
-- ✅ `HOW-IT-WORKS.md`
-- ✅ `FEATURES.md`
-- ✅ `DEVELOPMENT_HISTORY.md`
-- ✅ `FORK_VISION.md`
+- ✅ [HOW-IT-WORKS.md](../HOW-IT-WORKS.md)
+- ✅ [FEATURES.md](../FEATURES.md)
+- ✅ [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md)
+- ✅ [FORK_VISION.md](FORK_VISION.md)
 
 ## Commits Ready for Merge
 
@@ -58,8 +58,8 @@ All documentation links in README.md point to files that exist in `whatAmIThinki
 ## Files Changed
 
 - `memory-bank/tasks.md` - Task status updates
-- `DEVELOPMENT_HISTORY.md` - Phase completion updates
-- `FORK_VISION.md` - Feature completion updates
+- [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md) - Phase completion updates
+- [FORK_VISION.md](FORK_VISION.md) - Feature completion updates
 - `README.md` - Feature graduation and documentation links
 - `docs/README.md` - Comprehensive documentation index
 

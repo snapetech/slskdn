@@ -27,7 +27,7 @@ Video content requires:
 **MANDATORY for all T-VID tasks:**
 - Follow `docs/CURSOR-META-INSTRUCTIONS.md`
 - Follow `docs/security-hardening-guidelines.md`
-- Follow `MCP-HARDENING.md` (video files subject to moderation)
+- Follow [MCP-HARDENING.md](../../MCP-HARDENING.md) (video files subject to moderation)
 - Work budgets for all external API calls (TMDB/TVDB)
 - SSRF protection via catalogue-fetch service
 - No Soulseek backend usage for video domains

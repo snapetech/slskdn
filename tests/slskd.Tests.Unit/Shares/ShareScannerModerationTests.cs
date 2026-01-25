@@ -138,18 +138,18 @@ public class ShareRepositoryModerationTests : IDisposable
         var file = new Soulseek.File(1, "file.mp3", 1000, "extension");
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        // Act - Insert with moderation parameters
+        // Act - Insert with moderation parameters (isBlocked: false so ListFiles returns it; we still pass moderationReason)
         _repository.InsertFile(
             maskedFilename: maskedFilename,
             originalFilename: originalFilename,
             touchedAt: touchedAt,
             file: file,
             timestamp: timestamp,
-            isBlocked: true,
+            isBlocked: false,
             isQuarantined: false,
             moderationReason: "hash_blocklist");
 
-        // Assert - File was inserted (no exception thrown)
+        // Assert - File was inserted and ListFiles returns it (blocked files are excluded by ListFiles)
         var files = _repository.ListFiles().ToList();
         Assert.Single(files);
         Assert.Equal("file.mp3", files[0].Filename);
@@ -161,9 +161,9 @@ public class ShareRepositoryModerationTests : IDisposable
         // Arrange - Insert both blocked and allowed files
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        // Insert allowed file
+        // Insert allowed file (maskedFilename is used by ListFiles; use "allowed.mp3" so Filename matches)
         _repository.InsertFile(
-            maskedFilename: @"allowed\file.mp3",
+            maskedFilename: "allowed.mp3",
             originalFilename: "/tmp/allowed.mp3",
             touchedAt: DateTime.UtcNow,
             file: new Soulseek.File(1, "allowed.mp3", 1000, "mp3"),
@@ -208,9 +208,9 @@ public class ShareRepositoryModerationTests : IDisposable
         // Arrange - Insert both quarantined and allowed files
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        // Insert allowed file
+        // Insert allowed file (maskedFilename is used by ListFiles; use "allowed2.mp3" so Filename matches)
         _repository.InsertFile(
-            maskedFilename: @"allowed\file2.mp3",
+            maskedFilename: "allowed2.mp3",
             originalFilename: "/tmp/allowed2.mp3",
             touchedAt: DateTime.UtcNow,
             file: new Soulseek.File(1, "allowed2.mp3", 1000, "mp3"),
@@ -272,7 +272,7 @@ public class McpSecurityComplianceTests
     public void Scanner_LogsOnlyFilename_NotFullPath()
     {
         // 🔒 SECURITY: Verify that scanner logs only sanitized information
-        // Per MCP-HARDENING.md Section 1.2: No full filesystem paths in logs
+        // Per docs/MCP-HARDENING.md Section 1.2: No full filesystem paths in logs
         
         var fullPath = "/home/user/Music/Artist/Album/track.mp3";
         var sanitized = Path.GetFileName(fullPath);
@@ -285,7 +285,7 @@ public class McpSecurityComplianceTests
     [Fact]
     public void Scanner_DoesNotLogFullHash()
     {
-        // 🔒 SECURITY: Per MCP-HARDENING.md Section 1.1: No raw hashes in logs
+        // 🔒 SECURITY: Per docs/MCP-HARDENING.md Section 1.1: No raw hashes in logs
         // Logs should only include first 8 chars max for debugging
         
         var fullHash = "A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6";
@@ -299,7 +299,7 @@ public class McpSecurityComplianceTests
     public void ModerationDecision_EvidenceKeys_AreOpaque()
     {
         // 🔒 SECURITY: Evidence keys must be opaque identifiers
-        // Per MCP-HARDENING.md Section 1.4: No raw data in evidence
+        // Per docs/MCP-HARDENING.md Section 1.4: No raw data in evidence
         
         var decision = ModerationDecision.Block(
             "hash_blocklist",

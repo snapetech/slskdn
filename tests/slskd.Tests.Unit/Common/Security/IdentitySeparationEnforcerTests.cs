@@ -13,8 +13,8 @@ namespace slskd.Tests.Unit.Common.Security
     public class IdentitySeparationEnforcerTests
     {
         [Theory]
-        [InlineData("abc123def456", IdentitySeparationEnforcer.IdentityType.Mesh)]
-        [InlineData("SGVsbG8gV29ybGQ=", IdentitySeparationEnforcer.IdentityType.Mesh)] // base64
+        [InlineData("a1b2c3d4e5f6789012345678abcdef01", IdentitySeparationEnforcer.IdentityType.Mesh)] // 32-char hex
+        [InlineData("00112233445566778899aabbccddeeff", IdentitySeparationEnforcer.IdentityType.Mesh)] // 32-char hex
         [InlineData("user123", IdentitySeparationEnforcer.IdentityType.Soulseek)]
         [InlineData("user_name.123", IdentitySeparationEnforcer.IdentityType.Soulseek)]
         [InlineData("pod:abc123def4567890", IdentitySeparationEnforcer.IdentityType.Pod)]
@@ -122,12 +122,13 @@ namespace slskd.Tests.Unit.Common.Security
         }
 
         [Theory]
-        [InlineData("abc123def456", IdentitySeparationEnforcer.IdentityType.Mesh)]
+        [InlineData("a1b2c3d4e5f6789012345678abcdef01", IdentitySeparationEnforcer.IdentityType.Mesh)] // 32–64 hex
+        [InlineData("abc123def456", IdentitySeparationEnforcer.IdentityType.Soulseek)] // 12-char alphanumeric; Mesh needs 32+
         [InlineData("user123", IdentitySeparationEnforcer.IdentityType.Soulseek)]
         [InlineData("pod:abc123def4567890", IdentitySeparationEnforcer.IdentityType.Pod)]
         [InlineData("user@example.com", IdentitySeparationEnforcer.IdentityType.LocalUser)]
-        [InlineData("@user@domain.com", IdentitySeparationEnforcer.IdentityType.ActivityPub)]
-        [InlineData("unknown-format", null)]
+        [InlineData("@user@domain.com", IdentitySeparationEnforcer.IdentityType.LocalUser)] // contains @; LocalUser checked before ActivityPub
+        [InlineData("#", null)] // matches no format
         public void DetectIdentityType_VariousIdentities_ReturnsCorrectType(string identity, IdentitySeparationEnforcer.IdentityType? expected)
         {
             // Act

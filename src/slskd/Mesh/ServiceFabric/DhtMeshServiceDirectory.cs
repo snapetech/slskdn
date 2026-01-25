@@ -2,9 +2,11 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using MessagePack;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
 using slskd.Mesh.Dht;
+using slskd.Mesh.Transport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -25,6 +27,7 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
     private readonly IMeshServiceDescriptorValidator _validator;
     private readonly MeshServiceFabricOptions _options;
     private readonly SecurityEventLogger? _securityLogger;
+    private readonly int _maxPayload;
 
     // Discovery metrics: peerId -> (queryCount, serviceNamesQueried, windowStart)
     private readonly ConcurrentDictionary<string, DiscoveryStats> _discoveryMetrics = new();
@@ -34,13 +37,15 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         IMeshDhtClient dhtClient,
         IMeshServiceDescriptorValidator validator,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
-        SecurityEventLogger? securityLogger = null)
+        SecurityEventLogger? securityLogger = null,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger;
         _dhtClient = dhtClient;
         _validator = validator;
         _options = options.Value;
         _securityLogger = securityLogger;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByNameAsync(
@@ -87,11 +92,16 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
                 return Array.Empty<MeshServiceDescriptor>();
             }
 
-            // Deserialize list of descriptors
-            List<MeshServiceDescriptor> descriptors;
+            // Deserialize list of descriptors (safe parse: size/depth limits; MaxDhtValueBytes already enforced above)
+            List<MeshServiceDescriptor>? descriptors;
             try
             {
-                descriptors = MessagePackSerializer.Deserialize<List<MeshServiceDescriptor>>(rawValue);
+                descriptors = SecurityUtils.ParseMessagePackSafely<List<MeshServiceDescriptor>>(rawValue, _maxPayload);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "[ServiceDirectory] Payload too large or invalid for {ServiceName}", serviceName);
+                return Array.Empty<MeshServiceDescriptor>();
             }
             catch (Exception ex)
             {

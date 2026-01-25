@@ -301,7 +301,7 @@ Any deviation from these standards should be rare and must be justified in:
 
 - `docs/CURSOR-META-INSTRUCTIONS.md` - Meta-rules for implementation
 - `SECURITY-GUIDELINES.md` - Security and hardening requirements
-- `MCP-HARDENING.md` - Moderation layer security
+- [MCP-HARDENING.md](../../MCP-HARDENING.md) - Moderation layer security
 - `docs/virtualsoulfind-v2-design.md` - Multi-domain design
 - `docs/social-federation-design.md` - Federation privacy/security
 

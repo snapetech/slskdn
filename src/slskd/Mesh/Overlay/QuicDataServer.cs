@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh;
+using slskd.Mesh.Transport;
 
 /// <summary>
 /// QUIC data-plane server for bulk payload transfers.
@@ -23,15 +25,24 @@ public class QuicDataServer : BackgroundService
 {
     private readonly ILogger<QuicDataServer> logger;
     private readonly DataOverlayOptions options;
+    private readonly ConnectionThrottler connectionThrottler;
+    private readonly int maxPayloadBytes;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
 
     public QuicDataServer(
         ILogger<QuicDataServer> logger,
-        IOptions<DataOverlayOptions> options)
+        IOptions<DataOverlayOptions> options,
+        ConnectionThrottler connectionThrottler,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         logger.LogInformation("[QuicDataServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
+        this.connectionThrottler = connectionThrottler ?? throw new ArgumentNullException(nameof(connectionThrottler));
+        var cap = this.options.MaxPayloadBytes;
+        if (meshOptions?.Value?.Security != null)
+            cap = Math.Min(cap, meshOptions.Value.Security.GetEffectiveMaxPayloadSize());
+        maxPayloadBytes = Math.Max(1, cap);
         logger.LogInformation("[QuicDataServer] Constructor completed");
     }
 
@@ -86,6 +97,13 @@ public class QuicDataServer : BackgroundService
                 try
                 {
                     var connection = await listener.AcceptConnectionAsync(stoppingToken);
+                    var ep = connection.RemoteEndPoint as IPEndPoint;
+                    if (ep != null && !connectionThrottler.ShouldAllowConnection(ep.ToString(), TransportType.DirectQuic))
+                    {
+                        try { await connection.CloseAsync(0); } catch { /* ignore */ }
+                        await connection.DisposeAsync();
+                        continue;
+                    }
                     _ = HandleConnectionAsync(connection, stoppingToken);
                 }
                 catch (OperationCanceledException)
@@ -121,6 +139,11 @@ public class QuicDataServer : BackgroundService
                     try
                     {
                         var stream = await connection.AcceptInboundStreamAsync(ct);
+                        if (!connectionThrottler.ShouldAllowInboundStream(remoteEndPoint?.ToString() ?? "unknown"))
+                        {
+                            await stream.DisposeAsync();
+                            continue;
+                        }
                         _ = HandleStreamAsync(stream, remoteEndPoint, ct);
                     }
                     catch (OperationCanceledException)
@@ -158,8 +181,8 @@ public class QuicDataServer : BackgroundService
         {
             await using (stream)
             {
-                // Read payload data
-                var buffer = new byte[options.MaxPayloadBytes];
+                // Read payload data (cap aligned with Mesh.Security.GetEffectiveMaxPayloadSize)
+                var buffer = new byte[maxPayloadBytes];
                 var totalRead = 0;
 
                 while (totalRead < buffer.Length)

@@ -13,10 +13,11 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using MessagePack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh;
+using slskd.Mesh.Transport;
 
 /// <summary>
 /// QUIC overlay server for control-plane messages (ControlEnvelope).
@@ -26,17 +27,23 @@ public class QuicOverlayServer : BackgroundService
     private readonly ILogger<QuicOverlayServer> logger;
     private readonly OverlayOptions options;
     private readonly IControlDispatcher dispatcher;
+    private readonly ConnectionThrottler connectionThrottler;
+    private readonly int maxRemotePayload;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
 
     public QuicOverlayServer(
         ILogger<QuicOverlayServer> logger,
         IOptions<OverlayOptions> options,
-        IControlDispatcher dispatcher)
+        IControlDispatcher dispatcher,
+        ConnectionThrottler connectionThrottler,
+        IOptions<Mesh.MeshOptions>? meshOptions = null)
     {
         logger.LogInformation("[QuicOverlayServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
+        this.connectionThrottler = connectionThrottler ?? throw new ArgumentNullException(nameof(connectionThrottler));
+        maxRemotePayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
         logger.LogInformation("[QuicOverlayServer] Constructor completed");
     }
 
@@ -94,6 +101,13 @@ public class QuicOverlayServer : BackgroundService
                 try
                 {
                     var connection = await listener.AcceptConnectionAsync(stoppingToken);
+                    var ep = connection.RemoteEndPoint as IPEndPoint;
+                    if (ep != null && !connectionThrottler.ShouldAllowConnection(ep.ToString(), TransportType.DirectQuic))
+                    {
+                        try { await connection.CloseAsync(0); } catch { /* ignore */ }
+                        await connection.DisposeAsync();
+                        continue;
+                    }
                     _ = HandleConnectionAsync(connection, stoppingToken);
                 }
                 catch (OperationCanceledException)
@@ -129,6 +143,11 @@ public class QuicOverlayServer : BackgroundService
                     try
                     {
                         var stream = await connection.AcceptInboundStreamAsync(ct);
+                        if (!connectionThrottler.ShouldAllowInboundStream(remoteEndPoint?.ToString() ?? "unknown"))
+                        {
+                            await stream.DisposeAsync();
+                            continue;
+                        }
                         _ = HandleStreamAsync(stream, remoteEndPoint, ct);
                     }
                     catch (OperationCanceledException)
@@ -175,6 +194,11 @@ public class QuicOverlayServer : BackgroundService
                     var read = await stream.ReadAsync(buffer.AsMemory(totalRead), ct);
                     if (read == 0) break;
                     totalRead += read;
+                    if (totalRead > maxRemotePayload)
+                    {
+                        logger.LogWarning("[Overlay-QUIC] Payload exceeds {Max} bytes, aborting stream", maxRemotePayload);
+                        return;
+                    }
                 }
 
                 if (totalRead == 0)
@@ -182,7 +206,11 @@ public class QuicOverlayServer : BackgroundService
                     return;
                 }
 
-                var envelope = MessagePackSerializer.Deserialize<ControlEnvelope>(buffer.AsMemory(0, totalRead));
+                var envelope = PayloadParser.ParseMessagePackSafely<ControlEnvelope>(buffer.AsSpan(0, totalRead).ToArray(), maxRemotePayload);
+                if (envelope == null)
+                {
+                    return;
+                }
                 logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
 
                 var handled = await dispatcher.HandleAsync(envelope, ct);

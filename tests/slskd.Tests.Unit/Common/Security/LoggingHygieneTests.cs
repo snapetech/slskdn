@@ -71,7 +71,7 @@ namespace slskd.Tests.Unit.Common.Security
         public void LogSensitiveData_UsesRedactedPlaceholder()
         {
             // Arrange
-            var sensitiveData = "super-secret-api-key-12345";
+            var sensitiveData = "super-secret-api-key-12345"; // 26 chars → [redacted-26-chars]
 
             // Act
             _testLogger.LogSensitiveData(sensitiveData);
@@ -81,7 +81,7 @@ namespace slskd.Tests.Unit.Common.Security
                 x => x.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("[redacted-23-chars]")),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("[redacted-26-chars]")),
                     It.IsAny<Exception>(),
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()),
                 Times.Once);
@@ -101,16 +101,16 @@ namespace slskd.Tests.Unit.Common.Security
                 x => x.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("u***6 (18 chars)") && !v.ToString().Contains("user_john_doe_123456")),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("u***6 (20 chars)") && !v.ToString().Contains("user_john_doe_123456")),
                     It.IsAny<Exception>(),
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()),
                 Times.Once);
         }
 
         /// <summary>
-        ///     Test class to verify logging hygiene patterns.
+        ///     Test class to verify logging hygiene patterns. Must be public for Moq to create ILogger&lt;TestLogger&gt; proxy.
         /// </summary>
-        private class TestLogger
+        public class TestLogger
         {
             private readonly ILogger<TestLogger> _logger;
 

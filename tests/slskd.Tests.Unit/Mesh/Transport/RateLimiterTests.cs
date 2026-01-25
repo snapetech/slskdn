@@ -6,18 +6,19 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Transport;
 using Xunit;
+using MeshRateLimiter = slskd.Mesh.Transport.RateLimiter;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
 public class RateLimiterTests : IDisposable
 {
-    private readonly Mock<ILogger<RateLimiter>> _loggerMock;
-    private readonly RateLimiter _rateLimiter;
+    private readonly Mock<ILogger<MeshRateLimiter>> _loggerMock;
+    private readonly MeshRateLimiter _rateLimiter;
 
     public RateLimiterTests()
     {
-        _loggerMock = new Mock<ILogger<RateLimiter>>();
-        _rateLimiter = new RateLimiter(_loggerMock.Object);
+        _loggerMock = new Mock<ILogger<MeshRateLimiter>>();
+        _rateLimiter = new MeshRateLimiter(_loggerMock.Object);
     }
 
     public void Dispose()

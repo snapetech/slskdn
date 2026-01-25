@@ -6,11 +6,13 @@ namespace slskd.Audio.API
 {
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using slskd.Core.Security;
 
     [ApiController]
     [Route("api/audio/analyzers/migrate")]
+    [AllowAnonymous] // PR-02: intended-public
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class AnalyzerMigrationController : ControllerBase
     {

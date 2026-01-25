@@ -171,6 +171,18 @@ public sealed class MessagePaddingOptions
     /// </summary>
     [Range(0, 100)]
     public int MaxOverheadPercent { get; set; } = 50;
+
+    /// <summary>
+    /// Maximum unpadded payload size in bytes (Unpad rejects larger originalLength).
+    /// 0 = use default (1MB). PR-11 DoS limit.
+    /// </summary>
+    public int MaxUnpaddedBytes { get; set; } = 0;
+
+    /// <summary>
+    /// Maximum padded message size in bytes (Unpad rejects larger packets).
+    /// 0 = use default (2MB). PR-11 DoS limit.
+    /// </summary>
+    public int MaxPaddedBytes { get; set; } = 0;
 }
 
 /// <summary>

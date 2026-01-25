@@ -11,6 +11,7 @@ namespace slskd.Tests.Unit.Common.Moderation
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Common.Moderation;
     using Xunit;
 
     /// <summary>
@@ -48,7 +49,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         {
             // Arrange
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             _llmProviderMock
                 .Setup(x => x.ModerateAsync(It.IsAny<LlmModerationRequest>(), It.IsAny<CancellationToken>()))
@@ -76,7 +77,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         {
             // Arrange
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             _llmProviderMock
                 .Setup(x => x.ModerateAsync(It.IsAny<LlmModerationRequest>(), It.IsAny<CancellationToken>()))
@@ -102,7 +103,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             // Arrange
             _optionsMock.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions { Enabled = false });
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             // Act
             var result = await provider.CheckLocalFileAsync(file);
@@ -119,7 +120,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             // Arrange
             _llmProviderMock.Setup(x => x.IsAvailable).Returns(false);
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             // Act
             var result = await provider.CheckLocalFileAsync(file);
@@ -136,7 +137,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             // Arrange
             _llmProviderMock.Setup(x => x.CanHandleContentType(LlmModeration.ContentType.FileContent)).Returns(false);
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             // Act
             var result = await provider.CheckLocalFileAsync(file);
@@ -157,7 +158,7 @@ namespace slskd.Tests.Unit.Common.Moderation
                 FallbackBehavior = "block"
             });
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             _llmProviderMock
                 .Setup(x => x.ModerateAsync(It.IsAny<LlmModerationRequest>(), It.IsAny<CancellationToken>()))
@@ -168,7 +169,7 @@ namespace slskd.Tests.Unit.Common.Moderation
 
             // Assert
             Assert.Equal(ModerationVerdict.Blocked, result.Verdict);
-            Assert.Contains("llm_provider_failed_failsafe_block", result.Reason);
+            Assert.Contains("llm_analysis_failed_failsafe_block", result.Reason);
         }
 
         [Fact]
@@ -212,7 +213,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         {
             // Arrange
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("/path/to/malicious../../../file.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "/path/to/malicious../../../file.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             _llmProviderMock
                 .Setup(x => x.ModerateAsync(It.Is<LlmModerationRequest>(req =>
@@ -243,8 +244,7 @@ namespace slskd.Tests.Unit.Common.Moderation
                 MaxContentLength = 50 // Very short for testing
             });
             var provider = CreateProvider();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash",
-                new string('x', 100)); // Long media info
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = new string('x', 100) }; // Long media info
 
             _llmProviderMock
                 .Setup(x => x.ModerateAsync(It.IsAny<LlmModerationRequest>(), It.IsAny<CancellationToken>()))

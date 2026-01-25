@@ -72,6 +72,11 @@ public class MeshOptions
     /// Data directory for mesh-related storage (certificates, pins, etc.).
     /// </summary>
     public string DataDirectory { get; set; } = "./data/mesh";
+
+    /// <summary>
+    /// Security options for overlay/transport (PR-01, §8): enforce remote payload limits and safe deserialization.
+    /// </summary>
+    public MeshSecurityOptions Security { get; set; } = new();
 }
 
 /// <summary>

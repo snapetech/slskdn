@@ -2,17 +2,28 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using System.Net;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Moq;
+using slskd.Mesh;
+using slskd.Mesh.Transport;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
 public class DirectQuicDialerTests
 {
+    private static CertificatePinManager CreatePinManager()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "slskdn-dialer-test", Guid.NewGuid().ToString("N"));
+        var opts = Microsoft.Extensions.Options.Options.Create(new MeshOptions { DataDirectory = tempDir });
+        return new CertificatePinManager(Mock.Of<ILogger<CertificatePinManager>>(), opts);
+    }
+
     [Fact]
     public void CanHandle_WithDirectQuicEndpoint_ReturnsTrue()
     {
         // Arrange
-        var dialer = new DirectQuicDialer(null!);
+        var dialer = new DirectQuicDialer(Mock.Of<ILogger<DirectQuicDialer>>(), CreatePinManager());
 
         var endpoint = new TransportEndpoint
         {
@@ -34,7 +45,7 @@ public class DirectQuicDialerTests
     public void CanHandle_WithTorEndpoint_ReturnsFalse()
     {
         // Arrange
-        var dialer = new DirectQuicDialer(null!);
+        var dialer = new DirectQuicDialer(Mock.Of<ILogger<DirectQuicDialer>>(), CreatePinManager());
 
         var endpoint = new TransportEndpoint
         {
@@ -54,7 +65,7 @@ public class DirectQuicDialerTests
     public void CanHandle_WithExpiredEndpoint_ReturnsFalse()
     {
         // Arrange
-        var dialer = new DirectQuicDialer(null!);
+        var dialer = new DirectQuicDialer(Mock.Of<ILogger<DirectQuicDialer>>(), CreatePinManager());
 
         var endpoint = new TransportEndpoint
         {
@@ -75,7 +86,7 @@ public class DirectQuicDialerTests
     public async Task IsAvailableAsync_WhenQuicSupported_ReturnsTrue()
     {
         // Arrange
-        var dialer = new DirectQuicDialer(null!);
+        var dialer = new DirectQuicDialer(Mock.Of<ILogger<DirectQuicDialer>>(), CreatePinManager());
 
         // Act
         var result = await dialer.IsAvailableAsync();
@@ -90,7 +101,7 @@ public class DirectQuicDialerTests
     public void GetStatistics_ReturnsValidStatistics()
     {
         // Arrange
-        var dialer = new DirectQuicDialer(null!);
+        var dialer = new DirectQuicDialer(Mock.Of<ILogger<DirectQuicDialer>>(), CreatePinManager());
 
         // Act
         var stats = dialer.GetStatistics();
@@ -111,7 +122,7 @@ public class TorSocksDialerTests
     {
         // Arrange
         var options = new TorTransportOptions { Enabled = true };
-        var dialer = new TorSocksDialer(options, null!);
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
 
         var endpoint = new TransportEndpoint
         {
@@ -132,7 +143,7 @@ public class TorSocksDialerTests
     {
         // Arrange
         var options = new TorTransportOptions { Enabled = false };
-        var dialer = new TorSocksDialer(options, null!);
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
 
         var endpoint = new TransportEndpoint
         {
@@ -153,7 +164,7 @@ public class TorSocksDialerTests
     {
         // Arrange
         var options = new TorTransportOptions { Enabled = true };
-        var dialer = new TorSocksDialer(options, null!);
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
 
         var endpoint = new TransportEndpoint
         {
@@ -179,7 +190,7 @@ public class TorSocksDialerTests
             SocksHost = "127.0.0.1",
             SocksPort = 9050
         };
-        var dialer = new TorSocksDialer(options, null!);
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
 
         // Act
         var result = await dialer.IsAvailableAsync();
@@ -195,7 +206,7 @@ public class TorSocksDialerTests
     {
         // Arrange
         var options = new TorTransportOptions { Enabled = true };
-        var dialer = new TorSocksDialer(options, null!);
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
 
         // Act
         var stats = dialer.GetStatistics();
@@ -214,7 +225,7 @@ public class I2pSocksDialerTests
     {
         // Arrange
         var options = new I2PTransportOptions { Enabled = true };
-        var dialer = new I2pSocksDialer(options, null!);
+        var dialer = new I2pSocksDialer(options, Mock.Of<ILogger<I2pSocksDialer>>());
 
         var endpoint = new TransportEndpoint
         {
@@ -235,7 +246,7 @@ public class I2pSocksDialerTests
     {
         // Arrange
         var options = new I2PTransportOptions { Enabled = false };
-        var dialer = new I2pSocksDialer(options, null!);
+        var dialer = new I2pSocksDialer(options, Mock.Of<ILogger<I2pSocksDialer>>());
 
         var endpoint = new TransportEndpoint
         {
@@ -261,7 +272,7 @@ public class I2pSocksDialerTests
             SocksHost = "127.0.0.1",
             SocksPort = 4447
         };
-        var dialer = new I2pSocksDialer(options, null!);
+        var dialer = new I2pSocksDialer(options, Mock.Of<ILogger<I2pSocksDialer>>());
 
         // Act
         var result = await dialer.IsAvailableAsync();
@@ -275,7 +286,7 @@ public class I2pSocksDialerTests
     {
         // Arrange
         var options = new I2PTransportOptions { Enabled = true };
-        var dialer = new I2pSocksDialer(options, null!);
+        var dialer = new I2pSocksDialer(options, Mock.Of<ILogger<I2pSocksDialer>>());
 
         // Act
         var stats = dialer.GetStatistics();

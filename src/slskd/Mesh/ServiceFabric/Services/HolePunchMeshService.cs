@@ -3,8 +3,11 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
 using slskd.Mesh.Nat;
 using slskd.Mesh.ServiceFabric;
+using slskd.Mesh.Transport;
 using System;
 using System.Collections.Concurrent;
 using System.Net;
@@ -23,6 +26,7 @@ public class HolePunchMeshService : IMeshService
     private readonly ILogger<HolePunchMeshService> _logger;
     private readonly IUdpHolePuncher _holePuncher;
     private readonly IMeshServiceClient _meshClient;
+    private readonly int _maxPayload;
 
     // Track active hole punch sessions
     private readonly ConcurrentDictionary<string, HolePunchSession> _activeSessions = new();
@@ -30,11 +34,13 @@ public class HolePunchMeshService : IMeshService
     public HolePunchMeshService(
         ILogger<HolePunchMeshService> logger,
         IUdpHolePuncher holePuncher,
-        IMeshServiceClient meshClient)
+        IMeshServiceClient meshClient,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger;
         _holePuncher = holePuncher;
         _meshClient = meshClient;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public string ServiceName => "hole-punch";
@@ -95,7 +101,8 @@ public class HolePunchMeshService : IMeshService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<HolePunchRequest>(call.Payload);
+            var (request, err) = ServicePayloadParser.TryParseJson<HolePunchRequest>(call, _maxPayload);
+            if (err != null) return err;
             if (request?.TargetPeerId == null || request.LocalEndpoints == null || request.LocalEndpoints.Length == 0)
             {
                 return new ServiceReply
@@ -218,7 +225,8 @@ public class HolePunchMeshService : IMeshService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<HolePunchForwardRequest>(call.Payload);
+            var (request, err) = ServicePayloadParser.TryParseJson<HolePunchForwardRequest>(call, _maxPayload);
+            if (err != null) return err;
             if (request?.SessionId == null || request.InitiatorPeerId == null || request.InitiatorEndpoints == null)
             {
                 return new ServiceReply
@@ -298,7 +306,8 @@ public class HolePunchMeshService : IMeshService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<HolePunchCancelRequest>(call.Payload);
+            var (request, err) = ServicePayloadParser.TryParseJson<HolePunchCancelRequest>(call, _maxPayload);
+            if (err != null) return Task.FromResult(err);
             if (request?.SessionId != null && _activeSessions.TryRemove(request.SessionId, out _))
             {
                 _logger.LogDebug(

@@ -21,7 +21,9 @@
 
 namespace slskd.Authentication
 {
+    using System.Net;
     using System.Security.Principal;
+    using NetTools;
     using System.Text.Encodings.Web;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Authentication;
@@ -57,10 +59,34 @@ namespace slskd.Authentication
 
         /// <summary>
         ///     Authenticates using the configured <see cref="PassthroughAuthenticationOptions.Username"/> and <see cref="PassthroughAuthenticationOptions.Role"/>.
+        ///     When AllowRemoteNoAuth is false, only loopback requests are allowed (PR-03).
         /// </summary>
-        /// <returns>A successful authentication result containing a default ticket.</returns>
+        /// <returns>A successful authentication result, or failure when remote and AllowRemoteNoAuth is false.</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            var remote = Context.Connection.RemoteIpAddress;
+            var isLoopback = remote != null && IPAddress.IsLoopback(remote);
+            if (isLoopback)
+                ; // allow
+            else if (Options.AllowRemoteNoAuth)
+                ; // allow
+            else if (!string.IsNullOrWhiteSpace(Options.AllowedCidrs) && remote != null)
+            {
+                var allowed = false;
+                foreach (var cidr in Options.AllowedCidrs.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (IPAddressRange.TryParse(cidr, out var range) && range.Contains(remote))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+                if (!allowed)
+                    return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback, AllowRemoteNoAuth, or AllowedCidrs"));
+            }
+            else
+                return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback"));
+
             var identity = new GenericIdentity(Options.Username);
             var principal = new GenericPrincipal(identity, new[] { Options.Role.ToString() });
             var ticket = new AuthenticationTicket(principal, new AuthenticationProperties(), PassthroughAuthentication.AuthenticationScheme);
@@ -69,13 +95,12 @@ namespace slskd.Authentication
         }
 
         /// <summary>
-        ///     Handles authentication challenges by returning success (no challenge needed for passthrough).
+        ///     Handles authentication challenges by returning 401. Does not authenticate as a "challenge" (PR-03).
         /// </summary>
         protected override Task HandleChallengeAsync(AuthenticationProperties properties)
         {
-            // For passthrough authentication, we always succeed, so no challenge is needed
-            // Return success instead of challenge to prevent 401 responses
-            return HandleAuthenticateAsync();
+            Context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
         }
     }
 
@@ -100,5 +125,15 @@ namespace slskd.Authentication
         ///     Gets or sets the role for the passed-through authentication ticket.
         /// </summary>
         public Role Role { get; set; } = Role.Administrator;
+
+        /// <summary>
+        ///     When true, allow passthrough from non-loopback addresses. When false, passthrough is loopback-only (PR-03).
+        /// </summary>
+        public bool AllowRemoteNoAuth { get; set; } = false;
+
+        /// <summary>
+        ///     Optional. Comma-separated CIDRs (e.g. 127.0.0.1/32,::1/128) allowed when no-auth in addition to loopback (PR-03).
+        /// </summary>
+        public string? AllowedCidrs { get; set; }
     }
 }

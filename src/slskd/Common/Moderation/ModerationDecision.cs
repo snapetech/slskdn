@@ -37,7 +37,7 @@ namespace slskd.Common.Moderation
     ///         - External usernames or IP addresses
     ///     </para>
     ///     <para>
-    ///         See `MCP-HARDENING.md` Section 1.4 for evidence key requirements.
+    ///         See `docs/MCP-HARDENING.md` Section 1.4 for evidence key requirements.
     ///     </para>
     /// </remarks>
     public sealed class ModerationDecision

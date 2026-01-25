@@ -2,7 +2,7 @@
 
 **slskdn** - Soulseek client with mesh networking, multi-domain content acquisition, and service fabric
 
-> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) with mesh networking and advanced features. See [README.md](README.md#acknowledgments) for full attribution.
+> **Note**: This is a fork of [slskd](https://github.com/slskd/slskd) with mesh networking and advanced features. See [README.md](../README.md#acknowledgments) for full attribution.
 
 ---
 
@@ -399,31 +399,31 @@ Default config is secure:
 - Remote intent management disabled
 - Conservative rate limits and caps
 
-See `SECURITY-GUIDELINES.md` for detailed security configuration.
+See [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md) for detailed security configuration.
 
 ---
 
 ## Documentation
 
-- **HOW-IT-WORKS.md**: Technical architecture and synergies
-- **SECURITY-GUIDELINES.md**: Mandatory security requirements (all tasks)
-- **CURSOR-WARNINGS.md**: LLM implementation risk assessment
-- **SERVICE_FABRIC_TASKS.md**: Service fabric task breakdown
-- **HARDENING-TASKS.md**: Security hardening task breakdown
-- **PROXY-RELAY-TASKS.md**: Proxy/relay task breakdown
-- **VIRTUALSOULFIND-V2-TASKS.md**: VirtualSoulfind v2 task breakdown
-- **VIRTUALSOULFIND-CONTENT-DOMAINS.md**: Multi-domain refactoring
-- **TESTING-STRATEGY.md**: Comprehensive testing strategy
+- [HOW-IT-WORKS.md](HOW-IT-WORKS.md): Technical architecture and synergies
+- [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md): Mandatory security requirements (all tasks)
+- [CURSOR-WARNINGS.md](CURSOR-WARNINGS.md): LLM implementation risk assessment
+- [SERVICE_FABRIC_TASKS.md](SERVICE_FABRIC_TASKS.md): Service fabric task breakdown
+- [HARDENING-TASKS.md](archive/root/HARDENING-TASKS.md): Security hardening task breakdown
+- [PROXY-RELAY-TASKS.md](archive/root/PROXY-RELAY-TASKS.md): Proxy/relay task breakdown
+- [VIRTUALSOULFIND-V2-TASKS.md](archive/root/VIRTUALSOULFIND-V2-TASKS.md): VirtualSoulfind v2 task breakdown
+- [VIRTUALSOULFIND-CONTENT-DOMAINS.md](VIRTUALSOULFIND-CONTENT-DOMAINS.md): Multi-domain refactoring
+- [TESTING-STRATEGY.md](TESTING-STRATEGY.md): Comprehensive testing strategy
 
 ---
 
 ## Contributing
 
 ### Security First
-Read `SECURITY-GUIDELINES.md` before contributing. All contributions MUST follow the mandatory security requirements.
+Read [SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md) before contributing. All contributions MUST follow the mandatory security requirements.
 
 ### Task Implementation
-Check `CURSOR-WARNINGS.md` for implementation risk levels before starting any task. High-risk tasks require strict prompts and comprehensive tests.
+Check [CURSOR-WARNINGS.md](CURSOR-WARNINGS.md) for implementation risk levels before starting any task. High-risk tasks require strict prompts and comprehensive tests.
 
 ### Code Review
 All PRs require:

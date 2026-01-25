@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.Common.Moderation
 {
     using System;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.DataProtection;
@@ -105,15 +106,14 @@ namespace slskd.Tests.Unit.Common.Moderation
         [Fact]
         public async Task IsPeerBannedAsync_WithScoreAboveThreshold_ReturnsFalse()
         {
-            // Arrange
+            // Arrange: ProtocolViolation has severity 1; 5 events => score -5, above ban threshold -10
             var peerId = "good-peer";
 
-            // Record only 5 events (below ban threshold)
             for (int i = 0; i < 5; i++)
             {
                 await _store.RecordEventAsync(new PeerReputationEvent(
                     peerId: peerId,
-                    eventType: PeerReputationEventType.AssociatedWithBlockedContent));
+                    eventType: PeerReputationEventType.ProtocolViolation));
             }
 
             // Act
@@ -144,9 +144,10 @@ namespace slskd.Tests.Unit.Common.Moderation
             var events = await _store.GetRecentEventsAsync(peerId, maxEvents: 10);
 
             // Assert
-            Assert.Equal(2, events.Count);
-            Assert.Equal(PeerReputationEventType.ServedBadCopy, events[0].EventType); // Most recent first
-            Assert.Equal(PeerReputationEventType.AssociatedWithBlockedContent, events[1].EventType);
+            var list = events.ToList();
+            Assert.Equal(2, list.Count);
+            Assert.Equal(PeerReputationEventType.ServedBadCopy, list[0].EventType); // Most recent first
+            Assert.Equal(PeerReputationEventType.AssociatedWithBlockedContent, list[1].EventType);
         }
 
         [Fact]
@@ -175,18 +176,19 @@ namespace slskd.Tests.Unit.Common.Moderation
             var events = await _store.GetRecentEventsAsync(peerId);
 
             // Old event should be removed, recent event should be decayed but still present
-            Assert.Equal(1, events.Count);
-            Assert.Equal(PeerReputationEventType.ServedBadCopy, events[0].EventType);
+            var list = events.ToList();
+            Assert.Equal(1, list.Count);
+            Assert.Equal(PeerReputationEventType.ServedBadCopy, list[0].EventType);
         }
 
         [Fact]
         public async Task GetStatsAsync_WithMultiplePeers_ReturnsCorrectStatistics()
         {
-            // Arrange
+            // Arrange: AssociatedWithBlockedContent severity=3; BanThreshold=10 => score<=-10 is banned
+            // peer1: 5 events => -15 (banned); peer2: 15 events => -45 (banned)
             var peer1 = "peer1";
             var peer2 = "peer2";
 
-            // Peer1: 5 events
             for (int i = 0; i < 5; i++)
             {
                 await _store.RecordEventAsync(new PeerReputationEvent(
@@ -194,7 +196,6 @@ namespace slskd.Tests.Unit.Common.Moderation
                     eventType: PeerReputationEventType.AssociatedWithBlockedContent));
             }
 
-            // Peer2: 15 events (banned)
             for (int i = 0; i < 15; i++)
             {
                 await _store.RecordEventAsync(new PeerReputationEvent(
@@ -208,8 +209,8 @@ namespace slskd.Tests.Unit.Common.Moderation
             // Assert
             Assert.Equal(20, stats.TotalEvents);
             Assert.Equal(2, stats.UniquePeers);
-            Assert.Equal(1, stats.BannedPeers);
-            Assert.Equal(3, stats.EventsByType[PeerReputationEventType.AssociatedWithBlockedContent]);
+            Assert.Equal(2, stats.BannedPeers);
+            Assert.Equal(20, stats.EventsByType[PeerReputationEventType.AssociatedWithBlockedContent]);
             Assert.True(stats.AverageReputationScore < 0);
         }
 

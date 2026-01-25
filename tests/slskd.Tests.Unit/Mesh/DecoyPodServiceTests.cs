@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using Moq;
+using slskd.Mesh;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;

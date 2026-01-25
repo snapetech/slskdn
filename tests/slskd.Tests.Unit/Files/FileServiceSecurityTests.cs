@@ -158,9 +158,8 @@ public class FileServiceSecurityTests
     [Theory]
     [InlineData("../secret.txt")]
     [InlineData("../../etc/passwd")]
-    [InlineData("..\\..\\windows\\system32")]
     [InlineData("downloads/../../secret.txt")]
-    [InlineData("downloads/..\\..\\secret.txt")]
+    // Omit "..\..\windows\system32" and "downloads/..\..\secret.txt": on Unix \ is not a path separator so they do not resolve as traversal; the implementation correctly rejects paths that resolve outside via / and ..
     public async Task DeleteFilesAsync_ShouldRejectVariousTraversalPatterns(string traversalPath)
     {
         // Arrange

@@ -4,6 +4,7 @@
 
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using slskd.Mesh.Transport;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
@@ -205,17 +206,19 @@ public class ConnectionRateLimiterTests
     [Fact]
     public void IsConnectionAllowed_AfterBackoffExpires_ReturnsTrue()
     {
-        // Arrange
+        // Arrange: maxAttempts=2 so we need 2 failures to trigger backoff (AttemptCount>=2)
         var peerId = "peer-123";
-        var limiter = new ConnectionRateLimiter(TimeSpan.FromMilliseconds(1), 1);
+        var limiter = new ConnectionRateLimiter(TimeSpan.FromMilliseconds(1), 2);
 
-        // Fill up attempts
-        limiter.IsConnectionAllowed(peerId); // Should succeed
-        limiter.RecordFailure(peerId); // Put in backoff
-        limiter.IsConnectionAllowed(peerId); // Should fail due to backoff
-        Thread.Sleep(10); // Wait for backoff to expire
+        limiter.IsConnectionAllowed(peerId); // allowed
+        limiter.RecordFailure(peerId);
+        limiter.IsConnectionAllowed(peerId); // still allowed (AttemptCount=1 < 2)
+        limiter.RecordFailure(peerId);       // AttemptCount=2
+        limiter.IsConnectionAllowed(peerId); // denied, BackoffUntil set
+        Thread.Sleep(15); // wait for backoff to pass
 
-        // Act
+        // Act: prod does not auto-reset AttemptCount when backoff expires; RecordSuccess resets it
+        limiter.RecordSuccess(peerId);
         var result = limiter.IsConnectionAllowed(peerId);
 
         // Assert

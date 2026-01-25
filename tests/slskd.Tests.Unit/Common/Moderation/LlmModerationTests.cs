@@ -14,6 +14,7 @@ namespace slskd.Tests.Unit.Common.Moderation
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Common.Moderation;
     using Xunit;
 
     /// <summary>
@@ -40,7 +41,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             Assert.Equal("Test content", request.Content);
             Assert.Equal("test", request.Context);
             Assert.Equal("unit_test", request.Source);
-            Assert.True(request.Timestamp > default);
+            Assert.True(request.Timestamp > default(DateTimeOffset));
         }
 
         [Fact]
@@ -60,7 +61,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             Assert.Equal(0.0, response.Confidence);
             Assert.Equal(string.Empty, response.Reasoning);
             Assert.NotNull(response.Details);
-            Assert.True(response.Timestamp > default);
+            Assert.True(response.Timestamp > default(DateTimeOffset));
             Assert.False(response.FromCache);
             Assert.Null(response.Error);
         }
@@ -123,7 +124,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             Assert.True(health.IsHealthy);
             Assert.Equal("NoopLlmModerationProvider", health.ProviderName);
             Assert.Null(health.LastError);
-            Assert.Contains("always_healthy", health.Details);
+            Assert.Equal("always_healthy", health.Details["status"]);
         }
 
         [Fact]
@@ -253,6 +254,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             var loggerMock = new Mock<ILogger<CompositeModerationProvider>>();
             var llmProviderMock = new Mock<ILlmModerationProvider>();
             llmProviderMock.Setup(x => x.IsAvailable).Returns(true);
+            llmProviderMock.Setup(x => x.CanHandleContentType(It.IsAny<LlmModeration.ContentType>())).Returns(true);
             llmProviderMock.Setup(x => x.ModerateAsync(It.IsAny<LlmModerationRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new LlmModerationResponse
                 {
@@ -263,19 +265,20 @@ namespace slskd.Tests.Unit.Common.Moderation
                     Categories = LlmModeration.ContentCategory.HateSpeech
                 });
 
+            var optsLlm = new Mock<IOptionsMonitor<LlmModerationOptions>>();
+            optsLlm.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions { Enabled = true, MinConfidenceThreshold = 0.5 });
+            var loggerLlm = new Mock<ILogger<LlmModerationProvider>>();
+            var llmModProvider = new LlmModerationProvider(optsLlm.Object, llmProviderMock.Object, loggerLlm.Object);
+
             var provider = new CompositeModerationProvider(
                 optionsMock.Object,
                 loggerMock.Object,
-                llmProvider: llmProviderMock.Object);
+                llmModerationProvider: llmModProvider);
 
-            var fileMetadata = new LocalFileMetadata(
-                id: "test.mp3",
-                sizeBytes: 1024,
-                primaryHash: "testhash",
-                mediaInfo: "audio/mp3");
+            var fileMetadata = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "testhash", MediaInfo = "audio/mp3" };
 
             // Act
-            var result = await provider.CheckLocalFileAsync(fileMetadata);
+            var result = await provider.CheckLocalFileAsync(fileMetadata, default);
 
             // Assert
             Assert.Equal(ModerationVerdict.Blocked, result.Verdict);
@@ -301,6 +304,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             var loggerMock = new Mock<ILogger<CompositeModerationProvider>>();
             var llmProviderMock = new Mock<ILlmModerationProvider>();
             llmProviderMock.Setup(x => x.IsAvailable).Returns(true);
+            llmProviderMock.Setup(x => x.CanHandleContentType(It.IsAny<LlmModeration.ContentType>())).Returns(true);
             llmProviderMock.Setup(x => x.ModerateAsync(It.IsAny<LlmModerationRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new LlmModerationResponse
                 {
@@ -310,19 +314,20 @@ namespace slskd.Tests.Unit.Common.Moderation
                     Reasoning = "Low confidence"
                 });
 
+            var optsLlm = new Mock<IOptionsMonitor<LlmModerationOptions>>();
+            optsLlm.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions { Enabled = true, MinConfidenceThreshold = 0.8 });
+            var loggerLlm = new Mock<ILogger<LlmModerationProvider>>();
+            var llmModProvider = new LlmModerationProvider(optsLlm.Object, llmProviderMock.Object, loggerLlm.Object);
+
             var provider = new CompositeModerationProvider(
                 optionsMock.Object,
                 loggerMock.Object,
-                llmProvider: llmProviderMock.Object);
+                llmModerationProvider: llmModProvider);
 
-            var fileMetadata = new LocalFileMetadata(
-                id: "test.mp3",
-                sizeBytes: 1024,
-                primaryHash: "testhash",
-                mediaInfo: "audio/mp3");
+            var fileMetadata = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "testhash", MediaInfo = "audio/mp3" };
 
             // Act
-            var result = await provider.CheckLocalFileAsync(fileMetadata);
+            var result = await provider.CheckLocalFileAsync(fileMetadata, default);
 
             // Assert - Low confidence LLM result is ignored
             Assert.Equal(ModerationVerdict.Unknown, result.Verdict);

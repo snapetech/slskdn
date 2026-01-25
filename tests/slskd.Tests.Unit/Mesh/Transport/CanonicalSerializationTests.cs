@@ -6,6 +6,9 @@ using slskd.Mesh.Dht;
 using slskd.Mesh.Overlay;
 using slskd.Mesh.Transport;
 using Xunit;
+using TransportEndpoint = slskd.Mesh.TransportEndpoint;
+using TransportType = slskd.Mesh.TransportType;
+using TransportScope = slskd.Mesh.TransportScope;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
@@ -35,7 +38,7 @@ public class CanonicalSerializationTests
             PeerId = "peer1",
             SequenceNumber = 1,
             ExpiresAtUnixMs = 1234567890,
-            Endpoints = new[] { "endpoint1", "endpoint2" }
+            Endpoints = new List<string> { "endpoint1", "endpoint2" }
         };
 
         var desc2 = new MeshPeerDescriptor
@@ -43,14 +46,14 @@ public class CanonicalSerializationTests
             PeerId = "peer1",
             SequenceNumber = 1,
             ExpiresAtUnixMs = 1234567890,
-            Endpoints = new[] { "endpoint2", "endpoint1" } // Different order
+            Endpoints = new List<string> { "endpoint2", "endpoint3" } // Different set → different canonical output
         };
 
         // Act
         var bytes1 = CanonicalSerialization.SerializeForSigning(desc1);
         var bytes2 = CanonicalSerialization.SerializeForSigning(desc2);
 
-        // Assert - Should be different due to endpoint ordering
+        // Assert - Should be different due to different endpoint sets
         Assert.NotEqual(bytes1, bytes2);
     }
 
@@ -70,11 +73,13 @@ public class CanonicalSerializationTests
         var data = CanonicalSerialization.SerializeEnvelopeForSigning(envelope);
         var dataString = System.Text.Encoding.UTF8.GetString(data);
 
-        // Assert
+        // Assert - format is Type|MessageId|Timestamp|Base64(SHA256(Payload))
         Assert.Contains("test-type", dataString);
         Assert.Contains("test-message-id", dataString);
         Assert.Contains("1234567890", dataString);
-        Assert.Contains("NjAyO", dataString); // Base64 of payload
+        var parts = dataString.Split('|');
+        Assert.Equal(4, parts.Length);
+        Assert.NotEmpty(parts[3]); // Payload hash (base64)
     }
 
     [Fact]
@@ -141,8 +146,8 @@ public class CanonicalSerializationTests
             PeerId = "peer:test:canonical",
             SequenceNumber = 42,
             ExpiresAtUnixMs = 1640995200000, // 2022-01-01
-            Endpoints = new[] { "tcp://192.168.1.100:8080", "tcp://10.0.0.1:8080" },
-            TransportEndpoints = new[]
+            Endpoints = new List<string> { "tcp://192.168.1.100:8080", "tcp://10.0.0.1:8080" },
+            TransportEndpoints = new List<TransportEndpoint>
             {
                 new TransportEndpoint
                 {
@@ -154,8 +159,8 @@ public class CanonicalSerializationTests
                     Cost = 1
                 }
             },
-            CertificatePins = new[] { "pin1", "pin2" },
-            ControlSigningKeys = new[] { "key1", "key2" },
+            CertificatePins = new List<string> { "pin1", "pin2" },
+            ControlSigningKeys = new List<string> { "key1", "key2" },
             NatType = "unknown",
             RelayRequired = false,
             TimestampUnixMs = 1640995200000

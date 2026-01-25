@@ -5,7 +5,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using slskd.API.Controllers;
+using slskd.API.Native;
 using Xunit;
 
 namespace slskd.Tests.Unit.PodCore;

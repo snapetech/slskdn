@@ -27,7 +27,8 @@ public class PodPrivateServicePolicyTests
     }
 }
 
-public class PodPrivateServicePolicy
+/// <summary>Stub for future implementation; do not use - slskd.PodCore.PodPrivateServicePolicy is the real type.</summary>
+public class PodPrivateServicePolicyStub
 {
     public static bool EnforceDestinationPolicy(string destination, string requesterId)
     {

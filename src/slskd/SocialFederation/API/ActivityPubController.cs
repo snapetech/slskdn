@@ -7,13 +7,20 @@ namespace slskd.SocialFederation.API
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
+    using System.Security.Cryptography;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
-    using slskd.SocialFederation;
+    using NSec.Cryptography;
     using slskd.Core.Security;
+    using slskd.Mesh;
+    using slskd.Mesh.Transport;
+    using slskd.SocialFederation;
 
     /// <summary>
     ///     ActivityPub protocol endpoints.
@@ -24,31 +31,40 @@ namespace slskd.SocialFederation.API
     /// </remarks>
     [ApiController]
     [Route("actors")]
+    [AllowAnonymous]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ActivityPubController : ControllerBase
     {
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
         private readonly IActivityPubKeyStore _keyStore;
+        private readonly IHttpSignatureKeyFetcher _keyFetcher;
         private readonly LibraryActorService _libraryActorService;
         private readonly ILogger<ActivityPubController> _logger;
+        private readonly int _maxPayload;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActivityPubController"/> class.
         /// </summary>
         /// <param name="federationOptions">The federation options.</param>
         /// <param name="keyStore">The ActivityPub key store.</param>
+        /// <param name="keyFetcher">SSRF-safe key fetcher for HTTP Signature verification. PR-14.</param>
         /// <param name="libraryActorService">The library actor service.</param>
         /// <param name="logger">The logger.</param>
+        /// <param name="meshOptions">Optional mesh options for payload size limit (§8).</param>
         public ActivityPubController(
             IOptionsMonitor<SocialFederationOptions> federationOptions,
             IActivityPubKeyStore keyStore,
+            IHttpSignatureKeyFetcher keyFetcher,
             LibraryActorService libraryActorService,
-            ILogger<ActivityPubController> logger)
+            ILogger<ActivityPubController> logger,
+            IOptions<MeshOptions>? meshOptions = null)
         {
             _federationOptions = federationOptions ?? throw new ArgumentNullException(nameof(federationOptions));
             _keyStore = keyStore ?? throw new ArgumentNullException(nameof(keyStore));
+            _keyFetcher = keyFetcher ?? throw new ArgumentNullException(nameof(keyFetcher));
             _libraryActorService = libraryActorService ?? throw new ArgumentNullException(nameof(libraryActorService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
         }
 
         /// <summary>
@@ -160,36 +176,55 @@ namespace slskd.SocialFederation.API
         /// </remarks>
         [HttpPost("{actorName}/inbox")]
         [Consumes("application/activity+json")]
-        public async Task<IActionResult> PostToInbox(
-            string actorName,
-            [FromBody] ActivityPubActivity activity,
-            CancellationToken cancellationToken = default)
+        public async Task<IActionResult> PostToInbox(string actorName, CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
             if (!opts.Enabled || opts.IsHermit)
-            {
                 return NotFound();
-            }
 
             if (!string.Equals(actorName, "library", StringComparison.OrdinalIgnoreCase))
-            {
                 return NotFound();
+
+            var bodyBytes = HttpContext.Items["ActivityPubInboxBody"] as byte[];
+            if (bodyBytes == null)
+            {
+                _logger.LogWarning("[ActivityPub] Inbox body not captured (middleware)");
+                return Unauthorized();
             }
 
-            // TODO: Implement HTTP signature verification
-            if (opts.VerifySignatures && !await VerifyHttpSignatureAsync(cancellationToken))
+            if (bodyBytes.Length > _maxPayload)
+            {
+                _logger.LogWarning("[ActivityPub] Inbox body exceeds MaxRemotePayloadSize ({Max} bytes)", _maxPayload);
+                return StatusCode(413, "Payload too large");
+            }
+
+            if (opts.VerifySignatures && !await VerifyHttpSignatureAsync(bodyBytes, cancellationToken))
             {
                 _logger.LogWarning("[ActivityPub] HTTP signature verification failed");
                 return Unauthorized();
             }
 
+            ActivityPubActivity? activity;
+            try
+            {
+                var json = Encoding.UTF8.GetString(bodyBytes);
+                activity = SecurityUtils.ParseJsonSafely<ActivityPubActivity>(json, _maxPayload, SecurityUtils.MaxParseDepth);
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest("Invalid or oversized JSON body");
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest("Invalid JSON body");
+            }
+
+            if (activity == null)
+                return BadRequest("Invalid activity");
+
             _logger.LogInformation("[ActivityPub] Received activity {Type} from {Actor}", activity.Type, activity.Actor);
-
-            // TODO: Process the activity based on type
-            // For now, just acknowledge receipt
             await ProcessActivityAsync(activity, cancellationToken);
-
             return Accepted();
         }
 
@@ -264,17 +299,110 @@ namespace slskd.SocialFederation.API
 
         private bool IsAuthorizedRequest()
         {
-            // TODO: Implement proper authorization for friends-only mode
-            // For now, allow all requests in friends-only mode (they still need valid actors)
-            return true;
+            var opts = _federationOptions.CurrentValue;
+            if (!opts.IsFriendsOnly)
+                return true;
+            if (IsLoopback(HttpContext.Connection.RemoteIpAddress))
+                return true;
+            var host = Request.Host.Value;
+            if (!string.IsNullOrEmpty(host) && opts.ApprovedPeers != null && opts.ApprovedPeers.Length > 0
+                && opts.ApprovedPeers.Contains(host, StringComparer.OrdinalIgnoreCase))
+                return true;
+            return false;
         }
 
-        private async Task<bool> VerifyHttpSignatureAsync(CancellationToken cancellationToken)
+        private static bool IsLoopback(IPAddress? a) => a != null && IPAddress.IsLoopback(a);
+
+        /// <summary>PR-14: Verify HTTP Signature (Date ±5min, Digest, Ed25519).</summary>
+        private async Task<bool> VerifyHttpSignatureAsync(byte[] bodyBytes, CancellationToken cancellationToken)
         {
-            // TODO: Implement HTTP signature verification
-            // This involves parsing the Signature header and verifying against the actor's public key
-            // For now, skip verification
-            return true;
+            var sig = Request.Headers["Signature"].FirstOrDefault();
+            if (string.IsNullOrEmpty(sig))
+                return false;
+
+            if (!TryParseSignature(sig, out var keyId, out var algorithm, out var headersList, out var signatureB64))
+                return false;
+            if (!string.Equals(algorithm, "ed25519", StringComparison.OrdinalIgnoreCase) && !string.Equals(algorithm, "hs2019", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var date = Request.Headers["Date"].FirstOrDefault();
+            if (string.IsNullOrEmpty(date) || !DateTimeOffset.TryParse(date, out var dt) || Math.Abs((DateTimeOffset.UtcNow - dt).TotalMinutes) > 5)
+                return false;
+
+            var digest = Request.Headers["Digest"].FirstOrDefault();
+            var expectedDigest = "SHA-256=" + Convert.ToBase64String(SHA256.HashData(bodyBytes));
+            if (string.IsNullOrEmpty(digest) || !string.Equals(digest, expectedDigest, StringComparison.Ordinal))
+                return false;
+
+            var signingString = BuildSigningString(headersList);
+            if (signingString == null)
+                return false;
+
+            var pkix = await _keyFetcher.FetchPublicKeyPkixAsync(keyId, cancellationToken);
+            if (pkix == null || pkix.Length == 0)
+                return false;
+
+            byte[] signatureBytes;
+            try
+            {
+                signatureBytes = Convert.FromBase64String(signatureB64);
+            }
+            catch
+            {
+                return false;
+            }
+
+            try
+            {
+                var alg = SignatureAlgorithm.Ed25519;
+                using var key = Key.Import(alg, pkix, KeyBlobFormat.PkixPublicKey);
+                return alg.Verify(key.PublicKey, Encoding.UTF8.GetBytes(signingString), signatureBytes);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryParseSignature(string sig, out string keyId, out string algorithm, out string headersList, out string signatureB64)
+        {
+            keyId = algorithm = headersList = signatureB64 = string.Empty;
+            foreach (var part in sig.Split(','))
+            {
+                var eq = part.IndexOf('=', StringComparison.Ordinal);
+                if (eq <= 0) continue;
+                var k = part[..eq].Trim();
+                var v = part[(eq + 1)..].Trim();
+                if (v.Length >= 2 && v[0] == '"' && v[^1] == '"')
+                    v = v[1..^1];
+                if (k == "keyId") keyId = v;
+                else if (k == "algorithm") algorithm = v;
+                else if (k == "headers") headersList = v;
+                else if (k == "signature") signatureB64 = v;
+            }
+            return keyId.Length > 0 && algorithm.Length > 0 && headersList.Length > 0 && signatureB64.Length > 0;
+        }
+
+        private string? BuildSigningString(string headersList)
+        {
+            var sb = new StringBuilder();
+            var names = headersList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < names.Length; i++)
+            {
+                var n = names[i].ToLowerInvariant();
+                var v = n switch
+                {
+                    "(request-target)" => $"(request-target): post {Request.Path}",
+                    "host" => "host: " + Request.Host.Value,
+                    "date" => "date: " + Request.Headers["Date"].FirstOrDefault(),
+                    "digest" => "digest: " + Request.Headers["Digest"].FirstOrDefault(),
+                    _ => Request.Headers[n].FirstOrDefault() is { } h ? $"{n}: {h}" : null
+                };
+                if (v == null) return null;
+                if (i > 0) sb.Append('\n');
+                sb.Append(v);
+            }
+            return sb.ToString();
         }
 
         private async Task ProcessActivityAsync(ActivityPubActivity activity, CancellationToken cancellationToken)

@@ -97,7 +97,10 @@
   </Target>
 
   <ItemGroup>
-    <!-- Exclude CodeQuality MSBuild tasks from compilation -->
+    <InternalsVisibleTo Include="slskd.Tests.Unit" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Exclude CodeQuality MSBuild tasks from compilation. Re-enablement blocked: needs Microsoft.Build, Xunit; init-only/AsyncRules/StaticAnalysis/BuildTimeAnalyzer/HotspotAnalysis/TestCoverage/RegressionHarness compile fixes. See docs/dev/slskd-tests-unit-reenablement-execution-plan.md Block A. -->
     <Compile Remove="Common\CodeQuality\**" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="Dapper" Version="2.1.66" />
@@ -110,6 +113,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.6" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.621003" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.6" />
     <PackageReference Include="Mono.Nat" Version="3.0.0" />

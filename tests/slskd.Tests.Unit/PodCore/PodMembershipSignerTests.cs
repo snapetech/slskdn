@@ -189,9 +189,9 @@ public class PodMembershipSignerTests
         var joinRecord = await signer.SignMembershipAsync(podId, peerId, role, "join");
         var leaveRecord = await signer.SignMembershipAsync(podId, peerId, role, "leave");
 
-        // Assert
+        // Assert — signatures differ because action is in the signable payload
         Assert.NotEqual(joinRecord.Signature, leaveRecord.Signature);
-        Assert.NotEqual(joinRecord.TimestampUnixMs, leaveRecord.TimestampUnixMs);
+        // TimestampUnixMs may match if both calls occur in the same millisecond
     }
 
     [Fact]

@@ -190,6 +190,7 @@ echo "=== Done ==="
 
 Before every commit:
 
+0. ✅ **(If plan-driven)** Deferred and doc updates: add rows to the plan’s **Deferred and Follow-up Work** table for any left-out work; when completing a deferred item, remove its row. Update `config/slskd.example.yml` if options changed. See **AGENTS.md § After Completing Work**.
 1. ✅ No factories/wrappers/builders
 2. ✅ No swallowed exceptions
 3. ✅ No logging spam

@@ -105,6 +105,22 @@ Runs in `Program.Main()` before building the host. When `EnforceSecurity == true
 | PR-13 | §6.4 | PodMessageRouter: peer resolution + envelope signing |
 | PR-14 | §6.1, §6.2 | ActivityPub HTTP signatures + SSRF |
 
+Deferred items from completed PRs are listed in **Deferred and Follow-up Work** below.
+
+### Deferred and Follow-up Work
+
+Items left out of completed PRs or not yet assigned to a ticket. **Must be scheduled or folded into a PR so they are not forgotten.**
+
+- **Adding:** When you complete a PR/plan item but intentionally leave out optional or out-of-scope work, add a row (Source, Item, Action). See **AGENTS.md § After Completing Work**.
+- **Removing:** When you complete a deferred item, delete its row and update `memory-bank/progress.md`, `tasks.md`, `activeContext.md`.
+
+**Completed (removed from table):** PR-00 Mesh/**; PR-01 EnforceRemotePayloadLimits; PR-01 Enforce+invalid integration; PR-02 Hub tests (SearchHub/RelayHub anonymous → 401 when EnforceSecurity; HubEnforceAuthTestHostFactory, stub hubs); PR-03 Passthrough AllowedCidrs; PR-05 Exception handler custom formatter (InvalidModelStateResponseFactory: in Production no internal leak in ValidationProblemDetails); PR-06 Dump 501 when creation fails; PR-07 ModelState ValidationProblemDetails consistent (same InvalidModelStateResponseFactory); PR-08 chunked POST; PR-09 Kestrel MaxRequestBodySize; PR-09 Rate limit fed/mesh integration (Burst_federation_inbox_*, Burst_mesh_gateway_* in FedMeshRateLimitTestHostFactory); §8 QuicDataServer aligned with GetEffectiveMaxPayloadSize; §9 Metrics Basic Auth constant-time; §11 NotImplementedException gating; J ScriptService deadlock.
+
+| Source | Item | Action |
+|--------|------|--------|
+| **slskd.Tests.Unit** | Re-enable ~100 excluded tests in `slskd.Tests.Unit.csproj` | Execute **slskd.Tests.Unit Re-enablement Plan** (§ slskd.Tests.Unit Re-enablement Plan below). **In scope.** |
+
+
 ---
 
 ## 1. Controllers Public (No Default-Deny Auth) [Stop-Ship] (PR-02)
@@ -565,6 +581,7 @@ Body read only when `Request.ContentLength > 0`; chunked requests get `ContentLe
 | `Web.Api.RejectInvalidModelState` | Optional; in Enforce can imply true |
 | `Web.RateLimiting` | Policy limits |
 | `Privacy.MaxUnpaddedBytes`, `MaxPaddedBytes` | Padding caps |
+| `Flags.HashFromAudioFileEnabled` | §11: when true and EnforceSecurity, startup fails (audio hash from file not implemented) |
 
 ---
 
@@ -620,22 +637,23 @@ PR numbers (see Implementation Ticket Index) can be batched for review; order be
 
 ## Checklist Before Merge
 
-- [ ] `Web.EnforceSecurity`, `AllowRemoteNoAuth`, `Web.Cors`, `Diagnostics.AllowMemoryDump`, `Mesh.Security.EnforceRemotePayloadLimits` in Options and `slskd.example.yml`.
-- [ ] `HardeningValidator` runs in `Main()` and enforces Enforce rules.
-- [ ] AuthorizeFilter + `[AllowAnonymous]` on intended-public only; SignalR `RequireAuthorization` when Enforce.
-- [ ] Passthrough: loopback or `AllowRemoteNoAuth`; `HandleChallengeAsync` returns 401.
-- [ ] CORS: allowlist when enabled; no credentials with wildcard.
-- [ ] Exception: ProblemDetails, `traceId`, generic detail in prod.
-- [ ] Dump: `AllowMemoryDump` default false; admin-only; local-only when `AllowRemoteDump` false; no runtime download (or gated); Dumper uses DiagnosticsClient or dotnet-dump on PATH.
-- [ ] ActivityPub: IHttpSignatureService, Ed25519, digest, SSRF limits; inbound verify + IsAuthorizedRequest.
-- [ ] KeyedSigner uses `GetSignableData`; Verify supports legacy.
-- [ ] PodMessageRouter: envelope signing, PeerResolution; MessageSigner Ed25519 + canonical payload + membership-based pubkey.
-- [ ] Padding: versioned format, Unpad implemented, size limits.
-- [ ] SecurityUtils parse helpers; QUIC/overlay read caps; ConnectionThrottler on all inbound.
-- [ ] Metrics: FixedTimeEquals, WWW-Authenticate.
-- [ ] ModelState when Enforce; NotImplemented sites gated or fail-fast.
-- [ ] ScriptService: async read + WaitForExitAsync + timeout.
-- [ ] Regression tests above; CI green.
+- [x] `Web.EnforceSecurity`, `AllowRemoteNoAuth`, `Web.Cors`, `Diagnostics.AllowMemoryDump`, `Mesh.Security.EnforceRemotePayloadLimits` in Options and `slskd.example.yml`.
+- [x] `HardeningValidator` runs in `Main()` and enforces Enforce rules.
+- [x] AuthorizeFilter + `[AllowAnonymous]` on intended-public only; SignalR `RequireAuthorization` when Enforce.
+- [x] Passthrough: loopback or `AllowRemoteNoAuth`; `HandleChallengeAsync` returns 401.
+- [x] CORS: allowlist when enabled; no credentials with wildcard.
+- [x] Exception: ProblemDetails, `traceId`, generic detail in prod; FeatureNotImplementedException→501.
+- [x] Dump: `AllowMemoryDump` default false; admin-only; local-only when `AllowRemoteDump` false; no runtime download (or gated); Dumper uses DiagnosticsClient or dotnet-dump on PATH.
+- [x] ActivityPub: Ed25519 outbound, Digest, (request-target); inbound VerifyHttpSignature (Date ±5min, Digest, Ed25519/hs2019); HttpSignatureKeyFetcher SSRF-safe (HTTPS, no loopback/private/link-local/multicast, 3s, 256KB); IsAuthorizedRequest (IsFriendsOnly: loopback or ApprovedPeers).
+- [x] KeyedSigner uses `GetSignableData`; Verify supports legacy.
+- [x] PodMessageRouter: envelope signing, PeerResolution; MessageSigner Ed25519 + canonical payload + membership-based pubkey. (PR-12, PR-13 done.)
+- [x] Padding: versioned format, Unpad implemented, size limits.
+- [x] SecurityUtils parse helpers; [x] QUIC/overlay read caps (QuicOverlay abort, Udp drop, QuicData 512KB); [x] ConnectionThrottler on all inbound (QuicOverlay, UdpOverlay, QuicData).
+- [x] MeshGatewayController (PR-08/F): bounded body read, 413 on over-limit, chunked support.
+- [x] Metrics: FixedTimeEquals, WWW-Authenticate.
+- [x] ModelState when Enforce (SuppressModelStateInvalidFilter = !EnforceSecurity); [x] NotImplemented sites gated or fail-fast (§11: I2P/RelayOnly fail at startup; PerceptualHasher/AudioUtilities→FeatureNotImplementedException/501; Flags.HashFromAudioFileEnabled+Enforce fails startup).
+- [x] ScriptService: async read + WaitForExitAsync + timeout.
+- [x] Regression tests above; CI green (bin/build runs slskd.Tests.Unit, slskd.Tests, slskd.Tests.Integration; `dotnet test -c Release`).
 
 ### Definition of Done for the Epic (from PR-set)
 
@@ -644,10 +662,90 @@ PR numbers (see Implementation Ticket Index) can be batched for review; order be
 
 ---
 
+## Follow-up: Test re-enablement
+
+- **slskd.Tests.Unit** (many `Compile Remove`): **In scope.** Execute **slskd.Tests.Unit Re-enablement Plan** below.
+- **PR-00 Mesh/** in slskd.Tests: **Done.** `MeshServiceRouterSecurityTests` fixed (MaxDescriptorBytes; assertion “exceeds”); `Mesh/**` re-enabled in slskd.Tests.
+
+## slskd.Tests.Unit Re-enablement Plan
+
+**Goal:** Re-enable all `Compile Remove` in `slskd.Tests.Unit.csproj`; **in scope.**
+
+**Source of truth:** `tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` and its `Compile Remove` entries and inline blocker comments.
+
+### Phase 0 – API/type audit (prerequisite)
+
+1. Build with one `Compile Remove` commented out; capture errors.
+2. Classify: missing type, renamed/removed API, ctor/options, `slskd.Common.CodeQuality`, transport/options (TorSocksTransport, RateLimiter, Obfs4Options, MeekOptions, HttpTunnelOptions, WebSocketOptions), model/DTO (LocalFileMetadata, PodMessage, PodChannel, Pod, PodPrivateServicePolicy, ModerationVerdict, ContentDescriptor.Filename, IContentBackend, ContentBackendType, PlanStatus.Success, TestContext, etc.).
+3. For each: fix prod, add test shim, or change/remove test; write audit (file → error → resolution).
+
+### Phase 1
+
+- **CodeQuality** (`Common\CodeQuality\**`): AsyncRulesTests, BuildTimeAnalyzerTests, HotspotAnalysisTests, ModerationCoverageAuditTests, RegressionHarnessTests, StaticAnalysisTests, TestCoverageTests. *(Depend on slskd.Common.CodeQuality excluded from slskd build.)*
+- **Common:** LocalPortForwarderTests.
+- **MediaCore:** ContentDescriptorPublisherModerationTests.
+- **Relay:** RelayControllerModerationTests.
+
+### Phase 2 – Common
+
+- **Moderation:** ExternalModerationClientFactory, CompositeModerationProviderLlm, LocalExternalModerationClient, LlmModerationProvider, LlmModeration, RemoteExternalModerationClient; ContentIdGating, ModerationCore, PeerReputationService, PeerReputationStore. *(Blockers: LlmModeration\*, ModerationVerdict, APIs.)*
+- **Security:** DnsSecurityService, IdentityConfigurationAuditor, IdentitySeparationEnforcer, SecurityUtils, SoulseekSafetyLimiter, WorkBudget; Blacklist; TokenBucket.
+- **Files:** FilesControllerSecurity, FileServiceSecurity, FileService.
+
+### Phase 3 – PodCore
+
+- ConversationPodCoordinator, MembershipGate.
+- PodCoreApiIntegration, SqlitePodMessaging, PeerIdFactory, PodIdFactory, PodModels, PodPolicyEnforcement, PrivateGatewayMeshService.
+- GoldStarClub, MessageSigner, PodAffinityScorer, PodMembershipSigner, PodMessagingRouting, PodsController, PodValidation. *(Blockers: PodIdFactory, ConversationPodCoordinator, PodValidation, PodPrivateServicePolicy, Options/APIs.)*
+
+### Phase 4 – Mesh
+
+- **Transport:** HttpTunnel, Meek, Obfs4, WebSocket, TorSocks, RateLimiter; DescriptorSigning, SecurityUtils, TransportDialer, TransportSelector, TransportPolicy; AnonymityTransportSelection, CanonicalSerialization, CertificatePinManager, ConnectionThrottler, DnsLeakPreventionVerifier, LoggingUtils. *(Blockers: TorSocksTransport, RateLimiter, Obfs4Options, MeekOptions, HttpTunnelOptions, WebSocketOptions, ConnectionThrottler RateLimiter type.)*
+- **Overlay/Privacy:** BridgeDiscovery, DecoyPod, Gossip (RealmAware), Governance (RealmAware), MeshCircuitBuilder, OverlayPrivacy, PrivacyLayer; CoverTrafficGenerator, RandomJitterObfuscator, TimedBatcher.
+- **Realm:** ActivityPubBridge, BridgeFlowEnforcer, RealmMigrationTool, MultiRealm, RealmService; BridgeFlowTypes, RealmChangeValidator, MultiRealmConfig, RealmConfig, RealmIsolation.
+- **ServiceFabric:** DestinationAllowlist, RateLimitTimeout, DhtMeshServiceDirectory, MeshGatewayAuthMiddleware, MeshServiceRouterSecurity, MeshServiceRouter, RouterStats. *(Align or drop duplicates with slskd.Tests; MeshServiceRouterSecurity re-enabled in slskd.Tests.)*
+- **Other:** CensorshipSimulation, CircuitMaintenance, DomainFronted, MeshSyncSecurity, MeshTransportServiceIntegration, Phase8.
+
+### Phase 5
+
+- **SocialFederation:** ActivityPubKeyStore, FederationService, LibraryActorService, WorkRef.
+- **MediaCore:** ContentIdRegistry, FuzzyMatcher, IpldMapper, MetadataPortability.
+- **Audio:** CanonicalStatsService.
+- **Integrations:** MusicBrainzController.
+- **HashDb:** HashDbService.
+- **Shares:** ShareScannerModeration.
+- **Signals:** SignalBus.
+- **Transfers:** UploadGovernor, UploadQueue.
+
+### Phase 6 – VirtualSoulfind
+
+- **Core/Planning:** LocalLibraryBackendModeration, ContentDomain, GenericFile, Music, DomainAwarePlanner, MultiSourcePlannerDomain.
+- **v2:** VirtualSoulfindV2Controller, ContentBackend, HttpBackend, LanBackend, LocalLibraryBackend, MeshTorrentBackend, SoulseekBackend, CatalogueStore, LocalFileAndVerifiedCopy, CompleteV2Flow, VirtualSoulfindV2Integration, IntentQueue, SimpleMatchEngine, MultiSourcePlannerReputation, MultiSourcePlanner, IntentQueueProcessor, LibraryReconciliationService, SourceRegistry. *(Blockers: IContentBackend, LocalLibraryBackend, ContentBackendType, ContentDescriptor.Filename, PlanStatus.Success, TestContext.)*
+
+### Execution order
+
+Phase 0 → 1 → 2 → 3 → 4 → 5 → 6. Within each phase: (a) no prod changes where possible, (b) prod type/API tweaks, (c) larger refactors.
+
+### Per-file workflow
+
+1. Remove or narrow the `Compile Remove` for the file.
+2. `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` and fix build errors.
+3. `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~Namespace.Class"` and fix failing tests.
+4. Repeat until `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` passes.
+
+### Definition of done
+
+- No `Compile Remove` for the listed files (or a documented decision to drop a test).
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` passes (or only accepted skips).
+- Audit and any prod changes recorded.
+
+---
+
 ## Out of Scope (this branch)
 
 - Full feature completion for MediaCore, Mesh, VirtualSoulfind beyond the security/correctness fixes above.
 - Updating all external docs; `CHANGELOG` and option docs must note new flags and breaking behavior.
+- All previously deferred optionals (PR-02, PR-05, PR-07, PR-09 fed/mesh) are completed. See Deferred table Completed list.
 
 ---
 

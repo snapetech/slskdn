@@ -6,6 +6,7 @@ namespace slskd.MediaCore;
 
 using System;
 using System.Linq;
+using slskd;
 
 /// <summary>
 /// Supported perceptual hash algorithms.
@@ -426,13 +427,14 @@ public static class AudioUtilities
     /// Placeholder for PCM extraction from audio file.
     /// In production: use FFmpeg/NAudio to decode MP3/FLAC/etc to PCM.
     /// </summary>
+    /// <remarks>
+    ///     §11: Throws <see cref="FeatureNotImplementedException"/> so the exception handler returns 501.
+    ///     No production code calls this; when implemented, integrate FFmpeg/NAudio.
+    /// </remarks>
     public static (float[] Samples, int SampleRate) ExtractPcmSamples(string audioFilePath)
     {
-        // TODO: Integrate FFmpeg or NAudio for real audio decoding
-        // For now, return empty (this would be called by a background job)
-        throw new NotImplementedException(
-            "PCM extraction requires FFmpeg/NAudio integration. " +
-            "Install ffmpeg and use: ffmpeg -i input.mp3 -f f32le -ac 1 -ar 11025 output.raw");
+        throw new FeatureNotImplementedException(
+            "Audio hash from file is not implemented. PCM extraction requires FFmpeg/NAudio integration.");
     }
 
     /// <summary>

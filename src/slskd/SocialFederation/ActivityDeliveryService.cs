@@ -17,6 +17,7 @@ namespace slskd.SocialFederation
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using NSec.Cryptography;
 
     /// <summary>
     ///     Service for delivering ActivityPub activities to remote servers.
@@ -173,94 +174,82 @@ namespace slskd.SocialFederation
             CancellationToken cancellationToken)
         {
             var fedOpts = _federationOptions.CurrentValue;
+            var jsonOpts = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            };
+            var bodyBytes = JsonSerializer.SerializeToUtf8Bytes(activity, jsonOpts);
 
-            // Create the request
             var request = new HttpRequestMessage(HttpMethod.Post, inboxUrl)
             {
-                Content = JsonContent.Create(activity, options: new JsonSerializerOptions
+                Content = new ByteArrayContent(bodyBytes)
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                })
+                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/activity+json") }
+                }
             };
 
-            // Add standard headers
             request.Headers.Add("User-Agent", "slskdN/1.0");
             request.Headers.Add("Accept", "application/activity+json");
-            request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/activity+json");
 
-            // Add HTTP signature
-            await AddHttpSignatureAsync(request, activity, fedOpts, cancellationToken);
+            var actorId = activity.Actor?.ToString() ?? $"{fedOpts.BaseUrl}/actors/user";
+            await AddHttpSignatureAsync(request, bodyBytes, actorId, fedOpts, cancellationToken);
 
             return request;
         }
 
         /// <summary>
-        ///     Adds HTTP signature to the request.
+        ///     Adds HTTP signature to the request. PR-14: Ed25519, (request-target), Digest.
         /// </summary>
-        /// <param name="request">The HTTP request.</param>
-        /// <param name="activity">The activity being delivered.</param>
-        /// <param name="fedOpts">The federation options.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
         private async Task AddHttpSignatureAsync(
             HttpRequestMessage request,
-            ActivityPubActivity activity,
+            byte[] bodyBytes,
+            string actorId,
             SocialFederationOptions fedOpts,
             CancellationToken cancellationToken)
         {
-            // Extract actor from activity
-            var actorId = activity.Actor?.ToString() ?? $"{fedOpts.BaseUrl}/actors/user";
+            using var disp = await _keyStore.GetPrivateKeyAsync(actorId, cancellationToken);
+            var privateKeyPem = disp.PemString;
 
-            // Get the actor's private key
-            using var privateKey = await _keyStore.GetPrivateKeyAsync(actorId, cancellationToken);
-
-            // Create signing string (simplified HTTP signature)
             var date = DateTimeOffset.UtcNow.ToString("r");
             var host = request.RequestUri?.Host ?? "localhost";
-            var digest = await CreateDigestAsync(request.Content);
+            var digest = "SHA-256=" + Convert.ToBase64String(SHA256.HashData(bodyBytes));
 
-            var signingString = $"date: {date}\nhost: {host}\ndigest: {digest}";
+            var path = request.RequestUri?.AbsolutePath ?? "/";
+            var requestTarget = $"(request-target): post {path}";
+            var signingString = $"{requestTarget}\ndate: {date}\nhost: {host}\ndigest: {digest}";
 
-            // Sign the string
-            var signatureBytes = SignData(signingString, privateKey.PemString);
+            var signatureBytes = SignWithEd25519(Encoding.UTF8.GetBytes(signingString), privateKeyPem);
             var signature = Convert.ToBase64String(signatureBytes);
 
-            // Add signature headers
             request.Headers.Add("Date", date);
             request.Headers.Add("Digest", digest);
-            request.Headers.Add("Signature", $"keyId=\"{actorId}#main-key\",algorithm=\"rsa-sha256\",headers=\"date host digest\",signature=\"{signature}\"");
+            request.Headers.Add("Signature", $"keyId=\"{actorId}#main-key\",algorithm=\"ed25519\",headers=\"(request-target) date host digest\",signature=\"{signature}\"");
         }
 
         /// <summary>
-        ///     Creates a digest of the request body.
+        ///     Signs data with Ed25519 private key from PEM (PKIX). PR-14.
         /// </summary>
-        /// <param name="content">The HTTP content.</param>
-        /// <returns>The digest string.</returns>
-        private static async Task<string> CreateDigestAsync(HttpContent? content)
+        private static byte[] SignWithEd25519(byte[] data, string privateKeyPem)
         {
-            if (content == null)
+            var pkix = PemToBytes(privateKeyPem);
+            var alg = SignatureAlgorithm.Ed25519;
+            using var key = Key.Import(alg, pkix, KeyBlobFormat.PkixPrivateKey);
+            return alg.Sign(key, data);
+        }
+
+        private static byte[] PemToBytes(string pem)
+        {
+            var lines = pem.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var b64 = new List<string>();
+            var inKey = false;
+            foreach (var line in lines)
             {
-                return "SHA-256=" + Convert.ToBase64String(SHA256.HashData(Array.Empty<byte>()));
+                if (line.Contains("-----BEGIN", StringComparison.Ordinal)) { inKey = true; continue; }
+                if (line.Contains("-----END", StringComparison.Ordinal)) break;
+                if (inKey) b64.Add(line.Trim());
             }
-
-            var bytes = await content.ReadAsByteArrayAsync();
-            var hash = SHA256.HashData(bytes);
-            return "SHA-256=" + Convert.ToBase64String(hash);
-        }
-
-        /// <summary>
-        ///     Signs data with RSA private key.
-        /// </summary>
-        /// <param name="data">The data to sign.</param>
-        /// <param name="privateKeyPem">The private key in PEM format.</param>
-        /// <returns>The signature bytes.</returns>
-        private static byte[] SignData(string data, string privateKeyPem)
-        {
-            // For now, use a simple HMAC-based signature
-            // TODO: Implement proper RSA signing with the Ed25519 key
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes("federation-signing-key"));
-            return hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+            return Convert.FromBase64String(string.Concat(b64));
         }
 
         /// <summary>

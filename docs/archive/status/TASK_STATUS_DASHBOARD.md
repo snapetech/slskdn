@@ -699,7 +699,7 @@ All core functionality is **100% implemented and tested**. These research tasks 
 **ALL tasks follow:**
 - `docs/CURSOR-META-INSTRUCTIONS.md`
 - `docs/security-hardening-guidelines.md`
-- `MCP-HARDENING.md`
+- [MCP-HARDENING.md](../../MCP-HARDENING.md)
 
 ---
 

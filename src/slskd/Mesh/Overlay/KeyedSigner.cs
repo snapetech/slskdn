@@ -3,7 +3,6 @@
 // </copyright>
 
 using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using NSec.Cryptography;
 
@@ -61,13 +60,16 @@ public class ControlSigner : IControlSigner
                 return false;
             }
 
-            // Build signable payload
-            var payload = BuildSignablePayload(envelope);
-            var payloadBytes = Encoding.UTF8.GetBytes(payload);
-
-            // Verify signature using NSec (libsodium)
+            // Verify: try canonical (GetSignableData) then legacy for backward compatibility
             var publicKey = PublicKey.Import(SignatureAlgorithm.Ed25519, publicKeyBytes, KeyBlobFormat.RawPublicKey);
-            return SignatureAlgorithm.Ed25519.Verify(publicKey, payloadBytes, signatureBytes);
+            var signableData = envelope.GetSignableData();
+            if (SignatureAlgorithm.Ed25519.Verify(publicKey, signableData, signatureBytes))
+            {
+                return true;
+            }
+
+            var legacyData = envelope.GetLegacySignableData();
+            return SignatureAlgorithm.Ed25519.Verify(publicKey, legacyData, signatureBytes);
         }
         catch (Exception ex)
         {
@@ -80,9 +82,7 @@ public class ControlSigner : IControlSigner
     {
         try
         {
-            // Build signable payload
-            var payload = BuildSignablePayload(envelope);
-            var payloadBytes = Encoding.UTF8.GetBytes(payload);
+            var payloadBytes = envelope.GetSignableData();
 
             // Import private key and sign using NSec (libsodium)
             using var key = Key.Import(SignatureAlgorithm.Ed25519, privateKey, KeyBlobFormat.RawPrivateKey);
@@ -96,7 +96,4 @@ public class ControlSigner : IControlSigner
             throw;
         }
     }
-
-    private static string BuildSignablePayload(ControlEnvelope env) =>
-        $"{env.Type}|{env.TimestampUnixMs}|{Convert.ToBase64String(env.Payload)}";
 }

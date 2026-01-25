@@ -110,21 +110,28 @@ Every button must have a helpful mouseover tooltip (using Semantic UI's `Popup` 
 
 ## After Completing Work
 
-1. **Update `memory-bank/tasks.md`**:
-   - Mark task as complete with date
-   - Add any follow-up tasks discovered
+### 1. Deferred and Follow-up (plan-driven work)
 
-2. **Update `memory-bank/progress.md`**:
-   - Append timestamped summary of what was done
-   - Note any surprises or decisions made
+When the work comes from a plan that has a **Deferred and Follow-up Work** table (e.g. `docs/dev/40-fixes-plan.md`):
 
-3. **Update `memory-bank/activeContext.md`**:
-   - Clear current task if finished
-   - Update "Next Steps" section
+- **If you intentionally leave out** optional, out-of-scope, or “do later” items: **add a row** to that table before considering the PR/task done. Columns: **Source** (e.g. PR-08), **Item** (short name), **Action** (what to do).
+- **If nothing was left out** for that PR/item, no new deferred row is needed.
+- **When you later complete a deferred item:** remove that row from the Deferred table and do the usual doc updates below (progress, tasks, activeContext).
 
-4. **Run tests**: `dotnet test`
+### 2. Docs to update on completion
 
-5. **Run lint**: `./bin/lint`
+| Doc | When / What |
+|-----|-------------|
+| **`docs/dev/40-fixes-plan.md`** | If doing dev/40-fixes work: Deferred table (add rows for left-out work; remove rows when deferred items are completed). Update checklists or Implementation Ticket Index if the plan has them. |
+| **`config/slskd.example.yml`** | If you added or changed options: add or update the commented example. |
+| **`memory-bank/tasks.md`** | Mark task complete with date; add any new follow-up tasks. |
+| **`memory-bank/progress.md`** | Append a short, timestamped summary of what was done; note surprises or decisions. |
+| **`memory-bank/activeContext.md`** | Clear the current task if finished; set “Next Steps”. |
+
+### 3. Run tests and lint
+
+- **Run tests:** `dotnet test`
+- **Run lint:** `./bin/lint`
 
 ---
 
@@ -265,6 +272,7 @@ See `memory-bank/decisions/adr-0005-tagging-system.md` for detailed tag format a
 | `memory-bank/activeContext.md` | Current work context |
 | `memory-bank/progress.md` | Work log |
 | `memory-bank/scratch.md` | Temporary notes, commands |
+| `docs/dev/40-fixes-plan.md` | dev/40-fixes security plan; **Deferred and Follow-up Work** table — add rows when leaving work out; remove when completing deferred items. See AGENTS.md § After Completing Work. |
 | `FORK_VISION.md` | Feature roadmap |
 | `DEVELOPMENT_HISTORY.md` | Release history |
 | `TODO.md` | Human-maintained todo list |

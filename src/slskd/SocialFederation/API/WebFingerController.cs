@@ -8,6 +8,7 @@ namespace slskd.SocialFederation.API
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -22,6 +23,7 @@ namespace slskd.SocialFederation.API
     /// </remarks>
     [ApiController]
     [Route(".well-known")]
+    [AllowAnonymous]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class WebFingerController : ControllerBase
     {

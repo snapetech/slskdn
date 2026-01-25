@@ -2,6 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -18,7 +19,8 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/mediacore/fuzzymatch")]
 [ApiController]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[AllowAnonymous] // PR-02: intended-public
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class FuzzyMatcherController : ControllerBase
 {
     private readonly ILogger<FuzzyMatcherController> _logger;

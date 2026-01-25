@@ -546,7 +546,7 @@ Once the service fabric is stable, this enables:
 
 **Next Steps**:
 1. ✅ Read this vision doc thoroughly
-2. ✅ Read `SERVICE_FABRIC_TASKS.md` for detailed task breakdown
+2. ✅ Read [SERVICE_FABRIC_TASKS.md](../../SERVICE_FABRIC_TASKS.md) for detailed task breakdown
 3. ✅ Freeze current branch: `git tag pre-service-fabric-$(date +%Y%m%d)`
 4. 📋 Start with T-SF01 only (types & directory)
 5. 📋 Manually review diff before accepting
@@ -642,7 +642,7 @@ Once the service fabric is stable, this enables:
 
 **7 Major Documents (6000+ lines)**:
 
-1. **SERVICE_FABRIC_TASKS.md**
+1. [SERVICE_FABRIC_TASKS.md](../../SERVICE_FABRIC_TASKS.md)
    - Master task breakdown (T-SF01 through T-SF07)
    - Security gates defined
    - Implementation phases

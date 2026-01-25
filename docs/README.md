@@ -31,8 +31,8 @@ Complete guide to all slskdn documentation.
 
 ## 📚 Development Documentation
 
-- [Development History](../DEVELOPMENT_HISTORY.md) - Feature completion timeline and releases
-- [Fork Vision](../FORK_VISION.md) - Project philosophy and roadmap
+- [Development History](archive/DEVELOPMENT_HISTORY.md) - Feature completion timeline and releases
+- [Fork Vision](archive/FORK_VISION.md) - Project philosophy and roadmap
 - [Contributing](../CONTRIBUTING.md) - How to contribute to the project
 
 ## 🔍 Additional Resources

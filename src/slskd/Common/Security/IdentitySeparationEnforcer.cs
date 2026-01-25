@@ -181,12 +181,16 @@ namespace slskd.Common.Security
 
         /// <summary>
         ///     Validates Soulseek identity format (username).
+        ///     Also accepts "bridge:soulseek_username" as it leaks Soulseek identity into pod context.
         /// </summary>
         private static bool IsValidSoulseekIdentity(string identity)
         {
+            var part = identity.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase)
+                ? identity.Substring(7)
+                : identity;
             // Soulseek usernames: alphanumeric, underscores, dots, max 30 chars
-            return identity.Length >= 1 && identity.Length <= 30 &&
-                   identity.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
+            return part.Length >= 1 && part.Length <= 30 &&
+                   part.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');
         }
 
         /// <summary>

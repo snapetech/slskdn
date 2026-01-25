@@ -328,7 +328,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
         await stream.WriteAsync(authRequest.ToArray(), 0, authRequest.Count, cancellationToken);
     }
 
-    private static string GenerateIsolationUsername(string isolationKey)
+    internal static string GenerateIsolationUsername(string isolationKey)
     {
         // Generate a deterministic username based on the isolation key
         // This ensures the same peer always gets the same username (and thus same Tor circuit)
@@ -338,7 +338,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
         return "tor-" + BitConverter.ToString(hash).Replace("-", "").Substring(0, 16).ToLower();
     }
 
-    private static string GenerateIsolationPassword(string isolationKey)
+    internal static string GenerateIsolationPassword(string isolationKey)
     {
         // Generate a deterministic password based on the isolation key
         using var sha256 = System.Security.Cryptography.SHA256.Create();

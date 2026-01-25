@@ -32,7 +32,9 @@ public enum PodChannelKind
 {
     General,
     Custom,
-    Bound // e.g., bound to Soulseek room
+    Bound, // e.g., bound to Soulseek room
+    /// <summary>Direct-message channel (e.g. Soulseek DM).</summary>
+    DirectMessage
 }
 
 /// <summary>
@@ -52,6 +54,8 @@ public class Pod
     public string? FocusContentId { get; set; } // e.g., content:mb:recording:<mbid>
     public List<string> Tags { get; set; } = new();
     public List<PodChannel> Channels { get; set; } = new();
+    /// <summary>Optional in-memory member list (e.g. for tests); often not populated when loaded from storage.</summary>
+    public List<PodMember>? Members { get; set; }
     public List<ExternalBinding> ExternalBindings { get; set; } = new();
 
     /// <summary>
@@ -71,6 +75,7 @@ public class PodChannel
     public PodChannelKind Kind { get; set; } = PodChannelKind.General;
     public string Name { get; set; } = string.Empty;
     public string? BindingInfo { get; set; } // e.g., soulseek-room:techno
+    public string? Description { get; set; }
 }
 
 public class ExternalBinding
@@ -86,6 +91,10 @@ public class PodMember
     public string Role { get; set; } = "member"; // owner|mod|member
     public bool IsBanned { get; set; }
     public string? PublicKey { get; set; } // Ed25519 public key (base64)
+    /// <summary>When the member joined the pod (optional, may be set by storage).</summary>
+    public DateTimeOffset? JoinedAt { get; set; }
+    /// <summary>When the member was last seen (optional).</summary>
+    public DateTimeOffset? LastSeen { get; set; }
 }
 
 public class PodMessage

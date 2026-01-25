@@ -35,7 +35,7 @@ namespace slskd.Common.Moderation
     ///         3. Falls back to Unknown if no providers flag the content
     ///     </para>
     ///     <para>
-    ///         🔒 MANDATORY: Implements failsafe mode from `MCP-HARDENING.md` Section 5.
+    ///         🔒 MANDATORY: Implements failsafe mode from `docs/docs/MCP-HARDENING.md` Section 5.
     ///         On provider failure, behavior depends on configuration:
     ///         - "block" mode: Block on error (conservative)
     ///         - "allow" mode: Continue to next provider (permissive)
@@ -393,7 +393,7 @@ namespace slskd.Common.Moderation
         ///     Hashes a peer ID for logging (privacy protection).
         /// </summary>
         /// <remarks>
-        ///     🔒 Required by MCP-HARDENING.md Section 1.3.
+        ///     🔒 Required by docs/MCP-HARDENING.md Section 1.3.
         ///     Returns first 16 chars of SHA256 hash for correlation without exposure.
         /// </remarks>
         private string HashPeerId(string peerId)

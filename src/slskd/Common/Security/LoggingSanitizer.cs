@@ -37,7 +37,9 @@ namespace slskd.Common.Security
 
             try
             {
-                return System.IO.Path.GetFileName(path);
+                // Handle Windows-style paths on any OS (Path.GetFileName treats \ as literal on Unix)
+                var normalized = path.Replace('\\', '/');
+                return System.IO.Path.GetFileName(normalized);
             }
             catch
             {
@@ -183,11 +185,16 @@ namespace slskd.Common.Security
         /// <param name="contextName">Name of the context (e.g., "user", "file", "peer").</param>
         /// <param name="identifier">The identifier to sanitize.</param>
         /// <returns>A safe context object for logging.</returns>
-        public static object SafeContext(string contextName, string identifier)
+        public static LoggingSafeContext SafeContext(string contextName, string identifier)
         {
-            return new { Context = contextName, Id = SanitizeExternalIdentifier(identifier) };
+            return new LoggingSafeContext(contextName, SanitizeExternalIdentifier(identifier));
         }
     }
+
+    /// <summary>
+    ///     Safe context for structured logging (avoids anonymous type for testability).
+    /// </summary>
+    public sealed record LoggingSafeContext(string Context, string Id);
 }
 
 

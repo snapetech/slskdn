@@ -33,6 +33,7 @@
 
 Before committing code, verify:
 
+- [x] **Deferred and docs (if plan-driven)** - Add rows to the plan’s **Deferred and Follow-up Work** table for left-out work; remove rows when completing deferred items; update `config/slskd.example.yml` if options changed. See **AGENTS.md § After Completing Work**.
 - [x] **Grepped for patterns** - No invented abstractions
 - [x] **No defensive null checks** - Only validate at boundaries  
 - [x] **Exceptions propagate** - No swallowed errors

@@ -11,6 +11,7 @@ namespace slskd.Tests.Unit.Common.Moderation
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Common.Moderation;
     using Xunit;
 
     /// <summary>
@@ -144,10 +145,10 @@ namespace slskd.Tests.Unit.Common.Moderation
             _optionsMock.Setup(x => x.CurrentValue).Returns(new ExternalModerationOptions { Mode = "Off" });
             var factory = CreateFactory();
             var client = factory.CreateClient();
-            var file = new LocalFileMetadata("test.mp3", 1024, "hash", "audio/mp3");
+            var file = new LocalFileMetadata { Id = "test.mp3", SizeBytes = 1024, PrimaryHash = "hash", MediaInfo = "audio/mp3" };
 
             // Act
-            var result = await client.AnalyzeFileAsync(file);
+            var result = await client.AnalyzeFileAsync(file, default);
 
             // Assert
             Assert.Equal(ModerationVerdict.Unknown, result.Verdict);

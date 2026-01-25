@@ -7,9 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MessagePack;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using slskd.MediaCore;
+using slskd.Mesh;
+using slskd.Mesh.Transport;
 
 namespace slskd.Mesh.Dht;
 
@@ -21,15 +23,18 @@ public class MeshDirectory : IMeshDirectory
     private readonly ILogger<MeshDirectory> logger;
     private readonly IMeshDhtClient dht;
     private readonly MediaCore.IDescriptorValidator descriptorValidator;
+    private readonly int _maxPayload;
 
     public MeshDirectory(
         ILogger<MeshDirectory> logger,
         IMeshDhtClient dht,
-        MediaCore.IDescriptorValidator descriptorValidator)
+        MediaCore.IDescriptorValidator descriptorValidator,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         this.logger = logger;
         this.dht = dht;
         this.descriptorValidator = descriptorValidator;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public async Task<slskd.Mesh.MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
@@ -40,8 +45,8 @@ public class MeshDirectory : IMeshDirectory
 
         try
         {
-            // Deserialize DHT descriptor
-            var dhtDesc = MessagePackSerializer.Deserialize<MeshPeerDescriptor>(raw);
+            // Deserialize DHT descriptor (safe parse: size limit)
+            var dhtDesc = SecurityUtils.ParseMessagePackSafely<MeshPeerDescriptor>(raw, _maxPayload);
             
             // Convert to interface descriptor
             var endpoint = dhtDesc.Endpoints?.FirstOrDefault();

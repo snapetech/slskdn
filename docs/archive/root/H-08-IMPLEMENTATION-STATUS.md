@@ -271,7 +271,7 @@ Before H-08 can be marked complete:
 6. ⏳ **Metrics**: Safety metrics exposed via API
 7. ⏳ **Unit Tests**: 100% coverage of limiter logic
 8. ⏳ **Integration Tests**: End-to-end verification
-9. ⏳ **Documentation**: Usage documented in FEATURES.md
+9. ⏳ **Documentation**: Usage documented in [FEATURES.md](../../FEATURES.md)
 
 ---
 

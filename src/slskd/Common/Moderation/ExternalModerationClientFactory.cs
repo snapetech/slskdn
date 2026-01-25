@@ -75,7 +75,7 @@ namespace slskd.Common.Moderation
         /// <summary>
         ///     No-op external moderation client for when external moderation is disabled.
         /// </summary>
-        private sealed class NoopExternalModerationClient : IExternalModerationClient
+        public sealed class NoopExternalModerationClient : IExternalModerationClient
         {
             private readonly ILogger<NoopExternalModerationClient> _logger;
 

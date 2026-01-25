@@ -43,7 +43,7 @@ You are working on the **experimental/whatAmIThinking** branch. The design and t
 
 - `docs/CURSOR-META-INSTRUCTIONS.md` - Meta-rules for implementation
 - `SECURITY-GUIDELINES.md` - Global security requirements
-- `MCP-HARDENING.md` - Moderation layer security
+- [MCP-HARDENING.md](../../MCP-HARDENING.md) - Moderation layer security
 
 ---
 

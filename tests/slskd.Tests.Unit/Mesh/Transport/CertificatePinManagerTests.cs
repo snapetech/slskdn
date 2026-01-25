@@ -16,22 +16,18 @@ namespace slskd.Tests.Unit.Mesh.Transport;
 public class CertificatePinManagerTests : IDisposable
 {
     private readonly Mock<ILogger<CertificatePinManager>> _loggerMock;
-    private readonly Mock<IOptionsMonitor<MeshOptions>> _optionsMock;
+    private readonly Mock<IOptions<MeshOptions>> _optionsMock;
     private readonly string _tempDir;
     private readonly CertificatePinManager _pinManager;
 
     public CertificatePinManagerTests()
     {
         _loggerMock = new Mock<ILogger<CertificatePinManager>>();
-        _optionsMock = new Mock<IOptionsMonitor<MeshOptions>>();
-        _optionsMock.Setup(x => x.CurrentValue).Returns(new MeshOptions { DataDirectory = "test-data" });
-
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDir);
 
-        // Override the data directory to use our temp dir
-        var options = new MeshOptions { DataDirectory = _tempDir };
-        _optionsMock.Setup(x => x.CurrentValue).Returns(options);
+        _optionsMock = new Mock<IOptions<MeshOptions>>();
+        _optionsMock.Setup(x => x.Value).Returns(new MeshOptions { DataDirectory = _tempDir });
 
         _pinManager = new CertificatePinManager(_loggerMock.Object, _optionsMock.Object);
     }

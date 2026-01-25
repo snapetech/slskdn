@@ -99,11 +99,8 @@ namespace slskd.Tests.Unit.Transfers
             var optionsMonitorMock = new Mock<IOptionsMonitor<AppOptions>>();
             optionsMonitorMock.Setup(m => m.CurrentValue).Returns(options);
 
-            var service = new ScheduledRateLimitService(optionsMonitorMock.Object);
-
-            // Mock DateTime.Now to be during night hours (e.g., 2 AM)
             var nightTime = new DateTime(2025, 12, 13, 2, 0, 0); // 2:00 AM
-            using var _ = new DateTimeContext(nightTime);
+            var service = new ScheduledRateLimitService(optionsMonitorMock.Object, () => nightTime);
 
             // Act
             var result = service.GetEffectiveUploadSpeedLimit();
@@ -115,15 +112,24 @@ namespace slskd.Tests.Unit.Transfers
         [Fact]
         public void GetEffectiveDownloadSpeedLimit_Returns_NightLimit_When_Enabled_And_NightTime()
         {
-            // Arrange
+            // Arrange - IsNightTime() uses Global.Upload.ScheduledLimits, so both must be set
             var options = new AppOptions()
             {
                 Global = new slskd.Options.GlobalOptions()
                 {
+                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                    {
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        {
+                            Enabled = true,
+                            NightStartHour = 22,
+                            NightEndHour = 6
+                        }
+                    },
                     Download = new slskd.Options.GlobalOptions.GlobalDownloadOptions()
                     {
                         SpeedLimit = 1000, // Day limit
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = true,
                             NightStartHour = 22,
@@ -137,11 +143,8 @@ namespace slskd.Tests.Unit.Transfers
             var optionsMonitorMock = new Mock<IOptionsMonitor<AppOptions>>();
             optionsMonitorMock.Setup(m => m.CurrentValue).Returns(options);
 
-            var service = new ScheduledRateLimitService(optionsMonitorMock.Object);
-
-            // Mock DateTime.Now to be during night hours
             var nightTime = new DateTime(2025, 12, 13, 23, 30, 0); // 11:30 PM
-            using var _ = new DateTimeContext(nightTime);
+            var service = new ScheduledRateLimitService(optionsMonitorMock.Object, () => nightTime);
 
             // Act
             var result = service.GetEffectiveDownloadSpeedLimit();
@@ -211,9 +214,6 @@ namespace slskd.Tests.Unit.Transfers
             var optionsMonitorMock = new Mock<IOptionsMonitor<AppOptions>>();
             optionsMonitorMock.Setup(m => m.CurrentValue).Returns(options);
 
-            var service = new ScheduledRateLimitService(optionsMonitorMock.Object);
-
-            // Test various night times
             var nightTimes = new[]
             {
                 new DateTime(2025, 12, 13, 22, 0, 0), // 10:00 PM (start)
@@ -224,7 +224,7 @@ namespace slskd.Tests.Unit.Transfers
 
             foreach (var nightTime in nightTimes)
             {
-                using var _ = new DateTimeContext(nightTime);
+                var service = new ScheduledRateLimitService(optionsMonitorMock.Object, () => nightTime);
                 Assert.True(service.IsNightTime(), $"Should be night time at {nightTime}");
             }
         }
@@ -293,25 +293,14 @@ namespace slskd.Tests.Unit.Transfers
             var optionsMonitorMock = new Mock<IOptionsMonitor<AppOptions>>();
             optionsMonitorMock.Setup(m => m.CurrentValue).Returns(options);
 
-            var service = new ScheduledRateLimitService(optionsMonitorMock.Object);
+            var svc23 = new ScheduledRateLimitService(optionsMonitorMock.Object, () => new DateTime(2025, 12, 13, 23, 0, 0));
+            Assert.True(svc23.IsNightTime(), "23:00 should be night time");
 
-            // Test that 23:00 (11 PM) is night
-            using (var _ = new DateTimeContext(new DateTime(2025, 12, 13, 23, 0, 0)))
-            {
-                Assert.True(service.IsNightTime(), "23:00 should be night time");
-            }
+            var svc02 = new ScheduledRateLimitService(optionsMonitorMock.Object, () => new DateTime(2025, 12, 13, 2, 0, 0));
+            Assert.True(svc02.IsNightTime(), "02:00 should be night time");
 
-            // Test that 02:00 (2 AM) is night
-            using (var _ = new DateTimeContext(new DateTime(2025, 12, 13, 2, 0, 0)))
-            {
-                Assert.True(service.IsNightTime(), "02:00 should be night time");
-            }
-
-            // Test that 08:00 (8 AM) is day
-            using (var _ = new DateTimeContext(new DateTime(2025, 12, 13, 8, 0, 0)))
-            {
-                Assert.False(service.IsNightTime(), "08:00 should be day time");
-            }
+            var svc08 = new ScheduledRateLimitService(optionsMonitorMock.Object, () => new DateTime(2025, 12, 13, 8, 0, 0));
+            Assert.False(svc08.IsNightTime(), "08:00 should be day time");
         }
 
         [Fact]

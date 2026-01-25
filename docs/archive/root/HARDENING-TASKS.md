@@ -498,7 +498,7 @@ This document tracks security hardening tasks for `slskdn`. These tasks focus on
 2. ⏳ Create detailed implementation briefs for H-01, H-02, H-08 (like T-SF0x format)
 3. ⏳ Implement H-01 before starting T-SF04
 4. ⏳ Implement H-08 in parallel with service fabric work
-5. ⏳ Track progress in `SERVICE_FABRIC_TASKS.md`
+5. ⏳ Track progress in [SERVICE_FABRIC_TASKS.md](../../SERVICE_FABRIC_TASKS.md)
 
 ---
 

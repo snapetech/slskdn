@@ -13,9 +13,15 @@ using slskd.Common.Security;
 
 /// <summary>
 ///     Pads outbound messages to the next configured bucket size using random bytes.
+///     PR-11: versioned format v1 [1B version][4B originalLength BE][payload][random]; Unpad with size limits.
 /// </summary>
 public class MessagePadder : IMessagePadder
 {
+    private const byte FormatVersion = 0x01;
+    private const int HeaderLength = 5; // 1 version + 4 originalLength
+    private const int DefaultMaxUnpaddedBytes = 1024 * 1024;   // 1MB, align with typical MaxRemotePayloadSize
+    private const int DefaultMaxPaddedBytes = 2 * 1024 * 1024; // 2MB
+
     private static readonly int[] DefaultBuckets = new[] { 512, 1024, 2048, 4096, 8192, 16384 };
 
     private readonly ILogger<MessagePadder> logger;
@@ -44,25 +50,77 @@ public class MessagePadder : IMessagePadder
     {
         if (message == null)
             throw new ArgumentNullException(nameof(message));
-        
+
         if (targetSize <= message.Length)
             return message;
-        
-        var padded = new byte[targetSize];
+
+        var maxUnpadded = GetMaxUnpaddedBytes();
+        if (message.Length > maxUnpadded)
+            throw new ArgumentOutOfRangeException(nameof(message), $"Message length {message.Length} exceeds MaxUnpaddedBytes {maxUnpadded}.");
+
+        int actualSize = Math.Max(targetSize, HeaderLength + message.Length);
+        var padded = new byte[actualSize];
         var span = padded.AsSpan();
-        message.AsSpan().CopyTo(span);
-        
-        var paddingSpan = span.Slice(message.Length);
-        RandomNumberGenerator.Fill(paddingSpan);
-        
+        span[0] = FormatVersion;
+        WriteBigEndianUInt32(span, 1, (uint)message.Length);
+        message.AsSpan().CopyTo(span.Slice(HeaderLength));
+        RandomNumberGenerator.Fill(span.Slice(HeaderLength + message.Length));
         return padded;
     }
 
     public byte[] Unpad(byte[] paddedMessage)
     {
-        // This implementation doesn't track original size, so we can't unpad
-        // In a real implementation, you'd need to store the original size
-        throw new NotImplementedException("Unpad is not implemented for this padder");
+        if (paddedMessage == null)
+            throw new ArgumentNullException(nameof(paddedMessage));
+
+        int maxPadded = GetMaxPaddedBytes();
+        if (paddedMessage.Length > maxPadded)
+            throw new ArgumentOutOfRangeException(nameof(paddedMessage), $"Padded length {paddedMessage.Length} exceeds MaxPaddedBytes {maxPadded}.");
+
+        if (paddedMessage.Length < HeaderLength)
+            throw new ArgumentException($"Padded message is too short (min {HeaderLength} bytes for v1 header).", nameof(paddedMessage));
+
+        if (paddedMessage[0] != FormatVersion)
+            throw new ArgumentException($"Unsupported or corrupt padding version: 0x{paddedMessage[0]:X2}.", nameof(paddedMessage));
+
+        uint originalLength = ReadBigEndianUInt32(paddedMessage, 1);
+        int orig = (int)originalLength;
+
+        int maxUnpadded = GetMaxUnpaddedBytes();
+        if (orig > maxUnpadded)
+            throw new ArgumentOutOfRangeException(nameof(paddedMessage), $"originalLength {orig} exceeds MaxUnpaddedBytes {maxUnpadded}.");
+
+        if (orig > paddedMessage.Length - HeaderLength)
+            throw new ArgumentException($"Invalid originalLength {orig} for padded length {paddedMessage.Length}.", nameof(paddedMessage));
+
+        var result = new byte[orig];
+        Buffer.BlockCopy(paddedMessage, HeaderLength, result, 0, orig);
+        return result;
+    }
+
+    private static void WriteBigEndianUInt32(Span<byte> buf, int offset, uint value)
+    {
+        buf[offset] = (byte)(value >> 24);
+        buf[offset + 1] = (byte)(value >> 16);
+        buf[offset + 2] = (byte)(value >> 8);
+        buf[offset + 3] = (byte)value;
+    }
+
+    private static uint ReadBigEndianUInt32(byte[] buf, int offset)
+    {
+        return ((uint)buf[offset] << 24) | ((uint)buf[offset + 1] << 16) | ((uint)buf[offset + 2] << 8) | buf[offset + 3];
+    }
+
+    private int GetMaxUnpaddedBytes()
+    {
+        var v = adversarialOptions?.CurrentValue?.Privacy?.Padding?.MaxUnpaddedBytes ?? 0;
+        return v > 0 ? v : DefaultMaxUnpaddedBytes;
+    }
+
+    private int GetMaxPaddedBytes()
+    {
+        var v = adversarialOptions?.CurrentValue?.Privacy?.Padding?.MaxPaddedBytes ?? 0;
+        return v > 0 ? v : DefaultMaxPaddedBytes;
     }
 
     public int GetBucketSize(int messageLength)
@@ -89,9 +147,21 @@ public class MessagePadder : IMessagePadder
             return payload.ToArray();
         }
 
-        // Use first bucket size from BucketSizes list, or default
-        var configuredBucket = paddingOptions.BucketSizes?.FirstOrDefault(b => b >= payload.Length) ?? 0;
+        int maxUnpadded = GetMaxUnpaddedBytes();
+        if (payload.Length > maxUnpadded)
+        {
+            logger.LogWarning("[MessagePadder] Payload length {Length} exceeds MaxUnpaddedBytes {Max}; returning unmodified.", payload.Length, maxUnpadded);
+            return payload.ToArray();
+        }
+
+        int minBucket = HeaderLength + payload.Length;
+        var configuredBucket = paddingOptions.BucketSizes?.FirstOrDefault(b => b >= minBucket) ?? 0;
         var bucketSize = ResolveBucketSize(configuredBucket, payload.Length);
+        if (bucketSize < minBucket)
+        {
+            bucketSize = minBucket;
+        }
+
         if (bucketSize <= payload.Length)
         {
             return payload.ToArray();
@@ -99,10 +169,10 @@ public class MessagePadder : IMessagePadder
 
         var padded = new byte[bucketSize];
         var span = padded.AsSpan();
-        payload.Span.CopyTo(span);
-
-        var paddingSpan = span.Slice(payload.Length);
-        RandomNumberGenerator.Fill(paddingSpan);
+        span[0] = FormatVersion;
+        WriteBigEndianUInt32(span, 1, (uint)payload.Length);
+        payload.Span.CopyTo(span.Slice(HeaderLength));
+        RandomNumberGenerator.Fill(span.Slice(HeaderLength + payload.Length));
 
         return padded;
     }

@@ -11,7 +11,7 @@
 ## 📚 Documentation Files Created
 
 ### Core Service Fabric
-1. **SERVICE_FABRIC_TASKS.md** - Master task breakdown (T-SF01 through T-SF07)
+1. [SERVICE_FABRIC_TASKS.md](../../SERVICE_FABRIC_TASKS.md) - Master task breakdown (T-SF01 through T-SF07)
 2. **HARDENING-TASKS.md** - Security hardening backlog (H-01 through H-10)
 3. **TESTING-STRATEGY.md** - Comprehensive testing strategy (T-TEST-01 through T-TEST-07)
 
@@ -65,7 +65,7 @@
 
 ## 📋 Documentation Scope
 
-### Service Fabric Tasks (SERVICE_FABRIC_TASKS.md)
+### Service Fabric Tasks ([SERVICE_FABRIC_TASKS.md](../../SERVICE_FABRIC_TASKS.md))
 - **T-SF01-04**: ✅ Complete
 - **T-SF05**: Security review and tightening (deferred)
 - **T-SF06**: Developer docs and examples (deferred)

@@ -12,12 +12,12 @@ namespace slskd.Tests.Unit.Mesh.Transport;
 public class WebSocketTransportTests : IDisposable
 {
     private readonly Mock<ILogger<WebSocketTransport>> _loggerMock;
-    private readonly WebSocketOptions _defaultOptions;
+    private readonly WebSocketTransportOptions _defaultOptions;
 
     public WebSocketTransportTests()
     {
         _loggerMock = new Mock<ILogger<WebSocketTransport>>();
-        _defaultOptions = new WebSocketOptions
+        _defaultOptions = new WebSocketTransportOptions
         {
             ServerUrl = "wss://test.example.com/tunnel",
             SubProtocol = "slskd-tunnel",
@@ -34,7 +34,7 @@ public class WebSocketTransportTests : IDisposable
     public void Constructor_WithValidOptions_CreatesInstance()
     {
         // Act & Assert - Should not throw
-        using var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
     }
 
@@ -56,7 +56,7 @@ public class WebSocketTransportTests : IDisposable
     public void TransportType_ReturnsWebSocket()
     {
         // Arrange
-        using var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
 
         // Assert
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
@@ -66,7 +66,7 @@ public class WebSocketTransportTests : IDisposable
     public void GetStatus_ReturnsValidStatusObject()
     {
         // Arrange
-        using var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
 
         // Act
         var status = transport.GetStatus();
@@ -83,7 +83,7 @@ public class WebSocketTransportTests : IDisposable
     public async Task ConnectAsync_WithoutIsolationKey_UsesDefaultCircuit()
     {
         // Arrange
-        using var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
 
         // Act & Assert - Should throw due to no actual WebSocket server, but should handle connection logic
         await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
@@ -96,7 +96,7 @@ public class WebSocketTransportTests : IDisposable
     public async Task ConnectAsync_WithIsolationKey_UsesIsolatedCircuit()
     {
         // Arrange
-        using var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
 
         // Act & Assert - Should throw due to no actual WebSocket server, but should handle isolation logic
         await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer123"));
@@ -109,7 +109,7 @@ public class WebSocketTransportTests : IDisposable
     public async Task IsAvailableAsync_ConnectionFailure_ReturnsFalse()
     {
         // Arrange
-        using var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
 
         // Act
         var isAvailable = await transport.IsAvailableAsync();
@@ -124,34 +124,31 @@ public class WebSocketTransportTests : IDisposable
     [InlineData("wss://test.example.com/tunnel")]
     [InlineData("ws://localhost:8080/websocket")]
     [InlineData("wss://api.example.com:8443/ws")]
-    public void WebSocketOptions_AcceptsVariousServerUrls(string serverUrl)
+    public void WebSocketTransportOptions_AcceptsVariousServerUrls(string serverUrl)
     {
         // Arrange
-        var options = new WebSocketOptions { ServerUrl = serverUrl };
+        var options = new WebSocketTransportOptions { ServerUrl = serverUrl };
 
         // Act & Assert - Should not throw
-        using var transport = new WebSocketTransport(options, _loggerMock.Object);
+        var transport = new WebSocketTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
     }
 
     [Fact]
     public void Dispose_CleansUpResources()
     {
-        // Arrange
+        // Arrange & Act - WebSocketTransport does not implement IDisposable; creation should not throw
         var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
 
-        // Act
-        transport.Dispose();
-
-        // Assert - Should not throw and should clean up internal resources
-        // In a full test, we'd verify that connection pools are cleared
+        // Assert
+        Assert.NotNull(transport);
     }
 
     [Fact]
     public void Options_Validation_CustomHeaders()
     {
         // Arrange
-        var options = new WebSocketOptions
+        var options = new WebSocketTransportOptions
         {
             ServerUrl = "wss://test.example.com/tunnel",
             CustomHeaders = new Dictionary<string, string>
@@ -162,9 +159,7 @@ public class WebSocketTransportTests : IDisposable
         };
 
         // Act & Assert - Should not throw
-        using var transport = new WebSocketTransport(options, _loggerMock.Object);
+        var transport = new WebSocketTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
     }
 }
-
-

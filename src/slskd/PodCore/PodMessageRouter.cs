@@ -24,6 +24,8 @@ public class PodMessageRouter : IPodMessageRouter
     private readonly ILogger<PodMessageRouter> _logger;
     private readonly IPodService _podService;
     private readonly IOverlayClient _overlayClient;
+    private readonly IControlSigner _controlSigner;
+    private readonly IPeerResolutionService _peerResolution;
     private readonly IPrivacyLayer? _privacyLayer;
 
     // Time-windowed Bloom filter for efficient deduplication
@@ -47,11 +49,15 @@ public class PodMessageRouter : IPodMessageRouter
         ILogger<PodMessageRouter> logger,
         IPodService podService,
         IOverlayClient overlayClient,
+        IControlSigner controlSigner,
+        IPeerResolutionService peerResolution,
         IPrivacyLayer? privacyLayer = null)
     {
         _logger = logger;
         _podService = podService;
         _overlayClient = overlayClient;
+        _controlSigner = controlSigner ?? throw new ArgumentNullException(nameof(controlSigner));
+        _peerResolution = peerResolution ?? throw new ArgumentNullException(nameof(peerResolution));
         _privacyLayer = privacyLayer;
 
         // Initialize time-windowed Bloom filter for efficient deduplication
@@ -333,20 +339,21 @@ public class PodMessageRouter : IPodMessageRouter
             {
                 Type = "pod_message",
                 Payload = payload,
-                PublicKey = string.Empty, // TODO: Add proper public key from pod identity
-                Signature = string.Empty, // TODO: Add proper signature
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
             };
+            _controlSigner.Sign(envelope);
 
-            // TODO: Implement peer address resolution service
-            // For now, create a placeholder IPEndPoint (this would need real peer discovery)
-            var placeholderEndpoint = new IPEndPoint(IPAddress.Loopback, 5000);
+            var endpoint = await _peerResolution.ResolvePeerIdToEndpointAsync(peerId, cancellationToken);
+            if (endpoint == null)
+            {
+                _logger.LogWarning("[PodMessageRouter] No endpoint for peer {PeerId}, cannot route message {MessageId}", peerId, message.MessageId);
+                return false;
+            }
 
             _logger.LogInformation("[PodMessageRouter] Attempting to route message {MessageId} to peer {PeerId} at {Endpoint}",
-                message.MessageId, peerId, placeholderEndpoint);
+                message.MessageId, peerId, endpoint);
 
-            // Send via overlay client
-            var sendResult = await _overlayClient.SendAsync(envelope, placeholderEndpoint, cancellationToken);
+            var sendResult = await _overlayClient.SendAsync(envelope, endpoint, cancellationToken);
 
             if (sendResult)
             {

@@ -22,143 +22,67 @@
 namespace slskd
 {
     using System;
-    using System.Diagnostics;
     using System.IO;
-    using System.Net.Http;
-    using System.Runtime.InteropServices;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Diagnostics.NETCore.Client;
 
     /// <summary>
-    ///     Dumps the contents of the application's memory to a .dmp file using dotnet-dump.
+    ///     Creates a full memory dump of the current process using Microsoft.Diagnostics.NETCore.Client.
+    ///     No network download or shell execution. PR-06.
     /// </summary>
-    /// <remarks>
-    ///     <para>
-    ///         Monitor https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dump for tool updates. Currently supported
-    ///         runtime IDs:
-    ///     </para>
-    ///     <list type="bullet">
-    ///         <listheader>Currently supported runtime IDs:</listheader>
-    ///         <item>https://aka.ms/dotnet-dump/win-x86</item>
-    ///         <item>https://aka.ms/dotnet-dump/win-x64</item>
-    ///         <item>https://aka.ms/dotnet-dump/win-arm</item>
-    ///         <item>https://aka.ms/dotnet-dump/win-arm64</item>
-    ///         <item>https://aka.ms/dotnet-dump/osx-x64</item>
-    ///         <item>https://aka.ms/dotnet-dump/linux-x64</item>
-    ///         <item>https://aka.ms/dotnet-dump/linux-arm</item>
-    ///         <item>https://aka.ms/dotnet-dump/linux-arm64</item>
-    ///         <item>https://aka.ms/dotnet-dump/linux-musl-x64</item>
-    ///         <item>https://aka.ms/dotnet-dump/linux-musl-arm64</item>
-    ///         <item></item>
-    ///     </list>
-    /// </remarks>
-    public class Dumper : IDisposable
+    public class Dumper
     {
-        private static readonly string URLTemplate = "https://aka.ms/dotnet-dump/$RID";
+        private const long MinFreeBytes = 1024L * 1024 * 1024; // 1 GB
 
-        private string BinFile { get; set; }
-        private bool Disposed { get; set; }
-
-        public void Dispose()
+        /// <summary>
+        ///     Tries to create a full dump to a temp file. Does not throw for policy or runtime failures.
+        /// </summary>
+        /// <returns>(ok, error, path): ok true and path set on success; ok false and error set on failure.</returns>
+        public async Task<(bool Ok, string? Error, string? Path)> TryCreateDumpAsync(CancellationToken cancellationToken = default)
         {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+            var path = Path.Combine(Path.GetTempPath(), $"slskd_{Path.GetRandomFileName()}.dmp");
 
-        public async Task<string> DumpAsync()
-        {
-            BinFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            var outputFile = Path.Combine(Path.GetTempPath(), $"slskd_{Path.GetRandomFileName()}.dmp");
-
-            var url = URLTemplate.Replace("$RID", GetRID());
-
-            await Download(url, BinFile);
-
-            if (!OperatingSystem.IsWindows())
+            if (!HasEnoughFreeSpace(path, MinFreeBytes, out var spaceErr))
             {
-                await ExecAsync("/bin/sh", $"-c \"chmod +x {BinFile}\"");
+                return (false, spaceErr, null);
             }
 
-            await ExecAsync(BinFile, $"collect --process-id {Environment.ProcessId} --type full --output {outputFile}");
-
-            return outputFile;
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!Disposed)
-            {
-                if (disposing)
-                {
-                    TryDelete(BinFile);
-                }
-
-                Disposed = true;
-            }
-        }
-
-        private async Task Download(string url, string destination)
-        {
-            using var http = new HttpClient();
-
-            using var localStream = new FileStream(destination, FileMode.OpenOrCreate);
-            using var remoteStream = await http.GetStreamAsync(url);
-
-            await remoteStream.CopyToAsync(localStream);
-        }
-
-        private async Task ExecAsync(string bin, string args)
-        {
-            using var process = new Process();
-            process.StartInfo.FileName = bin;
-            process.StartInfo.Arguments = args;
-            process.Start();
-            await process.WaitForExitAsync();
-        }
-
-        private string GetRID()
-        {
-            // one of: x86, x64, arm, arm64, wasm, s390x
-            var arch = RuntimeInformation.ProcessArchitecture.ToString().ToLower();
-
-            // .RuntimeIdentifier returns a very specific (e.g. win10-x64) RID, and we need a generic one (e.g. win-x64). rather
-            // than trying to hack this up to derive a generic RID, only inspect this to see if this build targeted musl libc (we
-            // can't get this any other way)
-            var isMusl = RuntimeInformation.RuntimeIdentifier.ToLower().Contains("musl");
-
-            string os = default;
-
-            // seems like there should be a way to just retrieve this, but there is not as of .NET 6
-            if (OperatingSystem.IsLinux())
-            {
-                os = "linux";
-            }
-            else if (OperatingSystem.IsWindows())
-            {
-                os = "win";
-            }
-            else if (OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
-            {
-                os = "osx";
-            }
-
-            if (os == default)
-            {
-                throw new PlatformNotSupportedException($"Unable to determine operating system. RID is {RuntimeInformation.RuntimeIdentifier}; did someone forget to update Dumper.cs to reflect .NET targeting changes?");
-            }
-
-            return $"{os}-{(isMusl ? "musl-" : string.Empty)}{arch}";
-        }
-
-        private bool TryDelete(string file)
-        {
             try
             {
-                File.Delete(file);
+                var client = new DiagnosticsClient(Environment.ProcessId);
+                await client.WriteDumpAsync(DumpType.Full, path, logDumpGeneration: false, cancellationToken).ConfigureAwait(false);
+                return (true, null, path);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message, null);
+            }
+        }
+
+        private static bool HasEnoughFreeSpace(string filePath, long requiredBytes, out string? error)
+        {
+            error = null;
+            try
+            {
+                var root = Path.GetPathRoot(filePath);
+                if (string.IsNullOrEmpty(root))
+                {
+                    root = Path.DirectorySeparatorChar.ToString();
+                }
+
+                var drive = new DriveInfo(root);
+                if (drive.AvailableFreeSpace < requiredBytes)
+                {
+                    error = "Insufficient free disk space. At least 1 GB required.";
+                    return false;
+                }
+
                 return true;
             }
-            catch (FileNotFoundException)
+            catch
             {
-                return false;
+                return true; // best-effort; allow dump if we can't check
             }
         }
     }

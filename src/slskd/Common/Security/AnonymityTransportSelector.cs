@@ -292,16 +292,14 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
 
             if (anonymityOptions.Mode == AnonymityMode.I2P)
             {
-                _transports[AnonymityTransportType.I2P] = new I2PTransport(
-                    anonymityOptions.I2P, 
-                    _loggerFactory.CreateLogger<I2PTransport>());
+                throw new InvalidOperationException(
+                    "I2P anonymity mode is not yet implemented. Use AnonymityMode.Tor or AnonymityMode.Direct.");
             }
 
             if (anonymityOptions.Mode == AnonymityMode.RelayOnly)
             {
-                _transports[AnonymityTransportType.RelayOnly] = new RelayOnlyTransport(
-                    anonymityOptions.RelayOnly, 
-                    _loggerFactory.CreateLogger<RelayOnlyTransport>());
+                throw new InvalidOperationException(
+                    "Relay-only anonymity mode is not yet implemented. Use AnonymityMode.Tor or AnonymityMode.Direct.");
             }
 
             // Initialize obfuscated transports (available regardless of anonymity mode)

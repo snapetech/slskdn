@@ -325,6 +325,12 @@ namespace slskd
         public LoggerOptions Logger { get; init; } = new LoggerOptions();
 
         /// <summary>
+        ///     Gets diagnostics options (e.g. memory dump endpoint).
+        /// </summary>
+        [RequiresRestart]
+        public DiagnosticsOptions Diagnostics { get; init; } = new DiagnosticsOptions();
+
+        /// <summary>
         ///     Gets metrics options.
         /// </summary>
         [Validate]
@@ -591,6 +597,17 @@ namespace slskd
             [EnvironmentVariable("NO_SQLITE_POOLING")]
             [Description("disable SQLite pooling")]
             public bool NoSqlitePooling { get; init; } = false;
+
+            /// <summary>
+            ///     Gets a value indicating whether audio hash-from-file (PCM extraction) is enabled.
+            ///     When true and EnforceSecurity is on, startup fails: the feature is not implemented (requires FFmpeg/NAudio).
+            ///     §11: Do not register incomplete features, or fail at startup, or 501 at runtime.
+            /// </summary>
+            [Argument(default, "hash-from-audio-file")]
+            [EnvironmentVariable("HASH_FROM_AUDIO_FILE")]
+            [Description("enable audio hash from file (not implemented; fails startup when EnforceSecurity)")]
+            [RequiresRestart]
+            public bool HashFromAudioFileEnabled { get; init; } = false;
         }
 
         /// <summary>
@@ -1606,6 +1623,28 @@ namespace slskd
         }
 
         /// <summary>
+        ///     Diagnostics options (e.g. memory dump).
+        /// </summary>
+        public class DiagnosticsOptions
+        {
+            /// <summary>
+            ///     Gets a value indicating whether the memory dump endpoint is allowed. When false, dump returns 404/403.
+            /// </summary>
+            [EnvironmentVariable("ALLOW_MEMORY_DUMP")]
+            [Description("when true, allow memory dump endpoint; when false, dump returns 404/403")]
+            [RequiresRestart]
+            public bool AllowMemoryDump { get; init; } = false;
+
+            /// <summary>
+            ///     Gets a value indicating whether the dump endpoint may be called from non-loopback. When false, only loopback is allowed.
+            /// </summary>
+            [EnvironmentVariable("ALLOW_REMOTE_DUMP")]
+            [Description("when true, allow dump from remote IPs; when false, only loopback (127.0.0.1, ::1) is allowed")]
+            [RequiresRestart]
+            public bool AllowRemoteDump { get; init; } = false;
+        }
+
+        /// <summary>
         ///     Retention options.
         /// </summary>
         public class RetentionOptions
@@ -2188,6 +2227,113 @@ namespace slskd
             public WebAuthenticationOptions Authentication { get; init; } = new WebAuthenticationOptions();
 
             /// <summary>
+            ///     Gets a value indicating whether to enforce strict security checks at startup (fail-fast on dangerous configs).
+            /// </summary>
+            [Argument(default, "enforce-security")]
+            [EnvironmentVariable("ENFORCE_SECURITY")]
+            [Description("when true, refuse to start if auth disabled + non-loopback, CORS credentials+wildcard, or memory dump+no-auth")]
+            [RequiresRestart]
+            public bool EnforceSecurity { get; init; } = false;
+
+            /// <summary>
+            ///     Gets a value indicating whether to allow remote (non-loopback) access when authentication is disabled.
+            /// </summary>
+            [Argument(default, "allow-remote-no-auth")]
+            [EnvironmentVariable("ALLOW_REMOTE_NO_AUTH")]
+            [Description("when true, allow no-auth from non-loopback; when false, passthrough is loopback-only")]
+            [RequiresRestart]
+            public bool AllowRemoteNoAuth { get; init; } = false;
+
+            /// <summary>
+            ///     Kestrel max request body size in bytes (PR-09). Default 10 MB. Used for Limits.MaxRequestBodySize.
+            /// </summary>
+            [Description("Kestrel max request body size in bytes; default 10485760 (10 MB)")]
+            [Range(1, int.MaxValue)]
+            [RequiresRestart]
+            public long MaxRequestBodySize { get; init; } = 10 * 1024 * 1024;
+
+            /// <summary>
+            ///     Gets CORS options. When Cors.Enabled is false, CORS middleware is not applied (no CORS headers).
+            /// </summary>
+            public CorsOptions Cors { get; init; } = new CorsOptions();
+
+            /// <summary>
+            ///     CORS options.
+            /// </summary>
+            public class CorsOptions
+            {
+                /// <summary>
+                ///     Gets a value indicating whether CORS is enabled. When false, app.UseCors is not called (no CORS headers).
+                /// </summary>
+                [Description("when true, use AllowedOrigins and AllowCredentials; when false, no CORS middleware")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets a value indicating whether to allow credentials in CORS. When true, AllowedOrigins must not be wildcard/any when EnforceSecurity.
+                /// </summary>
+                [Description("allow credentials; when true with EnforceSecurity, AllowedOrigins must be an explicit allowlist")]
+                public bool AllowCredentials { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the allowed origins. Null, empty, or '*' is treated as any. When AllowCredentials is true and EnforceSecurity, any/wildcard is invalid.
+                /// </summary>
+                [Description("allowed CORS origins; when Cors.Enabled and AllowCredentials, must be explicit (no wildcard) when EnforceSecurity")]
+                public string[] AllowedOrigins { get; init; } = Array.Empty<string>();
+
+                /// <summary>
+                ///     Gets the allowed headers. Empty or null = any (AllowAnyHeader).
+                /// </summary>
+                [Description("allowed CORS headers; empty = any")]
+                public string[] AllowedHeaders { get; init; } = Array.Empty<string>();
+
+                /// <summary>
+                ///     Gets the allowed methods. Empty or null = any (AllowAnyMethod).
+                /// </summary>
+                [Description("allowed CORS methods; empty = any")]
+                public string[] AllowedMethods { get; init; } = Array.Empty<string>();
+            }
+
+            /// <summary>
+            ///     HTTP rate limiting options (PR-09). When Enabled, applies policies: Api (generous), FederationInbox (tighter), MeshGateway (tighter).
+            /// </summary>
+            [Description("HTTP rate limiting; when enabled, applies policies per path (api, federation inbox, mesh gateway)")]
+            public RateLimitingOptions RateLimiting { get; init; } = new RateLimitingOptions();
+
+            /// <summary>
+            ///     Rate limiting policy limits.
+            /// </summary>
+            public class RateLimitingOptions
+            {
+                /// <summary>When true, apply ASP.NET Core rate limiter with Api, FederationInbox, and MeshGateway policies. When false, no 429 from this layer.</summary>
+                [Description("enable HTTP rate limiting (policies: api, federation inbox, mesh gateway)")]
+                public bool Enabled { get; init; } = true;
+
+                /// <summary>Default API: requests per window (generous).</summary>
+                [Description("api policy: permit count per window")]
+                public int ApiPermitLimit { get; init; } = 200;
+
+                /// <summary>Default API: window in seconds.</summary>
+                [Description("api policy: window seconds")]
+                public int ApiWindowSeconds { get; init; } = 60;
+
+                /// <summary>Federation inbox (POST /actors/*/inbox): requests per window (tighter).</summary>
+                [Description("federation inbox policy: permit count per window")]
+                public int FederationPermitLimit { get; init; } = 30;
+
+                /// <summary>Federation inbox: window in seconds.</summary>
+                [Description("federation inbox policy: window seconds")]
+                public int FederationWindowSeconds { get; init; } = 60;
+
+                /// <summary>Mesh gateway (/mesh/*): requests per window (tighter).</summary>
+                [Description("mesh gateway policy: permit count per window")]
+                public int MeshGatewayPermitLimit { get; init; } = 60;
+
+                /// <summary>Mesh gateway: window in seconds.</summary>
+                [Description("mesh gateway policy: window seconds")]
+                public int MeshGatewayWindowSeconds { get; init; } = 60;
+            }
+
+            /// <summary>
             ///     Authentication options.
             /// </summary>
             public class WebAuthenticationOptions
@@ -2232,6 +2378,12 @@ namespace slskd
                 /// </summary>
                 [Validate]
                 public Dictionary<string, ApiKeyOptions> ApiKeys { get; init; } = new Dictionary<string, ApiKeyOptions>();
+
+                /// <summary>
+                ///     Passthrough (no-auth) options. When auth is disabled, AllowedCidrs can allow specific non-loopback networks in addition to loopback (PR-03).
+                /// </summary>
+                [Description("passthrough no-auth: allowed_cidrs e.g. 127.0.0.1/32,::1/128 for explicit allowlist in addition to loopback")]
+                public PassthroughOptions Passthrough { get; init; } = new PassthroughOptions();
 
                 /// <summary>
                 ///     JWT options.
@@ -2309,6 +2461,16 @@ namespace slskd
 
                         return results;
                     }
+                }
+
+                /// <summary>
+                ///     Passthrough (no-auth) options. AllowedCidrs: comma-separated CIDRs allowed when no-auth in addition to loopback.
+                /// </summary>
+                public class PassthroughOptions
+                {
+                    /// <summary>Comma-separated CIDRs allowed when no-auth (in addition to loopback). E.g. 127.0.0.1/32,::1/128.</summary>
+                    [Description("comma-separated CIDRs allowed when no-auth in addition to loopback; e.g. 127.0.0.1/32,::1/128")]
+                    public string? AllowedCidrs { get; init; }
                 }
             }
 

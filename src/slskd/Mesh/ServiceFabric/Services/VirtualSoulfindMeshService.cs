@@ -3,7 +3,10 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
 using slskd.Mesh.ServiceFabric;
+using slskd.Mesh.Transport;
 using slskd.VirtualSoulfind.ShadowIndex;
 using System;
 using System.Collections.Generic;
@@ -22,13 +25,16 @@ public class VirtualSoulfindMeshService : IMeshService
 {
     private readonly ILogger<VirtualSoulfindMeshService> _logger;
     private readonly IShadowIndexQuery _shadowIndexQuery;
+    private readonly int _maxPayload;
 
     public VirtualSoulfindMeshService(
         ILogger<VirtualSoulfindMeshService> logger,
-        IShadowIndexQuery shadowIndexQuery)
+        IShadowIndexQuery shadowIndexQuery,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger;
         _shadowIndexQuery = shadowIndexQuery;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public string ServiceName => "shadow-index";
@@ -81,7 +87,8 @@ public class VirtualSoulfindMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<QueryByMbidRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<QueryByMbidRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.MBID))
         {
             return new ServiceReply
@@ -141,7 +148,8 @@ public class VirtualSoulfindMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<QueryBatchRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<QueryBatchRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || request.MBIDs == null || request.MBIDs.Count == 0)
         {
             return new ServiceReply

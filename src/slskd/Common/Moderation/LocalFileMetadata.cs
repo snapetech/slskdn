@@ -26,7 +26,7 @@ namespace slskd.Common.Moderation
     ///         to determine if a file should be blocked, quarantined, or allowed.
     ///     </para>
     ///     <para>
-    ///         🔒 SECURITY (MCP-HARDENING.md Section 1):
+    ///         🔒 SECURITY (docs/MCP-HARDENING.md Section 1):
     ///         - Id: Internal identifier (NOT full path)
     ///         - PrimaryHash: Content hash (NEVER logged in full)
     ///         - MediaInfo: Generic summary only (e.g., "Audio: FLAC", "Book: EPUB")
@@ -68,7 +68,7 @@ namespace slskd.Common.Moderation
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         🔒 CRITICAL (MCP-HARDENING.md Section 1.1):
+        ///         🔒 CRITICAL (docs/MCP-HARDENING.md Section 1.1):
         ///         This hash MUST NEVER be logged in full.
         ///         - For debugging: Log only first 8 chars
         ///         - For metrics: Do NOT include in labels

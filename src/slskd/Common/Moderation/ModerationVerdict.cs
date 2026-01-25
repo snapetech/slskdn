@@ -26,7 +26,7 @@ namespace slskd.Common.Moderation
     ///         content shareability, advertisability, and peer reputation.
     ///     </para>
     ///     <para>
-    ///         See `docs/moderation-v1-design.md` and `MCP-HARDENING.md` for
+    ///         See `docs/moderation-v1-design.md` and `docs/MCP-HARDENING.md` for
     ///         complete moderation system design and security requirements.
     ///     </para>
     /// </remarks>

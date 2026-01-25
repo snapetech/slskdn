@@ -3,8 +3,11 @@
 // </copyright>
 
 using MessagePack;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
+using slskd.Mesh.Transport;
 using slskd.VirtualSoulfind.ShadowIndex;
 using System.Security.Cryptography;
 using System.Text;
@@ -36,11 +39,13 @@ public class MeshDhtClient : IMeshDhtClient
     private readonly ILogger<MeshDhtClient> logger;
     private readonly IDhtClient inner;
     private readonly Lazy<DhtService?> dhtService;
+    private readonly int _maxPayload;
 
-    public MeshDhtClient(ILogger<MeshDhtClient> logger, IDhtClient inner, IServiceProvider? serviceProvider = null)
+    public MeshDhtClient(ILogger<MeshDhtClient> logger, IDhtClient inner, IServiceProvider? serviceProvider = null, IOptions<MeshOptions>? meshOptions = null)
     {
         this.logger = logger;
         this.inner = inner;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
         // Use Lazy to break circular dependency: DhtService depends on KademliaRpcClient which depends on IMeshServiceClient
         // which depends on IMeshServiceDirectory which depends on IMeshDhtClient (this) which would depend on DhtService
         this.dhtService = new Lazy<DhtService?>(() => serviceProvider?.GetService<DhtService>());
@@ -63,7 +68,7 @@ public class MeshDhtClient : IMeshDhtClient
         if (raw == null) return default;
         try
         {
-            return MessagePackSerializer.Deserialize<T>(raw);
+            return SecurityUtils.ParseMessagePackSafely<T>(raw, _maxPayload);
         }
         catch (Exception ex)
         {

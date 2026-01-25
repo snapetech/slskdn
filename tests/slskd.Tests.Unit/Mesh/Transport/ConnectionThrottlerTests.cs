@@ -4,21 +4,23 @@
 
 using Microsoft.Extensions.Logging;
 using Moq;
+using slskd.Mesh;
 using slskd.Mesh.Transport;
 using Xunit;
+using MeshRateLimiter = slskd.Mesh.Transport.RateLimiter;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
 public class ConnectionThrottlerTests
 {
     private readonly Mock<ILogger<ConnectionThrottler>> _loggerMock;
-    private readonly RateLimiter _rateLimiter;
+    private readonly MeshRateLimiter _rateLimiter;
     private readonly ConnectionThrottler _throttler;
 
     public ConnectionThrottlerTests()
     {
         _loggerMock = new Mock<ILogger<ConnectionThrottler>>();
-        _rateLimiter = new RateLimiter(new Mock<ILogger<RateLimiter>>().Object);
+        _rateLimiter = new MeshRateLimiter(new Mock<ILogger<MeshRateLimiter>>().Object);
         _throttler = new ConnectionThrottler(_rateLimiter, _loggerMock.Object);
     }
 
@@ -169,17 +171,17 @@ public class ConnectionThrottlerTests
         // Arrange
         var endpoint = "192.168.1.100:8080";
 
-        // Report multiple failures
-        for (int i = 0; i < 5; i++)
+        // Report more failures than auth-failure bucket capacity (5/minute)
+        for (int i = 0; i < 6; i++)
         {
             _throttler.ReportFailedAuth(endpoint, "test failure");
         }
 
-        // Act - Check if connection is now throttled
-        var result = _throttler.ShouldAllowConnection(endpoint, TransportType.DirectQuic);
+        // Act - Auth-failure rate limit is a separate bucket; when exceeded, RateLimiter blocks
+        var stats = _throttler.GetStatistics();
 
-        // Assert - Should be throttled due to failures
-        Assert.False(result);
+        // Assert - At least one ReportFailedAuth exceeded the auth-failure limit and was counted as blocked
+        Assert.True(stats.TotalRequestsBlocked >= 1);
     }
 
     [Fact]

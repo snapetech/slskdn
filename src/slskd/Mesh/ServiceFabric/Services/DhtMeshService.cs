@@ -3,9 +3,11 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using slskd.Mesh;
 using slskd.Mesh.Dht;
 using slskd.Mesh.ServiceFabric;
+using slskd.Mesh.Transport;
 using slskd.VirtualSoulfind.ShadowIndex;
 using System;
 using System.IO;
@@ -26,17 +28,20 @@ public class DhtMeshService : IMeshService
     private readonly KademliaRoutingTable _routingTable;
     private readonly IDhtClient _dhtClient;
     private readonly IMeshMessageSigner _messageSigner;
+    private readonly int _maxPayload;
 
     public DhtMeshService(
         ILogger<DhtMeshService> logger,
         KademliaRoutingTable routingTable,
         IDhtClient dhtClient,
-        IMeshMessageSigner messageSigner)
+        IMeshMessageSigner messageSigner,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger;
         _routingTable = routingTable;
         _dhtClient = dhtClient;
         _messageSigner = messageSigner;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public string ServiceName => "dht";
@@ -98,7 +103,8 @@ public class DhtMeshService : IMeshService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<FindNodeRequest>(call.Payload);
+            var (request, err) = ServicePayloadParser.TryParseJson<FindNodeRequest>(call, _maxPayload);
+            if (err != null) return err;
             if (request?.TargetId == null || request.TargetId.Length != 20)
             {
                 return new ServiceReply
@@ -163,7 +169,8 @@ public class DhtMeshService : IMeshService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<FindValueRequest>(call.Payload);
+            var (request, err) = ServicePayloadParser.TryParseJson<FindValueRequest>(call, _maxPayload);
+            if (err != null) return err;
             if (request?.Key == null)
             {
                 return new ServiceReply
@@ -255,7 +262,8 @@ public class DhtMeshService : IMeshService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<StoreRequest>(call.Payload);
+            var (request, err) = ServicePayloadParser.TryParseJson<StoreRequest>(call, _maxPayload);
+            if (err != null) return err;
             if (request?.Key == null || request.Value == null || request.PublicKeyBase64 == null || request.SignatureBase64 == null)
             {
                 return new ServiceReply
@@ -367,9 +375,13 @@ public class DhtMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
+        var (pingReq, pingErr) = ServicePayloadParser.TryParseJson<PingRequest>(call, _maxPayload);
+        if (pingErr != null)
+            return Task.FromResult(pingErr);
+
         // Update routing table with the pinging peer
         _ = Task.Run(() => _routingTable.TouchAsync(
-            JsonSerializer.Deserialize<PingRequest>(call.Payload)?.RequesterId ?? Array.Empty<byte>(),
+            pingReq?.RequesterId ?? Array.Empty<byte>(),
             context.RemotePeerId));
 
         var response = new PingResponse

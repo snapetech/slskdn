@@ -1,4 +1,4 @@
-﻿namespace slskd.Tests.Unit.Transfers.Uploads
+namespace slskd.Tests.Unit.Transfers.Uploads
 {
     using System.Collections.Generic;
     using System.Threading;
@@ -267,8 +267,8 @@
                 // Assert - should use the scheduled night limit
                 var privilegedBucket = buckets[Application.PrivilegedGroup];
                 // The bucket capacity should be based on the scheduled limit (100 KiB/s)
-                var expectedCapacity = 100 * 1024 / 10; // 100 KiB/s / 10ms intervals
-                Assert.Equal(expectedCapacity, privilegedBucket.GetProperty<int>("Capacity"));
+                var expectedCapacity = 100L * 1024 / 10; // 100 KiB/s / 10 intervals per second (100ms interval)
+                Assert.Equal(expectedCapacity, privilegedBucket.Capacity);
             }
 
             [Fact]
@@ -301,8 +301,8 @@
 
                 // Assert - should use the regular limit, not scheduled
                 var privilegedBucket = buckets[Application.PrivilegedGroup];
-                var expectedCapacity = 500 * 1024 / 10; // 500 KiB/s / 10ms intervals
-                Assert.Equal(expectedCapacity, privilegedBucket.GetProperty<int>("Capacity"));
+                var expectedCapacity = 500L * 1024 / 10; // 500 KiB/s / 10 intervals per second (100ms interval)
+                Assert.Equal(expectedCapacity, privilegedBucket.Capacity);
             }
 
             [Fact]
@@ -327,8 +327,8 @@
 
                 // Assert - should use regular limit
                 var privilegedBucket = buckets[Application.PrivilegedGroup];
-                var expectedCapacity = 300 * 1024 / 10; // 300 KiB/s / 10ms intervals
-                Assert.Equal(expectedCapacity, privilegedBucket.GetProperty<int>("Capacity"));
+                var expectedCapacity = 300L * 1024 / 10; // 300 KiB/s / 10 intervals per second (100ms interval)
+                Assert.Equal(expectedCapacity, privilegedBucket.Capacity);
             }
         }
 

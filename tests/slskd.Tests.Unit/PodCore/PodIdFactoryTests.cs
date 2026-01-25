@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using slskd.PodCore;
+using slskd.Messaging;
 using Xunit;
 
 namespace slskd.Tests.Unit.PodCore;

@@ -15,11 +15,14 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using slskd.Mesh.ServiceFabric;
 using System;
+using System.Buffers;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -35,9 +38,10 @@ using slskd.Core.Security;
 /// </summary>
 [Route("mesh/http")]
 [ApiController]
+[AllowAnonymous] // PR-02: intended-public mesh HTTP gateway
 [Produces("application/json")]
 [Consumes("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class MeshGatewayController : ControllerBase
 {
     private readonly ILogger<MeshGatewayController> _logger;
@@ -93,26 +97,49 @@ public class MeshGatewayController : ControllerBase
 
         try
         {
-            // Read request body as payload
-            byte[] payload = Array.Empty<byte>();
-            if (Request.ContentLength > 0)
+            // PR-08: Always read body in a bounded loop; support chunked (ContentLength==null); reject over limit with 413.
+            var max = _options.MaxRequestBodyBytes;
+            if (Request.ContentLength.HasValue && Request.ContentLength.Value > max)
             {
-                // Enforce max body size (already enforced by middleware, but double-check)
-                if (Request.ContentLength > _options.MaxRequestBodyBytes)
+                _logger.LogWarning(
+                    "[GatewayController] Request body too large: {Size} bytes (max {Max})",
+                    Request.ContentLength.Value, max);
+                return StatusCode(413, new
                 {
-                    _logger.LogWarning(
-                        "[GatewayController] Request body too large: {Size} bytes",
-                        Request.ContentLength);
-                    return StatusCode(413, new
-                    {
-                        error = "payload_too_large",
-                        message = $"Request body exceeds {_options.MaxRequestBodyBytes} bytes"
-                    });
-                }
+                    error = "payload_too_large",
+                    message = $"Request body exceeds {max} bytes"
+                });
+            }
 
-                using var ms = new System.IO.MemoryStream();
-                await Request.Body.CopyToAsync(ms, cancellationToken);
+            byte[] payload;
+            const int bufferSize = 8192;
+            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+            try
+            {
+                using var ms = new MemoryStream();
+                int total = 0;
+                int read;
+                while ((read = await Request.Body.ReadAsync(buffer.AsMemory(0, bufferSize), cancellationToken)) > 0)
+                {
+                    total += read;
+                    if (total > max)
+                    {
+                        _logger.LogWarning(
+                            "[GatewayController] Request body exceeded {Max} bytes during read",
+                            max);
+                        return StatusCode(413, new
+                        {
+                            error = "payload_too_large",
+                            message = $"Request body exceeds {max} bytes"
+                        });
+                    }
+                    ms.Write(buffer, 0, read);
+                }
                 payload = ms.ToArray();
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
 
             // Create timeout for service call

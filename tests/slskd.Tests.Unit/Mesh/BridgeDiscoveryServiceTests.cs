@@ -3,6 +3,7 @@
 // </copyright>
 
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
 using Moq;
 using slskd.Common.Security;
 using Xunit;

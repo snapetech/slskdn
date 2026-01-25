@@ -95,7 +95,7 @@ public class ScriptService
 
         foreach (var script in scriptsTriggeredByThisEventType)
         {
-            _ = Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 Process process = default;
                 var processId = Guid.NewGuid();
@@ -189,17 +189,32 @@ public class ScriptService
 
                     process.Start();
 
-                    process.WaitForExit();
-                    sw.Stop();
+                    // Read streams asynchronously to avoid deadlock when process fills the pipe buffers.
+                    const int timeoutMs = 300_000; // 5 minutes
+                    var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                    var stderrTask = process.StandardError.ReadToEndAsync();
+                    var exitTask = process.WaitForExitAsync();
+                    var delayTask = Task.Delay(timeoutMs);
 
-                    var error = process.StandardError.ReadToEnd();
+                    var completed = await Task.WhenAny(exitTask, delayTask).ConfigureAwait(false);
+                    if (completed == delayTask)
+                    {
+                        try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                        await exitTask.ConfigureAwait(false);
+                        var err = await stderrTask.ConfigureAwait(false);
+                        var output = await stdoutTask.ConfigureAwait(false);
+                        throw new TimeoutException($"Script '{script.Key}' timed out after {timeoutMs / 1000}s. STDOUT: {output}; STDERR: {err}");
+                    }
+
+                    var error = await stderrTask.ConfigureAwait(false);
+                    var result = await stdoutTask.ConfigureAwait(false);
+                    sw.Stop();
 
                     if (!string.IsNullOrEmpty(error))
                     {
                         throw new Exception($"STDERR: {Regex.Replace(error, @"\r\n?|\n", " ", RegexOptions.Compiled)}");
                     }
 
-                    var result = process.StandardOutput.ReadToEnd();
                     var resultAsLines = result.Split(["\r\n", "\r", "\n"], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
                     Log.Debug("Script '{Script}' ran successfully in {Duration}ms; output: {Output} (id: {ProcessId})", script.Key, sw.ElapsedMilliseconds, resultAsLines, processId);

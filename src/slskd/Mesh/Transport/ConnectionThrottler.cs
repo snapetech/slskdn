@@ -85,6 +85,44 @@ public class ConnectionThrottler
     }
 
     /// <summary>
+    /// Checks if an inbound UDP datagram should be processed (§8). Call before parsing.
+    /// </summary>
+    /// <param name="remoteEndpoint">The remote endpoint (e.g. IP:port).</param>
+    /// <returns>True if the datagram should be processed.</returns>
+    public bool ShouldAllowInboundDatagram(string remoteEndpoint)
+    {
+        const int capacity = 120; // per minute
+        const double refillRate = 2.0; // ~120/minute
+
+        var key = $"inbound-dgram-{remoteEndpoint}";
+        if (!_rateLimiter.TryConsume(key, 1, capacity, refillRate))
+        {
+            _logger.LogWarning("[ConnectionThrottler] Inbound datagram rate limit exceeded for {Endpoint}", remoteEndpoint);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Checks if an inbound QUIC stream should be processed (§8). Call before reading.
+    /// </summary>
+    /// <param name="remoteEndpoint">The remote endpoint (e.g. IP:port).</param>
+    /// <returns>True if the stream should be processed.</returns>
+    public bool ShouldAllowInboundStream(string remoteEndpoint)
+    {
+        const int capacity = 60; // per minute
+        const double refillRate = 1.0; // ~60/minute
+
+        var key = $"inbound-stream-{remoteEndpoint}";
+        if (!_rateLimiter.TryConsume(key, 1, capacity, refillRate))
+        {
+            _logger.LogWarning("[ConnectionThrottler] Inbound stream rate limit exceeded for {Endpoint}", remoteEndpoint);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Checks if a control envelope should be processed.
     /// </summary>
     /// <param name="peerId">The peer ID sending the envelope.</param>

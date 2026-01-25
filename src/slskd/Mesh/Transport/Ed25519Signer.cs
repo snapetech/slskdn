@@ -96,7 +96,7 @@ public class Ed25519Signer : IDisposable
 
         if (publicKey == null || publicKey.Length != 32)
         {
-            throw new ArgumentException("Ed25519 public key must be 32 bytes", nameof(publicKey));
+            return false; // Invalid key; do not throw (allows graceful handling of bad input)
         }
 
         try

@@ -16,71 +16,75 @@ public class PodModelsTests
         var message = new PodMessage();
 
         // Assert
-        Assert.NotNull(message.Id);
-        Assert.NotEqual(Guid.Empty, message.Id);
-        Assert.NotNull(message.Timestamp);
-        Assert.True(message.Timestamp > DateTimeOffset.MinValue);
-        Assert.Null(message.PodId);
-        Assert.Null(message.ChannelId);
-        Assert.Null(message.SenderPeerId);
-        Assert.Null(message.Body);
-        Assert.Null(message.Signature);
+        Assert.NotNull(message.MessageId);
+        Assert.Equal(string.Empty, message.MessageId);
+        Assert.Equal(0, message.TimestampUnixMs);
+        Assert.Equal(string.Empty, message.PodId);
+        Assert.Equal(string.Empty, message.ChannelId);
+        Assert.Equal(string.Empty, message.SenderPeerId);
+        Assert.Equal(string.Empty, message.Body);
+        Assert.Equal(string.Empty, message.Signature);
+        Assert.Equal(1, message.SigVersion);
     }
 
     [Fact]
     public void PodMessage_CustomConstructor_SetsProperties()
     {
         // Arrange
+        var messageId = "msg-1";
         var podId = "pod:abcdef123456";
         var channelId = "general";
         var senderPeerId = "peer:mesh:self";
         var body = "Hello world!";
         var signature = "signature123";
+        var timestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         // Act
         var message = new PodMessage
         {
+            MessageId = messageId,
             PodId = podId,
             ChannelId = channelId,
             SenderPeerId = senderPeerId,
             Body = body,
-            Signature = signature
+            Signature = signature,
+            TimestampUnixMs = timestampUnixMs
         };
 
         // Assert
+        Assert.Equal(messageId, message.MessageId);
         Assert.Equal(podId, message.PodId);
         Assert.Equal(channelId, message.ChannelId);
         Assert.Equal(senderPeerId, message.SenderPeerId);
         Assert.Equal(body, message.Body);
         Assert.Equal(signature, message.Signature);
-        Assert.NotEqual(Guid.Empty, message.Id);
-        Assert.NotNull(message.Timestamp);
+        Assert.Equal(timestampUnixMs, message.TimestampUnixMs);
     }
 
     [Fact]
-    public void PodMessage_Id_IsUnique()
+    public void PodMessage_MessageId_CanBeSetUnique()
     {
         // Act
-        var message1 = new PodMessage();
-        var message2 = new PodMessage();
+        var message1 = new PodMessage { MessageId = Guid.NewGuid().ToString("N") };
+        var message2 = new PodMessage { MessageId = Guid.NewGuid().ToString("N") };
 
         // Assert
-        Assert.NotEqual(message1.Id, message2.Id);
+        Assert.NotEqual(message1.MessageId, message2.MessageId);
     }
 
     [Fact]
-    public void PodMessage_Timestamp_IsRecent()
+    public void PodMessage_TimestampUnixMs_CanBeSet()
     {
         // Arrange
-        var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+        var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1000;
 
         // Act
-        var message = new PodMessage();
-        var after = DateTimeOffset.UtcNow.AddSeconds(1);
+        var message = new PodMessage { TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+        var after = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 1000;
 
         // Assert
-        Assert.True(message.Timestamp >= before);
-        Assert.True(message.Timestamp <= after);
+        Assert.True(message.TimestampUnixMs >= before);
+        Assert.True(message.TimestampUnixMs <= after);
     }
 
     [Fact]
@@ -90,9 +94,9 @@ public class PodModelsTests
         var channel = new PodChannel();
 
         // Assert
-        Assert.Null(channel.ChannelId);
-        Assert.Null(channel.Name);
-        Assert.Null(channel.Kind);
+        Assert.Equal(string.Empty, channel.ChannelId);
+        Assert.Equal(string.Empty, channel.Name);
+        Assert.Equal(PodChannelKind.General, channel.Kind);
         Assert.Null(channel.BindingInfo);
         Assert.Null(channel.Description);
     }
@@ -103,7 +107,7 @@ public class PodModelsTests
         // Arrange
         var channelId = "general";
         var name = "General Discussion";
-        var kind = ChannelKind.Public;
+        var kind = PodChannelKind.Custom;
         var bindingInfo = "soulseek-dm:user123";
         var description = "General discussion channel";
 
@@ -132,12 +136,14 @@ public class PodModelsTests
         var pod = new Pod();
 
         // Assert
-        Assert.Null(pod.PodId);
-        Assert.Null(pod.Name);
+        Assert.Equal(string.Empty, pod.PodId);
+        Assert.Equal(string.Empty, pod.Name);
         Assert.Null(pod.Description);
-        Assert.Equal(Visibility.Private, pod.Visibility);
-        Assert.Null(pod.Tags);
-        Assert.Null(pod.Channels);
+        Assert.Equal(PodVisibility.Unlisted, pod.Visibility);
+        Assert.NotNull(pod.Tags);
+        Assert.Empty(pod.Tags);
+        Assert.NotNull(pod.Channels);
+        Assert.Empty(pod.Channels);
         Assert.Null(pod.Members);
     }
 
@@ -148,8 +154,8 @@ public class PodModelsTests
         var podId = "pod:abcdef123456";
         var name = "Test Pod";
         var description = "A test pod";
-        var visibility = Visibility.Public;
-        var tags = new[] { "test", "demo" };
+        var visibility = PodVisibility.Listed;
+        var tags = new List<string> { "test", "demo" };
         var channels = new List<PodChannel> { new PodChannel { ChannelId = "general" } };
         var members = new List<PodMember> { new PodMember { PeerId = "peer:mesh:self" } };
 
@@ -182,8 +188,8 @@ public class PodModelsTests
         var member = new PodMember();
 
         // Assert
-        Assert.Null(member.PeerId);
-        Assert.Equal(PodRole.Member, member.Role);
+        Assert.Equal(string.Empty, member.PeerId);
+        Assert.Equal(PodRoles.Member, member.Role);
         Assert.Null(member.JoinedAt);
         Assert.Null(member.LastSeen);
         Assert.False(member.IsBanned);
@@ -194,7 +200,7 @@ public class PodModelsTests
     {
         // Arrange
         var peerId = "peer:mesh:self";
-        var role = PodRole.Owner;
+        var role = PodRoles.Owner;
         var joinedAt = DateTimeOffset.UtcNow.AddDays(-1);
         var lastSeen = DateTimeOffset.UtcNow;
         var isBanned = false;
@@ -218,33 +224,30 @@ public class PodModelsTests
     }
 
     [Theory]
-    [InlineData(ChannelKind.Public)]
-    [InlineData(ChannelKind.Private)]
-    [InlineData(ChannelKind.DirectMessage)]
-    public void ChannelKind_EnumValues_AreDefined(ChannelKind kind)
+    [InlineData(PodChannelKind.General)]
+    [InlineData(PodChannelKind.Custom)]
+    [InlineData(PodChannelKind.Bound)]
+    [InlineData(PodChannelKind.DirectMessage)]
+    public void PodChannelKind_EnumValues_AreDefined(PodChannelKind kind)
     {
-        // Act & Assert - Should not throw
-        Assert.True(Enum.IsDefined(typeof(ChannelKind), kind));
+        Assert.True(Enum.IsDefined(typeof(PodChannelKind), kind));
     }
 
     [Theory]
-    [InlineData(Visibility.Public)]
-    [InlineData(Visibility.Unlisted)]
-    [InlineData(Visibility.Private)]
-    public void Visibility_EnumValues_AreDefined(Visibility visibility)
+    [InlineData(PodVisibility.Listed)]
+    [InlineData(PodVisibility.Unlisted)]
+    [InlineData(PodVisibility.Private)]
+    public void PodVisibility_EnumValues_AreDefined(PodVisibility visibility)
     {
-        // Act & Assert - Should not throw
-        Assert.True(Enum.IsDefined(typeof(Visibility), visibility));
+        Assert.True(Enum.IsDefined(typeof(PodVisibility), visibility));
     }
 
-    [Theory]
-    [InlineData(PodRole.Owner)]
-    [InlineData(PodRole.Moderator)]
-    [InlineData(PodRole.Member)]
-    public void PodRole_EnumValues_AreDefined(PodRole role)
+    [Fact]
+    public void PodRoles_Constants_AreDefined()
     {
-        // Act & Assert - Should not throw
-        Assert.True(Enum.IsDefined(typeof(PodRole), role));
+        Assert.False(string.IsNullOrEmpty(PodRoles.Owner));
+        Assert.False(string.IsNullOrEmpty(PodRoles.Moderator));
+        Assert.False(string.IsNullOrEmpty(PodRoles.Member));
     }
 
     [Fact]
@@ -252,32 +255,33 @@ public class PodModelsTests
     {
         // Arrange
         var message = new PodMessage();
-        var id = Guid.NewGuid();
-        var timestamp = DateTimeOffset.UtcNow;
+        var messageId = "msg-test";
+        var timestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var podId = "pod:test";
         var channelId = "general";
         var senderPeerId = "peer:mesh:self";
         var body = "Test message";
         var signature = "test-signature";
+        var sigVersion = 2;
 
         // Act
-        message.Id = id;
-        message.Timestamp = timestamp;
+        message.MessageId = messageId;
+        message.TimestampUnixMs = timestampUnixMs;
         message.PodId = podId;
         message.ChannelId = channelId;
         message.SenderPeerId = senderPeerId;
         message.Body = body;
         message.Signature = signature;
+        message.SigVersion = sigVersion;
 
         // Assert
-        Assert.Equal(id, message.Id);
-        Assert.Equal(timestamp, message.Timestamp);
+        Assert.Equal(messageId, message.MessageId);
+        Assert.Equal(timestampUnixMs, message.TimestampUnixMs);
         Assert.Equal(podId, message.PodId);
         Assert.Equal(channelId, message.ChannelId);
         Assert.Equal(senderPeerId, message.SenderPeerId);
         Assert.Equal(body, message.Body);
         Assert.Equal(signature, message.Signature);
+        Assert.Equal(sigVersion, message.SigVersion);
     }
 }
-
-

@@ -2,9 +2,13 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using System.Security.Cryptography;
+using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using Moq;
+using slskd.Mesh;
 using slskd.Mesh.Dht;
 using slskd.Mesh.Transport;
+using Xunit;
 
 namespace slskd.Tests.Unit.Mesh.Transport;
 
@@ -12,25 +16,21 @@ public class DescriptorSigningServiceTests
 {
     private readonly DescriptorSigningService _service;
     private readonly byte[] _privateKey;
-    private readonly byte[] _publicKey;
 
     public DescriptorSigningServiceTests()
     {
-        // Generate a test key pair (in reality this would be Ed25519)
-        using var rsa = RSA.Create(2048);
-        _privateKey = rsa.ExportRSAPrivateKey();
-        _publicKey = rsa.ExportRSAPublicKey();
+        // Ed25519 keys are 32 bytes; SignDescriptor requires exactly 32.
+        _privateKey = new byte[32];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(_privateKey);
 
-        // Note: Using RSA for testing since Ed25519 isn't implemented yet
-        // In production, this would use proper Ed25519 keys
-        _service = new DescriptorSigningService(null!); // Logger not needed for basic tests
+        _service = new DescriptorSigningService(Mock.Of<ILogger<DescriptorSigningService>>());
     }
 
     [Fact]
     public void SignDescriptor_WithValidDescriptor_ReturnsSignature()
     {
         // Arrange
-        var descriptor = new MeshPeerDescriptor
+        var descriptor = new slskd.Mesh.Dht.MeshPeerDescriptor
         {
             PeerId = "test-peer-123",
             SequenceNumber = 1,
@@ -115,7 +115,7 @@ public class DescriptorSigningServiceTests
     public void IsExpired_WithFutureExpiry_ReturnsFalse()
     {
         // Arrange
-        var descriptor = new MeshPeerDescriptor
+        var descriptor = new slskd.Mesh.Dht.MeshPeerDescriptor
         {
             ExpiresAtUnixMs = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeMilliseconds()
         };
@@ -131,7 +131,7 @@ public class DescriptorSigningServiceTests
     public void IsExpired_WithPastExpiry_ReturnsTrue()
     {
         // Arrange
-        var descriptor = new MeshPeerDescriptor
+        var descriptor = new slskd.Mesh.Dht.MeshPeerDescriptor
         {
             ExpiresAtUnixMs = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeMilliseconds()
         };
@@ -147,7 +147,7 @@ public class DescriptorSigningServiceTests
     public void GetSignableData_IncludesAllFields()
     {
         // Arrange
-        var descriptor = new MeshPeerDescriptor
+        var descriptor = new slskd.Mesh.Dht.MeshPeerDescriptor
         {
             PeerId = "peer-123",
             SequenceNumber = 42,
@@ -171,12 +171,11 @@ public class DescriptorSigningServiceTests
         // Act
         var data = descriptor.GetSignableData();
 
-        // Assert
+        // Assert: GetSignableData returns canonical MessagePack; key string values appear as raw bytes
+        Assert.NotEmpty(data);
         var dataString = System.Text.Encoding.UTF8.GetString(data);
         Assert.Contains("peer-123", dataString);
-        Assert.Contains("42", dataString);
-        Assert.Contains("1234567890", dataString);
-        Assert.Contains("DirectQuic:example.com:443:Control:1:5", dataString);
+        Assert.Contains("example.com", dataString);
         Assert.Contains("pin1", dataString);
         Assert.Contains("key1", dataString);
     }

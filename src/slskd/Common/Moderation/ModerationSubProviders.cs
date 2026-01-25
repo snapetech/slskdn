@@ -25,7 +25,7 @@ namespace slskd.Common.Moderation
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         🔒 MANDATORY: See `MCP-HARDENING.md` Section 2.2 for:
+    ///         🔒 MANDATORY: See `docs/MCP-HARDENING.md` Section 2.2 for:
     ///         - Timing attack mitigation (bloom filters)
     ///         - Constant-time comparisons
     ///         - Secure blocklist loading
@@ -52,7 +52,7 @@ namespace slskd.Common.Moderation
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         🔒 MANDATORY: See `MCP-HARDENING.md` Section 2.1 for:
+    ///         🔒 MANDATORY: See `docs/MCP-HARDENING.md` Section 2.1 for:
     ///         - SSRF protection (domain allowlist, HTTPS only)
     ///         - Request size limits (max 10KB metadata, max 100MB files)
     ///         - Timeouts (default 5s)

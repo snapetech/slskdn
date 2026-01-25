@@ -2,6 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Threading;
@@ -16,7 +17,8 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/podcore/discovery")]
 [ApiController]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[AllowAnonymous] // PR-02: intended-public
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodDiscoveryController : ControllerBase
 {
     private readonly ILogger<PodDiscoveryController> _logger;

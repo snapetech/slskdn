@@ -74,9 +74,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core
         [Theory]
         [InlineData(ContentDomain.Music, "track-123", null, null, true, null)]
         [InlineData(ContentDomain.Music, null, null, null, false, "TrackId is required")]
-        [InlineData(ContentDomain.GenericFile, null, "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", 1024, true, null)]
-        [InlineData(ContentDomain.GenericFile, null, null, 1024, false, "FileHash is required")]
-        [InlineData(ContentDomain.GenericFile, null, "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", 0, false, "FileSize is required")]
+        [InlineData(ContentDomain.GenericFile, null, "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", 1024L, true, null)]
+        [InlineData(ContentDomain.GenericFile, null, null, 1024L, false, "FileHash is required")]
+        [InlineData(ContentDomain.GenericFile, null, "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", 0L, false, "FileSize is required")]
         public void ValidateRequiredFields_EnforcesFieldRequirements(
             ContentDomain domain,
             string trackId,

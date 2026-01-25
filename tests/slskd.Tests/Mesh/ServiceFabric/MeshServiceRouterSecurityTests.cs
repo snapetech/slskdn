@@ -29,7 +29,7 @@ public class MeshServiceRouterSecurityTests
     public async Task GlobalRateLimit_BlocksExcessiveCalls()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions
         {
             GlobalMaxCallsPerPeer = 5,
             DefaultMaxCallsPerMinute = 100
@@ -64,7 +64,7 @@ public class MeshServiceRouterSecurityTests
     public async Task PerServiceRateLimit_BlocksExcessiveCalls()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions
         {
             GlobalMaxCallsPerPeer = 1000,
             PerServiceRateLimits = new()
@@ -102,9 +102,9 @@ public class MeshServiceRouterSecurityTests
     public async Task PayloadSizeLimit_RejectsOversizedPayload()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions
         {
-            MaxPayloadBytes = 1024 // 1 KB
+            MaxDescriptorBytes = 1024 // 1 KB
         });
         var router = new MeshServiceRouter(_logger, options);
         var service = new TestService();
@@ -122,14 +122,14 @@ public class MeshServiceRouterSecurityTests
 
         // Assert
         Assert.Equal(ServiceStatusCodes.PayloadTooLarge, reply.StatusCode);
-        Assert.Contains("size limit", reply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exceeds", reply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task CircuitBreaker_OpensAfter5ConsecutiveFailures()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions());
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions());
         var router = new MeshServiceRouter(_logger, options);
         var service = new FailingService(); // Always throws
         router.RegisterService(service);
@@ -160,7 +160,7 @@ public class MeshServiceRouterSecurityTests
     public async Task CircuitBreaker_ResetsAfterSuccessfulCall()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions());
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions());
         var router = new MeshServiceRouter(_logger, options);
         var service = new IntermittentService();
         router.RegisterService(service);
@@ -214,7 +214,7 @@ public class MeshServiceRouterSecurityTests
     public async Task ServiceTimeout_TriggersCircuitBreaker()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions
         {
             PerServiceTimeoutSeconds = new()
             {
@@ -259,7 +259,7 @@ public class MeshServiceRouterSecurityTests
     public async Task MultiPeerIsolation_OnePeerRateLimitDoesNotAffectOthers()
     {
         // Arrange
-        var options = Options.Create(new MeshServiceFabricOptions
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshServiceFabricOptions
         {
             GlobalMaxCallsPerPeer = 2
         });
@@ -312,6 +312,9 @@ public class MeshServiceRouterSecurityTests
                 Payload = Encoding.UTF8.GetBytes("success")
             });
         }
+
+        public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private class FailingService : IMeshService
@@ -323,8 +326,11 @@ public class MeshServiceRouterSecurityTests
             MeshServiceContext context,
             CancellationToken cancellationToken)
         {
-            throw new Exception("Service is broken");
+            throw new InvalidOperationException("Service is broken");
         }
+
+        public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private class IntermittentService : IMeshService
@@ -338,7 +344,7 @@ public class MeshServiceRouterSecurityTests
         {
             if (call.Method == "Fail")
             {
-                throw new Exception("Intermittent failure");
+                throw new InvalidOperationException("Intermittent failure");
             }
 
             return Task.FromResult(new ServiceReply
@@ -348,6 +354,9 @@ public class MeshServiceRouterSecurityTests
                 Payload = Array.Empty<byte>()
             });
         }
+
+        public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private class SlowService : IMeshService
@@ -369,6 +378,9 @@ public class MeshServiceRouterSecurityTests
                 Payload = Array.Empty<byte>()
             };
         }
+
+        public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }
 

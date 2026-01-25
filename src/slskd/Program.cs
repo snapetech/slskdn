@@ -34,10 +34,12 @@ namespace slskd
     using System.Net;
     using System.Net.Http;
     using System.Reflection;
+    using System.Security.Cryptography;
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Text.Json.Serialization;
     using System.Threading;
+    using System.Threading.RateLimiting;
     using System.Threading.Tasks;
     using Asp.Versioning.ApiExplorer;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -47,6 +49,9 @@ namespace slskd
     using Microsoft.AspNetCore.Diagnostics.HealthChecks;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Mvc.Authorization;
+    using Microsoft.AspNetCore.RateLimiting;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -515,6 +520,13 @@ namespace slskd
             // bootstrap the ASP.NET application
             try
             {
+                var isBindingNonLoopback = OptionsAtStartup.Web.Port > 0 ||
+                    (!OptionsAtStartup.Web.Https.Disabled && OptionsAtStartup.Web.Https.Port > 0);
+                Common.Security.HardeningValidator.Validate(
+                    OptionsAtStartup,
+                    System.Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production",
+                    isBindingNonLoopback);
+
                 var builder = WebApplication.CreateBuilder(args);
 
                 builder.Configuration
@@ -527,6 +539,8 @@ namespace slskd
                     .UseUrls()
                     .UseKestrel(options =>
                     {
+                        // PR-09: Global body size cap; configurable via Web.MaxRequestBodySize (default 10 MB). MeshGateway and others may enforce lower per-route.
+                        options.Limits.MaxRequestBodySize = OptionsAtStartup.Web.MaxRequestBodySize;
                         Log.Information($"[Kestrel] Configuring HTTP listener at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
                         options.Listen(IPAddress.Any, OptionsAtStartup.Web.Port);
                         Log.Information($"[Kestrel] HTTP listener configured");
@@ -645,6 +659,11 @@ namespace slskd
                 app.Run();
                 Log.Information("[Program] app.Run() returned (this should not happen normally)");
             }
+            catch (Common.Security.HardeningValidationException hex)
+            {
+                Log.Fatal(hex, "Hardening validation failed: {Message}", hex.Message);
+                Exit(1);
+            }
             catch (Exception ex)
             {
                 Log.Fatal(ex, "Application terminated unexpectedly");
@@ -699,6 +718,10 @@ namespace slskd
                 {
                     ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
                 });
+
+            // PR-14: SSRF-safe key fetcher for ActivityPub HTTP Signature (timeout 3s, max 3 redirects)
+            services.AddHttpClient<SocialFederation.IHttpSignatureKeyFetcher, SocialFederation.HttpSignatureKeyFetcher>(c => c.Timeout = TimeSpan.FromSeconds(3))
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { MaxAutomaticRedirections = 3 });
 
             // add a partially configured instance of SoulseekClient. the Application instance will
             // complete configuration at startup.
@@ -1075,8 +1098,10 @@ namespace slskd
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<PodCore.PodMessageRouter>>();
                 var podService = sp.GetRequiredService<PodCore.IPodService>();
                 var overlayClient = sp.GetRequiredService<Mesh.Overlay.IOverlayClient>();
+                var controlSigner = sp.GetRequiredService<Mesh.Overlay.IControlSigner>();
+                var peerResolution = sp.GetRequiredService<PodCore.IPeerResolutionService>();
                 var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
-                return new PodCore.PodMessageRouter(logger, podService, overlayClient, privacyLayer);
+                return new PodCore.PodMessageRouter(logger, podService, overlayClient, controlSigner, peerResolution, privacyLayer);
             });
             services.AddSingleton<PodCore.IMessageSigner, PodCore.MessageSigner>();
 
@@ -1302,6 +1327,7 @@ namespace slskd
             services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
             services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
             services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSection("Security:Adversarial"));
+            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(Configuration.GetSection("PodCore:Security"));
 
             // Transport policy manager for per-peer/per-pod transport policies
             services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
@@ -1392,7 +1418,7 @@ namespace slskd
                 Log.Information("[DI] Resolving IDhtClient for MeshDhtClient...");
                 var dhtClient = sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>();
                 Log.Information("[DI] All MeshDhtClient dependencies resolved, creating instance (DhtService will be resolved lazily to break circular dependency)...");
-                var service = new Mesh.Dht.MeshDhtClient(logger, dhtClient, sp);
+                var service = new Mesh.Dht.MeshDhtClient(logger, dhtClient, sp, sp.GetService<IOptions<Mesh.MeshOptions>>());
                 Log.Information("[DI] MeshDhtClient constructed");
                 return service;
             });
@@ -1813,12 +1839,29 @@ namespace slskd
         {
             Log.Information("[ASP] Starting ConfigureAspDotNetServices...");
             
-            services.AddCors(options => options.AddPolicy("AllowAll", builder => builder
-                .SetIsOriginAllowed((host) => true)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials()
-                .WithExposedHeaders("X-URL-Base", "X-Total-Count")));
+            services.AddCors(options =>
+            {
+                var c = OptionsAtStartup.Web.Cors;
+                if (c.Enabled && c.AllowedOrigins != null && c.AllowedOrigins.Length > 0)
+                {
+                    options.AddPolicy("ConfiguredCors", b =>
+                    {
+                        b.WithOrigins(c.AllowedOrigins)
+                            .WithExposedHeaders("X-URL-Base", "X-Total-Count")
+                            .SetPreflightMaxAge(TimeSpan.FromHours(1));
+                        if (c.AllowCredentials)
+                            b.AllowCredentials();
+                        if (c.AllowedHeaders != null && c.AllowedHeaders.Length > 0)
+                            b.WithHeaders(c.AllowedHeaders);
+                        else
+                            b.AllowAnyHeader();
+                        if (c.AllowedMethods != null && c.AllowedMethods.Length > 0)
+                            b.WithMethods(c.AllowedMethods);
+                        else
+                            b.AllowAnyMethod();
+                    });
+                }
+            });
 
             // note: don't dispose this (or let it be disposed) or some of the stats, like those related
             // to the thread pool won't work
@@ -1990,6 +2033,8 @@ namespace slskd
                     {
                         options.Username = "Anonymous";
                         options.Role = Role.Administrator;
+                        options.AllowRemoteNoAuth = OptionsAtStartup.Web.AllowRemoteNoAuth;
+                        options.AllowedCidrs = OptionsAtStartup.Web.Authentication.Passthrough?.AllowedCidrs;
                     });
             }
 
@@ -2013,13 +2058,34 @@ namespace slskd
             });
 
             services.AddRouting(options => options.LowercaseUrls = true);
-            services.AddControllers()
+            services.AddControllers(options =>
+                {
+                    options.Filters.Add(new AuthorizeFilter(AuthPolicy.Any));
+                })
                 .ConfigureApiBehaviorOptions(options =>
                 {
                     options.SuppressInferBindingSourcesForParameters = true; // explicit [FromRoute], etc
                     options.SuppressMapClientErrors = true; // disables automatic ProblemDetails for 4xx
-                    options.SuppressModelStateInvalidFilter = true; // disables automatic 400 for model errors
+                    // PR-07: when EnforceSecurity, enable automatic 400 for invalid model (ValidationProblemDetails)
+                    options.SuppressModelStateInvalidFilter = !OptionsAtStartup.Web.EnforceSecurity;
                     options.DisableImplicitFromServicesParameters = true; // explicit [FromServices]
+                    // PR-05, PR-07: custom ValidationProblemDetails; in Production do not leak internal property paths or structure.
+                    options.InvalidModelStateResponseFactory = actionContext =>
+                    {
+                        var env = actionContext.HttpContext.RequestServices.GetService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+                        var isDev = env?.IsDevelopment() == true;
+                        var problem = new ValidationProblemDetails(actionContext.ModelState)
+                        {
+                            Status = 400,
+                            Title = "One or more validation errors occurred.",
+                        };
+                        if (!isDev)
+                        {
+                            problem.Detail = "The request is invalid.";
+                            problem.Errors.Clear();
+                        }
+                        return new BadRequestObjectResult(problem);
+                    };
                 })
                 .AddJsonOptions(options =>
                 {
@@ -2053,6 +2119,33 @@ namespace slskd
                     options.GroupNameFormat = "'v'VVV";
                     options.SubstituteApiVersionInUrl = true;
                 });
+
+            // PR-09: HTTP rate limiting – Api (generous), FederationInbox (tighter), MeshGateway (tighter). Per-IP partitions.
+            if (OptionsAtStartup.Web.RateLimiting.Enabled)
+            {
+                var rl = OptionsAtStartup.Web.RateLimiting;
+                var apiPermit = rl.ApiPermitLimit;
+                var apiWindow = TimeSpan.FromSeconds(rl.ApiWindowSeconds <= 0 ? 60 : rl.ApiWindowSeconds);
+                var fedPermit = rl.FederationPermitLimit;
+                var fedWindow = TimeSpan.FromSeconds(rl.FederationWindowSeconds <= 0 ? 60 : rl.FederationWindowSeconds);
+                var meshPermit = rl.MeshGatewayPermitLimit;
+                var meshWindow = TimeSpan.FromSeconds(rl.MeshGatewayWindowSeconds <= 0 ? 60 : rl.MeshGatewayWindowSeconds);
+
+                services.AddRateLimiter(options =>
+                {
+                    options.RejectionStatusCode = 429;
+                    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                    {
+                        var path = context.Request.Path.Value ?? "";
+                        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                        if (path.StartsWith("/mesh/", StringComparison.OrdinalIgnoreCase))
+                            return RateLimitPartition.GetFixedWindowLimiter("mesh:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = meshPermit, Window = meshWindow });
+                        if (path.Contains("/inbox", StringComparison.OrdinalIgnoreCase) && string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase))
+                            return RateLimitPartition.GetFixedWindowLimiter("fed:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = fedPermit, Window = fedWindow });
+                        return RateLimitPartition.GetFixedWindowLimiter("api:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = apiPermit, Window = apiWindow });
+                    });
+                });
+            }
 
             if (OptionsAtStartup.Feature.Swagger)
             {
@@ -2100,31 +2193,54 @@ namespace slskd
             // STEP 3: Use a custom middleware class instead of inline delegate
             Log.Information("[Pipeline] Starting ConfigureAspDotNetPipeline...");
             
-            // stop ASP.NET from sending a full stack trace and ProblemDetails for unhandled exceptions
+            // PR-05: RFC 7807 ProblemDetails; in Production do not leak exception message; always include traceId
             app.UseExceptionHandler(a => a.Run(async context =>
             {
                 var feature = context.Features.Get<IExceptionHandlerPathFeature>();
                 if (feature?.Error != null)
                 {
+                    var ex = feature.Error;
                     var path = context.Request.Path.Value ?? string.Empty;
-                    Log.Error(feature.Error, "[ExceptionHandler] Unhandled exception for {Method} {Path}: {Message}\n{StackTrace}", 
-                        context.Request.Method, path, feature.Error.Message, feature.Error.StackTrace);
-                    
-                    // Only write if response hasn't started
+                    var traceId = context.TraceIdentifier;
+                    Log.Error(ex, "[ExceptionHandler] Unhandled exception for {Method} {Path} traceId={TraceId}: {Message}",
+                        context.Request.Method, path, traceId, ex.Message);
+
                     if (!context.Response.HasStarted)
                     {
-                        context.Response.StatusCode = 500;
-                        await context.Response.WriteAsJsonAsync(new { error = feature.Error.Message });
+                        int status;
+                        string title;
+                        string detail;
+                        if (ex is FeatureNotImplementedException fe)
+                        {
+                            // §11: Incomplete features → 501 Not Implemented
+                            status = 501;
+                            title = "Not Implemented";
+                            detail = fe.Message;
+                        }
+                        else
+                        {
+                            var env = context.RequestServices.GetService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+                            var isDev = env?.IsDevelopment() == true;
+                            status = 500;
+                            title = "Internal Server Error";
+                            detail = isDev ? ex.ToString() : "An unexpected error occurred.";
+                        }
+                        var problem = new ProblemDetails { Status = status, Title = title, Detail = detail };
+                        problem.Extensions["traceId"] = traceId;
+                        context.Response.StatusCode = status;
+                        context.Response.ContentType = "application/problem+json";
+                        await context.Response.Body.WriteAsync(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(problem));
                     }
                     else
                     {
-                        Log.Warning("[ExceptionHandler] Response already started, cannot write error body for {Method} {Path}", 
-                            context.Request.Method, path);
+                        Log.Warning("[ExceptionHandler] Response already started, cannot write error body for {Method} {Path} traceId={TraceId}",
+                            context.Request.Method, path, traceId);
                     }
                 }
             }));
 
-            app.UseCors("AllowAll");
+            if (OptionsAtStartup.Web.Cors.Enabled && OptionsAtStartup.Web.Cors.AllowedOrigins != null && OptionsAtStartup.Web.Cors.AllowedOrigins.Length > 0)
+                app.UseCors("ConfiguredCors");
 
             // CSRF token middleware - generates tokens for cookie-based auth
             // This must come AFTER UsePathBase but BEFORE UseAuthentication
@@ -2235,8 +2351,46 @@ namespace slskd
             // This middleware blocks /mesh/* paths when gateway is disabled
             app.UseMiddleware<Mesh.ServiceFabric.MeshGatewayAuthMiddleware>();
 
+            // PR-14: Capture POST /actors/.../inbox body for HTTP Signature verification (Digest) before model binding.
+            // §8: Bounded read to prevent DoS; reject over MaxRemotePayloadSize with 413.
+            app.UseWhen(
+                ctx => string.Equals(ctx.Request.Method, "POST", StringComparison.OrdinalIgnoreCase)
+                    && ctx.Request.Path.StartsWithSegments("/actors", StringComparison.OrdinalIgnoreCase)
+                    && (ctx.Request.Path.Value ?? string.Empty).Contains("/inbox", StringComparison.OrdinalIgnoreCase),
+                branch => branch.Use(async (ctx, next) =>
+                {
+                    ctx.Request.EnableBuffering();
+                    var limit = ctx.RequestServices.GetService<IOptions<Mesh.MeshOptions>>()?.Value?.Security?.GetEffectiveMaxPayloadSize()
+                        ?? slskd.Mesh.Transport.SecurityUtils.MaxRemotePayloadSize;
+                    if (ctx.Request.ContentLength.HasValue && ctx.Request.ContentLength.Value > limit)
+                    {
+                        ctx.Response.StatusCode = 413;
+                        return;
+                    }
+                    var buf = new byte[8192];
+                    int total = 0;
+                    using var ms = new MemoryStream();
+                    int n;
+                    while ((n = await ctx.Request.Body.ReadAsync(buf)) > 0)
+                    {
+                        total += n;
+                        if (total > limit)
+                        {
+                            ctx.Response.StatusCode = 413;
+                            return;
+                        }
+                        ms.Write(buf, 0, n);
+                    }
+                    var b = ms.ToArray();
+                    ctx.Request.Body.Position = 0;
+                    ctx.Items["ActivityPubInboxBody"] = b;
+                    await next(ctx);
+                }));
+
             app.UseAuthentication();
             app.UseRouting();
+            if (OptionsAtStartup.Web.RateLimiting.Enabled)
+                app.UseRateLimiter();
             app.UseAuthorization();
 
             if (OptionsAtStartup.Web.Logging)
@@ -2256,8 +2410,12 @@ namespace slskd
                 endpoints.MapHub<ApplicationHub>("/hub/application");
                 endpoints.MapHub<LogsHub>("/hub/logs");
                 endpoints.MapHub<Transfers.API.TransfersHub>("/hub/transfers");
-                endpoints.MapHub<SearchHub>("/hub/search");
-                endpoints.MapHub<RelayHub>("/hub/relay");
+                var searchHub = endpoints.MapHub<SearchHub>("/hub/search");
+                if (OptionsAtStartup.Web.EnforceSecurity)
+                    searchHub.RequireAuthorization(AuthPolicy.Any);
+                var relayHub = endpoints.MapHub<RelayHub>("/hub/relay");
+                if (OptionsAtStartup.Web.EnforceSecurity)
+                    relayHub.RequireAuthorization(AuthPolicy.Any);
 
                 endpoints.MapControllers();
                 endpoints.MapHealthChecks("/health");
@@ -2286,15 +2444,38 @@ namespace slskd
                         // this should be revisited.
                         if (!options.Authentication.Disabled)
                         {
-                            var auth = context.Request.Headers["Authorization"].FirstOrDefault();
-                            var providedCreds = auth?.Split(' ').Last();
-                            var validCreds = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.Authentication.Username}:{options.Authentication.Password}"));
-
-                            if (string.IsNullOrEmpty(auth) ||
-                                !auth.StartsWith("Basic", StringComparison.InvariantCultureIgnoreCase) ||
-                                !string.Equals(providedCreds, validCreds, StringComparison.InvariantCultureIgnoreCase))
+                            static void Reject(HttpContext ctx)
                             {
-                                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                                ctx.Response.Headers.Append("WWW-Authenticate", "Basic realm=\"metrics\"");
+                                ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                            }
+
+                            var auth = context.Request.Headers["Authorization"].FirstOrDefault();
+                            if (string.IsNullOrEmpty(auth) || !auth.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Reject(context);
+                                return;
+                            }
+                            var providedBase64 = auth["Basic ".Length..].Trim();
+                            if (string.IsNullOrEmpty(providedBase64))
+                            {
+                                Reject(context);
+                                return;
+                            }
+                            byte[] providedBytes;
+                            try
+                            {
+                                providedBytes = Convert.FromBase64String(providedBase64);
+                            }
+                            catch (FormatException)
+                            {
+                                Reject(context);
+                                return;
+                            }
+                            var validBytes = Encoding.UTF8.GetBytes($"{options.Authentication.Username}:{options.Authentication.Password}");
+                            if (!CryptographicOperations.FixedTimeEquals(providedBytes, validBytes))
+                            {
+                                Reject(context);
                                 return;
                             }
                         }

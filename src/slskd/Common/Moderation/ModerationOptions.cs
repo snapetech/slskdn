@@ -29,7 +29,7 @@ namespace slskd.Common.Moderation
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         🔒 MANDATORY: See `MCP-HARDENING.md` before configuring.
+    ///         🔒 MANDATORY: See `docs/docs/MCP-HARDENING.md` before configuring.
     ///     </para>
     ///     <para>
     ///         MCP provides content and peer moderation through:
@@ -170,7 +170,7 @@ namespace slskd.Common.Moderation
             ///     Gets the allowed domains for external moderation.
             /// </summary>
             /// <remarks>
-            ///     🔒 CRITICAL (MCP-HARDENING.md Section 2.1.1):
+            ///     🔒 CRITICAL (docs/MCP-HARDENING.md Section 2.1.1):
             ///     - Only HTTPS endpoints in this list are allowed
             ///     - No wildcards
             ///     - No IP addresses
@@ -278,7 +278,7 @@ namespace slskd.Common.Moderation
             ///     Gets the reputation decay period in days.
             /// </summary>
             /// <remarks>
-            ///     🔒 MANDATORY (MCP-HARDENING.md Section 3.3):
+            ///     🔒 MANDATORY (docs/MCP-HARDENING.md Section 3.3):
             ///     Reputation must decay over time to prevent permanent bans.
             ///     After this period, reputation resets to neutral.
             /// </remarks>

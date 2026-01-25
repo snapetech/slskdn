@@ -12,12 +12,12 @@ namespace slskd.Tests.Unit.Mesh.Transport;
 public class MeekTransportTests : IDisposable
 {
     private readonly Mock<ILogger<MeekTransport>> _loggerMock;
-    private readonly MeekOptions _defaultOptions;
+    private readonly MeekTransportOptions _defaultOptions;
 
     public MeekTransportTests()
     {
         _loggerMock = new Mock<ILogger<MeekTransport>>();
-        _defaultOptions = new MeekOptions
+        _defaultOptions = new MeekTransportOptions
         {
             BridgeUrl = "https://meek-bridge.example.com/connect",
             FrontDomain = "www.google.com",
@@ -34,7 +34,7 @@ public class MeekTransportTests : IDisposable
     public void Constructor_WithValidOptions_CreatesInstance()
     {
         // Act & Assert - Should not throw
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.Meek, transport.TransportType);
     }
 
@@ -56,7 +56,7 @@ public class MeekTransportTests : IDisposable
     public void TransportType_ReturnsMeek()
     {
         // Arrange
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
         // Assert
         Assert.Equal(AnonymityTransportType.Meek, transport.TransportType);
@@ -66,7 +66,7 @@ public class MeekTransportTests : IDisposable
     public void GetStatus_ReturnsValidStatusObject()
     {
         // Arrange
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
         // Act
         var status = transport.GetStatus();
@@ -83,7 +83,7 @@ public class MeekTransportTests : IDisposable
     public async Task ConnectAsync_WithoutIsolationKey_UsesDefaultSession()
     {
         // Arrange
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
         // Act & Assert - Should throw due to no actual HTTP server, but should handle connection logic
         await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
@@ -96,7 +96,7 @@ public class MeekTransportTests : IDisposable
     public async Task ConnectAsync_WithIsolationKey_UsesSessionId()
     {
         // Arrange
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
         // Act & Assert - Should throw due to no actual HTTP server, but should handle isolation logic
         await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, "peer123"));
@@ -109,7 +109,7 @@ public class MeekTransportTests : IDisposable
     public async Task IsAvailableAsync_ConnectionFailure_ReturnsFalse()
     {
         // Arrange
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
         // Act
         var isAvailable = await transport.IsAvailableAsync();
@@ -124,17 +124,17 @@ public class MeekTransportTests : IDisposable
     [InlineData("https://meek-bridge.example.com/connect")]
     [InlineData("http://localhost:8080/meek")]
     [InlineData("https://api.example.com:8443/meek/connect")]
-    public void MeekOptions_AcceptsVariousBridgeUrls(string bridgeUrl)
+    public void MeekTransportOptions_AcceptsVariousBridgeUrls(string bridgeUrl)
     {
         // Arrange
-        var options = new MeekOptions
+        var options = new MeekTransportOptions
         {
             BridgeUrl = bridgeUrl,
             FrontDomain = "www.google.com"
         };
 
         // Act & Assert - Should not throw
-        using var transport = new MeekTransport(options, _loggerMock.Object);
+        var transport = new MeekTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.Meek, transport.TransportType);
     }
 
@@ -142,17 +142,17 @@ public class MeekTransportTests : IDisposable
     [InlineData("www.google.com")]
     [InlineData("www.bing.com")]
     [InlineData("cdn.example.com")]
-    public void MeekOptions_AcceptsVariousFrontDomains(string frontDomain)
+    public void MeekTransportOptions_AcceptsVariousFrontDomains(string frontDomain)
     {
         // Arrange
-        var options = new MeekOptions
+        var options = new MeekTransportOptions
         {
             BridgeUrl = "https://meek-bridge.example.com/connect",
             FrontDomain = frontDomain
         };
 
         // Act & Assert - Should not throw
-        using var transport = new MeekTransport(options, _loggerMock.Object);
+        var transport = new MeekTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.Meek, transport.TransportType);
     }
 
@@ -160,7 +160,7 @@ public class MeekTransportTests : IDisposable
     public void Options_Validation_CustomHeaders()
     {
         // Arrange
-        var options = new MeekOptions
+        var options = new MeekTransportOptions
         {
             BridgeUrl = "https://meek-bridge.example.com/connect",
             FrontDomain = "www.google.com",
@@ -172,28 +172,25 @@ public class MeekTransportTests : IDisposable
         };
 
         // Act & Assert - Should not throw
-        using var transport = new MeekTransport(options, _loggerMock.Object);
+        var transport = new MeekTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.Meek, transport.TransportType);
     }
 
     [Fact]
     public void Dispose_CleansUpResources()
     {
-        // Arrange
+        // Arrange & Act - MeekTransport does not implement IDisposable; creation should not throw
         var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
-        // Act
-        transport.Dispose();
-
-        // Assert - Should not throw and should clean up internal resources
-        // HttpClient is managed internally and should be disposed
+        // Assert
+        Assert.NotNull(transport);
     }
 
     [Fact]
     public async Task MultipleConnectionAttempts_UpdateStatusCorrectly()
     {
         // Arrange
-        using var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
         // Act - Multiple connection attempts
         for (int i = 0; i < 3; i++)

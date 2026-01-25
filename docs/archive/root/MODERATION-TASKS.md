@@ -1,7 +1,7 @@
 # Moderation / Control Plane (MCP) Tasks
 
 **Design Doc**: `docs/moderation-v1-design.md`  
-**Hardening Doc**: `MCP-HARDENING.md` 🔒 **MANDATORY**  
+**Hardening Doc**: [MCP-HARDENING.md](../../MCP-HARDENING.md) 🔒 **MANDATORY**  
 **Status**: Planned (4 tasks)  
 **Priority**: HIGH (legal/ethical protection for operators)
 
@@ -11,7 +11,7 @@
 
 ## ⚠️ CRITICAL: Read MCP Hardening Doc FIRST
 
-**Before implementing ANY MCP task**, you MUST read and follow `MCP-HARDENING.md`.
+**Before implementing ANY MCP task**, you MUST read and follow [MCP-HARDENING.md](../../MCP-HARDENING.md).
 
 The MCP layer handles:
 - Hash checks against blocklists (potentially prohibited content)
@@ -26,7 +26,7 @@ The MCP layer handles:
 - 🔒 Failsafe mode (block on error)
 - 🔒 Encrypted reputation storage
 
-**See `MCP-HARDENING.md` for complete requirements.**
+**See [MCP-HARDENING.md](../../MCP-HARDENING.md) for complete requirements.**
 
 ---
 
@@ -48,7 +48,7 @@ The MCP layer handles:
 
 **Goal**: Implement the **core moderation layer** (MCP), including the main interfaces, verdict types, and a simple composite moderation provider.
 
-> 🔒 **MANDATORY**: Read `MCP-HARDENING.md` BEFORE starting this task!
+> 🔒 **MANDATORY**: Read [MCP-HARDENING.md](../../MCP-HARDENING.md) BEFORE starting this task!
 > - Never log raw hashes or full paths
 > - SSRF protection for external services
 > - Failsafe mode (block on error)
@@ -248,9 +248,9 @@ Add tests to ensure:
 * MCP is introduced as a clean, composable interface layer.
 * Default provider is conservative (`Unknown` when in doubt).
 
-### 8. Security Compliance (MCP-HARDENING.md)
+### 8. Security Compliance ([MCP-HARDENING.md](../../MCP-HARDENING.md))
 
-**MANDATORY**: Verify these requirements from `MCP-HARDENING.md`:
+**MANDATORY**: Verify these requirements from [MCP-HARDENING.md](../../MCP-HARDENING.md):
 
 - [x] No raw hashes in logs (use 8-char prefix max for debugging)
 - [x] No full filesystem paths in logs (filename only)
@@ -268,7 +268,7 @@ Add tests to ensure:
 
 **Goal**: Wire `IModerationProvider` into the **local library scanner / indexer**, so prohibited/blocked files are never added to VirtualSoulfind as shareable content.
 
-> 🔒 **MANDATORY**: Follow `MCP-HARDENING.md` requirements!
+> 🔒 **MANDATORY**: Follow [MCP-HARDENING.md](../../MCP-HARDENING.md) requirements!
 > - Sanitize ALL logging (no hashes, no full paths)
 > - Work budget integration for external calls
 > - Encrypted persistence for blocked file records
@@ -370,9 +370,9 @@ Use a fake `IModerationProvider` in tests to control verdicts.
 * Blocked/quarantined files are kept out of the usual shareable sets.
 * No hashes or full paths are logged in cleartext.
 
-### 8. Security Compliance (MCP-HARDENING.md)
+### 8. Security Compliance ([MCP-HARDENING.md](../../MCP-HARDENING.md))
 
-**MANDATORY**: Verify these requirements from `MCP-HARDENING.md`:
+**MANDATORY**: Verify these requirements from [MCP-HARDENING.md](../../MCP-HARDENING.md):
 
 - [x] Hash handling: Never log full hash (Section 1.1)
 - [x] Path sanitization: Only filename or internal ID (Section 1.2)
@@ -390,7 +390,7 @@ Use a fake `IModerationProvider` in tests to control verdicts.
 
 **Goal**: Use MCP to control what VirtualSoulfind treats as **advertisable content**, and ensure content relay never serves blocked items.
 
-> 🔒 **MANDATORY**: Apply `MCP-HARDENING.md` to content relay!
+> 🔒 **MANDATORY**: Apply [MCP-HARDENING.md](../../MCP-HARDENING.md) to content relay!
 > - Check moderation BEFORE serving any chunks
 > - Report peers requesting blocked content
 > - No content IDs in logs (use opaque references)
@@ -495,9 +495,9 @@ Use fakes for `IModerationProvider` and VirtualSoulfind's item DB in tests.
 * `IsAdvertisable` is driven by moderation, not ad-hoc logic.
 * Relay checks are in place before any file data is returned.
 
-### 8. Security Compliance (MCP-HARDENING.md)
+### 8. Security Compliance ([MCP-HARDENING.md](../../MCP-HARDENING.md))
 
-**MANDATORY**: Verify these requirements from `MCP-HARDENING.md`:
+**MANDATORY**: Verify these requirements from [MCP-HARDENING.md](../../MCP-HARDENING.md):
 
 - [x] Content relay: Check `IsAdvertisable` before ANY file I/O (Section 4)
 - [x] Peer reporting: Call `ReportPeerAsync` for blocked content requests (Section 5)
@@ -514,7 +514,7 @@ Use fakes for `IModerationProvider` and VirtualSoulfind's item DB in tests.
 
 **Goal**: Add a **peer reputation** layer and tie it into MCP, VirtualSoulfind planner, and service fabric to deprioritize or ban peers associated with blocked content or repeated abuse.
 
-> 🔒 **CRITICAL**: `MCP-HARDENING.md` Section 3 is MANDATORY!
+> 🔒 **CRITICAL**: [MCP-HARDENING.md](../../MCP-HARDENING.md) Section 3 is MANDATORY!
 > - Sybil resistance via rate limiting
 > - Encrypted reputation storage (DataProtection API)
 > - Hashed peer IDs for logging (SHA256 + salt)
@@ -632,7 +632,7 @@ Use fakes/mocks for planner and mesh context in tests.
 
 ### 8. Security Compliance (MCP-HARDENING.md)
 
-**MANDATORY**: Verify these requirements from `MCP-HARDENING.md` Section 3:
+**MANDATORY**: Verify these requirements from [MCP-HARDENING.md](../../MCP-HARDENING.md) Section 3:
 
 - [x] Sybil resistance: Rate limit peer events (max 10/min) (Section 3.1)
 - [x] Peer ID hashing: `HashPeerId()` for all logging (Section 3.1)

@@ -25,6 +25,7 @@ namespace slskd.Core.API
 {
     using System;
     using System.Diagnostics;
+    using System.Net;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
@@ -148,14 +149,55 @@ namespace slskd.Core.API
             return Ok();
         }
 
+        /// <summary>
+        ///     Creates a full memory dump. PR-06: requires Diagnostics.AllowMemoryDump; admin-only; loopback-only unless AllowRemoteDump.
+        /// </summary>
         [HttpGet("dump")]
-        [Authorize(Policy = AuthPolicy.Any)]
+        [Authorize(Policy = AuthPolicy.Any, Roles = AuthRole.AdministratorOnly)]
         public async Task<IActionResult> DumpMemory()
         {
-            using var dumper = new Dumper();
-            var file = await dumper.DumpAsync();
+            var opts = OptionsMonitor.CurrentValue.Diagnostics;
+            if (opts?.AllowMemoryDump != true)
+            {
+                return NotFound();
+            }
 
-            return PhysicalFile(file, "application/octet-stream", "slskd.dmp");
+            if (opts.AllowRemoteDump != true)
+            {
+                var ip = HttpContext.Connection.RemoteIpAddress;
+                if (ip == null || !IPAddress.IsLoopback(ip))
+                {
+                    return Forbid();
+                }
+            }
+
+            var dumper = new Dumper();
+            var (ok, error, path) = await dumper.TryCreateDumpAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+
+            if (!ok)
+            {
+                if (error != null && error.Contains("Insufficient", StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode(507, error);
+                }
+
+                Log.Warning("Dump failed: {Error}", error);
+                // PR-06: when DiagnosticsClient/WriteDump unavailable (e.g. older runtime), return 501 with instructions
+                var e = error ?? "";
+                var isUnsupported = e.Contains("not supported", StringComparison.OrdinalIgnoreCase) ||
+                    e.Contains("platform", StringComparison.OrdinalIgnoreCase) ||
+                    e.Contains("Unable to load", StringComparison.OrdinalIgnoreCase) ||
+                    e.Contains("DiagnosticsClient", StringComparison.OrdinalIgnoreCase) ||
+                    e.Contains("does not support", StringComparison.OrdinalIgnoreCase);
+                if (isUnsupported)
+                {
+                    return StatusCode(501, "Memory dump creation is not supported on this runtime. Use a supported .NET runtime or install dotnet-dump and capture manually (see https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dump).");
+                }
+
+                return StatusCode(500, "Dump failed.");
+            }
+
+            return PhysicalFile(path!, "application/octet-stream", "slskd.dmp");
         }
 
         [HttpPost("loopback")]

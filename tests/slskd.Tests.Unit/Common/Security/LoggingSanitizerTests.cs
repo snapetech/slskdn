@@ -82,13 +82,13 @@ namespace slskd.Tests.Unit.Common.Security
         public void SanitizeExternalIdentifier_WithLongIdentifier_ReturnsSanitized()
         {
             // Arrange
-            var identifier = "john_doe_12345";
+            var identifier = "john_doe_12345"; // 14 chars
 
             // Act
             var result = LoggingSanitizer.SanitizeExternalIdentifier(identifier);
 
             // Assert
-            Assert.Equal("j***5 (13 chars)", result);
+            Assert.Equal("j***5 (14 chars)", result);
         }
 
         [Fact]
@@ -107,14 +107,14 @@ namespace slskd.Tests.Unit.Common.Security
         [Fact]
         public void SanitizeHash_WithLongHash_ReturnsTruncated()
         {
-            // Arrange
+            // Arrange: 48 chars, first 8 and last 8
             var hash = "a1b2c3d4e5f678901234567890abcdef1234567890abcdef";
 
             // Act
             var result = LoggingSanitizer.SanitizeHash(hash);
 
-            // Assert
-            Assert.Equal("a1b2c3d4...bcdef123", result);
+            // Assert: first 8 + "..." + last 8; last 8 of this hash are "90abcdef"
+            Assert.Equal("a1b2c3d4...90abcdef", result);
         }
 
         [Fact]
@@ -147,13 +147,13 @@ namespace slskd.Tests.Unit.Common.Security
         public void SanitizeSensitiveData_WithData_ReturnsRedactedPlaceholder()
         {
             // Arrange
-            var data = "super-secret-token-12345";
+            var data = "super-secret-token-12345"; // 24 chars
 
             // Act
             var result = LoggingSanitizer.SanitizeSensitiveData(data);
 
             // Assert
-            Assert.Equal("[redacted-23-chars]", result);
+            Assert.Equal("[redacted-24-chars]", result);
         }
 
         [Fact]
@@ -166,9 +166,8 @@ namespace slskd.Tests.Unit.Common.Security
             var result = LoggingSanitizer.SafeContext("user", identifier);
 
             // Assert
-            var context = result as dynamic;
-            Assert.Equal("user", context.Context);
-            Assert.Equal("s***3 (19 chars)", context.Id);
+            Assert.Equal("user", result.Context);
+            Assert.Equal("s***3 (21 chars)", result.Id);
         }
     }
 }

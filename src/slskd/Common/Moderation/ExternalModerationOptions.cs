@@ -64,7 +64,7 @@ namespace slskd.Common.Moderation
         ///     Gets the allowed domains for external moderation.
         /// </summary>
         /// <remarks>
-        ///     🔒 CRITICAL (MCP-HARDENING.md Section 2.1.1):
+        ///     🔒 CRITICAL (docs/MCP-HARDENING.md Section 2.1.1):
         ///     - Only HTTPS endpoints in this list are allowed
         ///     - No wildcards
         ///     - No IP addresses

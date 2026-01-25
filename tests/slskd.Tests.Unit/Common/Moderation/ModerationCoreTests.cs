@@ -315,7 +315,7 @@ public class CompositeModerationProviderTests
         await provider.ReportPeerAsync("peer-123", report, CancellationToken.None);
 
         // Assert
-        peerReputation.Verify(x => x.RecordPeerEventAsync("peer-123", report, It.IsAny<CancellationToken>()), Times.Once);
+        peerReputation.Verify(x => x.RecordPeerEventAsync(It.Is<PeerReputationEvent>(e => e.PeerId == "peer-123" && e.EventType == PeerReputationEventType.ProtocolViolation && e.Metadata == report.Notes), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -373,7 +373,7 @@ public class CompositeModerationProviderTests
             },
             ExternalModeration = new ModerationOptions.ExternalModerationOptions
             {
-                Enabled = externalModerationEnabled
+                Mode = externalModerationEnabled ? "Local" : "Off"
             },
             Reputation = new ModerationOptions.ReputationOptions
             {

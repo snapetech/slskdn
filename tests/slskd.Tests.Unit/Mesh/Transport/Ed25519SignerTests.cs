@@ -33,9 +33,9 @@ public class Ed25519SignerTests : IDisposable
         Assert.NotNull(publicKey);
         Assert.NotEmpty(publicKey);
 
-        // ECDSA keys should be around 256-512 bytes
-        Assert.True(privateKey.Length >= 256);
-        Assert.True(publicKey.Length >= 128);
+        // Ed25519: 32-byte private and public keys
+        Assert.Equal(32, privateKey.Length);
+        Assert.Equal(32, publicKey.Length);
     }
 
     [Fact]

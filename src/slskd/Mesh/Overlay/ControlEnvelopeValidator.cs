@@ -2,8 +2,10 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using slskd.Mesh.Transport;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
 using slskd.Mesh.Dht;
+using slskd.Mesh.Transport;
 
 namespace slskd.Mesh.Overlay;
 
@@ -16,15 +18,18 @@ public class ControlEnvelopeValidator
     private readonly Transport.ConnectionThrottler _connectionThrottler;
     private readonly ReplayCache _replayCache;
     private readonly ILogger<ControlEnvelopeValidator> _logger;
+    private readonly int _maxPayload;
 
     public ControlEnvelopeValidator(
         DescriptorSigningService descriptorSigning,
         Transport.ConnectionThrottler connectionThrottler,
-        ILogger<ControlEnvelopeValidator> logger)
+        ILogger<ControlEnvelopeValidator> logger,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _descriptorSigning = descriptorSigning ?? throw new ArgumentNullException(nameof(descriptorSigning));
         _connectionThrottler = connectionThrottler ?? throw new ArgumentNullException(nameof(connectionThrottler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
 
         // Initialize replay cache with 5-minute TTL
         _replayCache = new ReplayCache(TimeSpan.FromMinutes(5));
@@ -61,9 +66,9 @@ public class ControlEnvelopeValidator
         }
 
         // 1. Check envelope size limits
-        if (envelope.Payload.Length > SecurityUtils.MaxRemotePayloadSize)
+        if (envelope.Payload.Length > _maxPayload)
         {
-            return EnvelopeValidationResult.Failure($"Payload exceeds maximum size of {SecurityUtils.MaxRemotePayloadSize} bytes");
+            return EnvelopeValidationResult.Failure($"Payload exceeds maximum size of {_maxPayload} bytes");
         }
 
         // 2. Validate timestamp skew
@@ -123,12 +128,16 @@ public class ControlEnvelopeValidator
                     continue;
                 }
 
-                var signableData = envelope.GetSignableData();
                 var signatureBytes = Convert.FromBase64String(envelope.Signature);
-
-                // Verify signature against allowed keys
                 using var verifier = new Ed25519Signer();
-                if (verifier.Verify(signableData, signatureBytes, publicKey))
+
+                // Try canonical (GetSignableData) then legacy for backward compatibility
+                if (verifier.Verify(envelope.GetSignableData(), signatureBytes, publicKey))
+                {
+                    return true;
+                }
+
+                if (verifier.Verify(envelope.GetLegacySignableData(), signatureBytes, publicKey))
                 {
                     return true;
                 }

@@ -2,9 +2,11 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using MessagePack;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
 using slskd.Mesh.ServiceFabric;
+using slskd.Mesh.Transport;
 using slskd.PodCore;
 using System;
 using System.Text.Json;
@@ -22,15 +24,18 @@ public class PodsMeshService : IMeshService
     private readonly ILogger<PodsMeshService> _logger;
     private readonly IPodService _podService;
     private readonly IPodMessaging _podMessaging;
+    private readonly int _maxPayload;
 
     public PodsMeshService(
         ILogger<PodsMeshService> logger,
         IPodService podService,
-        IPodMessaging podMessaging)
+        IPodMessaging podMessaging,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger;
         _podService = podService;
         _podMessaging = podMessaging;
+        _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public string ServiceName => "pods";
@@ -107,7 +112,8 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<GetPodRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<GetPodRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.PodId))
         {
             return new ServiceReply
@@ -144,7 +150,8 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<JoinPodRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<JoinPodRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.PodId))
         {
             return new ServiceReply
@@ -179,7 +186,8 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<LeavePodRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<LeavePodRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.PodId))
         {
             return new ServiceReply
@@ -207,7 +215,8 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<PostMessageRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<PostMessageRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null)
         {
             return new ServiceReply
@@ -256,7 +265,8 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        var request = JsonSerializer.Deserialize<GetMessagesRequest>(call.Payload);
+        var (request, err) = ServicePayloadParser.TryParseJson<GetMessagesRequest>(call, _maxPayload);
+        if (err != null) return err;
         if (request == null || string.IsNullOrWhiteSpace(request.PodId) || string.IsNullOrWhiteSpace(request.ChannelId))
         {
             return new ServiceReply

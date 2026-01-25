@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Common.Security
 {
+    using System.Linq;
     using Microsoft.Extensions.Logging;
     using Moq;
     using slskd.Common.Security;
@@ -25,27 +26,27 @@ namespace slskd.Tests.Unit.Common.Security
         [Fact]
         public void AuditConfiguration_CompliantConfiguration_ReturnsValidResult()
         {
-            // Arrange
+            // Arrange: usernames must not match Soulseek/Mesh/LocalUser; use characters outside those formats
             var options = new Options
             {
                 Soulseek = new Options.SoulseekOptions
                 {
-                    Username = "soulseek_user",
+                    Username = "ab",
                     Password = "soulseek_pass"
                 },
                 Web = new Options.WebOptions
                 {
-                    Auth = new Options.WebOptions.WebAuthenticationOptions
+                    Authentication = new Options.WebOptions.WebAuthenticationOptions
                     {
-                        Username = "web_admin",
+                        Username = "web#admin",
                         Password = "web_pass"
                     }
                 },
                 Metrics = new Options.MetricsOptions
                 {
-                    Auth = new Options.MetricsOptions.MetricsAuthenticationOptions
+                    Authentication = new Options.MetricsOptions.MetricsAuthenticationOptions
                     {
-                        Username = "metrics_user",
+                        Username = "metrics#user",
                         Password = "metrics_pass"
                     }
                 }
@@ -62,14 +63,16 @@ namespace slskd.Tests.Unit.Common.Security
         [Fact]
         public void AuditConfiguration_SoulseekUsernameLooksLikeMeshId_ReturnsViolation()
         {
-            // Arrange
+            // Arrange: omit Web/Metrics to avoid default "slskd" being audited; use empty Authentication.Username
             var options = new Options
             {
                 Soulseek = new Options.SoulseekOptions
                 {
-                    Username = "abc123def456", // Looks like a mesh ID
+                    Username = "abc123def456", // Resembles LocalUser (alphanumeric, 3–50)
                     Password = "password"
-                }
+                },
+                Web = new Options.WebOptions { Authentication = new Options.WebOptions.WebAuthenticationOptions { Username = "" } },
+                Metrics = new Options.MetricsOptions { Authentication = new Options.MetricsOptions.MetricsAuthenticationOptions { Username = "" } }
             };
 
             // Act
@@ -85,22 +88,23 @@ namespace slskd.Tests.Unit.Common.Security
         [Fact]
         public void AuditConfiguration_WebUsernameMatchesSoulseekUsername_ReturnsViolation()
         {
-            // Arrange
+            // Arrange: "ab" avoids Soulseek resembling LocalUser; Metrics.Username="" avoids default "slskd"
             var options = new Options
             {
                 Soulseek = new Options.SoulseekOptions
                 {
-                    Username = "shared_user",
+                    Username = "ab",
                     Password = "soulseek_pass"
                 },
                 Web = new Options.WebOptions
                 {
-                    Auth = new Options.WebOptions.WebAuthenticationOptions
+                    Authentication = new Options.WebOptions.WebAuthenticationOptions
                     {
-                        Username = "shared_user", // Same as Soulseek
+                        Username = "ab", // Same as Soulseek; matches Soulseek identity
                         Password = "web_pass"
                     }
-                }
+                },
+                Metrics = new Options.MetricsOptions { Authentication = new Options.MetricsOptions.MetricsAuthenticationOptions { Username = "" } }
             };
 
             // Act
@@ -116,23 +120,26 @@ namespace slskd.Tests.Unit.Common.Security
         [Fact]
         public void AuditConfiguration_ProxyUsernameMatchesSoulseekUsername_ReturnsViolation()
         {
-            // Arrange
+            // Arrange: "s" avoids Soulseek resembling LocalUser; Web/Metrics.Username="" avoids default "slskd".
+            // Prod emits both "Proxy username matches Soulseek identity" and "Proxy username matches Soulseek username".
             var options = new Options
             {
                 Soulseek = new Options.SoulseekOptions
                 {
-                    Username = "soulseek_user",
+                    Username = "s",
                     Password = "soulseek_pass",
                     Connection = new Options.SoulseekOptions.ConnectionOptions
                     {
                         Proxy = new Options.SoulseekOptions.ConnectionOptions.ProxyOptions
                         {
                             Enabled = true,
-                            Username = "soulseek_user", // Same as Soulseek username
+                            Username = "s", // Same as Soulseek username
                             Password = "proxy_pass"
                         }
                     }
-                }
+                },
+                Web = new Options.WebOptions { Authentication = new Options.WebOptions.WebAuthenticationOptions { Username = "" } },
+                Metrics = new Options.MetricsOptions { Authentication = new Options.MetricsOptions.MetricsAuthenticationOptions { Username = "" } }
             };
 
             // Act
@@ -140,20 +147,22 @@ namespace slskd.Tests.Unit.Common.Security
 
             // Assert
             Assert.False(result.IsCompliant);
-            Assert.Single(result.Violations);
-            Assert.Equal("Proxy", result.Violations[0].Category);
-            Assert.Contains("Proxy username matches Soulseek username", result.Violations[0].Issue);
+            var proxyViolations = result.Violations.Where(v => v.Category == "Proxy").ToList();
+            Assert.Equal(2, proxyViolations.Count);
+            Assert.Contains(proxyViolations, v => v.Issue == "Proxy username matches Soulseek username");
+            Assert.Contains(proxyViolations, v => v.Issue == "Proxy username matches Soulseek identity");
         }
 
         [Fact]
         public void AuditConfiguration_MetricsUsernameLooksLikeLocalUser_ReturnsViolation()
         {
-            // Arrange
+            // Arrange: Web.Username="" avoids default "slskd" being flagged
             var options = new Options
             {
+                Web = new Options.WebOptions { Authentication = new Options.WebOptions.WebAuthenticationOptions { Username = "" } },
                 Metrics = new Options.MetricsOptions
                 {
-                    Auth = new Options.MetricsOptions.MetricsAuthenticationOptions
+                    Authentication = new Options.MetricsOptions.MetricsAuthenticationOptions
                     {
                         Username = "admin@localhost", // Looks like local user
                         Password = "metrics_pass"

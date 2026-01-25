@@ -34,11 +34,21 @@ public class ControlEnvelope
     }
 
     /// <summary>
-    /// Gets the data that should be signed for envelope verification.
+    /// Gets the data that should be signed for envelope verification (canonical format).
     /// </summary>
     public byte[] GetSignableData()
     {
         return CanonicalSerialization.SerializeEnvelopeForSigning(this);
+    }
+
+    /// <summary>
+    /// Gets the legacy signable payload (Type|Timestamp|Base64(Payload)) for backwards compatibility during verify.
+    /// PR-10: matches old KeyedSigner.BuildSignablePayload so envelopes signed with it still validate.
+    /// </summary>
+    public byte[] GetLegacySignableData()
+    {
+        var s = $"{Type}|{TimestampUnixMs}|{Convert.ToBase64String(Payload)}";
+        return System.Text.Encoding.UTF8.GetBytes(s);
     }
 
     /// <summary>

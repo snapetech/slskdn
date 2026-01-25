@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using Moq;
+using slskd.Mesh;
 using slskd.Mesh.Transport;
 using Xunit;
 
@@ -233,7 +234,7 @@ public class TransportPolicyTests : IDisposable
         {
             AllowedTransportTypes = new List<TransportType> { TransportType.TorOnionQuic }
         };
-        var globalOptions = new MeshTransportOptions { Direct = new DirectTransportOptions { Enabled = true } };
+        var globalOptions = new MeshTransportOptions { EnableDirect = true };
 
         // Act
         var allowed = policy.IsTransportAllowed(TransportType.DirectQuic, globalOptions);
@@ -247,7 +248,7 @@ public class TransportPolicyTests : IDisposable
     {
         // Arrange
         var policy = new TransportPolicy { DisableClearnet = true };
-        var globalOptions = new MeshTransportOptions { Direct = new DirectTransportOptions { Enabled = true } };
+        var globalOptions = new MeshTransportOptions { EnableDirect = true };
 
         // Act
         var allowed = policy.IsTransportAllowed(TransportType.DirectQuic, globalOptions);
