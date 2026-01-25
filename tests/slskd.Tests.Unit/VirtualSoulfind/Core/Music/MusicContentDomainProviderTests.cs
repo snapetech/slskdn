@@ -4,11 +4,11 @@
 
 namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
 {
-    using System;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Moq;
+    using slskd.Common.Moderation;
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.VirtualSoulfind.Core.Music;
@@ -117,8 +117,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
         public async Task TryGetItemByLocalMetadataAsync_CurrentlyReturnsNull()
         {
             // Arrange
-            var fileMetadata = new LocalFileMetadata("test.flac", 1024L);
-            var tags = new AudioTags(Title: "Test Track", Artist: "Test Artist");
+            var fileMetadata = new LocalFileMetadata { Id = "test.flac", SizeBytes = 1024L };
+            var tags = new AudioTags("Test Track", "Test Artist", null, null, null, null, null, null, null, null, null, null, null, null);
 
             var provider = new MusicContentDomainProvider(_loggerMock.Object, _hashDbMock.Object);
 

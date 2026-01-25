@@ -33,8 +33,6 @@
     <!-- Additional deferrals: API/model mismatches (LocalFileMetadata, PodMessage, PodChannel, Pod, PodPrivateServicePolicy, etc.), missing types (PodIdFactory, ConversationPodCoordinator, LlmModeration*, ModerationVerdict), TorSocksTransport/RateLimiter/Options API changes. -->
     <!-- Further deferrals: PodValidation/PodPrivateServicePolicy/Options/APIs changed; RealmConfig, TransportType, BridgeFlowTypes, SourceCandidate, MultiSourcePlanner/IntentQueue/ModerationDecision/AudioTags; ConnectionThrottler RateLimiter type. -->
     <Compile Remove="VirtualSoulfind\Backends\LocalLibraryBackendModerationTests.cs" />
-    <Compile Remove="VirtualSoulfind\Core\GenericFile\GenericFileContentDomainProviderTests.cs" />
-    <Compile Remove="VirtualSoulfind\Core\Music\MusicContentDomainProviderTests.cs" />
     <Compile Remove="VirtualSoulfind\Planning\DomainAwarePlannerTests.cs" />
     <Compile Remove="VirtualSoulfind\Planning\MultiSourcePlannerDomainTests.cs" />
     <Compile Remove="VirtualSoulfind\v2\API\VirtualSoulfindV2ControllerTests.cs" />

@@ -4,11 +4,11 @@
 
 namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
 {
-    using System;
-    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Moq;
+    using slskd.Common.Moderation;
+    using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.Core.GenericFile;
     using Xunit;
 
@@ -28,10 +28,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         public async Task TryGetItemByLocalMetadataAsync_WithValidMetadata_ReturnsGenericFileItem()
         {
             // Arrange
-            var fileMetadata = new LocalFileMetadata("test.pdf", 1024L)
-            {
-                PrimaryHash = "abc123"
-            };
+            var fileMetadata = new LocalFileMetadata { Id = "test.pdf", SizeBytes = 1024L, PrimaryHash = "abc123" };
 
             var provider = new GenericFileContentDomainProvider(_loggerMock.Object);
 
@@ -109,10 +106,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         {
             // Arrange
             var item = GenericFileItem.FromLocalFileMetadata(
-                new LocalFileMetadata("test.txt", 100L) { PrimaryHash = "hash" });
+                new LocalFileMetadata { Id = "test.txt", SizeBytes = 100L, PrimaryHash = "hash" });
 
             // Assert
-            Assert.Equal(VirtualSoulfind.Core.ContentDomain.GenericFile, item.Domain);
+            Assert.Equal(ContentDomain.GenericFile, item.Domain);
         }
 
         [Fact]
@@ -120,7 +117,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         {
             // Arrange
             var item = GenericFileItem.FromLocalFileMetadata(
-                new LocalFileMetadata("test.txt", 100L) { PrimaryHash = "hash" });
+                new LocalFileMetadata { Id = "test.txt", SizeBytes = 100L, PrimaryHash = "hash" });
 
             // Assert
             Assert.Null(item.WorkId); // GenericFile items don't have parent works
@@ -131,7 +128,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         {
             // Arrange
             var item = GenericFileItem.FromLocalFileMetadata(
-                new LocalFileMetadata("test.txt", 100L) { PrimaryHash = "hash" });
+                new LocalFileMetadata { Id = "test.txt", SizeBytes = 100L, PrimaryHash = "hash" });
 
             // Assert
             Assert.Null(item.Position); // No position in GenericFile domain
@@ -142,7 +139,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         {
             // Arrange
             var item = GenericFileItem.FromLocalFileMetadata(
-                new LocalFileMetadata("test.txt", 100L) { PrimaryHash = "hash" });
+                new LocalFileMetadata { Id = "test.txt", SizeBytes = 100L, PrimaryHash = "hash" });
 
             // Assert
             Assert.Null(item.Duration); // No duration for generic files

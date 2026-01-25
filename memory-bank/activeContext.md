@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled **PodCore: PodsControllerTests** (20 pass, 4 skip: DeletePod_*, GetMessages_WithSoulseekDmBinding, SendMessage_WithSoulseekDmBinding). Removed `Compile Remove`. **Live status:** `docs/dev/slskd-tests-unit-completion-plan.md` § Completed, § Deferred (PodsController skips), § Remaining — Compile Remove. **Next:** PodCore (SqlitePodMessaging, etc.); v2 LocalFileAndVerifiedCopyTests, Planning/Processing/Reconciliation; or OverlayPrivacyIntegrationTests.
+- **Last Activity**: Re-enabled **VirtualSoulfind Core: GenericFileContentDomainProviderTests** (9 pass), **MusicContentDomainProviderTests** (7 pass). LocalFileMetadata `{ Id, SizeBytes, PrimaryHash }`; GenericFileItem; ContentDomain; AudioTags 14-arg; IHashDbService/AlbumTargetEntry/MusicWork. **Next:** LocalLibraryBackendModerationTests; DomainAwarePlannerTests; MultiSourcePlannerDomainTests; VirtualSoulfindV2ControllerTests; or PodCore (SqlitePodMessaging, etc.).
 
 ---
 
