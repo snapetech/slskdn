@@ -7,18 +7,11 @@ Canonical list of `[Fact(Skip = "...")]` / `[Theory(Skip = "...")]` as of the la
 
 ---
 
-## 1. ActivityPubKeyStoreTests (8 skips)
+## 1. ActivityPubKeyStoreTests (0 skips)
 
 | Test | Reason | How to fix |
 |------|--------|------------|
-| `EnsureKeypairAsync_CreatesKeypairForNewActor` | NSec `Key.Export(PkixPrivateKey)` and `Key.Export(RawPrivateKey)` both throw in this environment | **App:** Ensure a key format/export path works on this runtime (e.g. try `RawPrivateKey` on a different runtime; or add `IEd25519KeySerializer` and inject a test double that returns prebuilt keys). Phase 0.2. |
-| `GetPublicKeyAsync_ReturnsPemFormattedKey` | Same NSec export | Same as above. |
-| `GetPrivateKeyAsync_ReturnsProtectedKey` | Same NSec export | Same as above. |
-| `RotateKeypairAsync_ChangesKeypair` | Same NSec export | Same as above. |
-| `EnsureKeypairAsync_IdempotentForExistingActor` | Same NSec export | Same as above. |
-| `GetPublicKeyAsync_ThrowsForUnknownActor` | Same NSec export | Same as above. |
-| `GetPrivateKeyAsync_ThrowsForUnknownActor` | Same NSec export | Same as above. |
-| `VerifySignatureAsync_ReturnsFalseForInvalidSignature` | Same NSec export (needs GetPrivateKey) | Same as above. |
+| ~~All 8~~ | **FIXED.** `ActivityPubKeyStore` uses `IEd25519KeyPairGenerator`; tests use `FakeEd25519KeyPairGenerator` that returns PEM strings (RFC 8032 vectors). No NSec `Key.Export` in the store; `NsecEd25519KeyPairGenerator` used only in production. | — |
 
 ---
 
@@ -31,18 +24,18 @@ Canonical list of `[Fact(Skip = "...")]` / `[Theory(Skip = "...")]` as of the la
 
 ---
 
-## 3. PodsControllerTests (4 skips)
+## 3. PodsControllerTests (0 skips)
 
 | Test | Reason | How to fix |
 |------|--------|------------|
-| `DeletePod_WithValidPodId_ReturnsNoContent` | `IPodService` has no `DeletePodAsync`; `PodsController` has no DeletePod endpoint | **App:** Add `Task DeletePodAsync(string podId, CancellationToken ct)` to `IPodService` and implement in `SqlitePodService` (and any other impl); add `DELETE /pods/{podId}` (or equivalent) in `PodsController` that calls it. |
-| `DeletePod_WithInvalidPodId_ReturnsNotFound` | Same | Same as above. |
-| `GetMessages_WithSoulseekDmBinding_ReturnsConversationMessages` | `PodsController` has no Soulseek DM/conversation branch for GetMessages; `_conversationServiceMock` not defined | **App:** Implement Soulseek DM/conversation branch in GetMessages and inject `IConversationService` (or equivalent); **Test:** define and setup `_conversationServiceMock` and route to that branch. |
-| `SendMessage_WithSoulseekDmBinding_SendsConversationMessage` | Same for SendMessage | Same as above for SendMessage. |
+| ~~`DeletePod_WithValidPodId_ReturnsNoContent`~~ | **FIXED.** `IPodService.DeletePodAsync`, `SqlitePodService.DeletePodAsync`, `PodsController` [HttpDelete] `/pods/{podId}`. | — |
+| ~~`DeletePod_WithInvalidPodId_ReturnsNotFound`~~ | **FIXED.** Same. | — |
+| ~~`GetMessages_WithSoulseekDmBinding_ReturnsConversationMessages`~~ | **FIXED.** `PodsController` optional `IConversationService`; GetMessages uses `TryGetSoulseekDmUsernameAsync` and conversation branch; tests wire `_conversationServiceMock`. | — |
+| ~~`SendMessage_WithSoulseekDmBinding_SendsConversationMessage`~~ | **FIXED.** Same for SendMessage. | — |
 
 ---
 
-## 4. PodCoreIntegrationTests (2 skips)
+## 4. PodCoreIntegrationTests (0 skips)
 
 | Test | Reason | How to fix |
 |------|--------|------------|
@@ -75,16 +68,16 @@ Canonical list of `[Fact(Skip = "...")]` / `[Theory(Skip = "...")]` as of the la
 
 ---
 
-## 8. MembershipGateTests (6 skips)
+## 8. MembershipGateTests (0 skips)
 
 | Test | Reason | How to fix |
 |------|--------|------------|
-| `JoinAsync_VpnPodAtCapacity_ReturnsFalse` | `CreateAsync` requires VPN policy with `AllowedDestinations` and `ValidatePrivateServicePolicy(GatewayPeerId in members)`; cannot create VPN pod with 0 members | **App:** Same as `VpnPod_MaxMembers_EnforcedDuringJoin`: create-then-join or bootstrap so a VPN pod can exist with at least `GatewayPeerId` in members. **Test:** Create VPN pod at capacity (e.g. MaxMembers=2 with 2 members including gateway), then `JoinAsync` and assert `false`. |
-| `JoinAsync_VpnPodWithAvailableCapacity_Succeeds` | Same | **App:** Same. **Test:** Create VPN pod with 1 member (e.g. gateway), MaxMembers=2; `JoinAsync` and assert `true`. |
-| `JoinAsync_VpnPodWithoutPolicy_Succeeds` | `CreateAsync` requires `PrivateServicePolicy` for `PrivateServiceGateway` | **App:** Only if product allows VPN pod without policy (unlikely). Otherwise **Test-only:** Remove or reword test to assert that create fails without policy; or move to an “invalid create” test. |
-| `JoinAsync_VpnPodWithDisabledPolicy_Succeeds` | `CreateAsync` requires `policy.Enabled == true` for `PrivateServiceGateway` | Same as above: **Test-only:** assert create/join fails when policy disabled, or remove. |
+| ~~`JoinAsync_VpnPodAtCapacity_ReturnsFalse`~~ | **FIXED.** Create-then-join; create VPN pod at capacity, `JoinAsync` returns false. | — |
+| ~~`JoinAsync_VpnPodWithAvailableCapacity_Succeeds`~~ | **FIXED.** Create-then-join; 1 member, MaxMembers=2; `JoinAsync` succeeds. | — |
+| ~~`JoinAsync_VpnPodWithoutPolicy_Succeeds`~~ | **FIXED.** 13 pass, 0 skip. | — |
+| ~~`JoinAsync_VpnPodWithDisabledPolicy_Succeeds`~~ | **FIXED.** Same. | — |
 | ~~`JoinAsync_NullMember_Throws`~~ | **FIXED.** `PodService.JoinAsync` and `SqlitePodService.JoinAsync` throw `ArgumentNullException(nameof(member))` for null. | — |
-| `JoinAsync_GatewayPeer_JoinSucceeds` | Same as VpnPodAtCapacity: cannot create VPN pod with 0 members | **App:** Create-then-join / bootstrap. **Test:** Create VPN pod with 0 or 1 member such that the “gateway peer” join is the one under test; assert success. |
+| ~~`JoinAsync_GatewayPeer_JoinSucceeds`~~ | **FIXED.** Create-then-join; gateway peer join succeeds. | — |
 
 ---
 
@@ -94,7 +87,7 @@ Canonical list of `[Fact(Skip = "...")]` / `[Theory(Skip = "...")]` as of the la
 |------|--------|------------|
 | ~~`ExecuteAsync_ContinuesAfterMaintenanceException`~~ | **FIXED.** `IMeshCircuitBuilder` exists; `CircuitMaintenanceService` takes it. Test uses `Mock<IMeshCircuitBuilder>.Setup(x => x.PerformMaintenance()).Throws(...)` and passes. Skip removed. | — |
 | ~~`ExecuteAsync_SkipsCircuitTestingWhenActiveCircuitsExist`~~ | **FIXED.** `Mock<IMeshCircuitBuilder>` with `GetStatistics` → `ActiveCircuits=1`; invoke `PerformMaintenanceAsync` via reflection; verify `GetCircuitPeersAsync` Never. | — |
-| ~~`ExecuteAsync_TestsCircuitBuildingWhenNoActiveCircuitsAndEnoughPeers`~~ | **FIXED.** Real `MeshCircuitBuilder`; `GetCircuitPeersAsync` returns 1 peer (BuildCircuit needs ≥3); verifies `GetCircuitPeersAsync` Once. | — “succeeds” without real network. |
+| ~~`ExecuteAsync_TestsCircuitBuildingWhenNoActiveCircuitsAndEnoughPeers`~~ | **FIXED.** Real `MeshCircuitBuilder`; `GetCircuitPeersAsync` returns 1 peer (BuildCircuit needs ≥3); verifies `GetCircuitPeersAsync` Once. | — “succeeds” 
 
 ---
 
@@ -153,11 +146,11 @@ All 6 tests below now pass (RecordingMeshServiceClient, correct Payload, CreateT
 
 ---
 
-## 16. Obfs4TransportTests (1 skip)
+## 16. Obfs4TransportTests (0 skips)
 
 | Test | Reason | How to fix |
 |------|--------|------------|
-| `IsAvailableAsync_VersionCheckFailure_ReturnsFalse` | Environment-dependent: `/bin/ls --version` may exit 0 on some systems, so `IsAvailable` returns true | **Test-only:** Mock or abstract the process that runs the version check (e.g. `IProcessRunner` or `IObfs4VersionChecker`). **App:** Inject an `IObfs4Availability` (or similar) that runs the real check; tests inject a stub that returns `false` for this test. |
+| ~~`IsAvailableAsync_VersionCheckFailure_ReturnsFalse`~~ | **FIXED.** `IObfs4VersionChecker` injected into `Obfs4Transport` (optional ctor arg); test uses `Mock<IObfs4VersionChecker>.ReturnsAsync(1)` and a path that exists so the version-check path is exercised. | — |
 
 ---
 
@@ -181,9 +174,11 @@ Those are covered in sections **4** and **3** respectively.
 
 ## Summary by fix type
 
-- **App required (or strongly suggested):** ActivityPubKeyStore (8), PodsController DeletePod (2), PodsController Soulseek DM (2), PodCoreIntegration DeletePod (1), PodCoreIntegration VpnPod_MaxMembers (1), MembershipGate VPN/create-then-join (5), WorkRef FromMusicItem (1), Obfs4Transport (1).  
-- **Test-only (or test-first):** Obfs4Transport (1).  
-- **Either app or test-only:** Obfs4Transport (1).  
+- **App required (or strongly suggested):** WorkRef FromMusicItem (1).  
+- **FIXED (ActivityPubKeyStore):** All 8 — IEd25519KeyPairGenerator + FakeEd25519KeyPairGenerator.  
+- **FIXED (MembershipGateTests):** All 6 — create-then-join for VPN pods; 13 pass, 0 skip.  
+- **FIXED (PodsController/PodCoreIntegration):** DeletePod (2), Soulseek DM (2), PodDeletionCleansUpMessages (1), VpnPod_MaxMembers (1).  
+- **FIXED (Obfs4Transport):** IsAvailableAsync_VersionCheckFailure_ReturnsFalse — IObfs4VersionChecker injection.  
 - **FIXED (no longer skipped):** SecurityUtils timing, PrivacyLayer, MultiRealmConfig IsFlowAllowed, IpldMapper maxDepth, PodPolicyEnforcement ExceedsCurrentMembers, RateLimitTimeout OpenTunnel (2) and CleanupExpiredTunnels (3), MembershipGate JoinAsync_NullMember_Throws, CircuitMaintenance (3: ContinuesAfterMaintenanceException, SkipsCircuitTesting, TestsCircuitBuilding), PodCoreApiIntegration ConversationPodCoordinator, LocalPortForwarder (6), PerceptualHasher ComputeHash_DifferentFrequencies, Phase8Mesh MeshHealthCheck_AssessesHealth.
 
 ---

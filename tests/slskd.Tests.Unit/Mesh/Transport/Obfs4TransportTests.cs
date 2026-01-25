@@ -217,11 +217,13 @@ public class Obfs4TransportTests : IDisposable
         var versionCheckerMock = new Mock<IObfs4VersionChecker>();
         versionCheckerMock
             .Setup(x => x.RunVersionCheckAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+            .ReturnsAsync(1); // non-zero = version check failure
 
+        // Use a path that exists so we hit the version-check path, not File.Exists. On Unix /bin/true exists.
+        var pathThatExists = OperatingSystem.IsWindows() ? Environment.ProcessPath ?? "C:\\Windows\\System32\\cmd.exe" : "/bin/true";
         var options = new Obfs4TransportOptions
         {
-            Obfs4ProxyPath = "/usr/bin/obfs4proxy",
+            Obfs4ProxyPath = pathThatExists,
             BridgeLines = _defaultOptions.BridgeLines
         };
         var transport = new Obfs4Transport(options, _loggerMock.Object, versionCheckerMock.Object);
