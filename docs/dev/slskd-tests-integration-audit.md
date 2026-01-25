@@ -17,7 +17,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **PodCore** | 15 | 0 | 0 | PodCoreIntegration, PortForwarding |
 | **Security** (folder) | 50 | 0 | 0 | Tor, Obfuscated, Censorship, Http, MeshGateway, SecurityMiddleware |
 | **SecurityIntegrationTests** | 12 | 0 | 0 | |
-| **VirtualSoulfind / ModerationIntegration** | 6 | 0 | 17 | DisasterModeIntegration, LoadTests, NicotinePlus, ModerationIntegration; many `[Fact(Skip)]` |
+| **VirtualSoulfind / ModerationIntegration** | 12 | 0 | 11 | **NicotinePlusIntegrationTests:** un-skipped (6 pass; placeholders; N+ installed). DisasterModeIntegration 6, LoadTests 5 skip. ModerationIntegration. |
 | **BackfillIntegrationTests** | 3 | 0 | 0 | |
 | **DhtRendezvousIntegrationTests** | 3 | 0 | 0 | |
 | **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 4 | 0 | 2 | RescueMode.Slow_Transfer, CanonicalSelection.Should_Prefer_Canonical skipped |
@@ -36,17 +36,17 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 
 1. **Mesh:** ~~Fix or skip `NatTraversal_SymmetricFallback`~~ **DONE.** Relay URL must be IP (TryParseRelay does not resolve hostnames); test now uses `relay://127.0.0.1:6000`. Mesh 29 pass.
 2. **Timeouts (granular 2026-01-25):** **DisasterModeTests** (3) and **ProtocolContractTests** (6) **skipped** — IAsyncLifetime.InitializeAsync uses SlskdnTestClient.StartAsync; app host can hang when resolving real controller deps. MeshOnlyTests (3 pass) unaffected. Backfill, DhtRendezvous, Features, Soulbeet, MultiClient|MultiSource, CoverTraffic, PortForwarding, Signals complete in smaller filters.
-3. **VirtualSoulfind skips (17):** **Documented.** DisasterModeIntegrationTests 6 (TODO: Soulseek sim, DHT, shadow index, audit, health monitor, telemetry); LoadTests 5 (run manually); NicotinePlusIntegrationTests 6 (requires Nicotine+). No change—reasons clear.
+3. **VirtualSoulfind skips (11):** DisasterModeIntegrationTests 6 (TODO: Soulseek sim, DHT, etc.); LoadTests 5 (run manually). **NicotinePlusIntegrationTests 6 un-skipped** (placeholders; Nicotine+ installed); 6 pass.
 
 ---
 
-## VirtualSoulfind skip breakdown (17)
+## VirtualSoulfind skip breakdown (11)
 
 | File | Count | Reason |
 |------|-------|--------|
 | **DisasterModeIntegrationTests** | 6 | TODO: Soulseek sim, DHT, shadow index, audit infra, health monitor, telemetry |
 | **LoadTests** | 5 | Load test — run manually |
-| **NicotinePlusIntegrationTests** | 6 | Requires Nicotine+ installation |
+| **NicotinePlusIntegrationTests** | 0 | **Un-skipped** — 6 pass (placeholders; implement bridge/Nicotine+ when ready) |
 
 ---
 

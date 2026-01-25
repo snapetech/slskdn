@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; Mesh 29 pass; PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip (documented: DisasterModeIntegration 6 TODO, LoadTests 5 manual, NicotinePlus 6). DisasterModeTests (3) + ProtocolContractTests (6) skipped (SlskdnTestClient hang). See `docs/dev/slskd-tests-integration-audit.md`. | Stub more controller deps in SlskdnTestClient to re-enable DisasterMode/Protocol; VirtualSoulfind skips documented. |
+| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; Mesh 29; PodCore 15; Security 50+12; VirtualSoulfind/Moderation **12 pass / 11 skip** (NicotinePlusIntegration 6 un-skipped, 6 pass; DisasterModeIntegration 6 TODO, LoadTests 5 manual). DisasterModeTests (3) + ProtocolContractTests (6) skipped (SlskdnTestClient hang). See `docs/dev/slskd-tests-integration-audit.md`. | Stub more deps in SlskdnTestClient to re-enable DisasterMode/Protocol. |
 
 
 ---

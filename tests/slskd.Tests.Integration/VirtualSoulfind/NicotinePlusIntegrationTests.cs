@@ -8,7 +8,7 @@ using slskd.VirtualSoulfind.Bridge;
 /// </summary>
 public class NicotinePlusIntegrationTests
 {
-    [Fact(Skip = "Requires Nicotine+ installation")]
+    [Fact]
     public async Task NicotinePlus_ConnectToBridge_ShouldSucceed()
     {
         // Arrange: Start bridge service
@@ -19,7 +19,7 @@ public class NicotinePlusIntegrationTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Requires Nicotine+ installation")]
+    [Fact]
     public async Task NicotinePlus_SearchViaBridge_ShouldReturnResults()
     {
         // Arrange:
@@ -38,7 +38,7 @@ public class NicotinePlusIntegrationTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Requires Nicotine+ installation")]
+    [Fact]
     public async Task NicotinePlus_DownloadViaBridge_ShouldTransferFile()
     {
         // Arrange:
@@ -58,7 +58,7 @@ public class NicotinePlusIntegrationTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Requires Nicotine+ installation")]
+    [Fact]
     public async Task NicotinePlus_JoinRoomViaBridge_ShouldMapToScene()
     {
         // Arrange:
@@ -76,7 +76,7 @@ public class NicotinePlusIntegrationTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Requires Nicotine+ installation")]
+    [Fact]
     public async Task NicotinePlus_DisasterMode_ShouldWorkTransparently()
     {
         // Arrange:
@@ -97,7 +97,7 @@ public class NicotinePlusIntegrationTests
         await Task.CompletedTask;
     }
 
-    [Fact(Skip = "Requires Nicotine+ installation")]
+    [Fact]
     public async Task NicotinePlus_MultipleClients_ShouldHandleConcurrency()
     {
         // Arrange: 5 Nicotine+ clients connected to bridge
