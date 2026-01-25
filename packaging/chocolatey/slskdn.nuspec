@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>slskdn</id>
-    <version>0.24.1-slskdn.32</version>
+    <version>0.24.1-slskdn.40</version>
     <title>slskdn</title>
     <authors>snapetech</authors>
     <projectUrl>https://github.com/snapetech/slskdn</projectUrl>
