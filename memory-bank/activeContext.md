@@ -26,7 +26,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: 40-fixes test/docs follow-up.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: RPM slskdn.spec + Debian changelog → 0.24.1-slskdn.40. **Next:** 40-fixes; tasks.md (T-006, T-007, Phase 14, T-404+); or packaging (TrueNAS/Synology if desired; winget -dev is CI).
+- **Last Activity**: TrueNAS Chart (appVersion 0.24.1-slskdn.40, home/sources→snapetech/slskdn) + Synology INFO (version 0.24.1, URLs→snapetech/slskdn). **Next:** 40-fixes; tasks.md (T-006, T-007, Phase 14, T-404+).
 
 ---
 
