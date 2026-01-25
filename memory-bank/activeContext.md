@@ -26,7 +26,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: 40-fixes test/docs follow-up.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Enforce subprocess test —config, YAML shape (web/diagnostics at root), Skip (mutex). 40-fixes Deferred: slskd.Tests (45 pass, 1 skip). Integration 184 pass; Unit 2257; slskd.Tests 45 pass 1 skip. **Next:** Phase 0 (CodeQuality, ActivityPubKeyStore, CircuitMaintenance) or Phase 1+ unit completion-plan; or packaging/tasks from tasks.md.
+- **Last Activity**: chore: gitignore mesh-overlay.key, untrack; activeContext WORK DIRECTORY slskdn. Phase 0 (CodeQuality, ActivityPubKeyStore, CircuitMaintenance) and Phase 1+ completion-plan are done (0 Compile Remove; ActivityPubKeyStoreTests, CircuitMaintenanceServiceTests, DomainFrontedTransportTests pass). **Next:** 40-fixes Deferred (Integration 184, slskd.Tests 45 pass 1 skip); tasks.md; or packaging/tasks.
 
 ---
 

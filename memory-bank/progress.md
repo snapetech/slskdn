@@ -134,6 +134,12 @@
 - **Enforce_invalid_config_host_startup:** Use `--config` for temp slskd.yml. YAML: `web` and `diagnostics` at root (YamlConfigurationProvider prefixes with Namespace `slskd`; `slskd:` at root produced `slskd:slskd:web` and OptionsAtStartup.Web did not bind). On failure, assert includes stdout+stderr. `[Fact(Skip)]` when subprocess requires no other slskd (mutex); run manually when clear. Test passes in isolation.
 - **40-fixes Deferred:** slskd.Tests row added: 45 pass, 1 skip (Enforce subprocess).
 
+### chore: gitignore mesh-overlay.key, untrack; activeContext WORK DIRECTORY
+- **Status**: ✅ **COMPLETED**
+- **.gitignore:** `mesh-overlay.key` (generated at runtime; private keys). `git rm --cached src/slskd/mesh-overlay.key` so it is no longer tracked.
+- **memory-bank/activeContext.md:** Added **WORK DIRECTORY: /home/keith/Documents/code/slskdn** so agents use this repo root, not `/home/keith/Code/cursor`.
+- **Committed and pushed** on `dev/40-fixes`.
+
 ---
 
 ## 2026-01-24
