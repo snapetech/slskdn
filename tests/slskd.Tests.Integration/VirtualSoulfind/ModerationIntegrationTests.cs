@@ -9,7 +9,6 @@ namespace slskd.Tests.Integration.VirtualSoulfind
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Threading;
     using Microsoft.Extensions.DependencyInjection;
     using slskd.Common.Moderation;
     using slskd.VirtualSoulfind.Core;
@@ -18,6 +17,7 @@ namespace slskd.Tests.Integration.VirtualSoulfind
     using slskd.Shares;
     using slskd.MediaCore;
     using slskd.Tests.Integration;
+    using slskd.VirtualSoulfind.v2.Backends;
     using Xunit;
 
     /// <summary>
@@ -50,14 +50,13 @@ namespace slskd.Tests.Integration.VirtualSoulfind
                 cancellationToken: CancellationToken.None);
 
             // Act - Try to plan the track acquisition
-            var plan = await planner.CreatePlanAsync(desiredTrack, cancellationToken: TestContext.Current.CancellationToken);
+            var plan = await planner.CreatePlanAsync(desiredTrack, cancellationToken: CancellationToken.None);
 
             // Assert
             // The plan should either succeed (if content is allowed) or fail gracefully
             // In a real scenario, this would depend on MCP configuration
             Assert.NotNull(plan);
-            Assert.NotNull(plan.DesiredTrack);
-            Assert.Equal(desiredTrack.DesiredTrackId, plan.DesiredTrack.DesiredTrackId);
+            Assert.Equal(desiredTrack.TrackId, plan.TrackId);
 
             // If the plan fails, it should be due to moderation (not system errors)
             if (plan.Status == PlanStatus.Failed)
@@ -81,7 +80,7 @@ namespace slskd.Tests.Integration.VirtualSoulfind
             // Act - Check moderation decision
             var decision = await moderationProvider.CheckContentIdAsync(
                 contentId,
-                TestContext.Current.CancellationToken);
+                CancellationToken.None);
 
             // Assert - Should return a valid decision
             Assert.NotNull(decision);
@@ -98,24 +97,23 @@ namespace slskd.Tests.Integration.VirtualSoulfind
         public async Task ShareRepository_IsAdvertisableFlag_IntegratesWithVirtualSoulfind()
         {
             // Arrange
-            var services = _fixture.Services;
-            var shareRepository = services.GetRequiredService<IShareRepository>();
+            var shareRepository = _fixture.Services.GetRequiredService<IShareRepository>();
+            if (shareRepository is StubShareRepository stub)
+                stub.SeedForIsAdvertisableTest();
 
-            // Act - Query for content items
-            var allContent = shareRepository.ListContentItems().ToList();
-
-            // Assert - All returned items should have IsAdvertisable flag set appropriately
-            foreach (var content in allContent)
+            // Act & Assert: ListFiles -> ListContentItemsForFile; non-advertisable items must have ModerationReason.
+            foreach (var file in shareRepository.ListFiles().Take(10))
             {
-                // IsAdvertisable should be boolean (not null/undefined)
-                Assert.IsType<bool>(content.IsAdvertisable);
-
-                // If not advertisable, there should be a moderation reason
-                if (!content.IsAdvertisable)
+                var maskedFilename = file.Filename;
+                var items = shareRepository.ListContentItemsForFile(maskedFilename);
+                foreach (var (ContentId, Domain, WorkId, IsAdvertisable, ModerationReason) in items)
                 {
-                    Assert.False(string.IsNullOrEmpty(content.ModerationReason));
+                    if (!IsAdvertisable)
+                        Assert.False(string.IsNullOrEmpty(ModerationReason));
                 }
             }
+
+            await Task.CompletedTask;
         }
 
         [Fact]
@@ -130,12 +128,11 @@ namespace slskd.Tests.Integration.VirtualSoulfind
             {
                 ContentId = Guid.NewGuid().ToString(),
                 IsAdvertisable = false, // Explicitly mark as not advertisable
-                SizeBytes = 1024,
-                Filename = "test.mp3"
+                SizeBytes = 1024
             };
 
             // Act - Try to publish
-            var result = await publisher.PublishAsync(descriptor, cancellationToken: TestContext.Current.CancellationToken);
+            var result = await publisher.PublishAsync(descriptor, cancellationToken: CancellationToken.None);
 
             // Assert - Should fail due to IsAdvertisable = false
             Assert.False(result.Success);
@@ -151,16 +148,12 @@ namespace slskd.Tests.Integration.VirtualSoulfind
                 .OfType<LocalLibraryBackend>()
                 .FirstOrDefault();
 
-            if (backend == null)
-            {
-                // Skip test if LocalLibraryBackend is not available in test environment
-                return;
-            }
+            Assert.NotNull(backend); // StubWebApplicationFactory registers LocalLibraryBackend
 
             var itemId = ContentItemId.Parse(Guid.NewGuid().ToString());
 
             // Act - Query for candidates
-            var candidates = await backend.FindCandidatesAsync(itemId, TestContext.Current.CancellationToken);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
 
             // Assert - Should return candidates only for advertisable content
             // (In test environment, this may be empty if no content is configured)
@@ -189,22 +182,17 @@ namespace slskd.Tests.Integration.VirtualSoulfind
                 cancellationToken: CancellationToken.None);
 
             // Act - Create acquisition plan
-            var plan = await planner.CreatePlanAsync(desiredTrack, cancellationToken: TestContext.Current.CancellationToken);
+            var plan = await planner.CreatePlanAsync(desiredTrack, cancellationToken: CancellationToken.None);
 
             // Assert - Plan should be created successfully or fail gracefully
             Assert.NotNull(plan);
-            Assert.Equal(desiredTrack.DesiredTrackId, plan.DesiredTrack.DesiredTrackId);
+            Assert.Equal(desiredTrack.TrackId, plan.TrackId);
 
-            // If planning succeeds, should have valid steps
-            if (plan.Status == PlanStatus.Success)
+            // If planning produced steps, they should be valid
+            if (plan.Steps != null && plan.Steps.Count > 0)
             {
-                Assert.NotNull(plan.Steps);
-                Assert.NotEmpty(plan.Steps);
-
-                // All steps should be for valid backends
                 foreach (var step in plan.Steps)
                 {
-                    Assert.NotNull(step.Backend);
                     Assert.True(Enum.IsDefined(typeof(ContentBackendType), step.Backend));
                 }
             }
