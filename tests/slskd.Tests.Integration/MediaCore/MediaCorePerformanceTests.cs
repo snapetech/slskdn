@@ -33,8 +33,13 @@ public class MediaCorePerformanceTests
 
         _perceptualHasher = new PerceptualHasher();
 
+        var descriptorRetrieverMock = new Mock<IDescriptorRetriever>();
+        descriptorRetrieverMock
+            .Setup(d => d.RetrieveAsync(It.IsAny<string>(), It.IsAny<bool>(), default))
+            .ReturnsAsync(new DescriptorRetrievalResult(Found: false, Descriptor: null, default, default, FromCache: false, Verification: null));
+
         var fuzzyLogger = new Mock<ILogger<FuzzyMatcher>>();
-        _fuzzyMatcher = new FuzzyMatcher(_perceptualHasher, fuzzyLogger.Object);
+        _fuzzyMatcher = new FuzzyMatcher(_perceptualHasher, descriptorRetrieverMock.Object, fuzzyLogger.Object);
     }
 
     [Fact]
@@ -146,7 +151,7 @@ public class MediaCorePerformanceTests
         Assert.All(hashes, hash =>
         {
             Assert.NotNull(hash);
-            Assert.Equal("ChromaPrint", hash.Algorithm);
+            Assert.Equal("Chromaprint", hash.Algorithm);
             Assert.NotNull(hash.Hex);
             Assert.True(hash.NumericHash.HasValue);
         });

@@ -4,25 +4,40 @@
 
 namespace slskd.Tests.Unit.MediaCore;
 
-using slskd.MediaCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Threading.Tasks;
+using slskd.MediaCore;
 using Xunit;
 
 public class FuzzyMatcherTests
 {
     private readonly FuzzyMatcher matcher;
     private readonly Mock<IPerceptualHasher> perceptualHasherMock;
+    private readonly Mock<IDescriptorRetriever> descriptorRetrieverMock;
     private readonly Mock<ILogger<FuzzyMatcher>> loggerMock;
     private readonly Mock<IContentIdRegistry> _registryMock;
 
     public FuzzyMatcherTests()
     {
         perceptualHasherMock = new Mock<IPerceptualHasher>();
+        descriptorRetrieverMock = new Mock<IDescriptorRetriever>();
         loggerMock = new Mock<ILogger<FuzzyMatcher>>();
         _registryMock = new Mock<IContentIdRegistry>();
-        matcher = new FuzzyMatcher(perceptualHasherMock.Object, loggerMock.Object);
+
+        // Default: no descriptors found → ScorePerceptualAsync falls back to simulated similarity
+        descriptorRetrieverMock
+            .Setup(d => d.RetrieveAsync(It.IsAny<string>(), It.IsAny<bool>(), default))
+            .ReturnsAsync(new DescriptorRetrievalResult(
+                Found: false,
+                Descriptor: null,
+                RetrievedAt: default,
+                RetrievalDuration: default,
+                FromCache: false,
+                Verification: null));
+
+        matcher = new FuzzyMatcher(perceptualHasherMock.Object, descriptorRetrieverMock.Object, loggerMock.Object);
     }
 
     [Theory]
@@ -154,6 +169,50 @@ public class FuzzyMatcherTests
 
         // Assert
         Assert.Equal(0.0, score);
+    }
+
+    [Fact]
+    public async Task ScorePerceptualAsync_WhenDescriptorsHavePerceptualHashes_UsesPerceptualHasher()
+    {
+        var contentIdA = "content:audio:track:mb-aaa";
+        var contentIdB = "content:audio:track:mb-bbb";
+        var hashA = 0x1111UL;
+        var hashB = 0x2222UL;
+        const double expectedSimilarity = 0.9;
+
+        descriptorRetrieverMock
+            .Setup(d => d.RetrieveAsync(contentIdA, It.IsAny<bool>(), default))
+            .ReturnsAsync(new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor
+                {
+                    ContentId = contentIdA,
+                    PerceptualHashes = new List<PerceptualHash> { new("Chromaprint", "A", hashA) },
+                },
+                RetrievedAt: default,
+                RetrievalDuration: default,
+                FromCache: false,
+                Verification: null));
+        descriptorRetrieverMock
+            .Setup(d => d.RetrieveAsync(contentIdB, It.IsAny<bool>(), default))
+            .ReturnsAsync(new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor
+                {
+                    ContentId = contentIdB,
+                    PerceptualHashes = new List<PerceptualHash> { new("Chromaprint", "B", hashB) },
+                },
+                RetrievedAt: default,
+                RetrievalDuration: default,
+                FromCache: false,
+                Verification: null));
+
+        perceptualHasherMock.Setup(p => p.Similarity(hashA, hashB)).Returns(expectedSimilarity);
+
+        var score = await matcher.ScorePerceptualAsync(contentIdA, contentIdB, _registryMock.Object);
+
+        Assert.Equal(expectedSimilarity, score);
+        perceptualHasherMock.Verify(p => p.Similarity(hashA, hashB), Times.Once);
     }
 
     [Fact]

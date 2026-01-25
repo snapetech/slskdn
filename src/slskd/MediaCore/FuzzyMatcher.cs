@@ -72,13 +72,16 @@ public enum FuzzyMatchReason
 public class FuzzyMatcher : IFuzzyMatcher
 {
     private readonly IPerceptualHasher _perceptualHasher;
+    private readonly IDescriptorRetriever _descriptorRetriever;
     private readonly ILogger<FuzzyMatcher> _logger;
 
     public FuzzyMatcher(
         IPerceptualHasher perceptualHasher,
+        IDescriptorRetriever descriptorRetriever,
         ILogger<FuzzyMatcher> logger)
     {
         _perceptualHasher = perceptualHasher;
+        _descriptorRetriever = descriptorRetriever;
         _logger = logger;
     }
     public double Score(string title, string artist, string candidateTitle, string candidateArtist)
@@ -249,29 +252,47 @@ public class FuzzyMatcher : IFuzzyMatcher
 
         try
         {
-            // Parse ContentIDs to determine content type
             var parsedA = ContentIdParser.Parse(contentIdA);
             var parsedB = ContentIdParser.Parse(contentIdB);
 
             if (parsedA == null || parsedB == null)
                 return 0.0;
 
-            // Only compare content of the same domain (audio with audio, video with video, etc.)
             if (!string.Equals(parsedA.Domain, parsedB.Domain, StringComparison.OrdinalIgnoreCase))
                 return 0.0;
 
-            // For now, we assume perceptual hashes are stored in ContentDescriptors
-            // In a real implementation, this would be retrieved from the registry
-            // For this prototype, we'll simulate perceptual hash comparison
+            var resultA = await _descriptorRetriever.RetrieveAsync(contentIdA, bypassCache: false, cancellationToken);
+            var resultB = await _descriptorRetriever.RetrieveAsync(contentIdB, bypassCache: false, cancellationToken);
 
-            var similarity = await ComputeSimulatedPerceptualSimilarityAsync(contentIdA, contentIdB, parsedA.Domain, cancellationToken);
-            return similarity;
+            var hashA = GetBestNumericHash(resultA.Descriptor);
+            var hashB = GetBestNumericHash(resultB.Descriptor);
+
+            if (hashA.HasValue && hashB.HasValue)
+                return _perceptualHasher.Similarity(hashA.Value, hashB.Value);
+
+            return await ComputeSimulatedPerceptualSimilarityAsync(contentIdA, contentIdB, parsedA.Domain, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[FuzzyMatcher] Error computing perceptual similarity between {ContentIdA} and {ContentIdB}", contentIdA, contentIdB);
             return 0.0;
         }
+    }
+
+    /// <summary>
+    /// Picks the best perceptual hash with NumericHash: Chromaprint preferred, else first available.
+    /// </summary>
+    private static ulong? GetBestNumericHash(ContentDescriptor? descriptor)
+    {
+        if (descriptor?.PerceptualHashes == null || descriptor.PerceptualHashes.Count == 0)
+            return null;
+
+        var chroma = descriptor.PerceptualHashes.FirstOrDefault(h => h.Algorithm == "Chromaprint" && h.NumericHash.HasValue);
+        if (chroma?.NumericHash != null)
+            return chroma.NumericHash.Value;
+
+        var first = descriptor.PerceptualHashes.FirstOrDefault(h => h.NumericHash.HasValue);
+        return first?.NumericHash;
     }
 
     /// <inheritdoc/>

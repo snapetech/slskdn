@@ -6,6 +6,8 @@ namespace slskd.MediaCore;
 
 using System;
 using System.Linq;
+using System.Numerics;
+using MathNet.Numerics.IntegralTransforms;
 using slskd;
 
 /// <summary>
@@ -241,29 +243,85 @@ public class PerceptualHasher : IPerceptualHasher
     }
 
     /// <summary>
-    /// Computes Chromaprint-style audio fingerprint.
-    /// Simplified implementation of the Chromaprint algorithm.
+    /// Computes Chromaprint-style audio fingerprint using FFT-based chroma features.
+    /// Downsample to ~11 kHz, frame with Hann window, FFT, map to 24-bin chroma
+    /// (tone-aware, distinguishes e.g. 440 vs 880 Hz), reduce to 8 super-bands,
+    /// take 8 evenly spaced frames, flatten to 64 values, median-threshold to 64-bit hash.
     /// </summary>
     private ulong ComputeChromaPrint(float[] samples, int sampleRate)
     {
         if (samples == null || samples.Length == 0)
             return 0;
 
-        // Chromaprint uses 12-bin chroma features
-        const int chromaBins = 12;
-        var chromaFeatures = new double[chromaBins];
+        const int fftSize = 4096;
+        const int hopSize = 2048;
+        const int chromaBins = 24;
+        const int superBands = 8;
+        const int framesForHash = 8;
+        const double fRef = 55.0;
 
-        // Simplified chroma computation (real Chromaprint uses FFT)
-        var windowSize = Math.Min(samples.Length, sampleRate); // 1 second window
-        for (int i = 0; i < Math.Min(windowSize, samples.Length); i++)
+        var targetRate = 11025;
+        if (sampleRate > targetRate)
         {
-            // Very simplified chroma mapping (real implementation much more complex)
-            var chromaIndex = (int)(Math.Abs(samples[i]) * chromaBins) % chromaBins;
-            chromaFeatures[chromaIndex] += Math.Abs(samples[i]);
+            samples = Downsample(samples, sampleRate, targetRate);
+            sampleRate = targetRate;
         }
 
-        // Generate hash from chroma peaks
-        return GenerateHashFromPeaks(chromaFeatures);
+        var numFrames = (samples.Length - fftSize) / hopSize + 1;
+        if (numFrames <= 0)
+            return 0;
+
+        var binFreq = (double)sampleRate / fftSize;
+
+        var hann = new double[fftSize];
+        for (int i = 0; i < fftSize; i++)
+            hann[i] = 0.5 * (1.0 - Math.Cos(2.0 * Math.PI * i / (fftSize - 1)));
+
+        var chromaPerFftBin = new int[(fftSize / 2) + 1];
+        for (int k = 0; k <= fftSize / 2; k++)
+        {
+            var f = k * binFreq;
+            if (f < fRef)
+            {
+                chromaPerFftBin[k] = -1;
+                continue;
+            }
+
+            var c = (int)Math.Round(12.0 * Math.Log(f / fRef, 2)) % chromaBins;
+            chromaPerFftBin[k] = (c + chromaBins) % chromaBins;
+        }
+
+        var hashValues = new double[framesForHash * superBands];
+        var complexFrame = new Complex[fftSize];
+
+        for (int i = 0; i < framesForHash; i++)
+        {
+            int frameIdx = numFrames >= 2 ? (i * (numFrames - 1)) / (framesForHash - 1) : 0;
+            if (frameIdx >= numFrames)
+                frameIdx = numFrames - 1;
+
+            int start = frameIdx * hopSize;
+            for (int j = 0; j < fftSize; j++)
+            {
+                var s = (start + j) < samples.Length ? (double)samples[start + j] * hann[j] : 0.0;
+                complexFrame[j] = new Complex(s, 0);
+            }
+
+            Fourier.Forward(complexFrame);
+
+            var chromaVec = new double[chromaBins];
+            for (int k = 1; k < fftSize / 2; k++)
+            {
+                var c = chromaPerFftBin[k];
+                if (c >= 0)
+                    chromaVec[c] += complexFrame[k].Magnitude;
+            }
+
+            for (int sb = 0; sb < superBands; sb++)
+                hashValues[(i * superBands) + sb] = chromaVec[(sb * 3)] + chromaVec[(sb * 3) + 1] + chromaVec[(sb * 3) + 2];
+        }
+
+        return GenerateHash(hashValues);
     }
 
     /// <summary>
@@ -389,32 +447,6 @@ public class PerceptualHasher : IPerceptualHasher
         return hash;
     }
 
-    /// <summary>
-    /// Generates hash from peak features.
-    /// </summary>
-    private static ulong GenerateHashFromPeaks(double[] features)
-    {
-        if (features.Length == 0) return 0;
-
-        // Find peaks in the feature array
-        var peaks = new bool[features.Length];
-        for (int i = 1; i < features.Length - 1; i++)
-        {
-            peaks[i] = features[i] > features[i - 1] && features[i] > features[i + 1];
-        }
-
-        // Generate hash from peak pattern
-        ulong hash = 0;
-        for (int i = 0; i < Math.Min(peaks.Length, HashBits); i++)
-        {
-            if (peaks[i])
-            {
-                hash |= (1UL << i);
-            }
-        }
-
-        return hash;
-    }
 }
 
 /// <summary>

@@ -142,5 +142,6 @@
     <PackageReference Include="Utility.EnvironmentVariables" Version="1.0.5" />
     <PackageReference Include="YamlDotNet" Version="15.3.0" />
     <PackageReference Include="NSec.Cryptography" Version="24.4.0" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
   </ItemGroup>
 </Project>

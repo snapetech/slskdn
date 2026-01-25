@@ -37,8 +37,8 @@ public class MediaCoreIntegrationTests
 
         _perceptualHasher = new PerceptualHasher();
 
+        // DescriptorRetriever created below (after DHT/validator/options)
         var fuzzyLogger = new Mock<ILogger<FuzzyMatcher>>();
-        _fuzzyMatcher = new FuzzyMatcher(_perceptualHasher, fuzzyLogger.Object);
 
         var portabilityLogger = new Mock<ILogger<MetadataPortability>>();
         _metadataPortability = new MetadataPortability(_registry, _ipldMapper, portabilityLogger.Object);
@@ -54,6 +54,8 @@ public class MediaCoreIntegrationTests
             _dhtMock.Object,
             descriptorValidatorMock.Object,
             mediaCoreOptions);
+
+        _fuzzyMatcher = new FuzzyMatcher(_perceptualHasher, _descriptorRetriever, fuzzyLogger.Object);
     }
 
     [Fact]

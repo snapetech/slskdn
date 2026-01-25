@@ -282,6 +282,25 @@ public class PerceptualHasherTests
         Assert.True(similarity < 0.95, $"Expected similarity < 0.95 for 440 vs 262 Hz, got {similarity}");
     }
 
+    /// <summary>
+    /// FFT-based Chromaprint must treat 440 Hz and 880 Hz as different (low similarity at 0.5 threshold).
+    /// Aligns with CrossCodecMatchingTests.DifferentContent_LowSimilarityScores.
+    /// </summary>
+    [Fact]
+    public void ComputeAudioHash_Chromaprint_440vs880Hz_ProducesLowSimilarity()
+    {
+        var samples1 = GenerateSineWave(44100, 2.0f, 440.0f);
+        var samples2 = GenerateSineWave(44100, 2.0f, 880.0f);
+
+        var r1 = hasher.ComputeAudioHash(samples1, 44100, PerceptualHashAlgorithm.Chromaprint);
+        var r2 = hasher.ComputeAudioHash(samples2, 44100, PerceptualHashAlgorithm.Chromaprint);
+
+        Assert.NotNull(r1.NumericHash);
+        Assert.NotNull(r2.NumericHash);
+        var similar = hasher.AreSimilar(r1.NumericHash.Value, r2.NumericHash.Value, 0.5);
+        Assert.False(similar, "Chromaprint must not treat 440 Hz and 880 Hz as similar at 0.5 threshold");
+    }
+
     [Fact]
     public void ComputeHash_DownsamplingProducesSimilarHash()
     {
