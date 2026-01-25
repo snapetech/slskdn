@@ -123,6 +123,12 @@
 - **Change:** [Fact(Skip = "...")] on DisasterModeTests (2: Disaster_Mode_Search, Disaster_Mode_Recovery; Kill_Soulfind already skipped) and all 6 ProtocolContractTests. MeshOnlyTests (3) unchanged — 3 pass.
 - **Result:** Filters `DisasterMode|ProtocolContract` complete in ~21ms (3 pass, 17 skip). No hang. Audit and 40-fixes Deferred updated.
 
+### slskd.Tests.Integration: 184 pass, 0 skip; LoadTests smokes; StubVirtualSoulfindServices; audit
+- **Status**: ✅ **COMPLETED**
+- **LoadTests:** HTTP smokes (disaster-mode/status, shadow-index) instead of placeholders; TestingReadme updated (no “skipped by default”).
+- **StubVirtualSoulfindServices:** Added (StubDescriptorPublisher, StubPeerReputationStore, StubShareRepository); ModerationIntegration LocalLibraryBackend assert instead of skip.
+- **Audit:** `docs/dev/slskd-tests-integration-audit.md` — 184 pass, 0 skip; LoadTests, StubVirtualSoulfind, ModerationIntegration notes. **40-fixes-plan.md** Deferred: slskd.Tests.Integration 184 pass.
+
 ---
 
 ## 2026-01-24
