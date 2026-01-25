@@ -18,7 +18,7 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
         this.client = factory.CreateClient();
     }
 
-    [Fact(Skip = "Stub host")]
+    [Fact]
     public async Task GetInfo_ShouldReturnSlskdnInfo()
     {
         // Act
@@ -26,12 +26,16 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var info = await response.Content.ReadFromJsonAsync<InfoResponse>();
-        
+        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var info = await response.Content.ReadFromJsonAsync<InfoResponse>(options);
+
         Assert.NotNull(info);
         Assert.Equal("slskdn", info.Impl);
         Assert.Equal("slskd", info.Compat);
         Assert.NotNull(info.Version);
+        Assert.NotNull(info.Soulseek);
+        Assert.True(info.Soulseek.Connected);
+        Assert.NotNull(info.Soulseek.User);
     }
 
     [Fact]

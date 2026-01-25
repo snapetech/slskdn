@@ -22,7 +22,7 @@ Run filtered subsets to avoid full-suite timeout, e.g.:
 | **DhtRendezvousIntegrationTests** | 3 | 0 | 0 | |
 | **Features** (RescueMode, CanonicalSelection, LibraryHealth) | 4 | 0 | 2 | RescueMode.Slow_Transfer, CanonicalSelection.Should_Prefer_Canonical skipped |
 | **DisasterModeTests** | 2 | 0 | 1 | **FIXED:** IncludeOnlyControllersFeatureProvider in SlskdnTestClient; 2 pass, 1 skip (Kill_Soulfind_Mid_Transfer: "Stub host"). MeshOnlyTests: 3 pass. |
-| **Soulbeet** | 16 | 0 | 1 | SoulbeetCompatibility.GetInfo_ShouldReturnSlskdnInfo skipped |
+| **Soulbeet** | 17 | 0 | 0 | **FIXED:** GetInfo_ShouldReturnSlskdnInfo — StubWebApplicationFactory now stubs ISoulseekClient for CompatibilityController (GET /api/info). |
 | **MultiClient \| MultiSource** | 9 | 0 | 0 | ~21s |
 | **ProtocolContractTests** | 6 | 0 | 0 | **FIXED:** SlskdnTestClient now only loads 9 controllers; 6 pass. |
 | **CoverTrafficGeneratorIntegrationTests** | 3 | 0 | 0 | |

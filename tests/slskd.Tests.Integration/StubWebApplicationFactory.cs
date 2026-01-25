@@ -45,6 +45,7 @@ using slskd.VirtualSoulfind.v2.Planning;
 using slskd.VirtualSoulfind.v2.Sources;
 using slskd.VirtualSoulfind.Bridge;
 using slskd.Core;
+using Moq;
 using OptionsModel = global::slskd.Options;
 
 /// <summary>
@@ -119,8 +120,6 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                             options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
                         })
                         .AddApplicationPart(typeof(CapabilitiesController).Assembly)
-                        // CompatibilityController requires ISoulseekClient - skip for now
-                        // .AddApplicationPart(typeof(CompatibilityController).Assembly)
                         .AddApplicationPart(typeof(DownloadsCompatibilityController).Assembly)
                         .AddApplicationPart(typeof(LibraryHealthController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.API.Compatibility.LibraryCompatibilityController).Assembly)
@@ -166,7 +165,10 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddSingleton<IDownloadService, StubDownloadService>()
                         .AddSingleton<ITransferService>(_ => NullProxy<ITransferService>.Create())
                         .AddSingleton<ISearchService>(_ => NullProxy<ISearchService>.Create())
-                        .AddSingleton<IWarmCachePopularityService>(_ => NullProxy<IWarmCachePopularityService>.Create());
+                        .AddSingleton<IWarmCachePopularityService>(_ => NullProxy<IWarmCachePopularityService>.Create())
+                        // ISoulseekClient for CompatibilityController (GET /api/info) — Soulbeet
+                        .AddSingleton<ISoulseekClient>(_ => Mock.Of<ISoulseekClient>(x =>
+                            x.State == SoulseekClientStates.LoggedIn && x.Username == "test-user"));
 
                     // VirtualSoulfind / Moderation / MediaCore for ModerationIntegrationTests
                     services.AddSingleton<IIntentQueue, InMemoryIntentQueue>();
