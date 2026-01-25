@@ -94,6 +94,12 @@
 - **MeshServiceRouterSecurityTests:** Removed `Compile Remove`. Tests: GlobalRateLimit_BlocksExcessiveCalls, PerServiceRateLimit_BlocksExcessiveCalls, PayloadSizeLimit_RejectsOversizedPayload, CircuitBreaker_OpensAfter5ConsecutiveFailures, CircuitBreaker_ResetsAfterSuccessfulCall, ServiceTimeout_TriggersCircuitBreaker, MultiPeerIsolation_OnePeerRateLimitDoesNotAffectOthers; all 7 pass.
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1420 passed, 16 skipped** (+39).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – SocialFederation WorkRefTests)
+- **Status**: ✅ **COMPLETED**
+- **WorkRefTests:** Removed `Compile Remove`. Added `using slskd.SocialFederation`. `FromMusicItem_CreatesValidWorkRef` skipped (ContentDomain.MusicContentItem removed; needs MusicItem from VirtualSoulfind). `ValidateSecurity_AllowsSafeContent` and `ValidateSecurity_AllowsSafeExternalIds`: use non-UUID, non-path external IDs to match `WorkRef.ValidateSecurity` rules (blocks UUIDs in ExternalIds, path separators, 32+ hex). `ValidateSecurity_BlocksHashInExternalId`: value set to 32+ hex so hash pattern triggers. All 9 runnable tests pass, 1 skipped.
+- **ActivityPubKeyStoreTests:** Remains in `Compile Remove`. IDataProtector mock updated to `Protect(byte[])`/`Unprotect(byte[])` pass-through (for when re-enabled). NSec `Key.Export(KeyBlobFormat.PkixPrivateKey)` throws "The key cannot be exported" in this environment; defer until resolved.
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1429 passed, 17 skipped** (+9 pass, +1 skip).
+
 ---
 
 ## 2025-12-13

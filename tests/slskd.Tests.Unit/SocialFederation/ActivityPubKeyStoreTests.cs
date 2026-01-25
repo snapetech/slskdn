@@ -10,6 +10,7 @@ namespace slskd.Tests.Unit.SocialFederation
     using Microsoft.AspNetCore.DataProtection;
     using Microsoft.Extensions.Logging;
     using Moq;
+    using slskd.SocialFederation;
     using Xunit;
 
     /// <summary>
@@ -22,9 +23,9 @@ namespace slskd.Tests.Unit.SocialFederation
 
         public ActivityPubKeyStoreTests()
         {
-            // Setup data protector to return input unchanged for testing
-            _dataProtectorMock.Setup(x => x.Protect(It.IsAny<string>())).Returns<string>(s => s);
-            _dataProtectorMock.Setup(x => x.Unprotect(It.IsAny<string>())).Returns<string>(s => s);
+            // Setup IDataProtector.Protect(byte[])/Unprotect(byte[]) (used by string extensions) as pass-through
+            _dataProtectorMock.Setup(x => x.Protect(It.IsAny<byte[]>())).Returns<byte[]>(d => d);
+            _dataProtectorMock.Setup(x => x.Unprotect(It.IsAny<byte[]>())).Returns<byte[]>(d => d);
         }
 
         private ActivityPubKeyStore CreateKeyStore()
