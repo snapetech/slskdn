@@ -30,9 +30,7 @@ public class RandomJitterObfuscator : ITimingObfuscator
         _rng = RandomNumberGenerator.Create();
 
         if (minDelayMs < 0)
-        {
-            throw new ArgumentException("Minimum delay cannot be negative", nameof(minDelayMs));
-        }
+            minDelayMs = 0;
 
         if (maxDelayMs < minDelayMs)
         {

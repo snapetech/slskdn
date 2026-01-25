@@ -13,13 +13,13 @@ namespace slskd.Mesh;
 public class MeshHealthCheck : IHealthCheck
 {
     private readonly ILogger<MeshHealthCheck> _logger;
-    private readonly MeshStatsCollector _statsCollector;
+    private readonly IMeshStatsCollector _statsCollector;
     private readonly IMeshDirectory _directory;
     private readonly Dht.IMeshDhtClient _dhtClient;
 
     public MeshHealthCheck(
         ILogger<MeshHealthCheck> logger,
-        MeshStatsCollector statsCollector,
+        IMeshStatsCollector statsCollector,
         IMeshDirectory directory,
         Dht.IMeshDhtClient dhtClient)
     {

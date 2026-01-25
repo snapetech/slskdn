@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| **slskd.Tests.Unit** | Re-enable ~100 excluded tests in `slskd.Tests.Unit.csproj` | Execute **slskd.Tests.Unit Re-enablement Plan** (§ slskd.Tests.Unit Re-enablement Plan below). **In scope.** |
+| **slskd.Tests.Unit** | Re-enable ~100 excluded tests in `slskd.Tests.Unit.csproj` | Execute **slskd.Tests.Unit Re-enablement Plan** (§ slskd.Tests.Unit Re-enablement Plan below). **In scope.** Skipped: 37 `[Fact(Skip)]` (includes `SecurityUtilsTests.ConstantTimeEquals_LargeArrays_PerformsConstantTime`, timing flake) — see **docs/dev/slskd-tests-unit-completion-plan.md** § Deferred: Skipped and Failed Tests. |
 
 
 ---
@@ -672,6 +672,8 @@ PR numbers (see Implementation Ticket Index) can be batched for review; order be
 **Goal:** Re-enable all `Compile Remove` in `slskd.Tests.Unit.csproj`; **in scope.**
 
 **Source of truth:** `tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` and its `Compile Remove` entries and inline blocker comments.
+
+**Live status (done / remaining / deferred):** `docs/dev/slskd-tests-unit-completion-plan.md` (§ Completed, § Status and What Remains, § Remaining — Compile Remove, § Deferred: Skipped and Failed Tests). Prefer that doc when deciding what to do next.
 
 ### Phase 0 – API/type audit (prerequisite)
 

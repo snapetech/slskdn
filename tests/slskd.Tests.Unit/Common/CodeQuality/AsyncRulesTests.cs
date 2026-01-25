@@ -54,7 +54,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         public void HasCancellationPropagation_WithCancellationToken_ReturnsTrue()
         {
             // Arrange
-            var method = typeof(TestClass).GetMethod(nameof(TestClass.MethodWithCancellation));
+            var method = typeof(TestClass).GetMethod(nameof(TestClass.MethodWithCancellationAsync));
 
             // Act
             var result = AsyncRules.HasCancellationPropagation(method);
@@ -67,7 +67,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         public void HasCancellationPropagation_WithoutCancellationToken_ReturnsFalse()
         {
             // Arrange
-            var method = typeof(TestClass).GetMethod(nameof(TestClass.MethodWithoutCancellation));
+            var method = typeof(TestClass).GetMethod(nameof(TestClass.MethodWithoutCancellationAsync));
 
             // Act
             var result = AsyncRules.HasCancellationPropagation(method);

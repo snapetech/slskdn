@@ -4,6 +4,8 @@
 
 **Principle:** Fix prod and/or tests so the suite passes. If a type never existed in any branch, implement it from test expectations and prod usage.
 
+**Live status (what’s done / remaining):** `docs/dev/slskd-tests-unit-completion-plan.md` § Completed, § Status and What Remains, § Remaining — Compile Remove.
+
 ---
 
 ## 0. Branch / existence checks (do first)

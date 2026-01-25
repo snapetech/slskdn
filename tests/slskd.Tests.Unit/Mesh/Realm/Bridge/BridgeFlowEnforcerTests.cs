@@ -7,8 +7,10 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
     using System;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Moq;
     using slskd.Mesh.Realm;
+    using slskd.Mesh.Realm.Bridge;
     using Xunit;
 
     /// <summary>
@@ -16,20 +18,53 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
     /// </summary>
     public class BridgeFlowEnforcerTests
     {
-        private readonly Mock<MultiRealmService> _multiRealmServiceMock = new();
-        private readonly Mock<ILogger<BridgeFlowEnforcer>> _loggerMock = new();
-
-        public BridgeFlowEnforcerTests()
+        private static MultiRealmConfig ConfigWithActivityPubReadAndMetadataAllowed()
         {
-            // Setup default multi-realm service
-            _multiRealmServiceMock.Setup(x => x.IsCrossRealmOperationPermitted("realm-a", "realm-b", "activitypub:read")).Returns(true);
-            _multiRealmServiceMock.Setup(x => x.IsCrossRealmOperationPermitted("realm-a", "realm-b", "activitypub:write")).Returns(false);
-            _multiRealmServiceMock.Setup(x => x.IsCrossRealmOperationPermitted("realm-a", "realm-b", "metadata:read")).Returns(true);
+            return new MultiRealmConfig
+            {
+                Realms = new[]
+                {
+                    new RealmConfig { Id = "realm-a", GovernanceRoots = new[] { "root-a" }, Policies = new RealmPolicies() },
+                    new RealmConfig { Id = "realm-b", GovernanceRoots = new[] { "root-b" }, Policies = new RealmPolicies() }
+                },
+                Bridge = new BridgeConfig
+                {
+                    Enabled = true,
+                    AllowedFlows = new[] { "activitypub:read", "metadata:read" },
+                    DisallowedFlows = Array.Empty<string>()
+                }
+            };
         }
 
-        private BridgeFlowEnforcer CreateEnforcer()
+        private static MultiRealmConfig ConfigWithActivityPubReadBlocked()
         {
-            return new BridgeFlowEnforcer(_multiRealmServiceMock.Object, _loggerMock.Object);
+            return new MultiRealmConfig
+            {
+                Realms = new[]
+                {
+                    new RealmConfig { Id = "realm-a", GovernanceRoots = new[] { "root-a" }, Policies = new RealmPolicies() },
+                    new RealmConfig { Id = "realm-b", GovernanceRoots = new[] { "root-b" }, Policies = new RealmPolicies() }
+                },
+                Bridge = new BridgeConfig
+                {
+                    Enabled = true,
+                    AllowedFlows = new[] { "metadata:read" },
+                    DisallowedFlows = Array.Empty<string>()
+                }
+            };
+        }
+
+        private static MultiRealmService CreateMultiRealmService(MultiRealmConfig config)
+        {
+            return new MultiRealmService(
+                Mock.Of<IOptionsMonitor<MultiRealmConfig>>(x => x.CurrentValue == config),
+                Mock.Of<ILogger<MultiRealmService>>());
+        }
+
+        private static BridgeFlowEnforcer CreateEnforcer(MultiRealmService? multiRealm = null)
+        {
+            var svc = multiRealm ?? CreateMultiRealmService(ConfigWithActivityPubReadAndMetadataAllowed());
+            return new BridgeFlowEnforcer(svc, Mock.Of<ILogger<BridgeFlowEnforcer>>());
         }
 
         [Fact]
@@ -85,7 +120,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
                 () =>
                 {
                     operationExecuted = true;
-                    return Task.FromResult(BridgeOperationResult.Success("test-data"));
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess("test-data"));
                 });
 
             // Assert
@@ -97,8 +132,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public async Task PerformActivityPubReadAsync_WithBlockedFlow_ReturnsBlocked()
         {
-            // Arrange
-            var enforcer = CreateEnforcer();
+            // Arrange - use config that does not allow activitypub:read
+            var enforcer = CreateEnforcer(CreateMultiRealmService(ConfigWithActivityPubReadBlocked()));
             var operationExecuted = false;
 
             // Act
@@ -108,7 +143,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
                 () =>
                 {
                     operationExecuted = true;
-                    return Task.FromResult(BridgeOperationResult.Success("test-data"));
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess("test-data"));
                 });
 
             // Assert
@@ -132,7 +167,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
                 () =>
                 {
                     operationExecuted = true;
-                    return Task.FromResult(BridgeOperationResult.Success("test-data"));
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess("test-data"));
                 });
 
             // Assert
@@ -156,7 +191,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
                 () =>
                 {
                     operationExecuted = true;
-                    return Task.FromResult(BridgeOperationResult.Success("metadata"));
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess("metadata"));
                 });
 
             // Assert

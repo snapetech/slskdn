@@ -6,9 +6,11 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Moq;
+    using slskd.Mesh.Realm.Migration;
     using Xunit;
 
     /// <summary>
@@ -40,10 +42,10 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             Assert.True(result.Success);
             Assert.Equal(exportPath, result.ExportPath);
             Assert.True(Directory.Exists(exportPath));
-            Assert.Contains("Pod configuration", result.IncludedData);
-            Assert.Contains("User preferences", result.IncludedData);
-            Assert.Contains("Content metadata", result.IncludedData);
-            Assert.Contains("Public social connection metadata", result.IncludedData);
+            Assert.True(result.IncludedData.Any(x => x.Contains("Pod configuration", StringComparison.Ordinal)));
+            Assert.True(result.IncludedData.Any(x => x.Contains("User preferences", StringComparison.Ordinal)));
+            Assert.True(result.IncludedData.Any(x => x.Contains("Content metadata", StringComparison.Ordinal)));
+            Assert.True(result.IncludedData.Any(x => x.Contains("Public social connection metadata", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -57,8 +59,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.True(result.Success);
-            Assert.Contains("Sensitive data export requested", result.Warnings);
-            Assert.Contains("Sensitive authentication data", result.IncludedData);
+            Assert.True(result.Warnings.Any(w => w.Contains("Sensitive data export requested", StringComparison.Ordinal)));
+            Assert.True(result.IncludedData.Any(x => x.Contains("Sensitive authentication data", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -72,9 +74,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.True(result.Success);
-            Assert.Contains("Private keys and sensitive authentication data", result.ExcludedData);
-            Assert.Contains("Encrypted user credentials", result.ExcludedData);
-            Assert.Contains("Sensitive data not exported", result.Warnings);
+            Assert.True(result.ExcludedData.Any(x => x.Contains("Private keys and sensitive authentication data", StringComparison.Ordinal)));
+            Assert.True(result.ExcludedData.Any(x => x.Contains("Encrypted user credentials", StringComparison.Ordinal)));
+            Assert.True(result.Warnings.Any(w => w.Contains("Sensitive data not exported", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -93,9 +95,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             // Assert
             Assert.True(importResult.Success);
             Assert.Equal("target-realm", importResult.TargetRealmId);
-            Assert.Contains("Pod configuration", importResult.ImportedData);
-            Assert.Contains("User preferences", importResult.ImportedData);
-            Assert.Contains("Content catalog", importResult.ImportedData);
+            Assert.True(importResult.ImportedData.Any(x => x.Contains("Pod configuration", StringComparison.Ordinal)));
+            Assert.True(importResult.ImportedData.Any(x => x.Contains("User preferences", StringComparison.Ordinal)));
+            Assert.True(importResult.ImportedData.Any(x => x.Contains("Content catalog", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -109,7 +111,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.False(result.Success);
-            Assert.Contains("does not exist", result.Errors[0]);
+            Assert.True(result.Errors.Any(e => e.Contains("does not exist", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -123,7 +125,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var result = await _tool.ImportPodDataAsync(exportPath, "different-realm");
 
             // Assert
-            Assert.Contains("Cross-realm data import", result.Warnings);
+            Assert.True(result.Warnings.Any(w => w.Contains("Cross-realm data import", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -165,8 +167,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var guide = _tool.GenerateMigrationGuide(currentRealm, targetRealm);
 
             // Assert
-            Assert.Contains("Cross-realm migration detected", guide.Warnings);
-            Assert.Contains("Review cross-realm compatibility", guide.Steps[^1].Title);
+            Assert.True(guide.Warnings.Any(w => w.Contains("Cross-realm migration detected", StringComparison.Ordinal)));
+            Assert.True(guide.Steps[^1].Title?.Contains("Review cross-realm compatibility", StringComparison.Ordinal) == true);
         }
 
         [Fact]
@@ -176,9 +178,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var guide = _tool.GenerateMigrationGuide("old", "new");
 
             // Act & Assert
-            Assert.Contains("Backup all important data", guide.Prerequisites);
-            Assert.Contains("Ensure new realm infrastructure", guide.Prerequisites);
-            Assert.Contains("Notify users of planned downtime", guide.Prerequisites);
+            Assert.True(guide.Prerequisites.Any(p => p.Contains("Backup all important data", StringComparison.Ordinal)));
+            Assert.True(guide.Prerequisites.Any(p => p.Contains("Ensure new realm infrastructure", StringComparison.Ordinal)));
+            Assert.True(guide.Prerequisites.Any(p => p.Contains("Notify users of planned downtime", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -188,8 +190,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var guide = _tool.GenerateMigrationGuide("old", "new");
 
             // Act & Assert
-            Assert.Contains("Re-establish ActivityPub follows", guide.PostMigrationTasks);
-            Assert.Contains("Update documentation", guide.PostMigrationTasks);
+            Assert.True(guide.PostMigrationTasks.Any(t => t.Contains("Re-establish ActivityPub follows", StringComparison.Ordinal)));
+            Assert.True(guide.PostMigrationTasks.Any(t => t.Contains("Update documentation", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -199,8 +201,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var guide = _tool.GenerateMigrationGuide("old", "new");
 
             // Act & Assert
-            Assert.Contains("break all existing social and federation relationships", guide.Warnings);
-            Assert.Contains("Migration is one-way", guide.Warnings);
+            Assert.True(guide.Warnings.Any(w => w.Contains("break all existing social and federation relationships", StringComparison.Ordinal)));
+            Assert.True(guide.Warnings.Any(w => w.Contains("Migration is one-way", StringComparison.Ordinal)));
         }
 
         public void Dispose()

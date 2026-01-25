@@ -1452,6 +1452,7 @@ namespace slskd
                 Log.Information("[DI] MeshStatsCollector constructed");
                 return service;
             });
+            services.AddSingleton<Mesh.IMeshStatsCollector>(sp => sp.GetRequiredService<Mesh.MeshStatsCollector>());
             services.AddHostedService(p =>
             {
                 Log.Information("[DI] Resolving MeshBootstrapService hosted service...");
@@ -1575,6 +1576,7 @@ namespace slskd
                 var transportSelector = sp.GetRequiredService<Common.Security.IAnonymityTransportSelector>();
                 return new Mesh.MeshCircuitBuilder(meshOptions.Value, logger, peerManager, transportSelector);
             });
+            services.AddSingleton<Mesh.IMeshCircuitBuilder>(sp => sp.GetRequiredService<Mesh.MeshCircuitBuilder>());
             services.AddHostedService(p =>
             {
                 Log.Information("[DI] Constructing CircuitMaintenanceService hosted service...");

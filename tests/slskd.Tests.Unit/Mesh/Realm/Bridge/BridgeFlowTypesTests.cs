@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.Mesh.Realm.Bridge
 {
     using System.Linq;
+    using slskd.Mesh.Realm.Bridge;
     using Xunit;
 
     /// <summary>

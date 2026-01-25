@@ -26,7 +26,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
 
             // Assert
             Assert.NotNull(report);
-            Assert.True(report.AuditTimestamp > default);
+            Assert.True(report.AuditTimestamp > default(DateTimeOffset));
             Assert.NotEmpty(report.CriticalPaths);
             Assert.NotNull(report.PathResults);
             Assert.NotNull(report.Summary);

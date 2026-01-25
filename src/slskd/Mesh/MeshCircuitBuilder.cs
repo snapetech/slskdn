@@ -11,7 +11,7 @@ namespace slskd.Mesh;
 /// Builds and manages multi-hop onion routing circuits through mesh peers.
 /// Provides anonymous routing by forwarding traffic through multiple peers.
 /// </summary>
-public class MeshCircuitBuilder : IDisposable
+public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
 {
     private readonly MeshOptions _meshOptions;
     private readonly ILogger<MeshCircuitBuilder> _logger;

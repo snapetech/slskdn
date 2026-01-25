@@ -5,7 +5,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
+using slskd.Mesh;
 using slskd.Messaging;
 using slskd.PodCore;
 using System.Security.Claims;
@@ -20,6 +22,7 @@ public class PodsControllerTests
     private readonly Mock<IPodService> _podServiceMock;
     private readonly Mock<IPodMessaging> _podMessagingMock;
     private readonly Mock<ISoulseekChatBridge> _chatBridgeMock;
+    private readonly Mock<IConversationService> _conversationServiceMock;
     private readonly PodsController _controller;
 
     public PodsControllerTests()
@@ -28,12 +31,16 @@ public class PodsControllerTests
         _podServiceMock = new Mock<IPodService>();
         _podMessagingMock = new Mock<IPodMessaging>();
         _chatBridgeMock = new Mock<ISoulseekChatBridge>();
+        _conversationServiceMock = new Mock<IConversationService>();
+        var meshOptions = Mock.Of<IOptionsMonitor<MeshOptions>>(x => x.CurrentValue == new MeshOptions { SelfPeerId = "peer-mesh-self" });
 
         _controller = new PodsController(
             _podServiceMock.Object,
             _podMessagingMock.Object,
             _chatBridgeMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _conversationServiceMock.Object,
+            meshOptions);
 
         // Set up controller context
         _controller.ControllerContext = new ControllerContext
@@ -141,18 +148,27 @@ public class PodsControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
-    [Fact(Skip = "IPodService has no DeletePodAsync; PodsController has no DeletePod endpoint. See PodsControllerTests re-enablement.")]
+    [Fact]
     public async Task DeletePod_WithValidPodId_ReturnsNoContent()
     {
-        await Task.CompletedTask;
-        // Would test: DeletePod(podId) -> NoContent. Controller and IPodService have no DeletePod/DeletePodAsync.
+        var podId = "pod:00000000000000000000000000000001";
+        _podServiceMock.Setup(x => x.DeletePodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var result = await _controller.DeletePod(podId);
+
+        Assert.IsType<NoContentResult>(result);
     }
 
-    [Fact(Skip = "IPodService has no DeletePodAsync; PodsController has no DeletePod endpoint. See PodsControllerTests re-enablement.")]
+    [Fact]
     public async Task DeletePod_WithInvalidPodId_ReturnsNotFound()
     {
-        await Task.CompletedTask;
-        // Would test: DeletePod(podId) -> NotFound. Controller and IPodService have no DeletePod/DeletePodAsync.
+        var podId = "pod:00000000000000000000000000000000";
+        _podServiceMock.Setup(x => x.DeletePodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        var result = await _controller.DeletePod(podId);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Contains("not found", notFound.Value?.ToString() ?? "");
     }
 
     [Fact]
@@ -179,11 +195,31 @@ public class PodsControllerTests
         Assert.Equal(2, returnedMessages.Count);
     }
 
-    [Fact(Skip = "PodsController has no Soulseek DM/conversation branch for GetMessages; _conversationServiceMock not defined. See PodsControllerTests re-enablement.")]
+    [Fact]
     public async Task GetMessages_WithSoulseekDmBinding_ReturnsConversationMessages()
     {
-        await Task.CompletedTask;
-        // Would test: GetMessages for dm channel with soulseek-dm binding -> conversation messages. Controller no longer has this path.
+        var podId = "pod:00000000000000000000000000000001";
+        var channelId = "dm";
+        var pod = new Pod
+        {
+            PodId = podId,
+            Name = "DM",
+            Channels = new List<PodChannel> { new PodChannel { ChannelId = channelId, Name = "DM", BindingInfo = "soulseek-dm:remoteuser" } }
+        };
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+
+        var conv = new Conversation { Username = "remoteuser", Messages = new[]
+        {
+            new PrivateMessage { Id = 1, Username = "remoteuser", Direction = MessageDirection.In, Message = "Hi from Soulseek", Timestamp = DateTime.UtcNow.AddMinutes(-1) }
+        }};
+        _conversationServiceMock.Setup(x => x.FindAsync("remoteuser", true, true)).ReturnsAsync(conv);
+
+        var result = await _controller.GetMessages(podId, channelId);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<PodMessage>>(ok.Value);
+        Assert.NotEmpty(list);
+        Assert.Contains(list, m => m.Body == "Hi from Soulseek" && m.SenderPeerId == "bridge:remoteuser");
     }
 
     [Fact]
@@ -204,11 +240,24 @@ public class PodsControllerTests
         Assert.NotNull(okResult.Value);
     }
 
-    [Fact(Skip = "PodsController has no Soulseek DM/conversation branch for SendMessage; _conversationServiceMock not defined. See PodsControllerTests re-enablement.")]
+    [Fact]
     public async Task SendMessage_WithSoulseekDmBinding_SendsConversationMessage()
     {
-        await Task.CompletedTask;
-        // Would test: SendMessage for dm channel with soulseek-dm binding -> ConversationService. Controller no longer has this path.
+        var podId = "pod:00000000000000000000000000000001";
+        var channelId = "dm";
+        var pod = new Pod
+        {
+            PodId = podId,
+            Name = "DM",
+            Channels = new List<PodChannel> { new PodChannel { ChannelId = channelId, Name = "DM", BindingInfo = "soulseek-dm:remoteuser" } }
+        };
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _conversationServiceMock.Setup(x => x.SendMessageAsync("remoteuser", "Hello via DM")).Returns(Task.CompletedTask);
+
+        var result = await _controller.SendMessage(podId, channelId, new SendMessageRequest("Hello via DM", "peer-mesh-self"));
+
+        Assert.IsType<OkObjectResult>(result);
+        _conversationServiceMock.Verify(x => x.SendMessageAsync("remoteuser", "Hello via DM"), Times.Once);
     }
 
     [Fact]

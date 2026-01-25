@@ -5,9 +5,13 @@
 namespace slskd.Tests.Unit.Mesh.Realm.Bridge
 {
     using System;
+    using System.Net.Http;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Mesh.Realm;
+    using slskd.Mesh.Realm.Bridge;
     using slskd.SocialFederation;
     using Xunit;
 
@@ -16,26 +20,57 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
     /// </summary>
     public class ActivityPubBridgeTests
     {
-        private readonly Mock<BridgeFlowEnforcer> _flowEnforcerMock = new();
-        private readonly Mock<FederationService> _federationServiceMock = new();
-        private readonly Mock<ILogger<ActivityPubBridge>> _loggerMock = new();
-
-        public ActivityPubBridgeTests()
+        private static MultiRealmConfig ConfigWithReadAllowedWriteBlocked()
         {
-            // Setup default flow enforcer behavior
-            _flowEnforcerMock.Setup(x => x.IsActivityPubReadAllowed("realm-a", "realm-b")).Returns(true);
-            _flowEnforcerMock.Setup(x => x.IsActivityPubWriteAllowed("realm-a", "realm-b")).Returns(false);
-            _flowEnforcerMock.Setup(x => x.PerformActivityPubReadAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task<BridgeOperationResult>>>(), It.IsAny<CancellationToken>()))
-                .Returns(async (string local, string remote, Func<Task<BridgeOperationResult>> op, CancellationToken ct) => await op());
-            _flowEnforcerMock.Setup(x => x.PerformActivityPubWriteAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task<BridgeOperationResult>>>(), It.IsAny<CancellationToken>()))
-                .Returns(async (string local, string remote, Func<Task<BridgeOperationResult>> op, CancellationToken ct) => await op());
+            return new MultiRealmConfig
+            {
+                Realms = new[]
+                {
+                    new RealmConfig { Id = "realm-a", GovernanceRoots = new[] { "r" }, Policies = new RealmPolicies() },
+                    new RealmConfig { Id = "realm-b", GovernanceRoots = new[] { "r" }, Policies = new RealmPolicies() }
+                },
+                Bridge = new BridgeConfig { Enabled = true, AllowedFlows = new[] { "activitypub:read" }, DisallowedFlows = Array.Empty<string>() }
+            };
         }
 
-        private ActivityPubBridge CreateBridge()
+        private static MultiRealmConfig ConfigWithNoAccess()
         {
-            return new ActivityPubBridge(_flowEnforcerMock.Object, _federationServiceMock.Object, _loggerMock.Object);
+            return new MultiRealmConfig
+            {
+                Realms = new[]
+                {
+                    new RealmConfig { Id = "realm-a", GovernanceRoots = new[] { "r" }, Policies = new RealmPolicies() },
+                    new RealmConfig { Id = "realm-b", GovernanceRoots = new[] { "r" }, Policies = new RealmPolicies() }
+                },
+                Bridge = new BridgeConfig { Enabled = true, AllowedFlows = new[] { "metadata:read" }, DisallowedFlows = Array.Empty<string>() }
+            };
+        }
+
+        private static BridgeFlowEnforcer CreateFlowEnforcer(MultiRealmConfig config)
+        {
+            var multiRealm = new MultiRealmService(
+                Mock.Of<IOptionsMonitor<MultiRealmConfig>>(x => x.CurrentValue == config),
+                Mock.Of<ILogger<MultiRealmService>>());
+            return new BridgeFlowEnforcer(multiRealm, Mock.Of<ILogger<BridgeFlowEnforcer>>());
+        }
+
+        private static FederationService CreateFederationService()
+        {
+            var fedOpts = Mock.Of<IOptionsMonitor<slskd.Common.SocialFederationOptions>>(x => x.CurrentValue == new slskd.Common.SocialFederationOptions());
+            var pubOpts = Mock.Of<IOptionsMonitor<FederationPublishingOptions>>(x => x.CurrentValue == new FederationPublishingOptions());
+            var keyStore = Mock.Of<IActivityPubKeyStore>();
+            var loggerFactory = new LoggerFactory();
+            var libLogger = loggerFactory.CreateLogger<LibraryActorService>();
+            var libActor = new LibraryActorService(fedOpts, keyStore, musicActor: null, libLogger, loggerFactory);
+            var http = new HttpClient();
+            var delivery = new ActivityDeliveryService(http, fedOpts, pubOpts, keyStore, Mock.Of<ILogger<ActivityDeliveryService>>());
+            return new FederationService(fedOpts, pubOpts, libActor, keyStore, delivery, Mock.Of<ILogger<FederationService>>());
+        }
+
+        private static ActivityPubBridge CreateBridge(BridgeFlowEnforcer? enforcer = null)
+        {
+            var e = enforcer ?? CreateFlowEnforcer(ConfigWithReadAllowedWriteBlocked());
+            return new ActivityPubBridge(e, CreateFederationService(), Mock.Of<ILogger<ActivityPubBridge>>());
         }
 
         [Fact]
@@ -69,12 +104,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public async Task ShareToRemoteRealmAsync_WithBlockedFlow_ReturnsBlocked()
         {
-            // Arrange - Block ActivityPub write
-            _flowEnforcerMock.Setup(x => x.IsActivityPubWriteAllowed("realm-a", "realm-b")).Returns(false);
-            _flowEnforcerMock.Setup(x => x.PerformActivityPubWriteAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task<BridgeOperationResult>>>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(BridgeOperationResult.Blocked("activitypub:write flow not allowed")));
-
+            // Arrange - ConfigWithReadAllowedWriteBlocked already blocks write (activitypub:write not in AllowedFlows)
             var bridge = CreateBridge();
 
             // Act
@@ -89,12 +119,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public async Task AnnounceRemoteContentAsync_WithBlockedFlow_ReturnsBlocked()
         {
-            // Arrange - Block ActivityPub write
-            _flowEnforcerMock.Setup(x => x.IsActivityPubWriteAllowed("realm-a", "realm-b")).Returns(false);
-            _flowEnforcerMock.Setup(x => x.PerformActivityPubWriteAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Func<Task<BridgeOperationResult>>>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(BridgeOperationResult.Blocked("activitypub:write flow not allowed")));
-
+            // Arrange - ConfigWithReadAllowedWriteBlocked already blocks write
             var bridge = CreateBridge();
 
             // Act
@@ -122,11 +147,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public void IsRemoteRealmAccessible_WithNoAccess_ReturnsFalse()
         {
-            // Arrange - Block both read and write
-            _flowEnforcerMock.Setup(x => x.IsActivityPubReadAllowed("realm-a", "realm-b")).Returns(false);
-            _flowEnforcerMock.Setup(x => x.IsActivityPubWriteAllowed("realm-a", "realm-b")).Returns(false);
-
-            var bridge = CreateBridge();
+            // Arrange - use config that allows neither activitypub:read nor activitypub:write
+            var enforcer = CreateFlowEnforcer(ConfigWithNoAccess());
+            var bridge = CreateBridge(enforcer);
 
             // Act
             var result = bridge.IsRemoteRealmAccessible("realm-a", "realm-b");
@@ -138,10 +161,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public void GetRemoteRealmCapabilities_WithMixedPermissions_ReturnsCorrectCapabilities()
         {
-            // Arrange - Allow read but not write
-            _flowEnforcerMock.Setup(x => x.IsActivityPubReadAllowed("realm-a", "realm-b")).Returns(true);
-            _flowEnforcerMock.Setup(x => x.IsActivityPubWriteAllowed("realm-a", "realm-b")).Returns(false);
-
+            // Arrange - ConfigWithReadAllowedWriteBlocked gives read true, write false
             var bridge = CreateBridge();
 
             // Act
@@ -160,11 +180,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public void GetRemoteRealmCapabilities_WithNoPermissions_ReturnsAllFalse()
         {
-            // Arrange - Block all ActivityPub operations
-            _flowEnforcerMock.Setup(x => x.IsActivityPubReadAllowed("realm-a", "realm-b")).Returns(false);
-            _flowEnforcerMock.Setup(x => x.IsActivityPubWriteAllowed("realm-a", "realm-b")).Returns(false);
-
-            var bridge = CreateBridge();
+            // Arrange - ConfigWithNoAccess blocks both activitypub read and write
+            var enforcer = CreateFlowEnforcer(ConfigWithNoAccess());
+            var bridge = CreateBridge(enforcer);
 
             // Act
             var capabilities = bridge.GetRemoteRealmCapabilities("realm-a", "realm-b");

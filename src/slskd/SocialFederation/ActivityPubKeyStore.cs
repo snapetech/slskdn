@@ -6,8 +6,6 @@ namespace slskd.SocialFederation
 {
     using System;
     using System.Collections.Concurrent;
-    using System.IO;
-    using System.Security.Cryptography;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -25,6 +23,7 @@ namespace slskd.SocialFederation
     public sealed class ActivityPubKeyStore : IActivityPubKeyStore, IDisposable
     {
         private readonly IDataProtector _dataProtector;
+        private readonly IEd25519KeyPairGenerator _keyPairGenerator;
         private readonly ILogger<ActivityPubKeyStore> _logger;
         private readonly ConcurrentDictionary<string, KeypairInfo> _keypairs = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -34,10 +33,12 @@ namespace slskd.SocialFederation
         ///     Initializes a new instance of the <see cref="ActivityPubKeyStore"/> class.
         /// </summary>
         /// <param name="dataProtector">The data protector for private key encryption.</param>
+        /// <param name="keyPairGenerator">The Ed25519 keypair generator (allows tests to avoid NSec Key.Export).</param>
         /// <param name="logger">The logger.</param>
-        public ActivityPubKeyStore(IDataProtector dataProtector, ILogger<ActivityPubKeyStore> logger)
+        public ActivityPubKeyStore(IDataProtector dataProtector, IEd25519KeyPairGenerator keyPairGenerator, ILogger<ActivityPubKeyStore> logger)
         {
             _dataProtector = dataProtector ?? throw new ArgumentNullException(nameof(dataProtector));
+            _keyPairGenerator = keyPairGenerator ?? throw new ArgumentNullException(nameof(keyPairGenerator));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -104,17 +105,7 @@ namespace slskd.SocialFederation
 
                 _logger.LogInformation("[ActivityPub] Generating keypair for actor {ActorId}", actorId);
 
-                // Generate Ed25519 keypair
-                var algorithm = SignatureAlgorithm.Ed25519;
-                using var key = Key.Create(algorithm);
-
-                // Export public key
-                var publicKeyBytes = key.Export(KeyBlobFormat.PkixPublicKey);
-                var publicKeyPem = ConvertToPem(publicKeyBytes, "PUBLIC KEY");
-
-                // Export private key
-                var privateKeyBytes = key.Export(KeyBlobFormat.PkixPrivateKey);
-                var privateKeyPem = ConvertToPem(privateKeyBytes, "PRIVATE KEY");
+                var (publicKeyPem, privateKeyPem) = _keyPairGenerator.GenerateKeypair();
 
                 // Protect the private key
                 var protectedPrivateKeyPem = _dataProtector.Protect(privateKeyPem);
@@ -201,23 +192,6 @@ namespace slskd.SocialFederation
 
             _semaphore.Dispose();
             _disposed = true;
-        }
-
-        private static string ConvertToPem(byte[] keyBytes, string label)
-        {
-            var base64 = Convert.ToBase64String(keyBytes);
-            var pem = new StringBuilder();
-            pem.AppendLine($"-----BEGIN {label}-----");
-
-            // Insert line breaks every 64 characters
-            for (var i = 0; i < base64.Length; i += 64)
-            {
-                var length = Math.Min(64, base64.Length - i);
-                pem.AppendLine(base64.Substring(i, length));
-            }
-
-            pem.AppendLine($"-----END {label}-----");
-            return pem.ToString();
         }
 
         private static byte[] ConvertFromPem(string pem)

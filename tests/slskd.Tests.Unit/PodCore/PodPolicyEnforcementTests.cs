@@ -40,10 +40,9 @@ public class PodPolicyEnforcementTests
     }
 
     [Fact]
-    public void ValidatePod_PrivateServiceGateway_ValidMaxMembers_StillFailsWhenPolicyValidationRequiresMembers()
+    public void ValidatePod_PrivateServiceGateway_ValidMaxMembers_SucceedsWithEmptyMembers_CreateThenJoin()
     {
-        // ValidateCapabilities requires at least one AllowedDestination, then calls
-        // ValidatePrivateServicePolicy(policy, []) which fails: "GatewayPeerId must be a pod member".
+        // Create-then-join: ValidatePrivateServicePolicy(policy, []) allows empty members; gateway joins first.
         var pod = new Pod
         {
             PodId = ValidPodId,
@@ -58,22 +57,54 @@ public class PodPolicyEnforcementTests
                 {
                     new AllowedDestination { HostPattern = "api.example.com", Port = 443, Protocol = "tcp" }
                 },
+                RegisteredServices = new List<RegisteredService>(),
                 AllowPrivateRanges = true,
                 AllowPublicDestinations = false
             }
         };
 
-        var (isValid, error) = PodValidation.ValidatePod(pod, new List<PodMember>());
+        var (isValid, _) = PodValidation.ValidatePod(pod, new List<PodMember>());
 
-        Assert.False(isValid);
-        Assert.Contains("GatewayPeerId", error, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("member", error, StringComparison.OrdinalIgnoreCase);
+        Assert.True(isValid);
     }
 
-    [Fact(Skip = "ExceedsCurrentMembers check runs after ValidateCapabilities; ValidateCapabilities calls ValidatePrivateServicePolicy with empty members and fails before we reach it.")]
+    [Fact]
     public void ValidatePod_PrivateServiceGateway_ExceedsCurrentMembers_Fails()
     {
-        // Would require ValidateCapabilities to succeed (and thus pass members to policy validation).
+        // ValidatePod(pod, members) -> ValidateCapabilities(..., memberCount: 4) fails at memberCount > policy.MaxMembers.
+        var pod = new Pod
+        {
+            PodId = ValidPodId,
+            Name = "Test Pod",
+            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
+            PrivateServicePolicy = new PodPrivateServicePolicy
+            {
+                Enabled = true,
+                MaxMembers = 3,
+                GatewayPeerId = "peer-gateway",
+                AllowedDestinations = new List<AllowedDestination>
+                {
+                    new AllowedDestination { HostPattern = "api.example.com", Port = 443, Protocol = "tcp" }
+                },
+                RegisteredServices = new List<RegisteredService>(),
+                AllowPrivateRanges = true,
+                AllowPublicDestinations = false
+            }
+        };
+        var members = new List<PodMember>
+        {
+            new PodMember { PeerId = "peer-gateway" },
+            new PodMember { PeerId = "peer-2" },
+            new PodMember { PeerId = "peer-3" },
+            new PodMember { PeerId = "peer-4" }
+        };
+
+        var (isValid, error) = PodValidation.ValidatePod(pod, members);
+
+        Assert.False(isValid);
+        Assert.Contains("members", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("maximum", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", error);
     }
 
     [Fact]
@@ -299,10 +330,9 @@ public class PodPolicyEnforcementTests
     }
 
     [Fact]
-    public void ValidateCapabilities_PrivateServiceGateway_DelegatesToPolicyValidation_FailsWhenMembersNotProvided()
+    public void ValidateCapabilities_PrivateServiceGateway_WithZeroMembers_Succeeds_CreateThenJoin()
     {
-        // ValidateCapabilities calls ValidatePrivateServicePolicy(policy, []) which requires
-        // GatewayPeerId to be in members, so it fails with "GatewayPeerId must be a pod member".
+        // Create-then-join: ValidatePrivateServicePolicy(policy, []) allows empty; gateway joins first.
         var capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway };
         var policy = new PodPrivateServicePolicy
         {
@@ -313,15 +343,14 @@ public class PodPolicyEnforcementTests
             {
                 new AllowedDestination { HostPattern = "api.example.com", Port = 443, Protocol = "tcp" }
             },
+            RegisteredServices = new List<RegisteredService>(),
             AllowPrivateRanges = true,
             AllowPublicDestinations = false
         };
 
-        var (isValid, error) = PodValidation.ValidateCapabilities(capabilities, policy, memberCount: 0);
+        var (isValid, _) = PodValidation.ValidateCapabilities(capabilities, policy, memberCount: 0);
 
-        Assert.False(isValid);
-        Assert.Contains("GatewayPeerId", error, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("member", error, StringComparison.OrdinalIgnoreCase);
+        Assert.True(isValid);
     }
 
     [Fact]

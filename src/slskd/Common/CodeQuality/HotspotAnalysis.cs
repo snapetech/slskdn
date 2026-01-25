@@ -30,7 +30,7 @@ namespace slskd.Common.CodeQuality
                 Name = "LargeFile",
                 Description = "Files with excessive lines of code",
                 Severity = HotspotSeverity.Medium,
-                Condition = file => GetLineCount(file) > 1000,
+                Condition = (Func<string, bool>)(file => GetLineCount(file) > 1000),
                 Recommendation = "Consider splitting into multiple focused classes"
             },
 
@@ -39,7 +39,7 @@ namespace slskd.Common.CodeQuality
                 Name = "LargeClass",
                 Description = "Classes with too many public methods",
                 Severity = HotspotSeverity.Medium,
-                Condition = type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance).Length > 20,
+                Condition = (Func<Type, bool>)(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance).Length > 20),
                 Recommendation = "Consider extracting methods into separate classes with single responsibilities"
             },
 
@@ -48,7 +48,7 @@ namespace slskd.Common.CodeQuality
                 Name = "HighComplexity",
                 Description = "Classes with many dependencies (too many constructor parameters)",
                 Severity = HotspotSeverity.High,
-                Condition = type => GetConstructorParameterCount(type) > 10,
+                Condition = (Func<Type, bool>)(type => GetConstructorParameterCount(type) > 10),
                 Recommendation = "Consider parameter object pattern or dependency injection refactoring"
             },
 
@@ -57,7 +57,7 @@ namespace slskd.Common.CodeQuality
                 Name = "MultipleResponsibilities",
                 Description = "Classes that handle multiple concerns",
                 Severity = HotspotSeverity.High,
-                Condition = type => HasMultipleResponsibilities(type),
+                Condition = (Func<Type, bool>)(type => HasMultipleResponsibilities(type)),
                 Recommendation = "Apply Single Responsibility Principle - split into focused classes"
             },
 
@@ -66,7 +66,7 @@ namespace slskd.Common.CodeQuality
                 Name = "FrequentChanges",
                 Description = "Files that have been frequently modified (indicating complexity)",
                 Severity = HotspotSeverity.Medium,
-                Condition = file => GetGitChangeCount(file) > 10, // Would need git analysis
+                Condition = (Func<string, bool>)(file => GetGitChangeCount(file) > 10), // Would need git analysis
                 Recommendation = "Consider simplifying the change-prone areas"
             },
 
@@ -75,7 +75,7 @@ namespace slskd.Common.CodeQuality
                 Name = "EventHandlerOverload",
                 Description = "Classes with many event handlers",
                 Severity = HotspotSeverity.Medium,
-                Condition = type => GetEventHandlerCount(type) > 15,
+                Condition = (Func<Type, bool>)(type => GetEventHandlerCount(type) > 15),
                 Recommendation = "Consider event handler aggregation or mediator pattern"
             }
         };

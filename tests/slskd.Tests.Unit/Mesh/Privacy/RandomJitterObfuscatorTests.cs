@@ -34,10 +34,14 @@ public class RandomJitterObfuscatorTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_WithNegativeMinDelay_ThrowsArgumentException()
+    public void Constructor_WithNegativeMinDelay_ClampsToZero()
     {
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => new RandomJitterObfuscator(_loggerMock.Object, -10, 100));
+        // Act - negative minDelayMs is clamped to 0 instead of throwing
+        var obfuscator = new RandomJitterObfuscator(_loggerMock.Object, -10, 100);
+
+        Assert.NotNull(obfuscator);
+        Assert.Equal(TimeSpan.Zero, obfuscator.MinDelay);
+        Assert.Equal(TimeSpan.FromMilliseconds(100), obfuscator.MaxDelay);
     }
 
     [Fact]

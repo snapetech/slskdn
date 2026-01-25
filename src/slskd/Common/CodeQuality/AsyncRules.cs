@@ -8,6 +8,7 @@ namespace slskd.Common.CodeQuality
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -145,6 +146,29 @@ namespace slskd.Common.CodeQuality
 
             // If method takes CancellationToken, assume it propagates (simplified)
             return hasCancellationToken;
+        }
+
+        /// <summary>
+        ///     Checks if a method has suspicious async naming (returns Task but name contains 'Sync').
+        /// </summary>
+        public static bool HasSuspiciousAsyncNaming(MethodInfo method)
+        {
+            var returnsTask = typeof(Task).IsAssignableFrom(method.ReturnType) ||
+                (method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>));
+            return returnsTask && method.Name.Contains("Sync", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        ///     Checks if a long-running or async method should accept a CancellationToken parameter.
+        /// </summary>
+        public static bool MethodNeedsCancellationToken(MethodInfo method)
+        {
+            var hasToken = method.GetParameters().Any(p => p.ParameterType == typeof(CancellationToken));
+            if (hasToken)
+                return false;
+            var returnsTask = typeof(Task).IsAssignableFrom(method.ReturnType) ||
+                (method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>));
+            return returnsTask;
         }
     }
 

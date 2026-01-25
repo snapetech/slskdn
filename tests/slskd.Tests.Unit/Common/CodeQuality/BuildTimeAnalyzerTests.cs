@@ -126,7 +126,7 @@ public class TestClass
         var result = string.Empty;
         for (int i = 0; i < 10; i++)
         {
-            result += i.ToString(); // Inefficient string concat in loop
+            result = result + i.ToString(); // Inefficient string concat in loop
         }
     }
 }";
@@ -196,8 +196,8 @@ public class TestClass
 {
     public void MyMethod()
     {
-        // Simulate dangerous API usage
-        ExecuteSqlRaw(""SELECT * FROM Users"");
+        // Simulate dangerous API usage (member access so analyzer detects DangerousApiUsage)
+        this.ExecuteSqlRaw(""SELECT * FROM Users"");
     }
 
     private void ExecuteSqlRaw(string sql) { }

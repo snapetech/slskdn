@@ -4,7 +4,9 @@
 
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
 {
+    using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -20,145 +22,267 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
 
     /// <summary>
     ///     Tests for T-MCP04: MultiSourcePlanner reputation integration.
+    ///     The planner only runs peer reputation checks for Soulseek candidates (BackendRef = "peerId|filepath").
     /// </summary>
     public class MultiSourcePlannerReputationTests
     {
-        private readonly Mock<ICatalogueStore> _catalogueStoreMock;
-        private readonly Mock<ISourceRegistry> _sourceRegistryMock;
-        private readonly Mock<IModerationProvider> _moderationProviderMock;
-        private readonly Mock<PeerReputationService> _peerReputationServiceMock;
-        private readonly List<IContentBackend> _backends;
-        private readonly MultiSourcePlanner _planner;
-
-        public MultiSourcePlannerReputationTests()
-        {
-            _catalogueStoreMock = new Mock<ICatalogueStore>();
-            _sourceRegistryMock = new Mock<ISourceRegistry>();
-            _moderationProviderMock = new Mock<IModerationProvider>();
-            _peerReputationServiceMock = new Mock<PeerReputationService>();
-            _backends = new List<IContentBackend>();
-
-            _planner = new MultiSourcePlanner(
-                _catalogueStoreMock.Object,
-                _sourceRegistryMock.Object,
-                _backends,
-                _moderationProviderMock.Object,
-                _peerReputationServiceMock.Object);
-        }
-
         [Fact]
-        public async Task CreatePlanAsync_WithBannedPeer_ExcludesBannedPeerFromPlan()
+        public async Task CreatePlanAsync_WithBannedSoulseekPeer_ExcludesBannedPeerFromPlan()
         {
-            // Arrange
-            var desiredTrack = new DesiredTrack("track-123");
+            var trackId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(trackId);
             var goodPeer = "good-peer";
             var bannedPeer = "banned-peer";
+            var now = DateTimeOffset.UtcNow;
 
-            // Setup catalogue store
-            var track = new Track("track-123", ContentDomain.Music, "Test Track", "Test Artist");
-            _catalogueStoreMock.Setup(c => c.FindTrackByIdAsync(desiredTrack.TrackId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(track);
+            var catalogueStoreMock = new Mock<ICatalogueStore>();
+            catalogueStoreMock
+                .Setup(c => c.FindTrackByIdAsync(trackId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Track
+                {
+                    TrackId = trackId,
+                    ReleaseId = "rel-1",
+                    TrackNumber = 1,
+                    Title = "Test Track",
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
 
-            // Setup source registry with candidates from both peers
-            var candidates = new List<SourceCandidate>
-            {
-                new SourceCandidate(goodPeer, ContentBackendType.Mesh, 0.8f, 0.9f),
-                new SourceCandidate(bannedPeer, ContentBackendType.Mesh, 0.7f, 0.8f)
-            };
-            _sourceRegistryMock.Setup(s => s.FindCandidatesAsync(track, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(candidates);
+            var sourceRegistryMock = new Mock<ISourceRegistry>();
+            sourceRegistryMock
+                .Setup(s => s.FindCandidatesForItemAsync(itemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<SourceCandidate>
+                {
+                    new SourceCandidate
+                    {
+                        Id = "sc-1",
+                        ItemId = itemId,
+                        Backend = ContentBackendType.Soulseek,
+                        BackendRef = $"{goodPeer}|/music/track.flac",
+                        ExpectedQuality = 0.8f,
+                        TrustScore = 0.9f,
+                        LastValidatedAt = now,
+                        LastSeenAt = now,
+                    },
+                    new SourceCandidate
+                    {
+                        Id = "sc-2",
+                        ItemId = itemId,
+                        Backend = ContentBackendType.Soulseek,
+                        BackendRef = $"{bannedPeer}|/music/other.flac",
+                        ExpectedQuality = 0.7f,
+                        TrustScore = 0.8f,
+                        LastValidatedAt = now,
+                        LastSeenAt = now,
+                    },
+                });
 
-            // Setup moderation (allow all)
-            _moderationProviderMock.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision(ModerationVerdict.Allowed, "test"));
+            var moderationMock = new Mock<IModerationProvider>();
+            moderationMock
+                .Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Allow("test"));
 
-            // Setup reputation service (ban the banned peer)
-            _peerReputationServiceMock.Setup(r => r.IsPeerAllowedForPlanningAsync(goodPeer, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
-            _peerReputationServiceMock.Setup(r => r.IsPeerAllowedForPlanningAsync(bannedPeer, It.IsAny<CancellationToken>()))
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock
+                .Setup(s => s.IsPeerBannedAsync(goodPeer, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
+            storeMock
+                .Setup(s => s.IsPeerBannedAsync(bannedPeer, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
 
-            // Act
-            var plan = await _planner.CreatePlanAsync(desiredTrack);
+            var peerRep = new PeerReputationService(
+                new Mock<ILogger<PeerReputationService>>().Object,
+                storeMock.Object);
 
-            // Assert
-            Assert.Single(plan.Sources); // Only one source should remain
-            Assert.Equal(goodPeer, plan.Sources[0].PeerId);
+            var planner = new MultiSourcePlanner(
+                catalogueStoreMock.Object,
+                sourceRegistryMock.Object,
+                Array.Empty<IContentBackend>(),
+                moderationMock.Object,
+                peerRep);
+
+            var desiredTrack = new DesiredTrack
+            {
+                Domain = ContentDomain.Music,
+                DesiredTrackId = "dt-1",
+                TrackId = trackId,
+                Priority = IntentPriority.Normal,
+                Status = IntentStatus.Pending,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+
+            var plan = await planner.CreatePlanAsync(desiredTrack);
+
+            Assert.True(plan.IsExecutable);
+            var soulseekStep = plan.Steps.FirstOrDefault(s => s.Backend == ContentBackendType.Soulseek);
+            Assert.NotNull(soulseekStep);
+            Assert.Single(soulseekStep.Candidates);
+            Assert.StartsWith($"{goodPeer}|", soulseekStep.Candidates[0].BackendRef);
         }
 
         [Fact]
-        public async Task CreatePlanAsync_WithAllPeersBanned_ReturnsEmptyPlan()
+        public async Task CreatePlanAsync_WithAllSoulseekPeersBanned_ReturnsEmptyPlan()
         {
-            // Arrange
-            var desiredTrack = new DesiredTrack("track-123");
+            var trackId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(trackId);
             var bannedPeer1 = "banned-peer-1";
             var bannedPeer2 = "banned-peer-2";
+            var now = DateTimeOffset.UtcNow;
 
-            // Setup catalogue store
-            var track = new Track("track-123", ContentDomain.Music, "Test Track", "Test Artist");
-            _catalogueStoreMock.Setup(c => c.FindTrackByIdAsync(desiredTrack.TrackId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(track);
+            var catalogueStoreMock = new Mock<ICatalogueStore>();
+            catalogueStoreMock
+                .Setup(c => c.FindTrackByIdAsync(trackId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Track
+                {
+                    TrackId = trackId,
+                    ReleaseId = "rel-1",
+                    TrackNumber = 1,
+                    Title = "Test Track",
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
 
-            // Setup source registry with banned peers
-            var candidates = new List<SourceCandidate>
+            var sourceRegistryMock = new Mock<ISourceRegistry>();
+            sourceRegistryMock
+                .Setup(s => s.FindCandidatesForItemAsync(itemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<SourceCandidate>
+                {
+                    new SourceCandidate
+                    {
+                        Id = "sc-1",
+                        ItemId = itemId,
+                        Backend = ContentBackendType.Soulseek,
+                        BackendRef = $"{bannedPeer1}|/path.flac",
+                        ExpectedQuality = 0.8f,
+                        TrustScore = 0.9f,
+                        LastValidatedAt = now,
+                        LastSeenAt = now,
+                    },
+                    new SourceCandidate
+                    {
+                        Id = "sc-2",
+                        ItemId = itemId,
+                        Backend = ContentBackendType.Soulseek,
+                        BackendRef = $"{bannedPeer2}|/other.flac",
+                        ExpectedQuality = 0.7f,
+                        TrustScore = 0.8f,
+                        LastValidatedAt = now,
+                        LastSeenAt = now,
+                    },
+                });
+
+            var moderationMock = new Mock<IModerationProvider>();
+            moderationMock
+                .Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Allow("test"));
+
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock
+                .Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var peerRep = new PeerReputationService(
+                new Mock<ILogger<PeerReputationService>>().Object,
+                storeMock.Object);
+
+            var planner = new MultiSourcePlanner(
+                catalogueStoreMock.Object,
+                sourceRegistryMock.Object,
+                Array.Empty<IContentBackend>(),
+                moderationMock.Object,
+                peerRep);
+
+            var desiredTrack = new DesiredTrack
             {
-                new SourceCandidate(bannedPeer1, ContentBackendType.Mesh, 0.8f, 0.9f),
-                new SourceCandidate(bannedPeer2, ContentBackendType.Mesh, 0.7f, 0.8f)
+                Domain = ContentDomain.Music,
+                DesiredTrackId = "dt-1",
+                TrackId = trackId,
+                Priority = IntentPriority.Normal,
+                Status = IntentStatus.Pending,
+                CreatedAt = now,
+                UpdatedAt = now,
             };
-            _sourceRegistryMock.Setup(s => s.FindCandidatesAsync(track, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(candidates);
 
-            // Setup moderation (allow all)
-            _moderationProviderMock.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision(ModerationVerdict.Allowed, "test"));
+            var plan = await planner.CreatePlanAsync(desiredTrack);
 
-            // Setup reputation service (ban all peers)
-            _peerReputationServiceMock.Setup(r => r.IsPeerAllowedForPlanningAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(false);
-
-            // Act
-            var plan = await _planner.CreatePlanAsync(desiredTrack);
-
-            // Assert
-            Assert.Empty(plan.Sources); // No sources should remain
+            Assert.Empty(plan.Steps);
         }
 
         [Fact]
-        public async Task CreatePlanAsync_WithPeerReputationCheckFailure_IncludesCandidate()
+        public async Task CreatePlanAsync_WithPeerReputationCheckThrowing_ExcludesCandidate()
         {
-            // Arrange - reputation check throws exception (fail-safe behavior)
-            var desiredTrack = new DesiredTrack("track-123");
+            var trackId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(trackId);
             var peerId = "peer-123";
+            var now = DateTimeOffset.UtcNow;
 
-            // Setup catalogue store
-            var track = new Track("track-123", ContentDomain.Music, "Test Track", "Test Artist");
-            _catalogueStoreMock.Setup(c => c.FindTrackByIdAsync(desiredTrack.TrackId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(track);
+            var catalogueStoreMock = new Mock<ICatalogueStore>();
+            catalogueStoreMock
+                .Setup(c => c.FindTrackByIdAsync(trackId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Track
+                {
+                    TrackId = trackId,
+                    ReleaseId = "rel-1",
+                    TrackNumber = 1,
+                    Title = "Test Track",
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
 
-            // Setup source registry
-            var candidates = new List<SourceCandidate>
+            var sourceRegistryMock = new Mock<ISourceRegistry>();
+            sourceRegistryMock
+                .Setup(s => s.FindCandidatesForItemAsync(itemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<SourceCandidate>
+                {
+                    new SourceCandidate
+                    {
+                        Id = "sc-1",
+                        ItemId = itemId,
+                        Backend = ContentBackendType.Soulseek,
+                        BackendRef = $"{peerId}|/path.flac",
+                        ExpectedQuality = 0.8f,
+                        TrustScore = 0.9f,
+                        LastValidatedAt = now,
+                        LastSeenAt = now,
+                    },
+                });
+
+            var moderationMock = new Mock<IModerationProvider>();
+            moderationMock
+                .Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Allow("test"));
+
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock
+                .Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new Exception("Reputation check failed"));
+
+            var peerRep = new PeerReputationService(
+                new Mock<ILogger<PeerReputationService>>().Object,
+                storeMock.Object);
+
+            var planner = new MultiSourcePlanner(
+                catalogueStoreMock.Object,
+                sourceRegistryMock.Object,
+                Array.Empty<IContentBackend>(),
+                moderationMock.Object,
+                peerRep);
+
+            var desiredTrack = new DesiredTrack
             {
-                new SourceCandidate(peerId, ContentBackendType.Mesh, 0.8f, 0.9f)
+                Domain = ContentDomain.Music,
+                DesiredTrackId = "dt-1",
+                TrackId = trackId,
+                Priority = IntentPriority.Normal,
+                Status = IntentStatus.Pending,
+                CreatedAt = now,
+                UpdatedAt = now,
             };
-            _sourceRegistryMock.Setup(s => s.FindCandidatesAsync(track, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(candidates);
 
-            // Setup moderation (allow all)
-            _moderationProviderMock.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision(ModerationVerdict.Allowed, "test"));
+            var plan = await planner.CreatePlanAsync(desiredTrack);
 
-            // Setup reputation service to throw exception (fail-safe)
-            _peerReputationServiceMock.Setup(r => r.IsPeerAllowedForPlanningAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new System.Exception("Reputation check failed"));
-
-            // Act
-            var plan = await _planner.CreatePlanAsync(desiredTrack);
-
-            // Assert
-            Assert.Single(plan.Sources); // Candidate should still be included (fail-safe)
-            Assert.Equal(peerId, plan.Sources[0].PeerId);
+            Assert.Empty(plan.Steps);
         }
     }
 }
-
-

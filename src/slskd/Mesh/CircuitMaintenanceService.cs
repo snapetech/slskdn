@@ -11,7 +11,7 @@ namespace slskd.Mesh;
 public class CircuitMaintenanceService : BackgroundService
 {
     private readonly ILogger<CircuitMaintenanceService> _logger;
-    private readonly MeshCircuitBuilder _circuitBuilder;
+    private readonly IMeshCircuitBuilder _circuitBuilder;
     private readonly IMeshPeerManager _peerManager;
 
     /// <summary>
@@ -22,7 +22,7 @@ public class CircuitMaintenanceService : BackgroundService
     /// <param name="peerManager">The peer manager.</param>
     public CircuitMaintenanceService(
         ILogger<CircuitMaintenanceService> logger,
-        MeshCircuitBuilder circuitBuilder,
+        IMeshCircuitBuilder circuitBuilder,
         IMeshPeerManager peerManager)
     {
         logger.LogInformation("[CircuitMaintenanceService] Constructor called");

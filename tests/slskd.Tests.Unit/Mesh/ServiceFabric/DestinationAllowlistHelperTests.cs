@@ -1,9 +1,6 @@
 // <copyright file="DestinationAllowlistHelperTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-//
-// Tests for TestMatchesDestination and ValidateDestinationAgainstPolicy helpers only.
-// OpenTunnel / CreateService tests remain in DestinationAllowlistTests.cs (excluded).
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +11,11 @@ using Xunit;
 
 namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 
+/// <summary>
+/// Tests for TestMatchesDestination and ValidateDestinationAgainstPolicy helpers
+/// (logic from PrivateGatewayMeshService). OpenTunnel/CreateService tests remain in
+/// DestinationAllowlistTests.cs (excluded via Compile Remove until DnsSecurityService injection).
+/// </summary>
 public class DestinationAllowlistHelperTests
 {
     [Fact]
@@ -182,12 +184,10 @@ public class DestinationAllowlistHelperTests
         Assert.False(ValidateDestinationAgainstPolicy("evil.com", 80, policy));
     }
 
-    // Helpers (replicate logic used by PrivateGatewayMeshService / allowlist validation)
-
     private static bool TestMatchesDestination(AllowedDestination allowed, string host, int port)
     {
         if (allowed.Port != port) return false;
-        if (allowed.HostPattern.Contains('*'))
+        if (allowed.HostPattern != null && allowed.HostPattern.Contains('*'))
         {
             var pattern = "^" + Regex.Escape(allowed.HostPattern).Replace("\\*", ".*") + "$";
             return Regex.IsMatch(host, pattern, RegexOptions.IgnoreCase);
@@ -203,14 +203,12 @@ public class DestinationAllowlistHelperTests
         }
         foreach (var service in policy.RegisteredServices ?? new List<RegisteredService>())
         {
-            if (string.Equals(service.Host, host, StringComparison.OrdinalIgnoreCase) && service.Port == port)
-                return true;
+            if (string.Equals(service.Host, host, StringComparison.OrdinalIgnoreCase) && service.Port == port) return true;
         }
         if (IPAddress.TryParse(host, out var ip))
         {
             if (IsBlockedAddress(ip)) return false;
-            if (IsPrivateAddress(ip)) return policy.AllowPrivateRanges;
-            return policy.AllowPublicDestinations;
+            return IsPrivateAddress(ip) ? policy.AllowPrivateRanges : policy.AllowPublicDestinations;
         }
         return false;
     }
@@ -219,14 +217,11 @@ public class DestinationAllowlistHelperTests
     {
         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
         {
-            var bytes = ip.GetAddressBytes();
-            return (bytes[0] == 10) || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || (bytes[0] == 192 && bytes[1] == 168);
+            var b = ip.GetAddressBytes();
+            return (b[0] == 10) || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || (b[0] == 192 && b[1] == 168);
         }
         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-        {
-            var bytes = ip.GetAddressBytes();
-            return (bytes[0] & 0xfe) == 0xfc;
-        }
+            return (ip.GetAddressBytes()[0] & 0xfe) == 0xfc;
         return false;
     }
 
@@ -234,18 +229,18 @@ public class DestinationAllowlistHelperTests
     {
         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
         {
-            var bytes = ip.GetAddressBytes();
-            if (bytes[0] == 127) return true;
-            if (bytes[0] == 169 && bytes[1] == 254) return true;
-            if (bytes[0] >= 224 && bytes[0] <= 239) return true;
-            if (bytes[0] == 169 && bytes[1] == 254 && bytes[2] == 169 && bytes[3] == 254) return true;
+            var b = ip.GetAddressBytes();
+            if (b[0] == 127) return true;
+            if (b[0] == 169 && b[1] == 254) return true;
+            if (b[0] >= 224 && b[0] <= 239) return true;
+            if (b[0] == 169 && b[1] == 254 && b[2] == 169 && b[3] == 254) return true;
         }
         else if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
         {
-            var bytes = ip.GetAddressBytes();
+            var b = ip.GetAddressBytes();
             if (ip.Equals(IPAddress.IPv6Loopback)) return true;
-            if ((bytes[0] & 0xff) == 0xfe && (bytes[1] & 0xc0) == 0x80) return true;
-            if (bytes[0] == 0xff) return true;
+            if ((b[0] & 0xff) == 0xfe && (b[1] & 0xc0) == 0x80) return true;
+            if (b[0] == 0xff) return true;
         }
         return false;
     }

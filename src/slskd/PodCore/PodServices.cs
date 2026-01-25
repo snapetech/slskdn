@@ -28,6 +28,8 @@ public interface IPodService
     Task<bool> LeaveAsync(string podId, string peerId, CancellationToken ct = default);
     Task<bool> BanAsync(string podId, string peerId, CancellationToken ct = default);
     Task<Pod?> GetPodAsync(string podId, CancellationToken ct = default);
+    /// <summary>Deletes a pod and its members, membership history, and messages. Returns true if the pod existed and was deleted.</summary>
+    Task<bool> DeletePodAsync(string podId, CancellationToken ct = default);
     Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default);
     Task<IReadOnlyList<SignedMembershipRecord>> GetMembershipHistoryAsync(string podId, CancellationToken ct = default);
 
@@ -177,6 +179,15 @@ public class PodService : IPodService
         return Task.FromResult(pod);
     }
 
+    public Task<bool> DeletePodAsync(string podId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(podId)) return Task.FromResult(false);
+        var removed = pods.Remove(podId);
+        podMembers.Remove(podId);
+        membershipHistory.Remove(podId);
+        return Task.FromResult(removed);
+    }
+
     public Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default)
     {
         if (podMembers.TryGetValue(podId, out var members))
@@ -197,6 +208,8 @@ public class PodService : IPodService
 
     public async Task<bool> JoinAsync(string podId, PodMember member, CancellationToken ct = default)
     {
+        if (member == null)
+            throw new ArgumentNullException(nameof(member));
         if (!pods.TryGetValue(podId, out var pod)) return false;
 
         if (!podMembers.TryGetValue(podId, out var members))

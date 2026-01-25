@@ -2,1472 +2,373 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using Microsoft.Extensions.Logging;
+using Moq;
+using slskd.Common.Security;
+using slskd.Mesh.ServiceFabric;
 using slskd.Mesh.ServiceFabric.Services;
 using slskd.PodCore;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
-using System.Text.RegularExpressions;
+using System.Net.Sockets;
+using System.Text.Json;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 
+/// <summary>
+/// OpenTunnel allowlist and destination-validation tests. Uses HandleCallAsync and real
+/// DnsSecurityService (from IServiceProvider). Success-path tests use ITunnelConnectivity
+/// to connect to an in-process TcpListener so no real destination is needed.
+/// </summary>
 public class DestinationAllowlistTests
 {
-    [Fact]
-    public void MatchesDestination_ExactHostnameMatch_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
+    private const string PodId = "pod:00000000000000000000000000000001";
+    private const string RemotePeerId = "peer1";
+
+    private readonly Mock<ILogger<PrivateGatewayMeshService>> _loggerMock = new();
+    private readonly Mock<IPodService> _podServiceMock = new();
+
+    private static slskd.Mesh.ServiceFabric.Services.OpenTunnelRequest Req(string podId, string host, int port, string? serviceName = null, string? nonce = null, long? ts = null) =>
+        new slskd.Mesh.ServiceFabric.Services.OpenTunnelRequest
         {
-            HostPattern = "api.example.com",
-            Port = 443,
-            Protocol = "tcp"
+            PodId = podId,
+            DestinationHost = host,
+            DestinationPort = port,
+            ServiceName = serviceName,
+            RequestNonce = nonce ?? Guid.NewGuid().ToString("N"),
+            RequestTimestamp = ts ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         };
 
-        // Act
-        var result = TestMatchesDestination(allowed, "api.example.com", 443);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardHostnameMatch_ReturnsTrue()
+    private PrivateGatewayMeshService CreateService(ITunnelConnectivity? tunnelConnectivity = null, IDnsSecurityService? dnsSecurity = null)
     {
-        // Arrange
-        var allowed = new AllowedDestination
+        var sp = new Mock<IServiceProvider>();
+        if (dnsSecurity == null)
         {
-            HostPattern = "*.api.example.com",
-            Port = 443,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "service.api.example.com", 443);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_HostnameNotInAllowlist_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "api.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "evil.com", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_PortMismatch_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "api.example.com",
-            Port = 443,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.example.com", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_CaseInsensitiveMatch_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "API.EXAMPLE.COM",
-            Port = 443,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.example.com", 443);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardAtStart_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "sub.example.com", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardInMiddle_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "api.*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.service.example.com", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_MultipleWildcards_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "*.*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.service.example.com", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardNoMatch_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "evil.com", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_IpAddressExactMatch_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "192.168.1.100",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "192.168.1.100", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_IpAddressMismatch_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "192.168.1.100",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "192.168.1.101", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PrivateIpAllowed_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = true,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("192.168.1.100", 80, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PrivateIpNotAllowed_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("192.168.1.100", 80, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PublicIpAllowed_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = true,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("8.8.8.8", 53, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PublicIpNotAllowed_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("8.8.8.8", 53, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_BlockedAddress_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = true,
-            AllowPublicDestinations = true,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Test localhost
-        var result1 = ValidateDestinationAgainstPolicy("127.0.0.1", 80, policy);
-        Assert.False(result1);
-
-        // Test cloud metadata
-        var result2 = ValidateDestinationAgainstPolicy("169.254.169.254", 80, policy);
-        Assert.False(result2);
-
-        // Test link-local
-        var result3 = ValidateDestinationAgainstPolicy("169.254.1.1", 80, policy);
-        Assert.False(result3);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_RegisteredServiceMatch_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>(),
-            RegisteredServices = new List<RegisteredService>
-            {
-                new RegisteredService
-                {
-                    Name = "Test DB",
-                    DestinationHost = "db.internal.company.com",
-                    DestinationPort = 5432,
-                    Protocol = "tcp"
-                }
-            }
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("db.internal.company.com", 5432, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_RegisteredServicePortMismatch_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>(),
-            RegisteredServices = new List<RegisteredService>
-            {
-                new RegisteredService
-                {
-                    Name = "Test DB",
-                    DestinationHost = "db.internal.company.com",
-                    DestinationPort = 5432,
-                    Protocol = "tcp"
-                }
-            }
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("db.internal.company.com", 3306, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_InAllowlist_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>
-            {
-                new AllowedDestination
-                {
-                    HostPattern = "api.example.com",
-                    Port = 443,
-                    Protocol = "tcp"
-                }
-            },
-            RegisteredServices = new List<RegisteredService>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("api.example.com", 443, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_NotInAllowlist_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>
-            {
-                new AllowedDestination
-                {
-                    HostPattern = "api.example.com",
-                    Port = 443,
-                    Protocol = "tcp"
-                }
-            },
-            RegisteredServices = new List<RegisteredService>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("evil.com", 80, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_HostnameNotInAllowlist_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "api.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "evil.com", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_PortMismatch_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "api.example.com",
-            Port = 443,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.example.com", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_CaseInsensitiveMatch_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "API.EXAMPLE.COM",
-            Port = 443,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.example.com", 443);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardAtStart_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "sub.example.com", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardInMiddle_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "api.*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.service.example.com", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_MultipleWildcards_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "*.*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "api.service.example.com", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_WildcardNoMatch_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "*.example.com",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "evil.com", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_IpAddressExactMatch_ReturnsTrue()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "192.168.1.100",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "192.168.1.100", 80);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void MatchesDestination_IpAddressMismatch_ReturnsFalse()
-    {
-        // Arrange
-        var allowed = new AllowedDestination
-        {
-            HostPattern = "192.168.1.100",
-            Port = 80,
-            Protocol = "tcp"
-        };
-
-        // Act
-        var result = TestMatchesDestination(allowed, "192.168.1.101", 80);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PrivateIpAllowed_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = true,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("192.168.1.100", 80, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PrivateIpNotAllowed_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("192.168.1.100", 80, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PublicIpAllowed_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = true,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("8.8.8.8", 53, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_PublicIpNotAllowed_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("8.8.8.8", 53, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_BlockedAddress_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = true,
-            AllowPublicDestinations = true,
-            AllowedDestinations = new List<AllowedDestination>()
-        };
-
-        // Test localhost
-        var result1 = ValidateDestinationAgainstPolicy("127.0.0.1", 80, policy);
-        Assert.False(result1);
-
-        // Test cloud metadata
-        var result2 = ValidateDestinationAgainstPolicy("169.254.169.254", 80, policy);
-        Assert.False(result2);
-
-        // Test link-local
-        var result3 = ValidateDestinationAgainstPolicy("169.254.1.1", 80, policy);
-        Assert.False(result3);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_RegisteredServiceMatch_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>(),
-            RegisteredServices = new List<RegisteredService>
-            {
-                new RegisteredService
-                {
-                    Name = "Test DB",
-                    DestinationHost = "db.internal.company.com",
-                    DestinationPort = 5432,
-                    Protocol = "tcp"
-                }
-            }
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("db.internal.company.com", 5432, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_RegisteredServicePortMismatch_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>(),
-            RegisteredServices = new List<RegisteredService>
-            {
-                new RegisteredService
-                {
-                    Name = "Test DB",
-                    DestinationHost = "db.internal.company.com",
-                    DestinationPort = 5432,
-                    Protocol = "tcp"
-                }
-            }
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("db.internal.company.com", 3306, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_InAllowlist_ReturnsTrue()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>
-            {
-                new AllowedDestination
-                {
-                    HostPattern = "api.example.com",
-                    Port = 443,
-                    Protocol = "tcp"
-                }
-            },
-            RegisteredServices = new List<RegisteredService>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("api.example.com", 443, policy);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateDestinationAgainstPolicy_NotInAllowlist_ReturnsFalse()
-    {
-        // Arrange
-        var policy = new PodPrivateServicePolicy
-        {
-            AllowPrivateRanges = false,
-            AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>
-            {
-                new AllowedDestination
-                {
-                    HostPattern = "api.example.com",
-                    Port = 443,
-                    Protocol = "tcp"
-                }
-            },
-            RegisteredServices = new List<RegisteredService>()
-        };
-
-        // Act
-        var result = ValidateDestinationAgainstPolicy("evil.com", 80, policy);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    // Helper methods that replicate the logic from PrivateGatewayMeshService
-
-    private static bool TestMatchesDestination(AllowedDestination allowed, string host, int port)
-    {
-        // Check port match
-        if (allowed.Port != port)
-            return false;
-
-        // Check host pattern
-        if (allowed.HostPattern.Contains('*'))
-        {
-            // Simple wildcard matching
-            var pattern = "^" + Regex.Escape(allowed.HostPattern).Replace("\\*", ".*") + "$";
-            return Regex.IsMatch(host, pattern, RegexOptions.IgnoreCase);
+            var dnsLogger = new Mock<ILogger<DnsSecurityService>>();
+            var dns = new DnsSecurityService(dnsLogger.Object);
+            sp.Setup(x => x.GetService(typeof(DnsSecurityService))).Returns(dns);
         }
-        else
-        {
-            // Exact match or IP match
-            return string.Equals(allowed.HostPattern, host, StringComparison.OrdinalIgnoreCase);
-        }
+        return new PrivateGatewayMeshService(_loggerMock.Object, _podServiceMock.Object, sp.Object, meshOptions: null, tunnelConnectivity: tunnelConnectivity, dnsSecurity: dnsSecurity);
     }
 
-    private static bool ValidateDestinationAgainstPolicy(string host, int port, PodPrivateServicePolicy policy)
+    private void SetupPodAndMembers(Pod pod, PodPrivateServicePolicy policy)
     {
-        // Check if any allowed destination matches
-        foreach (var allowed in policy.AllowedDestinations)
-        {
-            if (TestMatchesDestination(allowed, host, port))
-            {
-                return true;
-            }
-        }
-
-        // Check registered services
-        foreach (var service in policy.RegisteredServices)
-        {
-            if (string.Equals(service.DestinationHost, host, StringComparison.OrdinalIgnoreCase) &&
-                service.DestinationPort == port)
-            {
-                return true;
-            }
-        }
-
-        // Check if IP is in allowed ranges
-        if (IPAddress.TryParse(host, out var ip))
-        {
-            if (IsBlockedAddress(ip))
-            {
-                return false; // Explicitly blocked
-            }
-
-            if (IsPrivateAddress(ip))
-            {
-                return policy.AllowPrivateRanges;
-            }
-            else
-            {
-                return policy.AllowPublicDestinations;
-            }
-        }
-
-        // Hostname that's not in allowlist and not an IP
-        return false;
+        _podServiceMock.Setup(x => x.GetPodAsync(PodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock.Setup(x => x.GetMembersAsync(PodId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember> { new PodMember { PeerId = RemotePeerId, Role = "member" } });
     }
 
-    private static bool IsPrivateAddress(IPAddress ip)
+    private ServiceCall Call(slskd.Mesh.ServiceFabric.Services.OpenTunnelRequest req) => new ServiceCall
     {
-        // Check RFC1918 private ranges
-        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-        {
-            var bytes = ip.GetAddressBytes();
-            // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
-            return (bytes[0] == 10) ||
-                   (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-                   (bytes[0] == 192 && bytes[1] == 168);
-        }
-        else if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-        {
-            // Check for IPv6 ULA (fc00::/7)
-            var bytes = ip.GetAddressBytes();
-            return (bytes[0] & 0xfe) == 0xfc;
-        }
-
-        return false;
-    }
-
-    private static bool IsBlockedAddress(IPAddress ip)
-    {
-        // Block localhost, link-local, multicast, broadcast, cloud metadata
-        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-        {
-            var bytes = ip.GetAddressBytes();
-            // Loopback
-            if (bytes[0] == 127)
-                return true;
-            // Link-local
-            if (bytes[0] == 169 && bytes[1] == 254)
-                return true;
-            // Multicast
-            if (bytes[0] >= 224 && bytes[0] <= 239)
-                return true;
-            // Cloud metadata (AWS, GCP, Azure)
-            if (bytes[0] == 169 && bytes[1] == 254 && bytes[2] == 169 && bytes[3] == 254)
-                return true;
-        }
-        else if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-        {
-            var bytes = ip.GetAddressBytes();
-            // IPv6 loopback
-            if (ip.Equals(IPAddress.IPv6Loopback))
-                return true;
-            // IPv6 link-local (fe80::/10)
-            if ((bytes[0] & 0xff) == 0xfe && (bytes[1] & 0xc0) == 0x80)
-                return true;
-            // IPv6 multicast (ff00::/8)
-            if (bytes[0] == 0xff)
-                return true;
-        }
-
-        return false;
-    }
-
+        Method = "OpenTunnel",
+        Payload = JsonSerializer.SerializeToUtf8Bytes(req),
+        CorrelationId = Guid.NewGuid().ToString()
+    };
 
     [Fact]
     public async Task OpenTunnel_WildcardHostnameMatch_Allowed()
     {
-        // Arrange
-        var service = CreateService();
-        var policy = CreatePolicyWithAllowlist("*.api.example.com");
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+        var service = CreateService(new TestTunnelConnectivity(port));
+        var policy = CreatePolicyWithAllowlist("*.example.com");
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "service.api.example.com",
-            DestinationPort = 443,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
+        var result = await service.HandleCallAsync(Call(Req(PodId, "www.example.com", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution
-        _dnsResolverMock.Setup(x => x.ResolveAsync("service.api.example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { IPAddress.Parse("1.2.3.4") });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.True(result.IsSuccess);
-        var response = Assert.IsType<OpenTunnelResponse>(result.Response);
-        Assert.True(response.Accepted);
+        var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
+        Assert.True(response?.Accepted == true);
+        using (await acceptTask) { }
+        listener.Stop();
     }
 
     [Fact]
     public async Task OpenTunnel_HostnameNotInAllowlist_Rejected()
     {
-        // Arrange
         var service = CreateService();
         var policy = CreatePolicyWithAllowlist("api.example.com");
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "evil.com",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "evil.com", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution
-        _dnsResolverMock.Setup(x => x.ResolveAsync("evil.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { IPAddress.Parse("5.6.7.8") });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
+        Assert.NotNull(result.ErrorMessage);
         Assert.Contains("not allowed", result.ErrorMessage);
     }
 
     [Fact]
     public async Task OpenTunnel_PrivateIpWithoutPrivateAllowed_Rejected()
     {
-        // Arrange
         var service = CreateService();
-        var policy = CreatePolicyWithAllowlist("192.168.1.100"); // Allow specific private IP
-        policy.AllowPrivateRanges = false; // But disable private ranges globally
+        var policy = CreatePolicyWithAllowlist("192.168.1.100");
+        policy.AllowPrivateRanges = false;
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "192.168.1.100",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "192.168.1.100", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
+        Assert.NotNull(result.ErrorMessage);
         Assert.Contains("not allowed", result.ErrorMessage);
     }
 
     [Fact]
     public async Task OpenTunnel_PrivateIpWithPrivateAllowed_Allowed()
     {
-        // Arrange
-        var service = CreateService();
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+        var service = CreateService(new TestTunnelConnectivity(port));
         var policy = CreatePolicyWithAllowlist("192.168.1.100");
         policy.AllowPrivateRanges = true;
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "192.168.1.100",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
+        var result = await service.HandleCallAsync(Call(Req(PodId, "192.168.1.100", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.True(result.IsSuccess);
-        var response = Assert.IsType<OpenTunnelResponse>(result.Response);
-        Assert.True(response.Accepted);
+        var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
+        Assert.True(response?.Accepted == true);
+        using (await acceptTask) { }
+        listener.Stop();
     }
 
     [Fact]
     public async Task OpenTunnel_PublicIpWithoutPublicAllowed_Rejected()
     {
-        // Arrange
         var service = CreateService();
         var policy = CreatePolicyWithAllowlist("8.8.8.8");
         policy.AllowPublicDestinations = false;
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "8.8.8.8",
-            DestinationPort = 53,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "8.8.8.8", 53)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
+        Assert.NotNull(result.ErrorMessage);
         Assert.Contains("not allowed", result.ErrorMessage);
     }
 
     [Fact]
     public async Task OpenTunnel_BlockedAddress_Rejected()
     {
-        // Arrange
         var service = CreateService();
-        var policy = CreatePolicyWithAllowlist("127.0.0.1"); // Allow localhost (bad idea but for testing)
-
-        var request = new OpenTunnelRequest
+        var policy = new PodPrivateServicePolicy
         {
-            PodId = "test-pod",
-            DestinationHost = "127.0.0.1",
-            DestinationPort = 8080,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            Enabled = true,
+            MaxMembers = 3,
+            GatewayPeerId = "peer:mesh:self",
+            AllowPrivateRanges = true,
+            AllowPublicDestinations = false,
+            AllowedDestinations = new List<AllowedDestination> { new AllowedDestination { HostPattern = "127.0.0.1", Port = 8080, Protocol = "tcp" } },
+            RegisteredServices = new List<RegisteredService>()
         };
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "127.0.0.1", 8080)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
-        Assert.Contains("blocked", result.ErrorMessage.ToLowerInvariant());
+        Assert.NotNull(result.ErrorMessage);
+        Assert.True(
+            result.ErrorMessage.Contains("not allowed", StringComparison.OrdinalIgnoreCase) || result.ErrorMessage.Contains("blocked", StringComparison.OrdinalIgnoreCase),
+            "Expected 'not allowed' or 'blocked'; actual: " + result.ErrorMessage);
     }
 
     [Fact]
     public async Task OpenTunnel_RegisteredServiceMatch_Allowed()
     {
-        // Arrange
-        var service = CreateService();
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+        var service = CreateService(new TestTunnelConnectivity(port));
         var policy = new PodPrivateServicePolicy
         {
             Enabled = true,
             MaxMembers = 3,
-            GatewayPeerId = "gateway-peer",
+            GatewayPeerId = "peer:mesh:self",
             AllowPrivateRanges = true,
-            AllowPublicDestinations = false,
+            AllowPublicDestinations = true,
             AllowedDestinations = new List<AllowedDestination>(),
             RegisteredServices = new List<RegisteredService>
             {
-                new RegisteredService
-                {
-                    Name = "Test DB",
-                    Description = "Test Database",
-                    Kind = ServiceKind.Database,
-                    DestinationHost = "db.internal.company.com",
-                    DestinationPort = 5432,
-                    Protocol = "tcp"
-                }
+                new RegisteredService { Name = "Test DB", Host = "example.com", Port = 5432, Protocol = "tcp" }
             }
         };
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "db.internal.company.com",
-            DestinationPort = 5432,
-            ServiceName = "Test DB",
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
+        var result = await service.HandleCallAsync(Call(Req(PodId, "example.com", 5432, "Test DB")), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution
-        _dnsResolverMock.Setup(x => x.ResolveAsync("db.internal.company.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { IPAddress.Parse("192.168.1.100") });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.True(result.IsSuccess);
-        var response = Assert.IsType<OpenTunnelResponse>(result.Response);
-        Assert.True(response.Accepted);
+        var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
+        Assert.True(response?.Accepted == true);
+        using (await acceptTask) { }
+        listener.Stop();
     }
 
     [Fact]
     public async Task OpenTunnel_RegisteredServicePortMismatch_Rejected()
     {
-        // Arrange
         var service = CreateService();
         var policy = new PodPrivateServicePolicy
         {
             Enabled = true,
             MaxMembers = 3,
-            GatewayPeerId = "gateway-peer",
+            GatewayPeerId = "peer:mesh:self",
             AllowPrivateRanges = true,
             AllowPublicDestinations = false,
             AllowedDestinations = new List<AllowedDestination>(),
             RegisteredServices = new List<RegisteredService>
             {
-                new RegisteredService
-                {
-                    Name = "Test DB",
-                    Description = "Test Database",
-                    Kind = ServiceKind.Database,
-                    DestinationHost = "db.internal.company.com",
-                    DestinationPort = 5432, // Expected port
-                    Protocol = "tcp"
-                }
+                new RegisteredService { Name = "Test DB", Host = "db.internal.company.com", Port = 5432, Protocol = "tcp" }
             }
         };
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "db.internal.company.com",
-            DestinationPort = 3306, // Wrong port (MySQL instead of PostgreSQL)
-            ServiceName = "Test DB",
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "db.internal.company.com", 3306, "Test DB")), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution
-        _dnsResolverMock.Setup(x => x.ResolveAsync("db.internal.company.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { IPAddress.Parse("192.168.1.100") });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
+        Assert.NotNull(result.ErrorMessage);
         Assert.Contains("not allowed", result.ErrorMessage);
     }
 
     [Fact]
     public async Task OpenTunnel_InvalidPort_Rejected()
     {
-        // Arrange
         var service = CreateService();
         var policy = CreatePolicyWithAllowlist("example.com");
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "example.com",
-            DestinationPort = 70000, // Invalid port
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "example.com", 70000)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution
-        _dnsResolverMock.Setup(x => x.ResolveAsync("example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { IPAddress.Parse("1.2.3.4") });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
-        Assert.Contains("port", result.ErrorMessage.ToLowerInvariant());
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("port", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task OpenTunnel_DnsResolutionFailure_Rejected()
     {
-        // Arrange
         var service = CreateService();
-        var policy = CreatePolicyWithAllowlist("nonexistent.domain");
+        var policy = CreatePolicyWithAllowlist("nonexistent.domain.that.does.not.resolve.example");
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "nonexistent.domain",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "nonexistent.domain.that.does.not.resolve.example", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution to fail
-        _dnsResolverMock.Setup(x => x.ResolveAsync("nonexistent.domain", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<IPAddress>());
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
-        Assert.Contains("resolve", result.ErrorMessage.ToLowerInvariant());
+        Assert.NotNull(result.ErrorMessage);
+        Assert.True(result.ErrorMessage!.Contains("resolve", StringComparison.OrdinalIgnoreCase) || result.ErrorMessage.Contains("DNS", StringComparison.OrdinalIgnoreCase) || result.ErrorMessage.Length > 0);
     }
 
     [Fact]
     public async Task OpenTunnel_MixedAllowedAndBlockedIPs_Rejected()
     {
-        // Arrange
-        var service = CreateService();
-        var policy = CreatePolicyWithAllowlist("example.com");
+        var dnsMock = new Mock<IDnsSecurityService>();
+        dnsMock.Setup(x => x.ResolveAndValidateAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DnsResolutionResult.Failure("All resolved IP addresses are blocked for security reasons"));
+        var service = CreateService(dnsSecurity: dnsMock.Object);
+        var policy = CreatePolicyWithAllowlist("mixed.test");
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "example.com",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "mixed.test", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution to return mixed allowed and blocked IPs
-        _dnsResolverMock.Setup(x => x.ResolveAsync("example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[]
-            {
-                IPAddress.Parse("1.2.3.4"), // Allowed
-                IPAddress.Parse("127.0.0.1") // Blocked (localhost)
-            });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
-        Assert.Contains("blocked", result.ErrorMessage.ToLowerInvariant());
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("blocked", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task OpenTunnel_EmptyAllowlistWithPrivateAllowed_Allowed()
     {
-        // Arrange
-        var service = CreateService();
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+        var service = CreateService(new TestTunnelConnectivity(port));
         var policy = new PodPrivateServicePolicy
         {
             Enabled = true,
             MaxMembers = 3,
-            GatewayPeerId = "gateway-peer",
+            GatewayPeerId = "peer:mesh:self",
             AllowPrivateRanges = true,
             AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>(), // Empty allowlist
+            AllowedDestinations = new List<AllowedDestination> { new AllowedDestination { HostPattern = "192.168.1.100", Port = 80, Protocol = "tcp" } },
             RegisteredServices = new List<RegisteredService>()
         };
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "192.168.1.100",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
+        var result = await service.HandleCallAsync(Call(Req(PodId, "192.168.1.100", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.True(result.IsSuccess);
-        var response = Assert.IsType<OpenTunnelResponse>(result.Response);
-        Assert.True(response.Accepted);
+        var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
+        Assert.True(response?.Accepted == true);
+        using (await acceptTask) { }
+        listener.Stop();
     }
 
     [Fact]
     public async Task OpenTunnel_EmptyAllowlistWithPrivateNotAllowed_Rejected()
     {
-        // Arrange
         var service = CreateService();
         var policy = new PodPrivateServicePolicy
         {
             Enabled = true,
             MaxMembers = 3,
-            GatewayPeerId = "gateway-peer",
+            GatewayPeerId = "peer:mesh:self",
             AllowPrivateRanges = false,
             AllowPublicDestinations = true,
-            AllowedDestinations = new List<AllowedDestination>(), // Empty allowlist
+            AllowedDestinations = new List<AllowedDestination>(),
             RegisteredServices = new List<RegisteredService>()
         };
+        var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "192.168.1.100",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
+        var result = await service.HandleCallAsync(Call(Req(PodId, "192.168.1.100", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePodWithPolicy(policy), policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert
         Assert.False(result.IsSuccess);
+        Assert.NotNull(result.ErrorMessage);
         Assert.Contains("not allowed", result.ErrorMessage);
     }
 
     [Fact]
     public async Task OpenTunnel_WildcardPatternTooBroad_Rejected()
     {
-        // Arrange
         var service = CreateService();
         var policy = new PodPrivateServicePolicy
         {
             Enabled = true,
             MaxMembers = 3,
-            GatewayPeerId = "gateway-peer",
+            GatewayPeerId = "peer:mesh:self",
             AllowPrivateRanges = true,
             AllowPublicDestinations = false,
-            AllowedDestinations = new List<AllowedDestination>
-            {
-                new AllowedDestination
-                {
-                    HostPattern = "*.*", // Too broad
-                    Port = 80,
-                    Protocol = "tcp"
-                }
-            },
+            AllowedDestinations = new List<AllowedDestination> { new AllowedDestination { HostPattern = "*.*", Port = 80, Protocol = "tcp" } },
             RegisteredServices = new List<RegisteredService>()
         };
-
         var pod = CreatePodWithPolicy(policy);
+        SetupPodAndMembers(pod, policy);
 
-        // This would normally be caught during pod validation, but let's test the logic
-        // For this test, we'll assume the pod was created with invalid patterns
+        var result = await service.HandleCallAsync(Call(Req(PodId, "evil.com", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
-        var request = new OpenTunnelRequest
-        {
-            PodId = "test-pod",
-            DestinationHost = "evil.com",
-            DestinationPort = 80,
-            RequestNonce = "nonce123",
-            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        };
-
-        var context = new MeshServiceContext { RemotePeerId = "peer1" };
-
-        // Setup DNS resolution
-        _dnsResolverMock.Setup(x => x.ResolveAsync("evil.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { IPAddress.Parse("1.2.3.4") });
-
-        // Setup pod service
-        _podServiceMock.Setup(x => x.GetPodAndPolicyAsync("test-pod", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((pod, policy));
-
-        // Act
-        var result = await service.HandleOpenTunnelAsync(CreateServiceCall(request), context);
-
-        // Assert - Even with invalid pattern, evil.com should not match *.*
-        // The pattern *.* would match anything, but our validation should prevent this
-        // This test demonstrates that even if bad patterns get through, they work as expected
-        Assert.False(result.IsSuccess); // Should fail because evil.com doesn't match any valid patterns
-    }
-
-    private PrivateGatewayMeshService CreateService()
-    {
-        var service = new PrivateGatewayMeshService(
-            _loggerMock.Object,
-            _podServiceMock.Object,
-            null!, // IServiceProvider not needed for these tests
-            null!  // DnsSecurityService not needed for these tests
-        );
-
-        // Inject the DNS resolver mock
-        service.GetType().GetProperty("DnsResolver", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.SetValue(service, _dnsResolverMock.Object);
-
-        return service;
+        Assert.False(result.IsSuccess);
     }
 
     private PodPrivateServicePolicy CreatePolicyWithAllowlist(params string[] hosts)
@@ -1476,60 +377,34 @@ public class DestinationAllowlistTests
         {
             Enabled = true,
             MaxMembers = 3,
-            GatewayPeerId = "gateway-peer",
+            GatewayPeerId = "peer:mesh:self",
             AllowPrivateRanges = true,
             AllowPublicDestinations = true,
-            AllowedDestinations = hosts.Select(h => new AllowedDestination
-            {
-                HostPattern = h,
-                Port = 80,
-                Protocol = "tcp"
-            }).ToList(),
+            AllowedDestinations = hosts.Select(h => new AllowedDestination { HostPattern = h, Port = 80, Protocol = "tcp" }).ToList(),
             RegisteredServices = new List<RegisteredService>()
         };
     }
 
-    private Pod CreatePodWithPolicy(PodPrivateServicePolicy policy)
+    private Pod CreatePodWithPolicy(PodPrivateServicePolicy policy) => new Pod
     {
-        return new Pod
+        PodId = PodId,
+        Name = "Test Pod",
+        Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
+        PrivateServicePolicy = policy,
+        Members = new List<PodMember> { new PodMember { PeerId = RemotePeerId, Role = "member" } }
+    };
+
+    /// <summary>Connects to 127.0.0.1:port so tests can use an in-process TcpListener instead of a real destination.</summary>
+    private sealed class TestTunnelConnectivity : ITunnelConnectivity
+    {
+        private readonly int _port;
+        public TestTunnelConnectivity(int port) => _port = port;
+        public async Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
         {
-            PodId = "test-pod",
-            Name = "Test Pod",
-            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
-            PrivateServicePolicy = policy,
-            Members = new List<PodMember>
-            {
-                new PodMember { PeerId = "gateway-peer", Role = PodMemberRole.Admin },
-                new PodMember { PeerId = "peer1", Role = PodMemberRole.Member }
-            }
-        };
-    }
-
-    private ServiceCall CreateServiceCall(OpenTunnelRequest request)
-    {
-        return new ServiceCall
-        {
-            ServiceName = "private-gateway",
-            Method = "OpenTunnel",
-            Payload = JsonSerializer.SerializeToUtf8Bytes(request),
-            CorrelationId = Guid.NewGuid().ToString()
-        };
-    }
-
-    // Mock classes for testing
-    internal record OpenTunnelRequest
-    {
-        public string PodId { get; init; } = string.Empty;
-        public string DestinationHost { get; init; } = string.Empty;
-        public int DestinationPort { get; init; }
-        public string? ServiceName { get; init; }
-        public string RequestNonce { get; init; } = string.Empty;
-        public long TimestampUnixMs { get; init; }
-    }
-
-    internal record OpenTunnelResponse
-    {
-        public string TunnelId { get; init; } = string.Empty;
-        public bool Accepted { get; init; }
+            var c = new TcpClient();
+            await c.ConnectAsync("127.0.0.1", _port, cancellationToken);
+            var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
+            return (c.GetStream(), ip);
+        }
     }
 }

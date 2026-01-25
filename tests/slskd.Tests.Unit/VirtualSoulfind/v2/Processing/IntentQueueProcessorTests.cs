@@ -64,6 +64,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var trackId = ContentItemId.NewId();
             var intent1 = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent1",
                 TrackId = trackId.ToString(),
                 Status = IntentStatus.Pending,
@@ -74,6 +75,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
 
             var intent2 = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent2",
                 TrackId = trackId.ToString(),
                 Status = IntentStatus.Pending,
@@ -91,10 +93,15 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
                 .ReturnsAsync((string id, CancellationToken _) => 
                     id == "intent1" ? intent1 : intent2);
 
+            var now = DateTimeOffset.UtcNow;
             var track = new Track
             {
                 TrackId = trackId.ToString(),
+                ReleaseId = "r1",
+                TrackNumber = 1,
                 Title = "Test Track",
+                CreatedAt = now,
+                UpdatedAt = now,
             };
 
             _mockCatalogueStore
@@ -151,6 +158,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var trackId = ContentItemId.NewId();
             var intent = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent1",
                 TrackId = trackId.ToString(),
                 Status = IntentStatus.Pending,
@@ -163,10 +171,15 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
                 .Setup(q => q.GetTrackIntentAsync("intent1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(intent);
 
+            var now = DateTimeOffset.UtcNow;
             var track = new Track
             {
                 TrackId = trackId.ToString(),
+                ReleaseId = "r1",
+                TrackNumber = 1,
                 Title = "Test Track",
+                CreatedAt = now,
+                UpdatedAt = now,
             };
 
             _mockCatalogueStore
@@ -176,7 +189,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var plan = new TrackAcquisitionPlan
             {
                 TrackId = trackId.ToString(),
-                Steps = new List<PlanStep> { new PlanStep { Backend = slskd.VirtualSoulfind.v2.Backends.ContentBackendType.LocalLibrary } },
+                Steps = new List<PlanStep> { new PlanStep { Backend = slskd.VirtualSoulfind.v2.Backends.ContentBackendType.LocalLibrary, Candidates = new List<SourceCandidate>() } },
             };
 
             _mockPlanner
@@ -223,6 +236,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var trackId = ContentItemId.NewId();
             var intent = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent1",
                 TrackId = trackId.ToString(),
                 Status = IntentStatus.Pending,
@@ -235,7 +249,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
                 .Setup(q => q.GetTrackIntentAsync("intent1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(intent);
 
-            var track = new Track { TrackId = trackId.ToString(), Title = "Test" };
+            var now = DateTimeOffset.UtcNow;
+            var track = new Track { TrackId = trackId.ToString(), ReleaseId = "r1", TrackNumber = 1, Title = "Test", CreatedAt = now, UpdatedAt = now };
 
             _mockCatalogueStore
                 .Setup(c => c.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -244,7 +259,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var plan = new TrackAcquisitionPlan
             {
                 TrackId = trackId.ToString(),
-                Steps = new List<PlanStep> { new PlanStep { Backend = slskd.VirtualSoulfind.v2.Backends.ContentBackendType.LocalLibrary } },
+                Steps = new List<PlanStep> { new PlanStep { Backend = slskd.VirtualSoulfind.v2.Backends.ContentBackendType.LocalLibrary, Candidates = new List<SourceCandidate>() } },
             };
 
             _mockPlanner
@@ -288,6 +303,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             // Arrange
             var intent = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent1",
                 TrackId = "track1",
                 Status = IntentStatus.Completed, // Already completed
@@ -324,6 +340,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var trackId = ContentItemId.NewId();
             var intent = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent1",
                 TrackId = trackId.ToString(),
                 Status = IntentStatus.Pending,
@@ -394,6 +411,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
             var trackId = ContentItemId.NewId();
             var intent = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent1",
                 TrackId = trackId.ToString(),
                 Status = IntentStatus.Pending,
@@ -406,7 +424,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
                 .Setup(q => q.GetTrackIntentAsync("intent1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(intent);
 
-            var track = new Track { TrackId = trackId.ToString(), Title = "Test" };
+            var now = DateTimeOffset.UtcNow;
+            var track = new Track { TrackId = trackId.ToString(), ReleaseId = "r1", TrackNumber = 1, Title = "Test", CreatedAt = now, UpdatedAt = now };
 
             _mockCatalogueStore
                 .Setup(c => c.FindTrackByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

@@ -66,12 +66,10 @@ namespace slskd.Common.CodeQuality
         {
             var violations = new List<CodeAnalysisViolation>();
 
-            // Find .Result calls
+            // Find .Result calls (the .Result MemberAccess is the node we want)
             var resultCalls = root.DescendantNodes()
                 .OfType<MemberAccessExpressionSyntax>()
-                .Where(m => m.Name.Identifier.Text == "Result")
-                .Select(m => m.Parent)
-                .OfType<MemberAccessExpressionSyntax>();
+                .Where(m => m.Name.Identifier.Text == "Result");
 
             foreach (var call in resultCalls)
             {
@@ -139,9 +137,7 @@ namespace slskd.Common.CodeQuality
 
             // Find string concatenation in loops (potential inefficiency)
             var stringConcatInLoops = root.DescendantNodes()
-                .OfType<ForStatementSyntax>()
-                .Concat(root.DescendantNodes().OfType<ForEachStatementSyntax>())
-                .Concat(root.DescendantNodes().OfType<WhileStatementSyntax>())
+                .Where(n => n is ForStatementSyntax or ForEachStatementSyntax or WhileStatementSyntax)
                 .SelectMany(loop => loop.DescendantNodes()
                     .OfType<BinaryExpressionSyntax>()
                     .Where(b => b.OperatorToken.Text == "+" &&

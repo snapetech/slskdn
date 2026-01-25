@@ -2,6 +2,7 @@
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -64,7 +65,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             _defaultOptions.Enabled = false;
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
             
-            var results = await backend.FindCandidatesAsync(ContentItemId.NewId());
+            var results = await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
             
             Assert.Empty(results);
         }
@@ -75,7 +76,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             _mockLimiter.Setup(l => l.TryConsumeSearch(It.IsAny<string>())).Returns(false);
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
             
-            var results = await backend.FindCandidatesAsync(ContentItemId.NewId());
+            var results = await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
             
             Assert.Empty(results);
             _mockLimiter.Verify(l => l.TryConsumeSearch("virtualsoulfind-v2"), Times.Once);
@@ -89,12 +90,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
             
-            await backend.FindCandidatesAsync(ContentItemId.NewId());
+            await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
             
             // Verify safety limiter was called BEFORE any search would happen
             _mockLimiter.Verify(l => l.TryConsumeSearch("virtualsoulfind-v2"), Times.Once);
             
-            // Verify search was NOT attempted when rate limited
+            // Verify search was NOT attempted when rate limited. Use 6-arg overload; when rate limited no SearchAsync is called.
             _mockClient.Verify(
                 c => c.SearchAsync(
                     It.IsAny<SearchQuery>(),
@@ -102,7 +103,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                     It.IsAny<SearchScope>(),
                     It.IsAny<int>(),
                     It.IsAny<SearchOptions>(),
-                    It.IsAny<System.Threading.CancellationToken>()),
+                    It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 
@@ -121,7 +122,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 0.80f, // 0-1 range
             };
 
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             Assert.True(result.IsValid);
             Assert.Equal(0.75f, result.TrustScore);
@@ -141,7 +142,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 BackendRef = "http://example.com/file.mp3",
             };
 
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             Assert.False(result.IsValid);
             Assert.Contains("Not a Soulseek", result.InvalidityReason);
@@ -161,7 +162,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 BackendRef = "user|file.mp3",
             };
 
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             Assert.False(result.IsValid);
             Assert.Contains("disabled", result.InvalidityReason);
@@ -180,7 +181,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 BackendRef = "invalid-no-pipe",
             };
 
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             Assert.False(result.IsValid);
             Assert.Contains("format", result.InvalidityReason);
@@ -200,7 +201,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.10f, // Below minimum (0.30)
             };
 
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             Assert.False(result.IsValid);
             Assert.Contains("Trust score", result.InvalidityReason);
@@ -221,7 +222,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.50f,
             };
 
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             Assert.True(result.IsValid);
         }
@@ -260,13 +261,13 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Try multiple searches
             for (int i = 0; i < 5; i++)
             {
-                await backend.FindCandidatesAsync(ContentItemId.NewId());
+                await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
             }
 
             // Safety limiter should have been called EXACTLY 5 times
             Assert.Equal(5, callCount);
             
-            // No actual searches should have been performed
+            // No actual searches should have been performed. Use 6-arg overload; when rate limited no SearchAsync is called.
             _mockClient.Verify(
                 c => c.SearchAsync(
                     It.IsAny<SearchQuery>(),
@@ -274,7 +275,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                     It.IsAny<SearchScope>(),
                     It.IsAny<int>(),
                     It.IsAny<SearchOptions>(),
-                    It.IsAny<System.Threading.CancellationToken>()),
+                    It.IsAny<CancellationToken>()),
                 Times.Never,
                 "H-08 VIOLATION: Search was attempted despite rate limit!");
         }

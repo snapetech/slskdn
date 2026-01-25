@@ -2,6 +2,8 @@
 
 **Updated:** 2026-01 (after PodIdFactory, PodModels, SignalBus, PodValidation, MessageSigner, GoldStarClubService re-enablement)
 
+**Completed since last edit (see `docs/dev/slskd-tests-unit-completion-plan.md` § Completed):** PrivacyLayerIntegrationTests, ContentBackendTests, HttpBackendTests; MultiRealmService, BridgeFlowEnforcer, ActivityPubBridge; LanBackendTests, LocalLibraryBackendTests, MeshTorrentBackendTests (MeshDht+Torrent), SoulseekBackendTests; SourceRegistryTests; CatalogueStoreTests; IntentQueueTests.
+
 ---
 
 ## Summary

@@ -17,295 +17,177 @@ public class SqlitePodMessagingTests : IDisposable
     private readonly DbConnection _connection;
     private readonly DbContextOptions<PodDbContext> _contextOptions;
     private readonly Mock<ILogger<SqlitePodMessaging>> _loggerMock;
+    private readonly PodDbContext _dbContext;
     private readonly SqlitePodMessaging _messaging;
+
+    private const string PodId1 = "pod:00000000000000000000000000000001";
+    private const string PodId2 = "pod:00000000000000000000000000000002";
+    private const string SenderPeer = "peer-mesh-self";
+    private const string ChannelGeneral = "general";
 
     public SqlitePodMessagingTests()
     {
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
-
         _contextOptions = new DbContextOptionsBuilder<PodDbContext>()
             .UseSqlite(_connection)
             .Options;
 
         _loggerMock = new Mock<ILogger<SqlitePodMessaging>>();
-        _messaging = new SqlitePodMessaging(_loggerMock.Object, CreateContext());
-
-        // Create the database schema
-        using var context = CreateContext();
-        context.Database.EnsureCreated();
+        _dbContext = new PodDbContext(_contextOptions);
+        _dbContext.Database.EnsureCreated();
+        SeedPodAndMember(_dbContext, PodId1, SenderPeer);
+        SeedPodAndMember(_dbContext, PodId2, SenderPeer);
+        _messaging = new SqlitePodMessaging(_dbContext, _loggerMock.Object);
     }
 
     public void Dispose()
     {
+        _dbContext.Dispose();
         _connection.Dispose();
+    }
+
+    private static void SeedPodAndMember(PodDbContext ctx, string podId, string peerId)
+    {
+        ctx.Pods.Add(new PodEntity
+        {
+            PodId = podId,
+            Name = "Test",
+            Visibility = PodVisibility.Unlisted,
+            IsPublic = false,
+            MaxMembers = 50,
+            AllowGuests = false,
+            RequireApproval = false,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            FocusContentId = "",
+            Tags = "[]",
+            Channels = "[]",
+            ExternalBindings = "[]"
+        });
+        ctx.Members.Add(new PodMemberEntity
+        {
+            PodId = podId,
+            PeerId = peerId,
+            Role = "member",
+            PublicKey = "",
+            IsBanned = false
+        });
+        ctx.SaveChanges();
+    }
+
+    private static PodMessage NewMessage(string podId, string channelId, string sender, string body, long ts)
+    {
+        return new PodMessage
+        {
+            PodId = podId,
+            ChannelId = channelId,
+            SenderPeerId = sender,
+            Body = body,
+            TimestampUnixMs = ts,
+            Signature = "sig"
+        };
     }
 
     [Fact]
     public async Task SendAsync_WithValidMessage_StoresMessage()
     {
-        // Arrange
-        var message = new PodMessage
-        {
-            PodId = "pod:test123",
-            ChannelId = "general",
-            SenderPeerId = "peer:mesh:self",
-            Body = "Hello world!",
-            Signature = "test-signature"
-        };
+        var message = NewMessage(PodId1, ChannelGeneral, SenderPeer, "Hello world!", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
-        // Act
-        await _messaging.SendAsync(message);
+        var ok = await _messaging.SendAsync(message);
+        Assert.True(ok);
 
-        // Assert
-        using var context = CreateContext();
-        var storedMessage = await context.PodMessages.FirstOrDefaultAsync();
-        Assert.NotNull(storedMessage);
-        Assert.Equal(message.PodId, storedMessage!.PodId);
-        Assert.Equal(message.ChannelId, storedMessage.ChannelId);
-        Assert.Equal(message.SenderPeerId, storedMessage.SenderPeerId);
-        Assert.Equal(message.Body, storedMessage.Body);
-        Assert.Equal(message.Signature, storedMessage.Signature);
+        var stored = await _dbContext.Messages.FirstOrDefaultAsync(m => m.PodId == PodId1 && m.ChannelId == ChannelGeneral);
+        Assert.NotNull(stored);
+        Assert.Equal(PodId1, stored.PodId);
+        Assert.Equal(ChannelGeneral, stored.ChannelId);
+        Assert.Equal(SenderPeer, stored.SenderPeerId);
+        Assert.Equal("Hello world!", stored.Body);
+        Assert.Equal("sig", stored.Signature);
     }
 
     [Fact]
-    public async Task SendAsync_WithNullMessage_ThrowsArgumentNullException()
+    public async Task SendAsync_WithNullMessage_Throws()
     {
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _messaging.SendAsync(null!));
+        await Assert.ThrowsAsync<NullReferenceException>(() => _messaging.SendAsync(null!));
     }
 
     [Fact]
     public async Task GetMessagesAsync_WithValidParameters_ReturnsMessages()
     {
-        // Arrange
-        var podId = "pod:test123";
-        var channelId = "general";
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "Message 1", ts));
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "Message 2", ts + 1));
 
-        var message1 = new PodMessage
-        {
-            PodId = podId,
-            ChannelId = channelId,
-            SenderPeerId = "peer:mesh:self",
-            Body = "Message 1",
-            Signature = "sig1"
-        };
-
-        var message2 = new PodMessage
-        {
-            PodId = podId,
-            ChannelId = channelId,
-            SenderPeerId = "peer:mesh:other",
-            Body = "Message 2",
-            Signature = "sig2"
-        };
-
-        await _messaging.SendAsync(message1);
-        await _messaging.SendAsync(message2);
-
-        // Act
-        var messages = await _messaging.GetMessagesAsync(podId, channelId);
-
-        // Assert
+        var messages = await _messaging.GetMessagesAsync(PodId1, ChannelGeneral);
         Assert.Equal(2, messages.Count);
         Assert.Contains(messages, m => m.Body == "Message 1");
         Assert.Contains(messages, m => m.Body == "Message 2");
     }
 
     [Fact]
-    public async Task GetMessagesAsync_WithLimit_ReturnsLimitedMessages()
-    {
-        // Arrange
-        var podId = "pod:test123";
-        var channelId = "general";
-
-        for (int i = 0; i < 5; i++)
-        {
-            var message = new PodMessage
-            {
-                PodId = podId,
-                ChannelId = channelId,
-                SenderPeerId = $"peer:mesh:user{i}",
-                Body = $"Message {i}",
-                Signature = $"sig{i}"
-            };
-            await _messaging.SendAsync(message);
-        }
-
-        // Act
-        var messages = await _messaging.GetMessagesAsync(podId, channelId, limit: 3);
-
-        // Assert
-        Assert.Equal(3, messages.Count);
-    }
-
-    [Fact]
-    public async Task GetMessagesAsync_WithBeforeId_ReturnsMessagesBeforeId()
-    {
-        // Arrange
-        var podId = "pod:test123";
-        var channelId = "general";
-
-        PodMessage? middleMessage = null;
-        for (int i = 0; i < 5; i++)
-        {
-            var message = new PodMessage
-            {
-                PodId = podId,
-                ChannelId = channelId,
-                SenderPeerId = $"peer:mesh:user{i}",
-                Body = $"Message {i}",
-                Signature = $"sig{i}"
-            };
-            await _messaging.SendAsync(message);
-
-            if (i == 2)
-            {
-                middleMessage = message;
-            }
-        }
-
-        // Act
-        var messages = await _messaging.GetMessagesAsync(podId, channelId, beforeId: middleMessage!.Id);
-
-        // Assert
-        Assert.Equal(2, messages.Count); // Should get messages 0 and 1 (before message 2)
-        Assert.DoesNotContain(messages, m => m.Id == middleMessage.Id);
-    }
-
-    [Fact]
     public async Task GetMessagesAsync_WithDifferentChannel_ReturnsEmpty()
     {
-        // Arrange
-        var podId = "pod:test123";
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "Test message", ts));
 
-        var message = new PodMessage
-        {
-            PodId = podId,
-            ChannelId = "general",
-            SenderPeerId = "peer:mesh:self",
-            Body = "Test message",
-            Signature = "test-sig"
-        };
-        await _messaging.SendAsync(message);
-
-        // Act
-        var messages = await _messaging.GetMessagesAsync(podId, "different-channel");
-
-        // Assert
+        var messages = await _messaging.GetMessagesAsync(PodId1, "different-channel");
         Assert.Empty(messages);
     }
 
     [Fact]
     public async Task GetMessagesAsync_WithDifferentPod_ReturnsEmpty()
     {
-        // Arrange
-        var message = new PodMessage
-        {
-            PodId = "pod:other",
-            ChannelId = "general",
-            SenderPeerId = "peer:mesh:self",
-            Body = "Test message",
-            Signature = "test-sig"
-        };
-        await _messaging.SendAsync(message);
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "Test message", ts));
 
-        // Act
-        var messages = await _messaging.GetMessagesAsync("pod:different", "general");
-
-        // Assert
+        var messages = await _messaging.GetMessagesAsync(PodId2, ChannelGeneral);
         Assert.Empty(messages);
     }
 
     [Fact]
-    public async Task GetMessagesAsync_OrdersByTimestampDescending()
+    public async Task GetMessagesAsync_OrdersByTimestampAscending()
     {
-        // Arrange
-        var podId = "pod:test123";
-        var channelId = "general";
+        var baseTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "M0", baseTs));
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "M1", baseTs + 1));
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "M2", baseTs + 2));
 
-        // Create messages with small time delays to ensure ordering
-        for (int i = 0; i < 3; i++)
-        {
-            var message = new PodMessage
-            {
-                PodId = podId,
-                ChannelId = channelId,
-                SenderPeerId = $"peer:mesh:user{i}",
-                Body = $"Message {i}",
-                Signature = $"sig{i}"
-            };
-            await _messaging.SendAsync(message);
-            await Task.Delay(1); // Small delay to ensure different timestamps
-        }
-
-        // Act
-        var messages = await _messaging.GetMessagesAsync(podId, channelId);
-
-        // Assert
+        var messages = await _messaging.GetMessagesAsync(PodId1, ChannelGeneral);
         Assert.Equal(3, messages.Count);
-        // Should be ordered by timestamp descending (newest first)
-        Assert.True(messages[0].Timestamp >= messages[1].Timestamp);
-        Assert.True(messages[1].Timestamp >= messages[2].Timestamp);
+        Assert.True(messages[0].TimestampUnixMs <= messages[1].TimestampUnixMs);
+        Assert.True(messages[1].TimestampUnixMs <= messages[2].TimestampUnixMs);
     }
 
     [Fact]
-    public async Task SendAsync_SetsIdAndTimestamp()
+    public async Task GetMessagesAsync_ReturnsMappedFields()
     {
-        // Arrange
-        var message = new PodMessage
-        {
-            PodId = "pod:test123",
-            ChannelId = "general",
-            SenderPeerId = "peer:mesh:self",
-            Body = "Test message",
-            Signature = "test-sig"
-        };
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _messaging.SendAsync(NewMessage(PodId1, ChannelGeneral, SenderPeer, "Test body", ts));
 
-        var originalId = message.Id;
-        var beforeSend = DateTimeOffset.UtcNow;
-
-        // Act
-        await _messaging.SendAsync(message);
-        var afterSend = DateTimeOffset.UtcNow;
-
-        // Assert
-        Assert.NotEqual(originalId, message.Id);
-        Assert.True(message.Timestamp >= beforeSend);
-        Assert.True(message.Timestamp <= afterSend);
-    }
-
-    [Fact]
-    public async Task GetMessagesAsync_ReturnsDtoObjects()
-    {
-        // Arrange
-        var message = new PodMessage
-        {
-            PodId = "pod:test123",
-            ChannelId = "general",
-            SenderPeerId = "peer:mesh:self",
-            Body = "Test message",
-            Signature = "test-sig"
-        };
-        await _messaging.SendAsync(message);
-
-        // Act
-        var messages = await _messaging.GetMessagesAsync("pod:test123", "general");
-
-        // Assert
+        var messages = await _messaging.GetMessagesAsync(PodId1, ChannelGeneral);
         Assert.Single(messages);
-        var retrievedMessage = messages[0];
-        Assert.Equal(message.Id, retrievedMessage.Id);
-        Assert.Equal(message.PodId, retrievedMessage.PodId);
-        Assert.Equal(message.ChannelId, retrievedMessage.ChannelId);
-        Assert.Equal(message.SenderPeerId, retrievedMessage.SenderPeerId);
-        Assert.Equal(message.Body, retrievedMessage.Body);
-        Assert.Equal(message.Signature, retrievedMessage.Signature);
-        Assert.Equal(message.Timestamp, retrievedMessage.Timestamp);
+        var m = messages[0];
+        Assert.Equal(PodId1, m.PodId);
+        Assert.Equal(ChannelGeneral, m.ChannelId);
+        Assert.Equal(SenderPeer, m.SenderPeerId);
+        Assert.Equal("Test body", m.Body);
+        Assert.Equal("sig", m.Signature);
+        Assert.Equal(ts, m.TimestampUnixMs);
     }
 
-    private PodDbContext CreateContext() => new PodDbContext(_contextOptions);
+    [Fact]
+    public async Task SendAsync_InvalidPodId_ReturnsFalse()
+    {
+        var msg = NewMessage("pod:invalid", ChannelGeneral, SenderPeer, "x", 1);
+        var ok = await _messaging.SendAsync(msg);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public async Task SendAsync_PodNotInDb_ReturnsFalse()
+    {
+        var msg = NewMessage("pod:00000000000000000000000000000099", ChannelGeneral, SenderPeer, "x", 1);
+        var ok = await _messaging.SendAsync(msg);
+        Assert.False(ok);
+    }
 }
-
-

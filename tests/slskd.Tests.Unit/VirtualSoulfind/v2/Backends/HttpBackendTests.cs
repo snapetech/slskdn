@@ -4,6 +4,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
     using System;
     using System.Collections.Generic;
     using System.Net.Http;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -29,7 +30,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var backend = CreateBackend(options);
             var itemId = ContentItemId.NewId();
             
-            var candidates = await backend.FindCandidatesAsync(itemId);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
             
             Assert.Empty(candidates);
         }
@@ -48,7 +49,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 0.8f,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.False(result.IsValid);
             Assert.Contains("Not an HTTP", result.InvalidityReason);
@@ -68,7 +69,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 0.8f,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.False(result.IsValid);
             Assert.Contains("Invalid URL", result.InvalidityReason);
@@ -92,7 +93,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 0.8f,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.False(result.IsValid);
             Assert.Contains("not in allowlist", result.InvalidityReason);
@@ -105,16 +106,24 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 DomainAllowlist = new List<string> { "allowed.com" }
             };
 
-            var mockHttpFactory = new Mock<IHttpClientFactory>();
+            // IHttpClientFactory.CreateClient (and its parameterless extension) must return an HttpClient.
+            // Use a test double because Moq cannot setup extension methods.
             var httpClient = new HttpClient();
-            mockHttpFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+            var httpFactory = new TestHttpClientFactory(httpClient);
 
             var optionsMonitor = new Mock<IOptionsMonitor<HttpBackendOptions>>();
             optionsMonitor.Setup(o => o.CurrentValue).Returns(options);
 
             var registry = new InMemorySourceRegistry();
 
-            return new HttpBackend(mockHttpFactory.Object, optionsMonitor.Object, registry);
+            return new HttpBackend(httpFactory, optionsMonitor.Object, registry);
         }
+    }
+
+    internal sealed class TestHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpClient _client;
+        public TestHttpClientFactory(HttpClient client) => _client = client;
+        public HttpClient CreateClient(string name) => _client;
     }
 }

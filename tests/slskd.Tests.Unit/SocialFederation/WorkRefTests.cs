@@ -6,7 +6,9 @@ namespace slskd.Tests.Unit.SocialFederation
 {
     using System;
     using System.Collections.Generic;
+    using slskd.HashDb.Models;
     using slskd.SocialFederation;
+    using slskd.VirtualSoulfind.Core.Music;
     using Xunit;
 
     /// <summary>
@@ -14,10 +16,32 @@ namespace slskd.Tests.Unit.SocialFederation
     /// </summary>
     public class WorkRefTests
     {
-        [Fact(Skip = "ContentDomain.MusicContentItem removed; WorkRef.FromMusicItem requires MusicItem from VirtualSoulfind.")]
+        [Fact]
         public void FromMusicItem_CreatesValidWorkRef()
         {
-            // Skipped: would need MusicItem/AlbumTargetTrackEntry to exercise WorkRef.FromMusicItem.
+            var trackEntry = new AlbumTargetTrackEntry
+            {
+                ReleaseId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                RecordingId = "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                Position = 1,
+                Title = "Test Track",
+                Artist = "Test Artist",
+                DurationMs = 180000,
+                Year = 2020,
+                Genre = "Rock",
+            };
+            var musicItem = MusicItem.FromTrackEntry(trackEntry);
+            const string instanceUrl = "https://example.com";
+
+            var workRef = WorkRef.FromMusicItem(musicItem, instanceUrl);
+
+            Assert.NotNull(workRef);
+            Assert.Equal("music", workRef.Domain);
+            Assert.Equal("Test Track", workRef.Title);
+            Assert.Equal("Test Artist", workRef.Creator);
+            Assert.Equal(2020, workRef.Year);
+            Assert.StartsWith(instanceUrl, workRef.Id, StringComparison.Ordinal);
+            Assert.True(workRef.ValidateSecurity());
         }
 
         [Fact]

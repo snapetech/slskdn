@@ -34,7 +34,8 @@ public class PrivateGatewayMeshService : IMeshService
     private readonly ILogger<PrivateGatewayMeshService> _logger;
     private readonly IPodService _podService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly DnsSecurityService _dnsSecurity;
+    private readonly IDnsSecurityService _dnsSecurity;
+    private readonly ITunnelConnectivity _tunnelConnectivity;
     private readonly int _maxPayload;
 
     // Active tunnels: tunnelId -> TunnelSession
@@ -56,12 +57,15 @@ public class PrivateGatewayMeshService : IMeshService
         ILogger<PrivateGatewayMeshService> logger,
         IPodService podService,
         IServiceProvider serviceProvider,
-        IOptions<MeshOptions>? meshOptions = null)
+        IOptions<MeshOptions>? meshOptions = null,
+        ITunnelConnectivity? tunnelConnectivity = null,
+        IDnsSecurityService? dnsSecurity = null)
     {
         _logger = logger;
         _podService = podService;
         _serviceProvider = serviceProvider;
-        _dnsSecurity = serviceProvider.GetRequiredService<DnsSecurityService>();
+        _dnsSecurity = dnsSecurity ?? serviceProvider.GetRequiredService<DnsSecurityService>();
+        _tunnelConnectivity = tunnelConnectivity ?? new DefaultTunnelConnectivity();
         _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? slskd.Mesh.Transport.SecurityUtils.MaxRemotePayloadSize;
 
         // Start cleanup task
@@ -410,19 +414,14 @@ public class PrivateGatewayMeshService : IMeshService
         // Attempt to establish TCP connection
         try
         {
-            var tcpClient = new TcpClient();
             var connectTimeout = policy.DialTimeout;
-
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(connectTimeout);
 
-            await tcpClient.ConnectAsync(request.DestinationHost, request.DestinationPort, cts.Token);
-
-            var stream = tcpClient.GetStream();
+            var (stream, connectedIP) = await _tunnelConnectivity.ConnectAsync(
+                request.DestinationHost, request.DestinationPort, resolvedIPs, cts.Token);
 
             // Pin the resolved IPs for this tunnel (DNS rebinding protection)
-            var remoteEndPoint = tcpClient.Client.RemoteEndPoint as System.Net.IPEndPoint;
-            var connectedIP = remoteEndPoint?.Address.ToString();
             if (connectedIP != null)
             {
                 // Ensure the connected IP is in our allowed list
@@ -432,7 +431,7 @@ public class PrivateGatewayMeshService : IMeshService
                         "[PrivateGateway] AUDIT: Tunnel rejected - Reason:DnsRebinding, PeerId:{PeerId}, PodId:{PodId}, Host:{Host}, ConnectedIP:{ConnectedIP}, AllowedIPs:{AllowedIPs}",
                         context.RemotePeerId, request.PodId, request.DestinationHost, connectedIP, string.Join(", ", resolvedIPs));
 
-                    tcpClient.Close();
+                    await stream.DisposeAsync();
                     return new ServiceReply
                     {
                         CorrelationId = call.CorrelationId,
@@ -840,55 +839,60 @@ public class PrivateGatewayMeshService : IMeshService
     {
         while (true)
         {
-            try
+            await RunOneCleanupIterationAsync();
+            await Task.Delay(TimeSpan.FromMinutes(5));
+        }
+    }
+
+    /// <summary>
+    /// Runs one cleanup iteration (expired tunnels, nonces, DNS). Used by the loop and by tests.
+    /// </summary>
+    internal async Task RunOneCleanupIterationAsync()
+    {
+        try
+        {
+            var expiredTunnels = new List<string>();
+
+            foreach (var (tunnelId, session) in _activeTunnels)
             {
-                var expiredTunnels = new List<string>();
+                var pod = await _podService.GetPodAsync(session.PodId);
+                var maxLifetime = pod?.PrivateServicePolicy?.MaxLifetime ?? TimeSpan.FromMinutes(60);
+                var idleTimeout = pod?.PrivateServicePolicy?.IdleTimeout ?? TimeSpan.FromSeconds(120);
 
-                foreach (var (tunnelId, session) in _activeTunnels)
+                var now = DateTimeOffset.UtcNow;
+
+                if (now - session.CreatedAt > maxLifetime ||
+                    now - session.LastActivity > idleTimeout)
                 {
-                    // Get pod policy for timeout values
-                    var pod = await _podService.GetPodAsync(session.PodId);
-                    var maxLifetime = pod?.PrivateServicePolicy?.MaxLifetime ?? TimeSpan.FromMinutes(60);
-                    var idleTimeout = pod?.PrivateServicePolicy?.IdleTimeout ?? TimeSpan.FromSeconds(120);
-
-                    var now = DateTimeOffset.UtcNow;
-
-                    if (now - session.CreatedAt > maxLifetime ||
-                        now - session.LastActivity > idleTimeout)
-                    {
-                        expiredTunnels.Add(tunnelId);
-                    }
-                }
-
-                foreach (var tunnelId in expiredTunnels)
-                {
-                    _logger.LogInformation("[PrivateGateway] Cleaning up expired tunnel {TunnelId}", tunnelId);
-                    await CloseTunnelAsync(tunnelId);
-                }
-
-                // Clean up expired cache entries
-                var expiredNonces = _nonceCache.Where(kvp => kvp.Value < DateTimeOffset.UtcNow)
-                                               .Select(kvp => kvp.Key)
-                                               .ToList();
-                foreach (var nonceKey in expiredNonces)
-                {
-                    _nonceCache.TryRemove(nonceKey, out _);
-                }
-
-                var expiredDnsEntries = _dnsCache.Where(kvp => kvp.Value.Expires < DateTimeOffset.UtcNow)
-                                                 .Select(kvp => kvp.Key)
-                                                 .ToList();
-                foreach (var hostname in expiredDnsEntries)
-                {
-                    _dnsCache.TryRemove(hostname, out _);
+                    expiredTunnels.Add(tunnelId);
                 }
             }
-            catch (Exception ex)
+
+            foreach (var tunnelId in expiredTunnels)
             {
-                _logger.LogError(ex, "[PrivateGateway] Error in cleanup task");
+                _logger.LogInformation("[PrivateGateway] Cleaning up expired tunnel {TunnelId}", tunnelId);
+                await CloseTunnelAsync(tunnelId);
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(5)); // Cleanup every 5 minutes
+            var expiredNonces = _nonceCache.Where(kvp => kvp.Value < DateTimeOffset.UtcNow)
+                                           .Select(kvp => kvp.Key)
+                                           .ToList();
+            foreach (var nonceKey in expiredNonces)
+            {
+                _nonceCache.TryRemove(nonceKey, out _);
+            }
+
+            var expiredDnsEntries = _dnsCache.Where(kvp => kvp.Value.Expires < DateTimeOffset.UtcNow)
+                                             .Select(kvp => kvp.Key)
+                                             .ToList();
+            foreach (var hostname in expiredDnsEntries)
+            {
+                _dnsCache.TryRemove(hostname, out _);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[PrivateGateway] Error in cleanup task");
         }
     }
 

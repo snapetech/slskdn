@@ -22,6 +22,7 @@ public class Obfs4Transport : IAnonymityTransport
 {
     private readonly Obfs4Options _options;
     private readonly ILogger<Obfs4Transport> _logger;
+    private readonly IObfs4VersionChecker _versionChecker;
 
     private readonly AnonymityTransportStatus _status = new();
     private readonly object _statusLock = new();
@@ -31,10 +32,12 @@ public class Obfs4Transport : IAnonymityTransport
     /// </summary>
     /// <param name="options">The obfs4 options.</param>
     /// <param name="logger">The logger.</param>
-    public Obfs4Transport(Obfs4Options options, ILogger<Obfs4Transport> logger)
+    /// <param name="versionChecker">Optional. Used for IsAvailableAsync; when null, uses the default process-based check.</param>
+    public Obfs4Transport(Obfs4Options options, ILogger<Obfs4Transport> logger, IObfs4VersionChecker? versionChecker = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _versionChecker = versionChecker ?? new Obfs4VersionChecker();
     }
 
     /// <summary>
@@ -62,27 +65,8 @@ public class Obfs4Transport : IAnonymityTransport
                 return false;
             }
 
-            // Test obfs4proxy with a simple command
-            using var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = _options.Obfs4ProxyPath,
-                    Arguments = "--version",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
-            };
-
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(5));
-
-            process.Start();
-            await process.WaitForExitAsync(cts.Token);
-
-            var isAvailable = process.ExitCode == 0;
+            var exitCode = await _versionChecker.RunVersionCheckAsync(_options.Obfs4ProxyPath, cancellationToken).ConfigureAwait(false);
+            var isAvailable = exitCode == 0;
 
             lock (_statusLock)
             {

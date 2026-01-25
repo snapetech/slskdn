@@ -59,7 +59,7 @@ public class DnsSecurityServiceTests : IDisposable
         Assert.Contains(ipAddress, result.AllowedIPs);
     }
 
-    [Fact(Skip = "DnsSecurityService allows private IPs for internal services even when allowPrivateRanges=false.")]
+    [Fact]
     public async Task ResolveAndValidateAsync_WithPrivateIpAndPrivateNotAllowed_ReturnsFailure()
     {
         // Arrange
@@ -311,7 +311,7 @@ public class DnsSecurityServiceTests : IDisposable
         Assert.Contains("not allowed", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact(Skip = "DnsSecurityService allows private IPs for internal services even when allowPrivateRanges=false.")]
+    [Fact]
     public async Task ResolveAndValidateAsync_PrivateRangeWithoutPermission_Blocked()
     {
         // Arrange

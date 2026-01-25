@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -137,13 +139,13 @@ public class LocalPortForwarder : IDisposable
                 DestinationPort = destinationPort,
                 ServiceName = serviceName,
                 RequestNonce = Guid.NewGuid().ToString("N"),
-                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "OpenTunnel",
-                MessagePack.MessagePackSerializer.Serialize(openTunnelRequest),
+                JsonSerializer.SerializeToUtf8Bytes(openTunnelRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -154,8 +156,8 @@ public class LocalPortForwarder : IDisposable
                 return null;
             }
 
-            var tunnelResponse = System.Text.Json.JsonSerializer.Deserialize<OpenTunnelResponse>(
-                response.Payload);
+            var json = Encoding.UTF8.GetString(response.Payload);
+            var tunnelResponse = JsonSerializer.Deserialize<OpenTunnelResponse>(json);
 
             if (tunnelResponse == null || !tunnelResponse.Accepted)
             {
@@ -206,7 +208,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "TunnelData",
-                MessagePack.MessagePackSerializer.Serialize(dataRequest),
+                JsonSerializer.SerializeToUtf8Bytes(dataRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -238,7 +240,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "GetTunnelData",
-                MessagePack.MessagePackSerializer.Serialize(getDataRequest),
+                JsonSerializer.SerializeToUtf8Bytes(getDataRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -249,10 +251,10 @@ public class LocalPortForwarder : IDisposable
                 return null;
             }
 
-            var dataResponse = System.Text.Json.JsonSerializer.Deserialize<GetTunnelDataResponse>(
-                response.Payload);
+            var json = Encoding.UTF8.GetString(response.Payload);
+            var dataResponse = JsonSerializer.Deserialize<GetTunnelDataResponse>(json);
 
-            return dataResponse?.Data;
+            return dataResponse?.Data ?? Array.Empty<byte>();
         }
         catch (Exception ex)
         {
@@ -277,7 +279,7 @@ public class LocalPortForwarder : IDisposable
             var response = await _meshClient.CallServiceAsync(
                 "private-gateway",
                 "CloseTunnel",
-                MessagePack.MessagePackSerializer.Serialize(closeRequest),
+                JsonSerializer.SerializeToUtf8Bytes(closeRequest),
                 CancellationToken.None);
 
             if (response.StatusCode != ServiceStatusCodes.OK)
@@ -960,7 +962,7 @@ internal record OpenTunnelRequest
     public int DestinationPort { get; init; }
     public string? ServiceName { get; init; }
     public string RequestNonce { get; init; } = string.Empty;
-    public long TimestampUnixMs { get; init; }
+    public long RequestTimestamp { get; init; }
 }
 
 internal record OpenTunnelResponse

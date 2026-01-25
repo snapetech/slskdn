@@ -29,15 +29,16 @@ public class RandomJitterObfuscator : ITimingObfuscator
     /// <returns>The delay in milliseconds.</returns>
     public Task<int> GetNextDelayAsync()
     {
-        // Generate random delay between 0 and JitterMs (inclusive)
-        int delay = _random.Next(0, _options.JitterMs + 1);
+        // Clamp JitterMs to avoid Next(0, n) when n <= 0; invalid config is handled gracefully
+        int jitter = _options.JitterMs < 0 ? 0 : _options.JitterMs;
+        int delay = _random.Next(0, jitter + 1);
         return Task.FromResult(delay);
     }
 
     /// <summary>
     /// Gets the configured maximum jitter value.
     /// </summary>
-    public int MaxJitterMs => _options.JitterMs;
+    public int MaxJitterMs => _options.JitterMs < 0 ? 0 : _options.JitterMs;
 }
 
 

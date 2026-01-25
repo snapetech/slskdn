@@ -117,6 +117,12 @@ namespace slskd.SocialFederation
         ///     Validates that the WorkRef contains no sensitive information.
         /// </summary>
         /// <returns>True if the WorkRef is safe to publish.</returns>
+        /// <summary>Keys where a UUID-like value is expected (e.g. MusicBrainz, Discogs) and should not be rejected.</summary>
+        private static readonly HashSet<string> ExternalIdKeysAllowUuid = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "musicbrainz", "discogs"
+        };
+
         public bool ValidateSecurity()
         {
             // Check external IDs for potentially sensitive patterns
@@ -124,9 +130,10 @@ namespace slskd.SocialFederation
             {
                 var key = kvp.Key.ToLowerInvariant();
                 var value = kvp.Value.ToLowerInvariant();
+                var allowUuidInValue = ExternalIdKeysAllowUuid.Contains(key);
 
                 // Block common sensitive patterns
-                if (ContainsSensitivePattern(key) || ContainsSensitivePattern(value))
+                if (ContainsSensitivePattern(key) || ContainsSensitivePattern(value, allowUuidInValue))
                 {
                     return false;
                 }
@@ -153,42 +160,34 @@ namespace slskd.SocialFederation
             return true;
         }
 
-        private static bool ContainsSensitivePattern(string input)
+        private const string UuidPattern = @"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$";
+
+        private static bool ContainsSensitivePattern(string input, bool allowUuid = false)
         {
             if (string.IsNullOrEmpty(input))
-            {
                 return false;
-            }
 
-            var sensitivePatterns = new[]
+            var patterns = new[]
             {
-                // File paths
-                @"^[a-zA-Z]:[\\/]",  // Windows paths
-                @"^/",               // Unix absolute paths
-                @"^\.\.",            // Relative paths with ..
-                @"[\\/]",            // Any path separators
-
-                // Hashes (hex patterns)
-                @"^[a-fA-F0-9]{32,}$",  // MD5/SHA1/SHA256 etc.
-
-                // IP addresses
+                @"^[a-zA-Z]:[\\/]",
+                @"^/",
+                @"^\.\.",
+                @"[\\/]",
+                @"^[a-fA-F0-9]{32,}$",
                 @"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b",
-
-                // UUIDs (could be sensitive identifiers)
-                @"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
-
-                // Mesh peer IDs (pod: or bridge: prefixes)
                 @"^(pod|bridge):",
-
-                // URLs with localhost/private IPs
                 @"(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)",
-
-                // Sensitive keywords
                 @"\b(hash|path|file|local|private|internal)\b"
             };
 
-            return sensitivePatterns.Any(pattern =>
-                System.Text.RegularExpressions.Regex.IsMatch(input, pattern));
+            foreach (var p in patterns)
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(input, p))
+                    return true;
+            }
+            if (!allowUuid && System.Text.RegularExpressions.Regex.IsMatch(input, UuidPattern))
+                return true;
+            return false;
         }
 
         /// <summary>

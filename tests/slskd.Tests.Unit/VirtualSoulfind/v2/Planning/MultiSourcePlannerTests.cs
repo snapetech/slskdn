@@ -22,6 +22,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using Moq;
     using slskd.Common.Moderation;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
@@ -44,10 +46,14 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
             var sourceRegistry = new InMemorySourceRegistry();
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
-            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp, peerRep);
 
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "dt:1",
                 TrackId = Guid.NewGuid().ToString(), // Track not in catalogue
                 Priority = IntentPriority.Normal,
@@ -106,10 +112,14 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
 
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
-            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp, peerRep);
 
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "dt:1",
                 TrackId = trackId,
                 Priority = IntentPriority.Normal,
@@ -170,10 +180,14 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
 
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
-            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp, peerRep);
 
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "dt:1",
                 TrackId = trackId,
                 Priority = IntentPriority.Normal,
@@ -233,10 +247,14 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
 
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
-            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp, peerRep);
 
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "dt:1",
                 TrackId = trackId,
                 Priority = IntentPriority.Normal,
@@ -262,7 +280,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
             var sourceRegistry = new InMemorySourceRegistry();
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
-            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp, peerRep);
 
             var plan = new TrackAcquisitionPlan
             {
@@ -287,7 +308,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
             var sourceRegistry = new InMemorySourceRegistry();
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
-            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp);
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+            var planner = new MultiSourcePlanner(catalogueStore, sourceRegistry, backends, mcp, peerRep);
 
             var plan = new TrackAcquisitionPlan
             {

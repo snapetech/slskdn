@@ -2,6 +2,7 @@
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -27,7 +28,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var backend = CreateMeshBackend(options);
             var itemId = ContentItemId.NewId();
             
-            var candidates = await backend.FindCandidatesAsync(itemId);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
             
             Assert.Empty(candidates);
         }
@@ -46,7 +47,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 80,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.False(result.IsValid);
             Assert.Contains("Not a MeshDht", result.InvalidityReason);
@@ -67,7 +68,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 90,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.True(result.IsValid);
         }
@@ -99,7 +100,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var backend = CreateTorrentBackend(options);
             var itemId = ContentItemId.NewId();
             
-            var candidates = await backend.FindCandidatesAsync(itemId);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
             
             Assert.Empty(candidates);
         }
@@ -119,7 +120,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 10,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.True(result.IsValid);
         }
@@ -139,7 +140,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 5,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.True(result.IsValid);
         }
@@ -158,7 +159,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 ExpectedQuality = 10,
             };
             
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
             
             Assert.False(result.IsValid);
             Assert.Contains("Invalid infohash", result.InvalidityReason);

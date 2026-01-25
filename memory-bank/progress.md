@@ -202,6 +202,18 @@
 - **IntentQueueTests:** Removed `Compile Remove`. `using slskd.VirtualSoulfind.Core`; EnqueueTrackAsync(ContentDomain.Music, trackId, ...) to match IIntentQueue (domain, trackId, priority). 6 tests pass.
 - **Result:** **14 pass** (8+6). **Docs:** completion-plan, activeContext, future-work.
 
+### slskd.Tests.Unit Re-enablement (Continue): DnsSecurityService, DestinationAllowlist, completion-plan
+- **Status**: ✅ **COMPLETED**
+- **DnsSecurityServiceTests:** Un-skipped 2 tests: `ResolveAndValidateAsync_WithPrivateIpAndPrivateNotAllowed_ReturnsFailure`, `ResolveAndValidateAsync_PrivateRangeWithoutPermission_Blocked`. `DnsSecurityService.IsIpAllowedForTunneling` now enforces `AllowPrivateRanges` (removed "if (isPrivate) return true" that always allowed private IPs). 23 pass, 0 skip.
+- **DestinationAllowlistTests:** `IDnsSecurityService` added; `CreateService(ITunnelConnectivity?, IDnsSecurityService?)`; `OpenTunnel_PrivateIpWithoutPrivateAllowed_Rejected` and `OpenTunnel_MixedAllowedAndBlockedIPs_Rejected` un-skipped (mock `ResolveAndValidateAsync` for Mixed). 14 pass, 0 skip.
+- **PrivateGatewayMeshServiceTests, LibraryReconciliationServiceTests:** Already built and passing (no `Compile Remove`). PrivateGateway `HandleCallAsync_OpenTunnel_PrivateAddressNotAllowed` updated: allowlist includes `192.168.1.100:80`, expects `ServiceUnavailable` and "not allowed".
+- **Docs:** `slskd-tests-unit-completion-plan.md` — Deferred: removed DnsSecurityServiceTests (2) and both DestinationAllowlistTests rows; Phase 2/4 DestinationAllowlist 14 pass 0 skip; Phase 4 PrivateGateway, LibraryReconciliation DONE; Remaining Compile Remove updated.
+
+### slskd.Tests.Unit Re-enablement (Continue remaining): completion-plan Phase 4 table
+- **Status**: ✅ **COMPLETED**
+- **Completion-plan Phase 4:** Trimmed obsolete text from DestinationAllowlistTests cell (post–"14 pass, 0 skip") and PrivateGatewayMeshServiceTests cell (post–"AllowPrivateRanges=false"). Marked **DONE** with pass counts: ContentBackendTests (7), HttpBackendTests (5), LanBackendTests (6), LocalLibraryBackendTests (7), MeshTorrentBackendTests (9), SoulseekBackendTests (13), SourceRegistryTests (8).
+- **Remaining — Compile Remove:** None. Remaining work: reduce skips that need app changes (Deferred).
+
 ---
 
 ## 2025-12-13

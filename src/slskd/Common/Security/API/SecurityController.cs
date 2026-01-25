@@ -30,7 +30,7 @@ public class SecurityController : ControllerBase
     private readonly ISecurityEventSink? _eventSink;
     private readonly AdversarialOptions? _adversarialOptions;
     private readonly AnonymityTransportSelector? _transportSelector;
-    private readonly Mesh.MeshCircuitBuilder? _circuitBuilder;
+    private readonly Mesh.IMeshCircuitBuilder? _circuitBuilder;
     private readonly Mesh.IMeshPeerManager? _peerManager;
 
     /// <summary>
@@ -41,7 +41,7 @@ public class SecurityController : ControllerBase
         ISecurityEventSink? eventSink = null,
         AdversarialOptions? adversarialOptions = null,
         AnonymityTransportSelector? transportSelector = null,
-        Mesh.MeshCircuitBuilder? circuitBuilder = null,
+        Mesh.IMeshCircuitBuilder? circuitBuilder = null,
         Mesh.IMeshPeerManager? peerManager = null)
     {
         _security = security;

@@ -228,13 +228,15 @@ namespace slskd.SocialFederation
         }
 
         /// <summary>
-        ///     Signs data with Ed25519 private key from PEM (PKIX). PR-14.
+        ///     Signs data with Ed25519 private key from PEM (PKIX or Raw). PR-14.
         /// </summary>
         private static byte[] SignWithEd25519(byte[] data, string privateKeyPem)
         {
-            var pkix = PemToBytes(privateKeyPem);
+            var keyBytes = PemToBytes(privateKeyPem);
+            var isRaw = privateKeyPem.IndexOf("RAW PRIVATE KEY", StringComparison.OrdinalIgnoreCase) >= 0;
+            var format = isRaw ? KeyBlobFormat.RawPrivateKey : KeyBlobFormat.PkixPrivateKey;
             var alg = SignatureAlgorithm.Ed25519;
-            using var key = Key.Import(alg, pkix, KeyBlobFormat.PkixPrivateKey);
+            using var key = Key.Import(alg, keyBytes, format);
             return alg.Sign(key, data);
         }
 

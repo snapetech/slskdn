@@ -115,6 +115,10 @@ namespace slskd.PodCore
         public string Tags { get; set; } // JSON array
         public string Channels { get; set; } // JSON array
         public string ExternalBindings { get; set; } // JSON array
+        /// <summary>JSON array of <see cref="PodCapability"/> (e.g. [0] for PrivateServiceGateway).</summary>
+        public string? Capabilities { get; set; }
+        /// <summary>JSON of <see cref="PodPrivateServicePolicy"/> when Capabilities includes PrivateServiceGateway.</summary>
+        public string? PrivateServicePolicy { get; set; }
     }
 
     /// <summary>

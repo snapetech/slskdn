@@ -325,23 +325,5 @@ namespace slskd.Tests.Unit.Transfers
             Assert.False(result);
         }
 
-        // Helper class to mock DateTime.Now for testing
-        private class DateTimeContext : IDisposable
-        {
-            private readonly DateTime _originalNow;
-
-            public DateTimeContext(DateTime newNow)
-            {
-                _originalNow = DateTime.Now;
-                // We can't actually mock DateTime.Now, but for this test we'll assume
-                // the time-based logic works as expected. In a real implementation,
-                // we'd use a time provider interface for testability.
-            }
-
-            public void Dispose()
-            {
-                // Restore original time if possible
-            }
-        }
     }
 }

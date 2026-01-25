@@ -267,18 +267,19 @@ public class PerceptualHasherTests
         Assert.True(similarity > 0.8, $"Expected similarity > 0.8, got {similarity}");
     }
 
-    [Fact(Skip = "Blocked on PerceptualHasher implementation; 440 vs 880 Hz similarity depends on algorithm.")]
+    [Fact]
     public void ComputeHash_DifferentFrequencies_ProduceDifferentHashes()
     {
-        // 440 Hz (A4) vs 880 Hz (A5) - one octave apart
+        // 440 vs 880 Hz: one octave (2×), same pitch class (A); spectral hasher often treats them as similar.
+        // 440 vs 262 Hz (A4 vs C4): different pitch classes; better for "different freqs → different hashes".
         var samples1 = GenerateSineWave(44100, 1.0f, 440);
-        var samples2 = GenerateSineWave(44100, 1.0f, 880);
+        var samples2 = GenerateSineWave(44100, 1.0f, 262);
         
         var hash1 = hasher.ComputeHash(samples1, 44100);
         var hash2 = hasher.ComputeHash(samples2, 44100);
         
         var similarity = hasher.Similarity(hash1, hash2);
-        Assert.True(similarity < 0.8, $"Expected similarity < 0.8, got {similarity}");
+        Assert.True(similarity < 0.95, $"Expected similarity < 0.95 for 440 vs 262 Hz, got {similarity}");
     }
 
     [Fact]

@@ -35,6 +35,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.8.3" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.8.3" />
     <PackageReference Include="System.Reactive" Version="6.0.0" />
     <PackageReference Include="MessagePack" Version="2.5.187" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
@@ -100,8 +102,6 @@
     <InternalsVisibleTo Include="slskd.Tests.Unit" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Exclude CodeQuality MSBuild tasks from compilation. Re-enablement blocked: needs Microsoft.Build, Xunit; init-only/AsyncRules/StaticAnalysis/BuildTimeAnalyzer/HotspotAnalysis/TestCoverage/RegressionHarness compile fixes. See docs/dev/slskd-tests-unit-reenablement-execution-plan.md Block A. -->
-    <Compile Remove="Common\CodeQuality\**" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="FluentFTP" Version="49.0.2" />

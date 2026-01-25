@@ -244,11 +244,11 @@ public class Phase8MeshTests
         Assert.Equal(15, stats.RoutingTableSize);
     }
 
-    [Fact(Skip = "MeshStatsCollector.GetStatsAsync is non-virtual; Moq cannot mock it. Use a real MeshStatsCollector and drive Record*/Update* to get desired stats, or Discuss: app (e.g. IMeshStatsCollector).")]
+    [Fact]
     public async Task MeshHealthCheck_AssessesHealth()
     {
         var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<MeshHealthCheck>>();
-        var statsCollector = new Mock<MeshStatsCollector>();
+        var statsCollector = new Mock<IMeshStatsCollector>();
         var directory = Mock.Of<IMeshDirectory>();
         var dhtClient = Mock.Of<slskd.Mesh.Dht.IMeshDhtClient>();
 

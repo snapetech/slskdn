@@ -4,7 +4,9 @@
 
 namespace slskd.Tests.Unit.Mesh.Realm
 {
+    using System;
     using System.Linq;
+    using slskd.Mesh.Realm;
     using Xunit;
 
     /// <summary>

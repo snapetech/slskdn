@@ -11,7 +11,7 @@ using System.Threading;
 /// <summary>
 /// Aggregates transport statistics from mesh services for diagnostics.
 /// </summary>
-public class MeshStatsCollector
+public class MeshStatsCollector : IMeshStatsCollector
 {
     private readonly ILogger<MeshStatsCollector> logger;
     private readonly Lazy<INatDetector> natDetector;

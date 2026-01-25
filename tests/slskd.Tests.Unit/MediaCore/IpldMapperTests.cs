@@ -86,19 +86,23 @@ public class IpldMapperTests
         Assert.NotNull(result.Paths);
     }
 
-    [Fact(Skip = "IpldMapper requires maxDepth 1-10; maxDepth=0 throws ArgumentOutOfRangeException.")]
+    [Fact]
     public async Task TraverseAsync_MaxDepthExceeded_StopsTraversal()
     {
-        // Arrange
+        // maxDepth 1–10 required; use maxDepth: 1 and a graph that goes deeper (track→album→…).
+        // Traversal stops at the limit: only the start node is visited; no deeper nodes.
         var startContentId = "content:audio:track:mb-12345";
         var linkName = IpldLinkNames.Album;
 
-        // Act
-        var result = await _mapper.TraverseAsync(startContentId, linkName, maxDepth: 0);
+        _registryMock.Setup(r => r.FindByDomainAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(Array.Empty<string>());
 
-        // Assert
+        var result = await _mapper.TraverseAsync(startContentId, linkName, maxDepth: 1);
+
         Assert.NotNull(result);
-        Assert.False(result.CompletedTraversal);
+        // With maxDepth=1 we process depth 0 only; recursion to linked nodes returns immediately at depth 1.
+        Assert.Single(result.VisitedNodes);
+        Assert.Equal(startContentId, result.VisitedNodes[0].ContentId);
     }
 
     [Fact]

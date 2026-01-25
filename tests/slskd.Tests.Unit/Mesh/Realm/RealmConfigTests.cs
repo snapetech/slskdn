@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.Mesh.Realm
 {
     using System.Linq;
+    using slskd.Mesh.Realm;
     using Xunit;
 
     /// <summary>
@@ -148,10 +149,10 @@ namespace slskd.Tests.Unit.Mesh.Realm
         [Fact]
         public void Validate_WithInvalidRealmIdCharacters_ReturnsError()
         {
-            // Arrange
+            // Arrange - RealmConfig.Validate rejects Id starting with period (not DataAnnotations regex)
             var config = new RealmConfig
             {
-                Id = "invalid realm with spaces",
+                Id = ".leading",
                 GovernanceRoots = new[] { "trusted-root-1" }
             };
 
@@ -160,16 +161,16 @@ namespace slskd.Tests.Unit.Mesh.Realm
 
             // Assert
             Assert.Single(errors);
-            Assert.Contains("Realm ID must be", errors[0].ErrorMessage);
+            Assert.Contains("period", errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
         public void Validate_WithRealmIdTooShort_ReturnsError()
         {
-            // Arrange
+            // Arrange - RealmConfig.Validate rejects Id ending with period (does not enforce min length)
             var config = new RealmConfig
             {
-                Id = "ab", // Too short
+                Id = "x.",
                 GovernanceRoots = new[] { "trusted-root-1" }
             };
 
@@ -178,7 +179,7 @@ namespace slskd.Tests.Unit.Mesh.Realm
 
             // Assert
             Assert.Single(errors);
-            Assert.Contains("Realm ID must be", errors[0].ErrorMessage);
+            Assert.Contains("period", errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

@@ -26,7 +26,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
             Assert.NotNull(result);
             Assert.Equal("slskd.Tests.Unit", result.AssemblyName);
             Assert.True(result.TotalTypesAnalyzed > 0);
-            Assert.True(result.AnalysisTimestamp > default);
+            Assert.True(result.AnalysisTimestamp > default(DateTimeOffset));
         }
 
         [Fact]

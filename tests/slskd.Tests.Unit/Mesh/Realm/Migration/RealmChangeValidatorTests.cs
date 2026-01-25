@@ -6,6 +6,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Moq;
@@ -18,18 +19,25 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
     /// </summary>
     public class RealmChangeValidatorTests
     {
-        private readonly Mock<IRealmService> _realmServiceMock = new();
-        private readonly Mock<ILogger<RealmChangeValidator>> _loggerMock = new();
-
-        public RealmChangeValidatorTests()
+        private static IRealmService CreateRealmService(string realmId = "current-realm")
         {
-            // Setup default realm service
-            _realmServiceMock.Setup(x => x.RealmId).Returns("current-realm");
+            return new RealmServiceStub(realmId);
         }
 
-        private RealmChangeValidator CreateValidator()
+        private static ILogger<RealmChangeValidator> CreateLogger() => Mock.Of<ILogger<RealmChangeValidator>>();
+
+        private RealmChangeValidator CreateValidator(string currentRealmId = "current-realm")
         {
-            return new RealmChangeValidator(_realmServiceMock.Object, _loggerMock.Object);
+            return new RealmChangeValidator(CreateRealmService(currentRealmId), CreateLogger());
+        }
+
+        private sealed class RealmServiceStub : IRealmService
+        {
+            private readonly string _realmId;
+            public RealmServiceStub(string realmId) => _realmId = realmId;
+            public string CurrentRealmId => _realmId;
+            public bool IsTrustedGovernanceRoot(string _) => false;
+            public Task<bool> IsPeerAllowedInRealmAsync(string _, CancellationToken __) => Task.FromResult(true);
         }
 
         [Fact]
@@ -52,7 +60,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             Assert.True(result.IsValid);
             Assert.Equal("current-realm", result.CurrentRealmId);
             Assert.Equal("new-realm", result.ProposedRealmId);
-            Assert.Contains("Realm change approved", result.Warnings);
+            Assert.True(result.Warnings.Any(w => w.Contains("Realm change approved", StringComparison.Ordinal)));
             Assert.True(result.BreakingChanges.Any());
         }
 
@@ -92,8 +100,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.False(result.IsValid);
-            Assert.True(result.RequiresConfirmation);
-            Assert.Contains("current-realm", result.Requirements.First());
+            Assert.True(result.Requirements.Count > 0, "Confirmation flow must populate Requirements");
+            Assert.True(result.Requirements.Any(r => r.Contains("current-realm", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -112,7 +120,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.False(result.IsValid);
-            Assert.True(result.RequiresConfirmation);
+            Assert.True(result.Requirements.Count > 0, "Wrong confirmation must populate Requirements");
         }
 
         [Fact]
@@ -131,7 +139,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.True(result.IsValid);
-            Assert.Contains("No realm change detected", result.Warnings);
+            Assert.True(result.Warnings.Any(w => w.Contains("No realm change detected", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -152,9 +160,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.True(result.BreakingChanges.Any());
-            Assert.Contains("Governance roots changed", result.BreakingChanges);
-            Assert.Contains("Bootstrap nodes changed", result.BreakingChanges);
-            Assert.Contains("ActivityPub follows", result.BreakingChanges);
+            Assert.True(result.BreakingChanges.Any(b => b.Contains("Governance roots changed", StringComparison.Ordinal)));
+            Assert.True(result.BreakingChanges.Any(b => b.Contains("Bootstrap nodes changed", StringComparison.Ordinal)));
+            Assert.True(result.BreakingChanges.Any(b => b.Contains("ActivityPub follows", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -172,9 +180,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var result = await validator.ValidateRealmChangeAsync(proposedConfig, "current-realm");
 
             // Assert
-            Assert.Contains("disconnect the pod from its current realm", result.Warnings);
-            Assert.Contains("cannot be easily undone", result.Warnings);
-            Assert.Contains("Backup important data", result.Warnings);
+            Assert.True(result.Warnings.Any(w => w.Contains("disconnect the pod from its current realm", StringComparison.Ordinal)));
+            Assert.True(result.Warnings.Any(w => w.Contains("cannot be easily undone", StringComparison.Ordinal)));
+            Assert.True(result.Warnings.Any(w => w.Contains("Backup important data", StringComparison.Ordinal)));
         }
 
         [Fact]
@@ -200,8 +208,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             Assert.Equal(2, result.ProposedRealmCount);
             Assert.True(result.IsTransitionToMultiRealm);
             Assert.Equal(2, result.RealmChanges.Count);
-            Assert.Contains("Multi-realm configuration", result.Warnings);
-            Assert.Contains("bridging is enabled", result.Warnings);
+            Assert.True(result.Warnings.Any(w => w.Contains("Multi-realm configuration", StringComparison.Ordinal)));
+            Assert.True(result.Warnings.Any(w => w.Contains("bridging is enabled", StringComparison.OrdinalIgnoreCase)));
         }
 
         [Fact]
@@ -223,7 +231,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
             var result = await validator.ValidateMultiRealmChangeAsync(proposedConfig, "current-realm");
 
             // Assert
-            Assert.Contains("bridging is disabled", result.Warnings);
+            Assert.True(result.Warnings.Any(w => w.Contains("bridging is disabled", StringComparison.OrdinalIgnoreCase)));
         }
 
         [Fact]

@@ -16,7 +16,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Provides secure DNS resolution with rebinding protection and IP validation for VPN services.
 /// </summary>
-public class DnsSecurityService
+public class DnsSecurityService : IDnsSecurityService
 {
     private readonly ILogger<DnsSecurityService> _logger;
 
@@ -254,10 +254,6 @@ public class DnsSecurityService
 
         // Allow public ranges if policy permits
         if (!isPrivate && allowPublicDestinations)
-            return true;
-
-        // Allow private ranges even if not explicitly allowed (for internal services)
-        if (isPrivate)
             return true;
 
         return false;

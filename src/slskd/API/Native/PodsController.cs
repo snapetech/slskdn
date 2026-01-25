@@ -8,6 +8,9 @@ using slskd.Core.Security;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
+using slskd.Messaging;
 using slskd.PodCore;
 
 /// <summary>
@@ -20,21 +23,29 @@ using slskd.PodCore;
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodsController : ControllerBase
 {
+    private const string SoulseekDmBindingPrefix = "soulseek-dm:";
+
     private readonly IPodService podService;
     private readonly IPodMessaging podMessaging;
     private readonly ISoulseekChatBridge chatBridge;
     private readonly ILogger<PodsController> logger;
+    private readonly IConversationService? conversationService;
+    private readonly IOptionsMonitor<MeshOptions>? meshOptions;
 
     public PodsController(
         IPodService podService,
         IPodMessaging podMessaging,
         ISoulseekChatBridge chatBridge,
-        ILogger<PodsController> logger)
+        ILogger<PodsController> logger,
+        IConversationService? conversationService = null,
+        IOptionsMonitor<MeshOptions>? meshOptions = null)
     {
         this.podService = podService;
         this.podMessaging = podMessaging;
         this.chatBridge = chatBridge;
         this.logger = logger;
+        this.conversationService = conversationService;
+        this.meshOptions = meshOptions;
     }
 
     /// <summary>
@@ -75,6 +86,30 @@ public class PodsController : ControllerBase
         {
             logger.LogError(ex, "Failed to get pod {PodId}", podId);
             return StatusCode(500, new { error = "Failed to get pod" });
+        }
+    }
+
+    /// <summary>
+    /// Deletes a pod and its members, membership history, and messages.
+    /// </summary>
+    [HttpDelete("{podId}")]
+    public async Task<IActionResult> DeletePod(string podId, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(podId))
+                return BadRequest(new { error = "PodId is required" });
+
+            var deleted = await podService.DeletePodAsync(podId, ct);
+            if (!deleted)
+                return NotFound(new { error = $"Pod {podId} not found" });
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete pod {PodId}", podId);
+            return StatusCode(500, new { error = "Failed to delete pod" });
         }
     }
 
@@ -339,7 +374,29 @@ public class PodsController : ControllerBase
     {
         try
         {
-            // HARDENING: Use channelId directly without concatenation
+            var soulseekUsername = await TryGetSoulseekDmUsernameAsync(podId, channelId, ct);
+            if (soulseekUsername != null && conversationService != null)
+            {
+                var conv = await conversationService.FindAsync(soulseekUsername, includeInactive: true, includeMessages: true);
+                var selfPeerId = meshOptions?.CurrentValue?.SelfPeerId ?? "bridge:self";
+                var podMessages = (conv?.Messages ?? Array.Empty<PrivateMessage>())
+                    .OrderBy(m => m.Timestamp)
+                    .Select(pm => new PodMessage
+                    {
+                        MessageId = pm.Id.ToString(),
+                        PodId = podId,
+                        ChannelId = channelId,
+                        SenderPeerId = pm.Direction == MessageDirection.In ? "bridge:" + pm.Username : selfPeerId,
+                        Body = pm.Message ?? "",
+                        TimestampUnixMs = new DateTimeOffset(pm.Timestamp, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                        Signature = "",
+                        SigVersion = 1,
+                    })
+                    .Where(m => !since.HasValue || m.TimestampUnixMs > since.Value)
+                    .ToList();
+                return Ok(podMessages);
+            }
+
             var messages = await podMessaging.GetMessagesAsync(podId, channelId, since, ct);
             return Ok(messages);
         }
@@ -372,10 +429,17 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "SenderPeerId is required" });
             }
 
-            // HARDENING: Use channelId directly without concatenation
+            var soulseekUsername = await TryGetSoulseekDmUsernameAsync(podId, channelId, ct);
+            if (soulseekUsername != null && conversationService != null)
+            {
+                await conversationService.SendMessageAsync(soulseekUsername, request.Body);
+                return Ok(new { messageId = Guid.NewGuid().ToString("N"), sent = true });
+            }
+
             var message = new PodMessage
             {
                 MessageId = Guid.NewGuid().ToString("N"),
+                PodId = podId,
                 ChannelId = channelId,
                 SenderPeerId = request.SenderPeerId,
                 Body = request.Body,
@@ -396,6 +460,16 @@ public class PodsController : ControllerBase
             logger.LogError(ex, "Failed to send message to pod {PodId} channel {ChannelId}", podId, channelId);
             return StatusCode(500, new { error = "Failed to send message" });
         }
+    }
+
+    /// <summary>Gets Soulseek username from channel BindingInfo when it is soulseek-dm:username; returns null otherwise.</summary>
+    private async Task<string?> TryGetSoulseekDmUsernameAsync(string podId, string channelId, CancellationToken ct)
+    {
+        var pod = await podService.GetPodAsync(podId, ct);
+        var ch = pod?.Channels?.FirstOrDefault(c => string.Equals(c.ChannelId, channelId, StringComparison.Ordinal));
+        if (string.IsNullOrEmpty(ch?.BindingInfo) || !ch.BindingInfo.StartsWith(SoulseekDmBindingPrefix, StringComparison.OrdinalIgnoreCase))
+            return null;
+        return ch.BindingInfo.Substring(SoulseekDmBindingPrefix.Length).Trim();
     }
 
     /// <summary>

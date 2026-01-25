@@ -138,6 +138,8 @@ namespace slskd.Mesh.Realm
         /// <returns>True if the flow is allowed.</returns>
         public bool IsFlowAllowed(string flow)
         {
+            if (string.IsNullOrWhiteSpace(flow))
+                return false;
             if (Bridge == null)
             {
                 return false;

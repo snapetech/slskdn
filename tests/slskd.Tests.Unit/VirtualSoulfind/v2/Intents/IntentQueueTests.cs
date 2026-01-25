@@ -2,6 +2,7 @@
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
 {
     using System.Threading.Tasks;
+    using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Intents;
     using Xunit;
 
@@ -12,7 +13,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
         {
             var queue = new InMemoryIntentQueue();
             
-            var intent = await queue.EnqueueTrackAsync("track123", IntentPriority.High);
+            var intent = await queue.EnqueueTrackAsync(ContentDomain.Music, "track123", IntentPriority.High);
             
             Assert.NotNull(intent);
             Assert.NotEmpty(intent.DesiredTrackId);
@@ -26,8 +27,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
         {
             var queue = new InMemoryIntentQueue();
             
-            var intent1 = await queue.EnqueueTrackAsync("track1");
-            var intent2 = await queue.EnqueueTrackAsync("track2");
+            var intent1 = await queue.EnqueueTrackAsync(ContentDomain.Music, "track1");
+            var intent2 = await queue.EnqueueTrackAsync(ContentDomain.Music, "track2");
             await queue.UpdateTrackStatusAsync(intent2.DesiredTrackId, IntentStatus.Completed);
             
             var pending = await queue.GetPendingTracksAsync();
@@ -41,9 +42,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
         {
             var queue = new InMemoryIntentQueue();
             
-            await queue.EnqueueTrackAsync("track1", IntentPriority.Low);
-            await queue.EnqueueTrackAsync("track2", IntentPriority.High);
-            await queue.EnqueueTrackAsync("track3", IntentPriority.Normal);
+            await queue.EnqueueTrackAsync(ContentDomain.Music, "track1", IntentPriority.Low);
+            await queue.EnqueueTrackAsync(ContentDomain.Music, "track2", IntentPriority.High);
+            await queue.EnqueueTrackAsync(ContentDomain.Music, "track3", IntentPriority.Normal);
             
             var pending = await queue.GetPendingTracksAsync();
             
@@ -58,7 +59,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
         {
             var queue = new InMemoryIntentQueue();
             
-            var intent = await queue.EnqueueTrackAsync("track1");
+            var intent = await queue.EnqueueTrackAsync(ContentDomain.Music, "track1");
             await queue.UpdateTrackStatusAsync(intent.DesiredTrackId, IntentStatus.InProgress);
             
             var updated = await queue.GetTrackIntentAsync(intent.DesiredTrackId);
@@ -72,10 +73,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
         {
             var queue = new InMemoryIntentQueue();
             
-            var intent1 = await queue.EnqueueTrackAsync("track1");
-            var intent2 = await queue.EnqueueTrackAsync("track2");
+            var intent1 = await queue.EnqueueTrackAsync(ContentDomain.Music, "track1");
+            var intent2 = await queue.EnqueueTrackAsync(ContentDomain.Music, "track2");
             await queue.UpdateTrackStatusAsync(intent1.DesiredTrackId, IntentStatus.Completed);
-            
+
             var pendingCount = await queue.CountTracksByStatusAsync(IntentStatus.Pending);
             var completedCount = await queue.CountTracksByStatusAsync(IntentStatus.Completed);
             

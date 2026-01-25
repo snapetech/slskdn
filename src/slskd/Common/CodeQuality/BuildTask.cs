@@ -59,18 +59,15 @@ namespace slskd.Common.CodeQuality
             {
                 Log.LogMessage(MessageImportance.Normal, "Running slskdN Code Analysis...");
 
-                var config = AnalyzerConfiguration.Default;
-
-                // Override config with task parameters
-                if (TreatWarningsAsErrors)
+                var defaultConfig = AnalyzerConfiguration.Default;
+                var config = new AnalyzerConfig
                 {
-                    config = config with { TreatWarningsAsErrors = true };
-                }
-
-                if (ExcludedPaths != null && ExcludedPaths.Length > 0)
-                {
-                    config = config with { ExcludedPaths = ExcludedPaths };
-                }
+                    Rules = defaultConfig.Rules,
+                    TreatWarningsAsErrors = TreatWarningsAsErrors,
+                    MaxViolationsPerFile = defaultConfig.MaxViolationsPerFile,
+                    ExcludedPaths = (ExcludedPaths != null && ExcludedPaths.Length > 0) ? ExcludedPaths : defaultConfig.ExcludedPaths,
+                    ExcludedRules = defaultConfig.ExcludedRules
+                };
 
                 var result = RunAnalysis(config);
 
@@ -105,7 +102,7 @@ namespace slskd.Common.CodeQuality
                 try
                 {
                     var assembly = Assembly.LoadFrom(AssemblyPath);
-                    violations.AddRange(StaticAnalysis.AnalyzeAssembly(assembly));
+                    violations.AddRange(StaticAnalysis.AnalyzeAssembly(assembly).Violations);
                 }
                 catch (Exception ex)
                 {

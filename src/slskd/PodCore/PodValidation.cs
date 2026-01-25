@@ -276,7 +276,8 @@ namespace slskd.PodCore
             if (!IsValidPeerId(policy.GatewayPeerId))
                 return (false, "Invalid GatewayPeerId format");
 
-            if (!members.Any(m => m.PeerId == policy.GatewayPeerId))
+            // At create time (members empty), gateway is expected to join first; once we have members, gateway must be among them
+            if (members.Count > 0 && !members.Any(m => m.PeerId == policy.GatewayPeerId))
                 return (false, "GatewayPeerId must be a pod member");
 
             // Registered services validation (preferred approach)

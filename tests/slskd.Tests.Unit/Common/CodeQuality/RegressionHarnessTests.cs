@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.Common.CodeQuality
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
     using System.Threading.Tasks;
@@ -41,20 +42,20 @@ namespace slskd.Tests.Unit.Common.CodeQuality
             var report = new TestCoverageReport
             {
                 AnalysisTimestamp = DateTimeOffset.UtcNow,
-                SourceAssemblies = new[] { "TestAssembly" },
-                TestAssemblies = new[] { "TestAssembly" },
-                SubsystemReports = new[]
+                SourceAssemblies = new List<string> { "TestAssembly" },
+                TestAssemblies = new List<string> { "TestAssembly" },
+                SubsystemReports = new List<SubsystemCoverageReport>
                 {
                     new SubsystemCoverageReport
                     {
                         SubsystemName = "TestSubsystem",
                         MethodCoverage = 0.85,
                         ClassCoverage = 0.80,
-                        CoverageGaps = new[] { "UncoveredType" }
+                        CoverageGaps = new List<string> { "UncoveredType" }
                     }
                 },
                 OverallCoverage = 0.85,
-                CoverageGaps = Array.Empty<CoverageGap>()
+                CoverageGaps = new List<CoverageGap>()
             };
 
             var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -105,7 +106,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
             Assert.NotNull(benchmarks);
             Assert.NotEmpty(benchmarks);
 
-            foreach (var benchmark in benchmarks)
+            foreach (dynamic benchmark in benchmarks)
             {
                 Assert.NotNull(benchmark.Name);
                 Assert.NotNull(benchmark.Description);
@@ -121,23 +122,21 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         {
             private static readonly Type RegressionHarnessType = typeof(RegressionHarness);
 
-            public static object[] GetCriticalScenarios()
+            public static CriticalScenario[] GetCriticalScenarios()
             {
-                // Access the private CriticalScenarios field via reflection
                 var field = RegressionHarnessType.GetField("CriticalScenarios", BindingFlags.NonPublic | BindingFlags.Static);
-                return field?.GetValue(null) as object[] ?? Array.Empty<object>();
+                return (CriticalScenario[])(field?.GetValue(null) ?? Array.Empty<CriticalScenario>());
             }
 
             public static object[] GetBenchmarkDefinitions()
             {
-                // In a real implementation, we'd access private benchmark definitions
-                // For now, return a mock
-                return new[]
+                return new object[]
                 {
                     new
                     {
                         Name = "PodMessage_Encryption",
                         Description = "Pod message encryption/decryption performance",
+                        Operation = (Func<Task>)(() => Task.CompletedTask),
                         ExpectedMaxDuration = TimeSpan.FromMilliseconds(50)
                     }
                 };

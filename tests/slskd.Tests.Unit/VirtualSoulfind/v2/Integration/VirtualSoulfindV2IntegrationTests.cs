@@ -19,7 +19,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Moq;
     using slskd.Common.Moderation;
     using slskd.Shares;
@@ -84,48 +86,57 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
                 UpdatedAt = DateTimeOffset.UtcNow,
             });
 
-            // Set up local library backend with a file
-            var mockShareRepo = new Mock<IShareRepository>();
-            mockShareRepo.Setup(r => r.FindContentItem(trackId))
-                .Returns(("Music", "work:dsotm", "05_Time.flac", true, string.Empty, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+            // LocalLibraryBackend has SupportedDomain=null and is skipped by the planner; use sourceRegistry to supply a LocalLibrary candidate
+            var now = DateTimeOffset.UtcNow;
+            var itemId = ContentItemId.Parse(trackId);
+            await sourceRegistry.UpsertCandidateAsync(new SourceCandidate
+            {
+                Id = "local:1",
+                ItemId = itemId,
+                Backend = ContentBackendType.LocalLibrary,
+                BackendRef = trackId,
+                ExpectedQuality = 100,
+                TrustScore = 1.0f,
+                LastValidatedAt = now,
+                LastSeenAt = now,
+                IsPreferred = true,
+            });
 
-            var localBackend = new LocalLibraryBackend(mockShareRepo.Object);
-
-            // Set up moderation (no-op for this test)
             var mockMcp = new Mock<IModerationProvider>();
-            mockMcp.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision { Verdict = ModerationVerdict.Allowed });
+            mockMcp.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Allow("test"));
 
-            // Create planner
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
+
             var planner = new MultiSourcePlanner(
                 catalogueStore,
                 sourceRegistry,
-                new[] { localBackend },
+                Array.Empty<IContentBackend>(),
                 mockMcp.Object,
+                peerRep,
                 PlanningMode.SoulseekFriendly);
 
-            // Create intent
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent:1",
                 TrackId = trackId,
                 Priority = IntentPriority.High,
                 Status = IntentStatus.Pending,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow,
+                CreatedAt = now,
+                UpdatedAt = now,
             };
 
             // Act: Generate plan
             var plan = await planner.CreatePlanAsync(desiredTrack);
 
-            // Assert: Plan includes local backend
             Assert.True(plan.IsExecutable);
             Assert.NotEmpty(plan.Steps);
-            
             var localStep = plan.Steps.FirstOrDefault(s => s.Backend == ContentBackendType.LocalLibrary);
             Assert.NotNull(localStep);
             Assert.Single(localStep.Candidates);
-            
             var candidate = localStep.Candidates.First();
             Assert.Equal(1.0f, candidate.TrustScore);
             Assert.Equal(100, candidate.ExpectedQuality);
@@ -151,30 +162,40 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
                 UpdatedAt = DateTimeOffset.UtcNow,
             });
 
-            var mockShareRepo = new Mock<IShareRepository>();
-            mockShareRepo.Setup(r => r.FindContentItem(trackId))
-                .Returns(("Music", "work:123", "blocked.mp3", true, string.Empty, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+            var itemId = ContentItemId.Parse(trackId);
+            var now2 = DateTimeOffset.UtcNow;
+            await sourceRegistry.UpsertCandidateAsync(new SourceCandidate
+            {
+                Id = "local:1",
+                ItemId = itemId,
+                Backend = ContentBackendType.LocalLibrary,
+                BackendRef = trackId,
+                ExpectedQuality = 100,
+                TrustScore = 1.0f,
+                LastValidatedAt = now2,
+                LastSeenAt = now2,
+            });
 
-            var localBackend = new LocalLibraryBackend(mockShareRepo.Object);
-
-            // MCP BLOCKS this content
+            // MCP BLOCKS this content; candidate is filtered out, plan is empty
             var mockMcp = new Mock<IModerationProvider>();
-            mockMcp.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision 
-                { 
-                    Verdict = ModerationVerdict.Blocked,
-                    Reason = "Prohibited content"
-                });
+            mockMcp.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Block("Prohibited content"));
+
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
 
             var planner = new MultiSourcePlanner(
                 catalogueStore,
                 sourceRegistry,
-                new[] { localBackend },
+                Array.Empty<IContentBackend>(),
                 mockMcp.Object,
+                peerRep,
                 PlanningMode.SoulseekFriendly);
 
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent:1",
                 TrackId = trackId,
                 Priority = IntentPriority.High,
@@ -183,10 +204,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
 
-            // Act
             var plan = await planner.CreatePlanAsync(desiredTrack);
 
-            // Assert: MCP blocked everything, plan is empty
+            // MCP blocked everything; no backends with SupportedDomain=Music contributed, plan is empty
             Assert.False(plan.IsExecutable);
             Assert.Empty(plan.Steps);
         }
@@ -283,17 +303,23 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             });
 
             var mockMcp = new Mock<IModerationProvider>();
-            mockMcp.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()))
-                .ReturnsAsync(new ModerationDecision { Verdict = ModerationVerdict.Allowed });
+            mockMcp.Setup(m => m.CheckContentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Allow("test"));
+
+            var storeMock = new Mock<IPeerReputationStore>();
+            storeMock.Setup(s => s.IsPeerBannedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            var peerRep = new PeerReputationService(new Mock<ILogger<PeerReputationService>>().Object, storeMock.Object);
 
             var planner = new MultiSourcePlanner(
                 catalogueStore,
                 sourceRegistry,
                 Array.Empty<IContentBackend>(),
-                mockMcp.Object);
+                mockMcp.Object,
+                peerRep);
 
             var desiredTrack = new DesiredTrack
             {
+                Domain = ContentDomain.Music,
                 DesiredTrackId = "intent:1",
                 TrackId = trackId,
                 Priority = IntentPriority.High,
@@ -302,7 +328,6 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
 
-            // Act: Plan in OfflinePlanning mode
             var plan = await planner.CreatePlanAsync(desiredTrack, PlanningMode.OfflinePlanning);
 
             // Assert: Only local backend in plan

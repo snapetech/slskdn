@@ -315,8 +315,7 @@ namespace slskd.Common.CodeQuality
                 var testMethod = testClasses
                     .SelectMany(tc => tc.GetMethods())
                     .FirstOrDefault(m => m.Name.Contains(testMethodName, StringComparison.OrdinalIgnoreCase) &&
-                                       (m.GetCustomAttributes(typeof(Xunit.FactAttribute), false).Any() ||
-                                        m.GetCustomAttributes(typeof(Xunit.TheoryAttribute), false).Any()));
+                                       m.GetCustomAttributes(false).Any(a => { var n = a.GetType().FullName; return n == "Xunit.FactAttribute" || n == "Xunit.TheoryAttribute"; }));
 
                 if (testMethod == null)
                 {

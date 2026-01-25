@@ -211,21 +211,23 @@ public class Obfs4TransportTests : IDisposable
         Assert.Equal(1, status.TotalConnectionsAttempted);
     }
 
-    [Fact(Skip = "Environment-dependent: /bin/ls --version may exit 0 on some systems, so IsAvailable returns true")]
+    [Fact]
     public async Task IsAvailableAsync_VersionCheckFailure_ReturnsFalse()
     {
-        // Arrange - Use a valid path that exists but isn't obfs4proxy
+        var versionCheckerMock = new Mock<IObfs4VersionChecker>();
+        versionCheckerMock
+            .Setup(x => x.RunVersionCheckAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
         var options = new Obfs4TransportOptions
         {
-            Obfs4ProxyPath = "/bin/ls", // Exists but won't return expected version
+            Obfs4ProxyPath = "/usr/bin/obfs4proxy",
             BridgeLines = _defaultOptions.BridgeLines
         };
-        var transport = new Obfs4Transport(options, _loggerMock.Object);
+        var transport = new Obfs4Transport(options, _loggerMock.Object, versionCheckerMock.Object);
 
-        // Act
         var isAvailable = await transport.IsAvailableAsync();
 
-        // Assert - Should return false since /bin/ls doesn't respond like obfs4proxy
         Assert.False(isAvailable);
     }
 }

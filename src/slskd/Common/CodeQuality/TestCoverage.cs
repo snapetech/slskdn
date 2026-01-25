@@ -266,8 +266,7 @@ namespace slskd.Common.CodeQuality
                 foreach (var testClass in testClasses)
                 {
                     var testMethods = testClass.GetMethods()
-                        .Where(m => m.GetCustomAttributes(typeof(Xunit.FactAttribute), false).Any() ||
-                                   m.GetCustomAttributes(typeof(Xunit.TheoryAttribute), false).Any())
+                        .Where(m => m.GetCustomAttributes(false).Any(a => { var n = a.GetType().FullName; return n == "Xunit.FactAttribute" || n == "Xunit.TheoryAttribute"; }))
                         .ToList();
 
                     results.TotalTests += testMethods.Count;
@@ -432,7 +431,7 @@ namespace slskd.Common.CodeQuality
         /// <summary>
         ///     Gets the list of coverage gaps.
         /// </summary>
-        public List<CoverageGap> CoverageGaps { get; init; } = new();
+        public List<CoverageGap> CoverageGaps { get; set; } = new();
     }
 
     /// <summary>
@@ -478,7 +477,7 @@ namespace slskd.Common.CodeQuality
         /// <summary>
         ///     Gets the list of types that lack test coverage.
         /// </summary>
-        public List<string> CoverageGaps { get; init; } = new();
+        public List<string> CoverageGaps { get; set; } = new();
     }
 
     /// <summary>

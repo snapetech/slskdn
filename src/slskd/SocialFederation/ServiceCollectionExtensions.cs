@@ -25,13 +25,16 @@ namespace slskd.SocialFederation
             // Register configuration options
             services.AddOptions<FederationPublishingOptions>();
 
+            services.AddSingleton<IEd25519KeyPairGenerator, NsecEd25519KeyPairGenerator>();
+
             // Register the key store with data protection
             services.AddSingleton<IActivityPubKeyStore>(sp =>
             {
                 var dataProtector = sp.GetRequiredService<IDataProtectionProvider>()
                     .CreateProtector("ActivityPubKeyStore");
+                var keyPairGenerator = sp.GetRequiredService<IEd25519KeyPairGenerator>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ActivityPubKeyStore>>();
-                return new ActivityPubKeyStore(dataProtector, logger);
+                return new ActivityPubKeyStore(dataProtector, keyPairGenerator, logger);
             });
 
             // Register activity delivery service

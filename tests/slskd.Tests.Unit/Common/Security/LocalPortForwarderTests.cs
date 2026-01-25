@@ -17,6 +17,22 @@ using Xunit;
 
 namespace slskd.Tests.Unit.Common.Security;
 
+/// <summary>Records CallServiceAsync invocations and returns a configurable response; avoids Moq+ReadOnlyMemory matching issues.</summary>
+internal sealed class RecordingMeshServiceClient : IMeshServiceClient
+{
+    public readonly List<(string ServiceName, string Method)> Invocations = new();
+    public ServiceReply Response { get; set; } = new ServiceReply { StatusCode = ServiceStatusCodes.OK };
+
+    public Task<ServiceReply> CallServiceAsync(string serviceName, string method, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
+    {
+        Invocations.Add((serviceName, method));
+        return Task.FromResult(Response);
+    }
+
+    public Task<ServiceReply> CallAsync(string targetPeerId, ServiceCall call, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Tests use CallServiceAsync only.");
+}
+
 public class LocalPortForwarderTests : IDisposable
 {
     private readonly Mock<ILogger<LocalPortForwarder>> _loggerMock;
@@ -93,29 +109,8 @@ public class LocalPortForwarderTests : IDisposable
         Assert.Contains("already being forwarded", exception.Message);
     }
 
-    [Fact(Skip = "StartForwardingAsync does not create a tunnel at start; rejection happens on first client connect.")]
-    public async Task StartForwardingAsync_TunnelRejected_ThrowsException()
-    {
-        // Arrange
-        var response = new ServiceReply
-        {
-            CorrelationId = Guid.NewGuid().ToString(),
-            StatusCode = ServiceStatusCodes.Forbidden,
-            ErrorMessage = "Tunnel rejected"
-        };
-
-        _meshClientMock.Setup(x => x.CallServiceAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Exception>(
-            () => _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80));
-        Assert.Contains("Failed to start forwarding", exception.Message);
-    }
+    // StartForwardingAsync does not call the mesh; tunnel rejection happens on first client
+    // connect in CreateTunnelConnectionAsync. See CreateTunnelConnectionAsync_TunnelRejected_ReturnsNull.
 
     [Fact]
     public async Task StopForwardingAsync_ValidPort_Succeeds()
@@ -238,29 +233,24 @@ public class LocalPortForwarderTests : IDisposable
         Assert.Null(status);
     }
 
-    [Fact(Skip = "OpenTunnelResponse JSON deserialization from mock Payload returns null; needs alignment with LocalPortForwarder.")]
+    [Fact]
     public void CreateTunnelConnectionAsync_TunnelAccepted_ReturnsConnection()
     {
-        // Arrange
-        var response = new ServiceReply
+        var client = new RecordingMeshServiceClient
         {
-            CorrelationId = Guid.NewGuid().ToString(),
-            StatusCode = ServiceStatusCodes.OK,
-            Payload = JsonSerializer.SerializeToUtf8Bytes(new { TunnelId = "tunnel-123", Accepted = true })
+            Response = new ServiceReply
+            {
+                CorrelationId = Guid.NewGuid().ToString(),
+                StatusCode = ServiceStatusCodes.OK,
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new { TunnelId = "tunnel-123", Accepted = true })
+            }
         };
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        _meshClientMock.Setup(x => x.CallServiceAsync(
-            "private-gateway",
-            "OpenTunnel",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        var connection = forwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).Result;
 
-        // Act
-        var connection = _portForwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).Result;
-
-        // Assert
         Assert.NotNull(connection);
+        Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "OpenTunnel");
     }
 
     [Fact]
@@ -306,115 +296,68 @@ public class LocalPortForwarderTests : IDisposable
         Assert.Null(connection);
     }
 
-    [Fact(Skip = "CallServiceAsync not invoked from internal SendTunnelDataAsync; needs investigation.")]
+    [Fact]
     public void SendTunnelDataAsync_ValidData_CallsService()
     {
-        // Arrange
-        var response = new ServiceReply
-        {
-            CorrelationId = Guid.NewGuid().ToString(),
-            StatusCode = ServiceStatusCodes.OK
-        };
-
-        _meshClientMock.Setup(x => x.CallServiceAsync(
-            "private-gateway",
-            "TunnelData",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
-
+        var client = new RecordingMeshServiceClient { Response = new ServiceReply { StatusCode = ServiceStatusCodes.OK } };
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
         var data = new byte[] { 1, 2, 3, 4 };
 
-        // Act
-        _portForwarder.SendTunnelDataAsync("tunnel-123", data).Wait();
+        forwarder.SendTunnelDataAsync("tunnel-123", data).Wait();
 
-        // Assert
-        _meshClientMock.Verify(x => x.CallServiceAsync(
-            "private-gateway",
-            "TunnelData",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "TunnelData");
     }
 
-    [Fact(Skip = "GetTunnelDataResponse JSON deserialization from mock Payload returns null; needs alignment.")]
+    [Fact]
     public void ReceiveTunnelDataAsync_ValidResponse_ReturnsData()
     {
-        // Arrange
         var testData = new byte[] { 5, 6, 7, 8 };
-        var response = new ServiceReply
+        var client = new RecordingMeshServiceClient
         {
-            CorrelationId = Guid.NewGuid().ToString(),
-            StatusCode = ServiceStatusCodes.OK,
-            Payload = JsonSerializer.SerializeToUtf8Bytes(new { Data = testData })
+            Response = new ServiceReply
+            {
+                StatusCode = ServiceStatusCodes.OK,
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new { Data = testData })
+            }
         };
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        _meshClientMock.Setup(x => x.CallServiceAsync(
-            "private-gateway",
-            "GetTunnelData",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        var result = forwarder.ReceiveTunnelDataAsync("tunnel-123").Result;
 
-        // Act
-        var result = _portForwarder.ReceiveTunnelDataAsync("tunnel-123").Result;
-
-        // Assert
         Assert.NotNull(result);
         Assert.Equal(testData, result);
+        Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "GetTunnelData");
     }
 
-    [Fact(Skip = "GetTunnelDataResponse deserialization; same as ValidResponse.")]
-    public void ReceiveTunnelDataAsync_NoData_ReturnsNull()
+    [Fact]
+    public void ReceiveTunnelDataAsync_NoData_ReturnsEmptyArray()
     {
-        // Arrange
-        var response = new ServiceReply
+        var client = new RecordingMeshServiceClient
         {
-            CorrelationId = Guid.NewGuid().ToString(),
-            StatusCode = ServiceStatusCodes.OK,
-            Payload = JsonSerializer.SerializeToUtf8Bytes(new { Data = Array.Empty<byte>() })
+            Response = new ServiceReply
+            {
+                StatusCode = ServiceStatusCodes.OK,
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new { Data = Array.Empty<byte>() })
+            }
         };
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        _meshClientMock.Setup(x => x.CallServiceAsync(
-            "private-gateway",
-            "GetTunnelData",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        var result = forwarder.ReceiveTunnelDataAsync("tunnel-123").Result;
 
-        // Act
-        var result = _portForwarder.ReceiveTunnelDataAsync("tunnel-123").Result;
-
-        // Assert (empty Data deserializes as byte[0], not null)
         Assert.NotNull(result);
         Assert.Empty(result);
+        Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "GetTunnelData");
     }
 
-    [Fact(Skip = "CallServiceAsync not invoked from internal CloseTunnelAsync; needs investigation.")]
+    [Fact]
     public void CloseTunnelAsync_ValidTunnel_CallsService()
     {
-        // Arrange
-        var response = new ServiceReply
-        {
-            CorrelationId = Guid.NewGuid().ToString(),
-            StatusCode = ServiceStatusCodes.OK
-        };
+        var client = new RecordingMeshServiceClient { Response = new ServiceReply { StatusCode = ServiceStatusCodes.OK } };
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        _meshClientMock.Setup(x => x.CallServiceAsync(
-            "private-gateway",
-            "CloseTunnel",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        forwarder.CloseTunnelAsync("tunnel-123").Wait();
 
-        // Act
-        _portForwarder.CloseTunnelAsync("tunnel-123").Wait();
-
-        // Assert
-        _meshClientMock.Verify(x => x.CallServiceAsync(
-            "private-gateway",
-            "CloseTunnel",
-            It.IsAny<ReadOnlyMemory<byte>>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "CloseTunnel");
     }
 
     [Fact]

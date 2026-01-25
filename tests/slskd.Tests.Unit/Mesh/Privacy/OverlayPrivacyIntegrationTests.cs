@@ -7,8 +7,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Common.Security;
+using slskd.Mesh.Dht;
 using slskd.Mesh.Overlay;
 using slskd.Mesh.Privacy;
+using PrivacyLayer = slskd.Mesh.Privacy.PrivacyLayer;
+using IPrivacyLayer = slskd.Mesh.Privacy.IPrivacyLayer;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh.Privacy;
@@ -18,8 +21,9 @@ public class OverlayPrivacyIntegrationTests : IDisposable
     private readonly Mock<ILogger<QuicOverlayClient>> _clientLoggerMock;
     private readonly Mock<ILogger<ControlDispatcher>> _dispatcherLoggerMock;
     private readonly Mock<ILogger<PrivacyLayer>> _privacyLoggerMock;
+    private readonly Mock<ILoggerFactory> _loggerFactoryMock;
     private readonly Mock<IControlSigner> _signerMock;
-    private readonly Mock<ControlEnvelopeValidator> _validatorMock;
+    private readonly Mock<IControlEnvelopeValidator> _validatorMock;
     private readonly OverlayOptions _overlayOptions;
     private readonly PrivacyLayerOptions _privacyOptions;
 
@@ -28,8 +32,10 @@ public class OverlayPrivacyIntegrationTests : IDisposable
         _clientLoggerMock = new Mock<ILogger<QuicOverlayClient>>();
         _dispatcherLoggerMock = new Mock<ILogger<ControlDispatcher>>();
         _privacyLoggerMock = new Mock<ILogger<PrivacyLayer>>();
+        _loggerFactoryMock = new Mock<ILoggerFactory>();
+        _loggerFactoryMock.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>());
         _signerMock = new Mock<IControlSigner>();
-        _validatorMock = new Mock<ControlEnvelopeValidator>();
+        _validatorMock = new Mock<IControlEnvelopeValidator>();
 
         _overlayOptions = new OverlayOptions { Enable = true, MaxDatagramBytes = 2048 };
         _privacyOptions = new PrivacyLayerOptions
@@ -51,7 +57,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
     public async Task OverlayClientWithPrivacyLayer_ProcessesOutboundMessages()
     {
         // Arrange
-        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _privacyOptions);
+        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _loggerFactoryMock.Object, _privacyOptions);
         var optionsMock = new Mock<IOptions<OverlayOptions>>();
         optionsMock.Setup(o => o.Value).Returns(_overlayOptions);
 
@@ -83,7 +89,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
     public async Task ControlDispatcherWithPrivacyLayer_ProcessesInboundMessages()
     {
         // Arrange
-        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _privacyOptions);
+        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _loggerFactoryMock.Object, _privacyOptions);
         var dispatcher = new ControlDispatcher(
             _dispatcherLoggerMock.Object,
             _validatorMock.Object,
@@ -95,7 +101,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
 
         var envelope = new ControlEnvelope
         {
-            Type = "test",
+            Type = OverlayControlTypes.Ping,
             Payload = paddedPayload,
             MessageId = Guid.NewGuid().ToString()
         };
@@ -105,7 +111,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
             It.IsAny<ControlEnvelope>(),
             It.IsAny<MeshPeerDescriptor>(),
             It.IsAny<string>()))
-            .Returns(new ControlEnvelopeValidator.ValidationResult(true));
+            .Returns(EnvelopeValidationResult.Success());
 
         var peerDescriptor = new MeshPeerDescriptor(); // Mock descriptor
 
@@ -120,7 +126,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
     public async Task RoundTripPrivacyProcessing_EnvelopePayloadSurvivesTransforms()
     {
         // Arrange - Full round-trip test
-        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _privacyOptions);
+        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _loggerFactoryMock.Object, _privacyOptions);
         var dispatcher = new ControlDispatcher(
             _dispatcherLoggerMock.Object,
             _validatorMock.Object,
@@ -135,7 +141,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
         // Step 2: Create envelope with processed payload
         var envelope = new ControlEnvelope
         {
-            Type = "test",
+            Type = OverlayControlTypes.Ping,
             Payload = processedPayload,
             MessageId = Guid.NewGuid().ToString()
         };
@@ -145,7 +151,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
             It.IsAny<ControlEnvelope>(),
             It.IsAny<MeshPeerDescriptor>(),
             It.IsAny<string>()))
-            .Returns(new ControlEnvelopeValidator.ValidationResult(true));
+            .Returns(EnvelopeValidationResult.Success());
 
         var peerDescriptor = new MeshPeerDescriptor();
 
@@ -163,7 +169,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
     {
         // Arrange
         var disabledOptions = new PrivacyLayerOptions { Enabled = false };
-        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, disabledOptions);
+        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _loggerFactoryMock.Object, disabledOptions);
 
         var originalPayload = new byte[] { 1, 2, 3, 4, 5 };
 
@@ -194,7 +200,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
             It.IsAny<ControlEnvelope>(),
             It.IsAny<MeshPeerDescriptor>(),
             It.IsAny<string>()))
-            .Returns(new ControlEnvelopeValidator.ValidationResult(true));
+            .Returns(EnvelopeValidationResult.Success());
 
         var peerDescriptor = new MeshPeerDescriptor();
 
@@ -209,7 +215,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
     public void PrivacyLayerIntegration_DoesNotBreakNormalOverlayOperation()
     {
         // Arrange - Test that privacy layer doesn't interfere with normal operation
-        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _privacyOptions);
+        var privacyLayer = new PrivacyLayer(_privacyLoggerMock.Object, _loggerFactoryMock.Object, _privacyOptions);
         var optionsMock = new Mock<IOptions<OverlayOptions>>();
         optionsMock.Setup(o => o.Value).Returns(_overlayOptions);
 

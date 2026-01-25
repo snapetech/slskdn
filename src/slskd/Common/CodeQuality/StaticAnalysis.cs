@@ -415,9 +415,16 @@ namespace slskd.Common.CodeQuality
         /// <summary>
         ///     Gets the violations grouped by severity.
         /// </summary>
-        public Dictionary<ViolationSeverity, int> ViolationsBySeverity =>
-            Violations.GroupBy(v => v.Severity)
-                     .ToDictionary(g => g.Key, g => g.Count);
+        public Dictionary<ViolationSeverity, int> ViolationsBySeverity
+        {
+            get
+            {
+                var d = new Dictionary<ViolationSeverity, int>();
+                foreach (var g in Violations.GroupBy(v => v.Severity))
+                    d[g.Key] = g.Count();
+                return d;
+            }
+        }
     }
 
     /// <summary>

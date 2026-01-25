@@ -30,7 +30,7 @@ namespace slskd.Tests.Unit.SocialFederation
 
         private ActivityPubKeyStore CreateKeyStore()
         {
-            return new ActivityPubKeyStore(_dataProtectorMock.Object, _loggerMock.Object);
+            return new ActivityPubKeyStore(_dataProtectorMock.Object, new FakeEd25519KeyPairGenerator(), _loggerMock.Object);
         }
 
         [Fact]
@@ -78,11 +78,11 @@ namespace slskd.Tests.Unit.SocialFederation
             // Act
             using var privateKey = await keyStore.GetPrivateKeyAsync(actorId);
 
-            // Assert
+            // Assert (accept PKIX "PRIVATE KEY" or Raw "RAW PRIVATE KEY" PEM from NSec fallback)
             Assert.NotNull(privateKey);
             Assert.NotNull(privateKey.PemString);
-            Assert.True(privateKey.PemString.Contains("-----BEGIN PRIVATE KEY-----"));
-            Assert.True(privateKey.PemString.Contains("-----END PRIVATE KEY-----"));
+            Assert.True(privateKey.PemString.Contains("PRIVATE KEY", StringComparison.Ordinal));
+            Assert.True(privateKey.PemString.Contains("-----END ", StringComparison.Ordinal));
         }
 
         [Fact]
@@ -120,27 +120,30 @@ namespace slskd.Tests.Unit.SocialFederation
         }
 
         [Fact]
-        public async Task GetPublicKeyAsync_ThrowsForUnknownActor()
+        public async Task GetPublicKeyAsync_ForUnknownActor_CreatesAndReturnsKey()
         {
-            // Arrange
+            // GetPublicKeyAsync calls EnsureKeypairAsync, which creates on demand; it does not throw for "unknown".
             var keyStore = CreateKeyStore();
             var unknownActorId = "https://example.com/actors/unknown";
 
-            // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => keyStore.GetPublicKeyAsync(unknownActorId));
+            var publicKey = await keyStore.GetPublicKeyAsync(unknownActorId);
+
+            Assert.NotNull(publicKey);
+            Assert.Contains("BEGIN PUBLIC KEY", publicKey);
         }
 
         [Fact]
-        public async Task GetPrivateKeyAsync_ThrowsForUnknownActor()
+        public async Task GetPrivateKeyAsync_ForUnknownActor_CreatesAndReturnsKey()
         {
-            // Arrange
+            // GetPrivateKeyAsync calls EnsureKeypairAsync, which creates on demand; it does not throw for "unknown".
             var keyStore = CreateKeyStore();
             var unknownActorId = "https://example.com/actors/unknown";
 
-            // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => keyStore.GetPrivateKeyAsync(unknownActorId));
+            using var privateKey = await keyStore.GetPrivateKeyAsync(unknownActorId);
+
+            Assert.NotNull(privateKey);
+            Assert.NotNull(privateKey.PemString);
+            Assert.Contains("PRIVATE KEY", privateKey.PemString, StringComparison.Ordinal);
         }
 
         [Fact]

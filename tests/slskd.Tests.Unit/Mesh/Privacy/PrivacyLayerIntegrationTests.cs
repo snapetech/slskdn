@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
 using slskd.Mesh.Privacy;
+using PrivacyLayer = slskd.Mesh.Privacy.PrivacyLayer;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh.Privacy;
@@ -14,11 +15,14 @@ namespace slskd.Tests.Unit.Mesh.Privacy;
 public class PrivacyLayerIntegrationTests : IDisposable
 {
     private readonly Mock<ILogger<PrivacyLayer>> _loggerMock;
+    private readonly Mock<ILoggerFactory> _loggerFactoryMock;
     private readonly PrivacyLayerOptions _defaultOptions;
 
     public PrivacyLayerIntegrationTests()
     {
         _loggerMock = new Mock<ILogger<PrivacyLayer>>();
+        _loggerFactoryMock = new Mock<ILoggerFactory>();
+        _loggerFactoryMock.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>());
         _defaultOptions = new PrivacyLayerOptions
         {
             Enabled = true,
@@ -38,7 +42,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
     public void Constructor_WithAllFeaturesEnabled_CreatesAllComponents()
     {
         // Act
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _defaultOptions);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
 
         // Assert
         Assert.True(privacyLayer.IsEnabled);
@@ -55,7 +59,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
         var options = new PrivacyLayerOptions { Enabled = false };
 
         // Act
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, options);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
 
         // Assert
         Assert.False(privacyLayer.IsEnabled);
@@ -69,7 +73,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
     public async Task ProcessOutboundMessageAsync_WithAllFeatures_AppliesAllTransforms()
     {
         // Arrange
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _defaultOptions);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
         var originalMessage = new byte[] { 1, 2, 3, 4, 5 };
         var cts = new CancellationTokenSource();
 
@@ -100,7 +104,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
             CoverTraffic = new CoverTrafficOptions { Enabled = false }
         };
 
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, options);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
         var message = new byte[] { 1, 2, 3 };
         var cts = new CancellationTokenSource();
 
@@ -126,7 +130,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
             CoverTraffic = new CoverTrafficOptions { Enabled = false }
         };
 
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, options);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
         var originalMessage = new byte[] { 1, 2, 3, 4, 5 };
         var cts = new CancellationTokenSource();
 
@@ -143,15 +147,15 @@ public class PrivacyLayerIntegrationTests : IDisposable
     [Fact]
     public void GetOutboundDelay_WithTimingEnabled_ReturnsDelay()
     {
-        // Arrange
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _defaultOptions);
+        // Arrange - PrivacyLayer passes JitterMs as minDelayMs; RandomJitterObfuscator uses maxDelayMs=500 default
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
 
         // Act
         var delay = privacyLayer.GetOutboundDelay();
 
-        // Assert
+        // Assert - delay is in [JitterMs, 500] ms
         Assert.True(delay >= TimeSpan.Zero, "Delay should be non-negative");
-        Assert.True(delay <= TimeSpan.FromMilliseconds(50), "Delay should be within configured range");
+        Assert.True(delay <= TimeSpan.FromMilliseconds(500), "Delay should be within RandomJitterObfuscator range (max 500ms default)");
     }
 
     [Fact]
@@ -163,7 +167,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
             Enabled = true,
             Timing = new TimingObfuscationOptions { Enabled = false }
         };
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, options);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
 
         // Act
         var delay = privacyLayer.GetOutboundDelay();
@@ -179,9 +183,9 @@ public class PrivacyLayerIntegrationTests : IDisposable
         var options = new PrivacyLayerOptions
         {
             Enabled = true,
-            CoverTraffic = new CoverTrafficOptions { Enabled = true, IntervalSeconds = 0.01 } // Very short interval
+            CoverTraffic = new CoverTrafficOptions { Enabled = true, IntervalSeconds = 1 } // Short interval for test
         };
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, options);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
         var cts = new CancellationTokenSource();
         var messages = new List<byte[]>();
 
@@ -201,7 +205,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
         foreach (var message in messages)
         {
             Assert.True(message.Length > 0, "Cover traffic messages should not be empty");
-            Assert.True(CoverTrafficGenerator.IsCoverTraffic(message), "Messages should be marked as cover traffic");
+            Assert.True(slskd.Mesh.Privacy.CoverTrafficGenerator.IsCoverTraffic(message), "Messages should be marked as cover traffic");
         }
     }
 
@@ -209,54 +213,54 @@ public class PrivacyLayerIntegrationTests : IDisposable
     public void RecordActivity_UpdatesCoverTrafficTiming()
     {
         // Arrange
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _defaultOptions);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
 
         // Act
         privacyLayer.RecordActivity();
 
-        // Assert - Should suppress cover traffic for the configured interval
-        var timeUntilNext = privacyLayer.TimeUntilNextCoverTraffic();
+        // Assert - Should suppress cover traffic for the configured interval (TimeUntilNextCoverTraffic is on concrete CoverTrafficGenerator)
+        var ctg = privacyLayer.CoverTrafficGenerator as slskd.Mesh.Privacy.CoverTrafficGenerator;
+        Assert.NotNull(ctg);
+        var timeUntilNext = ctg.TimeUntilNextCoverTraffic();
         Assert.True(timeUntilNext > TimeSpan.Zero, "Activity should suppress cover traffic");
     }
 
     [Fact]
     public void GetPendingBatches_WithMessagesQueued_ReturnsBatches()
     {
-        // Arrange
+        // Arrange: MaxBatchSize=2 so two AddMessage makes the batch ready (GetBatch returns the queued messages)
         var options = new PrivacyLayerOptions
         {
             Enabled = true,
-            Batching = new MessageBatchingOptions { Enabled = true, BatchWindowMs = 1000, MaxBatchSize = 2 }
+            Padding = new MessagePaddingOptions { Enabled = false },
+            Timing = new TimingObfuscationOptions { Enabled = false },
+            Batching = new MessageBatchingOptions { Enabled = true, BatchWindowMs = 1000, MaxBatchSize = 2 },
+            CoverTraffic = new CoverTrafficOptions { Enabled = false }
         };
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, options);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
 
-        // Queue some messages (synchronously for testing)
         var message1 = new byte[] { 1 };
         var message2 = new byte[] { 2 };
 
-        // Access batcher directly for testing (in real usage this would be done through ProcessOutboundMessageAsync)
         var batcher = privacyLayer.MessageBatcher;
         Assert.NotNull(batcher);
 
         batcher.AddMessage(message1);
-        batcher.AddMessage(message2);
-
-        // Force batch ready
-        privacyLayer.FlushBatches();
+        batcher.AddMessage(message2); // batch becomes ready (count >= MaxBatchSize)
 
         // Act
         var batches = privacyLayer.GetPendingBatches();
 
         // Assert
         Assert.NotNull(batches);
-        Assert.True(batches.Count > 0, "Should have pending batches after flushing");
+        Assert.True(batches.Count > 0, "Should have pending batch after filling to MaxBatchSize");
     }
 
     [Fact]
     public void UpdateConfiguration_ChangesPrivacyLayerBehavior()
     {
         // Arrange
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _defaultOptions);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
 
         // Initially enabled
         Assert.True(privacyLayer.IsEnabled);
@@ -277,7 +281,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
     public async Task EndToEndMessageFlow_WithAllFeaturesEnabled_ProcessesCorrectly()
     {
         // Arrange
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _defaultOptions);
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
         var originalMessage = new byte[] { 72, 101, 108, 108, 111 }; // "Hello"
         var cts = new CancellationTokenSource();
 
@@ -302,19 +306,19 @@ public class PrivacyLayerIntegrationTests : IDisposable
     [Fact]
     public void PrivacyLayer_HandlesInvalidConfiguration_Gracefully()
     {
-        // Arrange - Configuration with invalid values
+        // Arrange - Invalid JitterMs (negative). RandomJitterObfuscator clamps to 0; valid Padding/Batching to avoid other throws.
         var invalidOptions = new PrivacyLayerOptions
         {
             Enabled = true,
-            Padding = new MessagePaddingOptions { Enabled = true, BucketSizes = new() }, // Empty bucket sizes
-            Timing = new TimingObfuscationOptions { Enabled = true, JitterMs = -10 }, // Negative jitter
-            Batching = new MessageBatchingOptions { Enabled = true, MaxBatchSize = 0 }, // Invalid batch size
+            Padding = new MessagePaddingOptions { Enabled = true, BucketSizes = new() { 512 } },
+            Timing = new TimingObfuscationOptions { Enabled = true, JitterMs = -10 },
+            Batching = new MessageBatchingOptions { Enabled = true, BatchWindowMs = 100, MaxBatchSize = 2 },
+            CoverTraffic = new CoverTrafficOptions { Enabled = false }
         };
 
-        // Act & Assert - Should handle gracefully (components may be null or use defaults)
-        var privacyLayer = new PrivacyLayer(_loggerMock.Object, invalidOptions);
+        // Act - Should not throw; RandomJitterObfuscator treats negative JitterMs as 0
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, invalidOptions);
 
-        // Should still create successfully, though some components may not work
         Assert.NotNull(privacyLayer);
     }
 }

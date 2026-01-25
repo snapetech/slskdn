@@ -42,7 +42,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
 
             // Assert
             Assert.NotNull(report);
-            Assert.True(report.AnalysisTimestamp > default);
+            Assert.True(report.AnalysisTimestamp > default(DateTimeOffset));
             Assert.NotEmpty(report.SourceAssemblies);
             Assert.NotEmpty(report.TestAssemblies);
             Assert.True(report.SubsystemReports.Count >= 0); // May be 0 if no matching subsystems
@@ -76,7 +76,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
             // Assert
             Assert.NotNull(results);
             Assert.NotNull(results.TestRunId);
-            Assert.True(results.StartTime > default);
+            Assert.True(results.StartTime > default(DateTimeOffset));
             Assert.True(results.EndTime >= results.StartTime);
             Assert.True(results.Duration >= TimeSpan.Zero);
             Assert.True(results.TotalTests >= 0);
@@ -88,7 +88,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         public void UncoveredMethod_RiskLevel_CorrectlyCalculated()
         {
             // Arrange
-            var type = typeof(TestAnalysisTarget);
+            var type = typeof(TestCoverageAnalysisTarget);
             var encryptMethod = type.GetMethod("EncryptData");
             var saveMethod = type.GetMethod("SaveData");
             var normalMethod = type.GetMethod("ProcessData");
@@ -138,7 +138,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
     /// <summary>
     ///     Test target class for coverage analysis.
     /// </summary>
-    public class TestAnalysisTarget
+    public class TestCoverageAnalysisTarget
     {
         public void EncryptData(byte[] data) { }
         public void SaveData(string data) { }

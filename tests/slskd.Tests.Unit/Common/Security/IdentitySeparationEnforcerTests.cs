@@ -34,9 +34,8 @@ namespace slskd.Tests.Unit.Common.Security
         [Theory]
         [InlineData("", IdentitySeparationEnforcer.IdentityType.Mesh)]
         [InlineData(null, IdentitySeparationEnforcer.IdentityType.Mesh)]
-        [InlineData("user@domain.com", IdentitySeparationEnforcer.IdentityType.Soulseek)] // invalid chars
+        [InlineData("user@domain.com", IdentitySeparationEnforcer.IdentityType.Soulseek)] // @ not allowed in Soulseek
         [InlineData("bridge:user123", IdentitySeparationEnforcer.IdentityType.Pod)] // bridge format not allowed
-        [InlineData("user@domain.com", IdentitySeparationEnforcer.IdentityType.Soulseek)] // @ not allowed
         public void IsValidIdentityFormat_InvalidIdentities_ReturnsFalse(string identity, IdentitySeparationEnforcer.IdentityType type)
         {
             // Act

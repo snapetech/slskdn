@@ -22,12 +22,12 @@ public interface IControlDispatcher
 public class ControlDispatcher : IControlDispatcher
 {
     private readonly ILogger<ControlDispatcher> logger;
-    private readonly ControlEnvelopeValidator validator;
+    private readonly IControlEnvelopeValidator validator;
     private readonly IPrivacyLayer? privacyLayer;
 
     public ControlDispatcher(
         ILogger<ControlDispatcher> logger,
-        ControlEnvelopeValidator validator,
+        IControlEnvelopeValidator validator,
         IPrivacyLayer? privacyLayer = null)
     {
         this.logger = logger;

@@ -19,6 +19,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Moq;
     using slskd.Shares;
@@ -45,14 +46,14 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var itemId = ContentItemId.Parse(contentId);
 
             // Act
-            var candidates = await backend.FindCandidatesAsync(itemId);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
 
             // Assert
             Assert.Single(candidates);
             var candidate = candidates.First();
             Assert.Equal(ContentBackendType.LocalLibrary, candidate.Backend);
             Assert.Equal(1.0f, candidate.TrustScore);
-            Assert.Equal(100, candidate.ExpectedQuality);
+            Assert.Equal(100f, candidate.ExpectedQuality);
             Assert.True(candidate.IsPreferred);
         }
 
@@ -69,7 +70,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var itemId = ContentItemId.Parse(contentId);
 
             // Act
-            var candidates = await backend.FindCandidatesAsync(itemId);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
 
             // Assert
             Assert.Empty(candidates);
@@ -88,7 +89,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var itemId = ContentItemId.Parse(contentId);
 
             // Act
-            var candidates = await backend.FindCandidatesAsync(itemId);
+            var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
 
             // Assert
             Assert.Empty(candidates);
@@ -117,7 +118,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             };
 
             // Act
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             // Assert
             Assert.True(result.IsValid);
@@ -144,7 +145,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             };
 
             // Act
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             // Assert
             Assert.False(result.IsValid);
@@ -174,7 +175,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             };
 
             // Act
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             // Assert
             Assert.False(result.IsValid);
@@ -204,7 +205,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             };
 
             // Act
-            var result = await backend.ValidateCandidateAsync(candidate);
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
 
             // Assert
             Assert.False(result.IsValid);

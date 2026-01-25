@@ -12,6 +12,8 @@ using slskd.PodCore;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
@@ -24,6 +26,7 @@ public class RateLimitTimeoutTests
 {
     private readonly Mock<ILogger<PrivateGatewayMeshService>> _loggerMock;
     private readonly Mock<IPodService> _podServiceMock;
+    private readonly IServiceProvider _serviceProvider;
     private readonly PrivateGatewayMeshService _service;
     private readonly ConcurrentDictionary<string, TunnelSession> _activeTunnels;
 
@@ -33,13 +36,33 @@ public class RateLimitTimeoutTests
         _podServiceMock = new Mock<IPodService>();
         var dns = new DnsSecurityService(Mock.Of<ILogger<DnsSecurityService>>());
         var services = new ServiceCollection();
-        services.AddSingleton(dns);
-        var sp = services.BuildServiceProvider();
+        services.AddSingleton<DnsSecurityService>(dns);
+        _serviceProvider = services.BuildServiceProvider();
 
-        _service = new PrivateGatewayMeshService(_loggerMock.Object, _podServiceMock.Object, sp, null);
+        _service = new PrivateGatewayMeshService(_loggerMock.Object, _podServiceMock.Object, _serviceProvider, null);
 
         var field = typeof(PrivateGatewayMeshService).GetField("_activeTunnels", BindingFlags.NonPublic | BindingFlags.Instance);
         _activeTunnels = (ConcurrentDictionary<string, TunnelSession>)field!.GetValue(_service)!;
+    }
+
+    /// <summary>Service with TestTunnelConnectivity so OpenTunnel can connect to an in-process TcpListener.</summary>
+    private PrivateGatewayMeshService CreateServiceForOpenTunnelSuccess(ITunnelConnectivity tunnelConnectivity)
+    {
+        return new PrivateGatewayMeshService(_loggerMock.Object, _podServiceMock.Object, _serviceProvider, meshOptions: null, tunnelConnectivity: tunnelConnectivity, dnsSecurity: null);
+    }
+
+    /// <summary>Connects to 127.0.0.1:port so tests can use an in-process TcpListener.</summary>
+    private sealed class TestTunnelConnectivity : ITunnelConnectivity
+    {
+        private readonly int _port;
+        public TestTunnelConnectivity(int port) => _port = port;
+        public async Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
+        {
+            var c = new TcpClient();
+            await c.ConnectAsync(IPAddress.Loopback, _port, cancellationToken);
+            var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
+            return (c.GetStream(), ip);
+        }
     }
 
     [Fact]
@@ -78,11 +101,41 @@ public class RateLimitTimeoutTests
         Assert.Contains("per peer", result.ErrorMessage!.ToLowerInvariant());
     }
 
-    [Fact(Skip = "OpenTunnel connects via TcpClient; no abstraction to inject. Requires TCP listener.")]
+    [Fact]
     public async Task OpenTunnel_ConcurrentTunnelsPerPeerWithinLimit_Accepted()
     {
-        // Would need TCP to succeed; skipped.
-        await Task.CompletedTask;
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+        var service = CreateServiceForOpenTunnelSuccess(new TestTunnelConnectivity(port));
+
+        var policy = new PodPrivateServicePolicy
+        {
+            Enabled = true,
+            MaxMembers = 10,
+            GatewayPeerId = "peer:mesh:self",
+            AllowPrivateRanges = true,
+            AllowPublicDestinations = false,
+            MaxConcurrentTunnelsPerPeer = 3,
+            AllowedDestinations = new List<AllowedDestination>
+            {
+                new AllowedDestination { HostPattern = "192.168.1.100", Port = 80, Protocol = "tcp" }
+            }
+        };
+        var pod = CreatePodWithPolicy(policy);
+        _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock.Setup(x => x.GetMembersAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod.Members);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
+        var request = CreateOpenTunnelRequest(TestPodId, "192.168.1.100", 80);
+        var result = await service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = "test-peer" });
+
+        Assert.True(result.IsSuccess);
+        var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload!);
+        Assert.True(response?.Accepted == true);
+        using (await acceptTask) { }
+        listener.Stop();
     }
 
     [Fact]
@@ -154,20 +207,101 @@ public class RateLimitTimeoutTests
         Assert.Contains("rate limit", result.ErrorMessage!.ToLowerInvariant());
     }
 
-    [Fact(Skip = "OpenTunnel connects via TcpClient; no abstraction to inject. Requires TCP listener.")]
+    [Fact]
     public async Task OpenTunnel_NewTunnelsRateLimitWithinLimits_Accepted()
     {
-        await Task.CompletedTask;
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
+        var service = CreateServiceForOpenTunnelSuccess(new TestTunnelConnectivity(port));
+
+        var policy = new PodPrivateServicePolicy
+        {
+            Enabled = true,
+            MaxMembers = 10,
+            GatewayPeerId = "peer:mesh:self",
+            AllowPrivateRanges = true,
+            AllowPublicDestinations = false,
+            MaxNewTunnelsPerMinutePerPeer = 10,
+            AllowedDestinations = new List<AllowedDestination>
+            {
+                new AllowedDestination { HostPattern = "192.168.1.100", Port = 80, Protocol = "tcp" }
+            }
+        };
+        var pod = CreatePodWithPolicy(policy);
+        _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock.Setup(x => x.GetMembersAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod.Members);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
+        var request = CreateOpenTunnelRequest(TestPodId, "192.168.1.100", 80);
+        var result = await service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = "test-peer" });
+
+        Assert.True(result.IsSuccess);
+        var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload!);
+        Assert.True(response?.Accepted == true);
+        using (await acceptTask) { }
+        listener.Stop();
     }
 
-    [Fact(Skip = "CleanupExpiredTunnels(policy) does not exist; prod uses CleanupExpiredTunnelsAsync() which loops.")]
-    public void CleanupExpiredTunnels_RemovesIdleTunnels() { }
+    [Fact]
+    public async Task CleanupExpiredTunnels_RemovesIdleTunnels()
+    {
+        var idle = CreateTunnelSession("idle-tunnel", "peer1", "192.168.1.100", 80);
+        idle.LastActivity = DateTimeOffset.UtcNow.AddMinutes(-10);
+        _activeTunnels[idle.TunnelId] = idle;
 
-    [Fact(Skip = "CleanupExpiredTunnels(policy) does not exist; prod uses CleanupExpiredTunnelsAsync() which loops.")]
-    public void CleanupExpiredTunnels_RemovesMaxLifetimeExceededTunnels() { }
+        var policy = new PodPrivateServicePolicy { IdleTimeout = TimeSpan.FromMinutes(1), MaxLifetime = TimeSpan.FromHours(1) };
+        var pod = CreatePodWithPolicy(policy);
+        _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
 
-    [Fact(Skip = "CleanupExpiredTunnels(policy) does not exist; prod uses CleanupExpiredTunnelsAsync() which loops.")]
-    public void CleanupExpiredTunnels_KeepsActiveTunnelsWithinLimits() { }
+        await InvokeRunOneCleanupIterationAsync();
+
+        Assert.False(_activeTunnels.ContainsKey(idle.TunnelId));
+    }
+
+    [Fact]
+    public async Task CleanupExpiredTunnels_RemovesMaxLifetimeExceededTunnels()
+    {
+        var old = CreateTunnelSession("old-tunnel", "peer1", "192.168.1.100", 80);
+        old.CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-10);
+        _activeTunnels[old.TunnelId] = old;
+
+        var policy = new PodPrivateServicePolicy { IdleTimeout = TimeSpan.FromHours(1), MaxLifetime = TimeSpan.FromMinutes(1) };
+        var pod = CreatePodWithPolicy(policy);
+        _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+
+        await InvokeRunOneCleanupIterationAsync();
+
+        Assert.False(_activeTunnels.ContainsKey(old.TunnelId));
+    }
+
+    [Fact]
+    public async Task CleanupExpiredTunnels_KeepsActiveTunnelsWithinLimits()
+    {
+        var expired = CreateTunnelSession("expired-tunnel", "peer1", "192.168.1.100", 80);
+        expired.LastActivity = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var active = CreateTunnelSession("active-tunnel", "peer2", "192.168.1.100", 81);
+        _activeTunnels[expired.TunnelId] = expired;
+        _activeTunnels[active.TunnelId] = active;
+
+        var policy = new PodPrivateServicePolicy { IdleTimeout = TimeSpan.FromMinutes(1), MaxLifetime = TimeSpan.FromHours(1) };
+        var pod = CreatePodWithPolicy(policy);
+        _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+
+        await InvokeRunOneCleanupIterationAsync();
+
+        Assert.False(_activeTunnels.ContainsKey(expired.TunnelId));
+        Assert.True(_activeTunnels.ContainsKey(active.TunnelId));
+    }
+
+    private async Task InvokeRunOneCleanupIterationAsync()
+    {
+        var mi = typeof(PrivateGatewayMeshService).GetMethod("RunOneCleanupIterationAsync", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(mi);
+        var task = (Task)mi.Invoke(_service, null)!;
+        await task;
+    }
 
     [Fact]
     public async Task CloseTunnel_RemovesFromActiveTunnels()

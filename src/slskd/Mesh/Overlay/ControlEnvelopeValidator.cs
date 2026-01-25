@@ -10,9 +10,18 @@ using slskd.Mesh.Transport;
 namespace slskd.Mesh.Overlay;
 
 /// <summary>
+/// Validates control envelopes. Extracted for testability (mock without parameterless ctor).
+/// </summary>
+public interface IControlEnvelopeValidator
+{
+    /// <summary>Validates a control envelope against a peer descriptor.</summary>
+    EnvelopeValidationResult ValidateEnvelope(ControlEnvelope envelope, slskd.Mesh.Dht.MeshPeerDescriptor peerDescriptor, string peerId);
+}
+
+/// <summary>
 /// Validates control envelopes with replay protection and peer-bound signature verification.
 /// </summary>
-public class ControlEnvelopeValidator
+public class ControlEnvelopeValidator : IControlEnvelopeValidator
 {
     private readonly DescriptorSigningService _descriptorSigning;
     private readonly Transport.ConnectionThrottler _connectionThrottler;

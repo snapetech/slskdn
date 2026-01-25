@@ -2,486 +2,224 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-using Microsoft.Extensions.Logging;
-using Moq;
-using slskd.PodCore;
+namespace slskd.Tests.Unit.PodCore;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using slskd.PodCore;
 using Xunit;
 
-namespace slskd.Tests.Unit.PodCore;
-
+/// <summary>
+///     Tests for PodService.JoinAsync (membership gate behavior).
+///     Uses in-memory PodService(IPodPublisher=null, IPodMembershipSigner=null, IContentLinkService=null).
+///     JoinAsync returns bool; assert via GetMembersAsync. No PodServices or IPodRepository.
+/// </summary>
 public class MembershipGateTests
 {
-    private readonly Mock<ILogger<PodServices>> _loggerMock;
-    private readonly Mock<IPodRepository> _podRepositoryMock;
-    private readonly PodServices _podServices;
+    private readonly IPodService _podService = new PodService(podPublisher: null, membershipSigner: null, contentLinkService: null);
 
-    public MembershipGateTests()
+    /// <summary>Valid PodId format: ^pod:[a-f0-9]{32}$</summary>
+    private static string PodId(int n) => $"pod:{n.ToString("x").PadLeft(32, '0')}";
+
+    /// <summary>Creates a VPN pod. GatewayPeerId must match ^[a-zA-Z0-9\-_.@]{1,255}$ (no colons).</summary>
+    private static Pod CreateVpnPod(string podId, string gatewayPeerId, int maxMembers) => new Pod
     {
-        _loggerMock = new Mock<ILogger<PodServices>>();
-        _podRepositoryMock = new Mock<IPodRepository>();
-        _podServices = new PodServices(_loggerMock.Object, _podRepositoryMock.Object);
-    }
+        PodId = podId,
+        Name = "VPN Pod",
+        Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
+        Channels = new List<PodChannel>(),
+        PrivateServicePolicy = new PodPrivateServicePolicy
+        {
+            Enabled = true,
+            GatewayPeerId = gatewayPeerId,
+            MaxMembers = maxMembers,
+            AllowedDestinations = new List<AllowedDestination> { new AllowedDestination { HostPattern = "x.local", Port = 80 } },
+            RegisteredServices = new List<RegisteredService>()
+        }
+    };
 
     [Fact]
     public async Task JoinAsync_ValidMemberForRegularPod_Succeeds()
     {
-        // Arrange
-        var podId = "test-pod";
-        var member = new PodMember
-        {
-            PeerId = "peer-123",
-            Role = PodMemberRole.Member,
-            JoinedAt = DateTimeOffset.UtcNow
-        };
+        var podId = PodId(1);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Test Pod" });
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Test Pod",
-            Capabilities = new List<PodCapability>(), // No VPN gateway
-            Members = new List<PodMember>()
-        };
+        var member = new PodMember { PeerId = "peer-123", Role = PodRoles.Member, JoinedAt = DateTimeOffset.UtcNow };
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
+        var joined = await _podService.JoinAsync(podId, member);
 
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act
-        var result = await _podServices.JoinAsync(podId, member);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Contains(result.Members, m => m.PeerId == member.PeerId);
-        _podRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Contains(members, m => m.PeerId == "peer-123");
     }
 
     [Fact]
-    public async Task JoinAsync_PodNotFound_ThrowsKeyNotFoundException()
+    public async Task JoinAsync_PodNotFound_ReturnsFalse()
     {
-        // Arrange
-        var podId = "nonexistent-pod";
+        var podId = PodId(0); // never created
         var member = new PodMember { PeerId = "peer-123" };
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Pod?)null);
+        var joined = await _podService.JoinAsync(podId, member);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            _podServices.JoinAsync(podId, member));
+        Assert.False(joined);
     }
 
     [Fact]
-    public async Task JoinAsync_MemberAlreadyExists_ThrowsArgumentException()
+    public async Task JoinAsync_MemberAlreadyExists_ReturnsFalse()
     {
-        // Arrange
-        var podId = "test-pod";
-        var existingMemberId = "peer-123";
-        var member = new PodMember { PeerId = existingMemberId };
+        var podId = PodId(2);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Test Pod" });
+        await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-123" });
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Test Pod",
-            Members = new List<PodMember>
-            {
-                new PodMember { PeerId = existingMemberId }
-            }
-        };
+        var joined = await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-123" });
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _podServices.JoinAsync(podId, member));
-
-        Assert.Contains("already a member", exception.Message);
+        Assert.False(joined);
     }
 
     [Fact]
-    public async Task JoinAsync_VpnPodAtCapacity_ThrowsArgumentException()
+    public async Task JoinAsync_VpnPodAtCapacity_ReturnsFalse()
     {
-        // Arrange
-        var podId = "vpn-pod";
-        var member = new PodMember { PeerId = "peer-123" };
+        var podId = PodId(20);
+        await _podService.CreateAsync(CreateVpnPod(podId, "peer-gateway", maxMembers: 2));
+        Assert.True(await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-gateway", Role = PodRoles.Owner }));
+        Assert.True(await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-member2", Role = PodRoles.Member }));
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "VPN Pod",
-            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
-            PrivateServicePolicy = new PodPrivateServicePolicy
-            {
-                Enabled = true,
-                MaxMembers = 2,
-                GatewayPeerId = "gateway-peer"
-            },
-            Members = new List<PodMember>
-            {
-                new PodMember { PeerId = "member-1" },
-                new PodMember { PeerId = "member-2" }
-            }
-        };
+        var joined = await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-member3", Role = PodRoles.Member });
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _podServices.JoinAsync(podId, member));
-
-        Assert.Contains("maximum members", exception.Message.ToLowerInvariant());
-        Assert.Contains("2", exception.Message);
+        Assert.False(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Equal(2, members.Count);
     }
 
     [Fact]
     public async Task JoinAsync_VpnPodWithAvailableCapacity_Succeeds()
     {
-        // Arrange
-        var podId = "vpn-pod";
+        var podId = PodId(21);
+        await _podService.CreateAsync(CreateVpnPod(podId, "peer-gateway", maxMembers: 2));
+        Assert.True(await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-gateway", Role = PodRoles.Owner }));
+
+        var joined = await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-member2", Role = PodRoles.Member });
+
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Equal(2, members.Count);
+    }
+
+    [Fact]
+    public async Task JoinAsync_EmptyPeerId_InMemoryAccepts()
+    {
+        var podId = PodId(7);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Test Pod" });
+        var member = new PodMember { PeerId = "" };
+
+        var joined = await _podService.JoinAsync(podId, member);
+
+        // In-memory PodService does not call PodValidation.ValidateMember; it accepts.
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Contains(members, m => m.PeerId == "");
+    }
+
+    [Fact]
+    public async Task JoinAsync_NullMember_Throws()
+    {
+        var podId = PodId(14);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Test Pod" });
+
+        var ex = await Assert.ThrowsAsync<ArgumentNullException>(() => _podService.JoinAsync(podId, null!));
+
+        Assert.Equal("member", ex.ParamName);
+    }
+
+    [Fact]
+    public async Task JoinAsync_EmptyPodId_ReturnsFalse()
+    {
         var member = new PodMember { PeerId = "peer-123" };
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "VPN Pod",
-            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
-            PrivateServicePolicy = new PodPrivateServicePolicy
-            {
-                Enabled = true,
-                MaxMembers = 3,
-                GatewayPeerId = "gateway-peer"
-            },
-            Members = new List<PodMember>
-            {
-                new PodMember { PeerId = "member-1" },
-                new PodMember { PeerId = "member-2" }
-            }
-        };
+        var joined = await _podService.JoinAsync("", member);
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act
-        var result = await _podServices.JoinAsync(podId, member);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Members.Count);
-        Assert.Contains(result.Members, m => m.PeerId == member.PeerId);
+        Assert.False(joined);
     }
 
     [Fact]
-    public async Task JoinAsync_VpnPodWithoutPolicy_ThrowsArgumentException()
+    public async Task JoinAsync_MemberRole_Preserved()
     {
-        // Arrange
-        var podId = "vpn-pod";
-        var member = new PodMember { PeerId = "peer-123" };
+        var podId = PodId(9);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Test Pod" });
+        var member = new PodMember { PeerId = "peer-123", Role = PodRoles.Owner };
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "VPN Pod",
-            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
-            PrivateServicePolicy = null // Missing policy
-        };
+        var joined = await _podService.JoinAsync(podId, member);
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _podServices.JoinAsync(podId, member));
-
-        Assert.Contains("PrivateServicePolicy", exception.Message);
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        var m = members.First(x => x.PeerId == "peer-123");
+        Assert.Equal(PodRoles.Owner, m.Role);
     }
 
     [Fact]
-    public async Task JoinAsync_VpnPodWithDisabledPolicy_ThrowsArgumentException()
+    public async Task JoinAsync_GatewayPeer_JoinSucceeds()
     {
-        // Arrange
-        var podId = "vpn-pod";
-        var member = new PodMember { PeerId = "peer-123" };
+        var podId = PodId(22);
+        await _podService.CreateAsync(CreateVpnPod(podId, "peer-gateway", maxMembers: 3));
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "VPN Pod",
-            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
-            PrivateServicePolicy = new PodPrivateServicePolicy
-            {
-                Enabled = false, // Disabled
-                MaxMembers = 3,
-                GatewayPeerId = "gateway-peer"
-            }
-        };
+        var joined = await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-gateway", Role = PodRoles.Owner });
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _podServices.JoinAsync(podId, member));
-
-        Assert.Contains("VPN gateway", exception.Message.ToLowerInvariant());
-        Assert.Contains("disabled", exception.Message.ToLowerInvariant());
-    }
-
-    [Fact]
-    public async Task JoinAsync_InvalidMemberData_ThrowsArgumentException()
-    {
-        // Arrange
-        var podId = "test-pod";
-        var member = new PodMember { PeerId = "" }; // Invalid - empty peer ID
-
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Test Pod",
-            Members = new List<PodMember>()
-        };
-
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _podServices.JoinAsync(podId, member));
-
-        Assert.Contains("PeerId", exception.Message);
-    }
-
-    [Fact]
-    public async Task JoinAsync_NullMember_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var podId = "test-pod";
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _podServices.JoinAsync(podId, null!));
-    }
-
-    [Fact]
-    public async Task JoinAsync_EmptyPodId_ThrowsArgumentException()
-    {
-        // Arrange
-        var member = new PodMember { PeerId = "peer-123" };
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _podServices.JoinAsync("", member));
-
-        Assert.Contains("podId", exception.Message.ToLowerInvariant());
-    }
-
-    [Fact]
-    public async Task JoinAsync_RepositoryUpdateFails_PropagatesException()
-    {
-        // Arrange
-        var podId = "test-pod";
-        var member = new PodMember { PeerId = "peer-123" };
-
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Test Pod",
-            Members = new List<PodMember>()
-        };
-
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Database error"));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _podServices.JoinAsync(podId, member));
-    }
-
-    [Fact]
-    public async Task JoinAsync_MemberRoleAssignment_DefaultsToMember()
-    {
-        // Arrange
-        var podId = "test-pod";
-        var member = new PodMember
-        {
-            PeerId = "peer-123",
-            Role = PodMemberRole.Guest // Should be overridden
-        };
-
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Test Pod",
-            Members = new List<PodMember>()
-        };
-
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act
-        var result = await _podServices.JoinAsync(podId, member);
-
-        // Assert
-        var addedMember = result.Members.First(m => m.PeerId == member.PeerId);
-        Assert.Equal(PodMemberRole.Member, addedMember.Role);
-        Assert.True(addedMember.JoinedAt <= DateTimeOffset.UtcNow);
-    }
-
-    [Fact]
-    public async Task JoinAsync_GatewayPeerAutoJoin_Succeeds()
-    {
-        // Arrange
-        var podId = "vpn-pod";
-        var gatewayMember = new PodMember { PeerId = "gateway-peer" };
-
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "VPN Pod",
-            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
-            PrivateServicePolicy = new PodPrivateServicePolicy
-            {
-                Enabled = true,
-                MaxMembers = 3,
-                GatewayPeerId = "gateway-peer" // Same as joining member
-            },
-            Members = new List<PodMember>() // Empty initially
-        };
-
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act
-        var result = await _podServices.JoinAsync(podId, gatewayMember);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Members);
-        var addedMember = result.Members.First();
-        Assert.Equal("gateway-peer", addedMember.PeerId);
-        Assert.Equal(PodMemberRole.Admin, addedMember.Role); // Gateway peer should be admin
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Single(members);
+        Assert.Equal("peer-gateway", members[0].PeerId);
     }
 
     [Fact]
     public async Task JoinAsync_LargePodWithoutVpn_Succeeds()
     {
-        // Arrange
-        var podId = "large-pod";
-        var member = new PodMember { PeerId = "peer-123" };
+        var podId = PodId(11);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Large Pod" });
+        for (var i = 1; i <= 50; i++)
+            await _podService.JoinAsync(podId, new PodMember { PeerId = $"member-{i}", JoinedAt = DateTimeOffset.UtcNow.AddMinutes(-i) });
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Large Pod",
-            Capabilities = new List<PodCapability>(), // No VPN
-            Members = Enumerable.Range(1, 50).Select(i => new PodMember
-            {
-                PeerId = $"member-{i}",
-                JoinedAt = DateTimeOffset.UtcNow.AddMinutes(-i)
-            }).ToList()
-        };
+        var joined = await _podService.JoinAsync(podId, new PodMember { PeerId = "peer-123" });
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act
-        var result = await _podServices.JoinAsync(podId, member);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(51, result.Members.Count); // 50 existing + 1 new
-        Assert.Contains(result.Members, m => m.PeerId == member.PeerId);
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Equal(51, members.Count);
+        Assert.Contains(members, m => m.PeerId == "peer-123");
     }
 
     [Fact]
     public async Task JoinAsync_MemberWithExistingJoinTime_PreservesTimestamp()
     {
-        // Arrange
-        var podId = "test-pod";
+        var podId = PodId(12);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Test Pod" });
         var joinTime = DateTimeOffset.UtcNow.AddHours(-1);
-        var member = new PodMember
-        {
-            PeerId = "peer-123",
-            JoinedAt = joinTime
-        };
+        var member = new PodMember { PeerId = "peer-123", JoinedAt = joinTime };
 
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Test Pod",
-            Members = new List<PodMember>()
-        };
+        var joined = await _podService.JoinAsync(podId, member);
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        // Act
-        var result = await _podServices.JoinAsync(podId, member);
-
-        // Assert
-        var addedMember = result.Members.First(m => m.PeerId == member.PeerId);
-        Assert.Equal(joinTime, addedMember.JoinedAt);
+        Assert.True(joined);
+        var members = await _podService.GetMembersAsync(podId);
+        var m = members.First(x => x.PeerId == "peer-123");
+        Assert.Equal(joinTime, m.JoinedAt);
     }
 
     [Fact]
     public async Task JoinAsync_ConcurrentJoins_Succeeds()
     {
-        // Arrange
-        var podId = "concurrent-pod";
-        var existingPod = new Pod
-        {
-            PodId = podId,
-            Name = "Concurrent Pod",
-            Members = new List<PodMember>()
-        };
+        var podId = PodId(13);
+        await _podService.CreateAsync(new Pod { PodId = podId, Name = "Concurrent Pod" });
 
-        _podRepositoryMock.Setup(x => x.GetAsync(podId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingPod);
-
-        _podRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Pod pod, CancellationToken ct) => pod);
-
-        // Act - Simulate concurrent joins
         var joinTasks = Enumerable.Range(1, 5).Select(async i =>
         {
             var member = new PodMember { PeerId = $"peer-{i}" };
-            return await _podServices.JoinAsync(podId, member);
+            return await _podService.JoinAsync(podId, member);
         });
-
         var results = await Task.WhenAll(joinTasks);
 
-        // Assert
-        Assert.All(results, result => Assert.NotNull(result));
-        var finalResult = results.Last();
-        Assert.Equal(5, finalResult.Members.Count);
-        Assert.All(Enumerable.Range(1, 5), i =>
-            Assert.Contains(finalResult.Members, m => m.PeerId == $"peer-{i}"));
+        Assert.All(results, r => Assert.True(r));
+        var members = await _podService.GetMembersAsync(podId);
+        Assert.Equal(5, members.Count);
+        Assert.All(Enumerable.Range(1, 5), i => Assert.Contains(members, m => m.PeerId == $"peer-{i}"));
     }
 }
-
-

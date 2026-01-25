@@ -84,6 +84,8 @@ namespace slskd.PodCore
                     Tags = System.Text.Json.JsonSerializer.Serialize(pod.Tags ?? new List<string>()),
                     Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels ?? new List<PodChannel>()),
                     ExternalBindings = System.Text.Json.JsonSerializer.Serialize(pod.ExternalBindings ?? new List<ExternalBinding>()),
+                    Capabilities = System.Text.Json.JsonSerializer.Serialize(pod.Capabilities ?? new List<PodCapability>()),
+                    PrivateServicePolicy = pod.PrivateServicePolicy != null ? System.Text.Json.JsonSerializer.Serialize(pod.PrivateServicePolicy) : null,
                 };
 
                 db.Pods.Add(entity);
@@ -202,6 +204,40 @@ namespace slskd.PodCore
             }
         }
 
+        public async Task<bool> DeletePodAsync(string podId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(podId) || !PodValidation.IsValidPodId(podId))
+            {
+                logger.LogWarning("Invalid pod ID in DeletePodAsync");
+                return false;
+            }
+
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            using var transaction = await db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                var pod = await db.Pods.FindAsync(new object[] { podId }, ct);
+                if (pod == null)
+                    return false;
+
+                db.Messages.RemoveRange(await db.Messages.Where(m => m.PodId == podId).ToListAsync(ct));
+                db.Members.RemoveRange(await db.Members.Where(m => m.PodId == podId).ToListAsync(ct));
+                db.MembershipRecords.RemoveRange(await db.MembershipRecords.Where(r => r.PodId == podId).ToListAsync(ct));
+                db.Pods.Remove(pod);
+
+                await db.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+                logger.LogInformation("Pod {PodId} deleted", podId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error deleting pod {PodId}", podId);
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        }
+
         public async Task<IReadOnlyList<PodMember>> GetMembersAsync(string podId, CancellationToken ct = default)
         {
             await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -238,6 +274,8 @@ namespace slskd.PodCore
 
         public async Task<bool> JoinAsync(string podId, PodMember member, CancellationToken ct = default)
         {
+            if (member == null)
+                throw new ArgumentNullException(nameof(member));
             // SECURITY: Validate inputs
             if (!PodValidation.IsValidPodId(podId))
             {
@@ -277,6 +315,21 @@ namespace slskd.PodCore
 
                     logger.LogInformation("User already member of pod");
                     return true;
+                }
+
+                // Enforce MaxMembers for VPN (PrivateServiceGateway) pods
+                var capabilities = !string.IsNullOrEmpty(pod.Capabilities)
+                    ? System.Text.Json.JsonSerializer.Deserialize<List<PodCapability>>(pod.Capabilities) : null;
+                var policy = !string.IsNullOrEmpty(pod.PrivateServicePolicy) && pod.PrivateServicePolicy != "null"
+                    ? System.Text.Json.JsonSerializer.Deserialize<PodPrivateServicePolicy>(pod.PrivateServicePolicy) : null;
+                if (capabilities?.Contains(PodCapability.PrivateServiceGateway) == true && policy != null && policy.MaxMembers > 0)
+                {
+                    var memberCount = await db.Members.CountAsync(m => m.PodId == podId && !m.IsBanned, ct);
+                    if (memberCount >= policy.MaxMembers)
+                    {
+                        logger.LogWarning("Join rejected: VPN pod {PodId} at capacity ({Count} >= {Max})", podId, memberCount, policy.MaxMembers);
+                        return false;
+                    }
                 }
 
                 var memberEntity = new PodMemberEntity
@@ -390,6 +443,9 @@ namespace slskd.PodCore
                     Tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.Tags ?? "[]") ?? new List<string>(),
                     Channels = System.Text.Json.JsonSerializer.Deserialize<List<PodChannel>>(entity.Channels ?? "[]") ?? new List<PodChannel>(),
                     ExternalBindings = System.Text.Json.JsonSerializer.Deserialize<List<ExternalBinding>>(entity.ExternalBindings ?? "[]") ?? new List<ExternalBinding>(),
+                    Capabilities = System.Text.Json.JsonSerializer.Deserialize<List<PodCapability>>(entity.Capabilities ?? "[]") ?? new List<PodCapability>(),
+                    PrivateServicePolicy = !string.IsNullOrEmpty(entity.PrivateServicePolicy) && entity.PrivateServicePolicy != "null"
+                        ? System.Text.Json.JsonSerializer.Deserialize<PodPrivateServicePolicy>(entity.PrivateServicePolicy) : null,
                 };
             }
             catch (System.Text.Json.JsonException)
@@ -404,6 +460,8 @@ namespace slskd.PodCore
                     Tags = new List<string>(),
                     Channels = new List<PodChannel>(),
                     ExternalBindings = new List<ExternalBinding>(),
+                    Capabilities = new List<PodCapability>(),
+                    PrivateServicePolicy = null,
                 };
             }
         }
