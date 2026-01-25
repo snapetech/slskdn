@@ -79,6 +79,12 @@
 
 ## 2026-01-25
 
+### MediaCore: Chromaprint FFT + FuzzyMatcher ScorePerceptualAsync
+- **Status**: ✅ **COMPLETED**
+- **Chromaprint (PerceptualHasher):** MathNet.Numerics 5.0.0; FFT-based `ComputeChromaPrint`: downsample 11 025 Hz, 4096/2048 frame/hop, Hann, FFT, 24-bin chroma (tone-aware, 440 vs 880 Hz distinct), 8 super-bands, 8 frames → 64-bit median-threshold hash. Removed `GenerateHashFromPeaks`. `CrossCodecMatchingTests.DifferentContent_LowSimilarityScores` un-skipped; `SimilarContentDifferentQuality_HighSimilarityScores` tuned (2% noise, 0.5 threshold). `PerceptualHasherTests.ComputeAudioHash_Chromaprint_440vs880Hz_ProducesLowSimilarity` added.
+- **FuzzyMatcher:** `ScorePerceptualAsync` uses `IDescriptorRetriever.RetrieveAsync` + `GetBestNumericHash` (Chromaprint preferred) and `IPerceptualHasher.Similarity` when both descriptors have `PerceptualHash.NumericHash`; else falls back to `ComputeSimulatedPerceptualSimilarityAsync`. Ctor: `FuzzyMatcher(IPerceptualHasher, IDescriptorRetriever, ILogger)`. `FuzzyMatcherTests`: `IDescriptorRetriever` mock (default Found:false); `ScorePerceptualAsync_WhenDescriptorsHavePerceptualHashes_UsesPerceptualHasher` added. Integration: CrossCodecMatchingTests, MediaCorePerformanceTests, MediaCoreIntegrationTests pass `IDescriptorRetriever` (mock or real DescriptorRetriever) into FuzzyMatcher.
+- **Docs:** `docs/dev/slskd-tests-unit-completion-plan.md` (FuzzyMatcherTests DONE), `docs/dev/slskd-tests-unit-reenablement-execution-plan.md`, `docs/dev/slskd-tests-unit-skips-how-to-fix.md` (15b FuzzyMatcherTests, PerceptualHasher Chromaprint note).
+
 ### slskd.Tests.Unit Re-enablement — COMPLETE (0 Compile Remove, 0 skips)
 - **Status**: ✅ **COMPLETED**
 - **Milestone:** No `Compile Remove` in slskd.Tests.Unit.csproj; no `[Fact(Skip)]`; **2255 pass, 0 skip.**

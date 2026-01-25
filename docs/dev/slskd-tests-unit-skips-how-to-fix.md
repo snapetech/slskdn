@@ -146,6 +146,14 @@ All 6 tests below now pass (RecordingMeshServiceClient, correct Payload, CreateT
 
 ---
 
+## 15b. FuzzyMatcherTests (0 skips)
+
+| Test | Reason | How to fix |
+|------|--------|------------|
+| (all) | **DONE.** FuzzyMatcher(IPerceptualHasher, IDescriptorRetriever, ILogger); 35 pass. ScorePerceptualAsync uses IDescriptorRetriever+IPerceptualHasher when descriptors have NumericHash. | — |
+
+---
+
 ## 16. Obfs4TransportTests (0 skips)
 
 | Test | Reason | How to fix |
@@ -160,9 +168,9 @@ All 6 tests below now pass (RecordingMeshServiceClient, correct Payload, CreateT
 |------|--------|------------|
 | ~~`OpenTunnel_ConcurrentTunnelsPerPeerWithinLimit_Accepted`~~ | **FIXED.** `CreateServiceForOpenTunnelSuccess(TestTunnelConnectivity)` + in-process `TcpListener`. | — |
 | ~~`OpenTunnel_NewTunnelsRateLimitWithinLimits_Accepted`~~ | **FIXED.** Same. | — |
-| ~~`CleanupExpiredTunnels_RemovesIdleTunnels`~~ | **FIXED.** Test seeds `_activeTunnels` via reflection, sets `LastActivity` in the past, mocks `GetPodAsync` with `IdleTimeout`/`MaxLifetime`, invokes `RunOneCleanupIterationAsync` via reflection. | — |
-| ~~`CleanupExpiredTunnels_RemovesMaxLifetimeExceededTunnels`~~ | **FIXED.** Same; `CreatedAt` in the past, `MaxLifetime` short. | — |
-| ~~`CleanupExpiredTunnels_KeepsActiveTunnelsWithinLimits`~~ | **FIXED.** Same; mix of expired and active sessions; only expired removed. | — |
+| ~~`CleanupExpiredTunnels_RemovesIdleTunnels`~~ | **FIXED.** Test seeds `_activeTunnels` via reflection, sets `LastActivity` in the past, mocks `GetPodAsync` with `IdleTimeout`/`MaxLifetime`, invokes `RunOneCleanupIterationAsync` via reflection. (Previously: `CleanupExpiredTunnels(policy)` did not exist; prod has `CleanupExpiredTunnelsAsync()` which loops and uses pod policy from `_podService.GetPodAsync` | **Test-only:** Don’t call a `CleanupExpiredTunnels(policy)` overload. Instead: (1) Get the `_activeTunnels` (reflection) and add a `TunnelSession` with `LastActivity` (or `CreatedAt`) in the past; (2) set `_podServiceMock.GetPodAsync` to return a pod with `IdleTimeout` (and `MaxLifetime`) so that session is expired; (3) invoke the existing `CleanupExpiredTunnelsAsync` loop once (e.g. by exposing a `TriggerCleanupAsync` for tests or running the loop method via reflection). Assert the session is removed. **App (optional):** Add `CleanupExpiredTunnelsAsync(PrivateServicePolicy? overrides = null)` for tests that overrides timeout when non-null. |
+| `CleanupExpiredTunnels_RemovesMaxLifetimeExceededTunnels` | Same | Same as above; use `CreatedAt` old enough and `MaxLifetime` so the session is expired. |
+| `CleanupExpiredTunnels_KeepsActiveTunnelsWithinLimits` | Same | Same: drive `CleanupExpiredTunnelsAsync` with a mix of expired and non-expired sessions and assert only expired are removed. |
 
 ---
 
@@ -181,6 +189,8 @@ Those are covered in sections **4** and **3** respectively.
 - **FIXED (PodsController/PodCoreIntegration):** DeletePod (2), Soulseek DM (2), PodDeletionCleansUpMessages (1), VpnPod_MaxMembers (1).  
 - **FIXED (Obfs4Transport):** IsAvailableAsync_VersionCheckFailure_ReturnsFalse — IObfs4VersionChecker injection.  
 - **FIXED (no longer skipped):** SecurityUtils timing, PrivacyLayer, MultiRealmConfig IsFlowAllowed, IpldMapper maxDepth, PodPolicyEnforcement ExceedsCurrentMembers, RateLimitTimeout OpenTunnel (2) and CleanupExpiredTunnels (3: RemovesIdleTunnels, RemovesMaxLifetimeExceededTunnels, KeepsActiveTunnelsWithinLimits via RunOneCleanupIterationAsync + reflection), MembershipGate JoinAsync_NullMember_Throws, CircuitMaintenance (3: ContinuesAfterMaintenanceException, SkipsCircuitTesting, TestsCircuitBuilding), PodCoreApiIntegration ConversationPodCoordinator, LocalPortForwarder (6), PerceptualHasher ComputeHash_DifferentFrequencies, Phase8Mesh MeshHealthCheck_AssessesHealth.
+- **FuzzyMatcherTests:** DONE. 0 skips; FuzzyMatcher(IPerceptualHasher, IDescriptorRetriever, ILogger); ScorePerceptualAsync uses IDescriptorRetriever+IPerceptualHasher when descriptors have NumericHash; 35 pass (2026-01-25).
+- **PerceptualHasherTests:** ComputeAudioHash_Chromaprint_440vs880Hz_ProducesLowSimilarity added (FFT Chromaprint; 2026-01-25).
 
 ---
 

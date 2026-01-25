@@ -63,6 +63,10 @@
 
 ## Completed Tasks
 
+- [x] **T-MC1**: MediaCore Chromaprint FFT + FuzzyMatcher perceptual (2026-01-25)
+  - Chromaprint: MathNet.Numerics, FFT-based ComputeChromaPrint (24-bin chroma, 64-bit hash); DifferentContent_LowSimilarityScores un-skipped; PerceptualHasherTests 440vs880.
+  - FuzzyMatcher: ScorePerceptualAsync uses IDescriptorRetriever+IPerceptualHasher when descriptors have NumericHash; FuzzyMatcherTests 35 pass, ScorePerceptualAsync_WhenDescriptorsHavePerceptualHashes added.
+
 - [x] **T-100**: Auto-Replace Stuck Downloads
   - Status: Done (Release .1)
   - Notes: Finds alternatives for stuck/failed downloads
@@ -141,5 +145,5 @@
   - Notes: Real-time upload/download activity feed in UI
 
 
-*Last updated: January 21, 2026*
+*Last updated: 2026-01-25*
 

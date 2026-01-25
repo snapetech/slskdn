@@ -349,7 +349,7 @@ For each excluded file in these areas:
 | `SocialFederation\LibraryActorServiceTests.cs` | G | Update to current LibraryActorService. |
 | `SocialFederation\WorkRefTests.cs` | G | Update to current WorkRef. |
 | `MediaCore\ContentIdRegistryTests.cs` | G | Update to current ContentIdRegistry. |
-| `MediaCore\FuzzyMatcherTests.cs` | G | Update to current FuzzyMatcher. |
+| `MediaCore\FuzzyMatcherTests.cs` | G | **DONE.** FuzzyMatcher(IPerceptualHasher, IDescriptorRetriever, ILogger); ScorePerceptualAsync uses IDescriptorRetriever+IPerceptualHasher; 35 pass. |
 | `MediaCore\IpldMapperTests.cs` | G | Update to current IpldMapper. |
 | `MediaCore\MetadataPortabilityTests.cs` | G | Update to current MetadataPortability. |
 | `Audio\CanonicalStatsServiceTests.cs` | G | Update to current CanonicalStatsService, AudioTags, etc. |

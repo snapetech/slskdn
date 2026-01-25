@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
+- **Current Task**: MediaCore: Chromaprint FFT + FuzzyMatcher ScorePerceptualAsync (done). Docs/tasks/memory updates.
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled **VirtualSoulfind Core: GenericFileContentDomainProviderTests** (9 pass), **MusicContentDomainProviderTests** (7 pass). LocalFileMetadata `{ Id, SizeBytes, PrimaryHash }`; GenericFileItem; ContentDomain; AudioTags 14-arg; IHashDbService/AlbumTargetEntry/MusicWork. **Next:** LocalLibraryBackendModerationTests; DomainAwarePlannerTests; MultiSourcePlannerDomainTests; VirtualSoulfindV2ControllerTests; or PodCore (SqlitePodMessaging, etc.).
+- **Last Activity**: Chromaprint FFT (MathNet, 24-bin chroma, DifferentContent un-skipped, PerceptualHasher 440vs880 test). FuzzyMatcher ScorePerceptualAsync → IDescriptorRetriever+IPerceptualHasher; FuzzyMatcherTests 35 pass. Updated progress.md, completion-plan, reenablement-execution-plan, skips-how-to-fix, tasks.md. **Next:** Commit in logical chunks (Chromaprint, FuzzyMatcher, docs) and push.
 
 ---
 
