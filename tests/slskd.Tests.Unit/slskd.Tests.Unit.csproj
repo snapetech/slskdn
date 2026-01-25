@@ -29,51 +29,15 @@
   <!-- Excluded: depend on slskd.Common.CodeQuality (excluded from slskd build), missing/renamed types, or need non-trivial fixes. See docs/dev/40-fixes-plan.md Deferred table. -->
   <ItemGroup>
     <Compile Remove="Common\CodeQuality\**" />
-    <Compile Remove="PodCore\MembershipGateTests.cs" />
-    <Compile Remove="Mesh\Privacy\OverlayPrivacyIntegrationTests.cs" />
-    <Compile Remove="Mesh\Privacy\PrivacyLayerIntegrationTests.cs" />
-    <Compile Remove="Mesh\Realm\Bridge\ActivityPubBridgeTests.cs" />
-    <Compile Remove="Mesh\Realm\Bridge\BridgeFlowEnforcerTests.cs" />
-    <Compile Remove="Mesh\Realm\Migration\RealmMigrationToolTests.cs" />
-    <Compile Remove="Mesh\Realm\MultiRealmServiceTests.cs" />
     <Compile Remove="Mesh\ServiceFabric\DestinationAllowlistTests.cs" />
-    <Compile Remove="SocialFederation\ActivityPubKeyStoreTests.cs" />
-    <Compile Remove="SocialFederation\FederationServiceTests.cs" />
-    <Compile Remove="PodCore\PodCoreApiIntegrationTests.cs" />
-    <Compile Remove="PodCore\SqlitePodMessagingTests.cs" />
     <!-- Additional deferrals: API/model mismatches (LocalFileMetadata, PodMessage, PodChannel, Pod, PodPrivateServicePolicy, etc.), missing types (PodIdFactory, ConversationPodCoordinator, LlmModeration*, ModerationVerdict), TorSocksTransport/RateLimiter/Options API changes. -->
-    <Compile Remove="PodCore\PodCoreIntegrationTests.cs" />
-    <Compile Remove="PodCore\PrivateGatewayMeshServiceTests.cs" />
     <!-- Further deferrals: PodValidation/PodPrivateServicePolicy/Options/APIs changed; RealmConfig, TransportType, BridgeFlowTypes, SourceCandidate, MultiSourcePlanner/IntentQueue/ModerationDecision/AudioTags; ConnectionThrottler RateLimiter type. -->
-    <Compile Remove="Mesh\CircuitMaintenanceServiceTests.cs" />
-    <Compile Remove="Mesh\Realm\Bridge\BridgeFlowTypesTests.cs" />
-    <Compile Remove="Mesh\Realm\Migration\RealmChangeValidatorTests.cs" />
-    <Compile Remove="Mesh\Realm\MultiRealmConfigTests.cs" />
-    <Compile Remove="Mesh\Realm\RealmConfigTests.cs" />
-    <Compile Remove="Mesh\Realm\RealmIsolationTests.cs" />
-    <Compile Remove="PodCore\PodsControllerTests.cs" />
     <Compile Remove="VirtualSoulfind\Backends\LocalLibraryBackendModerationTests.cs" />
     <Compile Remove="VirtualSoulfind\Core\GenericFile\GenericFileContentDomainProviderTests.cs" />
     <Compile Remove="VirtualSoulfind\Core\Music\MusicContentDomainProviderTests.cs" />
     <Compile Remove="VirtualSoulfind\Planning\DomainAwarePlannerTests.cs" />
     <Compile Remove="VirtualSoulfind\Planning\MultiSourcePlannerDomainTests.cs" />
     <Compile Remove="VirtualSoulfind\v2\API\VirtualSoulfindV2ControllerTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Backends\ContentBackendTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Backends\HttpBackendTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Backends\LanBackendTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Backends\LocalLibraryBackendTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Backends\MeshTorrentBackendTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Backends\SoulseekBackendTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Catalogue\CatalogueStoreTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Catalogue\LocalFileAndVerifiedCopyTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Integration\CompleteV2FlowTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Integration\VirtualSoulfindV2IntegrationTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Intents\IntentQueueTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Planning\MultiSourcePlannerReputationTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Planning\MultiSourcePlannerTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Processing\IntentQueueProcessorTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Reconciliation\LibraryReconciliationServiceTests.cs" />
-    <Compile Remove="VirtualSoulfind\v2\Sources\SourceRegistryTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

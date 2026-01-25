@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled Mesh CensorshipSimulationServiceTests (Phase 4); slskd.Tests.Unit **1521 pass, 18 skipped**. Next: FederationService (ResolveInboxUrlsAsync/Public), DestinationAllowlist, CircuitMaintenance, or Phase 3 PodCore.
+- **Last Activity**: Re-enabled **PodCore: PodsControllerTests** (20 pass, 4 skip: DeletePod_*, GetMessages_WithSoulseekDmBinding, SendMessage_WithSoulseekDmBinding). Removed `Compile Remove`. **Live status:** `docs/dev/slskd-tests-unit-completion-plan.md` § Completed, § Deferred (PodsController skips), § Remaining — Compile Remove. **Next:** PodCore (SqlitePodMessaging, etc.); v2 LocalFileAndVerifiedCopyTests, Planning/Processing/Reconciliation; or OverlayPrivacyIntegrationTests.
 
 ---
 
@@ -54,7 +54,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - None currently
 
 ### Next Steps
-1. **slskd.Tests.Unit Re-enablement** — Continue Phase 2–6 per `docs/dev/40-fixes-plan.md`: Phase 2 (Common Moderation/Security/Files), Phase 3 (PodCore), Phase 4 (Mesh), Phase 5 (SocialFederation, MediaCore, etc.), Phase 6 (VirtualSoulfind). Un-skip or fix LocalPortForwarderTests’ 6 skipped tests when internal API/JSON alignment is done.
+1. **slskd.Tests.Unit Re-enablement** — Continue Phase 2–6 per `docs/dev/40-fixes-plan.md` and **live status** `docs/dev/slskd-tests-unit-completion-plan.md` (§ Completed, § Status and What Remains): Phase 2 (Common Moderation/Security/Files), Phase 3 (PodCore), Phase 4 (Mesh), Phase 5 (SocialFederation, MediaCore, etc.), Phase 6 (VirtualSoulfind). Un-skip or fix LocalPortForwarderTests’ 6 skipped tests when internal API/JSON alignment is done.
 2. **Phase 14 COMPLETED** - Tier-1 Pod-Scoped Private Service Network feature fully integrated
    - 21 tasks defined across 6 task groups (T-1400 to T-1452)
    - Comprehensive agent implementation document created
