@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** 0 `[Fact(Skip)]`. MediaCore 22; Mesh 29; PodCore 15; Security 50+12; VirtualSoulfind/Moderation 23 pass; NicotinePlus 6; Soulbeet 17; DisasterModeTests 3; DisasterModeIntegration 6; LoadTests 5; Signals 2; RunBenchmarks 1; ProtocolContract 6. See `docs/dev/slskd-tests-integration-audit.md`. | — |
+| **slskd.Tests.Integration** | **Build: OK.** **184 pass, 0 skip.** See `docs/dev/slskd-tests-integration-audit.md`. | — |
 
 
 ---
