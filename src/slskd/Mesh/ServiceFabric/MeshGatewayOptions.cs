@@ -131,7 +131,7 @@ public class MeshGatewayOptions
     {
         return address == "127.0.0.1" ||
                address == "localhost" ||
-               address == "::1" ||
-               address == "0.0.0.0"; // 0.0.0.0 is treated as localhost for validation purposes
+               address == "::1";
+        // 0.0.0.0 binds all interfaces and is reachable from the network; require ApiKey
     }
 }

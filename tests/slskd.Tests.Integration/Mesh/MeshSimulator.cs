@@ -202,10 +202,12 @@ public class MeshSimulator
         if (!nodes.ContainsKey(nodeId))
             throw new ArgumentException($"Node {nodeId} not found");
 
+        // Origin node always retains its own data
+        nodes[nodeId].Library[key] = value;
+
         if (networkPartitioned)
         {
-            // During partition, only store locally
-            nodes[nodeId].Library[key] = value;
+            await Task.CompletedTask;
             return;
         }
 

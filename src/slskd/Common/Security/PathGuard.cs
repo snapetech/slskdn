@@ -196,7 +196,25 @@ public static partial class PathGuard
 
         // Check for standalone ".." components
         var parts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-        return parts.Any(p => p == "..");
+        if (parts.Any(p => p == ".."))
+        {
+            return true;
+        }
+
+        // Also check URL-decoded form (catches double-encoding like %252e%252e -> ..)
+        var decoded = DecodeUrlEncoding(path);
+        if (TraversalPatternRegex().IsMatch(decoded))
+        {
+            return true;
+        }
+
+        var decodedParts = decoded.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        if (decodedParts.Any(p => p == ".."))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

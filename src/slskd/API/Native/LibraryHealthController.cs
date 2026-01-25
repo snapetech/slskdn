@@ -86,9 +86,9 @@ public class LibraryHealthController : ControllerBase
         [FromBody] LibraryRemediationRequest request,
         CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("Remediation job requested for {IssueCount} issues", request.IssueIds?.Count ?? 0);
+        logger.LogInformation("Remediation job requested for {IssueCount} issues", request?.IssueIds?.Count ?? 0);
 
-        if (request.IssueIds == null || request.IssueIds.Count == 0)
+        if (request?.IssueIds == null || request.IssueIds.Count == 0)
         {
             return BadRequest(new { error = "issue_ids is required" });
         }
@@ -99,4 +99,4 @@ public class LibraryHealthController : ControllerBase
     }
 }
 
-public record LibraryRemediationRequest(List<string> IssueIds);
+public record LibraryRemediationRequest([property: System.Text.Json.Serialization.JsonPropertyName("issue_ids")] List<string>? IssueIds);
