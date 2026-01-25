@@ -118,7 +118,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 
 | Source | Item | Action |
 |--------|------|--------|
-| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; **Mesh 29 pass** (NatTraversal_SymmetricFallback fixed: relay URL must be IP); PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterMode, Features\|Backfill\|DhtRendezvous, Soulbeet\|MultiClient\|… timeout. See `docs/dev/slskd-tests-integration-audit.md`. | Run slow filters in smaller chunks or with higher timeout; review VirtualSoulfind skips. |
+| **slskd.Tests.Integration** | **Build: OK** (0 errors). **Audit 2026-01-25:** MediaCore 22; Mesh 29 pass; PodCore 15; Security 50+12; VirtualSoulfind/Moderation 6 pass / 17 skip. DisasterModeTests (3) + ProtocolContractTests (6) **skipped** (SlskdnTestClient.StartAsync hang in IAsyncLifetime). MeshOnlyTests 3 pass. See `docs/dev/slskd-tests-integration-audit.md`. | Stub more controller deps in SlskdnTestClient to re-enable skipped DisasterMode/Protocol tests; review VirtualSoulfind skips. |
 
 
 ---
