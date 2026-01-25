@@ -15,10 +15,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: MediaCore: Chromaprint FFT + FuzzyMatcher ScorePerceptualAsync (done). Docs/tasks/memory updates.
+- **Current Task**: 40-fixes Deferred: slskd.Tests.Integration row updated (done).
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Committed (1) Chromaprint FFT + FuzzyMatcher code, (2) docs/memory; pushed dev/40-fixes. **Next:** IpldMapper TraverseAsync_MaxDepthExceeded; or slskd.Tests.Integration deferred (40-fixes Deferred table).
+- **Last Activity**: Updated `docs/dev/40-fixes-plan.md` Deferred table (Integration: build OK, full-suite timeout note, MediaCore 22 pass); `memory-bank/progress.md`. **Next:** slskd.Tests.Unit Phase 2–6; Integration runtime/skip audit; or other 40-fixes / tasks.
 
 ---
 

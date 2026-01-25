@@ -91,6 +91,11 @@
 - **Recent fixes (this session):** Obfs4TransportTests `IsAvailableAsync_VersionCheckFailure_ReturnsFalse` (IObfs4VersionChecker + path-that-exists); doc updates: WorkRef FromMusicItem FIXED (MusicItem.FromTrackEntry exists); RateLimitTimeout CleanupExpiredTunnels (3) FIXED (RunOneCleanupIterationAsync + reflection); 40-fixes deferred table cleared, slskd.Tests.Unit re-enablement moved to Completed.
 - **Docs:** `docs/dev/slskd-tests-unit-completion-plan.md`, `docs/dev/slskd-tests-unit-skips-how-to-fix.md`, `docs/dev/40-fixes-plan.md` (Deferred: slskd.Tests.Unit completed).
 
+### 40-fixes Deferred: slskd.Tests.Integration row updated
+- **Status**: ✅ **COMPLETED**
+- **Build:** `dotnet build tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj` — **0 errors** (warnings only). Previous “30 build errors / does not build” was outdated.
+- **40-fixes-plan.md Deferred table:** Row updated: Build OK; full `dotnet test` can time out — use `--filter "FullyQualifiedName~MediaCore"` for shorter runs; MediaCore 22 pass. Action: runtime/skip audit; optionally stabilize full-suite (filters, timeouts).
+
 ---
 
 ## 2026-01-24
