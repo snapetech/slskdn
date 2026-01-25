@@ -18,7 +18,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: slskd.Tests.Unit Re-enablement; dev/40-fixes maintenance
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Re-enabled SocialFederation WorkRefTests (Phase 5); slskd.Tests.Unit 1429 pass, 17 skipped. ActivityPubKeyStoreTests remains excluded (NSec Key.Export in this env). Next: Phase 5 (FederationService, LibraryActorService, MediaCore, etc.) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
+- **Last Activity**: Re-enabled SocialFederation LibraryActorServiceTests (Phase 5); slskd.Tests.Unit 1441 pass, 17 skipped. Next: Phase 5 (FederationService, MediaCore) or Phase 3 PodCore per `docs/dev/40-fixes-plan.md`.
 
 ---
 

@@ -43,7 +43,6 @@
     <Compile Remove="Mesh\ServiceFabric\DestinationAllowlistTests.cs" />
     <Compile Remove="SocialFederation\ActivityPubKeyStoreTests.cs" />
     <Compile Remove="SocialFederation\FederationServiceTests.cs" />
-    <Compile Remove="SocialFederation\LibraryActorServiceTests.cs" />
     <Compile Remove="PodCore\PodCoreApiIntegrationTests.cs" />
     <Compile Remove="PodCore\SqlitePodMessagingTests.cs" />
     <!-- Additional deferrals: API/model mismatches (LocalFileMetadata, PodMessage, PodChannel, Pod, PodPrivateServicePolicy, etc.), missing types (PodIdFactory, ConversationPodCoordinator, LlmModeration*, ModerationVerdict), TorSocksTransport/RateLimiter/Options API changes. -->

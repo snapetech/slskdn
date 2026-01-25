@@ -8,6 +8,9 @@ namespace slskd.Tests.Unit.SocialFederation
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Common;
+    using slskd.SocialFederation;
+    using slskd.VirtualSoulfind.Core.Music;
     using Xunit;
 
     /// <summary>
@@ -18,21 +21,25 @@ namespace slskd.Tests.Unit.SocialFederation
         private readonly Mock<IOptionsMonitor<SocialFederationOptions>> _federationOptionsMock = new();
         private readonly Mock<IActivityPubKeyStore> _keyStoreMock = new();
         private readonly Mock<ILogger<LibraryActorService>> _loggerMock = new();
-        private readonly Mock<MusicLibraryActor> _musicActorMock = new();
+        private readonly ILoggerFactory _loggerFactory = new LoggerFactory();
+        private readonly MusicLibraryActor _musicActor;
 
         public LibraryActorServiceTests()
         {
-            // Setup default options
+            // Setup default options (BaseUrl needed for actor IDs)
             _federationOptionsMock.Setup(x => x.CurrentValue).Returns(new SocialFederationOptions
             {
                 Enabled = true,
-                Mode = "Public"
+                Mode = "Public",
+                BaseUrl = "https://example.com"
             });
 
-            // Setup music actor
-            _musicActorMock.Setup(x => x.ActorName).Returns("music");
-            _musicActorMock.Setup(x => x.ActorId).Returns("https://example.com/actors/music");
-            _musicActorMock.Setup(x => x.IsAvailable).Returns(true);
+            var musicProviderMock = new Mock<IMusicContentDomainProvider>();
+            _musicActor = new MusicLibraryActor(
+                _federationOptionsMock.Object,
+                _keyStoreMock.Object,
+                musicProviderMock.Object,
+                _loggerFactory.CreateLogger<MusicLibraryActor>());
         }
 
         private LibraryActorService CreateService()
@@ -40,8 +47,9 @@ namespace slskd.Tests.Unit.SocialFederation
             return new LibraryActorService(
                 _federationOptionsMock.Object,
                 _keyStoreMock.Object,
-                _musicActorMock.Object,
-                _loggerMock.Object);
+                _musicActor,
+                _loggerMock.Object,
+                _loggerFactory);
         }
 
         [Fact]
@@ -145,8 +153,9 @@ namespace slskd.Tests.Unit.SocialFederation
             var service = new LibraryActorService(
                 _federationOptionsMock.Object,
                 _keyStoreMock.Object,
-                musicActor: null, // No music actor
-                _loggerMock.Object);
+                musicActor: null,
+                _loggerMock.Object,
+                _loggerFactory);
 
             // Assert
             Assert.NotNull(service);

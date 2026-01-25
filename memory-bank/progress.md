@@ -100,6 +100,11 @@
 - **ActivityPubKeyStoreTests:** Remains in `Compile Remove`. IDataProtector mock updated to `Protect(byte[])`/`Unprotect(byte[])` pass-through (for when re-enabled). NSec `Key.Export(KeyBlobFormat.PkixPrivateKey)` throws "The key cannot be exported" in this environment; defer until resolved.
 - **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1429 passed, 17 skipped** (+9 pass, +1 skip).
 
+### slskd.Tests.Unit Re-enablement (Phase 5 – SocialFederation LibraryActorServiceTests)
+- **Status**: ✅ **COMPLETED**
+- **LibraryActorServiceTests:** Removed `Compile Remove`. Ctor: add ILoggerFactory (LoggerFactory), real MusicLibraryActor via IMusicContentDomainProvider mock; SocialFederationOptions.BaseUrl = "https://example.com"; usings: slskd.Common, slskd.SocialFederation, slskd.VirtualSoulfind.Core.Music. Constructor_HandlesNullMusicActor: pass _loggerFactory. All 7 tests pass (GetActor music/generic/unknown, GetAvailableDomains, AvailableActors Hermit, IsLibraryActor, Constructor null music).
+- **Result:** `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release` — **1441 passed, 17 skipped** (+12 pass).
+
 ---
 
 ## 2025-12-13
