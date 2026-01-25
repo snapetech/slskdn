@@ -196,6 +196,6 @@ Those are covered in sections **4** and **3** respectively.
 
 ## Cross-references
 
-- **Completion plan:** `docs/dev/slskd-tests-unit-completion-plan.md` (Phase 0, Deferred, Discuss: app).
-- **Phase 0.2 (NSec):** ActivityPubKeyStore.
-- **Phase 0.3 (CircuitMaintenance):** `ExecuteAsync_ContinuesAfterMaintenanceException`; Path B in completion plan.
+- **Completion plan:** `docs/dev/slskd-tests-unit-completion-plan.md` (Phase 0 **DONE**, Deferred, Discuss: app).
+- **Phase 0.2 (NSec):** ActivityPubKeyStore — **DONE.** IEd25519KeyPairGenerator, NsecEd25519KeyPairGenerator Pkix→Raw, FakeEd25519KeyPairGenerator.
+- **Phase 0.3 (CircuitMaintenance):** ExecuteAsync_ContinuesAfterMaintenanceException — **DONE.** IMeshCircuitBuilder; Mock.PerformMaintenance().Throws.

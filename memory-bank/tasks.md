@@ -63,6 +63,8 @@
 
 ## Completed Tasks
 
+- [x] **chore (2026-01-25):** gitignore `mesh-overlay.key`, untrack; activeContext WORK DIRECTORY `/home/keith/Documents/code/slskdn`; completion-plan Phase 0 + Discuss first marked **DONE** (CodeQuality, ActivityPubKeyStore, CircuitMaintenance); DomainFrontedTransportTests DONE.
+
 - [x] **T-MC1**: MediaCore Chromaprint FFT + FuzzyMatcher perceptual (2026-01-25)
   - Chromaprint: MathNet.Numerics, FFT-based ComputeChromaPrint (24-bin chroma, 64-bit hash); DifferentContent_LowSimilarityScores un-skipped; PerceptualHasherTests 440vs880.
   - FuzzyMatcher: ScorePerceptualAsync uses IDescriptorRetriever+IPerceptualHasher when descriptors have NumericHash; FuzzyMatcherTests 35 pass, ScorePerceptualAsync_WhenDescriptorsHavePerceptualHashes added.

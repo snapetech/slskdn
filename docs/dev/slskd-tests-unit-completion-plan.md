@@ -5,9 +5,9 @@
 
 ---
 
-## Discuss first (before we can finish)
+## Discuss first (before we can finish) — ✅ DONE
 
-These blockers are addressed by **Phase 0** below. Once Phase 0 is done, they no longer block.
+All three blockers below are **resolved**. Phase 0 is complete.
 
 | Item | What | Why |
 |------|------|-----|
@@ -17,11 +17,9 @@ These blockers are addressed by **Phase 0** below. Once Phase 0 is done, they no
 
 ---
 
-## Phase 0 — Resolve Discuss-first blockers
+## Phase 0 — Resolve Discuss-first blockers — ✅ DONE
 
-Concrete plans to remove each blocker so Phase 3 (ActivityPubKeyStore, CircuitMaintenance), Phase 5 (CodeQuality), and related work can proceed.
-
-### 0.1 CodeQuality (build + compile)
+### 0.1 CodeQuality (build + compile) — ✅ DONE
 
 **Goal:** `Common\CodeQuality\**` compiles in slskd and is no longer `Compile Remove`d. CodeQuality tests can then be re‑enabled in Phase 5.
 
@@ -38,7 +36,7 @@ Concrete plans to remove each blocker so Phase 3 (ActivityPubKeyStore, CircuitMa
 
 ---
 
-### 0.2 ActivityPubKeyStore (NSec `Key.Export(PkixPrivateKey)`)
+### 0.2 ActivityPubKeyStore (NSec `Key.Export(PkixPrivateKey)`) — ✅ DONE
 
 **Goal:** `EnsureKeypairAsync` / `GetPrivateKeyAsync` / `RotateKeypairAsync` (and thus `key.Export(KeyBlobFormat.PkixPrivateKey)` in `ActivityPubKeyStore`) no longer throw. `ActivityPubKeyStoreTests` can run without `[Fact(Skip=...)]` on those paths.
 
@@ -53,7 +51,7 @@ Concrete plans to remove each blocker so Phase 3 (ActivityPubKeyStore, CircuitMa
 
 ---
 
-### 0.3 CircuitMaintenanceService (one test: `ExecuteAsync_ContinuesAfterMaintenanceException`)
+### 0.3 CircuitMaintenanceService (one test: `ExecuteAsync_ContinuesAfterMaintenanceException`) — ✅ DONE
 
 **Goal:** The "PerformMaintenance is non‑virtual / can't mock" blocker is gone. Either the test is runnable (app change) or we formally skip it and re‑enable the rest (test‑only).
 
@@ -77,7 +75,7 @@ Do these first; they only need edits in the test project.
 
 | File | Test refactor |
 |------|----------------|
-| `Mesh\DomainFrontedTransportTests.cs` | Re‑enable as‑is. All tests are placeholders (`Assert.True`). Remove from `Compile Remove`. |
+| `Mesh\DomainFrontedTransportTests.cs` | **DONE.** Re‑enabled as‑is; 3 placeholder tests pass. |
 | `Mesh\Privacy\OverlayPrivacyIntegrationTests.cs` | **DONE.** App: `IControlEnvelopeValidator` added; `ControlDispatcher` takes `IControlEnvelopeValidator`. Tests: `Mock<IControlEnvelopeValidator>`; `OverlayControlTypes.Ping` for `HandleAsync` (unknown types return false). `ILoggerFactory` already present. |
 | `Mesh\Privacy\PrivacyLayerIntegrationTests.cs` | Same: pass `ILoggerFactory` into `PrivacyLayer` ctor where required. Remove from `Compile Remove`. |
 | `MediaCore\FuzzyMatcherTests.cs` | **DONE.** Never in `Compile Remove`. `FuzzyMatcher(IPerceptualHasher, IDescriptorRetriever, ILogger)`; 35 tests pass. Mock `IDescriptorRetriever` (default Found:false → simulated path); `ScorePerceptualAsync_WhenDescriptorsHavePerceptualHashes_UsesPerceptualHasher` added. Score/ScoreLevenshtein/ScorePhonetic/FindSimilar match current impl. |
