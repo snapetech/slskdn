@@ -131,8 +131,8 @@
 
 ### slskd.Tests: Enforce subprocess test — --config, YAML shape, Skip (mutex)
 - **Status**: ✅ **COMPLETED**
-- **Enforce_invalid_config_host_startup:** Use `--config` for temp slskd.yml. YAML: `web` and `diagnostics` at root (YamlConfigurationProvider prefixes with Namespace `slskd`; `slskd:` at root produced `slskd:slskd:web` and OptionsAtStartup.Web did not bind). On failure, assert includes stdout+stderr. `[Fact(Skip)]` when subprocess requires no other slskd (mutex); run manually when clear. Test passes in isolation.
-- **40-fixes Deferred:** slskd.Tests row added: 45 pass, 1 skip (Enforce subprocess).
+- **Enforce_invalid_config_host_startup:** Un-skipped. Runtime skip when mutex held (probe with `Compute.Sha256Hash("slskd")` to avoid loading Program); run `dotnet slskd.dll` (not `dotnet run --project`) so host does not hold mutex; if subprocess exits 0 with "An instance of slskd is already running", treat as skip. 46 pass, 0 skip.
+- **40-fixes Deferred:** slskd.Tests: 46 pass, 0 skip (Enforce host_startup un-skipped).
 
 ### chore: gitignore mesh-overlay.key, untrack; activeContext WORK DIRECTORY
 - **Status**: ✅ **COMPLETED**

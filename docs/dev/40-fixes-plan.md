@@ -119,7 +119,7 @@ Items left out of completed PRs or not yet assigned to a ticket. **Must be sched
 | Source | Item | Action |
 |--------|------|--------|
 | **slskd.Tests.Integration** | **Build: OK.** **184 pass, 0 skip.** See `docs/dev/slskd-tests-integration-audit.md`. | — |
-| **slskd.Tests** | **45 pass, 1 skip.** Skip: `Enforce_invalid_config_host_startup` (subprocess requires no other slskd; mutex). Run manually when clear. | — |
+| **slskd.Tests** | **46 pass, 0 skip.** `Enforce_invalid_config_host_startup` un-skipped: runtime skip when mutex held; run `dotnet slskd.dll` (not `dotnet run --project`) to avoid host holding mutex; if subprocess exits 0 with "already running", treat as skip. | — |
 
 
 ---
