@@ -44,10 +44,18 @@ class Logs extends Component {
     });
 
     logsHub.onreconnecting(() => this.setState({ connected: false }));
-    logsHub.onclose(() => this.setState({ connected: false }));
+    logsHub.onclose((error) => {
+      this.setState({ connected: false });
+      if (error) {
+        console.error('[Logs] Hub connection closed with error:', error);
+      }
+    });
     logsHub.onreconnected(() => this.setState({ connected: true }));
 
-    logsHub.start();
+    logsHub.start().catch((error) => {
+      console.error('[Logs] Failed to start hub connection:', error);
+      this.setState({ connected: false });
+    });
   }
 
   formatTimestamp = (timestamp) => {
@@ -73,59 +81,65 @@ class Logs extends Component {
 
     return (
       <div className="logs">
+        <div style={{ marginBottom: '1em' }}>
+          <ButtonGroup>
+            <Button
+              active={filterLevel === 'all'}
+              onClick={() => this.handleFilterChange('all')}
+            >
+              All
+            </Button>
+            <Button
+              active={filterLevel === 'Information'}
+              onClick={() => this.handleFilterChange('Information')}
+            >
+              Info
+            </Button>
+            <Button
+              active={filterLevel === 'Warning'}
+              onClick={() => this.handleFilterChange('Warning')}
+            >
+              Warn
+            </Button>
+            <Button
+              active={filterLevel === 'Error'}
+              onClick={() => this.handleFilterChange('Error')}
+            >
+              Error
+            </Button>
+            <Button
+              active={filterLevel === 'Debug'}
+              onClick={() => this.handleFilterChange('Debug')}
+            >
+              Debug
+            </Button>
+          </ButtonGroup>
+          <span style={{ marginLeft: '1em', color: '#666' }}>
+            {connected ? `Showing ${filteredLogs.length} of ${this.state.logs.length} logs` : 'Connecting to logs...'}
+          </span>
+        </div>
         {!connected && <LoaderSegment />}
         {connected && (
-          <>
-            <div style={{ marginBottom: '1em' }}>
-              <ButtonGroup>
-                <Button
-                  active={filterLevel === 'all'}
-                  onClick={() => this.handleFilterChange('all')}
-                >
-                  All
-                </Button>
-                <Button
-                  active={filterLevel === 'Information'}
-                  onClick={() => this.handleFilterChange('Information')}
-                >
-                  Info
-                </Button>
-                <Button
-                  active={filterLevel === 'Warning'}
-                  onClick={() => this.handleFilterChange('Warning')}
-                >
-                  Warn
-                </Button>
-                <Button
-                  active={filterLevel === 'Error'}
-                  onClick={() => this.handleFilterChange('Error')}
-                >
-                  Error
-                </Button>
-                <Button
-                  active={filterLevel === 'Debug'}
-                  onClick={() => this.handleFilterChange('Debug')}
-                >
-                  Debug
-                </Button>
-              </ButtonGroup>
-              <span style={{ marginLeft: '1em', color: '#666' }}>
-                Showing {filteredLogs.length} of {this.state.logs.length} logs
-              </span>
-            </div>
-            <Table
-              className="logs-table"
-              compact="very"
-            >
-              <Table.Header>
+          <Table
+            className="logs-table"
+            compact="very"
+          >
+            <Table.Header>
+              <Table.Row>
+                <Table.HeaderCell>Timestamp</Table.HeaderCell>
+                <Table.HeaderCell>Level</Table.HeaderCell>
+                <Table.HeaderCell>Message</Table.HeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body className="logs-table-body">
+              {filteredLogs.length === 0 ? (
                 <Table.Row>
-                  <Table.HeaderCell>Timestamp</Table.HeaderCell>
-                  <Table.HeaderCell>Level</Table.HeaderCell>
-                  <Table.HeaderCell>Message</Table.HeaderCell>
+                  <Table.Cell colSpan="3" textAlign="center">
+                    No logs match the selected filter
+                  </Table.Cell>
                 </Table.Row>
-              </Table.Header>
-              <Table.Body className="logs-table-body">
-                {filteredLogs.map((log) => (
+              ) : (
+                filteredLogs.map((log) => (
                   <Table.Row
                     disabled={log.level === 'Debug' && filterLevel !== 'Debug'}
                     key={log.timestamp}
@@ -138,10 +152,10 @@ class Logs extends Component {
                       {log.message}
                     </Table.Cell>
                   </Table.Row>
-                ))}
-              </Table.Body>
-            </Table>
-          </>
+                ))
+              )}
+            </Table.Body>
+          </Table>
         )}
       </div>
     );

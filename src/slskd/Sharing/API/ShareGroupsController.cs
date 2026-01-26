@@ -11,8 +11,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using slskd.Core.Security;
+using slskd.Identity;
 using slskd.Sharing;
 
 /// <summary>Share group CRUD and members. Requires Feature.CollectionsSharing.</summary>
@@ -26,14 +28,40 @@ public class ShareGroupsController : ControllerBase
 {
     private readonly ISharingService _sharing;
     private readonly IOptionsMonitor<slskd.Options> _options;
+    private readonly IServiceProvider _serviceProvider;
 
-    public ShareGroupsController(ISharingService sharing, IOptionsMonitor<slskd.Options> options)
+    public ShareGroupsController(ISharingService sharing, IOptionsMonitor<slskd.Options> options, IServiceProvider serviceProvider)
     {
         _sharing = sharing;
         _options = options;
+        _serviceProvider = serviceProvider;
     }
 
-    private string CurrentUserId => _options.CurrentValue.Soulseek.Username ?? string.Empty;
+    private async Task<string> GetCurrentUserIdAsync(CancellationToken ct = default)
+    {
+        // Prefer Soulseek username if available
+        var soulseekUsername = _options.CurrentValue.Soulseek.Username;
+        if (!string.IsNullOrWhiteSpace(soulseekUsername))
+            return soulseekUsername;
+
+        // Fall back to Identity & Friends PeerId
+        var profileService = _serviceProvider.GetService<IProfileService>();
+        if (profileService != null)
+        {
+            try
+            {
+                var profile = await profileService.GetMyProfileAsync(ct);
+                if (!string.IsNullOrWhiteSpace(profile.PeerId))
+                    return profile.PeerId;
+            }
+            catch
+            {
+                // If profile service fails, continue with empty string
+            }
+        }
+
+        return string.Empty;
+    }
     private bool Enabled => _options.CurrentValue.Feature.CollectionsSharing;
 
     [HttpGet]
@@ -42,7 +70,8 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         if (!Enabled) return NotFound();
-        var list = await _sharing.GetShareGroupsByOwnerAsync(CurrentUserId, ct);
+        var currentUserId = await GetCurrentUserIdAsync(ct);
+        var list = await _sharing.GetShareGroupsByOwnerAsync(currentUserId, ct);
         return Ok(list);
     }
 
@@ -52,9 +81,10 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Get([FromRoute] Guid id, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
         if (g == null) return NotFound();
-        if (g.OwnerUserId != CurrentUserId) return NotFound();
+        if (g.OwnerUserId != currentUserId) return NotFound();
         return Ok(g);
     }
 
@@ -65,7 +95,8 @@ public class ShareGroupsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest("Name is required.");
-        var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = CurrentUserId };
+        var currentUserId = await GetCurrentUserIdAsync(ct);
+        var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
@@ -76,8 +107,9 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateShareGroupRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
-        if (g == null || g.OwnerUserId != CurrentUserId) return NotFound();
+        if (g == null || g.OwnerUserId != currentUserId) return NotFound();
         g.Name = req.Name?.Trim() ?? g.Name;
         await _sharing.UpdateShareGroupAsync(g, ct);
         return Ok(g);
@@ -89,8 +121,9 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
-        if (g == null || g.OwnerUserId != CurrentUserId) return NotFound();
+        if (g == null || g.OwnerUserId != currentUserId) return NotFound();
         await _sharing.DeleteShareGroupAsync(id, ct);
         return NoContent();
     }
@@ -102,8 +135,9 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> GetMembers([FromRoute] Guid id, [FromQuery] bool detailed = false, CancellationToken ct = default)
     {
         if (!Enabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
-        if (g == null || g.OwnerUserId != CurrentUserId) return NotFound();
+        if (g == null || g.OwnerUserId != currentUserId) return NotFound();
 
         if (detailed)
         {
@@ -124,8 +158,9 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> AddMember([FromRoute] Guid id, [FromBody] AddMemberRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
-        if (g == null || g.OwnerUserId != CurrentUserId) return NotFound();
+        if (g == null || g.OwnerUserId != currentUserId) return NotFound();
 
         // Support both UserId (legacy) and PeerId/ContactId (Identity & Friends)
         if (!string.IsNullOrWhiteSpace(req.PeerId))
@@ -150,8 +185,9 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> RemoveMember([FromRoute] Guid id, [FromRoute] string userId, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
-        if (g == null || g.OwnerUserId != CurrentUserId) return NotFound();
+        if (g == null || g.OwnerUserId != currentUserId) return NotFound();
         await _sharing.RemoveShareGroupMemberAsync(id, userId, ct);
         return NoContent();
     }

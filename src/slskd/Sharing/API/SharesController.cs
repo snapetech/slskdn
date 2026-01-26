@@ -12,8 +12,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using slskd.Core.Security;
+using slskd.Identity;
 using slskd.Sharing;
 
 /// <summary>Share-grant CRUD, token, and manifest. "Shares" = grants of a collection to a user/group. Requires Feature.CollectionsSharing (or Streaming for manifest with token).</summary>
@@ -27,15 +29,41 @@ public class SharesController : ControllerBase
     private readonly ISharingService _sharing;
     private readonly IShareTokenService _tokens;
     private readonly IOptionsMonitor<slskd.Options> _options;
+    private readonly IServiceProvider _serviceProvider;
 
-    public SharesController(ISharingService sharing, IShareTokenService tokens, IOptionsMonitor<slskd.Options> options)
+    public SharesController(ISharingService sharing, IShareTokenService tokens, IOptionsMonitor<slskd.Options> options, IServiceProvider serviceProvider)
     {
         _sharing = sharing;
         _tokens = tokens;
         _options = options;
+        _serviceProvider = serviceProvider;
     }
 
-    private string CurrentUserId => _options.CurrentValue.Soulseek.Username ?? string.Empty;
+    private async Task<string> GetCurrentUserIdAsync(CancellationToken ct = default)
+    {
+        // Prefer Soulseek username if available
+        var soulseekUsername = _options.CurrentValue.Soulseek.Username;
+        if (!string.IsNullOrWhiteSpace(soulseekUsername))
+            return soulseekUsername;
+
+        // Fall back to Identity & Friends PeerId
+        var profileService = _serviceProvider.GetService<IProfileService>();
+        if (profileService != null)
+        {
+            try
+            {
+                var profile = await profileService.GetMyProfileAsync(ct);
+                if (!string.IsNullOrWhiteSpace(profile.PeerId))
+                    return profile.PeerId;
+            }
+            catch
+            {
+                // If profile service fails, continue with empty string
+            }
+        }
+
+        return string.Empty;
+    }
     private bool CollectionsEnabled => _options.CurrentValue.Feature.CollectionsSharing;
 
     [HttpGet]
@@ -45,7 +73,8 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
-        var list = await _sharing.GetShareGrantsAccessibleByUserAsync(CurrentUserId, ct);
+        var currentUserId = await GetCurrentUserIdAsync(ct);
+        var list = await _sharing.GetShareGrantsAccessibleByUserAsync(currentUserId, ct);
         return Ok(list);
     }
 
@@ -56,9 +85,10 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Get([FromRoute] Guid id, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGrantAsync(id, ct);
         if (g == null) return NotFound();
-        var accessible = await _sharing.GetShareGrantsAccessibleByUserAsync(CurrentUserId, ct);
+        var accessible = await _sharing.GetShareGrantsAccessibleByUserAsync(currentUserId, ct);
         if (accessible.All(x => x.Id != id)) return NotFound();
         return Ok(g);
     }
@@ -73,8 +103,9 @@ public class SharesController : ControllerBase
         if (!CollectionsEnabled) return NotFound();
         if (req.CollectionId == default) return BadRequest("CollectionId is required.");
         if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId)) return BadRequest("AudienceType and AudienceId are required.");
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(req.CollectionId, ct);
-        if (c == null || c.OwnerUserId != CurrentUserId) return NotFound();
+        if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         var g = new ShareGrant
         {
             CollectionId = req.CollectionId,
@@ -99,10 +130,11 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGrantAsync(id, ct);
         if (g == null) return NotFound();
         var c = await _sharing.GetCollectionAsync(g.CollectionId, ct);
-        if (c == null || c.OwnerUserId != CurrentUserId) return NotFound();
+        if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         if (req.AllowStream != null) g.AllowStream = req.AllowStream.Value;
         if (req.AllowDownload != null) g.AllowDownload = req.AllowDownload.Value;
         if (req.AllowReshare != null) g.AllowReshare = req.AllowReshare.Value;
@@ -120,10 +152,11 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGrantAsync(id, ct);
         if (g == null) return NotFound();
         var c = await _sharing.GetCollectionAsync(g.CollectionId, ct);
-        if (c == null || c.OwnerUserId != CurrentUserId) return NotFound();
+        if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         await _sharing.DeleteShareGrantAsync(id, ct);
         return NoContent();
     }
@@ -137,10 +170,11 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> CreateToken([FromRoute] Guid id, [FromBody] CreateTokenRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGrantAsync(id, ct);
         if (g == null) return NotFound();
         var c = await _sharing.GetCollectionAsync(g.CollectionId, ct);
-        if (c == null || c.OwnerUserId != CurrentUserId) return NotFound();
+        if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         var expiresIn = req.ExpiresInSeconds.HasValue && req.ExpiresInSeconds.Value > 0
             ? TimeSpan.FromSeconds(req.ExpiresInSeconds.Value)
             : TimeSpan.FromHours(24);
@@ -185,7 +219,8 @@ public class SharesController : ControllerBase
 
         if (User?.Identity?.IsAuthenticated != true)
             return Unauthorized();
-        var m2 = await _sharing.GetManifestAsync(id, null, CurrentUserId, ct);
+        var currentUserId = await GetCurrentUserIdAsync(ct);
+        var m2 = await _sharing.GetManifestAsync(id, null, currentUserId, ct);
         if (m2 == null) return NotFound();
         return Ok(m2);
     }

@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,8 +94,38 @@ public class QuicOverlayServer : BackgroundService
                 }
             };
 
-            await using var listener = await QuicListener.ListenAsync(listenerOptions, stoppingToken);
-            logger.LogInformation("[Overlay-QUIC] Listening on port {Port}", options.ListenPort);
+            QuicListener? listener = null;
+            try
+            {
+                listener = await QuicListener.ListenAsync(listenerOptions, stoppingToken);
+                logger.LogInformation("[Overlay-QUIC] Listening on port {Port}", options.ListenPort);
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+            {
+                logger.LogWarning(
+                    "[Overlay-QUIC] QUIC overlay port {Port} is already in use. Continuing without QUIC overlay server. " +
+                    "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
+                    "but direct inbound QUIC connections will be unavailable.",
+                    options.ListenPort);
+                return; // Gracefully exit - mesh can still function via other transports
+            }
+            catch (SocketException ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "[Overlay-QUIC] QUIC overlay failed to bind to port {Port} (error: {Error}). Continuing without QUIC overlay server. " +
+                    "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
+                    "but direct inbound QUIC connections will be unavailable.",
+                    options.ListenPort, ex.SocketErrorCode);
+                return; // Gracefully exit - mesh can still function via other transports
+            }
+
+            if (listener == null)
+            {
+                return; // Should not happen, but safety check
+            }
+
+            await using (listener)
 
             while (!stoppingToken.IsCancellationRequested)
             {
