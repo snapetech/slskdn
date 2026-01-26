@@ -51,13 +51,29 @@ export class SlskdnNode {
   }
 
   /**
+   * Get the repository root directory.
+   */
+  private getRepoRoot(): string {
+    // process.cwd() is src/web/e2e/ when running tests, so go up 3 levels
+    // But we need to be more robust - use __dirname if available, or calculate from cwd
+    if (typeof __dirname !== 'undefined') {
+      // Running as compiled JS
+      return path.join(__dirname, '..', '..', '..', '..');
+    } else {
+      // Running as TS - process.cwd() is src/web/e2e/
+      return path.resolve(process.cwd(), '..', '..', '..');
+    }
+  }
+
+  /**
    * Start the slskdn node process.
    */
   async start(): Promise<void> {
+    const repoRoot = this.getRepoRoot();
+    
     // Ensure test fixtures are available (check only, don't fetch automatically)
     // The shareDir is like 'test-data/slskdn-test-fixtures/music'
     // We need to check the parent directory 'test-data/slskdn-test-fixtures'
-    const repoRoot = path.join(process.cwd(), '..', '..', '..');
     const shareDirPath = path.isAbsolute(this.config.shareDir)
       ? this.config.shareDir
       : path.join(repoRoot, this.config.shareDir);
@@ -97,6 +113,11 @@ export class SlskdnNode {
     await fs.mkdir(path.join(this.appDir, 'config'), { recursive: true });
 
     // Write minimal config (YAML format)
+    // Convert shareDir to absolute path (slskdn requires absolute paths)
+    const shareDirAbsolute = path.isAbsolute(this.config.shareDir)
+      ? this.config.shareDir
+      : path.join(repoRoot, this.config.shareDir);
+    
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
     const configYaml = `web:
   port: ${this.apiPort}
@@ -109,7 +130,7 @@ directories:
   incomplete: ${path.join(this.appDir, 'incomplete')}
 shares:
   directories:
-    - ${this.config.shareDir}
+    - ${shareDirAbsolute}
 feature:
   identityFriends: true
   collectionsSharing: true
@@ -120,12 +141,19 @@ flags:
     await fs.writeFile(configPath, configYaml, 'utf8');
 
     // Launch slskdn process
-    // Path from src/web/e2e/harness/ to src/slskd/slskd.csproj
-    const projectPath = path.join(process.cwd(), '..', '..', '..', 'src', 'slskd', 'slskd.csproj');
-    const args = ['run', '--project', projectPath, '--no-build', '--', '--config', configPath];
+    const projectPath = path.join(repoRoot, 'src', 'slskd', 'slskd.csproj');
+    
+    // Verify project exists
+    try {
+      await fs.access(projectPath);
+    } catch {
+      throw new Error(`Project not found: ${projectPath}`);
+    }
+    
+    const args = ['run', '--project', projectPath, '--no-build', '--', '--app-dir', this.appDir, '--config', configPath];
 
     this.process = spawn('dotnet', args, {
-      cwd: path.join(process.cwd(), '..', '..', '..'),
+      cwd: repoRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
         ...process.env,
@@ -133,17 +161,51 @@ flags:
       }
     });
 
-    // Log output for debugging
+    // Capture output for debugging (always log on error)
+    let stdout = '';
+    let stderr = '';
+    
     this.process.stdout?.on('data', (data) => {
+      const text = data.toString();
+      stdout += text;
       if (process.env.DEBUG) {
-        console.log(`[${this.config.nodeName}] ${data}`);
+        console.log(`[${this.config.nodeName}] ${text}`);
       }
     });
+    
     this.process.stderr?.on('data', (data) => {
+      const text = data.toString();
+      stderr += text;
       if (process.env.DEBUG) {
-        console.error(`[${this.config.nodeName}] ${data}`);
+        console.error(`[${this.config.nodeName}] ${text}`);
       }
     });
+
+    // Handle process errors
+    this.process.on('error', (err) => {
+      throw new Error(`Failed to start slskdn process: ${err.message}`);
+    });
+
+    // Check if process exits early
+    this.process.on('exit', (code, signal) => {
+      if (code !== null && code !== 0) {
+        const errorMsg = `slskdn process exited with code ${code}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`;
+        // Always log process exit errors
+        console.error(`[${this.config.nodeName}] ${errorMsg}`);
+      }
+    });
+    
+    // Also log stderr immediately for debugging
+    if (!process.env.DEBUG) {
+      this.process.stderr?.on('data', (data) => {
+        const text = data.toString();
+        stderr += text;
+        // Log errors even without DEBUG
+        if (text.toLowerCase().includes('error') || text.toLowerCase().includes('exception') || text.toLowerCase().includes('fatal')) {
+          console.error(`[${this.config.nodeName}] ${text}`);
+        }
+      });
+    }
 
     // Wait for health endpoint
     const healthUrl = `${this.apiUrl}/health`;
@@ -151,6 +213,17 @@ flags:
     const timeout = 30000;
     
     while (Date.now() - startTime < timeout) {
+      // Check if process died
+      if (this.process.exitCode !== null) {
+        if (this.process.exitCode !== 0) {
+          const errorMsg = `slskdn process exited early with code ${this.process.exitCode}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`;
+          throw new Error(errorMsg);
+        } else {
+          // Process exited with 0, which is unexpected but might be OK
+          break;
+        }
+      }
+      
       try {
         const response = await fetch(healthUrl);
         if (response.ok) {
@@ -162,7 +235,12 @@ flags:
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    throw new Error(`Health check timeout for ${healthUrl} after ${timeout}ms`);
+    // If we timeout, include any captured output
+    const errorMsg = `Health check timeout for ${healthUrl} after ${timeout}ms`;
+    if (stdout || stderr) {
+      throw new Error(`${errorMsg}\nProcess output:\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`);
+    }
+    throw new Error(errorMsg);
   }
 
   /**
