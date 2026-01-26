@@ -64,7 +64,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             return; // Anonymous endpoint - no CSRF needed (e.g., login)
         }
 
-        // 3. Exempt requests with Authorization header (JWT/Bearer tokens)
+        // 3. Exempt requests with Authorization header (JWT/Bearer tokens or Basic Auth)
         if (request.Headers.ContainsKey("Authorization"))
         {
             var authHeader = request.Headers["Authorization"].ToString();
@@ -72,6 +72,11 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             {
                 Log.Verbose("[CSRF] Skipping validation for JWT Bearer token");
                 return; // JWT auth - no CSRF needed
+            }
+            if (authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Verbose("[CSRF] Skipping validation for Basic Auth");
+                return; // Basic Auth - no CSRF needed
             }
         }
 
