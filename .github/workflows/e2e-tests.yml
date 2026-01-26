@@ -1,0 +1,81 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '0 2 * * *'  # Nightly at 2 AM
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8'
+  NODE_VERSION: '20'
+
+jobs:
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Build Backend
+        run: |
+          dotnet build src/slskd/slskd.csproj -c Release
+
+      - name: Build Frontend
+        run: |
+          cd src/web
+          npm ci
+          npm run build
+          # Copy to wwwroot for serving
+          rm -rf ../slskd/wwwroot/*
+          cp -r build/* ../slskd/wwwroot/
+
+      - name: Install E2E Dependencies
+        run: |
+          cd tests/e2e
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E Tests
+        run: |
+          cd tests/e2e
+          npm test
+        env:
+          SLSKDN_TEST_NO_CONNECT: true
+          SLSKDN_TEST_KEEP_ARTIFACTS: ${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Upload Test Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            tests/e2e/test-results/
+            /tmp/slskdn-test-*/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
