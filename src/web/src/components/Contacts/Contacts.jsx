@@ -259,7 +259,7 @@ export default class Contacts extends Component {
           </Header.Content>
         </Header>
 
-        {error && <ErrorSegment error={error} />}
+        {error && <ErrorSegment caption={error} />}
 
         <div style={{ marginBottom: '1em' }}>
           <Button primary onClick={this.handleCreateInvite}>
