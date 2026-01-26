@@ -5,8 +5,13 @@
 namespace slskd.MediaCore;
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Globalization;
+using System.Diagnostics;
 using MathNet.Numerics.IntegralTransforms;
 using slskd;
 
@@ -450,23 +455,110 @@ public class PerceptualHasher : IPerceptualHasher
 }
 
 /// <summary>
-/// Audio utility for extracting PCM samples from various formats.
-/// Simplified implementation - in production, use FFmpeg/NAudio for decoding.
+/// Audio utility for extracting PCM samples from various formats via ffmpeg.
 /// </summary>
 public static class AudioUtilities
 {
     /// <summary>
-    /// Placeholder for PCM extraction from audio file.
-    /// In production: use FFmpeg/NAudio to decode MP3/FLAC/etc to PCM.
+    /// Extracts PCM samples from an audio file using ffmpeg. Supports MP3, FLAC, OGG, WAV, M4A, etc.
     /// </summary>
-    /// <remarks>
-    ///     §11: Throws <see cref="FeatureNotImplementedException"/> so the exception handler returns 501.
-    ///     No production code calls this; when implemented, integrate FFmpeg/NAudio.
-    /// </remarks>
-    public static (float[] Samples, int SampleRate) ExtractPcmSamples(string audioFilePath)
+    /// <param name="audioFilePath">Path to the audio file.</param>
+    /// <param name="ffmpegPath">Path to ffmpeg executable; if null or empty, uses "ffmpeg" from PATH.</param>
+    /// <param name="sampleRate">Output sample rate in Hz (default 22050).</param>
+    /// <param name="channels">Output channels, 1=mono (default), 2=stereo.</param>
+    /// <param name="maxDurationSeconds">Maximum duration to decode in seconds (default 300).</param>
+    /// <returns>PCM samples (normalized -1.0 to 1.0) and sample rate.</returns>
+    public static (float[] Samples, int SampleRate) ExtractPcmSamples(
+        string audioFilePath,
+        string? ffmpegPath = null,
+        int sampleRate = 22050,
+        int channels = 1,
+        int maxDurationSeconds = 300)
     {
-        throw new FeatureNotImplementedException(
-            "Audio hash from file is not implemented. PCM extraction requires FFmpeg/NAudio integration.");
+        return ExtractPcmSamplesAsync(audioFilePath, default, ffmpegPath, sampleRate, channels, maxDurationSeconds)
+            .GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Extracts PCM samples from an audio file using ffmpeg asynchronously.
+    /// </summary>
+    /// <param name="audioFilePath">Path to the audio file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="ffmpegPath">Path to ffmpeg; if null or empty, uses "ffmpeg".</param>
+    /// <param name="sampleRate">Output sample rate in Hz (default 22050).</param>
+    /// <param name="channels">Output channels, 1=mono (default).</param>
+    /// <param name="maxDurationSeconds">Max duration to decode (default 300).</param>
+    /// <returns>PCM samples (normalized -1.0 to 1.0) and sample rate.</returns>
+    public static async Task<(float[] Samples, int SampleRate)> ExtractPcmSamplesAsync(
+        string audioFilePath,
+        CancellationToken cancellationToken = default,
+        string? ffmpegPath = null,
+        int sampleRate = 22050,
+        int channels = 1,
+        int maxDurationSeconds = 300)
+    {
+        if (string.IsNullOrWhiteSpace(audioFilePath))
+            throw new ArgumentException("Audio file path must be supplied.", nameof(audioFilePath));
+        if (!File.Exists(audioFilePath))
+            throw new FileNotFoundException("Audio file not found.", audioFilePath);
+        var exe = string.IsNullOrWhiteSpace(ffmpegPath) ? "ffmpeg" : ffmpegPath;
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = exe,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        psi.ArgumentList.Add("-hide_banner");
+        psi.ArgumentList.Add("-nostdin");
+        psi.ArgumentList.Add("-loglevel");
+        psi.ArgumentList.Add("error");
+        psi.ArgumentList.Add("-t");
+        psi.ArgumentList.Add(maxDurationSeconds.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("-i");
+        psi.ArgumentList.Add(audioFilePath);
+        psi.ArgumentList.Add("-f");
+        psi.ArgumentList.Add("s16le");
+        psi.ArgumentList.Add("-ar");
+        psi.ArgumentList.Add(sampleRate.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("-ac");
+        psi.ArgumentList.Add(channels.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("pipe:1");
+
+        using var process = new Process { StartInfo = psi };
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        process.Start();
+        await using var ms = new MemoryStream();
+        await process.StandardOutput.BaseStream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        var stderr = await stderrTask.ConfigureAwait(false);
+
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"ffmpeg exited with code {process.ExitCode} while decoding {audioFilePath}. stderr: {stderr.Trim()}");
+
+        var bytes = ms.ToArray();
+        if (bytes.Length == 0)
+            throw new InvalidOperationException(
+                $"ffmpeg produced no PCM output for {audioFilePath}. ffmpeg stderr: {stderr}");
+
+        if (bytes.Length % sizeof(short) != 0)
+        {
+            var truncated = bytes.Length - (bytes.Length % sizeof(short));
+            Array.Resize(ref bytes, truncated);
+        }
+
+        var sampleCount = bytes.Length / sizeof(short);
+        var shorts = new short[sampleCount];
+        Buffer.BlockCopy(bytes, 0, shorts, 0, bytes.Length);
+
+        var samples = new float[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+            samples[i] = shorts[i] / 32768f;
+
+        return (samples, sampleRate);
     }
 
     /// <summary>

@@ -1,0 +1,9 @@
+# Artifacts of fetch: files downloaded from remote sources (do not commit).
+# Run meta/fetch_media.sh or scripts/fetch-test-fixtures.sh to populate these.
+meta/_download_list.tsv
+meta/checksums.sha256
+movie/sintel_512kb_stereo.mp4
+tv/pioneer_one_s01e01_sample.mp4
+music/open_goldberg/01_aria.ogg
+music/open_goldberg/02_variatio_1.ogg
+music/open_goldberg/03_variatio_2.ogg

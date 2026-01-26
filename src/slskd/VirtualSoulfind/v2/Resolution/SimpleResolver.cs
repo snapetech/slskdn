@@ -19,10 +19,14 @@ namespace slskd.VirtualSoulfind.v2.Resolution
 {
     using System;
     using System.Collections.Concurrent;
+    using System.IO;
     using System.Linq;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Options;
+    using slskd.Mesh.ServiceFabric;
+    using slskd.Signals.Swarm;
     using slskd.VirtualSoulfind.v2.Backends;
     using slskd.VirtualSoulfind.v2.Execution;
     using slskd.VirtualSoulfind.v2.Planning;
@@ -32,20 +36,27 @@ namespace slskd.VirtualSoulfind.v2.Resolution
     /// </summary>
     /// <remarks>
     ///     Phase 2 implementation: Sequential step execution with basic fallback.
-    ///     Future: Parallel execution, advanced retry strategies, work budget integration.
+    ///     Performs fetch for Http, WebDav, S3 (via IContentFetchBackend), Torrent (via IBitTorrentBackend when supported),
+    ///     and NativeMesh (explicit fail until mesh GetContentByContentId RPC exists).
     /// </remarks>
     public sealed class SimpleResolver : IResolver
     {
         private readonly IOptionsMonitor<ResolverOptions> _options;
         private readonly IContentBackend[] _backends;
+        private readonly IBitTorrentBackend? _btBackend;
+        private readonly IMeshServiceClient? _meshClient;
         private readonly ConcurrentDictionary<string, PlanExecutionState> _executions = new();
 
         public SimpleResolver(
             IOptionsMonitor<ResolverOptions> options,
-            IEnumerable<IContentBackend> backends)
+            IEnumerable<IContentBackend> backends,
+            IBitTorrentBackend? btBackend = null,
+            IMeshServiceClient? meshClient = null)
         {
             _options = options;
             _backends = backends.ToArray();
+            _btBackend = btBackend;
+            _meshClient = meshClient;
         }
 
         /// <summary>
@@ -91,7 +102,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                         StartedAt = state.StartedAt,
                     });
 
-                    var stepResult = await ExecuteStepAsync(step, cancellationToken);
+                    var stepResult = await ExecuteStepAsync(plan, step, cancellationToken);
 
                     if (stepResult.IsSuccess)
                     {
@@ -105,6 +116,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                             TotalSteps = state.TotalSteps,
                             StartedAt = state.StartedAt,
                             CompletedAt = DateTimeOffset.UtcNow,
+                            FetchedFilePath = stepResult.FetchedFilePath,
                         });
                         return state;
                     }
@@ -186,35 +198,89 @@ namespace slskd.VirtualSoulfind.v2.Resolution
         }
 
         private async Task<StepResult> ExecuteStepAsync(
+            TrackAcquisitionPlan plan,
             PlanStep step,
             CancellationToken cancellationToken)
         {
-            // Find backend
             var backend = _backends.FirstOrDefault(b => b.Type == step.Backend);
             if (backend == null)
-            {
                 return StepResult.Failure($"Backend {step.Backend} not available");
+
+            var downloadDir = string.IsNullOrWhiteSpace(_options.CurrentValue.DownloadDirectory)
+                ? Path.GetTempPath()
+                : _options.CurrentValue.DownloadDirectory!;
+
+            // NativeMesh: fetch via MeshContent.GetByContentId RPC (def-5)
+            if (step.Backend == ContentBackendType.NativeMesh)
+            {
+                if (_meshClient == null)
+                    return StepResult.Failure("NativeMesh fetch requires IMeshServiceClient (not injected)");
+                foreach (var candidate in step.Candidates.Take(step.MaxParallel))
+                {
+                    if (!TryParseMeshBackendRef(candidate.BackendRef, out var peerId, out var contentId))
+                        continue;
+                    try
+                    {
+                        var payload = JsonSerializer.SerializeToUtf8Bytes(new { contentId });
+                        var call = new ServiceCall
+                        {
+                            ServiceName = "MeshContent",
+                            Method = "GetByContentId",
+                            CorrelationId = Guid.NewGuid().ToString("N"),
+                            Payload = payload,
+                        };
+                        var reply = await _meshClient.CallAsync(peerId, call, cancellationToken);
+                        if (reply.IsSuccess && reply.Payload != null && reply.Payload.Length > 0)
+                        {
+                            var tmpPath = Path.Combine(downloadDir, $"vs2_nativemesh_{Guid.NewGuid():N}.tmp");
+                            await File.WriteAllBytesAsync(tmpPath, reply.Payload, cancellationToken);
+                            return StepResult.Success(tmpPath);
+                        }
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+                return StepResult.Failure("NativeMesh GetByContentId failed for all candidates");
             }
 
-            // Try each candidate in the step
             foreach (var candidate in step.Candidates.Take(step.MaxParallel))
             {
                 try
                 {
-                    // Validate candidate
                     var validationResult = await backend.ValidateCandidateAsync(candidate, cancellationToken);
                     if (!validationResult.IsValid)
+                        continue;
+
+                    string? fetchedPath = null;
+
+                    // IContentFetchBackend (Http, WebDav, S3): fetch to file
+                    if (backend is IContentFetchBackend fetchBackend)
                     {
-                        continue; // Try next candidate
+                        var tmpPath = Path.Combine(downloadDir, $"vs2_{step.Backend}_{Guid.NewGuid():N}.tmp");
+                        await using (var fs = File.Create(tmpPath))
+                            await fetchBackend.FetchToStreamAsync(candidate, fs, cancellationToken);
+                        fetchedPath = tmpPath;
+                    }
+                    // Torrent: IBitTorrentBackend.FetchByInfoHashOrMagnetAsync (StubBitTorrentBackend returns null)
+                    else if (step.Backend == ContentBackendType.Torrent && _btBackend != null)
+                    {
+                        var path = await _btBackend.FetchByInfoHashOrMagnetAsync(candidate.BackendRef, downloadDir, cancellationToken);
+                        if (path == null)
+                            continue; // not supported or failed, try next candidate
+                        fetchedPath = path;
+                    }
+                    // LocalLibrary, Soulseek, MeshDht, Lan: no resolver fetch; success without path
+                    else
+                    {
+                        return StepResult.Success(null);
                     }
 
-                    // TODO: T-V2-P5-01 - Actually fetch/download content here
-                    // For now, we just simulate success for valid candidates
-                    return StepResult.Success();
+                    return StepResult.Success(fetchedPath);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Log and continue to next candidate
                     continue;
                 }
             }
@@ -228,12 +294,28 @@ namespace slskd.VirtualSoulfind.v2.Resolution
             return newState;
         }
 
+        private static bool TryParseMeshBackendRef(string? backendRef, out string? peerId, out string? contentId)
+        {
+            peerId = null;
+            contentId = null;
+            if (string.IsNullOrWhiteSpace(backendRef) || !backendRef.StartsWith("mesh:", StringComparison.OrdinalIgnoreCase))
+                return false;
+            var rest = backendRef.Substring(5);
+            var idx = rest.IndexOf(':');
+            if (idx <= 0 || idx >= rest.Length - 1)
+                return false;
+            peerId = rest.Substring(0, idx);
+            contentId = rest.Substring(idx + 1);
+            return !string.IsNullOrEmpty(peerId) && !string.IsNullOrEmpty(contentId);
+        }
+
         private sealed class StepResult
         {
             public bool IsSuccess { get; init; }
             public string? ErrorMessage { get; init; }
+            public string? FetchedFilePath { get; init; }
 
-            public static StepResult Success() => new() { IsSuccess = true };
+            public static StepResult Success(string? fetchedFilePath = null) => new() { IsSuccess = true, FetchedFilePath = fetchedFilePath };
             public static StepResult Failure(string error) => new() { IsSuccess = false, ErrorMessage = error };
         }
     }

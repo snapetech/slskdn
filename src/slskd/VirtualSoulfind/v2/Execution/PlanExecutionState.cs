@@ -44,5 +44,11 @@ namespace slskd.VirtualSoulfind.v2.Execution
         public DateTimeOffset StartedAt { get; init; }
         public DateTimeOffset? CompletedAt { get; init; }
         public string? ErrorMessage { get; init; }
+
+        /// <summary>
+        ///     Path to the fetched file when Status is Succeeded and the resolver performed a fetch.
+        ///     Null when the backend does not perform a fetch (e.g. LocalLibrary) or when no fetch was done.
+        /// </summary>
+        public string? FetchedFilePath { get; init; }
     }
 }

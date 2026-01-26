@@ -24,13 +24,13 @@ namespace slskd.Audio.API
         }
 
         /// <summary>
-        ///     Recompute analyzer outputs for variants missing/stale analyzer_version.
+        ///     Recompute analyzer outputs for variants missing/stale analyzer_version. Use force=true to recompute all.
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<object>> Migrate([FromQuery] string targetVersion = "audioqa-1", CancellationToken ct = default)
+        public async Task<ActionResult<object>> Migrate([FromQuery] string targetVersion = "audioqa-1", [FromQuery] bool force = false, CancellationToken ct = default)
         {
-            var updated = await migrationService.MigrateAsync(targetVersion, ct).ConfigureAwait(false);
-            return Ok(new { updated, targetVersion });
+            var updated = await migrationService.MigrateAsync(targetVersion, force, ct).ConfigureAwait(false);
+            return Ok(new { updated, targetVersion, force });
         }
     }
 }

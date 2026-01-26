@@ -1,0 +1,71 @@
+{{- if .Values.persistence.config.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "slskdn.fullname" . }}-config
+  labels:
+    {{- include "slskdn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.config.size }}
+  {{- if .Values.persistence.config.storageClass }}
+  storageClassName: {{ .Values.persistence.config.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.persistence.downloads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "slskdn.fullname" . }}-downloads
+  labels:
+    {{- include "slskdn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.downloads.size }}
+  {{- if .Values.persistence.downloads.storageClass }}
+  storageClassName: {{ .Values.persistence.downloads.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.persistence.shares.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "slskdn.fullname" . }}-shares
+  labels:
+    {{- include "slskdn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.shares.size }}
+  {{- if .Values.persistence.shares.storageClass }}
+  storageClassName: {{ .Values.persistence.shares.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.persistence.incomplete.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "slskdn.fullname" . }}-incomplete
+  labels:
+    {{- include "slskdn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.incomplete.size }}
+  {{- if .Values.persistence.incomplete.storageClass }}
+  storageClassName: {{ .Values.persistence.incomplete.storageClass }}
+  {{- end }}
+{{- end }}

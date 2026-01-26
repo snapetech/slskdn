@@ -14,7 +14,8 @@ public record PodJoinRequest(
     string PublicKey,
     long TimestampUnixMs,
     string Signature,
-    string? Message = null);
+    string? Message = null,
+    string? Nonce = null);
 
 /// <summary>
 /// A signed acceptance of a join request.

@@ -77,17 +77,17 @@ Do these first; they only need edits in the test project.
 |------|----------------|
 | `Mesh\DomainFrontedTransportTests.cs` | **DONE.** Re‑enabled as‑is; 3 placeholder tests pass. |
 | `Mesh\Privacy\OverlayPrivacyIntegrationTests.cs` | **DONE.** App: `IControlEnvelopeValidator` added; `ControlDispatcher` takes `IControlEnvelopeValidator`. Tests: `Mock<IControlEnvelopeValidator>`; `OverlayControlTypes.Ping` for `HandleAsync` (unknown types return false). `ILoggerFactory` already present. |
-| `Mesh\Privacy\PrivacyLayerIntegrationTests.cs` | Same: pass `ILoggerFactory` into `PrivacyLayer` ctor where required. Remove from `Compile Remove`. |
+| `Mesh\Privacy\PrivacyLayerIntegrationTests.cs` | **DONE.** ILoggerFactory in PrivacyLayer ctor; tests pass. (No Compile Remove in csproj.) |
 | `MediaCore\FuzzyMatcherTests.cs` | **DONE.** Never in `Compile Remove`. `FuzzyMatcher(IPerceptualHasher, IDescriptorRetriever, ILogger)`; 35 tests pass. Mock `IDescriptorRetriever` (default Found:false → simulated path); `ScorePerceptualAsync_WhenDescriptorsHavePerceptualHashes_UsesPerceptualHasher` added. Score/ScoreLevenshtein/ScorePhonetic/FindSimilar match current impl. |
-| `VirtualSoulfind\Core\ContentDomainTests.cs` | Align to current `ContentDomain`, `ContentWorkId` (enums, `NewId`/`Parse`). Fix imports/names. Remove from `Compile Remove`. |
-| `VirtualSoulfind\v2\Matching\SimpleMatchEngineTests.cs` | Align to current `SimpleMatchEngine`, `Track`, `CandidateFileMetadata`, `EmbeddedMetadata`, `MatchAsync`, `MatchConfidence`. Remove from `Compile Remove`. |
-| `Mesh\Gossip\RealmAwareGossipServiceTests.cs` | Use `RealmAwareGossipService(IRealmService, ILogger)`, `PublishForRealmAsync`, `GossipMessage`. Ensure `GossipMessage` has Id, Type, RealmId, Timestamp, Ttl, Originator, `CanForward` as used. Mock `IRealmService.IsSameRealm`. Remove from `Compile Remove`. |
+| `VirtualSoulfind\Core\ContentDomainTests.cs` | **DONE.** Aligned to ContentDomain, ContentWorkId; tests pass. |
+| `VirtualSoulfind\v2\Matching\SimpleMatchEngineTests.cs` | **DONE.** Aligned to SimpleMatchEngine, Track, CandidateFileMetadata, MatchAsync, MatchConfidence; tests pass. |
+| `Mesh\Gossip\RealmAwareGossipServiceTests.cs` | **DONE.** RealmAwareGossipService(IRealmService, ILogger), PublishForRealmAsync, GossipMessage; tests pass. |
 | `Mesh\Governance\RealmAwareGovernanceClientTests.cs` | Use `RealmAwareGovernanceClient(IRealmService, ILogger)`, `ValidateDocumentForRealmAsync`, `GovernanceDocument`. In a test helper, compute `GovernanceDocument.Signature` with the **same HMAC** as `RealmAwareGovernanceClient`’s `ValidateDocumentSignatureAsync` (key `"governance-signing-key"`, same payload: `Id|Type|Version|Created:O|RealmId|Signer`), so validation passes. Mock `IRealmService.IsTrustedGovernanceRoot`. Remove from `Compile Remove`. |
-| `Mesh\Realm\RealmServiceTests.cs` | Use `RealmService(IOptionsMonitor<RealmConfig>, ILogger)`, `RealmConfig`, `InitializeAsync`, `RealmId`, `NamespaceSalt`, `IsSameRealm`. Align options/RealmConfig shape if it differs. Remove from `Compile Remove`. |
-| `Mesh\MeshCircuitBuilderTests.cs` | Use `MeshCircuitBuilder(MeshOptions, ILogger, IMeshPeerManager, IAnonymityTransportSelector)`, `MeshOptions.SelfPeerId`, `BuildCircuitAsync`. Mock `IMeshPeerManager` to return no peers (or a list) as needed. For `BuildCircuitAsync("some-peer")` when there are no peers: expect `InvalidOperationException` (or whatever the impl throws). Remove from `Compile Remove`. |
-| `Mesh\MeshSyncSecurityTests.cs` | Use 5‑arg ctor `MeshSyncService(..., peerReputation, appState: null)`. `HandleMessageAsync`, `Stats.SignatureVerificationFailures`, `Stats.RejectedMessages` exist. Remove from `Compile Remove`. |
-| `Mesh\MeshTransportServiceIntegrationTests.cs` | Use `MeshTransportService(ILogger, IOptions<MeshOptions>, IAnonymityTransportSelector?, IOptions<AdversarialOptions>?)` with 2 or 4 args. `ChooseTransportAsync`, `MeshTransportDecision(Preference, Reason, AnonymityTransport)`. Remove from `Compile Remove`. |
-| `Mesh\Phase8MeshTests.cs` | Use current `KademliaRoutingTable`, `InMemoryDhtClient`, `NatTraversalService`, `IUdpHolePuncher`, `IRelayClient`, `UdpHolePunchResult`. TTL expectation already accounts for InMemoryDhtClient’s ≥60s clamp. Remove from `Compile Remove`. |
+| `Mesh\Realm\RealmServiceTests.cs` | **DONE.** RealmService(IOptionsMonitor<RealmConfig>, ILogger), RealmConfig, InitializeAsync, RealmId, NamespaceSalt, IsSameRealm; tests pass. |
+| `Mesh\MeshCircuitBuilderTests.cs` | **DONE.** MeshCircuitBuilder(MeshOptions, ILogger, IMeshPeerManager, IAnonymityTransportSelector), BuildCircuitAsync; tests pass. |
+| `Mesh\MeshSyncSecurityTests.cs` | **DONE.** MeshSyncService 5-arg (peerReputation, appState: null), HandleMessageAsync, Stats; tests pass. |
+| `Mesh\MeshTransportServiceIntegrationTests.cs` | **DONE.** MeshTransportService(ILogger, IOptions, IAnonymityTransportSelector?, IOptions<AdversarialOptions>?), ChooseTransportAsync, MeshTransportDecision; tests pass. |
+| `Mesh\Phase8MeshTests.cs` | **DONE.** KademliaRoutingTable, `InMemoryDhtClient`, `NatTraversalService`, `IUdpHolePuncher`, `IRelayClient`, `UdpHolePunchResult`. TTL expectation already accounts for InMemoryDhtClient’s ≥60s clamp. Remove from `Compile Remove`. |
 
 ---
 
@@ -105,19 +105,19 @@ Refactor tests to call **current** production types and APIs; fix asserts to mat
 
 | File | Test refactor |
 |------|----------------|
-| `PodCore\MembershipGateTests.cs` | **Rewrite to `PodService` / `IPodService`:** (1) Use `PodService(IPodPublisher=null, IPodMembershipSigner=null, IContentLinkService=null)`. (2) `JoinAsync(podId, member)` returns `bool`. Use `GetMembersAsync(podId)` to assert membership after join. (3) Pod not found: `JoinAsync` returns `false` (no `KeyNotFoundException`). (4) Member already exists: match what `PodService.JoinAsync` does (inspect impl; likely returns `false` or throws—align assert). (5) VpnPodAtCapacity and the rest: use current `Pod`, `PodMember`, `PodPrivateServicePolicy`, `PodCapability`, `PodVisibility`. Remove `PodServices`, `IPodRepository`. Remove from `Compile Remove`. |
-| `SocialFederation\FederationServiceTests.cs` | For the two “Public” tests that expect `DeliverActivityAsync`: change asserts to the **current** behavior (no delivery for `"https://www.w3.org/ns/activitystreams#Public"`): e.g. assert `DeliverActivityAsync` is **not** called, or that the outcome reflects that. Align all other tests to current `ResolveInboxUrlsAsync`, `DeliverActivityAsync`, `PublishWorkRefAsync`, etc. Remove from `Compile Remove`. |
-| `Mesh\Realm\Bridge\ActivityPubBridgeTests.cs` | **Use real instances:** Build `BridgeFlowEnforcer(MultiRealmService, ILogger)` and `FederationService(...)` with: mocked `IOptionsMonitor` for options; mocked `IActivityPubKeyStore`; real or minimal fakes for `LibraryActorService`, `ActivityDeliveryService` (inspect their ctors). If `MultiRealmService` or `FederationService` deps are too heavy to construct in a test, **stop and Discuss: app** (e.g. `IBridgeFlowEnforcer`, `IFederationService`). Otherwise, refactor tests to drive behavior via configuration (e.g. `MultiRealmService` / bridge config) instead of mocking the concretes. Remove from `Compile Remove`. |
-| `Mesh\Realm\Bridge\BridgeFlowEnforcerTests.cs` | Use **real** `BridgeFlowEnforcer(MultiRealmService, ILogger)`. Mock or build `MultiRealmService` with the minimum needed for `IsFlowAllowedBetweenRealms`, `PerformActivityPubReadAsync`, `PerformActivityPubWriteAsync`. Align to current `BridgeFlowTypes`, result types. Remove from `Compile Remove`. |
-| `Mesh\Realm\Bridge\BridgeFlowTypesTests.cs` | Use current `BridgeFlowTypes` enum/static. Fix expected values/names. Remove from `Compile Remove`. |
-| `Mesh\Realm\Migration\RealmMigrationToolTests.cs` | Refactor to current `RealmMigrationTool` and migration APIs. If a type is missing, **Discuss: app**. Remove from `Compile Remove` when possible. |
-| `Mesh\Realm\Migration\RealmChangeValidatorTests.cs` | Refactor to current `RealmChangeValidator`, `RealmConfig`, validation model. Remove from `Compile Remove` when possible. |
-| `Mesh\Realm\MultiRealmServiceTests.cs` | Refactor to current `MultiRealmService`, `MultiRealmConfig`. Remove from `Compile Remove` when possible. |
-| `Mesh\Realm\MultiRealmConfigTests.cs` | Refactor to current `MultiRealmConfig`, options. Remove from `Compile Remove` when possible. |
-| `Mesh\Realm\RealmConfigTests.cs` | Refactor to current `RealmConfig`, options. Remove from `Compile Remove` when possible. |
-| `Mesh\Realm\RealmIsolationTests.cs` | Refactor to current realm isolation APIs. Remove from `Compile Remove` when possible. |
-| `Mesh\CircuitMaintenanceServiceTests.cs` | (1) **Use real `MeshCircuitBuilder`** with mocked `IMeshPeerManager` and `IAnonymityTransportSelector`. (2) **Remove** `Verify(PerformMaintenance)` and `Verify(GetStatistics)` (non‑virtual; we can’t mock them). (3) Use mocked `IMeshPeerManager.GetStatistics()` for the `PeerStatistics` you need; **real** `MeshCircuitBuilder.GetStatistics()` will return 0 active circuits when empty. (4) **Delete** the local `CircuitStatistics` and `PeerStatistics` at the bottom; use `slskd.Mesh.CircuitStatistics` and `slskd.Mesh.PeerStatistics` where needed. (5) **Skip:** `ExecuteAsync_ContinuesAfterMaintenanceException` (needs `PerformMaintenance` to throw; **Discuss: app** to keep). `ExecuteAsync_SkipsCircuitTestingWhenActiveCircuitsExist` (needs `ActiveCircuits=1` from the builder; hard without a real built circuit—skip or **Discuss: app**). (6) **Relax** `ExecuteAsync_LogsMaintenanceStatistics`: assert Log Information with a message containing "circuit" and "peer" (or similar) instead of exact "3 circuits" / "25 total peers", since the real builder gives 0 circuits. (7) For `ExecuteAsync_TestsCircuitBuildingWhenNoActiveCircuitsAndEnoughPeers`: if `BuildCircuitAsync` can’t be made to succeed with mocks, relax to e.g. `Verify(GetCircuitPeersAsync was called)` or skip. Remove from `Compile Remove`. |
-| `SocialFederation\ActivityPubKeyStoreTests.cs` | **Skip** tests that hit NSec `Key.Export`: add `[Fact(Skip = "NSec Key.Export(PkixPrivateKey) throws in this environment. See Discuss: app.")]` to `EnsureKeypairAsync_*`, `GetPrivateKeyAsync_*`, `RotateKeypairAsync_*` (and any other that goes through that path). Re‑enable the file; any remaining tests that don’t need Ensure/GetPrivate/Rotate can run. Remove from `Compile Remove`. |
+| `PodCore\MembershipGateTests.cs` | **DONE.** PodService/IPodService, JoinAsync/GetMembersAsync, Pod/PodMember/PodPrivateServicePolicy/PodCapability/PodVisibility; tests pass. |
+| `SocialFederation\FederationServiceTests.cs` | **DONE.** DeliverActivityAsync/Public behavior, ResolveInboxUrlsAsync, PublishWorkRefAsync; tests pass. |
+| `Mesh\Realm\Bridge\ActivityPubBridgeTests.cs` | **DONE.** BridgeFlowEnforcer, FederationService, MultiRealmService; tests pass. |
+| `Mesh\Realm\Bridge\BridgeFlowEnforcerTests.cs` | **DONE.** BridgeFlowEnforcer(MultiRealmService, ILogger), IsFlowAllowedBetweenRealms, PerformActivityPubRead/Write; tests pass. |
+| `Mesh\Realm\Bridge\BridgeFlowTypesTests.cs` | **DONE.** BridgeFlowTypes enum/static; tests pass. |
+| `Mesh\Realm\Migration\RealmMigrationToolTests.cs` | **DONE.** RealmMigrationTool and migration APIs; tests pass. |
+| `Mesh\Realm\Migration\RealmChangeValidatorTests.cs` | **DONE.** RealmChangeValidator, RealmConfig, validation model; tests pass. |
+| `Mesh\Realm\MultiRealmServiceTests.cs` | **DONE.** MultiRealmService, MultiRealmConfig; tests pass. |
+| `Mesh\Realm\MultiRealmConfigTests.cs` | **DONE.** MultiRealmConfig, options; tests pass. |
+| `Mesh\Realm\RealmConfigTests.cs` | **DONE.** RealmConfig, options; tests pass. |
+| `Mesh\Realm\RealmIsolationTests.cs` | **DONE.** Realm isolation APIs; tests pass. |
+| `Mesh\CircuitMaintenanceServiceTests.cs` | **DONE.** IMeshCircuitBuilder; real MeshCircuitBuilder, mocked IMeshPeerManager/IAnonymityTransportSelector; tests pass. ~~(1) **Use real `MeshCircuitBuilder`** with mocked `IMeshPeerManager` and `IAnonymityTransportSelector`. (2) **Remove** `Verify(PerformMaintenance)` and `Verify(GetStatistics)` (non‑virtual; we can’t mock them). (3) Use mocked `IMeshPeerManager.GetStatistics()` for the `PeerStatistics` you need; **real** `MeshCircuitBuilder.GetStatistics()` will return 0 active circuits when empty. (4) **Delete** the local `CircuitStatistics` and `PeerStatistics` at the bottom; use `slskd.Mesh.CircuitStatistics` and `slskd.Mesh.PeerStatistics` where needed. (5) **Skip:** `ExecuteAsync_ContinuesAfterMaintenanceException` (needs `PerformMaintenance` to throw; **Discuss: app** to keep). `ExecuteAsync_SkipsCircuitTestingWhenActiveCircuitsExist` (needs `ActiveCircuits=1` from the builder; hard without a real built circuit—skip or **Discuss: app**). (6) **Relax** `ExecuteAsync_LogsMaintenanceStatistics`: assert Log Information with a message containing "circuit" and "peer" (or similar) instead of exact "3 circuits" / "25 total peers", since the real builder gives 0 circuits. (7) For `ExecuteAsync_TestsCircuitBuildingWhenNoActiveCircuitsAndEnoughPeers`: if `BuildCircuitAsync` can’t be made to succeed with mocks, relax to e.g. `Verify(GetCircuitPeersAsync was called)` or skip. Remove from `Compile Remove`. |
+| `SocialFederation\ActivityPubKeyStoreTests.cs` | **DONE.** IEd25519KeyPairGenerator, FakeEd25519KeyPairGenerator; 0 skips. ~~**Skip** tests that hit NSec `Key.Export`: add `[Fact(Skip = "NSec Key.Export(PkixPrivateKey) throws in this environment. See Discuss: app.")]` to `EnsureKeypairAsync_*`, `GetPrivateKeyAsync_*`, `RotateKeypairAsync_*` (and any other that goes through that path). Re‑enable the file; any remaining tests that don’t need Ensure/GetPrivate/Rotate can run. Remove from `Compile Remove`. |
 
 ---
 
@@ -169,10 +169,10 @@ For any of the above: if a **type or API does not exist** in the app, **Discuss:
 
 ## Execution order
 
-0. **Phase 0** — Resolve Discuss-first blockers (0.1 CodeQuality, 0.2 ActivityPubKeyStore, 0.3 CircuitMaintenance). Enact in any order; 0.1 unblocks Phase 5, 0.2 unblocks ActivityPubKeyStoreTests, 0.3 unblocks CircuitMaintenanceServiceTests.
-1. **Phase 1** — All of it (fast, no app deps).
-2. **Phase 2** — Split `DestinationAllowlistTests` and re‑enable `DestinationAllowlistHelperTests`.
-3. **Phase 3** — In any order; prefer `MembershipGateTests`, `FederationServiceTests`, `CircuitMaintenanceServiceTests`, `ActivityPubKeyStoreTests` early.
+0. **Phase 0** — ✅ DONE. Discuss-first blockers resolved.
+1. **Phase 1** — ✅ DONE. All items (PrivacyLayer, ContentDomain, SimpleMatchEngine, RealmAwareGossip/Governance/RealmService, MeshCircuitBuilder/MeshSyncSecurity/MeshTransportService/Phase8) marked DONE; tests pass.
+2. **Phase 2** — ✅ DONE. DestinationAllowlistTests split; DestinationAllowlistHelperTests; OpenTunnel.
+3. **Phase 3** — ✅ DONE. MembershipGate, FederationService, ActivityPubBridge, BridgeFlow*, Realm* (Migration/ChangeValidator/MultiRealm/Config/Isolation), CircuitMaintenanceService, ActivityPubKeyStore; tests pass.
 4. **Phase 4** — PodCore, then DestinationAllowlist OpenTunnel, then VirtualSoulfind (order between VirtualSoulfind files can vary).
 5. **Phase 5** — CodeQuality tests **DONE** (Phase 0.1 done; test `Compile Remove` removed; *Tests fixed: default(DateTimeOffset), AsyncRules nameof, Hotspot AnalyzeAssembly, RegressionHarness list types and CriticalScenario/benchmark helpers, BuildTimeAnalyzer .Result and test snippets).
 
@@ -193,7 +193,7 @@ For any of the above: if a **type or API does not exist** in the app, **Discuss:
 
 ## Deferred: Skipped and Failed Tests
 
-**slskd.Tests.Unit:** 0 `[Fact(Skip)]` as of last audit (2255 pass). The list below and in **`docs/dev/slskd-tests-unit-skips-how-to-fix.md`** records previously skipped or integration/other-project items and how to fix or re-enable them.
+**slskd.Tests.Unit:** 0 `[Fact(Skip)]` as of last audit (2257 pass). The list below and in **`docs/dev/slskd-tests-unit-skips-how-to-fix.md`** records previously skipped or integration/other-project items and how to fix or re-enable them.
 
 ### Skipped (`[Fact(Skip = "...")]`)
 

@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "slskdn.fullname" . }}
+  labels:
+    {{- include "slskdn.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "slskdn.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "slskdn.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.main.port }}
+              protocol: TCP
+            {{- if .Values.service.https.enabled }}
+            - name: https
+              containerPort: {{ .Values.service.https.port }}
+              protocol: TCP
+            {{- end }}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          volumeMounts:
+            {{- if .Values.persistence.config.enabled }}
+            - name: config
+              mountPath: /app/config
+            {{- end }}
+            {{- if .Values.persistence.downloads.enabled }}
+            - name: downloads
+              mountPath: /app/downloads
+            {{- end }}
+            {{- if .Values.persistence.shares.enabled }}
+            - name: shares
+              mountPath: /app/shared
+            {{- end }}
+            {{- if .Values.persistence.incomplete.enabled }}
+            - name: incomplete
+              mountPath: /app/incomplete
+            {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+      volumes:
+        {{- if .Values.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "slskdn.fullname" . }}-config
+        {{- end }}
+        {{- if .Values.persistence.downloads.enabled }}
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: {{ include "slskdn.fullname" . }}-downloads
+        {{- end }}
+        {{- if .Values.persistence.shares.enabled }}
+        - name: shares
+          persistentVolumeClaim:
+            claimName: {{ include "slskdn.fullname" . }}-shares
+        {{- end }}
+        {{- if .Values.persistence.incomplete.enabled }}
+        - name: incomplete
+          persistentVolumeClaim:
+            claimName: {{ include "slskdn.fullname" . }}-incomplete
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

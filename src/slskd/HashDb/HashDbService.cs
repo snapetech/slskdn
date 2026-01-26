@@ -1108,6 +1108,13 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<AudioVariant?> GetAudioVariantByFlacKeyAsync(string flacKey, CancellationToken cancellationToken = default)
+        {
+            var entry = await LookupHashAsync(flacKey, cancellationToken).ConfigureAwait(false);
+            return MapEntryToVariant(entry);
+        }
+
+        /// <inheritdoc/>
         public async Task<IEnumerable<HashDbEntry>> LookupHashesBySizeAsync(long size, CancellationToken cancellationToken = default)
         {
             var entries = new List<HashDbEntry>();

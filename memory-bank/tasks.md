@@ -44,37 +44,44 @@
 ## Optionals / Follow-up (40-fixes, Research, Packaging)
 
 > All items below must be done. Source: `docs/dev/40-fixes-plan.md` Deferred/optional, Research follow-ups, TODO.md, Out of Scope. Verify against “Completed” list in 40-fixes when marking done.
-
 ### 40-fixes plan (PR / § / J)
 
-- [ ] **PR-03 Passthrough AllowedCidrs**: Add `Web.Authentication.Passthrough.AllowedCidrs` (e.g. `"127.0.0.1/32,::1/128"`) for explicit CIDR allowlist instead of/in addition to loopback check.
-- [ ] **PR-04 CORS AllowedHeaders/AllowedMethods**: Implement and wire `Web.Cors.AllowedHeaders`, `Web.Cors.AllowedMethods` in Options and CORS middleware.
-- [ ] **PR-05 Exception / ValidationProblemDetails**: Custom `InvalidModelStateResponseFactory` (or validation formatter) so Production does not leak internals; consistent `ValidationProblemDetails`.
-- [ ] **PR-06 Dump 501**: Dump endpoint returns **501** when dump creation fails (e.g. dotnet-dump not on PATH, DiagnosticsClient failure) with instructions.
-- [ ] **PR-07 ModelState / RejectInvalidModelState**: `Web.Api.RejectInvalidModelState` (in Enforce can imply true); consistent `ValidationProblemDetails` (same factory as PR-05 where applicable).
-- [ ] **PR-08 MeshGateway chunked POST**: Chunked POST for MeshGateway — bounded body read, 413 on over-limit; support chunked when `ContentLength` null (if not already done).
-- [ ] **PR-09a Kestrel MaxRequestBodySize**: Kestrel `MaxRequestBodySize` configured and documented in Options/example config.
-- [ ] **PR-09b Rate limit fed/mesh**: Rate-limit fed/mesh integration: `Burst_federation_inbox_*`, `Burst_mesh_gateway_*` in `FedMeshRateLimitTestHostFactory` (or equivalent) and policies applied.
-- [ ] **§8 QuicDataServer**: `QuicDataServer` read/limits aligned with `GetEffectiveMaxPayloadSize`.
-- [ ] **§9 Metrics Basic Auth constant-time**: Metrics Basic Auth uses constant-time comparison (`CryptographicOperations.FixedTimeEquals`); `WWW-Authenticate: Basic realm="metrics"`.
-- [ ] **§11 NotImplementedException gating**: Incomplete features (I2P, RelayOnly, PerceptualHasher, etc.) fail at startup or return 501 when enabled; no `NotImplementedException` crash in configured defaults.
-- [ ] **J ScriptService deadlock**: ScriptService: async read of stdout/stderr, `WaitForExitAsync`, timeout and process kill; no `WaitForExit()` while redirecting.
-- [ ] **6.4 Pod Join nonce**: Optional nonce for replay protection in E2 Pod Join when `PodCore.Join.SignatureMode` is Enforce.
+- [x] **PR-03 Passthrough AllowedCidrs**: Add `Web.Authentication.Passthrough.AllowedCidrs` (e.g. `"127.0.0.1/32,::1/128"`) for explicit CIDR allowlist instead of/in addition to loopback check.
+- [x] **PR-04 CORS AllowedHeaders/AllowedMethods**: Implement and wire `Web.Cors.AllowedHeaders`, `Web.Cors.AllowedMethods` in Options and CORS middleware.
+- [x] **PR-05 Exception / ValidationProblemDetails**: Custom `InvalidModelStateResponseFactory` (or validation formatter) so Production does not leak internals; consistent `ValidationProblemDetails`.
+- [x] **PR-06 Dump 501**: Dump endpoint returns **501** when dump creation fails (e.g. dotnet-dump not on PATH, DiagnosticsClient failure) with instructions.
+- [x] **PR-07 ModelState / RejectInvalidModelState**: `Web.Api.RejectInvalidModelState` (in Enforce can imply true); consistent `ValidationProblemDetails` (same factory as PR-05 where applicable).
+- [x] **PR-08 MeshGateway chunked POST**: Chunked POST for MeshGateway — bounded body read, 413 on over-limit; support chunked when `ContentLength` null (if not already done).
+- [x] **PR-09a Kestrel MaxRequestBodySize**: Kestrel `MaxRequestBodySize` configured and documented in Options/example config.
+- [x] **PR-09b Rate limit fed/mesh**: Rate-limit fed/mesh integration: `Burst_federation_inbox_*`, `Burst_mesh_gateway_*` in `FedMeshRateLimitTestHostFactory` (or equivalent) and policies applied.
+- [x] **§8 QuicDataServer**: `QuicDataServer` read/limits aligned with `GetEffectiveMaxPayloadSize`.
+- [x] **§9 Metrics Basic Auth constant-time**: Metrics Basic Auth uses constant-time comparison (`CryptographicOperations.FixedTimeEquals`); `WWW-Authenticate: Basic realm="metrics"`.
+- [x] **§11 NotImplementedException gating**: Incomplete features (I2P, RelayOnly, PerceptualHasher, etc.) fail at startup or return 501 when enabled; no `NotImplementedException` crash in configured defaults.
+- [x] **J ScriptService deadlock**: ScriptService: async read of stdout/stderr, `WaitForExitAsync`, timeout and process kill; no `WaitForExit()` while redirecting.
+- [x] **6.4 Pod Join nonce**: `PodJoinRequest` has optional `Nonce`; `PodJoinLeaveService` uses `PodJoinOptions.SignatureMode` (bind `PodCore:Join`). When Enforce: Nonce required, replay cache `PodId:PeerId:Nonce` with 5min TTL. Done.
 
 ### Research follow-ups (T-906, T-907, T-908, T-912)
 
-- [ ] **T-906 Resolver fetch**: Resolver fetch follow-up for NativeMeshBackend (docs: `docs/research/T-906-native-mesh-backend-design.md`).
-- [ ] **T-907 Resolver fetch**: Resolver fetch follow-up for WebDav/S3 backend.
-- [ ] **T-908 StubBitTorrentBackend / TorrentBackend**: StubBitTorrentBackend replacement and TorrentBackend private logic (design: `docs/research/T-908-private-bittorrent-backend-design.md`).
-- [ ] **T-912 Soulseek adapter**: Soulseek adapter follow-up for MetadataFacade / IMetadataFacade.
+- [x] **T-906 Resolver fetch**: SimpleResolver calls `MeshContent.GetByContentId` via IMeshServiceClient for `mesh:{peerId}:{contentId}`; writes payload to temp file and returns path. Done.
+- [x] **T-907 Resolver fetch**: SimpleResolver uses `IContentFetchBackend`; `WebDavBackend`, `S3Backend`, `HttpBackend` implement it; fetch via `FetchToStreamAsync`. Done.
+- [x] **T-908 StubBitTorrentBackend / TorrentBackend**: `MonoTorrentBitTorrentBackend` registered in DI; respects `PrivateMode` (DisableDht, DisablePex, InviteList). `StubBitTorrentBackend` class remains in `SwarmSignalHandlers` but is not in DI. Done.
+- [x] **T-912 Soulseek adapter**: `IMetadataFacade.GetBySoulseekFilenameAsync(username, filename)` parses common patterns (Artist - Title, Album - NN - Title, NN. Title) and returns `MetadataResult` with `SourceSoulseek`. Done.
 
 ### Packaging (TODO.md)
 
-- [ ] **Proxmox LXC templates**: Proxmox LXC templates for Proxmox users (low priority; `TODO.md`).
+- [x] **Proxmox LXC templates**: `packaging/proxmox-lxc/` — README, `slskdn.conf.example`, `setup-inside-ct.sh` (Debian 12/Ubuntu 22.04: .NET 8, slskdn zip to /opt/slskdn, systemd, /etc/slskd, /var/lib/slskd). Done.
 
 ### 40-fixes Out of Scope (docs)
 
-- [ ] **CHANGELOG and option docs**: CHANGELOG and option docs (e.g. `config/slskd.example.yml`) updated for new flags and breaking behavior from 40-fixes (EnforceSecurity, Mesh:SyncSecurity, etc.).
+- [x] **CHANGELOG and option docs**: CHANGELOG and option docs (e.g. `config/slskd.example.yml`) updated for new flags and breaking behavior from 40-fixes (EnforceSecurity, Mesh:SyncSecurity, etc.).
+
+### Docs / meta
+
+- [x] **Sync DEVELOPMENT_HISTORY Pending**: `docs/archive/DEVELOPMENT_HISTORY.md` "Pending Features" — Phase 8 Create Chat Rooms/Predictable Search URLs → ✅ (T-006, T-007); Pending section now points to tasks.md, lists done (T-001–T-007) and still-pending.
+- [x] **slskd.Tests.Unit Phase 2–6**: Completion-plan shows 0 Compile Remove, 0 skips; `dotnet test` slskd.Tests.Unit 2294 pass, 0 fail, 0 skip. Re-enablement complete.
+- [x] **Triage src/ TODO/FIXME/placeholder**: Triaged in `memory-bank/triage-todo-fixme.md`: ~13 accepted, ~100 defer, 7 task. Follow-up [ ] below. Done.
+- [x] **Triage follow-up (task)**: Options realm validation re-enabled (`Realm.Validate()`, `MultiRealm.Validate()` in Options.Validate). QuicDataServer TODO replaced with defer comment (IOverlayDataPayloadHandler). RescueService/Scene* remain in triage-todo-fixme as defer. Done.
+- [x] **Reconcile tasks-audit-gaps**: Phase 8 reconciled: T-1421, T-1422, T-1423, T-1425, T-1429 implemented (Ed25519, KeyedSigner/ControlSigner, QuicOverlayServer, QuicDataServer, ControlDispatcher). Tasks-audit-gaps.md updated. T-1424, T-1426, T-1427, T-1428 and Phases 1–6 remain as backlog; promote to [ ] when prioritizing.
 
 ---
 

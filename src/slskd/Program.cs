@@ -17,6 +17,7 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.AudioCore;
 using slskd.Mesh.Realm;
 using slskd.Mesh.Realm.Bridge;
 using slskd.Mesh.Governance;
@@ -53,6 +54,7 @@ namespace slskd
     using Microsoft.AspNetCore.Mvc.Authorization;
     using Microsoft.AspNetCore.RateLimiting;
     using Microsoft.EntityFrameworkCore;
+    using Microsoft.Extensions.Caching.Memory;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.FileProviders;
@@ -77,6 +79,7 @@ namespace slskd
     using slskd.Integrations.AutoTagging;
     using slskd.Integrations.Chromaprint;
     using slskd.Integrations.FTP;
+    using slskd.Integrations.MetadataFacade;
     using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
@@ -99,6 +102,7 @@ namespace slskd
     using slskd.DhtRendezvous;
     using slskd.DhtRendezvous.Security;
     using slskd.Transfers.MultiSource.Discovery;
+    using slskd.Transfers.Rescue;
     using slskd.Signals;
     using Soulseek;
     using Utility.CommandLine;
@@ -600,6 +604,14 @@ namespace slskd
                     app.Services.GetService<Migrator>().Migrate(force: OptionsAtStartup.Flags.ForceMigrations);
                 }
 
+                if (OptionsAtStartup.Flags.AudioReanalyze && !OptionsAtStartup.Flags.Volatile)
+                {
+                    Log.Information("[AudioReanalyze] Running analyzer migration (force={Force})...", OptionsAtStartup.Flags.AudioReanalyzeForce);
+                    var migrationService = app.Services.GetRequiredService<IAnalyzerMigrationService>();
+                    var n = migrationService.MigrateAsync("audioqa-1", OptionsAtStartup.Flags.AudioReanalyzeForce, default).GetAwaiter().GetResult();
+                    Log.Information("[AudioReanalyze] Updated {Count} variants", n);
+                }
+
                 // hack: services that exist only to subscribe to the event bus are not referenced by anything else
                 //       and are thus never instantiated.  force a reference here so they are created.
                 Log.Information("[DI] Forcing construction of ScriptService and WebhookService...");
@@ -969,28 +981,14 @@ namespace slskd
             services.AddSingleton<Transfers.Ranking.ISourceRankingService, Transfers.Ranking.SourceRankingService>();
 
             // Multi-source feature services
-            // HashDb - content-addressed storage for file verification
-            // Subscribes to download events to automatically hash completed downloads
-            // Uses IServiceProvider for lazy resolution of IMeshSyncService (avoids circular dependency)
-            services.AddSingleton<HashDb.IHashDbService>(sp => new HashDb.HashDbService(
-                Program.AppDirectory,
-                sp.GetRequiredService<EventBus>(),
-                sp,
-                sp.GetRequiredService<IFingerprintExtractionService>(),
-                sp.GetRequiredService<IAcoustIdClient>(),
-                sp.GetRequiredService<IAutoTaggingService>(),
-                sp.GetRequiredService<IMusicBrainzClient>(),
-                sp.GetRequiredService<IOptionsMonitor<Options>>()));
-            services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();
-            services.AddSingleton<IDedupeService, DedupeService>();
-            services.AddSingleton<IAnalyzerMigrationService, AnalyzerMigrationService>();
+            // (IHashDbService, IMediaVariantStore, ICanonicalStatsService, IDedupeService, IAnalyzerMigrationService in AddAudioCore)
             services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
             services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
             services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
             services.AddSingleton<Signals.Swarm.ISwarmJobStore, Signals.Swarm.InMemorySwarmJobStore>();
             services.AddSingleton<Signals.Swarm.ISecurityPolicyEngine, Signals.Swarm.StubSecurityPolicyEngine>();
-            services.AddSingleton<Signals.Swarm.IBitTorrentBackend, Signals.Swarm.StubBitTorrentBackend>();
+            services.AddSingleton<Signals.Swarm.IBitTorrentBackend, Signals.Swarm.MonoTorrentBitTorrentBackend>();
             services.AddSingleton<Transfers.MultiSource.Metrics.ITrafficAccountingService, Transfers.MultiSource.Metrics.TrafficAccountingService>();
             services.AddSingleton<Transfers.MultiSource.Metrics.IFairnessGuard>(sp =>
                 new Transfers.MultiSource.Metrics.FairnessGuard(
@@ -1006,8 +1004,7 @@ namespace slskd
             services.AddSignalSystem();
             services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackPriorityService, Transfers.MultiSource.Playback.PlaybackPriorityService>();
             services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackFeedbackService, Transfers.MultiSource.Playback.PlaybackFeedbackService>();
-            services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
-            services.AddSingleton<LibraryHealth.Remediation.ILibraryHealthRemediationService, LibraryHealth.Remediation.LibraryHealthRemediationService>();
+            // (ILibraryHealthService, ILibraryHealthRemediationService in AddAudioCore)
 
             // Virtual Soulfind services
             services.AddSingleton<VirtualSoulfind.Capture.ITrafficObserver, VirtualSoulfind.Capture.TrafficObserver>();
@@ -1052,8 +1049,7 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
-            // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03)
-            services.AddSingleton<VirtualSoulfind.Core.Music.IMusicContentDomainProvider, VirtualSoulfind.Core.Music.MusicContentDomainProvider>();
+            // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03) (IMusicContentDomainProvider in AddAudioCore)
             services.AddSingleton<VirtualSoulfind.Core.GenericFile.IGenericFileContentDomainProvider, VirtualSoulfind.Core.GenericFile.GenericFileContentDomainProvider>();
 
             // Peer Reputation System (T-MCP04)
@@ -1328,6 +1324,7 @@ namespace slskd
             services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
             services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSection("Security:Adversarial"));
             services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(Configuration.GetSection("PodCore:Security"));
+            services.AddOptions<PodCore.PodJoinOptions>().Bind(Configuration.GetSection("PodCore:Join"));
 
             // Transport policy manager for per-peer/per-pod transport policies
             services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
@@ -1339,7 +1336,8 @@ namespace slskd
                 var policyManager = sp.GetRequiredService<Mesh.Transport.TransportPolicyManager>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Common.Security.AnonymityTransportSelector>>();
                 var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                return new Common.Security.AnonymityTransportSelector(options.Value, policyManager, logger, loggerFactory);
+                var overlayDataPlane = sp.GetService<Mesh.Overlay.IOverlayDataPlane>();
+                return new Common.Security.AnonymityTransportSelector(options.Value, policyManager, logger, loggerFactory, overlayDataPlane);
             });
 
             // Privacy layer for traffic analysis protection
@@ -1353,6 +1351,7 @@ namespace slskd
 
             services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
             services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
+            services.AddOptions<Mesh.MeshSyncSecurityOptions>().Bind(Configuration.GetSection("Mesh:SyncSecurity"));
             services.AddOptions<Mesh.MeshTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport"));
             services.AddOptions<Mesh.TorTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:Tor"));
             services.AddOptions<Mesh.I2PTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:I2P"));
@@ -1549,6 +1548,7 @@ namespace slskd
 
             // Hole punching services for NAT traversal
             services.AddSingleton<Mesh.ServiceFabric.Services.HolePunchMeshService>();
+            services.AddSingleton<Mesh.ServiceFabric.Services.MeshContentMeshService>();
             services.AddSingleton<Mesh.Nat.IHolePunchCoordinator, Mesh.Nat.HolePunchCoordinator>();
             services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
 
@@ -1712,6 +1712,8 @@ namespace slskd
             services.AddSingleton<OverlayRateLimiter>();
             services.AddSingleton<OverlayBlocklist>();
             services.AddSingleton<MeshNeighborRegistry>();
+            services.AddSingleton<DhtRendezvous.Search.IMeshSearchRpcHandler, DhtRendezvous.Search.MeshSearchRpcHandler>();
+            services.AddSingleton<DhtRendezvous.Search.IMeshOverlaySearchService, DhtRendezvous.Search.MeshOverlaySearchService>();
             services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();
             services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
 
@@ -1729,6 +1731,8 @@ namespace slskd
             services.AddHostedService(p => (Backfill.BackfillSchedulerService)p.GetRequiredService<Backfill.IBackfillSchedulerService>());
 
             // Mesh services (Hash database synchronization)
+            services.AddSingleton<Mesh.IFlacKeyToPathResolver, Mesh.ShareBasedFlacKeyToPathResolver>();
+            services.AddSingleton<Mesh.IProofOfPossessionService, Mesh.ProofOfPossessionService>();
             services.AddSingleton<Mesh.IMeshSyncService, Mesh.MeshSyncService>();
 
             // Multi-source download services (Swarm)
@@ -1737,6 +1741,17 @@ namespace slskd
                 sp.GetRequiredService<ISoulseekClient>(),
                 sp.GetRequiredService<Transfers.MultiSource.IContentVerificationService>()));
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
+            services.AddSingleton<IRescueGuardrailService, RescueGuardrailService>();
+            services.AddSingleton<IRescueService>(sp => new RescueService(
+                sp.GetService<HashDb.IHashDbService>(),
+                sp.GetService<IFingerprintExtractionService>(),
+                sp.GetService<IAcoustIdClient>(),
+                sp.GetService<Mesh.IMeshSyncService>(),
+                sp.GetService<Mesh.IMeshDirectory>(),
+                sp.GetService<Transfers.MultiSource.IMultiSourceDownloadService>(),
+                sp.GetRequiredService<IDownloadService>(),
+                sp.GetService<IRescueGuardrailService>()));
+            services.AddHostedService<UnderperformanceDetectorHostedService>();
             services.AddSingleton<Transfers.MultiSource.IContentVerificationService, Transfers.MultiSource.ContentVerificationService>();
             services.AddSingleton<Transfers.MultiSource.Metrics.IPeerMetricsService, Transfers.MultiSource.Metrics.PeerMetricsService>();
             services.AddSingleton<Transfers.MultiSource.Scheduling.IChunkScheduler>(sp =>
@@ -1778,11 +1793,18 @@ namespace slskd
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
             services.AddSingleton<IFTPService, FTPService>();
 
-            services.AddSingleton<IChromaprintService, ChromaprintService>();
-            services.AddSingleton<IFingerprintExtractionService, FingerprintExtractionService>();
+            // AudioCore: IChromaprintService, IFingerprintExtractionService in AddAudioCore
             services.AddSingleton<IAcoustIdClient, AcoustIdClient>();
             services.AddSingleton<IAutoTaggingService, AutoTaggingService>();
             services.AddSingleton<IMusicBrainzClient, MusicBrainzClient>();
+            services.AddAudioCore(Program.AppDirectory);
+            services.AddSingleton<IMetadataFacade>(sp => new MetadataFacade(
+                sp.GetRequiredService<IMusicBrainzClient>(),
+                sp.GetRequiredService<IAcoustIdClient>(),
+                sp.GetRequiredService<IFingerprintExtractionService>(),
+                sp.GetRequiredService<IOptionsMonitor<Options>>(),
+                sp.GetRequiredService<ILogger<MetadataFacade>>(),
+                sp.GetService<IMemoryCache>()));
             services.AddSingleton<IPushbulletService, PushbulletService>();
             services.AddSingleton<Integrations.Notifications.INotificationService, Integrations.Notifications.NotificationService>();
 

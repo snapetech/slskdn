@@ -7,6 +7,7 @@
 namespace slskd.Mesh.Overlay;
 
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -75,6 +76,37 @@ public class QuicDataClient : IOverlayDataPlane
             logger.LogWarning(ex, "[Overlay-QUIC-DATA] Failed to send to {Endpoint}", endpoint);
             connections.TryRemove(endpoint, out _);
             return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<Stream?> OpenBidirectionalStreamAsync(IPEndPoint endpoint, CancellationToken ct = default)
+    {
+        if (!options.Enable)
+            return null;
+        if (!QuicConnection.IsSupported)
+        {
+            logger.LogDebug("[Overlay-QUIC-DATA] QUIC not supported, cannot open stream to {Endpoint}", endpoint);
+            return null;
+        }
+        try
+        {
+            if (!connections.TryGetValue(endpoint, out var connection) || connection == null)
+            {
+                connection = await CreateConnectionAsync(endpoint, ct);
+                if (connection == null)
+                    return null;
+                connections.TryAdd(endpoint, connection);
+            }
+            var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
+            logger.LogDebug("[Overlay-QUIC-DATA] Opened bidirectional stream to {Endpoint}", endpoint);
+            return stream;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Overlay-QUIC-DATA] Failed to open stream to {Endpoint}", endpoint);
+            connections.TryRemove(endpoint, out _);
+            return null;
         }
     }
 

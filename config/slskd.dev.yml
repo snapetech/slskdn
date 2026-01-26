@@ -30,6 +30,10 @@ global:
     auto_replace_threshold: 5
     auto_replace_interval: 60
 
+# To use test-data/slskdn-test-fixtures: run ./scripts/fetch-test-fixtures.sh, then uncomment:
+# shares:
+#   directories:
+#     - ./test-data/slskdn-test-fixtures
 shares: []
 
 debug: true

@@ -209,9 +209,12 @@
 #     username: slskd
 #     password: slskd
 # PodCore.Security (MessageSigner). PR-12. Binds to PodCore:Security.
+# PodCore.Join (6.4). Binds to PodCore:Join. When SignatureMode Enforce: PodJoinRequest requires Nonce and replay is rejected.
 # PodCore:
 #   Security:
 #     SignatureMode: Off   # Off | Warn | Enforce
+#   Join:
+#     SignatureMode: Off   # Enforce: require Nonce on join, reject replay
 # feature:
 #   swagger: false
 # security:
@@ -241,11 +244,16 @@
 #     enabled: true
 #     trusted_threshold: 70
 #     untrusted_threshold: 20
-#   adversarial:  # Security:Adversarial (privacy, padding, etc.)
+#   adversarial:  # Security:Adversarial (privacy, padding, anonymity, etc.)
 #     privacy:
 #       padding:
 #         max_unpadded_bytes: 0  # 0=default 1MB. PR-11 DoS limit for Unpad.
 #         max_padded_bytes: 0    # 0=default 2MB. PR-11 DoS limit for Unpad.
+#     anonymity:   # I2P, RelayOnly, Tor. AnonymityLayerOptions.
+#       relay_only:
+#         relay_peer_data_endpoints: []  # ["host:port"] per relay's QUIC data overlay; used when TrustedRelayPeers not resolved. Required for RelayOnly until peer-id resolution.
+#         # trusted_relay_peers: []
+#         # max_chain_length: 3
 # soulseek:
 #   address: vps.slsknet.org
 #   port: 2271
@@ -366,3 +374,17 @@
 #   security:
 #     enforceRemotePayloadLimits: true   # when true, enforce max size and safe deserialization on overlay/transport
 #     maxRemotePayloadSize: 1048576      # 1 MiB; max for remote JSON/MessagePack payloads
+#
+# Mesh:SyncSecurity (T-1432, T-1433, T-1434, T-1435). Rate limiting, quarantine, proof-of-possession, consensus, alert thresholds.
+#   sync_security:
+#     max_invalid_entries_per_window: 50    # T-1432: entries before rate limit. Default 50.
+#     max_invalid_messages_per_window: 10   # T-1432: messages before rate limit. Default 10.
+#     rate_limit_window_minutes: 5          # T-1432/1433: window for rate limit and quarantine. Default 5.
+#     quarantine_violation_threshold: 3     # T-1433: violations in window to quarantine. Default 3.
+#     quarantine_duration_minutes: 30       # T-1433: quarantine length. Default 30.
+#     proof_of_possession_enabled: false    # T-1434: require PoP before accepting new hashes. Default false.
+#     consensus_min_peers: 5                # T-1435: min peers to query for hash consensus. Default 5.
+#     consensus_min_agreements: 3           # T-1435: min agreeing peers to accept hash. Default 3.
+#     alert_threshold_signature_failures: 50   # Alert when exceeded. 0=disabled. Default 50.
+#     alert_threshold_rate_limit_violations: 20 # Alert when exceeded. 0=disabled. Default 20.
+#     alert_threshold_quarantine_events: 10    # Alert when exceeded. 0=disabled. Default 10.

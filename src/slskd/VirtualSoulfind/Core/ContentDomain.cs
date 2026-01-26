@@ -77,12 +77,17 @@ namespace slskd.VirtualSoulfind.Core
         /// </remarks>
         GenericFile = 1,
 
-        // Future domains:
-        // Movie = 2,
-        // Tv = 3,
-        // Book = 4,
-        // Game = 5,
-        // Software = 6,
+        /// <summary>
+        ///     Image domain (T-911 placeholder). Placeholder for future image-specific variants.
+        /// </summary>
+        Image = 2,
+
+        /// <summary>
+        ///     Video domain (T-911 placeholder). Placeholder for future video-specific variants.
+        /// </summary>
+        Video = 3,
+
+        // Future: Movie, Tv, Book, Game, Software
     }
 }
 

@@ -42,6 +42,12 @@ namespace slskd.Mesh.Messages
 
         /// <summary>Acknowledge receipt of entries.</summary>
         Ack = 6,
+
+        /// <summary>Request file chunk for proof-of-possession (T-1434).</summary>
+        ReqChunk = 7,
+
+        /// <summary>Response with file chunk data (T-1434).</summary>
+        RespChunk = 8,
     }
 
     /// <summary>
@@ -204,6 +210,52 @@ namespace slskd.Mesh.Messages
         /// </summary>
         [JsonPropertyName("entry")]
         public MeshHashEntry Entry { get; set; }
+    }
+
+    /// <summary>
+    ///     Request a file chunk for proof-of-possession (T-1434). Hash is over first 32KB.
+    /// </summary>
+    public class MeshReqChunkMessage : MeshMessage
+    {
+        /// <inheritdoc/>
+        public override MeshMessageType Type => MeshMessageType.ReqChunk;
+
+        /// <summary>Gets or sets the FLAC key.</summary>
+        [JsonPropertyName("flac_key")]
+        public string FlacKey { get; set; }
+
+        /// <summary>Gets or sets the byte offset to read from.</summary>
+        [JsonPropertyName("offset")]
+        public long Offset { get; set; }
+
+        /// <summary>Gets or sets the number of bytes to read (e.g. 32768 for first 32KB).</summary>
+        [JsonPropertyName("length")]
+        public int Length { get; set; }
+    }
+
+    /// <summary>
+    ///     Response with file chunk data for proof-of-possession (T-1434).
+    /// </summary>
+    public class MeshRespChunkMessage : MeshMessage
+    {
+        /// <inheritdoc/>
+        public override MeshMessageType Type => MeshMessageType.RespChunk;
+
+        /// <summary>Gets or sets the FLAC key.</summary>
+        [JsonPropertyName("flac_key")]
+        public string FlacKey { get; set; }
+
+        /// <summary>Gets or sets the byte offset that was read.</summary>
+        [JsonPropertyName("offset")]
+        public long Offset { get; set; }
+
+        /// <summary>Gets or sets the chunk data Base64-encoded.</summary>
+        [JsonPropertyName("data_base64")]
+        public string DataBase64 { get; set; }
+
+        /// <summary>Gets or sets whether the chunk was successfully read.</summary>
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
     }
 
     /// <summary>

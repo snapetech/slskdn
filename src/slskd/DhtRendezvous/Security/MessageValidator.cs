@@ -433,6 +433,118 @@ public static partial class MessageValidator
         
         return ValidationResult.Success;
     }
+
+    /// <summary>
+    /// Maximum search text length for mesh_search_req.
+    /// </summary>
+    public const int MaxMeshSearchTextLength = 256;
+
+    /// <summary>
+    /// Minimum max_results for mesh_search_req.
+    /// </summary>
+    public const int MinMeshSearchMaxResults = 1;
+
+    /// <summary>
+    /// Maximum max_results for mesh_search_req.
+    /// </summary>
+    public const int MaxMeshSearchMaxResults = 200;
+
+    /// <summary>
+    /// Maximum number of files in a mesh_search_resp (amplification limit).
+    /// </summary>
+    public const int MaxMeshSearchResponseFiles = 500;
+
+    /// <summary>
+    /// Validates a mesh search request message.
+    /// </summary>
+    public static ValidationResult ValidateMeshSearchReq(MeshSearchRequestMessage? message)
+    {
+        if (message is null)
+        {
+            return ValidationResult.Fail("Message is null");
+        }
+
+        if (!ValidateMagic(message.Magic))
+        {
+            return ValidationResult.Fail("Invalid protocol magic");
+        }
+
+        if (message.Version < MinVersion || message.Version > MaxVersion)
+        {
+            return ValidationResult.Fail($"Invalid version: {message.Version}");
+        }
+
+        if (string.IsNullOrEmpty(message.RequestId) || !Guid.TryParse(message.RequestId, out _))
+        {
+            return ValidationResult.Fail("request_id must be a valid GUID");
+        }
+
+        if (string.IsNullOrWhiteSpace(message.SearchText))
+        {
+            return ValidationResult.Fail("search_text must be non-empty");
+        }
+
+        if (message.SearchText.Length > MaxMeshSearchTextLength)
+        {
+            return ValidationResult.Fail($"search_text too long: {message.SearchText.Length} > {MaxMeshSearchTextLength}");
+        }
+
+        if (message.MaxResults < MinMeshSearchMaxResults || message.MaxResults > MaxMeshSearchMaxResults)
+        {
+            return ValidationResult.Fail($"max_results must be between {MinMeshSearchMaxResults} and {MaxMeshSearchMaxResults}, got {message.MaxResults}");
+        }
+
+        return ValidationResult.Success;
+    }
+
+    /// <summary>
+    /// Validates a mesh search response message.
+    /// </summary>
+    public static ValidationResult ValidateMeshSearchResp(MeshSearchResponseMessage? message)
+    {
+        if (message is null)
+        {
+            return ValidationResult.Fail("Message is null");
+        }
+
+        if (!ValidateMagic(message.Magic))
+        {
+            return ValidationResult.Fail("Invalid protocol magic");
+        }
+
+        if (string.IsNullOrEmpty(message.RequestId) || !Guid.TryParse(message.RequestId, out _))
+        {
+            return ValidationResult.Fail("request_id must be a valid GUID");
+        }
+
+        if (message.Files is not null && message.Files.Count > MaxMeshSearchResponseFiles)
+        {
+            return ValidationResult.Fail($"files count exceeds limit: {message.Files.Count} > {MaxMeshSearchResponseFiles}");
+        }
+
+        if (message.Files is not null)
+        {
+            foreach (var f in message.Files)
+            {
+                if (f is null)
+                {
+                    return ValidationResult.Fail("files must not contain null");
+                }
+
+                if (string.IsNullOrEmpty(f.Filename))
+                {
+                    return ValidationResult.Fail("file filename must be non-empty");
+                }
+
+                if (f.Size < 0 || f.Size > 10_000_000_000)
+                {
+                    return ValidationResult.Fail($"file size out of range: {f.Size}");
+                }
+            }
+        }
+
+        return ValidationResult.Success;
+    }
     
     /// <summary>
     /// Validates file size is reasonable.

@@ -4,6 +4,7 @@
 
 using slskd.Mesh;
 using slskd.Mesh.Transport;
+using slskd.Mesh.Overlay;
 
 namespace slskd.Common.Security;
 
@@ -55,6 +56,7 @@ public sealed class TransportSelectorStatus
 public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposable
 {
     private readonly AdversarialOptions _adversarialOptions;
+    private readonly IOverlayDataPlane? _overlayDataPlane;
     private readonly ILogger<AnonymityTransportSelector> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly TransportPolicyManager _policyManager;
@@ -70,16 +72,19 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
     /// <param name="adversarialOptions">The adversarial options containing both anonymity and obfuscated transport settings.</param>
     /// <param name="policyManager">The transport policy manager for per-peer/per-pod policies.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="overlayDataPlane">Optional data-plane overlay; required for RelayOnly mode.</param>
     public AnonymityTransportSelector(
         AdversarialOptions adversarialOptions,
         TransportPolicyManager policyManager,
         ILogger<AnonymityTransportSelector> logger,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IOverlayDataPlane? overlayDataPlane = null)
     {
         _adversarialOptions = adversarialOptions ?? throw new ArgumentNullException(nameof(adversarialOptions));
         _policyManager = policyManager ?? throw new ArgumentNullException(nameof(policyManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+        _overlayDataPlane = overlayDataPlane;
 
         InitializeTransports();
     }
@@ -292,14 +297,17 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
 
             if (anonymityOptions.Mode == AnonymityMode.I2P)
             {
-                throw new InvalidOperationException(
-                    "I2P anonymity mode is not yet implemented. Use AnonymityMode.Tor or AnonymityMode.Direct.");
+                _transports[AnonymityTransportType.I2P] = new I2PTransport(
+                    anonymityOptions.I2P,
+                    _loggerFactory.CreateLogger<I2PTransport>());
             }
 
-            if (anonymityOptions.Mode == AnonymityMode.RelayOnly)
+            if (anonymityOptions.Mode == AnonymityMode.RelayOnly && _overlayDataPlane != null)
             {
-                throw new InvalidOperationException(
-                    "Relay-only anonymity mode is not yet implemented. Use AnonymityMode.Tor or AnonymityMode.Direct.");
+                _transports[AnonymityTransportType.RelayOnly] = new RelayOnlyTransport(
+                    anonymityOptions.RelayOnly,
+                    _overlayDataPlane,
+                    _loggerFactory.CreateLogger<RelayOnlyTransport>());
             }
 
             // Initialize obfuscated transports (available regardless of anonymity mode)

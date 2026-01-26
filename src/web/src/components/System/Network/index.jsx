@@ -10,6 +10,7 @@ import {
   Icon,
   Label,
   List,
+  Message,
   Popup,
   Progress,
   Segment,
@@ -369,6 +370,74 @@ const Network = () => {
           </Segment>
         </Grid.Column>
       </Grid>
+
+      <Divider />
+
+      {/* Mesh Sync Security */}
+      <Segment>
+        <Header as="h4">
+          <Icon name="shield alternate" />
+          <Header.Content>
+            Mesh Sync Security
+            <Header.Subheader>
+              Counters for signatures, reputation, rate limits, and quarantine
+            </Header.Subheader>
+          </Header.Content>
+        </Header>
+        {mesh?.warnings?.length > 0 && (
+          <Message
+            attached="top"
+            negative
+            size="small"
+          >
+            <Message.Header>
+              <Icon name="exclamation triangle" />
+              Security threshold alerts
+            </Message.Header>
+            <List
+              bulleted
+              size="small"
+            >
+              {mesh.warnings.map((w, i) => (
+                <List.Item key={i}>{w}</List.Item>
+              ))}
+            </List>
+          </Message>
+        )}
+        <Statistic.Group
+          size="small"
+          widths={7}
+        >
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.signatureVerificationFailures ?? 0)}</Statistic.Value>
+            <Statistic.Label>Sig. failures</Statistic.Label>
+          </Statistic>
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.reputationBasedRejections ?? 0)}</Statistic.Value>
+            <Statistic.Label>Rep. rejections</Statistic.Label>
+          </Statistic>
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.rateLimitViolations ?? 0)}</Statistic.Value>
+            <Statistic.Label>Rate limits</Statistic.Label>
+          </Statistic>
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.quarantinedPeers ?? 0)}</Statistic.Value>
+            <Statistic.Label>Quarantined</Statistic.Label>
+          </Statistic>
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.quarantineEvents ?? 0)}</Statistic.Value>
+            <Statistic.Label>Quarantine events</Statistic.Label>
+          </Statistic>
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.rejectedMessages ?? 0)}</Statistic.Value>
+            <Statistic.Label>Rejected msgs</Statistic.Label>
+          </Statistic>
+          <Statistic>
+            <Statistic.Value>{formatNumber(mesh?.skippedEntries ?? 0)}</Statistic.Value>
+            <Statistic.Label>Skipped entries</Statistic.Label>
+          </Statistic>
+        </Statistic.Group>
+      </Segment>
 
       <Divider />
 

@@ -368,6 +368,12 @@ public sealed class RelayOnlyOptions
     public List<string> TrustedRelayPeers { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets data-overlay endpoints for relay peers ("host:port" for each relay's QUIC data overlay).
+    /// When non-empty, used instead of resolving TrustedRelayPeers. Required for RelayOnly until peer-id resolution is integrated.
+    /// </summary>
+    public List<string> RelayPeerDataEndpoints { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets maximum relay chain length.
     /// </summary>
     [Range(1, 5)]

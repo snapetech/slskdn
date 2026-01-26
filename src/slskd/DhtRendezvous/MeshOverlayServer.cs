@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.DhtRendezvous.Search;
 using slskd.DhtRendezvous.Security;
 using slskd.Mesh;
 
@@ -33,8 +34,9 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
     private readonly IMeshSyncService _meshSyncService;
+    private readonly IMeshSearchRpcHandler _meshSearchRpcHandler;
     private readonly DhtRendezvousOptions _dhtOptions;
-    
+
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
     private Task? _acceptLoopTask;
@@ -57,6 +59,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         OverlayBlocklist blocklist,
         MeshNeighborRegistry registry,
         IMeshSyncService meshSyncService,
+        IMeshSearchRpcHandler meshSearchRpcHandler,
         DhtRendezvousOptions dhtOptions)
     {
         _logger = logger;
@@ -67,6 +70,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _blocklist = blocklist;
         _registry = registry;
         _meshSyncService = meshSyncService;
+        _meshSearchRpcHandler = meshSearchRpcHandler ?? throw new ArgumentNullException(nameof(meshSearchRpcHandler));
         _dhtOptions = dhtOptions;
     }
     
@@ -370,7 +374,26 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                                 _logger.LogDebug("Received disconnect from {Username}: {Reason}", connection.Username, disconnect?.Reason ?? "no reason");
                             }
                             goto cleanup;
-                        
+
+                        case Messages.OverlayMessageType.MeshSearchReq:
+                            var meshSearchReq = _framerInstance.DeserializeMessage<Messages.MeshSearchRequestMessage>(rawMessage);
+                            var reqVal = MessageValidator.ValidateMeshSearchReq(meshSearchReq);
+                            if (!reqVal.IsValid)
+                            {
+                                _logger.LogWarning("Invalid mesh_search_req from {Username}: {Error}", connection.Username, reqVal.Error);
+                                _rateLimiter.RecordViolation(connection.RemoteAddress);
+                                break;
+                            }
+                            var meshRl = _rateLimiter.CheckMeshSearchRequest(connection.ConnectionId);
+                            if (!meshRl)
+                            {
+                                _logger.LogWarning("Mesh search rate limit exceeded for {Username}: {Reason}", connection.Username, meshRl.Reason);
+                                break;
+                            }
+                            var meshSearchResp = await _meshSearchRpcHandler.HandleAsync(meshSearchReq, cancellationToken);
+                            await connection.WriteMessageAsync(meshSearchResp, cancellationToken);
+                            break;
+
                         default:
                             // Forward to mesh sync service for handling
                             if (connection.Username is not null)

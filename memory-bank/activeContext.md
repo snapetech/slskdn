@@ -23,10 +23,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: 40-fixes test/docs follow-up.
-- **Branch**: `dev/40-fixes`
+- **Current Task**: —
+- **Branch**: `dev/40-fixes` (or feature branch as appropriate)
 - **Environment**: Local dev
-- **Last Activity**: TrueNAS Chart (appVersion 0.24.1-slskdn.40, home/sources→snapetech/slskdn) + Synology INFO (version 0.24.1, URLs→snapetech/slskdn). **Next:** 40-fixes; tasks.md (T-006, T-007, Phase 14, T-404+).
+- **Last Activity**: CHANGELOG and option docs updated. CHANGELOG.md added (40-fixes, I2P, RelayOnly, ExtractPcmSamples, Mesh:SyncSecurity, breaking behavior). config/slskd.example.yml: RelayOnly.RelayPeerDataEndpoints. packaging/debian/changelog 0.24.1.slskdn.41-1. tasks.md: "CHANGELOG and option docs" [x]. progress.md and activeContext updated.
 
 ---
 
@@ -61,32 +61,28 @@ This is the #1 most important thing to do before ending a session. Future AI age
 ### Blocking Issues
 - None currently
 
+### Current focus (the rest)
+- **40-fixes plan (PR-00–PR-14):** Done. slskd.Tests 46, slskd.Tests.Unit 2257 pass; Epic implemented. Deferred table: status only.
+- **T-404+:** Done. t410-backfill-wire (RescueMode underperformance detector → RescueService); codec/fingerprint (T-420–T-430) done per dashboard.
+- **slskd.Tests.Unit re-enablement:** Phase 1 (PrivacyLayerIntegrationTests, ContentDomainTests, SimpleMatchEngineTests, RealmAwareGossip/Governance/RealmService, MeshCircuitBuilder/SyncSecurity/TransportService, Phase8Mesh) and Phase 3 (MembershipGate, FederationService, ActivityPubBridge, BridgeFlow*, Realm*/RealmMigration/RealmChangeValidator/MultiRealm/RealmConfig/RealmIsolation, CircuitMaintenanceService, ActivityPubKeyStore) per `docs/dev/slskd-tests-unit-completion-plan.md`.
+- **New product work**: As prioritized.
+
+**Research (9) implementation:** Unpinned; in progress. T-901–T-913 in `memory-bank/tasks.md` § Medium Priority. Start: T-912 (Metadata facade). Design: `docs/research/9-research-design-scope.md`.
+
 ### Next Steps
 1. **slskd.Tests.Unit Re-enablement** — Continue Phase 2–6 per `docs/dev/40-fixes-plan.md` and **live status** `docs/dev/slskd-tests-unit-completion-plan.md` (§ Completed, § Status and What Remains): Phase 2 (Common Moderation/Security/Files), Phase 3 (PodCore), Phase 4 (Mesh), Phase 5 (SocialFederation, MediaCore, etc.), Phase 6 (VirtualSoulfind). Un-skip or fix LocalPortForwarderTests’ 6 skipped tests when internal API/JSON alignment is done.
-2. **Phase 14 COMPLETED** - Tier-1 Pod-Scoped Private Service Network feature fully integrated
-   - 21 tasks defined across 6 task groups (T-1400 to T-1452)
-   - Comprehensive agent implementation document created
-   - Security threat model and acceptance criteria documented
-   - Task dashboard and progress tracking updated
+2. **Phase 14 COMPLETED** — Pod-Scoped Private Service Network (T-1400–T-1440) done per TASK_STATUS_DASHBOARD (20/20). No further Phase 14 implementation needed.
 
-3. **Immediate Priority**: Begin Phase 14 implementation with T-1400 (Pod Policy Model & Persistence)
-   - Start with pod capability flags and policy fields
-   - Enable private service gateway functionality
-   - Establish foundation for gateway service implementation
+3. **Packaging**: T-010–T-013 Done. **New product / other**: T-003, T-004, Phase 6/6X, Phase 7, or as prioritized.
 
-4. **High Priority Tasks Available**:
+4. ~~**High Priority Tasks Available** (obsolete):~~
    - **Packaging**: T-010 to T-013 (NAS/docker packaging - 4 tasks)
    - **Medium Priority**: T-003 (Download Queue Position Polling), T-004 (Visual Group Indicators)
-   - **Phase 2 Continuation**: T-404+ (Advanced codec fingerprinting and quality analysis)
+   - ~~T-404+~~ (done)
 
-5. **Implementation Timeline**:
-   - **Phase 14**: ~12-16 weeks (21 tasks - VPN-like utility)
-   - Phase 2 + 2-Extended: ~8-10 weeks (T-404+)
-   - Phase 6 + 6X: ~20-26 weeks (T-823+)
-   - Phase 7: Parallel with features (4-6 weeks)
-   - **Total remaining: ~44-58 weeks** (including new Phase 14)
+5. ~~**Implementation Timeline**~~ (archived; Phase 14 and T-404+ done.)
 
-6. **Branch Strategy**: Phase 14 should use `experimental/pod-vpn` branch for development
+6. ~~**Branch Strategy**: Phase 14 `experimental/pod-vpn`~~ (Phase 14 done.)
 
 ---
 

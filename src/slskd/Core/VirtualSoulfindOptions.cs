@@ -37,11 +37,27 @@ public class VirtualSoulfindOptions
     /// Disaster mode configuration.
     /// </summary>
     public DisasterModeOptions? DisasterMode { get; set; }
-    
+
+    /// <summary>
+    /// Hybrid mesh search: when enabled, overlay mesh search runs in parallel with Soulseek and results are merged.
+    /// </summary>
+    public MeshSearchOptions? MeshSearch { get; set; }
+
     /// <summary>
     /// Legacy client bridge configuration.
     /// </summary>
     public BridgeOptions? Bridge { get; set; }
+}
+
+/// <summary>
+/// Hybrid mesh overlay search configuration.
+/// </summary>
+public class MeshSearchOptions
+{
+    /// <summary>
+    /// Enable overlay mesh search in parallel with Soulseek. Default false.
+    /// </summary>
+    public bool Enabled { get; set; } = false;
 }
 
 /// <summary>

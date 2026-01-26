@@ -1,8 +1,8 @@
 # Task Status Dashboard - experimental/whatAmIThinking
 
-**Last Updated**: December 14, 2025  
-**Branch**: `experimental/whatAmIThinking`  
-**Status**: 🎉 **97.8% COMPLETE** - 9 research tasks remaining
+**Last Updated**: 2026-01-25  
+**Branch**: `experimental/whatAmIThinking` or `dev/40-fixes`  
+**Status**: 🎉 **97.8% COMPLETE** — **Research (9) order complete.** T-912, T-911, T-913, T-901, T-902, T-903, T-906, T-907, T-908 done. slskd.Tests.Unit **2257 pass**, 0 skip; T-014 Helm (generic K8s) done.
 
 > **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
 
@@ -18,29 +18,25 @@
 
 **Status Breakdown:**
 - ✅ Complete: 406 tasks
-- ⏸️ Pending: 9 tasks (research/design)
+- 🔄 In progress: 9 tasks (Research implementation T-901–T-913)
 
 **Note**: tasks.md contains some duplicate task IDs (same ID used for different purposes in different phases). Line count includes all occurrences.
 
 ---
 
-## ⏸️ Remaining Work
+## 🔄 In progress: Research implementation (T-901–T-913)
 
-### 9 Research/Design Tasks (T-900 series)
+**Design/scope:** `docs/research/9-research-design-scope.md`. **Order:** T-912 → T-911 → T-913 → T-901 → T-902 → T-903 → T-906 → T-907 → T-908. **All implemented; Research (9) order complete.**
 
-These are **optional future enhancement** research tasks:
-
-- ⏸️ **T-901**: Implement Ed25519 signed identity system
-- ⏸️ **T-902**: Build DHT node and routing table
-- ⏸️ **T-903**: Implement DHT storage with TTL and signatures
-- ⏸️ **T-906**: Implement native mesh protocol backend
-- ⏸️ **T-907**: Implement HTTP/WebDAV/S3 backend
-- ⏸️ **T-908**: Implement private BitTorrent backend
-- ⏸️ **T-911**: Implement MediaVariant model and storage
-- ⏸️ **T-912**: Build metadata facade abstraction
-- ⏸️ **T-913**: Implement AudioCore domain module
-
-All core functionality is **100% implemented and tested**. These research tasks are for potential future features.
+- [x] **T-912**: Metadata facade (IMetadataFacade, MetadataFacade, MB/AcoustID/file tags, Search, caching) — **done**
+- [x] **T-911**: MediaVariant model and storage (MediaVariant, IMediaVariantStore, HashDbMediaVariantStore, ContentDomain Image/Video) — **done**
+- [x] **T-913**: AudioCore (slskd.AudioCore, AddAudioCore, consolidated DI) — **done**
+- [x] **T-901**: Ed25519 identity (T-901-ed25519-identity-design.md, DerivePeerId formalized) — **done**
+- [x] **T-902**: DHT node and routing table (T-902-dht-node-design.md, KademliaRoutingTable, DhtMeshService, KademliaRpcClient) — **done**
+- [x] **T-903**: DHT storage with TTL and signatures (T-903-dht-storage-design.md, IDhtClient, Store Ed25519) — **done**
+- [x] **T-906**: Native mesh protocol backend (T-906-native-mesh-backend-design.md, NativeMeshBackend, BackendRef mesh:{peerId}:{contentId}) — **done**
+- [x] **T-907**: HTTP/WebDAV/S3 backend (T-907-http-webdav-s3-backend-design.md, WebDavBackend, S3Backend, s3://bucket/key) — **done**
+- [x] **T-908**: Private BitTorrent backend (T-908-private-bittorrent-backend-design.md, PrivateTorrentModeOptions, TorrentBackendOptions.PrivateMode) — **done**
 
 ---
 
@@ -49,7 +45,7 @@ All core functionality is **100% implemented and tested**. These research tasks 
 
 ### ✅ Core Foundation
 
-**Range**: T-001 to T-099 | **Progress**: 11/11 (100%)
+**Range**: T-001 to T-099 | **Progress**: 12/12 (100%)
 
 ```
 [████████████████████] 100%
@@ -71,6 +67,7 @@ All core functionality is **100% implemented and tested**. These research tasks 
 - ✅ **T-011**: Synology Package Center
 - ✅ **T-012**: Homebrew Formula
 - ✅ **T-013**: Flatpak (Flathub)
+- ✅ **T-014**: Helm chart for generic Kubernetes (`packaging/helm/slskdn/`)
 
 </details>
 

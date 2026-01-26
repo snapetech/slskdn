@@ -142,6 +142,14 @@ namespace slskd.Shares
         IEnumerable<File> ListFiles(string parentDirectory = null, bool includeFullPath = false);
 
         /// <summary>
+        ///     Lists local (original) file paths and sizes for all shared files.
+        ///     Used by <see cref="Mesh.IFlacKeyToPathResolver"/> to serve proof-of-possession chunk requests (T-1434).
+        /// </summary>
+        /// <param name="parentDirectory">Optional. When set, filters by maskedFilename LIKE parentDirectory || '%'.</param>
+        /// <returns>Sequence of (LocalPath, Size).</returns>
+        IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string parentDirectory = null);
+
+        /// <summary>
         ///     Returns the list of all <see cref="Scan"/> started at or after the specified <paramref name="startedAtOrAfter"/>
         ///     unix timestamp.
         /// </summary>

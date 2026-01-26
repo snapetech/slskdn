@@ -79,6 +79,18 @@
 
 ## 2026-01-25
 
+### tasks.md work: Sync DEVELOPMENT_HISTORY, Reconcile tasks-audit-gaps, slskd.Tests.Unit
+- **Sync DEVELOPMENT_HISTORY Pending**: `docs/archive/DEVELOPMENT_HISTORY.md` — Phase 8 Create Chat Rooms and Predictable Search URLs set to ✅ (T-006, T-007). "Pending Features" replaced with pointer to `memory-bank/tasks.md` and list of done (T-001–T-007) and still-pending. tasks.md: [x].
+- **Reconcile tasks-audit-gaps**: `memory-bank/tasks-audit-gaps.md` — Reconciliation (2026-01) added. Phase 8: T-1421 (Ed25519KeyPair.Generate), T-1422 (KeyedSigner/ControlSigner), T-1423 (QuicOverlayServer), T-1425 (QuicDataServer), T-1429 (ControlDispatcher) implemented. T-1424, T-1426, T-1427, T-1428 and Phases 1–6 remain as backlog. tasks.md: [x].
+- **slskd.Tests.Unit Phase 2–6**: Completion-plan reports 0 Compile Remove, 0 skips; `dotnet test` slskd.Tests.Unit 2294 pass, 0 fail, 0 skip. tasks.md: [x].
+
+### CHANGELOG and option docs (40-fixes, I2P, RelayOnly, ExtractPcmSamples)
+- **Status**: ✅ **COMPLETED**
+- **CHANGELOG.md**: New project CHANGELOG. [Unreleased]: 40-fixes (EnforceSecurity, passthrough AllowedCidrs, CORS, dump 501, ModelState, Kestrel MaxRequestBodySize, fed/mesh rate limit, Metrics constant-time, §11 gating, ScriptService); Mesh:Security, Mesh:SyncSecurity; I2P (SAM STREAM CONNECT, selector), RelayOnly (RELAY_TCP, RelayPeerDataEndpoints); AudioUtilities.ExtractPcmSamples (ffmpeg); test-data/slskdn-test-fixtures; breaking/behavior changes.
+- **config/slskd.example.yml**: `security.adversarial.anonymity.relay_only.relay_peer_data_endpoints` documented for RelayOnly transport.
+- **packaging/debian/changelog**: 0.24.1.slskdn.41-1 entry for CHANGELOG.md, option docs, memory-bank updates.
+- **memory-bank/tasks.md**: "CHANGELOG and option docs" marked [x]. **activeContext.md**: Last Activity = CHANGELOG and option docs updated; progress.md updated.
+
 ### MediaCore: Chromaprint FFT + FuzzyMatcher ScorePerceptualAsync
 - **Status**: ✅ **COMPLETED**
 - **Chromaprint (PerceptualHasher):** MathNet.Numerics 5.0.0; FFT-based `ComputeChromaPrint`: downsample 11 025 Hz, 4096/2048 frame/hop, Hann, FFT, 24-bin chroma (tone-aware, 440 vs 880 Hz distinct), 8 super-bands, 8 frames → 64-bit median-threshold hash. Removed `GenerateHashFromPeaks`. `CrossCodecMatchingTests.DifferentContent_LowSimilarityScores` un-skipped; `SimilarContentDifferentQuality_HighSimilarityScores` tuned (2% noise, 0.5 threshold). `PerceptualHasherTests.ComputeAudioHash_Chromaprint_440vs880Hz_ProducesLowSimilarity` added.

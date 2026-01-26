@@ -21,12 +21,14 @@ namespace slskd.Mesh
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Text;
     using System.Text.Json;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Options;
     using Serilog;
     using slskd.Capabilities;
     using slskd.Core;
@@ -39,7 +41,7 @@ namespace slskd.Mesh
     /// <summary>
     ///     Service for epidemic mesh synchronization of hash databases.
     /// </summary>
-    public class MeshSyncService : IMeshSyncService
+    public class MeshSyncService : IMeshSyncService, IChunkRequestSender
     {
         /// <summary>Minimum seconds between syncs with same peer.</summary>
         public const int SyncIntervalMinSeconds = 1800; // 30 minutes
@@ -53,29 +55,18 @@ namespace slskd.Mesh
         /// <summary>
         ///     Maximum invalid entries allowed per time window (T-1432).
         /// </summary>
-        private const int MaxInvalidEntriesPerWindow = 50;
-        
-        /// <summary>
-        ///     Maximum invalid messages allowed per time window (T-1432).
-        /// </summary>
-        private const int MaxInvalidMessagesPerWindow = 10;
-        
-        /// <summary>
-        ///     Rate limiting time window in minutes (T-1432).
-        /// </summary>
-        private const int RateLimitWindowMinutes = 5;
-        
-        /// <summary>
-        ///     Number of rate limit violations before automatic quarantine (T-1433).
-        /// </summary>
-        private const int QuarantineViolationThreshold = 3;
-        
-        /// <summary>
-        ///     Quarantine duration in minutes (T-1433).
-        /// </summary>
-        private const int QuarantineDurationMinutes = 30;
+        private const int DefaultMaxInvalidEntriesPerWindow = 50;
+        private const int DefaultMaxInvalidMessagesPerWindow = 10;
+        private const int DefaultRateLimitWindowMinutes = 5;
+        private const int DefaultQuarantineViolationThreshold = 3;
 
         private readonly IHashDbService hashDb;
+        private readonly int _maxInvalidEntriesPerWindow;
+        private readonly int _maxInvalidMessagesPerWindow;
+        private readonly int _rateLimitWindowMinutes;
+        private readonly int _quarantineViolationThreshold;
+        private readonly int _quarantineDurationMinutes;
+        private readonly IOptions<MeshSyncSecurityOptions> _syncSecurityOptions;
         private readonly ICapabilityService capabilities;
         private readonly IManagedState<State> appState;
         private readonly ISoulseekClient soulseekClient;
@@ -89,7 +80,11 @@ namespace slskd.Mesh
         
         // Pending requests: requestId -> TaskCompletionSource
         private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>> pendingRequests = new();
+        // Pending chunk requests for proof-of-possession (T-1434): "{peer}:{flacKey}:{offset}" -> TCS
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>> pendingChunkRequests = new();
         private const string MeshMessagePrefix = "MESH:";
+        private readonly IFlacKeyToPathResolver _pathResolver;
+        private readonly IProofOfPossessionService _proofOfPossession;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MeshSyncService"/> class.
@@ -100,7 +95,10 @@ namespace slskd.Mesh
             ISoulseekClient soulseekClient,
             IMeshMessageSigner messageSigner,
             Common.Security.PeerReputation? peerReputation = null,
-            IManagedState<State> appState = null)
+            IManagedState<State> appState = null,
+            IOptions<MeshSyncSecurityOptions> syncSecurityOptions = null,
+            IFlacKeyToPathResolver pathResolver = null,
+            IProofOfPossessionService proofOfPossession = null)
         {
             this.hashDb = hashDb;
             this.capabilities = capabilities;
@@ -108,6 +106,15 @@ namespace slskd.Mesh
             this.messageSigner = messageSigner;
             this.peerReputation = peerReputation;
             this.appState = appState;
+            _syncSecurityOptions = syncSecurityOptions;
+            _pathResolver = pathResolver;
+            _proofOfPossession = proofOfPossession;
+            var o = syncSecurityOptions?.Value;
+            _maxInvalidEntriesPerWindow = o?.MaxInvalidEntriesPerWindow ?? DefaultMaxInvalidEntriesPerWindow;
+            _maxInvalidMessagesPerWindow = o?.MaxInvalidMessagesPerWindow ?? DefaultMaxInvalidMessagesPerWindow;
+            _rateLimitWindowMinutes = o?.RateLimitWindowMinutes ?? DefaultRateLimitWindowMinutes;
+            _quarantineViolationThreshold = o?.QuarantineViolationThreshold ?? DefaultQuarantineViolationThreshold;
+            _quarantineDurationMinutes = o?.QuarantineDurationMinutes ?? 30;
             
             // Subscribe to private messages for mesh protocol
             if (soulseekClient != null)
@@ -170,6 +177,7 @@ namespace slskd.Mesh
                             "REQDELTA" => JsonSerializer.Deserialize<MeshReqDeltaMessage>(payload),
                             "PUSHDELTA" => JsonSerializer.Deserialize<MeshPushDeltaMessage>(payload),
                             "HELLO" => JsonSerializer.Deserialize<MeshHelloMessage>(payload),
+                            "REQCHUNK" => JsonSerializer.Deserialize<MeshReqChunkMessage>(payload),
                             _ => null,
                         };
                         
@@ -212,6 +220,8 @@ namespace slskd.Mesh
                     MeshMessageType.PushDelta => "PUSHDELTA",
                     MeshMessageType.Hello => "HELLO",
                     MeshMessageType.Ack => "ACK",
+                    MeshMessageType.ReqChunk => "REQCHUNK",
+                    MeshMessageType.RespChunk => "RESPCHUNK",
                     _ => "UNKNOWN",
                 };
                 
@@ -224,6 +234,46 @@ namespace slskd.Mesh
             catch (Exception ex)
             {
                 log.Warning(ex, "[MESH] Failed to send mesh message to {Peer}", username);
+            }
+        }
+
+        /// <inheritdoc cref="IChunkRequestSender.RequestChunkAsync"/>
+        public async Task<(string? DataBase64, bool Success)> RequestChunkAsync(string peer, string flacKey, long offset, int length, CancellationToken cancellationToken = default)
+        {
+            if (soulseekClient == null)
+            {
+                log.Debug("[MESH] Cannot request chunk - Soulseek client not available");
+                return (null, false);
+            }
+
+            var req = new MeshReqChunkMessage { FlacKey = flacKey, Offset = offset, Length = length };
+            var key = $"{peer}:{flacKey}:{offset}";
+            var tcs = new TaskCompletionSource<MeshRespChunkMessage>();
+            if (!pendingChunkRequests.TryAdd(key, tcs))
+            {
+                log.Warning("[MESH] Duplicate chunk request for {Key} from {Peer}", key, peer);
+                return (null, false);
+            }
+
+            try
+            {
+                await SendMeshMessageAsync(peer, req);
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+                var resp = await tcs.Task.WaitAsync(timeoutCts.Token);
+                return (resp?.DataBase64, resp?.Success ?? false);
+            }
+            catch (OperationCanceledException)
+            {
+                log.Debug("[MESH] Chunk request timeout for {Key} from {Peer}", key, peer);
+                pendingChunkRequests.TryRemove(key, out _);
+                return (null, false);
+            }
+            catch (Exception ex)
+            {
+                log.Warning(ex, "[MESH] Chunk request failed for {Key} from {Peer}", key, peer);
+                pendingChunkRequests.TryRemove(key, out _);
+                return (null, false);
             }
         }
 
@@ -245,8 +295,24 @@ namespace slskd.Mesh
                     }
                 });
                 
+                stats.Warnings = ComputeWarnings();
                 return stats;
             }
+        }
+        
+        /// <summary>Builds security warning messages when configured thresholds are exceeded.</summary>
+        private List<string> ComputeWarnings()
+        {
+            var list = new List<string>();
+            var o = _syncSecurityOptions?.Value;
+            if (o == null) return list;
+            if (o.AlertThresholdSignatureFailures > 0 && stats.SignatureVerificationFailures >= o.AlertThresholdSignatureFailures)
+                list.Add($"Signature verification failures ({stats.SignatureVerificationFailures}) >= {o.AlertThresholdSignatureFailures}");
+            if (o.AlertThresholdRateLimitViolations > 0 && stats.RateLimitViolations >= o.AlertThresholdRateLimitViolations)
+                list.Add($"Rate limit violations ({stats.RateLimitViolations}) >= {o.AlertThresholdRateLimitViolations}");
+            if (o.AlertThresholdQuarantineEvents > 0 && stats.QuarantineEvents >= o.AlertThresholdQuarantineEvents)
+                list.Add($"Quarantine events ({stats.QuarantineEvents}) >= {o.AlertThresholdQuarantineEvents}");
+            return list;
         }
 
         /// <inheritdoc/>
@@ -405,6 +471,7 @@ namespace slskd.Mesh
                 MeshMessageType.ReqDelta => await HandleReqDeltaAsync(fromUser, (MeshReqDeltaMessage)message, cancellationToken),
                 MeshMessageType.PushDelta => await HandlePushDeltaAsync(fromUser, (MeshPushDeltaMessage)message, cancellationToken),
                 MeshMessageType.ReqKey => await HandleReqKeyAsync(fromUser, (MeshReqKeyMessage)message, cancellationToken),
+                MeshMessageType.ReqChunk => await HandleReqChunkAsync(fromUser, (MeshReqChunkMessage)message, cancellationToken),
                 _ => null,
             };
         }
@@ -450,6 +517,22 @@ namespace slskd.Mesh
                     }
                     break;
 
+                case MeshReqChunkMessage reqChunk:
+                    var chunkKeyValidation = MessageValidator.ValidateFlacKey(reqChunk.FlacKey);
+                    if (!chunkKeyValidation.IsValid)
+                    {
+                        return chunkKeyValidation;
+                    }
+                    if (reqChunk.Offset < 0)
+                    {
+                        return ValidationResult.Fail($"Invalid Offset: {reqChunk.Offset}");
+                    }
+                    if (reqChunk.Length <= 0 || reqChunk.Length > 32768)
+                    {
+                        return ValidationResult.Fail($"Invalid Length: {reqChunk.Length} (max 32768)");
+                    }
+                    break;
+
                 case MeshHelloMessage hello:
                     if (hello.LatestSeqId < 0)
                     {
@@ -491,11 +574,14 @@ namespace slskd.Mesh
                 };
             }
 
-            // Query mesh neighbors
+            // T-1435: Use ConsensusMinPeers and ConsensusMinAgreements from options (fallback 5, 3)
+            var minPeers = _syncSecurityOptions?.Value?.ConsensusMinPeers ?? 5;
+            var minAgreements = _syncSecurityOptions?.Value?.ConsensusMinAgreements ?? 3;
+
             var meshPeers = GetMeshPeers()
                 .Where(p => p.LastSeen > DateTime.UtcNow.AddHours(-24)) // Only query recently seen peers
                 .OrderByDescending(p => p.LastSyncTime ?? DateTime.MinValue) // Prefer recently synced peers
-                .Take(5) // Limit to 5 peers to avoid flooding
+                .Take(minPeers)
                 .ToList();
 
             if (meshPeers.Count == 0)
@@ -504,9 +590,9 @@ namespace slskd.Mesh
                 return null;
             }
 
-            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key}", meshPeers.Count, flacKey);
+            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key} (consensus: minAgreements={Min})", meshPeers.Count, flacKey, minAgreements);
 
-            // Query peers in parallel (with limit)
+            // Query peers in parallel
             var queryTasks = meshPeers.Select(async peer =>
             {
                 try
@@ -521,7 +607,13 @@ namespace slskd.Mesh
             });
 
             var results = await Task.WhenAll(queryTasks);
-            var foundEntry = results.FirstOrDefault(r => r != null);
+            // T-1435: Group by (FlacKey, ByteHash, Size); only accept if >= ConsensusMinAgreements
+            var groups = results
+                .Where(r => r != null && !string.IsNullOrEmpty(r.ByteHash))
+                .GroupBy(r => (r.FlacKey ?? string.Empty, r.ByteHash ?? string.Empty, r.Size))
+                .ToList();
+            var agreed = groups.FirstOrDefault(g => g.Count() >= minAgreements);
+            var foundEntry = agreed?.FirstOrDefault();
 
             if (foundEntry != null)
             {
@@ -555,9 +647,9 @@ namespace slskd.Mesh
         }
 
         /// <summary>
-        ///     Queries a specific peer for a hash entry.
+        ///     Queries a specific peer for a hash entry. Overridable for tests.
         /// </summary>
-        private async Task<MeshHashEntry> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
+        protected virtual async Task<MeshHashEntry> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
         {
             // Check if peer supports mesh sync
             var peerCaps = capabilities.GetPeerCapabilities(username);
@@ -832,6 +924,37 @@ namespace slskd.Mesh
                 return 0;
             }
 
+            // T-1434: Proof-of-possession when enabled
+            if (_syncSecurityOptions?.Value?.ProofOfPossessionEnabled == true && _proofOfPossession != null)
+            {
+                var popCache = new Dictionary<string, bool>(StringComparer.Ordinal);
+                var toMerge = new List<HashDbEntry>();
+                foreach (var entry in validatedEntries)
+                {
+                    var key = $"{fromUser}:{entry.FlacKey}";
+                    if (!popCache.TryGetValue(key, out var ok))
+                    {
+                        ok = await _proofOfPossession.VerifyAsync(fromUser, entry.FlacKey, entry.ByteHash, entry.Size, this, cancellationToken);
+                        popCache[key] = ok;
+                        if (!ok)
+                        {
+                            stats.ProofOfPossessionFailures++;
+                            log.Debug("[MESH] Proof-of-possession failed for {Key} from {Peer}", entry.FlacKey, fromUser);
+                        }
+                    }
+                    if (ok)
+                    {
+                        toMerge.Add(entry);
+                    }
+                }
+                validatedEntries = toMerge;
+                if (validatedEntries.Count == 0)
+                {
+                    log.Warning("[MESH] No entries passed proof-of-possession from {Peer}", fromUser);
+                    return 0;
+                }
+            }
+
             var merged = await hashDb.MergeEntriesFromMeshAsync(validatedEntries, cancellationToken);
 
             stats.TotalEntriesReceived += entryList.Count;
@@ -916,6 +1039,41 @@ namespace slskd.Mesh
             };
         }
 
+        private async Task<MeshMessage> HandleReqChunkAsync(string fromUser, MeshReqChunkMessage req, CancellationToken cancellationToken)
+        {
+            log.Debug("[MESH] {Peer} requested chunk {Key} @ {Offset} len={Length}", fromUser, req.FlacKey, req.Offset, req.Length);
+
+            string path = _pathResolver != null ? await _pathResolver.TryGetFilePathAsync(req.FlacKey, cancellationToken) : null;
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+            {
+                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+            }
+
+            try
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                if (req.Offset >= fs.Length)
+                {
+                    return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+                }
+                var toRead = (int)Math.Min(req.Length, fs.Length - req.Offset);
+                fs.Seek(req.Offset, SeekOrigin.Begin);
+                var buf = new byte[toRead];
+                var read = await fs.ReadAsync(buf, 0, toRead, cancellationToken);
+                if (read <= 0)
+                {
+                    return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+                }
+                var b64 = read < buf.Length ? Convert.ToBase64String(buf.AsSpan(0, read)) : Convert.ToBase64String(buf);
+                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = b64, Success = true };
+            }
+            catch (Exception ex)
+            {
+                log.Debug(ex, "[MESH] Failed to read chunk for {Key} from {Peer}", req.FlacKey, fromUser);
+                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+            }
+        }
+
         private MeshPeerState GetOrCreatePeerState(string username)
         {
             return peerStates.GetOrAdd(username, u => new MeshPeerState
@@ -934,7 +1092,7 @@ namespace slskd.Mesh
             lock (state)
             {
                 var now = DateTime.UtcNow;
-                var cutoff = now.AddMinutes(-RateLimitWindowMinutes);
+                var cutoff = now.AddMinutes(-_rateLimitWindowMinutes);
                 
                 // Clean up old timestamps outside the window
                 while (state.InvalidEntryTimestamps.Count > 0 && state.InvalidEntryTimestamps.Peek() < cutoff)
@@ -961,7 +1119,7 @@ namespace slskd.Mesh
             lock (state)
             {
                 var now = DateTime.UtcNow;
-                var cutoff = now.AddMinutes(-RateLimitWindowMinutes);
+                var cutoff = now.AddMinutes(-_rateLimitWindowMinutes);
                 
                 // Clean up old timestamps outside the window
                 while (state.InvalidMessageTimestamps.Count > 0 && state.InvalidMessageTimestamps.Peek() < cutoff)
@@ -985,7 +1143,7 @@ namespace slskd.Mesh
             lock (state)
             {
                 var now = DateTime.UtcNow;
-                var cutoff = now.AddMinutes(-RateLimitWindowMinutes);
+                var cutoff = now.AddMinutes(-_rateLimitWindowMinutes);
                 
                 if (isMessage)
                 {
@@ -996,7 +1154,7 @@ namespace slskd.Mesh
                         state.InvalidMessageCount--;
                     }
                     
-                    return state.InvalidMessageCount >= MaxInvalidMessagesPerWindow;
+                    return state.InvalidMessageCount >= _maxInvalidMessagesPerWindow;
                 }
                 else
                 {
@@ -1007,7 +1165,7 @@ namespace slskd.Mesh
                         state.InvalidEntryCount--;
                     }
                     
-                    return state.InvalidEntryCount >= MaxInvalidEntriesPerWindow;
+                    return state.InvalidEntryCount >= _maxInvalidEntriesPerWindow;
                 }
             }
         }
@@ -1038,7 +1196,7 @@ namespace slskd.Mesh
                 if (state.LastRateLimitViolation.HasValue)
                 {
                     var timeSinceLastViolation = DateTime.UtcNow - state.LastRateLimitViolation.Value;
-                    if (timeSinceLastViolation.TotalMinutes > RateLimitWindowMinutes)
+                    if (timeSinceLastViolation.TotalMinutes > _rateLimitWindowMinutes)
                     {
                         // Reset count if violations are old
                         state.RateLimitViolationCount = 1;
@@ -1046,7 +1204,7 @@ namespace slskd.Mesh
                     }
                 }
                 
-                return state.RateLimitViolationCount >= QuarantineViolationThreshold;
+                return state.RateLimitViolationCount >= _quarantineViolationThreshold;
             }
         }
         
@@ -1061,14 +1219,14 @@ namespace slskd.Mesh
                 if (state.QuarantinedUntil.HasValue && state.QuarantinedUntil.Value > DateTime.UtcNow)
                 {
                     // Already quarantined, extend duration
-                    state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(QuarantineDurationMinutes);
+                    state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(_quarantineDurationMinutes);
                     log.Warning("[MESH] Extended quarantine for peer {Peer} until {Until} (reason: {Reason})", 
                         username, state.QuarantinedUntil, reason);
                 }
                 else
                 {
                     // New quarantine
-                    state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(QuarantineDurationMinutes);
+                    state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(_quarantineDurationMinutes);
                     log.Warning("[MESH] Quarantined peer {Peer} until {Until} (reason: {Reason}, violations: {Count})", 
                         username, state.QuarantinedUntil, reason, state.RateLimitViolationCount);
                     

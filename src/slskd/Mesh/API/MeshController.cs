@@ -220,6 +220,7 @@ namespace slskd.Mesh.API
                 MeshMessageType.ReqDelta => JsonSerializer.Deserialize<MeshReqDeltaMessage>(messageJson.GetRawText()),
                 MeshMessageType.PushDelta => JsonSerializer.Deserialize<MeshPushDeltaMessage>(messageJson.GetRawText()),
                 MeshMessageType.ReqKey => JsonSerializer.Deserialize<MeshReqKeyMessage>(messageJson.GetRawText()),
+                MeshMessageType.ReqChunk => JsonSerializer.Deserialize<MeshReqChunkMessage>(messageJson.GetRawText()),
                 _ => null,
             };
 

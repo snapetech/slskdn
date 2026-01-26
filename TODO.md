@@ -56,8 +56,8 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
   - JSON template, easy to add
 - [x] **QNAP App Center** - Another NAS vendor
   - QPKG format
-- [ ] **Helm Charts** (Kubernetes) - K8s deployments
-  - For enterprise/homelab K8s users
+- [x] **Helm Charts** (Kubernetes) - K8s deployments ✅
+  - Generic chart at `packaging/helm/slskdn/` (T-014). For enterprise/homelab K8s users.
 - [x] **OpenMediaVault Plugins** - Debian-based NAS
   - OMV plugin format
 
@@ -69,7 +69,8 @@ Expand slskdn availability beyond current channels (AUR, COPR, PPA, Docker/GHCR)
 - [x] **Scoop** (Windows) - Alternative Windows PM
 - [x] **AppImage** (Linux) - Portable Linux apps
 - [x] **FreeBSD Ports** - BSD systems
-- [ ] **Proxmox LXC Templates** - Proxmox users
+- [x] **Proxmox LXC Templates** - Proxmox users ✅
+  - `packaging/proxmox-lxc/`: README, slskdn.conf.example, setup-inside-ct.sh (Debian 12/Ubuntu 22.04, .NET 8, GitHub zip, systemd)
 
 ### Implementation Notes
 - Most NAS platforms use Docker underneath - leverage existing image

@@ -92,5 +92,11 @@ namespace slskd.VirtualSoulfind.v2.Sources
         ///     Gets or initializes whether this candidate is preferred by the user.
         /// </summary>
         public bool IsPreferred { get; init; }
+
+        /// <summary>
+        ///     When true, indicates this candidate comes from a private source (overlay or invite list).
+        ///     Used by TorrentBackend when PrivateMode.PrivateOnly is set to filter to private-only candidates.
+        /// </summary>
+        public bool IsFromPrivateSource { get; init; }
     }
 }

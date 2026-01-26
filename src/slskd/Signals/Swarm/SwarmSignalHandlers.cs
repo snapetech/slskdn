@@ -15,6 +15,8 @@ public class StubBitTorrentBackend : IBitTorrentBackend
     public bool IsSupported() => false;
     public Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken ct = default) => 
         Task.FromResult(string.Empty);
+    public Task<string?> FetchByInfoHashOrMagnetAsync(string backendRef, string destDirectory, CancellationToken ct = default) => 
+        Task.FromResult<string?>(null);
 }
 
 /// <summary>
@@ -317,4 +319,15 @@ public interface IBitTorrentBackend
 {
     bool IsSupported();
     Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Fetches content by infohash or magnet URI. Used by the VirtualSoulfind resolver for
+    ///     ContentBackendType.Torrent. Returns the path to the fetched file when complete, or null
+    ///     if not supported (e.g. StubBitTorrentBackend) or when the fetch fails.
+    /// </summary>
+    /// <param name="backendRef">Infohash (40 or 64 hex chars) or magnet URI.</param>
+    /// <param name="destDirectory">Directory to write the first/only file into.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Absolute path to the fetched file, or null if not supported or failed.</returns>
+    Task<string?> FetchByInfoHashOrMagnetAsync(string backendRef, string destDirectory, CancellationToken ct = default);
 }

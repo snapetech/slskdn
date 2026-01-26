@@ -34,6 +34,9 @@ public sealed class OverlayRateLimiter : IDisposable
     
     /// <summary>Maximum delta sync requests per hour per peer.</summary>
     public const int MaxDeltaRequestsPerHour = 60;
+
+    /// <summary>Maximum mesh search requests per minute per peer.</summary>
+    public const int MaxMeshSearchRequestsPerMinute = 30;
     
     // Violation handling
     /// <summary>Seconds to block after violations.</summary>
@@ -194,6 +197,32 @@ public sealed class OverlayRateLimiter : IDisposable
             return RateLimitResult.Allowed();
         }
     }
+
+    /// <summary>
+    /// Check if a mesh search request is allowed.
+    /// </summary>
+    /// <param name="connectionId">The connection/peer sending the request.</param>
+    public RateLimitResult CheckMeshSearchRequest(string connectionId)
+    {
+        var state = _connectionStates.GetOrAdd(connectionId, _ => new ConnectionRateLimitState());
+        var now = DateTimeOffset.UtcNow;
+
+        lock (state.Lock)
+        {
+            while (state.MeshSearchRequestTimes.Count > 0 && state.MeshSearchRequestTimes.Peek() < now.AddMinutes(-1))
+            {
+                state.MeshSearchRequestTimes.Dequeue();
+            }
+
+            if (state.MeshSearchRequestTimes.Count >= MaxMeshSearchRequestsPerMinute)
+            {
+                return RateLimitResult.RateLimited("Mesh search rate limit exceeded");
+            }
+
+            state.MeshSearchRequestTimes.Enqueue(now);
+            return RateLimitResult.Allowed();
+        }
+    }
     
     /// <summary>
     /// Record a protocol violation from an IP.
@@ -270,7 +299,7 @@ public sealed class OverlayRateLimiter : IDisposable
         {
             lock (kvp.Value.Lock)
             {
-                if (kvp.Value.MessageTimes.Count == 0 && kvp.Value.DeltaRequestTimes.Count == 0)
+                if (kvp.Value.MessageTimes.Count == 0 && kvp.Value.DeltaRequestTimes.Count == 0 && kvp.Value.MeshSearchRequestTimes.Count == 0)
                 {
                     _connectionStates.TryRemove(kvp.Key, out _);
                 }
@@ -297,6 +326,7 @@ public sealed class OverlayRateLimiter : IDisposable
         public object Lock { get; } = new();
         public Queue<DateTimeOffset> MessageTimes { get; } = new();
         public Queue<DateTimeOffset> DeltaRequestTimes { get; } = new();
+        public Queue<DateTimeOffset> MeshSearchRequestTimes { get; } = new();
     }
 }
 

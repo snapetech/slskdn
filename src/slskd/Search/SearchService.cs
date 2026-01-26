@@ -128,7 +128,8 @@ namespace slskd.Search
             slskd.Common.Security.ISoulseekSafetyLimiter safetyLimiter,
             slskd.Events.EventBus eventBus = null,
             slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator = null,
-            slskd.VirtualSoulfind.DisasterMode.IMeshSearchService meshSearchService = null)
+            slskd.VirtualSoulfind.DisasterMode.IMeshSearchService meshSearchService = null,
+            slskd.DhtRendezvous.Search.IMeshOverlaySearchService meshOverlaySearchService = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
@@ -138,6 +139,7 @@ namespace slskd.Search
             EventBus = eventBus;
             DisasterModeCoordinator = disasterModeCoordinator;
             MeshSearchService = meshSearchService;
+            MeshOverlaySearchService = meshOverlaySearchService;
         }
 
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; }
@@ -152,6 +154,7 @@ namespace slskd.Search
         private IHubContext<SearchHub> SearchHub { get; set; }
         private slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator DisasterModeCoordinator { get; }
         private slskd.VirtualSoulfind.DisasterMode.IMeshSearchService MeshSearchService { get; }
+        private slskd.DhtRendezvous.Search.IMeshOverlaySearchService MeshOverlaySearchService { get; }
 
         /// <summary>
         ///     Deletes the specified search.
@@ -357,6 +360,11 @@ namespace slskd.Search
                 {
                     try
                     {
+                        // Start mesh overlay search in parallel when enabled (hybrid mode)
+                        var meshTask = (OptionsMonitor.CurrentValue.VirtualSoulfind?.MeshSearch?.Enabled == true && MeshOverlaySearchService != null)
+                            ? MeshOverlaySearchService.SearchAsync(query.SearchText, cancellationTokenSource.Token)
+                            : Task.FromResult((IReadOnlyList<Response>)Array.Empty<Response>());
+
                         try
                         {
                             var soulseekSearch = await soulseekSearchTask;
@@ -382,6 +390,18 @@ namespace slskd.Search
                             }
                         }
 
+                        // Await mesh overlay results (runs in parallel with Soulseek; bounded by per-peer timeout)
+                        IReadOnlyList<Response> meshResponses;
+                        try
+                        {
+                            meshResponses = await meshTask;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Debug(ex, "Mesh overlay search for '{Query}' failed: {Message}", query.SearchText, ex.Message);
+                            meshResponses = Array.Empty<Response>();
+                        }
+
                         // it shouldn't be possible for this to happen, as the StateChanged callback is called before the
                         // SearchAsync() method returns, and we will have already updated the record at that time. if for
                         // some extremely odd reason that doesn't happen, make sure the record is persisted the final time
@@ -392,7 +412,13 @@ namespace slskd.Search
                         }
 
                         search.EndedAt = DateTime.UtcNow;
-                        search.Responses = responses.Select(r => Response.FromSoulseekSearchResponse(r));
+
+                        var soulseekResponses = responses.Select(r => Response.FromSoulseekSearchResponse(r));
+                        var merged = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
+                        search.Responses = merged;
+                        search.ResponseCount = merged.Count;
+                        search.FileCount = merged.Sum(r => r.FileCount);
+                        search.LockedFileCount = merged.Sum(r => r.LockedFileCount);
 
                         Update(search);
 
@@ -581,10 +607,31 @@ namespace slskd.Search
 
                 if (mbids.Count == 0)
                 {
-                    Log.Warning("[VSF-DISASTER-SEARCH] No MBIDs found for query: {Query}", query.SearchText);
-                    // Create empty search result
+                    Log.Information("[VSF-DISASTER-SEARCH] No MBIDs for query: {Query}, falling back to overlay text search", query.SearchText);
+                    IReadOnlyList<Response> overlayResponses;
+                    if (MeshOverlaySearchService != null)
+                    {
+                        try
+                        {
+                            overlayResponses = await MeshOverlaySearchService.SearchAsync(query.SearchText, cancellationTokenSource.Token);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Debug(ex, "[VSF-DISASTER-SEARCH] Overlay text search failed: {Message}", ex.Message);
+                            overlayResponses = Array.Empty<Response>();
+                        }
+                    }
+                    else
+                    {
+                        overlayResponses = Array.Empty<Response>();
+                    }
+
                     search.State = SearchStates.Completed;
                     search.EndedAt = DateTime.UtcNow;
+                    search.Responses = overlayResponses;
+                    search.ResponseCount = overlayResponses.Count;
+                    search.FileCount = overlayResponses.Sum(r => r.FileCount);
+                    search.LockedFileCount = 0;
                     Update(search);
                     await SearchHub.BroadcastUpdateAsync(search);
                     return search;

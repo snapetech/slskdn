@@ -351,6 +351,12 @@ namespace slskd
         public SoulseekOptions Soulseek { get; init; } = new SoulseekOptions();
 
         /// <summary>
+        ///     Gets options for rescue mode (underperformance detection and overlay backfill).
+        /// </summary>
+        [Validate]
+        public RescueModeOptions RescueMode { get; init; } = new RescueModeOptions();
+
+        /// <summary>
         ///     Gets options for external integrations.
         /// </summary>
         [Validate]
@@ -445,8 +451,8 @@ namespace slskd
             }
 
             // Validate realm configuration (T-REALM-01, T-REALM-02)
-            // Temporarily disabled to allow application startup
-            // TODO: Re-enable realm validation once configuration loading is working properly
+            results.AddRange(Realm.Validate());
+            results.AddRange(MultiRealm.Validate());
 
             return results;
         }
@@ -608,6 +614,22 @@ namespace slskd
             [Description("enable audio hash from file (not implemented; fails startup when EnforceSecurity)")]
             [RequiresRestart]
             public bool HashFromAudioFileEnabled { get; init; } = false;
+
+            /// <summary>
+            ///     Run audio analyzer migration at startup (recompute quality/transcode for variants with stale analyzer_version).
+            /// </summary>
+            [Argument(default, "audio-reanalyze")]
+            [EnvironmentVariable("AUDIO_REANALYZE")]
+            [Description("run audio analyzer migration at startup (recompute quality/transcode for stale variants)")]
+            public bool AudioReanalyze { get; init; } = false;
+
+            /// <summary>
+            ///     When used with --audio-reanalyze, recompute all variants (ignore analyzer_version). Otherwise only stale.
+            /// </summary>
+            [Argument(default, "audio-reanalyze-force")]
+            [EnvironmentVariable("AUDIO_REANALYZE_FORCE")]
+            [Description("with --audio-reanalyze: recompute all variants, not only stale")]
+            public bool AudioReanalyzeForce { get; init; } = false;
         }
 
         /// <summary>
@@ -1642,6 +1664,47 @@ namespace slskd
             [Description("when true, allow dump from remote IPs; when false, only loopback (127.0.0.1, ::1) is allowed")]
             [RequiresRestart]
             public bool AllowRemoteDump { get; init; } = false;
+        }
+
+        /// <summary>
+        ///     Rescue mode options (underperformance detection and overlay backfill).
+        /// </summary>
+        public class RescueModeOptions
+        {
+            /// <summary>
+            ///     Gets a value indicating whether rescue mode and underperformance detection are enabled.
+            /// </summary>
+            public bool Enabled { get; init; } = false;
+
+            /// <summary>
+            ///     Maximum time a download may remain queued before rescue is triggered, in seconds.
+            /// </summary>
+            [Range(60, 86400)]
+            public int MaxQueueTimeSeconds { get; init; } = 1800;
+
+            /// <summary>
+            ///     Minimum throughput in KB/s below which an in-progress transfer is considered underperforming.
+            /// </summary>
+            [Range(1, 10000)]
+            public int MinThroughputKBps { get; init; } = 10;
+
+            /// <summary>
+            ///     Minimum time an in-progress transfer must have been running before throughput is evaluated, in seconds.
+            /// </summary>
+            [Range(60, 3600)]
+            public int MinDurationSeconds { get; init; } = 300;
+
+            /// <summary>
+            ///     Time with no progress in bytes before an in-progress transfer is considered stalled, in seconds.
+            /// </summary>
+            [Range(30, 600)]
+            public int StalledTimeoutSeconds { get; init; } = 120;
+
+            /// <summary>
+            ///     Interval between underperformance check runs, in seconds.
+            /// </summary>
+            [Range(15, 300)]
+            public int CheckIntervalSeconds { get; init; } = 45;
         }
 
         /// <summary>

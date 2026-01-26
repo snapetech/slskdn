@@ -14,9 +14,9 @@ namespace slskd.Audio
     public interface IAnalyzerMigrationService
     {
         /// <summary>
-        ///     Recompute quality/transcode flags for all variants with stale analyzer_version.
+        ///     Recompute quality/transcode flags for variants. When force is false, only those with stale analyzer_version.
         /// </summary>
-        Task<int> MigrateAsync(string targetAnalyzerVersion, CancellationToken ct = default);
+        Task<int> MigrateAsync(string targetAnalyzerVersion, bool force = false, CancellationToken ct = default);
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ namespace slskd.Audio
             this.log = log;
         }
 
-        public async Task<int> MigrateAsync(string targetAnalyzerVersion, CancellationToken ct = default)
+        public async Task<int> MigrateAsync(string targetAnalyzerVersion, bool force = false, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(targetAnalyzerVersion))
             {
@@ -54,7 +54,9 @@ namespace slskd.Audio
                     continue;
                 }
 
-                var stale = variants.Where(v => string.IsNullOrWhiteSpace(v.AnalyzerVersion) || !string.Equals(v.AnalyzerVersion, targetAnalyzerVersion, StringComparison.OrdinalIgnoreCase)).ToList();
+                var stale = force
+                    ? variants
+                    : variants.Where(v => string.IsNullOrWhiteSpace(v.AnalyzerVersion) || !string.Equals(v.AnalyzerVersion, targetAnalyzerVersion, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (stale.Count == 0)
                 {
                     continue;

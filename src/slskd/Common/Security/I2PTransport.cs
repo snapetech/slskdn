@@ -122,11 +122,11 @@ public class I2PTransport : IAnonymityTransport
     /// <summary>
     /// Establishes a connection through I2P with stream isolation.
     /// </summary>
-    /// <param name="host">The destination host (ignored for I2P).</param>
-    /// <param name="port">The destination port (ignored for I2P).</param>
-    /// <param name="isolationKey">Optional key for stream isolation.</param>
+    /// <param name="host">I2P destination: base64-encoded destination key or .b32.i2p address. Must not be clearnet host:port.</param>
+    /// <param name="port">Unused for I2P SAM STREAM CONNECT; reserved for API compatibility.</param>
+    /// <param name="isolationKey">Optional key for stream isolation (SAM session ID suffix when we add named sessions).</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A stream for the anonymous connection.</returns>
+    /// <returns>A stream for the anonymous I2P connection.</returns>
     public async Task<Stream> ConnectAsync(string host, int port, string? isolationKey, CancellationToken cancellationToken = default)
     {
         lock (_statusLock)
@@ -134,44 +134,47 @@ public class I2PTransport : IAnonymityTransport
             _status.TotalConnectionsAttempted++;
         }
 
+        TcpClient? client = null;
         try
         {
-            var client = new TcpClient();
+            if (string.IsNullOrWhiteSpace(host))
+                throw new ArgumentException("I2P destination (host) must be a base64 or .b32.i2p address.", nameof(host));
 
-            // Connect to SAM bridge
+            client = new TcpClient();
+
             var parts = _options.SamAddress.Split(':');
             var samHost = parts[0];
             var samPort = int.Parse(parts[1]);
 
             await client.ConnectAsync(samHost, samPort, cancellationToken);
             var stream = client.GetStream();
-
-            // Create a unique session ID for this connection
-            var sessionId = Guid.NewGuid().ToString("N").Substring(0, 8);
-
-            // SAM v3.1 STREAM CONNECT command
-            // Note: This is a simplified implementation. Full I2P integration would require
-            // more sophisticated session management and destination handling.
-            var connectCommand = $"STREAM CONNECT ID={sessionId} DESTINATION={host}:{port} SILENT=false";
-
             var writer = new StreamWriter(stream);
             var reader = new StreamReader(stream);
 
+            // SAM v3.1 HELLO (one-shot; no named session)
             await writer.WriteLineAsync("HELLO VERSION MIN=3.1 MAX=3.1");
             await writer.FlushAsync();
-
             var helloResponse = await reader.ReadLineAsync();
-            if (!helloResponse.Contains("RESULT=OK"))
-            {
-                throw new Exception($"SAM HELLO failed: {helloResponse}");
-            }
+            if (helloResponse == null || !helloResponse.Contains("RESULT=OK"))
+                throw new InvalidOperationException($"SAM HELLO failed: {helloResponse}");
 
-            // For this implementation, we'll create a placeholder connection
-            // In a real implementation, you'd need to handle I2P destination keys
-            // and proper STREAM CONNECT protocol
-            throw new NotImplementedException(
-                "Full I2P STREAM CONNECT implementation requires I2P destination key management. " +
-                "This is a placeholder that demonstrates the SAM bridge connectivity pattern.");
+            // STREAM CONNECT: DESTINATION is I2P dest (base64 or .b32.i2p). Port is not used by SAM.
+            var sessionId = Guid.NewGuid().ToString("N")[..8];
+            var connectCmd = $"STREAM CONNECT ID={sessionId} DESTINATION={host.Trim()} SILENT=false";
+            await writer.WriteLineAsync(connectCmd);
+            await writer.FlushAsync();
+
+            var connectResponse = await reader.ReadLineAsync();
+            if (connectResponse == null)
+                throw new InvalidOperationException("SAM STREAM CONNECT produced no response.");
+
+            if (!connectResponse.Contains("RESULT=OK"))
+            {
+                var msg = connectResponse.Contains("MESSAGE=")
+                    ? connectResponse
+                    : $"STREAM CONNECT failed: {connectResponse}";
+                throw new InvalidOperationException(msg);
+            }
 
             lock (_statusLock)
             {
@@ -180,14 +183,15 @@ public class I2PTransport : IAnonymityTransport
                 _status.LastSuccessfulConnection = DateTimeOffset.UtcNow;
             }
 
-            // This would return the actual I2P stream in a full implementation
+            var c = client;
+            client = null;
             return new TrackedStream(stream, () =>
             {
                 lock (_statusLock)
                 {
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
-                client.Dispose();
+                c.Dispose();
             });
         }
         catch (Exception ex)
@@ -196,7 +200,8 @@ public class I2PTransport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
-            _logger.LogError(ex, "Failed to establish I2P connection to {Host}:{Port}", host, port);
+            _logger.LogError(ex, "Failed to establish I2P connection to destination {Host}", host);
+            client?.Dispose();
             throw;
         }
     }

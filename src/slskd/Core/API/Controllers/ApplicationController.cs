@@ -194,7 +194,8 @@ namespace slskd.Core.API
                     return StatusCode(501, "Memory dump creation is not supported on this runtime. Use a supported .NET runtime or install dotnet-dump and capture manually (see https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dump).");
                 }
 
-                return StatusCode(500, "Dump failed.");
+                // PR-06: any other dump creation failure → 501
+                return StatusCode(501, "Memory dump creation failed.");
             }
 
             return PhysicalFile(path!, "application/octet-stream", "slskd.dmp");

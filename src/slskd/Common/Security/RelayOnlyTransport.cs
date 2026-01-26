@@ -4,18 +4,23 @@
 
 namespace slskd.Common.Security;
 
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+using slskd.Mesh.Overlay;
+
 /// <summary>
-/// Relay-only transport that routes all connections through trusted relay nodes.
+/// Relay-only transport that routes all connections through trusted relay nodes via the data overlay.
 /// Never reveals the user's IP address to the destination peer.
 /// </summary>
 public class RelayOnlyTransport : IAnonymityTransport
 {
     private readonly RelayOnlyOptions _options;
+    private readonly IOverlayDataPlane _overlay;
     private readonly ILogger<RelayOnlyTransport> _logger;
-
-    // In a full implementation, these would be injected services
-    // private readonly IMeshDirectory _meshDirectory;
-    // private readonly IOverlayClient _overlayClient;
 
     private readonly AnonymityTransportStatus _status = new();
     private readonly object _statusLock = new();
@@ -24,16 +29,18 @@ public class RelayOnlyTransport : IAnonymityTransport
     /// Initializes a new instance of the <see cref="RelayOnlyTransport"/> class.
     /// </summary>
     /// <param name="options">The relay-only options.</param>
+    /// <param name="overlay">The data-plane overlay for opening streams to relay peers.</param>
     /// <param name="logger">The logger.</param>
-    public RelayOnlyTransport(RelayOnlyOptions options, ILogger<RelayOnlyTransport> logger)
+    public RelayOnlyTransport(RelayOnlyOptions options, IOverlayDataPlane overlay, ILogger<RelayOnlyTransport> logger)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // Validate trusted relays
-        if (_options.TrustedRelayPeers == null || _options.TrustedRelayPeers.Count == 0)
+        if ((_options.RelayPeerDataEndpoints == null || _options.RelayPeerDataEndpoints.Count == 0) &&
+            (_options.TrustedRelayPeers == null || _options.TrustedRelayPeers.Count == 0))
         {
-            _logger.LogWarning("RelayOnlyTransport: No trusted relay peers configured. Relay-only mode will not function.");
+            _logger.LogWarning("RelayOnlyTransport: No RelayPeerDataEndpoints or TrustedRelayPeers configured. Relay-only will not function.");
         }
     }
 
@@ -43,21 +50,29 @@ public class RelayOnlyTransport : IAnonymityTransport
     public AnonymityTransportType TransportType => AnonymityTransportType.RelayOnly;
 
     /// <summary>
-    /// Checks if relay-only transport is available (has trusted relays configured).
+    /// Checks if relay-only transport is available (has RelayPeerDataEndpoints or TrustedRelayPeers as host:port).
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>True if relay transport is available, false otherwise.</returns>
     public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
     {
-        var isAvailable = _options.TrustedRelayPeers != null && _options.TrustedRelayPeers.Count > 0;
+        var list = GetRelayEndpointList();
+        var isAvailable = list.Count > 0;
 
         lock (_statusLock)
         {
             _status.IsAvailable = isAvailable;
-            _status.LastError = isAvailable ? null : "No trusted relay peers configured";
+            _status.LastError = isAvailable ? null : "No RelayPeerDataEndpoints or TrustedRelayPeers (host:port) configured";
         }
 
         return Task.FromResult(isAvailable);
+    }
+
+    private System.Collections.Generic.List<string> GetRelayEndpointList()
+    {
+        if (_options.RelayPeerDataEndpoints != null && _options.RelayPeerDataEndpoints.Count > 0)
+            return _options.RelayPeerDataEndpoints;
+        if (_options.TrustedRelayPeers != null)
+            return _options.TrustedRelayPeers.Where(s => !string.IsNullOrEmpty(s) && s.Contains(':', StringComparison.Ordinal)).ToList();
+        return new System.Collections.Generic.List<string>();
     }
 
     /// <summary>
@@ -73,13 +88,13 @@ public class RelayOnlyTransport : IAnonymityTransport
     }
 
     /// <summary>
-    /// Establishes a connection through trusted relay nodes with stream isolation.
+    /// Establishes a connection through trusted relay nodes via the data overlay (RELAY_TCP protocol).
     /// </summary>
-    /// <param name="host">The target host.</param>
+    /// <param name="host">The target host for the relay to connect to.</param>
     /// <param name="port">The target port.</param>
-    /// <param name="isolationKey">Optional key for stream isolation.</param>
+    /// <param name="isolationKey">Unused; reserved for future stream isolation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A stream for the relayed connection.</returns>
+    /// <returns>A stream that tunnels to the target host:port via the relay.</returns>
     public async Task<Stream> ConnectAsync(string host, int port, string? isolationKey, CancellationToken cancellationToken = default)
     {
         lock (_statusLock)
@@ -89,50 +104,34 @@ public class RelayOnlyTransport : IAnonymityTransport
 
         try
         {
-            if (_options.TrustedRelayPeers == null || _options.TrustedRelayPeers.Count == 0)
+            var list = GetRelayEndpointList();
+            if (list.Count == 0)
+                throw new InvalidOperationException("No RelayPeerDataEndpoints or TrustedRelayPeers (host:port) configured for relay-only transport.");
+
+            var relayEndpoint = SelectRelayPeer(list);
+            var endpoint = await ParseEndpointAsync(relayEndpoint, cancellationToken);
+
+            _logger.LogDebug("Relay connection to {Host}:{Port} via relay {Relay}", host, port, relayEndpoint);
+
+            var stream = await _overlay.OpenBidirectionalStreamAsync(endpoint, cancellationToken);
+            if (stream == null)
+                throw new InvalidOperationException("Failed to open overlay stream to relay " + relayEndpoint + ". Is the data overlay enabled?");
+
+            var cmd = Encoding.ASCII.GetBytes("RELAY_TCP " + host + " " + port + "\n");
+            await stream.WriteAsync(cmd, cancellationToken);
+
+            var lineBuf = new byte[128];
+            var n = 0;
+            while (n < lineBuf.Length)
             {
-                throw new InvalidOperationException("No trusted relay peers configured for relay-only transport");
+                var r = await stream.ReadAsync(lineBuf.AsMemory(n, 1), cancellationToken);
+                if (r == 0) break;
+                if (lineBuf[n] == (byte)'\n') { n++; break; }
+                n += r;
             }
-
-            // Select a relay peer (round-robin, random, or based on load)
-            var relayPeer = SelectRelayPeer();
-
-            _logger.LogDebug("Attempting relay connection to {Host}:{Port} via relay {Relay}",
-                host, port, relayPeer);
-
-            // In a full implementation, this would:
-            // 1. Establish connection to the relay peer via mesh overlay
-            // 2. Send a relay request with the target host/port
-            // 3. The relay would establish the connection on behalf of the client
-            // 4. Return a stream that tunnels through the relay
-
-            // For now, this is a placeholder implementation
-            throw new NotImplementedException(
-                $"Relay-only transport requires mesh overlay infrastructure to connect through relay '{relayPeer}'. " +
-                "This is a placeholder that demonstrates the relay selection and routing concept.");
-
-            // Example of what the full implementation would look like:
-            /*
-            // Connect to relay via overlay
-            var relayConnection = await _overlayClient.ConnectAsync(relayPeer, cancellationToken);
-
-            // Send relay request
-            var relayRequest = new RelayRequest
-            {
-                TargetHost = host,
-                TargetPort = port,
-                MaxChainLength = Math.Min(_options.MaxChainLength, 3) // Limit for security
-            };
-
-            await relayConnection.SendAsync(relayRequest, cancellationToken);
-
-            // Receive relay response
-            var relayResponse = await relayConnection.ReceiveAsync<RelayResponse>(cancellationToken);
-
-            if (!relayResponse.Success)
-            {
-                throw new Exception($"Relay connection failed: {relayResponse.ErrorMessage}");
-            }
+            var line = n > 0 ? Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : "";
+            if (!line.StartsWith("OK", StringComparison.Ordinal))
+                throw new InvalidOperationException("Relay refused: " + (string.IsNullOrEmpty(line) ? "no response" : line));
 
             lock (_statusLock)
             {
@@ -141,14 +140,7 @@ public class RelayOnlyTransport : IAnonymityTransport
                 _status.LastSuccessfulConnection = DateTimeOffset.UtcNow;
             }
 
-            return new RelayedStream(relayConnection, () =>
-            {
-                lock (_statusLock)
-                {
-                    _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
-                }
-            });
-            */
+            return stream;
         }
         catch (Exception ex)
         {
@@ -159,6 +151,25 @@ public class RelayOnlyTransport : IAnonymityTransport
             _logger.LogError(ex, "Failed to establish relay connection to {Host}:{Port}", host, port);
             throw;
         }
+    }
+
+    private static async Task<IPEndPoint> ParseEndpointAsync(string hostPort, CancellationToken ct)
+    {
+        var idx = hostPort.LastIndexOf(':');
+        if (idx < 0)
+            throw new ArgumentException("Relay endpoint must be host:port: " + hostPort);
+        var host = hostPort[..idx];
+        var port = int.Parse(hostPort[(idx + 1)..]);
+
+        IPAddress ip;
+        if (IPAddress.TryParse(host, out var a))
+            ip = a;
+        else
+        {
+            var he = await Dns.GetHostEntryAsync(host, ct);
+            ip = he.AddressList.FirstOrDefault() ?? throw new InvalidOperationException("Could not resolve relay host: " + host);
+        }
+        return new IPEndPoint(ip, port);
     }
 
     /// <summary>
@@ -180,19 +191,8 @@ public class RelayOnlyTransport : IAnonymityTransport
         }
     }
 
-    /// <summary>
-    /// Selects a relay peer from the trusted list.
-    /// </summary>
-    private string SelectRelayPeer()
+    private static string SelectRelayPeer(System.Collections.Generic.List<string> list)
     {
-        if (_options.TrustedRelayPeers == null || _options.TrustedRelayPeers.Count == 0)
-        {
-            throw new InvalidOperationException("No trusted relay peers available");
-        }
-
-        // Simple round-robin selection for now
-        // In production, this could consider relay load, latency, geographic diversity, etc.
-        var random = new Random();
-        return _options.TrustedRelayPeers[random.Next(_options.TrustedRelayPeers.Count)];
+        return list[new Random().Next(list.Count)];
     }
 }

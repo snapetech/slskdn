@@ -110,9 +110,9 @@
 | Tabbed Browse Sessions | ✅ Done | .10 | Multiple browse tabs, persistent |
 | Full-Width Room/Chat Search | ✅ Done | .15 | Searchable room/user inputs |
 | LRU Cache for Browse State | ✅ Done | .14 | Prevents localStorage bloat |
-| Create Chat Rooms | ❌ Pending | - | Create rooms from UI |
-| Predictable Search URLs | ❌ Pending | - | Bookmarkable searches |
-| Persistent Room/Chat Tabs | ✅ Done | 2025-12-12 | Like Browse tabs (T-001) |
+| Create Chat Rooms | ✅ Done | 2025-12-12 | T-006; RoomCreateModal, create→join |
+| Predictable Search URLs | ✅ Done | 2025-12-12 | T-007; /searches/{id} bookmarkable |
+| Persistent Room/Chat Tabs | ✅ Done | 2025-12-12 | T-001; Like Browse tabs |
 
 ---
 
@@ -171,28 +171,27 @@
 
 ---
 
-## Pending Features (TODO)
+## Infrastructure & Security (2026-01, dev/40-fixes)
 
-### High Priority
-- Persistent Room/Chat Tabs (like Browse)
-- Scheduled Rate Limits
-
-### Medium Priority
-- Consensus Track Matching
-- Search by MusicBrainz/Discogs ID
-- Track List Matching
-- Visual Group Indicators
-- Traffic Ticker
-- Email Notifications
-
-### Low Priority
-- Prometheus Metrics UI
-- Who's Browsing/Downloading
-- Create Chat Rooms
-- Predictable Search URLs
-- Resumable Downloads
+| Feature | Status | Notes |
+|---------|--------|-------|
+| CHANGELOG.md | ✅ Done | Project CHANGELOG for 40-fixes, I2P, RelayOnly, ExtractPcmSamples, Mesh:SyncSecurity, breaking behavior |
+| Option docs (slskd.example.yml) | ✅ Done | RelayOnly.RelayPeerDataEndpoints; 40-fixes flags (EnforceSecurity, passthrough, CORS, dump, ModelState, Kestrel, rate limit, Mesh:Security, Mesh:SyncSecurity) already present or in CHANGELOG |
+| 40-fixes (Enforce, CORS, dump, ModelState, §11, ScriptService, etc.) | ✅ Done | See `docs/dev/40-fixes-plan.md`, `CHANGELOG.md` |
+| I2P SAM STREAM CONNECT, RelayOnly RELAY_TCP | ✅ Done | Anonymity transports; §11 gating |
+| AudioUtilities.ExtractPcmSamples (ffmpeg) | ✅ Done | |
 
 ---
 
-*Last updated: December 7, 2025 (Release .18)*
+## Pending Features
+
+**Canonical list: memory-bank/tasks.md** (Optionals / Follow-up, Docs / meta).
+
+Previously listed here as Pending, now done per tasks.md: **Persistent Room/Chat Tabs** (T-001), **Scheduled Rate Limits** (T-002), **Visual Group Indicators** (T-004), **Traffic Ticker** (T-005), **Create Chat Rooms** (T-006), **Predictable Search URLs** (T-007).
+
+Still pending (see phase tables above for ❌, or tasks.md for [ ]): Consensus Track Matching, Search by MusicBrainz/Discogs ID, Track List Matching, File Type Restrictions per Group, Download Quotas per Group, Transfer Statistics API, Prometheus Metrics UI, Who's Browsing/Downloading, Chat Upload Context, Email Notifications, Unread Message Badge, Preserve Remote Path Structure, Resumable Downloads, Proxmox LXC, 6.4 Pod Join nonce, T-906/907/908/912 follow-ups, and items under Docs / meta.
+
+---
+
+*Last updated: 2026-01-25 (Sync DEVELOPMENT_HISTORY Pending with tasks.md)*
 

@@ -113,6 +113,7 @@ internal sealed class StubShareRepository : IShareRepository
                 yield return new File(1, masked, 1024, "mp3");
         }
     }
+    public IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string parentDirectory = null) => Array.Empty<(string, long)>();
     public IEnumerable<Scan> ListScans(long startedAtOrAfter = 0) => Array.Empty<Scan>();
     public long PruneDirectories(long olderThanTimestamp) => 0L;
     public long PruneFiles(long olderThanTimestamp) => 0L;

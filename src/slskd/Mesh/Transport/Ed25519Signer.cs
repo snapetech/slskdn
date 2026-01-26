@@ -113,10 +113,14 @@ public class Ed25519Signer : IDisposable
     }
 
     /// <summary>
-    /// Derives a self-certifying PeerId from an Ed25519 public key.
+    ///     Derives a self-certifying PeerId from an Ed25519 public key. T-901.
     /// </summary>
-    /// <param name="publicKey">The Ed25519 public key.</param>
-    /// <returns>The PeerId as a string.</returns>
+    /// <param name="publicKey">The 32-byte Ed25519 raw public key.</param>
+    /// <returns>PeerId = ToLower(Base32(First20(SHA256(publicKey)))).</returns>
+    /// <remarks>
+    ///     Formal rule: PeerId = Base32( first 20 bytes of SHA256(publicKey) ), lowercased.
+    ///     Used for DHT and overlay as a self-certifying node id. See docs/research/T-901-ed25519-identity-design.md.
+    /// </remarks>
     public static string DerivePeerId(byte[] publicKey)
     {
         if (publicKey == null || publicKey.Length != 32)

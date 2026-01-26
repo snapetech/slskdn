@@ -19,6 +19,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Net.Http;
     using System.Threading;
@@ -35,7 +36,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     ///     🔒 Work budgets: Per-domain quotas.
     ///     🔒 Size limits: HEAD requests before commits.
     /// </remarks>
-    public sealed class HttpBackend : IContentBackend
+    public sealed class HttpBackend : IContentFetchBackend
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IOptionsMonitor<HttpBackendOptions> _options;
@@ -177,6 +178,62 @@ namespace slskd.VirtualSoulfind.v2.Backends
             catch (HttpRequestException ex)
             {
                 return SourceCandidateValidationResult.Invalid($"HTTP error: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task FetchToStreamAsync(
+            SourceCandidate candidate,
+            Stream destination,
+            CancellationToken cancellationToken = default)
+        {
+            if (candidate.Backend != ContentBackendType.Http)
+                throw new ArgumentException("Not an HTTP candidate", nameof(candidate));
+
+            if (!Uri.TryCreate(candidate.BackendRef, UriKind.Absolute, out var uri))
+                throw new ArgumentException("Invalid URL", nameof(candidate));
+
+            if (uri.Scheme != "https" && uri.Scheme != "http")
+                throw new ArgumentException("Only HTTP/HTTPS allowed", nameof(candidate));
+
+            var opts = _options.CurrentValue;
+            if (opts.DomainAllowlist == null || opts.DomainAllowlist.Count == 0)
+                throw new InvalidOperationException("No allowlist configured");
+
+            var host = uri.Host.ToLowerInvariant();
+            var allowed = opts.DomainAllowlist.Any(domain =>
+                host == domain.ToLowerInvariant() ||
+                host.EndsWith("." + domain.ToLowerInvariant(), StringComparison.Ordinal));
+            if (!allowed)
+                throw new InvalidOperationException($"Domain {host} not in allowlist");
+
+            using var httpClient = _httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(Math.Max(opts.ValidationTimeoutSeconds * 3, 60));
+
+            using var response = await httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength.HasValue && contentLength.Value > opts.MaxFileSizeBytes)
+                throw new InvalidOperationException("File too large");
+            if (contentLength.HasValue && contentLength.Value == 0)
+                throw new InvalidOperationException("Empty file");
+
+            await using var src = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await CopyWithLimitAsync(src, destination, opts.MaxFileSizeBytes, cancellationToken);
+        }
+
+        private static async Task CopyWithLimitAsync(Stream source, Stream destination, long maxBytes, CancellationToken ct)
+        {
+            var buf = new byte[81920];
+            long total = 0;
+            int r;
+            while ((r = await source.ReadAsync(buf, ct)) > 0)
+            {
+                total += r;
+                if (total > maxBytes)
+                    throw new InvalidOperationException("File too large");
+                await destination.WriteAsync(buf.AsMemory(0, r), ct);
             }
         }
     }

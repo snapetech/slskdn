@@ -99,6 +99,36 @@ namespace slskd.Integrations.MusicBrainz
             return releaseId is null ? null : await GetReleaseAsync(releaseId, cancellationToken).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<RecordingSearchHit>> SearchRecordingsAsync(string query, int limit = 10, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return Array.Empty<RecordingSearchHit>();
+            }
+
+            var encoded = WebUtility.UrlEncode(query);
+            var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/recording?query={encoded}&fmt=json&limit={Math.Max(1, Math.Min(limit, 100))}";
+            var response = await GetAsync<RecordingSearchResponse>(requestUrl, cancellationToken).ConfigureAwait(false);
+            var recordings = response?.Recordings;
+            if (recordings is null || recordings.Length == 0)
+            {
+                return Array.Empty<RecordingSearchHit>();
+            }
+
+            return recordings
+                .Select(r =>
+                {
+                    var ac = r.ArtistCredit?.FirstOrDefault();
+                    return new RecordingSearchHit(
+                        r.Id,
+                        r.Title ?? string.Empty,
+                        ac?.Name ?? string.Empty,
+                        ac?.Artist?.Id);
+                })
+                .ToList();
+        }
+
         private async Task<T?> GetAsync<T>(string requestUri, CancellationToken cancellationToken) where T : class
         {
             var options = MusicBrainzOptions;
@@ -334,6 +364,17 @@ namespace slskd.Integrations.MusicBrainz
         private sealed record ReleaseSearchResponse(ReleaseSummary[]? Releases);
 
         private sealed record ReleaseSummary(string Id);
+
+        private sealed record RecordingSearchResponse(RecordingSearchItem[]? Recordings);
+
+        private sealed record RecordingSearchItem(
+            string Id,
+            string? Title,
+            [property: System.Text.Json.Serialization.JsonPropertyName("artist-credit")] ArtistCreditSearchItem[]? ArtistCredit);
+
+        private sealed record ArtistCreditSearchItem(string? Name, ArtistRef? Artist);
+
+        private sealed record ArtistRef(string? Id);
     }
 }
 

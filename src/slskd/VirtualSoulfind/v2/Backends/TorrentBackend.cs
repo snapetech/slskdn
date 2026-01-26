@@ -76,15 +76,21 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 ContentBackendType.Torrent,
                 cancellationToken);
 
+            // T-908: When PrivateMode.PrivateOnly, restrict to candidates from overlay or invite only
+            var filtered = candidates.AsEnumerable();
+            if (opts.PrivateMode?.PrivateOnly == true)
+            {
+                filtered = filtered.Where(c => c.IsFromPrivateSource);
+            }
+
             // Filter by minimum seeders (stored in ExpectedQuality for torrents)
-            var filtered = candidates
+            filtered = filtered
                 .Where(c => c.ExpectedQuality >= opts.MinimumSeeders)
                 .OrderByDescending(c => c.ExpectedQuality) // Higher seeders = better
                 .ThenByDescending(c => c.TrustScore)
-                .Take(opts.MaxCandidatesPerItem)
-                .ToList();
+                .Take(opts.MaxCandidatesPerItem);
 
-            return filtered;
+            return filtered.ToList();
         }
 
         /// <summary>
@@ -162,5 +168,54 @@ namespace slskd.VirtualSoulfind.v2.Backends
         ///     Query timeout for DHT/tracker lookups (seconds).
         /// </summary>
         public int QueryTimeoutSeconds { get; init; } = 30;
+
+        /// <summary>
+        ///     Private swarm mode (invite-only or overlay-only; no public DHT). When set,
+        ///     TorrentBackend and IBitTorrentBackend impls should disable DHT/PEX and use
+        ///     only overlay or invite-list peers. See T-908 and docs/research/T-908-private-bittorrent-backend-design.md.
+        /// </summary>
+        public PrivateTorrentModeOptions? PrivateMode { get; init; }
+    }
+
+    /// <summary>
+    ///     Options for private BitTorrent swarms (T-908). Used when TorrentBackendOptions.PrivateMode is set.
+    /// </summary>
+    /// <remarks>
+    ///     Private swarms: no public DHT; peers from overlay or invite list only. Real IBitTorrentBackend
+    ///     impl (replacing StubBitTorrentBackend) should respect DisableDht, DisablePex and only add
+    ///     peers from allowed sources.
+    /// </remarks>
+    public sealed class PrivateTorrentModeOptions
+    {
+        /// <summary>When true, only private swarms (no public DHT/PEX).</summary>
+        public bool PrivateOnly { get; init; } = true;
+
+        /// <summary>Disable BitTorrent DHT for discovery. Recommended true when PrivateOnly.</summary>
+        public bool DisableDht { get; init; } = true;
+
+        /// <summary>Disable PEX (peer exchange) for discovery. Recommended true when PrivateOnly.</summary>
+        public bool DisablePex { get; init; } = true;
+
+        /// <summary>Allowed peer sources when private: Overlay, InviteList, or Both.</summary>
+        public PrivatePeerSource AllowedPeerSources { get; init; } = PrivatePeerSource.Both;
+
+        /// <summary>
+        ///     Manual peer list for FetchByInfoHashOrMagnetAsync when no SwarmJob (e.g. "host:port").
+        ///     Used when AllowedPeerSources includes InviteList.
+        /// </summary>
+        public IReadOnlyList<string>? InviteList { get; init; }
+    }
+
+    /// <summary>Where to obtain peers for a private torrent swarm.</summary>
+    public enum PrivatePeerSource
+    {
+        /// <summary>Only from mesh overlay.</summary>
+        Overlay,
+
+        /// <summary>Only from an invite/allow list.</summary>
+        InviteList,
+
+        /// <summary>Overlay or invite list.</summary>
+        Both,
     }
 }

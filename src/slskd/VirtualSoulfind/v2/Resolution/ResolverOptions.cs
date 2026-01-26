@@ -41,5 +41,10 @@ namespace slskd.VirtualSoulfind.v2.Resolution
         ///     Enable automatic fallback to next candidate on failure.
         /// </summary>
         public bool EnableAutoFallback { get; init; } = true;
+
+        /// <summary>
+        ///     Directory where the resolver writes fetched files. If null or empty, uses the system temp path.
+        /// </summary>
+        public string? DownloadDirectory { get; init; }
     }
 }

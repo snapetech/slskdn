@@ -46,9 +46,9 @@ const Searches = ({ server } = {}) => {
       create({
         navigate: false,
         search: decodeURIComponent(queryParameter),
-      }).then(() => {
-        // Clear the query parameter from the URL after creating the search
-        history.replace({ search: '' });
+      }).then((id) => {
+        if (id) history.replace(`${match.url}/${id}`);
+        else history.replace({ search: '' });
       });
     }
   }, [location.search, creating, searchId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -151,11 +151,9 @@ const Searches = ({ server } = {}) => {
       setCreating(false);
 
       if (navigate) {
-        // Use predictable URL with query parameter instead of UUID
-        const baseUrl = match.url;
-        const encodedQuery = encodeURIComponent(searchText);
-        history.push(`${baseUrl}?q=${encodedQuery}`);
+        history.push(`${match.url}/${id}`);
       }
+      return id;
     } catch (createError) {
       console.error(createError);
       toast.error(

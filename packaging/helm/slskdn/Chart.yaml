@@ -1,0 +1,19 @@
+apiVersion: v2
+name: slskdn
+description: A decentralized mesh community service for Soulseek with advanced VPN, privacy features, and peer networking
+type: application
+version: 0.1.0
+appVersion: "0.24.1-slskdn.40"
+keywords:
+  - p2p
+  - mesh-networking
+  - soulseek
+  - community-service
+  - decentralized
+home: https://github.com/snapetech/slskdn
+sources:
+  - https://github.com/snapetech/slskdn
+maintainers:
+  - name: slskdN Team
+    email: contact@slskdn.team
+kubeVersion: ">=1.19.0"

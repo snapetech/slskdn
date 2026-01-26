@@ -18,6 +18,7 @@
 namespace slskd.Transfers.Rescue
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -54,6 +55,11 @@ namespace slskd.Transfers.Rescue
         ///     Deactivate rescue mode (transfer recovered or completed).
         /// </summary>
         Task DeactivateRescueModeAsync(string transferId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Returns whether rescue mode is currently active (or pending) for the given transfer.
+        /// </summary>
+        bool IsRescueActive(string transferId);
     }
 
     /// <summary>
@@ -69,7 +75,7 @@ namespace slskd.Transfers.Rescue
         private readonly IMultiSourceDownloadService multiSource;
         private readonly IDownloadService downloadService;
         private readonly IRescueGuardrailService guardrails;
-        private readonly Dictionary<string, string> activeRescueJobs = new(); // transferId -> multiSourceJobId
+        private readonly ConcurrentDictionary<string, string> activeRescueJobs = new(); // transferId -> multiSourceJobId (or "" when pending)
         private readonly ILogger log = Log.ForContext<RescueService>();
 
         /// <summary>
@@ -169,6 +175,9 @@ namespace slskd.Transfers.Rescue
                 Reason = reason,
             };
 
+            // Mark as rescue-active immediately so underperformance detector does not re-trigger
+            activeRescueJobs[transferId] = "";
+
             // Step 5: Start overlay chunk transfers with IMultiSourceDownloadService
             if (multiSource != null && overlayPeers.Count > 0)
             {
@@ -239,28 +248,34 @@ namespace slskd.Transfers.Rescue
         {
             log.Information("[RESCUE] Deactivating rescue mode for transfer {TransferId}", transferId);
             
-            // Cancel multi-source job if active
-            if (activeRescueJobs.TryGetValue(transferId, out var jobId) && Guid.TryParse(jobId, out var jobGuid))
+            if (activeRescueJobs.TryGetValue(transferId, out var jobId))
             {
-                try
+                if (!string.IsNullOrEmpty(jobId) && Guid.TryParse(jobId, out var jobGuid))
                 {
-                    var status = multiSource?.GetStatus(jobGuid);
-                    if (status != null && status.State != MultiSourceDownloadState.Completed && status.State != MultiSourceDownloadState.Failed)
+                    try
                     {
-                        // Note: MultiSourceDownloadService doesn't have explicit cancellation,
-                        // but we can mark it as inactive and let it complete/fail naturally
-                        log.Information("[RESCUE] Marking multi-source job {JobId} for transfer {TransferId} as inactive", jobId, transferId);
+                        var status = multiSource?.GetStatus(jobGuid);
+                        if (status != null && status.State != MultiSourceDownloadState.Completed && status.State != MultiSourceDownloadState.Failed)
+                        {
+                            log.Information("[RESCUE] Marking multi-source job {JobId} for transfer {TransferId} as inactive", jobId, transferId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warning(ex, "[RESCUE] Error checking multi-source job status for {TransferId}", transferId);
                     }
                 }
-                catch (Exception ex)
-                {
-                    log.Warning(ex, "[RESCUE] Error checking multi-source job status for {TransferId}", transferId);
-                }
-                
-                activeRescueJobs.Remove(transferId);
+
+                activeRescueJobs.TryRemove(transferId, out _);
             }
             
             await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRescueActive(string transferId)
+        {
+            return !string.IsNullOrEmpty(transferId) && activeRescueJobs.ContainsKey(transferId);
         }
 
         private string GetOutputPathForTransfer(string transferId)

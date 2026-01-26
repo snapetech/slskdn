@@ -458,6 +458,40 @@ namespace slskd.Shares
             }
         }
 
+        /// <inheritdoc/>
+        public IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string parentDirectory = null)
+        {
+            var results = new List<(string, long)>();
+            using var conn = GetConnection();
+            SqliteCommand cmd;
+            if (string.IsNullOrEmpty(parentDirectory))
+            {
+                cmd = new SqliteCommand(
+                    "SELECT originalFilename, size FROM files WHERE isBlocked = 0 AND isQuarantined = 0;",
+                    conn);
+            }
+            else
+            {
+                cmd = new SqliteCommand(
+                    "SELECT originalFilename, size FROM files WHERE isBlocked = 0 AND isQuarantined = 0 AND maskedFilename LIKE @prefix || '%';",
+                    conn);
+                cmd.Parameters.AddWithValue("prefix", parentDirectory);
+            }
+
+            using (cmd)
+            {
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    var path = reader.GetString(0);
+                    var size = reader.GetInt64(1);
+                    results.Add((path, size));
+                }
+            }
+
+            return results;
+        }
+
         /// <summary>
         ///     Returns the list of all <see cref="Scan"/> started at or after the specified <paramref name="startedAtOrAfter"/>
         ///     unix timestamp.

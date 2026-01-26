@@ -578,7 +578,7 @@ namespace slskd
         {
             try
             {
-                // Register DHT mesh service for FIND_NODE, FIND_VALUE, and PING RPCs
+                // Register DHT mesh service for FIND_NODE, FIND_VALUE, STORE, and PING RPCs (T-902)
                 var router = ServiceProvider.GetService<Mesh.ServiceFabric.MeshServiceRouter>();
                 if (router != null)
                 {
@@ -603,6 +603,18 @@ namespace slskd
                     else
                     {
                         Log.Warning("HolePunchMeshService not available for registration");
+                    }
+
+                    // Register MeshContent service for GetByContentId (T-906, def-5)
+                    var meshContentService = ServiceProvider.GetService<Mesh.ServiceFabric.Services.MeshContentMeshService>();
+                    if (meshContentService != null)
+                    {
+                        router.RegisterService(meshContentService);
+                        Log.Information("Registered MeshContent mesh service for GetByContentId RPC");
+                    }
+                    else
+                    {
+                        Log.Warning("MeshContentMeshService not available for registration");
                     }
                 }
                 else

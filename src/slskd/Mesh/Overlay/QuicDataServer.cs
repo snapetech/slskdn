@@ -6,7 +6,9 @@
 
 namespace slskd.Mesh.Overlay;
 
+using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -181,21 +183,66 @@ public class QuicDataServer : BackgroundService
         {
             await using (stream)
             {
-                // Read payload data (cap aligned with Mesh.Security.GetEffectiveMaxPayloadSize)
-                var buffer = new byte[maxPayloadBytes];
-                var totalRead = 0;
+                // Read first line (up to 256 bytes) to detect RELAY_TCP
+                var lineBuf = new byte[256];
+                var n = 0;
+                while (n < lineBuf.Length)
+                {
+                    var r = await stream.ReadAsync(lineBuf.AsMemory(n, 1), ct);
+                    if (r == 0) break;
+                    if (lineBuf[n] == (byte)'\n') { n++; break; }
+                    n += r;
+                }
+                var line = n > 0 ? System.Text.Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : "";
 
+                if (line.StartsWith("RELAY_TCP ", StringComparison.Ordinal))
+                {
+                    var parts = line.Split(' ');
+                    if (parts.Length >= 3 && int.TryParse(parts[2], out var port))
+                    {
+                        var host = parts[1];
+                        try
+                        {
+                            using var tcp = new System.Net.Sockets.TcpClient();
+                            await tcp.ConnectAsync(host, port, ct);
+                            var tcpStream = tcp.GetStream();
+                            await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("OK\n"), ct);
+
+                            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                            var toTcp = CopyToAsync(stream, tcpStream, cts.Token);
+                            var toStream = CopyToAsync(tcpStream, stream, cts.Token);
+                            await Task.WhenAny(toTcp, toStream);
+                            cts.Cancel();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "[Overlay-QUIC-DATA] RELAY_TCP to {Host}:{Port} failed", host, port);
+                            try { await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR " + ex.Message + "\n"), ct); } catch { /* best effort */ }
+                        }
+                    }
+                    else
+                    {
+                        try { await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR bad RELAY_TCP format\n"), ct); } catch { }
+                    }
+                    return;
+                }
+
+                // Non-relay: read payload (existing behavior)
+                var buffer = new byte[maxPayloadBytes];
+                var totalRead = n;
+                if (n > 0)
+                    Array.Copy(lineBuf, 0, buffer, 0, n);
                 while (totalRead < buffer.Length)
                 {
                     var read = await stream.ReadAsync(buffer.AsMemory(totalRead), ct);
                     if (read == 0) break;
                     totalRead += read;
                 }
-
                 if (totalRead > 0)
                 {
                     logger.LogDebug("[Overlay-QUIC-DATA] Received {Size} bytes from {Endpoint}", totalRead, remoteEndPoint);
-                    // TODO: Process payload (e.g., deliver to mesh message handler)
+                    // Payload delivery: deferred until IOverlayDataPayloadHandler (or similar) is designed and wired.
+                    // See memory-bank/triage-todo-fixme.md. For now we log and retain buffer for future use.
                 }
             }
         }
@@ -203,5 +250,13 @@ public class QuicDataServer : BackgroundService
         {
             logger.LogWarning(ex, "[Overlay-QUIC-DATA] Stream error from {Endpoint}", remoteEndPoint);
         }
+    }
+
+    private static async Task CopyToAsync(Stream source, Stream target, CancellationToken ct)
+    {
+        var buf = new byte[8192];
+        int r;
+        while ((r = await source.ReadAsync(buf, ct)) > 0)
+            await target.WriteAsync(buf.AsMemory(0, r), ct);
     }
 }

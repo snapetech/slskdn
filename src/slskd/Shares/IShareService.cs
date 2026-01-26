@@ -117,6 +117,14 @@ namespace slskd.Shares
         Task<IEnumerable<File>> SearchAsync(SearchQuery query);
 
         /// <summary>
+        ///     Searches only the local share repository for the specified <paramref name="query"/>.
+        ///     Used by mesh overlay RPC (mesh_search_req) to answer peers without including remote/relay shares.
+        /// </summary>
+        /// <param name="query">The query for which to search.</param>
+        /// <returns>The matching files from the local share.</returns>
+        Task<IEnumerable<File>> SearchLocalAsync(SearchQuery query);
+
+        /// <summary>
         ///     Cancels the currently running scan on the local host, if one is running.
         /// </summary>
         /// <returns>A value indicating whether a scan was cancelled.</returns>

@@ -4,6 +4,7 @@
 
 namespace slskd.Integrations.MusicBrainz
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using slskd.Integrations.MusicBrainz.Models;
@@ -33,6 +34,15 @@ namespace slskd.Integrations.MusicBrainz
         ///     Resolves a release using a Discogs release/master identifier.
         /// </summary>
         Task<AlbumTarget?> GetReleaseByDiscogsReleaseIdAsync(string discogsReleaseId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Searches for recordings by query (artist, title, etc.). T-912 Metadata facade.
+        /// </summary>
+        /// <param name="query">Search query (e.g. artist and/or recording name).</param>
+        /// <param name="limit">Maximum number of results.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Matching recordings with id, title, artist.</returns>
+        Task<IReadOnlyList<RecordingSearchHit>> SearchRecordingsAsync(string query, int limit = 10, CancellationToken cancellationToken = default);
     }
 }
 

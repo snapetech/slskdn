@@ -182,6 +182,12 @@ namespace slskd.Mesh
 
         /// <summary>Gets or sets count of quarantine events (including extensions).</summary>
         public long QuarantineEvents { get; set; }
+
+        /// <summary>Gets or sets security alert messages when thresholds are exceeded.</summary>
+        public List<string> Warnings { get; set; } = new();
+
+        /// <summary>Gets or sets count of entries rejected due to proof-of-possession failure (T-1434).</summary>
+        public long ProofOfPossessionFailures { get; set; }
     }
 
     /// <summary>

@@ -1,0 +1,22 @@
+# Proxmox LXC: example options for an slskdn container
+# Merge these into /etc/pve/lxc/<vmid>.conf or use as reference for 'pct create' / 'pct set'.
+# See: pve.proxmox.com/wiki/Manual:_pct.conf
+
+arch: amd64
+cores: 1
+memory: 512
+swap: 256
+
+# Network (adjust bridge and IP as needed)
+net0: name=eth0,bridge=vmbr0,ip=dhcp,ip6=auto
+
+# Bind-mounts: host path,mp=/path/inside/container
+# Create the host dirs first, and ensure the container can read/write (unprivileged: map uid/gid if needed).
+# mp0: /mnt/pve/storage/slskdn-data,mp=/var/lib/slskd
+# mp1: /mnt/pve/storage/slskdn-downloads,mp=/var/lib/slskd/downloads
+
+# Optional: limit CPU
+# cpulimit: 1
+
+# Optional: description
+# description: slskdn - Soulseek web client

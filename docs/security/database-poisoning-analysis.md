@@ -1,5 +1,10 @@
 # Database Poisoning Protection Analysis
 
+**Created**: Dec 2025 · **Updated**: Jan 2026  
+**Status**: Original analysis (Dec 2025). Implementation status as of **Jan 2026**: gaps 1–6 are **MITIGATED**. T-1430–T-1433 (signatures, reputation, rate limiting, quarantine), T-1434 (proof-of-possession), and T-1435 (consensus) are implemented. See `database-poisoning-tasks.md` and `mesh-sync-security.md` for current state.
+
+---
+
 ## Current Protections ✅
 
 ### 1. Input Validation
@@ -27,57 +32,26 @@
   - Malformed messages
 - Can mark peers as untrusted (score < 20)
 
-## Critical Gaps ❌
+## Critical Gaps
 
-### 1. **NO Cryptographic Signatures**
-**Risk**: HIGH
-- Mesh sync messages are NOT cryptographically signed
-- A malicious client can forge messages claiming to be from any peer
-- No authentication of message origin
+### 1. ~~**NO Cryptographic Signatures**~~ ✅ **MITIGATED (T-1430)**
+**Risk**: HIGH → mitigated  
+- Ed25519 signatures added to mesh messages; verified in `HandleMessageAsync()`.
+- Unsigned or invalidly signed messages rejected; `SignatureVerificationFailures` tracked.
 
-**Impact**: 
-- Attacker can inject fake hash entries claiming to be from trusted peers
-- Can poison the network by impersonating legitimate users
+### 2. ~~**Reputation Not Used for Mesh Sync**~~ ✅ **MITIGATED (T-1431)**
+**Risk**: HIGH → mitigated  
+- `PeerReputation.IsUntrusted()` checked at start of `MergeEntriesAsync()` (and via `HandlePushDeltaAsync`).
+- Sync rejected for reputation &lt; 20; `ReputationBasedRejections` tracked.
 
-**Recommendation**: 
-- Add Ed25519 signatures to all mesh sync messages
-- Verify signatures before accepting any data
-- Use existing `ControlSigner` infrastructure
+### 3. ~~**No Proof of File Ownership**~~ ✅ **MITIGATED (T-1434)**
+**Risk**: MEDIUM → mitigated  
+- **T-1434 implemented:** When `Mesh:SyncSecurity.proof_of_possession_enabled` is true, `MergeEntriesAsync` challenges each new entry: ReqChunk (first 32KB), SHA256 compared to `ByteHash`. Failures increment `ProofOfPossessionFailures` and the entry is skipped. `ShareBasedFlacKeyToPathResolver` resolves FlacKey→path from shares for responding to ReqChunk.
 
-### 2. **Reputation Not Used for Mesh Sync**
-**Risk**: HIGH
-- `PeerReputation` exists but is NOT checked before accepting mesh sync data
-- Untrusted peers can still sync their poisoned data
-
-**Impact**:
-- Known malicious peers can continue poisoning the network
-- No filtering based on peer trustworthiness
-
-**Recommendation**:
-- Check `PeerReputation.IsUntrusted()` before accepting mesh sync
-- Reject sync requests from untrusted peers
-- Log and track peers sending invalid data
-
-### 3. **No Proof of File Ownership**
-**Risk**: MEDIUM
-- System accepts hash entries without verifying the peer actually has the file
-- No challenge-response to prove file possession
-
-**Impact**:
-- Attacker can inject fake hash→file mappings
-- Can claim to have files they don't actually possess
-
-**Recommendation**:
-- Implement proof-of-possession challenges
-- Require peers to prove they have the file before accepting their hash entry
-- Use random byte range requests as challenges
-
-### 4. **No Rate Limiting on Invalid Data**
-**Risk**: MEDIUM
-- While invalid entries are skipped, there's no rate limiting
-- No automatic penalty for peers sending lots of invalid data
-
-**Impact**:
+### 4. ~~**No Rate Limiting on Invalid Data**~~ ✅ **MITIGATED (T-1432)**
+**Risk**: MEDIUM → mitigated
+- Sliding-window rate limiting: 50 invalid entries or 10 invalid messages per 5‑minute window. `RecordInvalidEntries` / `RecordInvalidMessage`; `RateLimitViolations` tracked.
+**Impact** (obsolete; see T-1432):
 - Attacker can flood the network with invalid entries
 - Can degrade performance even if entries are rejected
 
@@ -86,33 +60,13 @@
 - Rate limit peers sending >10% invalid entries
 - Automatically reduce reputation for high invalid rates
 
-### 5. **No Automatic Quarantine**
-**Risk**: MEDIUM
-- Peers sending bad data aren't automatically quarantined
-- No automatic blocking mechanism
+### 5. ~~**No Automatic Quarantine**~~ ✅ **MITIGATED (T-1433)**
+**Risk**: MEDIUM → mitigated  
+- 3 rate-limit violations in 5 minutes → 30‑minute quarantine. `QuarantinePeer`, `IsQuarantined`; `QuarantineEvents` tracked.
 
-**Impact**:
-- Malicious peers can continue operating
-- Requires manual intervention to block bad actors
-
-**Recommendation**:
-- Auto-quarantine peers with reputation < 10
-- Block peers sending >50% invalid entries
-- Implement temporary bans with exponential backoff
-
-### 6. **No Hash Correctness Verification**
-**Risk**: LOW-MEDIUM
-- System accepts hash entries without verifying hash matches a real file
-- No cross-validation with other peers
-
-**Impact**:
-- Attacker can inject hash entries that don't match any real file
-- Can pollute the database with non-existent mappings
-
-**Recommendation**:
-- Cross-validate hashes with multiple peers
-- Require consensus (e.g., 3+ peers) before accepting new hash
-- Track hash verification success rate per peer
+### 6. ~~**No Hash Correctness Verification**~~ ✅ **MITIGATED (T-1435)**
+**Risk**: LOW-MEDIUM → mitigated  
+- **T-1435 implemented:** `LookupHashAsync` queries up to `consensus_min_peers`, groups by (FlacKey, ByteHash, Size), and returns only if ≥ `consensus_min_agreements` peers agree. Config: `Mesh:SyncSecurity.consensus_min_peers`, `consensus_min_agreements`.
 
 ## Attack Scenarios
 
@@ -139,7 +93,9 @@
 
 ## Recommended Immediate Actions
 
-### Priority 1 (Critical)
+*Priority 1 and 2 below are **implemented** (T-1430–T-1433). Priority 3 remains deferred.*
+
+### Priority 1 (Critical) ✅ Done
 1. **Add signature verification to mesh sync messages**
    - Use Ed25519 signatures (already have infrastructure)
    - Verify signatures before accepting any data
@@ -150,7 +106,7 @@
    - Reject sync requests from untrusted peers
    - Log all rejections for monitoring
 
-### Priority 2 (High)
+### Priority 2 (High) ✅ Done
 3. **Implement rate limiting on invalid data**
    - Track invalid entry rate per peer
    - Rate limit peers with >10% invalid entries
@@ -161,16 +117,9 @@
    - Block peers sending >50% invalid entries
    - Implement temporary bans
 
-### Priority 3 (Medium)
-5. **Add proof-of-possession challenges**
-   - Challenge peers to prove file ownership
-   - Use random byte range requests
-   - Only accept hash entries after successful challenge
-
-6. **Cross-validate hashes**
-   - Require consensus from multiple peers
-   - Track verification success rate
-   - Flag suspicious hash patterns
+### Priority 3 (Medium) ✅ Done
+5. **Add proof-of-possession challenges** – T-1434: ReqChunk/RespChunk, `ProofOfPossessionService`, `ShareBasedFlacKeyToPathResolver`; gated by `proof_of_possession_enabled`.
+6. **Cross-validate hashes** – T-1435: `LookupHashAsync` uses `consensus_min_peers` and `consensus_min_agreements`.
 
 ## Implementation Notes
 
@@ -211,9 +160,11 @@ if (invalidRate > 0.1) // 10% invalid
 
 ## Conclusion
 
-**Current State**: Basic format validation exists, but critical security gaps allow database poisoning.
+**Original (Dec 2025):** Critical gaps allowed database poisoning; recommendation was to implement signatures and reputation first.
 
-**Risk Level**: **HIGH** - A determined attacker can poison the network with fake hash entries.
+**Current State (Jan 2026):** T-1430–T-1436, T-1434 (proof-of-possession), and T-1435 (consensus) are **implemented**. Mesh:SyncSecurity options, alerting (`warnings`), and `ShareBasedFlacKeyToPathResolver` are in place.
 
-**Recommendation**: Implement signature verification and reputation checks immediately. These are the most critical gaps and can be addressed using existing infrastructure.
+**Risk Level**: **HIGH → MITIGATED** for all analysed vectors (impersonation, untrusted sync, flooding, quarantine, proof-of-possession, hash correctness). Residual: Sybil (many low-reputation identities) partially addressed by reputation and quarantine.
+
+**References:** `database-poisoning-tasks.md`, `mesh-sync-security.md`.
 

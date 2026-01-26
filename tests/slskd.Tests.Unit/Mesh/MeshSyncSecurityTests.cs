@@ -18,11 +18,13 @@
 namespace slskd.Tests.Unit.Mesh
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Moq;
     using slskd.Capabilities;
     using slskd.Common.Security;
@@ -47,6 +49,9 @@ namespace slskd.Tests.Unit.Mesh
         private readonly PeerReputation peerReputation;
         private readonly Mock<ILogger<MeshSyncService>> mockLogger;
         private readonly MeshSyncService meshSyncService;
+
+        /// <summary>Used by TestableMeshSyncService to control QueryPeerForHashAsync results for consensus tests.</summary>
+        private static readonly ConcurrentDictionary<string, MeshHashEntry> ConsensusQueryResponses = new();
 
         public MeshSyncSecurityTests()
         {
@@ -328,76 +333,41 @@ namespace slskd.Tests.Unit.Mesh
         [Fact]
         public async Task MergeEntriesAsync_RejectsQuarantinedPeer()
         {
-            // Arrange
-            var entries = new List<MeshHashEntry>
+            // Use QuarantineViolationThreshold=1 so one rate-limit violation triggers quarantine (deterministic).
+            // With default 3, we would need 3 separate batches; the sliding-window logic can be timing-sensitive.
+            var opts = Options.Create(new MeshSyncSecurityOptions { QuarantineViolationThreshold = 1 });
+            var svc = CreateMeshSyncService(syncSecurityOptions: opts);
+
+            var validEntries = new List<MeshHashEntry>
             {
                 new MeshHashEntry
                 {
-                    FlacKey = "0123456789abcdef", // 16 hex chars (64-bit)
-                    ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // 64 hex chars (SHA256 = 32 bytes)
+                    FlacKey = "0123456789abcdef",
+                    ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                     Size = 1024,
                     SeqId = 1,
                 },
             };
 
-            // Peer is not untrusted (default reputation is 50)
-
-            // Trigger multiple rate limit violations to cause quarantine (need 3 violations)
-            // Each violation needs to exceed MaxInvalidEntriesPerWindow (50) AND trigger RecordRateLimitViolation
-            // The rate limit check happens AFTER validation, so we need invalid entries
-            // We need at least 3 separate calls, each with enough invalid entries to exceed the rate limit
-            for (int i = 0; i < 5; i++) // Increased to 5 iterations to ensure quarantine is triggered
+            // One batch of 60 invalid entries: all fail FlacKey, RecordInvalidEntries(60), IsRateLimited (>=50),
+            // RecordRateLimitViolation, ShouldQuarantine (1>=1) → QuarantinePeer, QuarantineEvents++
+            var invalidEntries = Enumerable.Range(0, 60).Select(j => new MeshHashEntry
             {
-                // Send 60 invalid entries to exceed rate limit (50 per window)
-                // All entries have invalid FLAC keys, so all 60 will be skipped
-                var invalidEntries = Enumerable.Range(0, 60).Select(j => new MeshHashEntry
-                {
-                    FlacKey = "invalid", // Invalid FLAC key (wrong length)
-                    ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // Valid length but entries will be skipped due to invalid FlacKey
-                    Size = 1024,
-                    SeqId = i * 100 + j, // Unique SeqId for each entry
-                }).ToList();
+                FlacKey = "invalid",
+                ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                Size = 1024,
+                SeqId = j,
+            }).ToList();
 
-                // This will:
-                // 1. Skip all 60 entries (invalid FLAC keys)
-                // 2. RecordInvalidEntries(60) - adds 60 timestamps
-                // 3. IsRateLimited checks if count >= 50 (yes, cumulative count >= 50)
-                // 4. RecordRateLimitViolation increments violation count
-                // 5. ShouldQuarantine checks if count >= 3 (on 3rd call, yes)
-                // 6. QuarantinePeer increments QuarantineEvents
-                var mergeResult = await meshSyncService.MergeEntriesAsync("quarantined-peer", invalidEntries);
-                
-                // Each call should return 0 because entries are invalid and rate limited (or quarantined)
-                Assert.Equal(0, mergeResult);
-                
-                // Debug: Log the stats after each iteration
-                var stats = meshSyncService.Stats;
-                // Note: Cannot easily log in xunit, but we can check conditions
-                
-                // If we've hit 3 violations, quarantine should be triggered
-                if (i >= 2) // After 3rd iteration (i=2), quarantine should be set
-                {
-                    // Break early if quarantine is triggered
-                    if (stats.QuarantineEvents > 0)
-                    {
-                        break;
-                    }
-                }
-                
-                // Small delay to ensure violations are tracked (but within the 5-minute window)
-                await Task.Delay(50); // Increased delay slightly
-            }
+            var mergeResult = await svc.MergeEntriesAsync("quarantined-peer", invalidEntries);
+            Assert.Equal(0, mergeResult);
+            Assert.True(svc.Stats.QuarantineEvents >= 1,
+                "Quarantine should have been triggered by one rate-limit violation (QuarantineViolationThreshold=1).");
 
-            // If quarantine was not triggered, impl thresholds/flow may have changed; pass.
-            if (meshSyncService.Stats.QuarantineEvents < 1)
-                return;
+            // Act - merge from same peer; should be rejected (IsQuarantined at start of MergeEntriesAsync)
+            var result = await svc.MergeEntriesAsync("quarantined-peer", validEntries);
 
-            // Act - Try to merge entries from quarantined peer
-            // Should be rejected because peer is quarantined (check happens at start of method)
-            var result = await meshSyncService.MergeEntriesAsync("quarantined-peer", entries);
-
-            // Assert
-            Assert.Equal(0, result); // Should be rejected due to quarantine
+            Assert.Equal(0, result);
         }
 
         [Fact]
@@ -454,6 +424,7 @@ namespace slskd.Tests.Unit.Mesh
             Assert.True(stats.RateLimitViolations >= 0);
             Assert.True(stats.QuarantinedPeers >= 0);
             Assert.True(stats.QuarantineEvents >= 0);
+            Assert.True(stats.ProofOfPossessionFailures >= 0);
         }
 
         [Fact]
@@ -486,6 +457,232 @@ namespace slskd.Tests.Unit.Mesh
         }
 
         #endregion
+
+        #region Proof-of-Possession Tests (T-1434)
+
+        [Fact]
+        public async Task MergeEntriesAsync_PoPEnabled_SkipsEntryWhenVerifyReturnsFalse()
+        {
+            var popMock = new Mock<IProofOfPossessionService>();
+            popMock.Setup(p => p.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<IChunkRequestSender>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+
+            var opts = Options.Create(new MeshSyncSecurityOptions { ProofOfPossessionEnabled = true });
+            var svc = CreateMeshSyncService(syncSecurityOptions: opts, proofOfPossession: popMock.Object);
+
+            var entries = new List<MeshHashEntry>
+            {
+                new MeshHashEntry { FlacKey = "0123456789abcdef", ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Size = 1024, SeqId = 1 },
+            };
+
+            var merged = await svc.MergeEntriesAsync("peer", entries);
+
+            Assert.Equal(0, merged);
+            Assert.True(svc.Stats.ProofOfPossessionFailures >= 1);
+        }
+
+        [Fact]
+        public async Task MergeEntriesAsync_PoPEnabled_MergesWhenVerifyReturnsTrue()
+        {
+            var popMock = new Mock<IProofOfPossessionService>();
+            popMock.Setup(p => p.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<IChunkRequestSender>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var opts = Options.Create(new MeshSyncSecurityOptions { ProofOfPossessionEnabled = true });
+            var svc = CreateMeshSyncService(syncSecurityOptions: opts, proofOfPossession: popMock.Object);
+
+            var entries = new List<MeshHashEntry>
+            {
+                new MeshHashEntry { FlacKey = "0123456789abcdef", ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Size = 1024, SeqId = 1 },
+            };
+
+            var merged = await svc.MergeEntriesAsync("peer", entries);
+
+            Assert.Equal(1, merged);
+            Assert.Equal(0, svc.Stats.ProofOfPossessionFailures);
+        }
+
+        [Fact]
+        public async Task MergeEntriesAsync_PoPDisabled_DoesNotCallProofOfPossession()
+        {
+            var popMock = new Mock<IProofOfPossessionService>();
+            var opts = Options.Create(new MeshSyncSecurityOptions { ProofOfPossessionEnabled = false });
+            var svc = CreateMeshSyncService(syncSecurityOptions: opts, proofOfPossession: popMock.Object);
+
+            var entries = new List<MeshHashEntry>
+            {
+                new MeshHashEntry { FlacKey = "0123456789abcdef", ByteHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Size = 1024, SeqId = 1 },
+            };
+
+            var merged = await svc.MergeEntriesAsync("peer", entries);
+
+            Assert.Equal(1, merged);
+            popMock.Verify(p => p.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<IChunkRequestSender>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        #endregion
+
+        #region Consensus Tests (T-1435)
+
+        [Fact]
+        public async Task LookupHashAsync_ReturnsNull_WhenNoMeshPeersAndNotInLocalDb()
+        {
+            mockHashDb.Setup(h => h.LookupHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((HashDbEntry)null);
+
+            var result = await meshSyncService.LookupHashAsync("0123456789abcdef");
+
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task LookupHashAsync_ReturnsLocal_WhenFoundInDb()
+        {
+            var local = new HashDbEntry { FlacKey = "0123456789abcdef", ByteHash = "ab", Size = 1024, SeqId = 1 };
+            mockHashDb.Setup(h => h.LookupHashAsync("0123456789abcdef", It.IsAny<CancellationToken>())).ReturnsAsync(local);
+
+            var result = await meshSyncService.LookupHashAsync("0123456789abcdef");
+
+            Assert.NotNull(result);
+            Assert.Equal("0123456789abcdef", result.FlacKey);
+            Assert.Equal(1024, result.Size);
+        }
+
+        [Fact]
+        public async Task LookupHashAsync_ConsensusOptions_WhenMinAgreementsMet_ReturnsEntry()
+        {
+            var flacKey = "0123456789abcdef";
+            var agreed = new MeshHashEntry { FlacKey = flacKey, ByteHash = "ab".PadRight(64, '0'), Size = 100, SeqId = 1 };
+            ConsensusQueryResponses["p1"] = agreed;
+            ConsensusQueryResponses["p2"] = agreed;
+            ConsensusQueryResponses["p3"] = null; // p3 returns null
+            try
+            {
+                var opts = Options.Create(new MeshSyncSecurityOptions { ConsensusMinPeers = 3, ConsensusMinAgreements = 2 });
+                var svc = CreateTestableMeshSyncService(opts);
+                SeedPeers(svc, "p1", "p2", "p3");
+
+                var result = await svc.LookupHashAsync(flacKey);
+
+                Assert.NotNull(result);
+                Assert.Equal(flacKey, result.FlacKey);
+                Assert.Equal(100, result.Size);
+            }
+            finally
+            {
+                ConsensusQueryResponses.Clear();
+            }
+        }
+
+        [Fact]
+        public async Task LookupHashAsync_ConsensusOptions_WhenMinAgreementsNotMet_ReturnsNull()
+        {
+            var flacKey = "0123456789abcdef";
+            var entry = new MeshHashEntry { FlacKey = flacKey, ByteHash = "ab".PadRight(64, '0'), Size = 100, SeqId = 1 };
+            ConsensusQueryResponses["p1"] = entry;
+            ConsensusQueryResponses["p2"] = entry;
+            // p3 not set -> null; need 3 agreements, only 2 agree
+            try
+            {
+                var opts = Options.Create(new MeshSyncSecurityOptions { ConsensusMinPeers = 3, ConsensusMinAgreements = 3 });
+                var svc = CreateTestableMeshSyncService(opts);
+                SeedPeers(svc, "p1", "p2", "p3");
+
+                var result = await svc.LookupHashAsync(flacKey);
+
+                Assert.Null(result);
+            }
+            finally
+            {
+                ConsensusQueryResponses.Clear();
+            }
+        }
+
+        #endregion
+
+        private MeshSyncService CreateMeshSyncService(
+            IOptions<MeshSyncSecurityOptions> syncSecurityOptions = null,
+            IProofOfPossessionService proofOfPossession = null)
+        {
+            var h = new Mock<IHashDbService>();
+            h.Setup(x => x.CurrentSeqId).Returns(100);
+            h.Setup(x => x.GetStats()).Returns(new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 });
+            h.Setup(x => x.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new List<HashDbEntry>());
+            h.Setup(x => x.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>())).ReturnsAsync((IEnumerable<HashDbEntry> e, CancellationToken _) => e.Count());
+            h.Setup(x => x.UpdatePeerLastSeqSeenAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            return new MeshSyncService(
+                h.Object,
+                mockCapabilities.Object,
+                mockSoulseekClient.Object,
+                mockMessageSigner.Object,
+                peerReputation,
+                appState: null,
+                syncSecurityOptions,
+                pathResolver: null,
+                proofOfPossession);
+        }
+
+        private static TestableMeshSyncService CreateTestableMeshSyncService(IOptions<MeshSyncSecurityOptions> options)
+        {
+            var h = new Mock<IHashDbService>();
+            h.Setup(x => x.CurrentSeqId).Returns(100);
+            h.Setup(x => x.GetStats()).Returns(new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 });
+            h.Setup(x => x.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new List<HashDbEntry>());
+            h.Setup(x => x.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>())).ReturnsAsync((IEnumerable<HashDbEntry> e, CancellationToken _) => e.Count());
+            h.Setup(x => x.UpdatePeerLastSeqSeenAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            h.Setup(x => x.LookupHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((HashDbEntry)null);
+            h.Setup(x => x.StoreHashAsync(It.IsAny<HashDbEntry>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var cap = new Mock<ICapabilityService>();
+            cap.Setup(c => c.VersionString).Returns("1.0.0-test");
+            cap.Setup(c => c.GetPeerCapabilities(It.IsAny<string>())).Returns(new PeerCapabilities { Flags = PeerCapabilityFlags.SupportsMeshSync });
+
+            var signer = new Mock<IMeshMessageSigner>();
+            signer.Setup(s => s.VerifyMessage(It.IsAny<MeshMessage>())).Returns(true);
+
+            var rep = new PeerReputation(Mock.Of<ILogger<PeerReputation>>());
+            return new TestableMeshSyncService(
+                h.Object,
+                cap.Object,
+                Mock.Of<ISoulseekClient>(),
+                signer.Object,
+                rep,
+                appState: null,
+                options,
+                pathResolver: null,
+                proofOfPossession: null);
+        }
+
+        private static void SeedPeers(MeshSyncService svc, params string[] usernames)
+        {
+            foreach (var u in usernames)
+            {
+                var hello = new MeshHelloMessage { ClientId = u, ClientVersion = "1.0", LatestSeqId = 0, HashCount = 0 };
+                _ = svc.HandleMessageAsync(u, hello).GetAwaiter().GetResult();
+            }
+        }
+
+        private sealed class TestableMeshSyncService : MeshSyncService
+        {
+            public TestableMeshSyncService(
+                IHashDbService hashDb,
+                ICapabilityService capabilities,
+                ISoulseekClient soulseekClient,
+                IMeshMessageSigner messageSigner,
+                slskd.Common.Security.PeerReputation peerReputation,
+                IManagedState<State> appState,
+                IOptions<MeshSyncSecurityOptions> syncSecurityOptions,
+                IFlacKeyToPathResolver pathResolver,
+                IProofOfPossessionService proofOfPossession)
+                : base(hashDb, capabilities, soulseekClient, messageSigner, peerReputation, appState, syncSecurityOptions, pathResolver, proofOfPossession)
+            { }
+
+            protected override async Task<MeshHashEntry> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+                return ConsensusQueryResponses.TryGetValue(username, out var e) ? e : null;
+            }
+        }
     }
 }
 

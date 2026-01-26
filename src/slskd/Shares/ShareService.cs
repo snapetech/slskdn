@@ -360,6 +360,13 @@ namespace slskd.Shares
             return Task.FromResult(results);
         }
 
+        /// <inheritdoc />
+        public Task<IEnumerable<File>> SearchLocalAsync(SearchQuery query)
+        {
+            var results = Local.Repository.Search(query);
+            return Task.FromResult(results);
+        }
+
         /// <summary>
         ///     Scans the configured shares.
         /// </summary>

@@ -5,34 +5,43 @@
 namespace slskd.PodCore;
 
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 /// <summary>
 /// Service for handling signed pod join and leave operations.
 /// </summary>
 public class PodJoinLeaveService : IPodJoinLeaveService
 {
+    private static readonly TimeSpan ReplayCacheTtl = TimeSpan.FromMinutes(5);
+
     private readonly ILogger<PodJoinLeaveService> _logger;
     private readonly IPodService _podService;
     private readonly IPodMembershipService _membershipService;
     private readonly IPodMembershipVerifier _membershipVerifier;
+    private readonly IOptionsMonitor<PodJoinOptions> _joinOptions;
 
     // In-memory storage for pending requests (in production, this would be persisted)
     private readonly ConcurrentDictionary<string, ConcurrentBag<PodJoinRequest>> _pendingJoinRequests = new();
     private readonly ConcurrentDictionary<string, ConcurrentBag<PodLeaveRequest>> _pendingLeaveRequests = new();
+    // 6.4: replay protection when SignatureMode is Enforce. Key: PodId:PeerId:Nonce, Value: expiry.
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _joinReplayCache = new();
 
     public PodJoinLeaveService(
         ILogger<PodJoinLeaveService> logger,
         IPodService podService,
         IPodMembershipService membershipService,
-        IPodMembershipVerifier membershipVerifier)
+        IPodMembershipVerifier membershipVerifier,
+        IOptionsMonitor<PodJoinOptions> joinOptions)
     {
         _logger = logger;
         _podService = podService;
         _membershipService = membershipService;
         _membershipVerifier = membershipVerifier;
+        _joinOptions = joinOptions;
     }
 
     /// <inheritdoc/>
@@ -41,6 +50,31 @@ public class PodJoinLeaveService : IPodJoinLeaveService
         try
         {
             _logger.LogInformation("[PodJoinLeave] Processing join request for {PeerId} to join {PodId}", joinRequest.PeerId, joinRequest.PodId);
+
+            // 0. 6.4: When SignatureMode is Enforce, require Nonce and enforce replay protection
+            var mode = _joinOptions.CurrentValue.SignatureMode;
+            if (mode == SignatureMode.Enforce)
+            {
+                if (string.IsNullOrWhiteSpace(joinRequest.Nonce))
+                {
+                    return new PodJoinResult(
+                        Success: false,
+                        PodId: joinRequest.PodId,
+                        PeerId: joinRequest.PeerId,
+                        ErrorMessage: "Nonce is required when PodCore.Join.SignatureMode is Enforce");
+                }
+                var replayKey = $"{joinRequest.PodId}:{joinRequest.PeerId}:{joinRequest.Nonce}";
+                EvictExpiredJoinReplayEntries();
+                if (!_joinReplayCache.TryAdd(replayKey, DateTimeOffset.UtcNow + ReplayCacheTtl))
+                {
+                    _logger.LogWarning("[PodJoinLeave] Replay rejected: duplicate Nonce for {PeerId} in {PodId}", joinRequest.PeerId, joinRequest.PodId);
+                    return new PodJoinResult(
+                        Success: false,
+                        PodId: joinRequest.PodId,
+                        PeerId: joinRequest.PeerId,
+                        ErrorMessage: "Replay detected: nonce already used");
+                }
+            }
 
             // 1. Verify the join request signature
             if (!await VerifyJoinRequestSignatureAsync(joinRequest, cancellationToken))
@@ -460,6 +494,13 @@ public class PodJoinLeaveService : IPodJoinLeaveService
         }
 
         return Task.FromResult(found);
+    }
+
+    private void EvictExpiredJoinReplayEntries()
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var k in _joinReplayCache.Where(e => e.Value < now).Select(e => e.Key).ToList())
+            _joinReplayCache.TryRemove(k, out _);
     }
 
     // Helper methods for signature verification

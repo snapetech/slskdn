@@ -4,6 +4,19 @@
 > **Source**: Comprehensive stub audits for Phases 1-10  
 > **Total New Tasks**: 49
 
+## Reconciliation (2026-01)
+
+**Phase 8 — implemented (40-fixes, overlay):**
+- **T-1421** Ed25519 keypair: `Ed25519KeyPair.Generate()` in `KeyStore.cs` uses NSec `Key.Create(SignatureAlgorithm.Ed25519)` (real Ed25519). ✅
+- **T-1422** KeyedSigner/ControlSigner: `KeyedSigner.cs` (class `ControlSigner`) uses NSec `SignatureAlgorithm.Ed25519.Sign`/`Verify`; canonical + legacy. ✅
+- **T-1423** QuicOverlayServer: Real implementation (QuicListener, AcceptConnectionAsync, HandleConnectionAsync). ✅
+- **T-1425** QuicDataServer: Real implementation (listener, HandleConnectionAsync, RELAY_TCP, GetEffectiveMaxPayloadSize). ✅
+- **T-1429** ControlDispatcher: Uses `IControlEnvelopeValidator` and `IControlSigner`; verification is real. ✅
+
+**Phase 8 — still open:** T-1424 (QuicOverlayClient), T-1426 (QuicDataClient), T-1427 (MeshSyncService "Query mesh neighbors"), T-1428 (MeshSyncService "Get actual username").
+
+**Phases 1–6, 9–10:** Not re-verified; treat as backlog. Promote to `memory-bank/tasks.md` when prioritizing.
+
 ---
 
 ## Phase 1 Gap Tasks

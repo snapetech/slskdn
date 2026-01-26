@@ -13,43 +13,43 @@
 **Status**: Complete (T-300 to T-313)  
 **Branch**: `experimental/brainz`
 
-### Phase 2: Canonical Scoring & Library Health 🔄
-**Status**: Partial (T-400 to T-403 done, T-404+ in progress)  
+### Phase 2: Canonical Scoring & Library Health ✅
+**Status**: Complete (T-400 to T-411)  
 **Branch**: `experimental/brainz`  
 **Tasks**: T-400 to T-411
 
-### Phase 2-Extended: Codec-Specific Fingerprinting 📋
-**Status**: Ready for implementation  
+### Phase 2-Extended: Codec-Specific Fingerprinting ✅
+**Status**: Complete (T-420 to T-430)  
 **Branch**: `experimental/brainz`  
 **Tasks**: T-420 to T-430
 
-### Phase 3: Discovery, Reputation & Fairness 📋
-**Status**: Ready for implementation  
+### Phase 3: Discovery, Reputation & Fairness ✅
+**Status**: Complete (T-500 to T-510)  
 **Branch**: `experimental/brainz`  
 **Tasks**: T-500 to T-510
 
-### Phase 4: Job Manifests & Advanced Features 📋
-**Status**: Ready for implementation  
+### Phase 4: Job Manifests & Advanced Features ✅
+**Status**: Complete (T-600 to T-611)  
 **Branch**: `experimental/brainz`  
 **Tasks**: T-600 to T-611
 
-### Phase 5: Soulbeet Integration 📋
-**Status**: Ready for implementation  
+### Phase 5: Soulbeet Integration ✅
+**Status**: Complete (T-700 to T-712)  
 **Branch**: `experimental/brainz`  
 **Tasks**: T-700 to T-712
 
-### Phase 6: Virtual Soulfind Mesh & Disaster Mode 📋
-**Status**: Ready for implementation  
+### Phase 6: Virtual Soulfind Mesh & Disaster Mode ✅
+**Status**: Complete (T-800 to T-840)  
 **Branch**: `experimental/virtual-soulfind`  
 **Tasks**: T-800 to T-840
 
-### Phase 6X: Legacy Client Compatibility Bridge (Optional) 📋
-**Status**: Ready for implementation  
+### Phase 6X: Legacy Client Compatibility Bridge (Optional) ✅
+**Status**: Complete (T-850 to T-860)  
 **Branch**: `experimental/virtual-soulfind`  
 **Tasks**: T-850 to T-860
 
-### Phase 7: Testing Strategy 📋
-**Status**: Ready for implementation  
+### Phase 7: Testing Strategy ✅
+**Status**: Complete (T-900 to T-915)  
 **Branch**: `experimental/brainz` (parallel with features)  
 **Tasks**: T-900 to T-915
 
@@ -145,62 +145,33 @@
 - T-300 to T-313 (14 tasks)
 - Status: All done
 
-### Phase 2: Canonical Scoring & Library Health
-- **T-400 to T-403**: Done ✅ (AudioVariant, canonical stats, library health scaffolding)
-- **T-404 to T-405**: In progress 🔄 (Library health UI/API, fix actions)
-- **T-406 to T-411**: Ready 📋 (Swarm scheduler, rescue mode)
+### Phase 2: Canonical Scoring & Library Health ✅
+- **T-400 to T-411**: Done ✅ (AudioVariant, canonical stats, library health, swarm scheduler, rescue mode)
+- **T-404 to T-405**: Done ✅ (Library health UI/API, fix actions)
 
-### Phase 2-Extended: Codec-Specific Fingerprinting
-- **T-420 to T-430**: Ready 📋 (11 tasks)
-  - FLAC/MP3/Opus/AAC analyzers
-  - Stream hashes, spectral analysis
-  - Cross-codec deduplication
-  - Heuristic versioning
+### Phase 2-Extended: Codec-Specific Fingerprinting ✅
+- **T-420 to T-430**: Done ✅ (FLAC/MP3/Opus/AAC analyzers, stream hashes, audio_sketch_hash, cross-codec dedup, analyzer migration/--audio-reanalyze)
 
-### Phase 3: Discovery, Reputation & Fairness
-- **T-500 to T-510**: Ready 📋 (11 tasks)
-  - Discography jobs
-  - Label crate mode
-  - Local reputation
-  - Fairness governor
+### Phase 3: Discovery, Reputation & Fairness ✅
+- **T-500 to T-510**: Done ✅ (Discography, label crates, reputation, fairness governor)
 
-### Phase 4: Job Manifests & Advanced Features
-- **T-600 to T-611**: Ready 📋 (12 tasks)
-  - YAML job manifests
-  - Session traces
-  - Warm cache nodes (optional)
-  - Playback-aware swarming (optional)
+### Phase 4: Job Manifests & Advanced Features ✅
+- **T-600 to T-611**: Done ✅ (YAML manifests, session traces, warm cache, playback-aware swarming, streaming diagnostics)
 
-### Phase 5: Soulbeet Integration
-- **T-700 to T-712**: Ready 📋 (13 tasks)
-  - slskd compatibility layer
-  - slskdn-native job APIs
-  - Soulbeet client integration
+### Phase 5: Soulbeet Integration ✅
+- **T-700 to T-712**: Done ✅ (slskd compatibility, slskdn job APIs, Soulbeet integration)
 
-### Phase 6: Virtual Soulfind Mesh
-- **T-800 to T-840**: Ready 📋 (41 tasks)
-  - Capture & normalization
-  - Shadow index over DHT
-  - Scenes/micro-networks
-  - Disaster mode & failover
-  - Integration & polish
+### Phase 6: Virtual Soulfind Mesh ✅
+- **T-800 to T-840**: Done ✅ (Soulseek observer, shadow index/DHT, scenes, disaster mode, recovery, integration)
 
-### Phase 6X: Legacy Client Compatibility Bridge (Optional)
-- **T-850 to T-860**: Ready 📋 (11 tasks)
-  - Bridge service lifecycle
-  - Soulfind proxy mode
-  - MBID resolution from legacy queries
-  - Scene ↔ room mapping
+### Phase 6X: Legacy Client Compatibility Bridge (Optional) ✅
+- **T-850 to T-860**: Done ✅ (Bridge lifecycle, Soulfind proxy, bridge API, MBID resolution, filename synthesis, peer anonymization, room→scene mapping, transfer proxying, config UI, status dashboard, Nicotine+ tests; TASK_STATUS_DASHBOARD.)
 
-### Phase 7: Testing Strategy
-- **T-900 to T-915**: Ready 📋 (16 tasks)
-  - Test harness infrastructure (Soulfind, slskdn clients)
-  - L1 protocol contract tests
-  - L2 multi-client integration tests
-  - L3 disaster mode & mesh-only simulations
-  - CI/CD integration
-  - Feature-specific integration tests
-  - Performance benchmarking
+### Phase 7: Testing Strategy ✅
+- **T-900 to T-915**: Done ✅ (Soulfind/slskdn harnesses, L1/L2/L3 tests, mesh simulator, CI, rescue/canonical/library-health integration tests, perf suite)
+
+### 🔄 In progress: 9 Research implementation (T-901–T-913)
+T-901 Ed25519, T-902 DHT node/routing, T-903 DHT storage/TTL/sigs, T-906 native mesh, T-907 HTTP/WebDAV/S3, T-908 private BitTorrent, T-911 MediaVariant, T-912 metadata facade, T-913 AudioCore. **Unpinned; implementation in progress.** Order: T-912 → T-911 → T-913 → T-901 → T-902 → T-903 → T-906 → T-907 → T-908. Start: T-912. Design/scope: `docs/research/9-research-design-scope.md`.
 
 ---
 
@@ -209,14 +180,15 @@
 | Phase | Duration | Dependencies | Status |
 |-------|----------|--------------|--------|
 | Phase 1 | 4-6 weeks | None | ✅ Complete |
-| Phase 2 (T-400-411) | 6-8 weeks | Phase 1 | 🔄 Partial (T-400-403 done) |
-| Phase 2-Ext (T-420-430) | 2-4 weeks | T-400, T-401 | 📋 Ready |
-| Phase 3 (T-500-510) | 8-10 weeks | Phase 2 | 📋 Ready |
-| Phase 4 (T-600-611) | 6-8 weeks | Phase 2, 3 | 📋 Ready |
-| Phase 5 (T-700-712) | 4-6 weeks | Phase 2, 3 | 📋 Ready |
-| Phase 6 (T-800-840) | 16-20 weeks | All above | 📋 Ready |
-| Phase 6X (T-850-860) | 4-6 weeks | Phase 6 | 📋 Ready (optional) |
-| Phase 7 (T-900-915) | 4-6 weeks | Parallel with features | 📋 Ready |
+| Phase 2 (T-400-411) | 6-8 weeks | Phase 1 | ✅ Complete |
+| Phase 2-Ext (T-420-430) | 2-4 weeks | T-400, T-401 | ✅ Complete |
+| Phase 3 (T-500-510) | 8-10 weeks | Phase 2 | ✅ Complete |
+| Phase 4 (T-600-611) | 6-8 weeks | Phase 2, 3 | ✅ Complete |
+| Phase 5 (T-700-712) | 4-6 weeks | Phase 2, 3 | ✅ Complete |
+| Phase 6 (T-800-840) | 16-20 weeks | All above | ✅ Complete |
+| Phase 6X (T-850-860) | 4-6 weeks | Phase 6 | ✅ Complete |
+| Phase 7 (T-900-915) | 4-6 weeks | Parallel with features | ✅ Complete |
+| 9 Research (T-901–T-913) | TBD | — | 🔄 In progress (start T-912) |
 
 **Total Estimated Timeline**: 50-66 weeks (excluding Phase 6X)  
 **With Phase 6X**: 54-72 weeks

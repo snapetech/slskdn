@@ -1,3 +1,13 @@
+slskdn (0.24.1.slskdn.41-1) stable; urgency=medium
+
+  * CHANGELOG.md: add project CHANGELOG for 40-fixes, I2P, RelayOnly,
+    ExtractPcmSamples, Mesh:SyncSecurity, breaking behavior
+  * config/slskd.example.yml: document security.adversarial.anonymity.relay_only
+    relay_peer_data_endpoints for RelayOnly transport
+  * memory-bank: tasks (CHANGELOG and option docs done), progress, activeContext
+
+ -- snapetech <slskdn@proton.me>  Sun, 25 Jan 2026 12:00:00 +0000
+
 slskdn (0.24.1.slskdn.40-1) stable; urgency=medium
 
   * Bump to 0.24.1-slskdn.40 (slskdn-main-linux-x64.zip)

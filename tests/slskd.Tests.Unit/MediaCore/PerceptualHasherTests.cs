@@ -1,6 +1,7 @@
 namespace slskd.Tests.Unit.MediaCore;
 
 using System;
+using System.IO;
 using slskd;
 using slskd.MediaCore;
 using Xunit;
@@ -340,13 +341,13 @@ public class PerceptualHasherTests
     }
 
     /// <summary>
-    /// §11: AudioUtilities.ExtractPcmSamples is not implemented; throws FeatureNotImplementedException.
+    /// AudioUtilities.ExtractPcmSamples throws FileNotFoundException when the file does not exist.
     /// </summary>
     [Fact]
-    public void ExtractPcmSamples_throws_FeatureNotImplementedException()
+    public void ExtractPcmSamples_throws_FileNotFoundException_when_file_missing()
     {
-        var ex = Assert.Throws<FeatureNotImplementedException>(() => AudioUtilities.ExtractPcmSamples("/any/path.wav"));
-        Assert.Contains("not implemented", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var ex = Assert.Throws<FileNotFoundException>(() => AudioUtilities.ExtractPcmSamples("/nonexistent/path.wav"));
+        Assert.Contains("nonexistent", ex.FileName, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

@@ -99,7 +99,14 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// Current state of the connection.
     /// </summary>
     public ConnectionState State { get; private set; } = ConnectionState.Connecting;
-    
+
+    /// <summary>
+    /// True if we initiated the connection (outbound/client). False if the peer connected to us (inbound/server).
+    /// Used to decide if we can do request-response (e.g. mesh_search_req) on this connection without
+    /// competing with the server's read loop; only outbound connections are used for that.
+    /// </summary>
+    public bool IsOutbound { get; init; }
+
     private MeshOverlayConnection(
         TcpClient tcpClient,
         SslStream sslStream,
@@ -154,8 +161,9 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             {
                 State = ConnectionState.TlsEstablished,
                 CertificateThumbprint = sslStream.RemoteCertificate?.GetCertHashString(),
+                IsOutbound = true,
             };
-            
+
             return connection;
         }
         catch
@@ -164,7 +172,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             throw;
         }
     }
-    
+
     /// <summary>
     /// Create a server connection (inbound).
     /// </summary>

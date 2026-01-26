@@ -63,5 +63,30 @@ namespace slskd.VirtualSoulfind.v2.Backends
         ///     LAN sources (local network shares, etc.).
         /// </summary>
         Lan,
+
+        /// <summary>
+        ///     Native mesh overlay only (no Soulseek, no BitTorrent).
+        /// </summary>
+        /// <remarks>
+        ///     Find candidates via mesh/DHT (e.g. IMeshDirectory.FindPeersByContentAsync),
+        ///     fetch via overlay transfer. Use case: mesh-only, disaster mode, closed communities.
+        /// </remarks>
+        NativeMesh,
+
+        /// <summary>
+        ///     WebDAV (PROPFIND, GET). Remote storage over HTTP.
+        /// </summary>
+        /// <remarks>
+        ///     Domain allowlist; optional Basic/Bearer auth. BackendRef = full WebDAV URL.
+        /// </remarks>
+        WebDav,
+
+        /// <summary>
+        ///     S3-compatible object storage (MinIO, AWS S3, Backblaze B2, etc.).
+        /// </summary>
+        /// <remarks>
+        ///     ListObjectsV2, GetObject. BackendRef = s3://bucket/key. Auth: access/secret or IAM.
+        /// </remarks>
+        S3,
     }
 }

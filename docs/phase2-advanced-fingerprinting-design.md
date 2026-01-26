@@ -610,13 +610,16 @@ Each analyzer is registered in DI and invoked by `AudioAnalyzerService` based on
 
 **Deliverables:**
 
-- Background job to detect stale `analyzer_version`
-- Recompute quality scores from stored raw features
-- CLI command: `slskdn audio reanalyze [--force]`
+- Background job to detect stale `analyzer_version` — **Done:** `AnalyzerMigrationService.MigrateAsync`, uses QualityScorer + TranscodeDetector on stored variant fields.
+- Recompute quality scores from stored raw features — **Done.**
+- CLI: `slskdn audio reanalyze [--force]` — **Done:** `--audio-reanalyze` runs migration at startup; `--audio-reanalyze-force` recomputes all. API: `POST /api/audio/analyzers/migrate?targetVersion=audioqa-1&force=true`.
 
 **Files:**
 
-- `src/slskd/Audio/Jobs/ReanalyzeJob.cs`
+- `src/slskd/Audio/AnalyzerMigrationService.cs` (existing; added `force` param)
+- `src/slskd/Audio/API/AnalyzerMigrationController.cs` (existing; added `force` query)
+- `src/slskd/Core/Options.cs` (Flags: `AudioReanalyze`, `AudioReanalyzeForce`)
+- `src/slskd/Program.cs` (startup hook when `--audio-reanalyze`)
 
 ### T-428: Update CanonicalStatsService with codec-specific logic
 

@@ -1,0 +1,111 @@
+# Default values for slskdn – generic Kubernetes Helm chart
+# Deploy slskdN on any Kubernetes cluster (no TrueCharts/TrueNAS deps)
+
+# Image
+image:
+  repository: slskd/slskdn
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Service
+service:
+  type: ClusterIP
+  main:
+    port: 5030
+  https:
+    enabled: false
+    port: 5031
+
+# Persistence (PVCs; no hostPath)
+persistence:
+  config:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  downloads:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  shares:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  incomplete:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+
+# Environment (slskdN / slskd env vars)
+env:
+  SLSKD_USERNAME: ""
+  SLSKD_PASSWORD: ""
+  SLSKD_LISTEN_PORT: "5030"
+  SLSKD_SHARED_DIR: "/app/shared"
+  SLSKD_DOWNLOADS_DIR: "/app/downloads"
+  SLSKD_INCOMPLETE_DIR: "/app/incomplete"
+  SLSKD_WEBUI: "true"
+  SLSKD_WEBUI_HTTPS: "false"
+  SLSKD_SOULSEEK_NO_LISTEN_PORT: "false"
+  SLSKD_SOULSEEK_LISTEN_PORT: "2234"
+  SLSKD_API_KEYS: ""
+  SLSKD_API_REQUIRE_KEYS: "false"
+  SLSKD_MESH_ENABLED: "false"
+  SLSKD_MESH_PEER_ID: ""
+  SLSKD_MESH_PARENT: ""
+  SLSKD_MESH_NETWORK_NAME: ""
+  SLSKD_MESH_NETWORK_PASSWORD: ""
+  SLSKD_PODCORE_ENABLED: "false"
+  SLSKD_PODCORE_PEER_ID: ""
+  SLSKD_PODCORE_NETWORK_NAME: ""
+  SLSKD_TRANSPORTS_TOR_ENABLED: "false"
+  SLSKD_TRANSPORTS_I2P_ENABLED: "false"
+  SLSKD_TRANSPORTS_RELAY_ENABLED: "false"
+  SLSKD_PRIVACY_ENABLED: "false"
+  SLSKD_PRIVACY_MESSAGE_PADDING: "false"
+  SLSKD_PRIVACY_TIMING_OBFUSCATION: "false"
+  SLSKD_PRIVACY_MESSAGE_BATCHING: "false"
+  SLSKD_GLOBAL_UPLOAD_SPEED_LIMIT: "0"
+  SLSKD_GLOBAL_DOWNLOAD_SPEED_LIMIT: "0"
+  SLSKD_LOG_LEVEL: "info"
+  SLSKD_LOG_FILTER: ""
+
+# Pod
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 568
+  runAsGroup: 568
+  fsGroup: 568
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 568
+  runAsGroup: 568
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Ingress (optional)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: slskdn.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: slskdn-tls
+  #    hosts:
+  #      - slskdn.local

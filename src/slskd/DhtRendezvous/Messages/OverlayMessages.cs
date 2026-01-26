@@ -41,6 +41,16 @@ public static class OverlayMessageType
     public const string Ping = "ping";
     public const string Pong = "pong";
     public const string Disconnect = "disconnect";
+
+    /// <summary>
+    /// Mesh search request (overlay RPC).
+    /// </summary>
+    public const string MeshSearchReq = "mesh_search_req";
+
+    /// <summary>
+    /// Mesh search response (overlay RPC).
+    /// </summary>
+    public const string MeshSearchResp = "mesh_search_resp";
 }
 
 /// <summary>
@@ -191,7 +201,12 @@ public static class OverlayFeatures
     public const string Multipart = "multipart";
     public const string Swarm = "swarm";
     public const string DeltaSync = "delta_sync";
-    
+
+    /// <summary>
+    /// Mesh overlay text search (mesh_search_req / mesh_search_resp).
+    /// </summary>
+    public const string MeshSearch = "mesh_search";
+
     /// <summary>
     /// All features supported by this client.
     /// </summary>
@@ -202,6 +217,73 @@ public static class OverlayFeatures
         Multipart,
         Swarm,
         DeltaSync,
+        MeshSearch,
     };
+}
+
+/// <summary>
+/// File DTO for mesh search response (virtual share path only; never absolute).
+/// </summary>
+public sealed class MeshSearchFileDto
+{
+    [JsonPropertyName("filename")]
+    public string Filename { get; set; } = string.Empty;
+
+    [JsonPropertyName("size")]
+    public long Size { get; set; }
+
+    [JsonPropertyName("extension")]
+    public string? Extension { get; set; }
+
+    [JsonPropertyName("bitrate")]
+    public int? Bitrate { get; set; }
+
+    [JsonPropertyName("duration")]
+    public int? Duration { get; set; }
+
+    [JsonPropertyName("codec")]
+    public string? Codec { get; set; }
+}
+
+/// <summary>
+/// Mesh search request sent over overlay (initiator -> peer).
+/// </summary>
+public sealed class MeshSearchRequestMessage : OverlayMessage
+{
+    [JsonPropertyName("type")]
+    public override string Type => OverlayMessageType.MeshSearchReq;
+
+    [JsonPropertyName("request_id")]
+    public string RequestId { get; set; } = string.Empty;
+
+    [JsonPropertyName("search_text")]
+    public string SearchText { get; set; } = string.Empty;
+
+    [JsonPropertyName("max_results")]
+    public int MaxResults { get; set; }
+
+    [JsonPropertyName("scope")]
+    public string? Scope { get; set; }
+}
+
+/// <summary>
+/// Mesh search response sent over overlay (peer -> initiator).
+/// </summary>
+public sealed class MeshSearchResponseMessage : OverlayMessage
+{
+    [JsonPropertyName("type")]
+    public override string Type => OverlayMessageType.MeshSearchResp;
+
+    [JsonPropertyName("request_id")]
+    public string RequestId { get; set; } = string.Empty;
+
+    [JsonPropertyName("files")]
+    public List<MeshSearchFileDto> Files { get; set; } = new();
+
+    [JsonPropertyName("truncated")]
+    public bool Truncated { get; set; }
+
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
 }
 
