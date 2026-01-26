@@ -98,10 +98,20 @@ public class ShareGroupsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         if (string.IsNullOrWhiteSpace(req.Name)) 
-            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Name is required.", Detail = "Name is required." });
+        {
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Name is required.", Detail = "Name is required." };
+            var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Add("application/problem+json");
+            return result;
+        }
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
-            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends." });
+        {
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends." };
+            var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Add("application/problem+json");
+            return result;
+        }
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
