@@ -170,7 +170,7 @@ export default class SharedWithMe extends Component {
                 const displayName = ownerNickname || share.collection?.ownerUserId || 'Unknown';
                 
                 return (
-                  <Table.Row key={share.id}>
+                  <Table.Row key={share.id} data-testid={`incoming-share-row-${share.collection?.title || 'Untitled'}`}>
                     <Table.Cell>
                       <strong>{share.collection?.title || 'Untitled'}</strong>
                       {share.collection?.description && (
@@ -195,6 +195,7 @@ export default class SharedWithMe extends Component {
                     </Table.Cell>
                     <Table.Cell>
                       <Button
+                        data-testid="incoming-share-open"
                         size="small"
                         primary
                         onClick={() => this.handleViewManifest(share)}
@@ -231,7 +232,7 @@ export default class SharedWithMe extends Component {
             {manifestLoading ? (
               <LoaderSegment />
             ) : manifest ? (
-              <div>
+              <div data-testid="shared-manifest">
                 {manifest.description && (
                   <p style={{ marginBottom: '1em' }}>{manifest.description}</p>
                 )}
@@ -256,6 +257,7 @@ export default class SharedWithMe extends Component {
                           <Table.Cell>
                             {item.streamUrl && (
                               <Button
+                                data-testid="incoming-stream"
                                 size="small"
                                 primary
                                 onClick={() => {

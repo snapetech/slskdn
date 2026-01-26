@@ -34,12 +34,15 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@craco/craco": "^7.0.0",
+    "@playwright/test": "^1.40.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@semantic-ui-react/craco-less": "^3.0.0",
     "@semantic-ui-react/css-patch": "^1.0.0",
+    "@types/node": "^20.0.0",
     "eslint": "^8.56.0",
     "eslint-config-canonical": "^42.8.1",
-    "react-scripts": "^5.0.0"
+    "react-scripts": "^5.0.0",
+    "typescript": "^5.0.0"
   },
   "homepage": ".",
   "name": "web",
@@ -57,7 +60,9 @@
     "postinstall": "semantic-ui-css-patch",
     "start": "craco start",
     "test": "craco test",
-    "test-unattended": "craco test --watchAll false --passWithNoTests"
+    "test-unattended": "craco test --watchAll false --passWithNoTests",
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --reporter=line"
   },
   "version": "0.1.0"
 }

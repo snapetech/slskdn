@@ -229,7 +229,7 @@ export default class ShareGroups extends Component {
         {error && <ErrorSegment caption={error} />}
 
         <div style={{ marginBottom: '1em' }}>
-          <Button primary onClick={() => this.setState({ createModalOpen: true })}>
+          <Button data-testid="groups-create" primary onClick={() => this.setState({ createModalOpen: true })}>
             <Icon name="plus" />
             Create Group
           </Button>
@@ -257,7 +257,7 @@ export default class ShareGroups extends Component {
             </Table.Header>
             <Table.Body>
               {shareGroups.map((group) => (
-                <Table.Row key={group.id}>
+                <Table.Row key={group.id} data-testid={`group-row-${group.name}`}>
                   <Table.Cell>{group.name}</Table.Cell>
                   <Table.Cell>
                     <Button
@@ -280,6 +280,7 @@ export default class ShareGroups extends Component {
                   <Table.Cell>{new Date(group.createdAt).toLocaleDateString()}</Table.Cell>
                   <Table.Cell>
                     <Button
+                      data-testid="group-add-member"
                       size="small"
                       primary
                       onClick={() => this.setState({ addMemberModalOpen: true, selectedGroup: group })}
@@ -309,6 +310,7 @@ export default class ShareGroups extends Component {
           <Modal.Content>
             <Form>
               <Form.Input
+                data-testid="groups-name-input"
                 label="Group Name"
                 value={newGroupName}
                 onChange={(e) => this.setState({ newGroupName: e.target.value })}
@@ -320,7 +322,7 @@ export default class ShareGroups extends Component {
             <Button onClick={() => this.setState({ createModalOpen: false, newGroupName: '' })}>
               Cancel
             </Button>
-            <Button primary onClick={this.handleCreateGroup} disabled={!newGroupName.trim()}>
+            <Button data-testid="groups-create-submit" primary onClick={this.handleCreateGroup} disabled={!newGroupName.trim()}>
               Create
             </Button>
           </Modal.Actions>
@@ -343,6 +345,7 @@ export default class ShareGroups extends Component {
                 <Form.Field>
                   <label>Add from Contacts</label>
                   <Dropdown
+                    data-testid="group-member-picker"
                     placeholder="Select a contact"
                     fluid
                     search
@@ -393,6 +396,7 @@ export default class ShareGroups extends Component {
               Cancel
             </Button>
             <Button 
+              data-testid="group-member-add-submit"
               primary 
               onClick={this.handleAddMember}
               disabled={!selectedContactId && !selectedUserId}

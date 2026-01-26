@@ -409,67 +409,67 @@ class App extends Component {
             ) : (
               <>
                 <Link to={`${urlBase}/searches`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-search">
                     <Icon name="search" />
                     Search
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/wishlist`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-wishlist">
                     <Icon name="star" />
                     Wishlist
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/downloads`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-downloads">
                     <Icon name="download" />
                     Downloads
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/uploads`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-uploads">
                     <Icon name="upload" />
                     Uploads
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/rooms`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-rooms">
                     <Icon name="comments" />
                     Rooms
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/chat`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-chat">
                     <Icon name="comment" />
                     Chat
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/users`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-users">
                     <Icon name="users" />
                     Users
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/contacts`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-contacts">
                     <Icon name="address book" />
                     Contacts
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/sharegroups`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-groups">
                     <Icon name="users" />
                     Share Groups
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/shared`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-shared-with-me">
                     <Icon name="share" />
                     Shared with Me
                   </Menu.Item>
                 </Link>
                 <Link to={`${urlBase}/browse`}>
-                  <Menu.Item>
+                  <Menu.Item data-testid="nav-browse">
                     <Icon name="folder open" />
                     Browse
                   </Menu.Item>
@@ -558,7 +558,7 @@ class App extends Component {
                 </Modal>
               )}
               <Link to={`${urlBase}/system`}>
-                <Menu.Item>
+                <Menu.Item data-testid="nav-system">
                   <Icon name="cogs" />
                   System
                 </Menu.Item>
@@ -584,7 +584,7 @@ class App extends Component {
                   }
                   size="mini"
                   trigger={
-                    <Menu.Item>
+                    <Menu.Item data-testid="logout">
                       <Icon name="sign-out" />
                       Log Out
                     </Menu.Item>

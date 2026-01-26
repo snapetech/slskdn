@@ -183,7 +183,7 @@ export default class Contacts extends Component {
                   <Icon name="users" />
                   No contacts yet
                 </Header>
-                <Button primary onClick={this.handleCreateInvite}>
+                <Button data-testid="contacts-create-invite" primary onClick={this.handleCreateInvite}>
                   Create Invite
                 </Button>
               </Segment>
@@ -200,7 +200,7 @@ export default class Contacts extends Component {
                 </Table.Header>
                 <Table.Body>
                   {contacts.map((contact) => (
-                    <Table.Row key={contact.id}>
+                    <Table.Row key={contact.id} data-testid={`contact-row-${contact.nickname || contact.peerId.substring(0, 8)}`}>
                       <Table.Cell>{contact.nickname || 'Unnamed'}</Table.Cell>
                       <Table.Cell>
                         <code style={{ fontSize: '0.85em' }}>
@@ -298,11 +298,11 @@ export default class Contacts extends Component {
         {error && <ErrorSegment caption={error} />}
 
         <div style={{ marginBottom: '1em' }}>
-          <Button primary onClick={this.handleCreateInvite}>
+          <Button data-testid="contacts-create-invite" primary onClick={this.handleCreateInvite}>
             <Icon name="plus" />
             Create Invite
           </Button>
-          <Button onClick={() => this.setState({ addFriendModalOpen: true })}>
+          <Button data-testid="contacts-add-friend" onClick={() => this.setState({ addFriendModalOpen: true })}>
             <Icon name="user plus" />
             Add Friend
           </Button>
@@ -340,6 +340,7 @@ export default class Contacts extends Component {
             <p>Share this invite link:</p>
             <div style={{ marginBottom: '1em' }}>
               <input
+                data-testid="contacts-invite-output"
                 readOnly
                 value={inviteLink || ''}
                 style={{ width: '100%', padding: '0.5em' }}
@@ -348,7 +349,7 @@ export default class Contacts extends Component {
             </div>
             {inviteFriendCode && (
               <p>
-                Friend Code: <code>{inviteFriendCode}</code>
+                Friend Code: <code data-testid="contacts-invite-friend-code">{inviteFriendCode}</code>
               </p>
             )}
             <p>
@@ -382,6 +383,7 @@ class AddFriendForm extends Component {
         <div style={{ marginBottom: '1em' }}>
           <label>Invite Link:</label>
           <input
+            data-testid="contacts-add-invite-input"
             type="text"
             value={this.state.inviteLink}
             onChange={(e) => this.setState({ inviteLink: e.target.value })}
@@ -392,6 +394,7 @@ class AddFriendForm extends Component {
         <div style={{ marginBottom: '1em' }}>
           <label>Nickname:</label>
           <input
+            data-testid="contacts-contact-nickname"
             type="text"
             value={this.state.nickname}
             onChange={(e) => this.setState({ nickname: e.target.value })}
@@ -399,7 +402,7 @@ class AddFriendForm extends Component {
             style={{ width: '100%', padding: '0.5em' }}
           />
         </div>
-        <Button type="submit" primary>
+        <Button data-testid="contacts-add-invite-submit" type="submit" primary>
           Add Contact
         </Button>
       </form>

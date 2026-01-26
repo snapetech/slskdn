@@ -73,6 +73,7 @@ const LoginForm = ({ error, loading, onLoginAttempt }) => {
           <Form size="large">
             <Segment raised>
               <Input
+                data-testid="login-username"
                 disabled={loading}
                 fluid
                 icon="user"
@@ -84,6 +85,7 @@ const LoginForm = ({ error, loading, onLoginAttempt }) => {
                 ref={usernameInput}
               />
               <Form.Input
+                data-testid="login-password"
                 disabled={loading}
                 fluid
                 icon="lock"
@@ -103,6 +105,7 @@ const LoginForm = ({ error, loading, onLoginAttempt }) => {
             </Segment>
             <Button
               className="login-button"
+              data-testid="login-submit"
               disabled={!ready || loading}
               fluid
               loading={loading}
