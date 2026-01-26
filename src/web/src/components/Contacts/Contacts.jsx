@@ -90,7 +90,19 @@ export default class Contacts extends Component {
         error: null,
       });
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message;
+      // Extract error message from response
+      let errorMsg = error.message;
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMsg = error.response.data.error;
+        } else {
+          errorMsg = JSON.stringify(error.response.data);
+        }
+      }
       this.setState({ 
         error: errorMsg || 'Failed to create invite. Please ensure Identity & Friends is enabled and configured.',
         createInviteModalOpen: false,

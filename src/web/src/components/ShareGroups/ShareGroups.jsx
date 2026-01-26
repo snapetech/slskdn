@@ -40,9 +40,10 @@ export default class ShareGroups extends Component {
       this.setState({ loading: true, error: null });
       const [groupsRes, contactsRes] = await Promise.all([
         collectionsAPI.getShareGroups().catch((err) => {
-          // If 401/403/404/400, feature not enabled or not authenticated - return empty list
+          // If 401/403/404, feature not enabled or not authenticated - return empty list
+          // 400 errors might have useful messages, so let them through
           if (err.response?.status === 401 || err.response?.status === 403 || 
-              err.response?.status === 404 || err.response?.status === 400) {
+              err.response?.status === 404) {
             return { data: [] };
           }
           throw err;
@@ -55,13 +56,25 @@ export default class ShareGroups extends Component {
         loading: false,
       });
     } catch (error) {
-      // Only show error if it's not an auth/feature issue (which we handle above)
+      // Extract error message from response
+      let errorMsg = error.message;
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMsg = error.response.data.error;
+        } else {
+          errorMsg = JSON.stringify(error.response.data);
+        }
+      }
+      // Only suppress errors for 401/403/404 (auth/feature disabled)
       const isAuthOrFeatureError = error.response?.status === 401 || 
                                    error.response?.status === 403 || 
-                                   error.response?.status === 404 ||
-                                   error.response?.status === 400;
+                                   error.response?.status === 404;
       this.setState({ 
-        error: isAuthOrFeatureError ? null : (error.response?.data || error.message), 
+        error: isAuthOrFeatureError ? null : errorMsg, 
         loading: false 
       });
     }
@@ -73,7 +86,19 @@ export default class ShareGroups extends Component {
       this.setState({ createModalOpen: false, newGroupName: '', error: null });
       await this.loadData();
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message;
+      // Extract error message from response
+      let errorMsg = error.message;
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMsg = error.response.data.error;
+        } else {
+          errorMsg = JSON.stringify(error.response.data);
+        }
+      }
       this.setState({ error: errorMsg || 'Failed to create share group. Please configure Soulseek username or enable Identity & Friends.' });
     }
   };
@@ -90,7 +115,19 @@ export default class ShareGroups extends Component {
       this.setState({ addMemberModalOpen: false, selectedContactId: null, selectedUserId: null, error: null });
       await this.loadData();
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message;
+      // Extract error message from response
+      let errorMsg = error.message;
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMsg = error.response.data.error;
+        } else {
+          errorMsg = JSON.stringify(error.response.data);
+        }
+      }
       this.setState({ error: errorMsg || 'Failed to add member. Please configure Soulseek username or enable Identity & Friends.' });
     }
   };
