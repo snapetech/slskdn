@@ -2510,40 +2510,57 @@ using slskd.Telemetry;
             // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
             // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
             
-            // DIAGNOSTIC: Response body diagnostic middleware to find what's clearing 400 responses
-            // This should be removed once we identify the offending middleware
+            // WORKAROUND: Response body finalizer middleware to ensure 400 responses have bodies
+            // This buffers the response and ensures it's written even if something clears it
+            // TODO: Find and fix the middleware that's clearing response bodies for 400 status codes
             app.Use(async (ctx, next) =>
             {
+                // Only buffer API routes to reduce overhead
+                if (!ctx.Request.Path.StartsWithSegments("/api"))
+                {
+                    await next();
+                    return;
+                }
+
                 var originalBody = ctx.Response.Body;
                 await using var buffer = new MemoryStream();
                 ctx.Response.Body = buffer;
 
                 await next();
 
-                // Restore
+                // Restore original body
                 ctx.Response.Body = originalBody;
                 buffer.Position = 0;
 
                 var bufferLen = buffer.Length;
                 var statusCode = ctx.Response.StatusCode;
-                var contentType = ctx.Response.ContentType;
-                var contentLengthHeader = ctx.Response.ContentLength;
 
-                // Only log for API routes with 400 status to reduce noise
-                if (ctx.Request.Path.StartsWithSegments("/api") && statusCode == 400)
+                // For 400-499 status codes, ensure the body is written
+                if (statusCode >= 400 && statusCode < 500)
                 {
-                    Log.Warning("[BodyDiag] {Method} {Path} -> {StatusCode} bufferLen={BufferLen} contentType={ContentType} contentLengthHeader={ContentLengthHeader}",
-                        ctx.Request.Method, ctx.Request.Path, statusCode, bufferLen, contentType ?? "null", contentLengthHeader?.ToString() ?? "null");
-                }
-
-                if (bufferLen > 0)
-                {
-                    // If some middleware set Content-Length=0, overwrite it correctly
-                    if (contentLengthHeader == 0 || contentLengthHeader == null)
+                    if (bufferLen > 0)
                     {
-                        ctx.Response.ContentLength = bufferLen;
+                        // Body was written - copy it to original stream
+                        if (ctx.Response.ContentLength == 0 || ctx.Response.ContentLength == null)
+                        {
+                            ctx.Response.ContentLength = bufferLen;
+                        }
+                        await buffer.CopyToAsync(originalBody);
                     }
-                    await buffer.CopyToAsync(originalBody);
+                    else
+                    {
+                        // Body is empty - log warning for debugging
+                        Log.Warning("[BodyFinalizer] {Method} {Path} -> {StatusCode} has empty body (bufferLen=0)",
+                            ctx.Request.Method, ctx.Request.Path, statusCode);
+                    }
+                }
+                else
+                {
+                    // For other status codes, just copy the buffer
+                    if (bufferLen > 0)
+                    {
+                        await buffer.CopyToAsync(originalBody);
+                    }
                 }
             });
 
@@ -2659,6 +2676,7 @@ using slskd.Telemetry;
 
                 await next();
             });
+
 
             if (OptionsAtStartup.Feature.Swagger)
             {
