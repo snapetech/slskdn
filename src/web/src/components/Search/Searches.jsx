@@ -283,6 +283,7 @@ const Searches = ({ server } = {}) => {
           input={
             <input
               data-lpignore="true"
+              data-testid="search-input"
               placeholder={
                 server.isConnected
                   ? 'Search phrase'

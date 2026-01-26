@@ -77,4 +77,14 @@ export const T = {
   sharesList: "shares-list",
   collectionItems: "collection-items",
   groupMembers: "group-members",
+  
+  // Search
+  searchInput: "search-input",
+  searchResult: "search-result",
+  
+  // Library/Browse
+  libraryContent: "library-content",
+  browseContent: "browse-content",
+  libraryItem: "library-item",
+  browseItem: "browse-item",
 } as const;

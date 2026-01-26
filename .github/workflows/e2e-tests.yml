@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: tests/e2e/package-lock.json
+          cache-dependency-path: src/web/package-lock.json
 
       - name: Build Backend
         run: |
@@ -48,14 +48,14 @@ jobs:
 
       - name: Install E2E Dependencies
         run: |
-          cd tests/e2e
+          cd src/web
           npm ci
           npx playwright install --with-deps chromium
 
       - name: Run E2E Tests
         run: |
-          cd tests/e2e
-          npm test
+          cd src/web
+          npm run test:e2e:ci
         env:
           SLSKDN_TEST_NO_CONNECT: true
           SLSKDN_TEST_KEEP_ARTIFACTS: ${{ github.event_name == 'workflow_dispatch' }}
@@ -66,7 +66,7 @@ jobs:
         with:
           name: e2e-artifacts
           path: |
-            tests/e2e/test-results/
+            src/web/e2e/test-results/
             /tmp/slskdn-test-*/
           retention-days: 7
           if-no-files-found: ignore
@@ -76,6 +76,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: tests/e2e/playwright-report/
+          path: src/web/e2e/playwright-report/
           retention-days: 7
           if-no-files-found: ignore
