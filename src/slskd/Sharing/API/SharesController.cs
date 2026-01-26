@@ -104,11 +104,13 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
-        if (req.CollectionId == default) return BadRequest("CollectionId is required.");
-        if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId)) return BadRequest("AudienceType and AudienceId are required.");
+        if (req.CollectionId == default) 
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "CollectionId is required.", Detail = "CollectionId is required." });
+        if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId)) 
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "AudienceType and AudienceId are required.", Detail = "AudienceType and AudienceId are required." });
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
-            return BadRequest("Cannot create share: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share: user identity not available. Please configure Soulseek username or enable Identity & Friends." });
         var c = await _sharing.GetCollectionAsync(req.CollectionId, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         var g = new ShareGrant

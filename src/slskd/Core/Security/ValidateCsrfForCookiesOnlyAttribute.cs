@@ -112,12 +112,14 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             Log.Warning("[CSRF] Token validation failed for {Method} {Path}: {Message}", 
                 request.Method, request.Path, ex.Message);
             
-            context.Result = new BadRequestObjectResult(new
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
             {
-                error = "CSRF token validation failed",
-                message = "This request requires a valid CSRF token. If you're using the web UI, please try refreshing the page. If you're using the API, use JWT or API key authentication instead of cookies.",
-                hint = "Web UI: Refresh page | API: Use Authorization header with Bearer token or X-API-Key header"
-            });
+                Status = 400,
+                Title = "CSRF token validation failed",
+                Detail = "This request requires a valid CSRF token. If you're using the web UI, please try refreshing the page. If you're using the API, use JWT or API key authentication instead of cookies."
+            };
+            problem.Extensions["hint"] = "Web UI: Refresh page | API: Use Authorization header with Bearer token or X-API-Key header";
+            context.Result = new BadRequestObjectResult(problem);
         }
         catch (Exception ex)
         {
@@ -125,11 +127,13 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             Log.Error(ex, "[CSRF] Unexpected error during token validation for {Method} {Path}", 
                 request.Method, request.Path);
             
-            context.Result = new BadRequestObjectResult(new
+            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
             {
-                error = "CSRF validation error",
-                message = ex.Message
-            });
+                Status = 400,
+                Title = "CSRF validation error",
+                Detail = ex.Message
+            };
+            context.Result = new BadRequestObjectResult(problem);
         }
     }
 }

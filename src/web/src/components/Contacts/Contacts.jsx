@@ -90,15 +90,19 @@ export default class Contacts extends Component {
         error: null,
       });
     } catch (error) {
-      // Extract error message from response
+      // Extract error message from response (supports ProblemDetails, object with message/error, or string)
       let errorMsg = error.message;
       if (error.response?.data) {
         if (typeof error.response.data === 'string') {
           errorMsg = error.response.data;
+        } else if (error.response.data.detail) {
+          errorMsg = error.response.data.detail; // ProblemDetails format
         } else if (error.response.data.message) {
           errorMsg = error.response.data.message;
         } else if (error.response.data.error) {
           errorMsg = error.response.data.error;
+        } else if (error.response.data.title) {
+          errorMsg = error.response.data.title; // ProblemDetails title as fallback
         } else {
           errorMsg = JSON.stringify(error.response.data);
         }

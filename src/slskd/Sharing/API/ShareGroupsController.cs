@@ -97,10 +97,11 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateShareGroupRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
-        if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest("Name is required.");
+        if (string.IsNullOrWhiteSpace(req.Name)) 
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Name is required.", Detail = "Name is required." });
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
-            return BadRequest("Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends." });
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
@@ -165,7 +166,7 @@ public class ShareGroupsController : ControllerBase
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
-            return BadRequest("Cannot add member: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot add member: user identity not available. Please configure Soulseek username or enable Identity & Friends." });
         var g = await _sharing.GetShareGroupAsync(id, ct);
         if (g == null || g.OwnerUserId != currentUserId) return NotFound();
 
@@ -180,7 +181,7 @@ public class ShareGroupsController : ControllerBase
         }
         else
         {
-            return BadRequest("UserId or PeerId is required.");
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "UserId or PeerId is required.", Detail = "UserId or PeerId is required." });
         }
 
         return NoContent();
