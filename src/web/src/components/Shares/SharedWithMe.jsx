@@ -34,7 +34,14 @@ export default class SharedWithMe extends Component {
     try {
       this.setState({ loading: true, error: null });
       const [sharesRes, contactsRes] = await Promise.all([
-        collectionsAPI.getShares(),
+        collectionsAPI.getShares().catch((err) => {
+          // If 401/403, user isn't authenticated - return empty list
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            return { data: [] };
+          }
+          // For other errors, rethrow to be caught below
+          throw err;
+        }),
         identityAPI.getContacts().catch(() => ({ data: [] })), // Gracefully handle if Identity not enabled
       ]);
       
@@ -57,7 +64,12 @@ export default class SharedWithMe extends Component {
         loading: false,
       });
     } catch (error) {
-      this.setState({ error: error.response?.data || error.message, loading: false });
+      // Only show error if it's not an auth issue (which we handle above)
+      const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+      this.setState({ 
+        error: isAuthError ? null : (error.response?.data || error.message), 
+        loading: false 
+      });
     }
   };
 

@@ -2926,3 +2926,30 @@ See `COMPILE_FIX_FOLLOWUP.md` for detailed list:
 - All 2430 unit tests passing.
 - Build successful (0 errors).
 
+### QUIC Overlay Fault Tolerance, Identity Fallback, Logs Improvements
+
+**QUIC Overlay Server Fault Tolerance:**
+- Added graceful error handling for port binding failures (`SocketException` with `AddressAlreadyInUse` or other errors).
+- When QUIC overlay fails to bind, mesh continues operating in degraded mode with DHT, relay, and hole punching still functional.
+- Only direct inbound QUIC connections are unavailable in degraded mode.
+- Matches the fault-tolerant pattern used by UDP overlay server.
+- Clear warning logs explain degraded mode to users.
+
+**Sharing Controllers - Identity & Friends Fallback:**
+- Changed `CurrentUserId` property to async `GetCurrentUserIdAsync()` method in `CollectionsController`, `ShareGroupsController`, and `SharesController`.
+- Falls back to Identity & Friends `PeerId` (via `IProfileService.GetMyProfileAsync`) when Soulseek username is unavailable.
+- Enables sharing features for users who don't have Soulseek configured but are using Identity & Friends.
+- All methods updated to use `await GetCurrentUserIdAsync(ct)` instead of synchronous property access.
+
+**Logs Page Error Handling:**
+- Improved SignalR hub connection error handling:
+  - Added error parameter to `onclose` handler with console error logging.
+  - Added `.catch()` to `hub.start()` with error logging and state update.
+- Moved filter buttons outside the `connected` check so they're always visible, even when disconnected.
+- Better user experience when connection issues occur.
+
+**Test Results:**
+- All 2294 unit tests passing.
+- Build successful (0 errors).
+- Committed to `dev/40-fixes` branch.
+

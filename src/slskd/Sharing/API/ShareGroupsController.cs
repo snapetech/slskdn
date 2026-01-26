@@ -71,6 +71,9 @@ public class ShareGroupsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        // If we can't determine user identity, return empty list instead of error
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return Ok(new List<ShareGroup>());
         var list = await _sharing.GetShareGroupsByOwnerAsync(currentUserId, ct);
         return Ok(list);
     }

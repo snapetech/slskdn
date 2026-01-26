@@ -74,6 +74,9 @@ public class SharesController : ControllerBase
     {
         if (!CollectionsEnabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        // If we can't determine user identity, return empty list instead of error
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return Ok(new List<ShareGrant>());
         var list = await _sharing.GetShareGrantsAccessibleByUserAsync(currentUserId, ct);
         return Ok(list);
     }

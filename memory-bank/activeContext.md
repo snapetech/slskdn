@@ -26,7 +26,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Current Task**: —
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Completed and committed Phase 4 & 5 (ShareGroups/Collections/Streaming). Phase 4: Mesh search improvements (MediaKinds/ContentId/Hash, MeshParallelSearch flag). Phase 5: IMeshContentFetcher and relay streaming fallback endpoint. All phases (1-5) complete. Committed and pushed to dev/40-fixes. All 2430 tests passing.
+- **Last Activity**: Completed QUIC overlay fault tolerance, Identity fallback for sharing controllers, and improved logs error handling. QUIC overlay gracefully handles port binding failures (degraded mode). Sharing controllers now fall back to Identity & Friends PeerId when Soulseek username unavailable. Logs page has better SignalR error handling and always-visible filter buttons. All 2294 tests passing. Committed to dev/40-fixes.
 
 ---
 

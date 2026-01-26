@@ -72,6 +72,9 @@ public class CollectionsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        // If we can't determine user identity, return empty list instead of error
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return Ok(new List<Collection>());
         var list = await _sharing.GetCollectionsByOwnerAsync(currentUserId, ct);
         return Ok(list);
     }
