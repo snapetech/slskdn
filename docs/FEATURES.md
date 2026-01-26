@@ -178,6 +178,8 @@ Application-specific fetch and relay capabilities without becoming a generic pro
 
 ### Logging & Metrics
 - **No PII**: Logs/metrics never contain Soulseek usernames, IPs, secrets
+- **Logs Page Filtering**: Filter logs by level (All, Info, Warn, Error, Debug) with count display
+- **Reduced Noise**: CSRF validation logs for safe methods moved to Verbose level (not shown in default views)
 - **Low Cardinality**: Metrics use low-cardinality labels only
 - **Audit Trail**: All mutating operations logged with origin
 

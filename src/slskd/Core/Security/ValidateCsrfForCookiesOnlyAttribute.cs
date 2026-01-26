@@ -44,18 +44,16 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
     {
         var request = context.HttpContext.Request;
         
-        // Log that the attribute was invoked (Debug level to reduce noise)
-        Log.Debug("[CSRF] Attribute invoked for {Method} {Path}", request.Method, request.Path);
-        
         // 2. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE) - CHECK FIRST
         // NOTE: This check must happen BEFORE any other checks to ensure GET requests are never validated
         if (SafeMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
         {
-            Log.Debug("[CSRF] Skipping validation for safe method: {Method} {Path}", request.Method, request.Path);
+            // Verbose level - safe methods are very common and don't need logging
+            Log.Verbose("[CSRF] Skipping validation for safe method: {Method} {Path}", request.Method, request.Path);
             return; // Safe method - no CSRF needed
         }
         
-        Log.Debug("[CSRF] Processing non-safe method: {Method} {Path}", request.Method, request.Path);
+        Log.Verbose("[CSRF] Processing non-safe method: {Method} {Path}", request.Method, request.Path);
         
         // 1. Exempt endpoints with [AllowAnonymous] attribute (like login)
         var endpoint = context.HttpContext.GetEndpoint();
@@ -99,7 +97,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
         }
 
         // 7. This is a cookie-based request (web UI) - validate CSRF token
-        Log.Debug("[CSRF] Validating CSRF token for cookie-based request: {Method} {Path}", 
+        Log.Verbose("[CSRF] Validating CSRF token for cookie-based request: {Method} {Path}", 
             request.Method, request.Path);
 
         var antiforgery = context.HttpContext.RequestServices.GetRequiredService<IAntiforgery>();
@@ -107,7 +105,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
         try
         {
             await antiforgery.ValidateRequestAsync(context.HttpContext);
-            Log.Debug("[CSRF] Token validation successful for {Path}", request.Path);
+            Log.Verbose("[CSRF] Token validation successful for {Path}", request.Path);
         }
         catch (AntiforgeryValidationException ex)
         {

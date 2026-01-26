@@ -106,6 +106,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Consistent Error Handling**: Matches the fault-tolerant pattern used by QUIC overlay servers.
   - **Use Case**: Enables mesh operation behind firewalls where port forwarding is not available, relying on outbound connections, DHT, and relay services for connectivity.
 
+### User Interface Improvements
+
+- **Logs Page Enhancements**: Improved log viewing experience with reduced noise and filtering capabilities.
+  - **CSRF Logging Noise Reduction**: CSRF Debug logs for safe HTTP methods (GET, HEAD, OPTIONS, TRACE) and successful validations changed to Verbose level, reducing noise in default log views.
+  - **Log Level Filtering**: Added filter buttons (All, Info, Warn, Error, Debug) to the logs page for easy filtering by log level.
+  - **Log Count Display**: Shows count of filtered logs vs total logs (e.g., "Showing 50 of 500 logs").
+  - **Improved Readability**: Users can now focus on specific log levels (warnings, errors) without scrolling through verbose debug information.
+
 ### Security & hardening (40-fixes, dev/40-fixes)
 
 - **EnforceSecurity** (`web.enforce_security`): When `true`, enables strict auth, CORS, startup checks via `HardeningValidator`, and automatic 400 for invalid `ModelState` (`SuppressModelStateInvalidFilter = false`). Use for repeatable hardened testing.

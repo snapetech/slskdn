@@ -89,6 +89,8 @@
 
 - [x] **Mesh UDP Overlay Fault Tolerance**: UDP overlay server now gracefully handles port binding failures (address already in use, firewall blocked). Mesh continues operating in degraded mode: DHT operations, relay/beacon services, and hole punching remain functional. Only direct inbound UDP connections are unavailable. Clear warning logs explain degraded mode. Matches fault-tolerant pattern used by QUIC overlay servers. Enables mesh operation behind firewalls without port forwarding. **Complete** (2026-01-26): UdpOverlayServer updated with graceful error handling, all 2430 unit tests and 190 integration tests passing.
 
+- [x] **Logs Page Improvements**: Reduced CSRF logging noise and added log level filtering to logs page. CSRF Debug logs for safe methods (GET requests) and successful validations changed to Verbose level (won't appear in default views). Added filter buttons (All, Info, Warn, Error, Debug) to logs page with count display. **Complete** (2026-01-26): ValidateCsrfForCookiesOnlyAttribute updated, Logs component enhanced with filtering UI, all 2430 unit tests and 190 integration tests passing.
+
 ---
 
 ## Packaging & Distribution
