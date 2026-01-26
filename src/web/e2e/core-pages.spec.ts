@@ -1,12 +1,31 @@
 import { test, expect } from "@playwright/test";
-import { NODES } from "./env";
+import { NODES, shouldLaunchNodes } from "./env";
 import { waitForHealth, login, clickNav } from "./helpers";
 import { T } from "./selectors";
+import { MultiPeerHarness } from "./harness/MultiPeerHarness";
 
 test.describe("core pages", () => {
+  let harness: MultiPeerHarness | null = null;
+
+  test.beforeAll(async () => {
+    if (shouldLaunchNodes()) {
+      harness = new MultiPeerHarness();
+      await harness.startNode('A', 'test-data/slskdn-test-fixtures/music', {
+        noConnect: process.env.SLSKDN_TEST_NO_CONNECT === 'true'
+      });
+    }
+  });
+
+  test.afterAll(async () => {
+    if (harness) {
+      await harness.stopAll();
+    }
+  });
+
   test("system_page_loads", async ({ page, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
-    await login(page, NODES.A);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    await waitForHealth(request, nodeA.baseUrl);
+    await login(page, nodeA);
 
     await clickNav(page, T.navSystem);
     await expect(page).toHaveURL(/\/system/);
@@ -20,8 +39,9 @@ test.describe("core pages", () => {
   });
 
   test("downloads_page_loads", async ({ page, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
-    await login(page, NODES.A);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    await waitForHealth(request, nodeA.baseUrl);
+    await login(page, nodeA);
 
     await clickNav(page, T.navDownloads);
     await expect(page).toHaveURL(/\/downloads/);
@@ -30,8 +50,9 @@ test.describe("core pages", () => {
   });
 
   test("uploads_page_loads", async ({ page, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
-    await login(page, NODES.A);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    await waitForHealth(request, nodeA.baseUrl);
+    await login(page, nodeA);
 
     await clickNav(page, T.navUploads);
     await expect(page).toHaveURL(/\/uploads/);
@@ -40,8 +61,9 @@ test.describe("core pages", () => {
   });
 
   test("rooms_chat_users_pages_graceful_offline", async ({ page, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
-    await login(page, NODES.A);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    await waitForHealth(request, nodeA.baseUrl);
+    await login(page, nodeA);
 
     for (const nav of [T.navRooms, T.navChat, T.navUsers]) {
       await clickNav(page, nav);

@@ -1,25 +1,48 @@
 import { test, expect } from "@playwright/test";
-import { NODES } from "./env";
+import { NODES, shouldLaunchNodes } from "./env";
 import { waitForHealth, login, clickNav } from "./helpers";
 import { T } from "./selectors";
+import { MultiPeerHarness } from "./harness/MultiPeerHarness";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("multi-peer sharing", () => {
+  let harness: MultiPeerHarness | null = null;
   const groupName = "E2E Crew";
   const collectionTitle = "E2E Playlist";
 
+  test.beforeAll(async () => {
+    if (shouldLaunchNodes()) {
+      harness = new MultiPeerHarness();
+      await harness.startNode('A', 'test-data/slskdn-test-fixtures/music', {
+        noConnect: process.env.SLSKDN_TEST_NO_CONNECT === 'true'
+      });
+      await harness.startNode('B', 'test-data/slskdn-test-fixtures/book', {
+        noConnect: process.env.SLSKDN_TEST_NO_CONNECT === 'true'
+      });
+    }
+  });
+
+  test.afterAll(async () => {
+    if (harness) {
+      await harness.stopAll();
+    }
+  });
+
   test("invite_add_friend", async ({ browser, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
-    await waitForHealth(request, NODES.B.baseUrl);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    const nodeB = harness ? harness.getNode('B').nodeCfg : NODES.B;
+    
+    await waitForHealth(request, nodeA.baseUrl);
+    await waitForHealth(request, nodeB.baseUrl);
 
     const ctxA = await browser.newContext();
     const ctxB = await browser.newContext();
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
-    await login(pageA, NODES.A);
-    await login(pageB, NODES.B);
+    await login(pageA, nodeA);
+    await login(pageB, nodeB);
 
     await clickNav(pageA, T.navContacts);
     await pageA.getByTestId(T.contactsCreateInvite).click();
@@ -49,11 +72,12 @@ test.describe("multi-peer sharing", () => {
   });
 
   test("create_group_add_member", async ({ browser, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    await waitForHealth(request, nodeA.baseUrl);
 
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();
-    await login(pageA, NODES.A);
+    await login(pageA, nodeA);
 
     await clickNav(pageA, T.navGroups);
     await pageA.getByTestId(T.groupsCreate).click();
@@ -86,11 +110,12 @@ test.describe("multi-peer sharing", () => {
   });
 
   test("create_collection_share_to_group", async ({ browser, request }) => {
-    await waitForHealth(request, NODES.A.baseUrl);
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
+    await waitForHealth(request, nodeA.baseUrl);
 
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();
-    await login(pageA, NODES.A);
+    await login(pageA, nodeA);
 
     // Navigate to collections (if you have a collections page)
     // For now, this test is a placeholder - adjust based on your actual collections UI
@@ -133,11 +158,12 @@ test.describe("multi-peer sharing", () => {
   });
 
   test("recipient_sees_shared_manifest", async ({ browser, request }) => {
-    await waitForHealth(request, NODES.B.baseUrl);
+    const nodeB = harness ? harness.getNode('B').nodeCfg : NODES.B;
+    await waitForHealth(request, nodeB.baseUrl);
 
     const ctxB = await browser.newContext();
     const pageB = await ctxB.newPage();
-    await login(pageB, NODES.B);
+    await login(pageB, nodeB);
 
     await clickNav(pageB, T.navSharedWithMe);
     await expect(pageB.getByTestId(T.incomingShareRow(collectionTitle))).toBeVisible({ timeout: 10000 });
@@ -151,11 +177,12 @@ test.describe("multi-peer sharing", () => {
   });
 
   test("stream_and_backfill", async ({ browser, request }) => {
-    await waitForHealth(request, NODES.B.baseUrl);
+    const nodeB = harness ? harness.getNode('B').nodeCfg : NODES.B;
+    await waitForHealth(request, nodeB.baseUrl);
 
     const ctxB = await browser.newContext();
     const pageB = await ctxB.newPage();
-    await login(pageB, NODES.B);
+    await login(pageB, nodeB);
 
     // Watch for a stream response; confirm 206 (Range)
     const streamResponse = pageB.waitForResponse(resp => {
