@@ -91,11 +91,11 @@ public class ProfileController : ControllerBase
             var profile = await _profile.GetMyProfileAsync(ct).ConfigureAwait(false);
             if (profile == null || string.IsNullOrWhiteSpace(profile.PeerId))
             {
-                var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Profile not available", Detail = "Cannot create invite: profile not available. Please ensure Identity & Friends is properly configured." };
-                var result = new BadRequestObjectResult(problem);
-                result.ContentTypes.Clear();
-                result.ContentTypes.Add("application/problem+json");
-                return result;
+                return Problem(
+                    title: "Profile not available",
+                    detail: "Cannot create invite: profile not available. Please ensure Identity & Friends is properly configured.",
+                    statusCode: StatusCodes.Status400BadRequest
+                );
             }
             var invite = new FriendInvite
             {
@@ -111,11 +111,11 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Failed to create invite", Detail = $"Cannot create invite: {ex.Message}" };
-            var result = new BadRequestObjectResult(problem);
-            result.ContentTypes.Clear();
-            result.ContentTypes.Add("application/problem+json");
-            return result;
+            return Problem(
+                title: "Failed to create invite",
+                detail: $"Cannot create invite: {ex.Message}",
+                statusCode: StatusCodes.Status400BadRequest
+            );
         }
     }
 }

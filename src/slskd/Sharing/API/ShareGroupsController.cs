@@ -7,10 +7,10 @@ namespace slskd.Sharing.API;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -100,23 +100,20 @@ public class ShareGroupsController : ControllerBase
         if (!Enabled) return NotFound();
         if (string.IsNullOrWhiteSpace(req.Name)) 
         {
-            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Name is required.", Detail = "Name is required." };
-            var result = new BadRequestObjectResult(problem);
-            result.ContentTypes.Clear();
-            result.ContentTypes.Add("application/problem+json");
-            return result;
+            return Problem(
+                title: "Name is required.",
+                detail: "Name is required.",
+                statusCode: StatusCodes.Status400BadRequest
+            );
         }
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
         {
-            var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends." };
-            var json = JsonSerializer.Serialize(problem);
-            return new ContentResult
-            {
-                StatusCode = 400,
-                Content = json,
-                ContentType = "application/problem+json"
-            };
+            return Problem(
+                title: "User identity not available",
+                detail: "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends.",
+                statusCode: StatusCodes.Status400BadRequest
+            );
         }
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
