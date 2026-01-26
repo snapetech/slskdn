@@ -119,7 +119,9 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
                 Detail = "This request requires a valid CSRF token. If you're using the web UI, please try refreshing the page. If you're using the API, use JWT or API key authentication instead of cookies."
             };
             problem.Extensions["hint"] = "Web UI: Refresh page | API: Use Authorization header with Bearer token or X-API-Key header";
-            context.Result = new BadRequestObjectResult(problem);
+            var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Add("application/problem+json");
+            context.Result = result;
         }
         catch (Exception ex)
         {
@@ -133,7 +135,9 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
                 Title = "CSRF validation error",
                 Detail = ex.Message
             };
-            context.Result = new BadRequestObjectResult(problem);
+            var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Add("application/problem+json");
+            context.Result = result;
         }
     }
 }

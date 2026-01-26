@@ -86,21 +86,32 @@ export default class ShareGroups extends Component {
       this.setState({ createModalOpen: false, newGroupName: '', error: null });
       await this.loadData();
     } catch (error) {
+      console.error('[ShareGroups] Create group error:', error);
       // Extract error message from response (supports ProblemDetails, object with message/error, or string)
-      let errorMsg = error.message;
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMsg = error.response.data;
-        } else if (error.response.data.detail) {
-          errorMsg = error.response.data.detail; // ProblemDetails format
-        } else if (error.response.data.message) {
-          errorMsg = error.response.data.message;
-        } else if (error.response.data.error) {
-          errorMsg = error.response.data.error;
-        } else if (error.response.data.title) {
-          errorMsg = error.response.data.title; // ProblemDetails title as fallback
-        } else {
-          errorMsg = JSON.stringify(error.response.data);
+      let errorMsg = error.message || 'Failed to create share group';
+      if (error.response) {
+        console.error('[ShareGroups] Response status:', error.response.status);
+        console.error('[ShareGroups] Response data:', error.response.data);
+        if (error.response.data) {
+          if (typeof error.response.data === 'string') {
+            errorMsg = error.response.data;
+          } else if (error.response.data.detail) {
+            errorMsg = error.response.data.detail; // ProblemDetails format
+          } else if (error.response.data.message) {
+            errorMsg = error.response.data.message;
+          } else if (error.response.data.error) {
+            errorMsg = error.response.data.error;
+          } else if (error.response.data.title) {
+            errorMsg = error.response.data.title; // ProblemDetails title as fallback
+          } else {
+            errorMsg = JSON.stringify(error.response.data);
+          }
+        } else if (error.response.status === 400) {
+          errorMsg = 'Bad request. Please check your input and try again.';
+        } else if (error.response.status === 401) {
+          errorMsg = 'Authentication required. Please refresh the page.';
+        } else if (error.response.status === 404) {
+          errorMsg = 'Collections sharing feature is not enabled.';
         }
       }
       this.setState({ error: errorMsg || 'Failed to create share group. Please configure Soulseek username or enable Identity & Friends.' });
