@@ -107,7 +107,8 @@ export default class ShareGroups extends Component {
             errorMsg = JSON.stringify(error.response.data);
           }
         } else if (error.response.status === 400) {
-          errorMsg = 'Bad request. Please check your input and try again.';
+          // 400 with empty body likely means CSRF validation failed or user identity missing
+          errorMsg = 'Request failed. This may be due to: missing CSRF token (try refreshing the page), user identity not available (configure Soulseek username or enable Identity & Friends), or invalid input.';
         } else if (error.response.status === 401) {
           errorMsg = 'Authentication required. Please refresh the page.';
         } else if (error.response.status === 404) {
