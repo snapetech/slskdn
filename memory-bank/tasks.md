@@ -9,59 +9,149 @@
 
 ### High Priority
 
-### High Priority
-
 *No high priority tasks currently active
 
-    /^### Medium Priority$/d
 ### Medium Priority
 
-### Medium Priority
+**Research implementation (T-901–T-913)** — Design/scope: `docs/research/9-research-design-scope.md`. Suggested order: T-912 → T-911 → T-913 → T-901 → T-902 → T-903 → T-906 → T-907 → T-908. **T-912, T-911, T-913, T-901, T-902, T-903, T-906, T-907, T-908 done; Research (9) order complete.**
 
-*No medium priority tasks currently active
+- [x] **T-912**: Metadata facade abstraction — `IMetadataFacade` (GetByRecordingId, GetByFingerprint, GetByFile, Search); MetadataFacade (MB, AcoustID, file tags via TagLib/XiphComment); IMusicBrainzClient.SearchRecordingsAsync; optional IMemoryCache. Soulseek adapter: follow-up.
+- [x] **T-911**: MediaVariant model and storage — `MediaVariant` (ContentDomain, domain-specific: Audio/Image/Video/GenericFile); `IMediaVariantStore` + `HashDbMediaVariantStore` (Music→HashDb, Image/Video/Generic in-memory); `IHashDbService.GetAudioVariantByFlacKeyAsync`; `ContentDomain` Image/Video; `FromAudioVariant`/`ToAudioVariant`.
+- [x] **T-913**: AudioCore domain module — `slskd.AudioCore` (API boundary doc); `AddAudioCore(IServiceCollection, appDirectory)` registers fingerprinting, HashDb, IMediaVariantStore, ICanonicalStatsService, IDedupeService, IAnalyzerMigrationService, ILibraryHealth, IMusicContentDomainProvider; wired in Program.
+- [x] **T-901**: Ed25519 signed identity system — Design: `docs/research/T-901-ed25519-identity-design.md` (unified model, key lifecycle, alignment); `Ed25519Signer.DerivePeerId` formalized (PeerId = Base32(First20(SHA256(pubkey)))).
+- [x] **T-902**: DHT node and routing table — Design: `docs/research/T-902-dht-node-design.md`. KademliaRoutingTable (160-bit, k-buckets, FIND_NODE); DhtMeshService responds to FindNode, FindValue, Store, Ping; KademliaRpcClient; NodeId from Ed25519 (SHA1); slskdn DHT (BEP 5 GET_PEERS/ANNOUNCE_PEER = FindValue/Store).
+- [x] **T-903**: DHT storage with TTL and signatures — Design: `docs/research/T-903-dht-storage-design.md`. IDhtClient PUT/GET/GetMultipleAsync, TTL (expiry on read); Store RPC requires Ed25519 (DhtStoreMessage); overlap with shadow index, pods, scenes.
+- [x] **T-906**: Native mesh protocol backend — `IContentBackend` via mesh/DHT only (no Soulseek, no BitTorrent); mesh “get content by ContentId” RPC.
+- [x] **T-907**: HTTP/WebDAV/S3 backend — `ContentBackendType.WebDav`, `WebDavBackend` (registry, domain allowlist, Basic/Bearer, HEAD); `ContentBackendType.S3`, `S3Backend` (registry, s3://bucket/key, HeadObject, AWSSDK.S3, MinIO/B2/AWS). Design: `docs/research/T-907-http-webdav-s3-backend-design.md`.
+- [x] **T-908**: Private BitTorrent backend — Design: `docs/research/T-908-private-bittorrent-backend-design.md`. `TorrentBackendOptions.PrivateMode` (`PrivateTorrentModeOptions`: PrivateOnly, DisableDht, DisablePex, AllowedPeerSources); `PrivatePeerSource` enum. StubBitTorrentBackend replacement and TorrentBackend private logic: follow-up.
 
-    /^### Low Priority$/d
 ### Low Priority
 
 - [x] **T-006**: Create Chat Rooms from UI
-  - Status: Not started
+  - Status: Done
   - Priority: Low
   - Related: slskd #1258
-  - Notes: Create public/private rooms from web interface
+  - Notes: RoomCreateModal; create→join (public: join creates if new; private: server/ops create, then join via dropdown).
 
 - [x] **T-007**: Predictable Search URLs
-  - Status: Not started
+  - Status: Done
   - Priority: Low
   - Related: slskd #1170
-  - Notes: Bookmarkable search URLs for browser integration
+  - Notes: /searches?q= and search icon → /searches/{id} bookmarkable (create returns id; navigate uses it).
+
+---
+
+## Optionals / Follow-up (40-fixes, Research, Packaging)
+
+> All items below must be done. Source: `docs/dev/40-fixes-plan.md` Deferred/optional, Research follow-ups, TODO.md, Out of Scope. Verify against “Completed” list in 40-fixes when marking done.
+
+### 40-fixes plan (PR / § / J)
+
+- [ ] **PR-03 Passthrough AllowedCidrs**: Add `Web.Authentication.Passthrough.AllowedCidrs` (e.g. `"127.0.0.1/32,::1/128"`) for explicit CIDR allowlist instead of/in addition to loopback check.
+- [ ] **PR-04 CORS AllowedHeaders/AllowedMethods**: Implement and wire `Web.Cors.AllowedHeaders`, `Web.Cors.AllowedMethods` in Options and CORS middleware.
+- [ ] **PR-05 Exception / ValidationProblemDetails**: Custom `InvalidModelStateResponseFactory` (or validation formatter) so Production does not leak internals; consistent `ValidationProblemDetails`.
+- [ ] **PR-06 Dump 501**: Dump endpoint returns **501** when dump creation fails (e.g. dotnet-dump not on PATH, DiagnosticsClient failure) with instructions.
+- [ ] **PR-07 ModelState / RejectInvalidModelState**: `Web.Api.RejectInvalidModelState` (in Enforce can imply true); consistent `ValidationProblemDetails` (same factory as PR-05 where applicable).
+- [ ] **PR-08 MeshGateway chunked POST**: Chunked POST for MeshGateway — bounded body read, 413 on over-limit; support chunked when `ContentLength` null (if not already done).
+- [ ] **PR-09a Kestrel MaxRequestBodySize**: Kestrel `MaxRequestBodySize` configured and documented in Options/example config.
+- [ ] **PR-09b Rate limit fed/mesh**: Rate-limit fed/mesh integration: `Burst_federation_inbox_*`, `Burst_mesh_gateway_*` in `FedMeshRateLimitTestHostFactory` (or equivalent) and policies applied.
+- [ ] **§8 QuicDataServer**: `QuicDataServer` read/limits aligned with `GetEffectiveMaxPayloadSize`.
+- [ ] **§9 Metrics Basic Auth constant-time**: Metrics Basic Auth uses constant-time comparison (`CryptographicOperations.FixedTimeEquals`); `WWW-Authenticate: Basic realm="metrics"`.
+- [ ] **§11 NotImplementedException gating**: Incomplete features (I2P, RelayOnly, PerceptualHasher, etc.) fail at startup or return 501 when enabled; no `NotImplementedException` crash in configured defaults.
+- [ ] **J ScriptService deadlock**: ScriptService: async read of stdout/stderr, `WaitForExitAsync`, timeout and process kill; no `WaitForExit()` while redirecting.
+- [ ] **6.4 Pod Join nonce**: Optional nonce for replay protection in E2 Pod Join when `PodCore.Join.SignatureMode` is Enforce.
+
+### Research follow-ups (T-906, T-907, T-908, T-912)
+
+- [ ] **T-906 Resolver fetch**: Resolver fetch follow-up for NativeMeshBackend (docs: `docs/research/T-906-native-mesh-backend-design.md`).
+- [ ] **T-907 Resolver fetch**: Resolver fetch follow-up for WebDav/S3 backend.
+- [ ] **T-908 StubBitTorrentBackend / TorrentBackend**: StubBitTorrentBackend replacement and TorrentBackend private logic (design: `docs/research/T-908-private-bittorrent-backend-design.md`).
+- [ ] **T-912 Soulseek adapter**: Soulseek adapter follow-up for MetadataFacade / IMetadataFacade.
+
+### Packaging (TODO.md)
+
+- [ ] **Proxmox LXC templates**: Proxmox LXC templates for Proxmox users (low priority; `TODO.md`).
+
+### 40-fixes Out of Scope (docs)
+
+- [ ] **CHANGELOG and option docs**: CHANGELOG and option docs (e.g. `config/slskd.example.yml`) updated for new flags and breaking behavior from 40-fixes (EnforceSecurity, Mesh:SyncSecurity, etc.).
 
 ---
 
 ## Packaging & Distribution
 
 - [x] **T-010**: TrueNAS SCALE Apps
-  - Status: Not started
+  - Status: Done
   - Priority: High
-  - Notes: Helm chart or ix-chart format
+  - Notes: Helm ix-chart; appVersion 0.24.1-slskdn.40, home/sources→snapetech/slskdn (chore 2026-01-25).
 
 - [x] **T-011**: Synology Package Center
-  - Status: Not started
+  - Status: Done
   - Priority: High
-  - Notes: SPK format, cross-compile for ARM/x86
+  - Notes: SPK; INFO version 0.24.1, URLs→snapetech/slskdn (chore 2026-01-25).
 
 - [x] **T-012**: Homebrew Formula
-  - Status: Not started
+  - Status: Done
   - Priority: High
-  - Notes: macOS package manager support
+  - Notes: Formula/slskdn.rb 0.24.1-slskdn.40, osx-arm64/osx-x64/linux-x64, SHA256 from GitHub API (chore 2026-01-25).
 
 - [x] **T-013**: Flatpak (Flathub)
   - Status: Done (2026-01-25)
   - Priority: High
   - Notes: .NET 8.0.11 + slskdn-main-linux-x64 0.24.1-slskdn.40, slskdn.svg; placeholders replaced; build.sh, FLATHUB_SUBMISSION updated.
 
+- [x] **T-014**: Helm chart for generic Kubernetes
+  - Status: Done (2026-01-25)
+  - Priority: Medium
+  - Notes: `packaging/helm/slskdn/` — Chart.yaml, values.yaml, templates (_helpers, Deployment, Service, PVCs, Ingress). No TrueCharts; standard K8s, PVCs for config/downloads/shares/incomplete. appVersion 0.24.1-slskdn.40. README with install and main values.
+
 ---
 
 ## Completed Tasks
+
+- [x] **T-912 (2026-01-25):** Metadata facade — IMetadataFacade, MetadataResult, MetadataFacade (GetByRecordingId, GetByFingerprint, GetByFile, Search). MusicBrainzClient.SearchRecordingsAsync + RecordingSearchHit. File tags (TagLib, XiphComment MUSICBRAINZ_*). AcoustID→MB for fingerprint. IMemoryCache. DI in Program. Soulseek adapter: follow-up.
+
+- [x] **T-911 (2026-01-25):** MediaVariant model and storage — MediaVariant (Domain, VariantId, FirstSeenAt, LastSeenAt, SeenCount, FileSha256, FileSizeBytes; Audio/ImageDimensions/ImageCodec/VideoDimensions/VideoCodec/VideoDurationSeconds). IMediaVariantStore (GetByVariantId, GetByRecordingId, GetByDomain, Upsert). HashDbMediaVariantStore (Music→IHashDbService, Image/Video/GenericFile in-memory). IHashDbService.GetAudioVariantByFlacKeyAsync. ContentDomain Image=2, Video=3. FromAudioVariant/ToAudioVariant. DI.
+
+- [x] **T-913 (2026-01-25):** AudioCore domain module — slskd.AudioCore.AudioCore (API boundary doc: IChromaprintService, IFingerprintExtractionService, IHashDbService, IMediaVariantStore, ICanonicalStatsService, ILibraryHealthService, ILibraryHealthRemediationService, IAnalyzerMigrationService, IDedupeService, IMusicContentDomainProvider, analyzers). AddAudioCore(IServiceCollection, appDirectory) registers all; Program uses AddAudioCore(Program.AppDirectory); scattered audio registrations consolidated.
+
+- [x] **T-901 (2026-01-25):** Ed25519 signed identity system — docs/research/T-901-ed25519-identity-design.md: unified identity model (Mesh+IKeyStore/FileKeyStore shared with Pods; ActivityPub separate); key lifecycle (FileKeyStore JSON/KeyPath/RotateDays, ActivityPubKeyStore IEd25519KeyPairGenerator PEM, RotateKeypairAsync); alignment. Ed25519Signer.DerivePeerId formalized: PeerId = Base32(First20(SHA256(publicKey))). Revocation, DID deferred.
+
+- [x] **T-902 (2026-01-25):** DHT node and routing table — docs/research/T-902-dht-node-design.md. KademliaRoutingTable (160-bit, k=20, bucket splitting, XOR, Touch, GetClosest); selfId=SHA1(Ed25519) from IKeyStore. DhtMeshService: FindNode, FindValue, Store, Ping; KademliaRpcClient; slskdn DHT wire (mesh overlay, JSON). GET_PEERS/ANNOUNCE_PEER mapped to FindValue/Store; DhtRendezvous remains BEP 5 client.
+
+- [x] **T-903 (2026-01-25):** DHT storage with TTL and signatures — docs/research/T-903-dht-storage-design.md. IDhtClient PutAsync/GetAsync/GetMultipleAsync; TTL expiry on read; Store RPC requires Ed25519 (DhtStoreMessage.CreateSigned/VerifySignature, 5 min freshness); same store for shadow index, pods, scenes; _maxPayload; conflict last-write-wins, republish open.
+
+- [x] **T-906 (2026-01-25):** Native mesh protocol backend — ContentBackendType.NativeMesh; NativeMeshBackend (IMeshDirectory, IContentIdRegistry; FindCandidatesAsync via FindPeersByContentAsync, BackendRef mesh:{peerId}:{contentId}; ValidateCandidateAsync format-only); NativeMeshBackendOptions. Design: docs/research/T-906-native-mesh-backend-design.md (mesh “get content by ContentId/hash” RPC, resolver fetch follow-up). DI: document only (v2 IContentBackend not wired in Program).
+
+- [x] **T-907 (2026-01-25):** HTTP/WebDAV/S3 backend — ContentBackendType.WebDav, WebDavBackend (registry, domain allowlist, Basic/Bearer, HEAD); ContentBackendType.S3, S3Backend (registry, s3://bucket/key, HeadObject, AWSSDK.S3). Design: docs/research/T-907-http-webdav-s3-backend-design.md. Resolver fetch: follow-up.
+
+- [x] **T-908 (2026-01-25):** Private BitTorrent backend — TorrentBackendOptions.PrivateMode (PrivateTorrentModeOptions: PrivateOnly, DisableDht, DisablePex, AllowedPeerSources), PrivatePeerSource enum. Design: docs/research/T-908-private-bittorrent-backend-design.md (IBitTorrentBackend, MonoTorrent, private swarm, StubBitTorrentBackend replacement). Stub replacement and TorrentBackend private logic: follow-up.
+
+- [x] **chore (2026-01-25):** Research (9) **unpinned**; implementation started. T-901–T-913 moved to tasks.md § Medium Priority (Research implementation). Suggested order: T-912 → T-911 → T-913 → T-901 → T-902 → T-903 → T-906 → T-907 → T-908. Start: T-912 (Metadata facade).
+
+- [x] **T-014 (2026-01-25):** Helm chart for generic Kubernetes at `packaging/helm/slskdn/`. Chart.yaml, values.yaml, templates (_helpers, Deployment, Service, PVCs, Ingress). No TrueCharts; standard K8s; PVCs for config/downloads/shares/incomplete. TODO.md Helm Charts marked done.
+
+- [x] **chore (2026-01-25):** slskd.Tests.Unit completion plan: Phase 1 and Phase 3 marked **DONE** (PrivacyLayerIntegration, ContentDomain, SimpleMatchEngine, RealmAwareGossip/Governance/RealmService, MeshCircuitBuilder/MeshSyncSecurity/MeshTransportService/Phase8, MembershipGate, FederationService, ActivityPubBridge, BridgeFlow*, Realm* suite, CircuitMaintenanceService, ActivityPubKeyStore). Execution order §0–3 updated. 2257 pass, 0 skip.
+
+- [x] **t410-backfill-wire (2026-01-25):** RescueMode underperformance detector → RescueService. RescueModeOptions (Enabled, MaxQueueTimeSeconds, MinThroughputKBps, MinDurationSeconds, StalledTimeoutSeconds, CheckIntervalSeconds); IRescueService.IsRescueActive; UnderperformanceDetectorHostedService (QueuedTooLong, ThroughputTooLow, Stalled); IRescueService, RescueGuardrailService, UnderperformanceDetectorHostedService in Program.cs. RescueMode.Enabled=false by default.
+
+- [x] **T-404+ (2026-01-25):** Phase 2 continuation done. t410-backfill-wire (rescue wire) completed; codec fingerprinting / quality (T-420–T-430) already done per TASK_STATUS_DASHBOARD.
+
+- [x] **40-fixes plan (PR-00–PR-14) (2026-01-25):** Epic implemented per `docs/dev/40-fixes-plan.md`. slskd.Tests 46 pass, slskd.Tests.Unit 2257 pass; Integration 184 pass per audit. Enforce, HardeningValidator, default-deny, passthrough loopback, CORS, exception handler, dump, ModelState, MeshGateway body/413, rate limiting, ControlEnvelope/KeyedSigner, MessagePadder Unpad, Pod MessageSigner/Router, ActivityPub HTTP signatures. Deferred table: status only.
+
+- [x] **chore (2026-01-25):** Research (9) **pinned for future build**. Moved to tasks.md § Pinned; COMPLETE_PLANNING_INDEX_V2, TASK_STATUS_DASHBOARD, `docs/research/9-research-design-scope.md` updated. activeContext: Current focus = 40-fixes (PR-00–PR-14), T-404+ (optional), new product.
+
+- [x] **chore (2026-01-25):** Research (9) design/scope: `docs/research/9-research-design-scope.md` — scope, deps, open questions, suggested order for T-901–T-913. Linked from COMPLETE_PLANNING_INDEX_V2, tasks.md, activeContext.
+
+- [x] **chore (2026-01-25):** activeContext: Next Steps first, then Research (9). Next Steps revised: slskd.Tests.Unit, Phase 14, Packaging T-010–T-013, T-003/T-004 done; T-404+ optional; 40-fixes deferred. New "Then: Research (9)" section. tasks.md: Research (9) "Do after activeContext Next Steps".
+
+- [x] **chore (2026-01-25):** COMPLETE_PLANNING_INDEX_V2: Phase 6X (T-850–T-860) marked Complete to match TASK_STATUS_DASHBOARD (bridge lifecycle, Soulfind proxy, API, MBID resolution, filename synthesis, anonymization, room→scene, transfer proxying, config UI, status dashboard, Nicotine+ tests).
+
+- [x] **chore (2026-01-25):** COMPLETE_PLANNING_INDEX_V2: Phases 2, 2-Ext, 3, 4, 5, 6, 7 marked Complete; 9 research tasks (T-901, T-902, T-903, T-906–T-908, T-911–T-913) as ⏸️ optional. tasks.md: Research (9) in Low Priority.
+
+- [x] **T-427 (2026-01-25):** Phase 2-Ext: Analyzer migration force; --audio-reanalyze and --audio-reanalyze-force at startup; POST /api/audio/analyzers/migrate?force=true.
+
+- [x] **T-007 (2026-01-25):** Predictable Search URLs: create() returns id; /searches?q= and search icon → /searches/{id} bookmarkable; navigate uses /searches/{id}.
 
 - [x] **chore (2026-01-25):** TrueNAS Chart appVersion 0.24.1-slskdn.40, version 0.2.1, home/sources→snapetech/slskdn. Synology INFO version 0.24.1, URLs→snapetech/slskdn.
 
