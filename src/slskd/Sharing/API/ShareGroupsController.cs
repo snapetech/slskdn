@@ -7,6 +7,7 @@ namespace slskd.Sharing.API;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -101,6 +102,7 @@ public class ShareGroupsController : ControllerBase
         {
             var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Name is required.", Detail = "Name is required." };
             var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Clear();
             result.ContentTypes.Add("application/problem+json");
             return result;
         }
@@ -108,9 +110,10 @@ public class ShareGroupsController : ControllerBase
         if (string.IsNullOrWhiteSpace(currentUserId))
         {
             var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends." };
-            var result = new BadRequestObjectResult(problem);
-            result.ContentTypes.Add("application/problem+json");
-            return result;
+            Response.StatusCode = 400;
+            Response.ContentType = "application/problem+json";
+            await Response.Body.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(problem), ct);
+            return new EmptyResult();
         }
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);

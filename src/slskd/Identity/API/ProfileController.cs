@@ -93,6 +93,7 @@ public class ProfileController : ControllerBase
             {
                 var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Profile not available", Detail = "Cannot create invite: profile not available. Please ensure Identity & Friends is properly configured." };
                 var result = new BadRequestObjectResult(problem);
+                result.ContentTypes.Clear();
                 result.ContentTypes.Add("application/problem+json");
                 return result;
             }
@@ -112,6 +113,7 @@ public class ProfileController : ControllerBase
         {
             var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Failed to create invite", Detail = $"Cannot create invite: {ex.Message}" };
             var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Clear();
             result.ContentTypes.Add("application/problem+json");
             return result;
         }
