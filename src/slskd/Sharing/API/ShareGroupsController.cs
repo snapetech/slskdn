@@ -110,10 +110,13 @@ public class ShareGroupsController : ControllerBase
         if (string.IsNullOrWhiteSpace(currentUserId))
         {
             var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends." };
-            Response.StatusCode = 400;
-            Response.ContentType = "application/problem+json";
-            await Response.Body.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(problem), ct);
-            return new EmptyResult();
+            var json = JsonSerializer.Serialize(problem);
+            return new ContentResult
+            {
+                StatusCode = 400,
+                Content = json,
+                ContentType = "application/problem+json"
+            };
         }
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
