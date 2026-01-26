@@ -99,6 +99,8 @@ public class ShareGroupsController : ControllerBase
         if (!Enabled) return NotFound();
         if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest("Name is required.");
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return BadRequest("Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
@@ -162,6 +164,8 @@ public class ShareGroupsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return BadRequest("Cannot add member: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
         var g = await _sharing.GetShareGroupAsync(id, ct);
         if (g == null || g.OwnerUserId != currentUserId) return NotFound();
 

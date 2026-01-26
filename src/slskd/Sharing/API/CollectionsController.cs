@@ -99,6 +99,8 @@ public class CollectionsController : ControllerBase
         if (!Enabled) return NotFound();
         if (string.IsNullOrWhiteSpace(req.Title)) return BadRequest("Title is required.");
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return BadRequest("Cannot create collection: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
         var t = req.Type?.Trim() == CollectionType.Playlist ? CollectionType.Playlist : CollectionType.ShareList;
         var c = new Collection { Title = req.Title.Trim(), Description = req.Description?.Trim(), Type = t, OwnerUserId = currentUserId };
         var created = await _sharing.CreateCollectionAsync(c, ct);

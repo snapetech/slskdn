@@ -70,10 +70,11 @@ export default class ShareGroups extends Component {
   handleCreateGroup = async () => {
     try {
       await collectionsAPI.createShareGroup({ name: this.state.newGroupName });
-      this.setState({ createModalOpen: false, newGroupName: '' });
+      this.setState({ createModalOpen: false, newGroupName: '', error: null });
       await this.loadData();
     } catch (error) {
-      this.setState({ error: error.response?.data || error.message });
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message;
+      this.setState({ error: errorMsg || 'Failed to create share group. Please configure Soulseek username or enable Identity & Friends.' });
     }
   };
 
@@ -86,10 +87,11 @@ export default class ShareGroups extends Component {
         : { userId: this.state.selectedUserId || this.state.selectedContactId };
       
       await collectionsAPI.addShareGroupMember(this.state.selectedGroup.id, data);
-      this.setState({ addMemberModalOpen: false, selectedContactId: null, selectedUserId: null });
+      this.setState({ addMemberModalOpen: false, selectedContactId: null, selectedUserId: null, error: null });
       await this.loadData();
     } catch (error) {
-      this.setState({ error: error.response?.data || error.message });
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message;
+      this.setState({ error: errorMsg || 'Failed to add member. Please configure Soulseek username or enable Identity & Friends.' });
     }
   };
 

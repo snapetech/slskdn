@@ -107,6 +107,8 @@ public class SharesController : ControllerBase
         if (req.CollectionId == default) return BadRequest("CollectionId is required.");
         if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId)) return BadRequest("AudienceType and AudienceId are required.");
         var currentUserId = await GetCurrentUserIdAsync(ct);
+        if (string.IsNullOrWhiteSpace(currentUserId))
+            return BadRequest("Cannot create share: user identity not available. Please configure Soulseek username or enable Identity & Friends.");
         var c = await _sharing.GetCollectionAsync(req.CollectionId, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         var g = new ShareGrant

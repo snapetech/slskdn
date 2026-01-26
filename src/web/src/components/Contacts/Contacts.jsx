@@ -87,9 +87,14 @@ export default class Contacts extends Component {
         inviteLink: response.data.inviteLink,
         inviteFriendCode: response.data.friendCode,
         createInviteModalOpen: true,
+        error: null,
       });
     } catch (error) {
-      this.setState({ error: error.response?.data || error.message });
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message;
+      this.setState({ 
+        error: errorMsg || 'Failed to create invite. Please ensure Identity & Friends is enabled and configured.',
+        createInviteModalOpen: false,
+      });
     }
   };
 

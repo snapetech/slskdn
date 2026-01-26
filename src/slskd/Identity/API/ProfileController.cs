@@ -86,18 +86,27 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> CreateInvite([FromBody] CreateInviteRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
-        var profile = await _profile.GetMyProfileAsync(ct).ConfigureAwait(false);
-        var invite = new FriendInvite
+        try
         {
-            InviteVersion = 1,
-            Profile = profile,
-            Nonce = Guid.NewGuid().ToString("N"),
-            ExpiresAt = DateTimeOffset.UtcNow.Add(req.ExpiresInHours > 0 ? TimeSpan.FromHours(req.ExpiresInHours) : TimeSpan.FromHours(24))
-        };
-        var json = System.Text.Json.JsonSerializer.Serialize(invite);
-        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        var link = $"slskdn://invite/{base64}";
-        return Ok(new InviteResponse { InviteLink = link, FriendCode = _profile.GetFriendCode(profile.PeerId) });
+            var profile = await _profile.GetMyProfileAsync(ct).ConfigureAwait(false);
+            if (profile == null || string.IsNullOrWhiteSpace(profile.PeerId))
+                return BadRequest("Cannot create invite: profile not available. Please ensure Identity & Friends is properly configured.");
+            var invite = new FriendInvite
+            {
+                InviteVersion = 1,
+                Profile = profile,
+                Nonce = Guid.NewGuid().ToString("N"),
+                ExpiresAt = DateTimeOffset.UtcNow.Add(req.ExpiresInHours > 0 ? TimeSpan.FromHours(req.ExpiresInHours) : TimeSpan.FromHours(24))
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(invite);
+            var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            var link = $"slskdn://invite/{base64}";
+            return Ok(new InviteResponse { InviteLink = link, FriendCode = _profile.GetFriendCode(profile.PeerId) });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Cannot create invite: {ex.Message}");
+        }
     }
 }
 
