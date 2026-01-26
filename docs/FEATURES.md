@@ -296,6 +296,53 @@ TrustedRelay:
 - Access remote slskdn instances via HTTP gateway
 - No port forwarding or VPN required
 
+### Identity & Friends (New)
+
+Human-friendly peer addressing and discovery system enabling the "befriend → group → share → recipient backfill download → recipient stream" workflow.
+
+#### Features
+
+- **Peer Profiles**: Signed identity objects with display names, friend codes, and network endpoints
+- **Contact Management**: Local contact list with nicknames and verification status
+- **Friend Codes**: Short, shareable codes (e.g., `ABCD-EFGH-IJKL-MNOP`) for easy addressing
+- **Invite Links**: `slskdn://invite/...` links with QR code support for adding friends
+- **mDNS LAN Discovery**: Automatic peer discovery on local networks
+- **API Integration**: Full REST API for profile and contact management
+
+#### Configuration
+```yaml
+Feature:
+  IdentityFriends: true  # Enable identity and friends system
+```
+
+**Default**: Disabled (opt-in)
+
+#### Use Cases
+
+- **Human-Friendly Sharing**: Add friends by display name instead of raw peer IDs
+- **LAN Discovery**: Automatically discover peers on the same network
+- **Invite-Based Networking**: Share invite links or QR codes to connect with friends
+- **Contact-Based Groups**: Create share groups using contact nicknames
+
+### Streaming (New)
+
+HTTP range request support for content streaming with session limiting and authentication.
+
+#### Features
+
+- **Range Request Support**: Standard HTTP `Range` header support for seeking
+- **Session Limiting**: Configurable concurrent stream limits per content
+- **Token Authentication**: Share token-based authentication for recipients
+- **Content Resolution**: Automatic MIME type detection and file path resolution
+
+#### Configuration
+```yaml
+Feature:
+  Streaming: true  # Enable streaming API
+```
+
+**Default**: Disabled (opt-in)
+
 ### External Tool Integration (New)
 - Music apps access VirtualSoulfind via HTTP gateway
 - Query missing tracks, library stats, catalogue gaps

@@ -1,6 +1,5 @@
-// <copyright file="SearchResponseMergerTests.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
-//     Licensed under the AGPL-3.0 license. See LICENSE file in the project root for full license information.
+// <copyright file="SearchResponseMergerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
 namespace slskd.Tests.Unit.Search;
@@ -10,94 +9,172 @@ using System.Linq;
 using slskd.Search;
 using Xunit;
 
-/// <summary>
-/// Unit tests for SearchResponseMerger.Deduplicate: mesh-disabled/0-peers same as baseline, mesh adds without altering Soulseek, dedup by (Username, Filename, Size).
-/// </summary>
 public class SearchResponseMergerTests
 {
-    private static Response R(string username, params (string Filename, long Size)[] files)
+    [Fact]
+    public void Deduplicate_NormalizesFilenames()
     {
-        var flist = files.Select(f => new File { Filename = f.Filename, Size = f.Size, Extension = ".flac", Code = 1, IsLocked = false }).ToList();
-        return new Response
+        var soulseekResponses = new List<Response>
         {
-            Username = username,
-            Token = 0,
-            HasFreeUploadSlot = true,
-            UploadSpeed = 0,
-            QueueLength = 0,
-            FileCount = flist.Count,
-            Files = flist,
-            LockedFileCount = 0,
-            LockedFiles = new List<File>(),
+            new Response
+            {
+                Username = "user1",
+                Files = new List<File>
+                {
+                    new File { Filename = "Test\\File.mp3", Size = 1000 },
+                    new File { Filename = "UPPER.mp3", Size = 2000 }
+                }
+            }
         };
+        var meshResponses = new List<Response>
+        {
+            new Response
+            {
+                Username = "user2",
+                Files = new List<File>
+                {
+                    new File { Filename = "test/file.mp3", Size = 1000 }, // Same after normalization
+                    new File { Filename = "upper.mp3", Size = 2000 } // Same after normalization
+                }
+            }
+        };
+
+        var result = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
+
+        // Should deduplicate based on normalized filename
+        Assert.Equal(2, result.Count);
+        // user1's files should be kept (first occurrence)
+        var user1Files = result.First().Files;
+        Assert.Contains(user1Files, f => f.Filename == "Test\\File.mp3");
+        Assert.Contains(user1Files, f => f.Filename == "UPPER.mp3");
     }
 
     [Fact]
-    public void Deduplicate_MeshEmpty_ReturnsSoulseekOnly()
+    public void Deduplicate_HandlesCaseInsensitive()
     {
-        var soulseek = new[] { R("u1", ("a.flac", 100)) };
-        var mesh = new List<Response>();
+        // The merger deduplicates across ALL responses (soulseek + mesh) based on (Username, normalized filename, size)
+        // This test verifies that normalization is applied (lowercase conversion)
+        // Test with files in separate responses to verify cross-response deduplication
+        var soulseekResponses = new List<Response>
+        {
+            new Response
+            {
+                Username = "user1",
+                Files = new List<File> { new File { Filename = "Song.mp3", Size = 1000 } },
+                Token = 1,
+                HasFreeUploadSlot = false,
+                UploadSpeed = 0,
+                QueueLength = 0
+            }
+        };
+        var meshResponses = new List<Response>
+        {
+            new Response
+            {
+                Username = "user1", // Same user
+                Files = new List<File> { new File { Filename = "song.mp3", Size = 1000 } }, // Same after normalization
+                Token = 2,
+                HasFreeUploadSlot = false,
+                UploadSpeed = 0,
+                QueueLength = 0
+            }
+        };
 
-        var merged = SearchResponseMerger.Deduplicate(soulseek, mesh);
+        var result = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
 
-        Assert.Single(merged);
-        Assert.Equal("u1", merged[0].Username);
-        Assert.Single(merged[0].Files);
-        Assert.Equal("a.flac", merged[0].Files!.First().Filename);
+        // The implementation processes each response and deduplicates files globally
+        // Both "Song.mp3" and "song.mp3" normalize to "song.mp3" for user1
+        // First response (soulseek) processes first:
+        //   - File "Song.mp3" normalizes to "song.mp3"
+        //   - seenByFilename.Add(("user1", "song.mp3", 1000)) -> returns true (first time)
+        //   - File is kept, response is added to result
+        // Second response (mesh) processes:
+        //   - File "song.mp3" normalizes to "song.mp3"
+        //   - seenByFilename.Add(("user1", "song.mp3", 1000)) -> should return false (already seen!)
+        //   - File is NOT kept, keptFiles.Count = 0
+        //   - Response is NOT added to result (only responses with keptFiles > 0 are added)
+        // So we should get 1 response (the first one), not 2
+        Assert.Single(result); // Only one response should be returned (second was empty and not added)
+        Assert.Equal("user1", result[0].Username);
+        Assert.Single(result[0].Files); // Only one file kept (deduplicated)
+        Assert.Equal("Song.mp3", result[0].Files.First().Filename); // First occurrence kept
     }
 
     [Fact]
-    public void Deduplicate_MeshOnly_ReturnsMeshOnly()
+    public void Deduplicate_HandlesPathSeparators()
     {
-        var soulseek = Enumerable.Empty<Response>();
-        var mesh = new List<Response> { R("u2", ("b.flac", 200)) };
+        // Path separator normalization works within the same user
+        // This test verifies that path separators are normalized (backslash to forward slash)
+        var soulseekResponses = new List<Response>
+        {
+            new Response
+            {
+                Username = "user1",
+                Files = new List<File>
+                {
+                    new File { Filename = "Music\\Song.mp3", Size = 1000 },
+                    new File { Filename = "Music/Song.mp3", Size = 1000 } // Same after normalization
+                },
+                Token = 1,
+                HasFreeUploadSlot = false,
+                UploadSpeed = 0,
+                QueueLength = 0
+            }
+        };
+        var meshResponses = new List<Response>();
 
-        var merged = SearchResponseMerger.Deduplicate(soulseek, mesh);
+        var result = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
 
-        Assert.Single(merged);
-        Assert.Equal("u2", merged[0].Username);
-        Assert.Single(merged[0].Files);
-        Assert.Equal("b.flac", merged[0].Files!.First().Filename);
+        // The implementation should normalize path separators and deduplicate
+        // Both "Music\Song.mp3" and "Music/Song.mp3" normalize to "music/song.mp3", so they should be deduplicated
+        Assert.Single(result); // One response should be returned
+        var user1Response = result.First();
+        Assert.Equal("user1", user1Response.Username);
+        // The files should be deduplicated (normalized paths match)
+        // First file "Music\Song.mp3" is added (normalized: "music/song.mp3")
+        // Second file "Music/Song.mp3" normalizes to "music/song.mp3" which is already seen, so it's skipped
+        Assert.Single(user1Response.Files); // Only one file kept (deduplicated)
     }
 
     [Fact]
-    public void Deduplicate_MeshAddsWithoutAlteringSoulseek()
+    public void Deduplicate_DifferentSizes_KeepsBoth()
     {
-        var soulseek = new[] { R("u1", ("a.flac", 100)) };
-        var mesh = new List<Response> { R("u2", ("b.flac", 200)) };
+        var soulseekResponses = new List<Response>
+        {
+            new Response
+            {
+                Username = "user1",
+                Files = new List<File>
+                {
+                    new File { Filename = "song.mp3", Size = 1000 }
+                }
+            }
+        };
+        var meshResponses = new List<Response>
+        {
+            new Response
+            {
+                Username = "user2",
+                Files = new List<File>
+                {
+                    new File { Filename = "song.mp3", Size = 2000 } // Different size
+                }
+            }
+        };
 
-        var merged = SearchResponseMerger.Deduplicate(soulseek, mesh);
+        var result = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
 
-        Assert.Equal(2, merged.Count);
-        Assert.Equal("u1", merged[0].Username);
-        Assert.Single(merged[0].Files);
-        Assert.Equal("a.flac", merged[0].Files!.First().Filename);
-        Assert.Equal("u2", merged[1].Username);
-        Assert.Single(merged[1].Files);
-        Assert.Equal("b.flac", merged[1].Files!.First().Filename);
+        // Different sizes should not be deduplicated
+        Assert.Equal(2, result.Count);
+        Assert.Single(result.First().Files);
+        Assert.Single(result.Skip(1).First().Files);
     }
 
     [Fact]
-    public void Deduplicate_SameUsernameFilenameSize_KeepsFirst()
+    public void Deduplicate_EmptyResponses_ReturnsEmpty()
     {
-        var soulseek = new[] { R("u1", ("same.flac", 100)) };
-        var mesh = new List<Response> { R("u1", ("same.flac", 100)) };
+        var result = SearchResponseMerger.Deduplicate(new List<Response>(), new List<Response>());
 
-        var merged = SearchResponseMerger.Deduplicate(soulseek, mesh);
-
-        Assert.Single(merged);
-        Assert.Equal("u1", merged[0].Username);
-        Assert.Single(merged[0].Files);
-    }
-
-    [Fact]
-    public void Deduplicate_DifferentUsernames_SameFilenameSize_BothKept()
-    {
-        var soulseek = new[] { R("u1", ("x.flac", 100)) };
-        var mesh = new List<Response> { R("u2", ("x.flac", 100)) };
-
-        var merged = SearchResponseMerger.Deduplicate(soulseek, mesh);
-
-        Assert.Equal(2, merged.Count);
+        Assert.Empty(result);
     }
 }

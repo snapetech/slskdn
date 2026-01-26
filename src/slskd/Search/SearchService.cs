@@ -361,7 +361,10 @@ namespace slskd.Search
                     try
                     {
                         // Start mesh overlay search in parallel when enabled (hybrid mode)
-                        var meshTask = (OptionsMonitor.CurrentValue.VirtualSoulfind?.MeshSearch?.Enabled == true && MeshOverlaySearchService != null)
+                        // MeshParallelSearch flag or VirtualSoulfind.MeshSearch.Enabled can enable it
+                        var meshEnabled = OptionsMonitor.CurrentValue.Feature.MeshParallelSearch 
+                            || OptionsMonitor.CurrentValue.VirtualSoulfind?.MeshSearch?.Enabled == true;
+                        var meshTask = (meshEnabled && MeshOverlaySearchService != null)
                             ? MeshOverlaySearchService.SearchAsync(query.SearchText, cancellationTokenSource.Token)
                             : Task.FromResult((IReadOnlyList<Response>)Array.Empty<Response>());
 

@@ -46,6 +46,12 @@ namespace slskd.Shares
         IStateMonitor<ShareState> StateMonitor { get; }
 
         /// <summary>
+        ///     Gets the local host's share repository. Used by IContentLocator and other services that need to resolve
+        ///     contentId or masked paths against the local share index.
+        /// </summary>
+        IShareRepository GetLocalRepository();
+
+        /// <summary>
         ///     Adds a new, or updates an existing, share host.
         /// </summary>
         /// <param name="host">The host to add or update.</param>

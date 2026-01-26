@@ -345,6 +345,12 @@ namespace slskd
         public FeatureOptions Feature { get; init; } = new FeatureOptions();
 
         /// <summary>
+        ///     Gets options for sharing (collections, share-grants, tokens).
+        /// </summary>
+        [Validate]
+        public SharingOptions Sharing { get; init; } = new SharingOptions();
+
+        /// <summary>
         ///     Gets options for the Soulseek client.
         /// </summary>
         [Validate]
@@ -1403,6 +1409,39 @@ namespace slskd
             [Description("enable swagger documentation and UI")]
             [RequiresRestart]
             public bool Swagger { get; init; } = false;
+
+            /// <summary>ShareGroups, Collections, ShareGrants, manifest, token. When false, related APIs return 404.</summary>
+            public bool CollectionsSharing { get; init; } = false;
+
+            /// <summary>GET /api/v0/streams/{contentId} with range and token or normal auth. When false, streaming API returns 404.</summary>
+            public bool Streaming { get; init; } = false;
+
+            /// <summary>Relay streaming fallback (controller proxies to agent). Defer; when false, relay/streams returns 404.</summary>
+            public bool StreamingRelayFallback { get; init; } = false;
+
+            /// <summary>Run mesh overlay search in parallel with Soulseek and merge results. Can align with VirtualSoulfind.MeshSearch.Enabled.</summary>
+            public bool MeshParallelSearch { get; init; } = false;
+
+            /// <summary>Publish availability to mesh/DHT. Defer.</summary>
+            public bool MeshPublishAvailability { get; init; } = false;
+
+            /// <summary>Identity and friends (profiles, contacts, LAN discovery, invites). When false, related APIs return 404.</summary>
+            public bool IdentityFriends { get; init; } = false;
+        }
+
+        /// <summary>
+        ///     Sharing options (collections, share-grants, token signing).
+        /// </summary>
+        public class SharingOptions
+        {
+            /// <summary>
+            ///     Base64-encoded key for HMAC-SHA256 signing of share tokens. Decoded key must be at least 32 bytes.
+            ///     When empty, IShareTokenService.Create throws. Used for token auth on streams and manifest.
+            /// </summary>
+            [Argument(default, "sharing-token-key")]
+            [EnvironmentVariable("SHARING_TOKEN_KEY")]
+            [Description("base64-encoded HMAC key for share tokens (min 32 bytes decoded)")]
+            public string TokenSigningKey { get; init; } = string.Empty;
         }
 
         /// <summary>

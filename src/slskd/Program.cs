@@ -89,8 +89,11 @@ namespace slskd
     using slskd.Relay;
     using slskd.Search;
     using slskd.Search.API;
-    using slskd.Shares;
-    using slskd.Telemetry;
+using slskd.Sharing;
+using slskd.Shares;
+using slskd.Streaming;
+using slskd.Identity;
+using slskd.Telemetry;
     using slskd.Transfers;
     using slskd.Transfers.Downloads;
     using slskd.Transfers.MultiSource;
@@ -662,6 +665,43 @@ namespace slskd
                 hostLifetime.ApplicationStarted.Register(() =>
                 {
                     Log.Information("[Program] ✓ ApplicationStarted event fired - all hosted services have completed StartAsync");
+                    
+                    // Start LAN discovery advertising if enabled
+                    if (OptionsAtStartup.Feature.IdentityFriends)
+                    {
+                        try
+                        {
+                            var discovery = app.Services.GetService<Identity.ILanDiscoveryService>();
+                            if (discovery != null)
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        await discovery.StartAdvertisingAsync().ConfigureAwait(false);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Log.Warning(ex, "[Program] Failed to start LAN discovery advertising");
+                                    }
+                                });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "[Program] Failed to initialize LAN discovery");
+                        }
+                    }
+                });
+                
+                hostLifetime.ApplicationStopping.Register(() =>
+                {
+                    try
+                    {
+                        var discovery = app.Services.GetService<Identity.ILanDiscoveryService>();
+                        discovery?.StopAdvertisingAsync().GetAwaiter().GetResult();
+                    }
+                    catch { }
                 });
                 
                 // Try to detect if we're hanging during web server startup
@@ -899,6 +939,11 @@ namespace slskd
                 return service;
             });
             services.AddTransient<IShareRepositoryFactory, SqliteShareRepositoryFactory>();
+
+            services.AddSingleton<IContentLocator, ContentLocator>();
+            services.AddSingleton<IMeshContentFetcher, MeshContentFetcher>();
+            services.AddSingleton<IStreamSessionLimiter, StreamSessionLimiter>();
+            services.AddSingleton<IShareTokenService, ShareTokenService>();
 
             services.AddSingleton<ISearchService, SearchService>();
 
@@ -1825,6 +1870,42 @@ namespace slskd
             }
 
             services.AddSingleton<Users.Notes.IUserNoteService, Users.Notes.UserNoteService>();
+
+            // Collections / sharing (ShareGroup, Collection, ShareGrant) — behind Feature.CollectionsSharing
+            var collectionsDbPath = Path.Combine(Program.AppDirectory, "collections.db");
+            services.AddDbContextFactory<Sharing.CollectionsDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={collectionsDbPath}");
+            });
+            using (var collectionsContext = new Sharing.CollectionsDbContext(
+                new DbContextOptionsBuilder<Sharing.CollectionsDbContext>()
+                    .UseSqlite($"Data Source={collectionsDbPath}")
+                    .Options))
+            {
+                collectionsContext.Database.EnsureCreated();
+            }
+            services.AddSingleton<Sharing.IShareGroupRepository, Sharing.ShareGroupRepository>();
+            services.AddSingleton<Sharing.ICollectionRepository, Sharing.CollectionRepository>();
+            services.AddSingleton<Sharing.IShareGrantRepository, Sharing.ShareGrantRepository>();
+            services.AddSingleton<Sharing.ISharingService, Sharing.SharingService>();
+
+            // Identity / friends (PeerProfile, Contact) — behind Feature.IdentityFriends
+            var identityDbPath = Path.Combine(Program.AppDirectory, "identity.db");
+            services.AddDbContextFactory<Identity.IdentityDbContext>(options =>
+            {
+                options.UseSqlite($"Data Source={identityDbPath}");
+            });
+            using (var identityContext = new Identity.IdentityDbContext(
+                new DbContextOptionsBuilder<Identity.IdentityDbContext>()
+                    .UseSqlite($"Data Source={identityDbPath}")
+                    .Options))
+            {
+                identityContext.Database.EnsureCreated();
+            }
+            services.AddSingleton<Identity.IContactRepository, Identity.ContactRepository>();
+            services.AddSingleton<Identity.IContactService, Identity.ContactService>();
+            services.AddSingleton<Identity.IProfileService, Identity.ProfileService>();
+            services.AddSingleton<Identity.ILanDiscoveryService, Identity.LanDiscoveryService>();
 
             // Security services (zero-trust hardening)
             Log.Information("[DI] About to call AddSlskdnSecurity...");

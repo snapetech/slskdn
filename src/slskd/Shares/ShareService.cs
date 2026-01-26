@@ -154,6 +154,9 @@ namespace slskd.Shares
             });
         }
 
+        /// <inheritdoc />
+        public IShareRepository GetLocalRepository() => Local.Repository;
+
         /// <summary>
         ///     Returns the entire contents of the share.
         /// </summary>

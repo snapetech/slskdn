@@ -83,6 +83,10 @@
 - [x] **Triage follow-up (task)**: Options realm validation re-enabled (`Realm.Validate()`, `MultiRealm.Validate()` in Options.Validate). QuicDataServer TODO replaced with defer comment (IOverlayDataPayloadHandler). RescueService/Scene* remain in triage-todo-fixme as defer. Done.
 - [x] **Reconcile tasks-audit-gaps**: Phase 8 reconciled: T-1421, T-1422, T-1423, T-1425, T-1429 implemented (Ed25519, KeyedSigner/ControlSigner, QuicOverlayServer, QuicDataServer, ControlDispatcher). Tasks-audit-gaps.md updated. T-1424, T-1426, T-1427, T-1428 and Phases 1–6 remain as backlog; promote to [ ] when prioritizing.
 
+### Design / Backlog (ShareGroups, Collections, Streaming, Hybrid Search)
+
+- [x] **ShareGroups + Collections + Streaming + Hybrid Search (design merged)**: Assessment and merged design in `docs/design/sharegroups-collections-streaming-assessment.md`. Merges older agent-ticket with existing: ShareGroup, Collection, ShareGrant, SharePolicy, IShareTokenService, IContentLocator, GET /streams/{contentId} (range, token or auth), manifest, IStreamSessionLimiter; mesh search (we have overlay + MeshSearchRpcHandler + SearchResponseMerger + MeshContent.GetByContentId). Feature flags: CollectionsSharing, Streaming, StreamingRelayFallback, MeshParallelSearch (= VirtualSoulfind.MeshSearch.Enabled), MeshPublishAvailability (defer). **All phases complete** (2026-01-26): Phase 1 (foundations), Phase 2 (collections/sharing), Phase 3 (streaming), Phase 4 (mesh search improvements: MediaKinds/ContentId/Hash in MeshSearchFileDto, SearchResponseMerger normalization, MeshParallelSearch wired), Phase 5 (IMeshContentFetcher with size/hash validation, GET /api/v0/relay/streams/{contentId} endpoint).
+
 ---
 
 ## Packaging & Distribution

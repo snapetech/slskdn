@@ -144,5 +144,6 @@
     <PackageReference Include="NSec.Cryptography" Version="24.4.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.400" />
+    <PackageReference Include="Zeroconf" Version="3.0.30" />
   </ItemGroup>
 </Project>

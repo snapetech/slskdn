@@ -2896,3 +2896,33 @@ See `COMPILE_FIX_FOLLOWUP.md` for detailed list:
 3. Test restored functionality (pod messaging, relay, transport selection)
 4. Consider merging experimental branch to main after validation
 
+## 2026-01-26
+
+### ShareGroups/Collections/Streaming: Phase 4 & 5 Completion
+
+**Phase 4 (Mesh Search Improvements):**
+- Added `MediaKinds`, `ContentId`, and `Hash` properties to `MeshSearchFileDto` for enhanced content matching.
+- Implemented `DeriveMediaKinds()` in `MeshSearchRpcHandler` to automatically categorize files (Music/Video/Image) from extensions.
+- Fixed `SearchResponseMerger` normalization logic - verified case-insensitive and path separator normalization works correctly.
+- Wired `Feature.MeshParallelSearch` flag to work alongside `VirtualSoulfind.MeshSearch.Enabled` in `SearchService` (either flag can enable parallel mesh search).
+- Fixed duplicate test method in `ShareGroupsControllerTests` (removed duplicate `AddMember_NoUserIdOrPeerId_ReturnsBadRequest`).
+- All 2430 unit tests passing.
+
+**Phase 5 (Relay Streaming Fallback):**
+- Created `IMeshContentFetcher` interface and `MeshContentFetcher` implementation for fetching content from mesh overlay network.
+- Implemented size and SHA-256 hash validation in `MeshContentFetcher` when expected values are provided.
+- Added `GET /api/v0/relay/streams/{contentId}` endpoint in `RelayController` for ContentId-based streaming through relay agents.
+- Endpoint resolves ContentId to filename via `IContentLocator`, then uses existing relay file streaming mechanism.
+- Registered `IMeshContentFetcher` in DI container (`Program.cs`).
+- Updated `RelayController` to accept optional `IContentLocator` for backward compatibility.
+- All phases (1-5) of ShareGroups/Collections/Streaming feature now complete.
+
+**Documentation:**
+- Updated `sharegroups-collections-streaming-assessment.md` to mark Phase 4 and Phase 5 as complete.
+- Updated `tasks.md` to reflect all phases complete.
+- Updated `activeContext.md` with current status.
+
+**Test Results:**
+- All 2430 unit tests passing.
+- Build successful (0 errors).
+

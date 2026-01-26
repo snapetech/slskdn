@@ -50,6 +50,23 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
     {
         try
         {
+            // Query length cap (prevent abuse)
+            const int MaxQueryLength = 256;
+            if (request.SearchText.Length > MaxQueryLength)
+            {
+                return new MeshSearchResponseMessage
+                {
+                    RequestId = request.RequestId,
+                    Files = new List<MeshSearchFileDto>(),
+                    Truncated = false,
+                    Error = $"Query too long: {request.SearchText.Length} > {MaxQueryLength}",
+                };
+            }
+
+            // Time cap: use cancellation token with timeout
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5)); // 5 second cap
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
             var query = SearchQuery.FromText(request.SearchText);
             var maxResults = Math.Clamp(request.MaxResults, MessageValidator.MinMeshSearchMaxResults, MessageValidator.MaxMeshSearchMaxResults);
 
@@ -73,6 +90,9 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
                     Bitrate = f.BitRate,
                     Duration = f.Length,
                     Codec = DeriveCodec(f.Extension),
+                    MediaKinds = DeriveMediaKinds(f.Extension),
+                    ContentId = null, // TODO: Populate from share repository if available
+                    Hash = null, // TODO: Populate from share repository if available
                 })
                 .ToList();
 
@@ -118,4 +138,32 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
             _ => null,
         };
     }
+
+    private static List<string>? DeriveMediaKinds(string? extension)
+    {
+        if (string.IsNullOrEmpty(extension)) return null;
+        var ext = extension.TrimStart('.').ToLowerInvariant();
+        var kinds = new List<string>();
+
+        // Music
+        if (ext is "mp3" or "flac" or "m4a" or "aac" or "opus" or "ogg" or "wav" or "wma" or "ape" or "mka")
+        {
+            kinds.Add("Music");
+        }
+
+        // Video
+        if (ext is "mp4" or "mkv" or "avi" or "mov" or "wmv" or "flv" or "webm" or "m4v" or "mpg" or "mpeg")
+        {
+            kinds.Add("Video");
+        }
+
+        // Image
+        if (ext is "jpg" or "jpeg" or "png" or "gif" or "bmp" or "webp" or "svg" or "ico")
+        {
+            kinds.Add("Image");
+        }
+
+        return kinds.Count > 0 ? kinds : null;
+    }
+
 }

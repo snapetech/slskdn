@@ -9,10 +9,13 @@ import { isPassthroughEnabled } from '../lib/token';
 import AppContext from './AppContext';
 import Browse from './Browse/Browse';
 import Chat from './Chat/Chat';
+import Contacts from './Contacts/Contacts';
 import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
+import ShareGroups from './ShareGroups/ShareGroups';
+import SharedWithMe from './Shares/SharedWithMe';
 import {
   isStatusBarVisible,
   SlskdnStatusBar,
@@ -447,6 +450,24 @@ class App extends Component {
                     Users
                   </Menu.Item>
                 </Link>
+                <Link to={`${urlBase}/contacts`}>
+                  <Menu.Item>
+                    <Icon name="address book" />
+                    Contacts
+                  </Menu.Item>
+                </Link>
+                <Link to={`${urlBase}/sharegroups`}>
+                  <Menu.Item>
+                    <Icon name="users" />
+                    Share Groups
+                  </Menu.Item>
+                </Link>
+                <Link to={`${urlBase}/shared`}>
+                  <Menu.Item>
+                    <Icon name="share" />
+                    Shared with Me
+                  </Menu.Item>
+                </Link>
                 <Link to={`${urlBase}/browse`}>
                   <Menu.Item>
                     <Icon name="folder open" />
@@ -636,6 +657,32 @@ class App extends Component {
                     path={`${urlBase}/users`}
                     render={(props) =>
                       this.withTokenCheck(<Users {...props} />)
+                    }
+                  />
+                  <Route
+                    path={`${urlBase}/contacts`}
+                    render={(props) =>
+                      this.withTokenCheck(<Contacts {...props} />)
+                    }
+                  />
+                  <Route
+                    path={`${urlBase}/sharegroups`}
+                    render={(props) =>
+                      this.withTokenCheck(
+                        <div className="view">
+                          <ShareGroups {...props} />
+                        </div>,
+                      )
+                    }
+                  />
+                  <Route
+                    path={`${urlBase}/shared`}
+                    render={(props) =>
+                      this.withTokenCheck(
+                        <div className="view">
+                          <SharedWithMe {...props} />
+                        </div>,
+                      )
                     }
                   />
                   <Route

@@ -23,10 +23,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: —
-- **Branch**: `dev/40-fixes` (or feature branch as appropriate)
+- **Current Task**: Phase 5 completion - ShareGroups/Collections/Streaming
+- **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: CHANGELOG and option docs updated. CHANGELOG.md added (40-fixes, I2P, RelayOnly, ExtractPcmSamples, Mesh:SyncSecurity, breaking behavior). config/slskd.example.yml: RelayOnly.RelayPeerDataEndpoints. packaging/debian/changelog 0.24.1.slskdn.41-1. tasks.md: "CHANGELOG and option docs" [x]. progress.md and activeContext updated.
+- **Last Activity**: Completed Phase 5 (relay streaming fallback): Implemented IMeshContentFetcher with size/hash validation, added GET /api/v0/relay/streams/{contentId} endpoint. All phases (1-5) now complete for ShareGroups/Collections/Streaming feature.
 
 ---
 

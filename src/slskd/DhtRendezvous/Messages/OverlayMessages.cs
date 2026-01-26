@@ -243,6 +243,24 @@ public sealed class MeshSearchFileDto
 
     [JsonPropertyName("codec")]
     public string? Codec { get; set; }
+
+    /// <summary>
+    /// Media kinds (e.g., "Music", "Video", "Image") derived from file extension.
+    /// </summary>
+    [JsonPropertyName("mediaKinds")]
+    public List<string>? MediaKinds { get; set; }
+
+    /// <summary>
+    /// Content ID if available from share repository.
+    /// </summary>
+    [JsonPropertyName("contentId")]
+    public string? ContentId { get; set; }
+
+    /// <summary>
+    /// File hash (SHA-256) if available from share repository.
+    /// </summary>
+    [JsonPropertyName("hash")]
+    public string? Hash { get; set; }
 }
 
 /// <summary>
@@ -286,4 +304,3 @@ public sealed class MeshSearchResponseMessage : OverlayMessage
     [JsonPropertyName("error")]
     public string? Error { get; set; }
 }
-

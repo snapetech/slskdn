@@ -38,6 +38,7 @@ namespace slskd.Relay
     using Serilog;
     using slskd.Shares;
     using slskd.Core.Security;
+    using slskd.Streaming;
 
     /// <summary>
     ///     Relay.
@@ -62,12 +63,14 @@ namespace slskd.Relay
             IRelayService relayService,
             IShareRepository shareRepository,
             IOptionsMonitor<Options> optionsMonitor,
-            OptionsAtStartup optionsAtStartup)
+            OptionsAtStartup optionsAtStartup,
+            IContentLocator? contentLocator = null)
         {
             Relay = relayService;
             ShareRepository = shareRepository;
             OptionsMonitor = optionsMonitor;
             OptionsAtStartup = optionsAtStartup;
+            ContentLocator = contentLocator;
         }
 
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayController>();
@@ -76,6 +79,7 @@ namespace slskd.Relay
         private OptionsAtStartup OptionsAtStartup { get; }
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IContentLocator? ContentLocator { get; }
 
         /// <summary>
         ///     Connects to the configured controller.
@@ -383,6 +387,92 @@ namespace slskd.Relay
                 {
                     Log.Debug(ex, "Failed to remove temporary share upload file: {Message}", ex.Message);
                 }
+            }
+        }
+
+        /// <summary>
+        ///     Streams content by ContentId through relay agents (Phase 5: relay streaming fallback).
+        ///     Resolves ContentId to filename, then uses existing relay file streaming.
+        /// </summary>
+        /// <param name="contentId">Content identifier to stream.</param>
+        /// <param name="agentName">Agent name to request the file from.</param>
+        /// <param name="token">Optional token for authentication.</param>
+        /// <returns>File stream result.</returns>
+        [HttpGet("streams/{contentId}")]
+        [ProducesResponseType(typeof(FileStreamResult), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(503)]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> StreamContent(string contentId, [FromQuery] string? agentName, [FromQuery] string? token)
+        {
+            if (!OptionsAtStartup.Relay.Enabled || !OptionsMonitor.CurrentValue.Feature.StreamingRelayFallback)
+            {
+                return StatusCode(503, "Relay streaming fallback is not enabled");
+            }
+
+            if (!new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
+            {
+                return Forbid();
+            }
+
+            if (ContentLocator == null)
+            {
+                Log.Warning("[RelayStreams] ContentLocator not available");
+                return StatusCode(503, "Content locator not available");
+            }
+
+            // Resolve ContentId to filename
+            var resolved = ContentLocator.Resolve(contentId, HttpContext.RequestAborted);
+            if (resolved == null)
+            {
+                Log.Debug("[RelayStreams] ContentId {ContentId} not found", contentId);
+                return NotFound();
+            }
+
+            // Extract filename from absolute path (get relative path from share)
+            var filename = resolved.AbsolutePath;
+            var shareRepo = ShareRepository;
+            var contentItem = shareRepo.FindContentItem(contentId);
+            if (contentItem.HasValue)
+            {
+                var fileInfo = shareRepo.FindFileInfo(contentItem.Value.MaskedFilename);
+                if (!string.IsNullOrEmpty(fileInfo.Filename))
+                {
+                    // Use the masked filename for relay (virtual path)
+                    filename = contentItem.Value.MaskedFilename;
+                }
+            }
+
+            if (string.IsNullOrEmpty(agentName))
+            {
+                return BadRequest("agentName query parameter is required");
+            }
+
+            if (!Relay.RegisteredAgents.Any(a => a.Name == agentName))
+            {
+                return NotFound($"Agent {agentName} is not registered");
+            }
+
+            var id = Guid.NewGuid();
+            try
+            {
+                // Use existing relay file streaming mechanism
+                var stream = await Relay.GetFileStreamAsync(agentName, filename, startOffset: 0, id, timeout: 30000, HttpContext.RequestAborted);
+                
+                Log.Information("[RelayStreams] Streaming content {ContentId} (filename: {Filename}) from agent {Agent}", contentId, filename, agentName);
+                
+                return File(stream, resolved.ContentType, enableRangeProcessing: true);
+            }
+            catch (TimeoutException ex)
+            {
+                Log.Warning(ex, "[RelayStreams] Timeout streaming {ContentId} from {Agent}", contentId, agentName);
+                return StatusCode(504, "Gateway timeout");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[RelayStreams] Failed to stream {ContentId} from {Agent}", contentId, agentName);
+                return StatusCode(500, "Failed to stream content");
             }
         }
     }

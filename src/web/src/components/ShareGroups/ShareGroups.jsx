@@ -1,0 +1,313 @@
+import React, { Component } from 'react';
+import {
+  Button,
+  Container,
+  Dropdown,
+  Header,
+  Icon,
+  Modal,
+  Table,
+  Form,
+  Message,
+  Segment,
+} from 'semantic-ui-react';
+import * as collectionsAPI from '../../lib/collections';
+import * as identityAPI from '../../lib/identity';
+import ErrorSegment from '../Shared/ErrorSegment';
+import LoaderSegment from '../Shared/LoaderSegment';
+
+export default class ShareGroups extends Component {
+  state = {
+    shareGroups: [],
+    contacts: [],
+    loading: true,
+    error: null,
+    createModalOpen: false,
+    addMemberModalOpen: false,
+    selectedGroup: null,
+    newGroupName: '',
+    selectedContactId: null,
+    selectedUserId: null,
+    usePeerId: true,
+  };
+
+  componentDidMount() {
+    this.loadData();
+  }
+
+  loadData = async () => {
+    try {
+      this.setState({ loading: true, error: null });
+      const [groupsRes, contactsRes] = await Promise.all([
+        collectionsAPI.getShareGroups(),
+        identityAPI.getContacts().catch(() => ({ data: [] })), // Gracefully handle if Identity not enabled
+      ]);
+      this.setState({
+        shareGroups: groupsRes.data || [],
+        contacts: contactsRes.data || [],
+        loading: false,
+      });
+    } catch (error) {
+      this.setState({ error: error.response?.data || error.message, loading: false });
+    }
+  };
+
+  handleCreateGroup = async () => {
+    try {
+      await collectionsAPI.createShareGroup({ name: this.state.newGroupName });
+      this.setState({ createModalOpen: false, newGroupName: '' });
+      await this.loadData();
+    } catch (error) {
+      this.setState({ error: error.response?.data || error.message });
+    }
+  };
+
+  handleAddMember = async () => {
+    if (!this.state.selectedGroup) return;
+    
+    try {
+      const data = this.state.usePeerId && this.state.selectedContactId
+        ? { peerId: this.state.selectedContactId }
+        : { userId: this.state.selectedUserId || this.state.selectedContactId };
+      
+      await collectionsAPI.addShareGroupMember(this.state.selectedGroup.id, data);
+      this.setState({ addMemberModalOpen: false, selectedContactId: null, selectedUserId: null });
+      await this.loadData();
+    } catch (error) {
+      this.setState({ error: error.response?.data || error.message });
+    }
+  };
+
+  handleDeleteGroup = async (id) => {
+    if (!window.confirm('Delete this share group?')) return;
+    try {
+      await collectionsAPI.deleteShareGroup(id);
+      await this.loadData();
+    } catch (error) {
+      this.setState({ error: error.response?.data || error.message });
+    }
+  };
+
+  handleRemoveMember = async (groupId, userId) => {
+    if (!window.confirm('Remove this member?')) return;
+    try {
+      await collectionsAPI.removeShareGroupMember(groupId, userId);
+      await this.loadData();
+    } catch (error) {
+      this.setState({ error: error.response?.data || error.message });
+    }
+  };
+
+  render() {
+    const {
+      shareGroups,
+      contacts,
+      loading,
+      error,
+      createModalOpen,
+      addMemberModalOpen,
+      selectedGroup,
+      newGroupName,
+      selectedContactId,
+      selectedUserId,
+      usePeerId,
+    } = this.state;
+
+    const contactOptions = contacts.map(c => ({
+      key: c.id,
+      text: `${c.nickname || 'Unnamed'} (${c.peerId?.substring(0, 16)}...)`,
+      value: c.peerId,
+      contact: c,
+    }));
+
+    if (loading) return <LoaderSegment />;
+
+    return (
+      <Container>
+        <Header as="h1">
+          <Icon name="users" />
+          <Header.Content>
+            Share Groups
+            <Header.Subheader>Manage groups for sharing collections</Header.Subheader>
+          </Header.Content>
+        </Header>
+
+        {error && <ErrorSegment error={error} />}
+
+        <div style={{ marginBottom: '1em' }}>
+          <Button primary onClick={() => this.setState({ createModalOpen: true })}>
+            <Icon name="plus" />
+            Create Group
+          </Button>
+        </div>
+
+        {shareGroups.length === 0 ? (
+          <Segment placeholder>
+            <Header icon>
+              <Icon name="users" />
+              No share groups yet
+            </Header>
+            <Button primary onClick={() => this.setState({ createModalOpen: true })}>
+              Create Your First Group
+            </Button>
+          </Segment>
+        ) : (
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.HeaderCell>Name</Table.HeaderCell>
+                <Table.HeaderCell>Members</Table.HeaderCell>
+                <Table.HeaderCell>Created</Table.HeaderCell>
+                <Table.HeaderCell>Actions</Table.HeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {shareGroups.map((group) => (
+                <Table.Row key={group.id}>
+                  <Table.Cell>{group.name}</Table.Cell>
+                  <Table.Cell>
+                    <Button
+                      size="small"
+                      onClick={async () => {
+                        try {
+                          const membersRes = await collectionsAPI.getShareGroupMembers(group.id, true);
+                          const members = membersRes.data || [];
+                          alert(`Members:\n${members.map(m => 
+                            m.contactNickname || m.userId
+                          ).join('\n')}`);
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                    >
+                      View Members
+                    </Button>
+                  </Table.Cell>
+                  <Table.Cell>{new Date(group.createdAt).toLocaleDateString()}</Table.Cell>
+                  <Table.Cell>
+                    <Button
+                      size="small"
+                      primary
+                      onClick={() => this.setState({ addMemberModalOpen: true, selectedGroup: group })}
+                    >
+                      Add Member
+                    </Button>
+                    <Button
+                      size="small"
+                      negative
+                      onClick={() => this.handleDeleteGroup(group.id)}
+                    >
+                      Delete
+                    </Button>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        )}
+
+        {/* Create Group Modal */}
+        <Modal
+          open={createModalOpen}
+          onClose={() => this.setState({ createModalOpen: false, newGroupName: '' })}
+        >
+          <Modal.Header>Create Share Group</Modal.Header>
+          <Modal.Content>
+            <Form>
+              <Form.Input
+                label="Group Name"
+                value={newGroupName}
+                onChange={(e) => this.setState({ newGroupName: e.target.value })}
+                placeholder="Enter group name"
+              />
+            </Form>
+          </Modal.Content>
+          <Modal.Actions>
+            <Button onClick={() => this.setState({ createModalOpen: false, newGroupName: '' })}>
+              Cancel
+            </Button>
+            <Button primary onClick={this.handleCreateGroup} disabled={!newGroupName.trim()}>
+              Create
+            </Button>
+          </Modal.Actions>
+        </Modal>
+
+        {/* Add Member Modal */}
+        <Modal
+          open={addMemberModalOpen}
+          onClose={() => this.setState({ 
+            addMemberModalOpen: false, 
+            selectedGroup: null,
+            selectedContactId: null,
+            selectedUserId: null,
+          })}
+        >
+          <Modal.Header>Add Member to {selectedGroup?.name}</Modal.Header>
+          <Modal.Content>
+            {contacts.length > 0 ? (
+              <Form>
+                <Form.Field>
+                  <label>Add from Contacts</label>
+                  <Dropdown
+                    placeholder="Select a contact"
+                    fluid
+                    search
+                    selection
+                    options={contactOptions}
+                    value={selectedContactId}
+                    onChange={(e, { value }) => this.setState({ 
+                      selectedContactId: value,
+                      usePeerId: true,
+                    })}
+                  />
+                </Form.Field>
+                <Message info>
+                  <p>Or enter a Soulseek username (legacy):</p>
+                  <Form.Input
+                    placeholder="Soulseek username"
+                    value={selectedUserId}
+                    onChange={(e) => this.setState({ 
+                      selectedUserId: e.target.value,
+                      usePeerId: false,
+                    })}
+                  />
+                </Message>
+              </Form>
+            ) : (
+              <Form>
+                <Form.Field>
+                  <label>Soulseek Username (legacy)</label>
+                  <Form.Input
+                    placeholder="Enter username"
+                    value={selectedUserId}
+                    onChange={(e) => this.setState({ selectedUserId: e.target.value })}
+                  />
+                </Form.Field>
+                <Message warning>
+                  No contacts available. Add contacts from the Contacts page to use friend-based sharing.
+                </Message>
+              </Form>
+            )}
+          </Modal.Content>
+          <Modal.Actions>
+            <Button onClick={() => this.setState({ 
+              addMemberModalOpen: false,
+              selectedGroup: null,
+              selectedContactId: null,
+              selectedUserId: null,
+            })}>
+              Cancel
+            </Button>
+            <Button 
+              primary 
+              onClick={this.handleAddMember}
+              disabled={!selectedContactId && !selectedUserId}
+            >
+              Add Member
+            </Button>
+          </Modal.Actions>
+        </Modal>
+      </Container>
+    );
+  }
+}
