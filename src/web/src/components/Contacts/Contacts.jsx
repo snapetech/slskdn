@@ -41,7 +41,12 @@ export default class Contacts extends Component {
       const response = await identityAPI.getContacts();
       this.setState({ contacts: response.data || [], loading: false });
     } catch (error) {
-      this.setState({ error: error.message, loading: false });
+      // If 401/403/404, feature not enabled or not authenticated - return empty list
+      if (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404) {
+        this.setState({ contacts: [], loading: false, error: null });
+      } else {
+        this.setState({ error: error.message, loading: false });
+      }
     }
   };
 

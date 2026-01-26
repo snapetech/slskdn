@@ -39,7 +39,14 @@ export default class ShareGroups extends Component {
     try {
       this.setState({ loading: true, error: null });
       const [groupsRes, contactsRes] = await Promise.all([
-        collectionsAPI.getShareGroups(),
+        collectionsAPI.getShareGroups().catch((err) => {
+          // If 401/403/404/400, feature not enabled or not authenticated - return empty list
+          if (err.response?.status === 401 || err.response?.status === 403 || 
+              err.response?.status === 404 || err.response?.status === 400) {
+            return { data: [] };
+          }
+          throw err;
+        }),
         identityAPI.getContacts().catch(() => ({ data: [] })), // Gracefully handle if Identity not enabled
       ]);
       this.setState({
@@ -48,7 +55,15 @@ export default class ShareGroups extends Component {
         loading: false,
       });
     } catch (error) {
-      this.setState({ error: error.response?.data || error.message, loading: false });
+      // Only show error if it's not an auth/feature issue (which we handle above)
+      const isAuthOrFeatureError = error.response?.status === 401 || 
+                                   error.response?.status === 403 || 
+                                   error.response?.status === 404 ||
+                                   error.response?.status === 400;
+      this.setState({ 
+        error: isAuthOrFeatureError ? null : (error.response?.data || error.message), 
+        loading: false 
+      });
     }
   };
 

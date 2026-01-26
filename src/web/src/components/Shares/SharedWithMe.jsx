@@ -35,8 +35,9 @@ export default class SharedWithMe extends Component {
       this.setState({ loading: true, error: null });
       const [sharesRes, contactsRes] = await Promise.all([
         collectionsAPI.getShares().catch((err) => {
-          // If 401/403, user isn't authenticated - return empty list
-          if (err.response?.status === 401 || err.response?.status === 403) {
+          // If 401/403/404/400, user isn't authenticated or feature not enabled - return empty list
+          if (err.response?.status === 401 || err.response?.status === 403 || 
+              err.response?.status === 404 || err.response?.status === 400) {
             return { data: [] };
           }
           // For other errors, rethrow to be caught below
@@ -64,10 +65,13 @@ export default class SharedWithMe extends Component {
         loading: false,
       });
     } catch (error) {
-      // Only show error if it's not an auth issue (which we handle above)
-      const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+      // Only show error if it's not an auth/feature issue (which we handle above)
+      const isAuthOrFeatureError = error.response?.status === 401 || 
+                                   error.response?.status === 403 || 
+                                   error.response?.status === 404 ||
+                                   error.response?.status === 400;
       this.setState({ 
-        error: isAuthError ? null : (error.response?.data || error.message), 
+        error: isAuthOrFeatureError ? null : (error.response?.data || error.message), 
         loading: false 
       });
     }
