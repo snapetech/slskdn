@@ -97,6 +97,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Feature Flag**: `feature.streaming_relay_fallback` (default: `false`). Endpoint returns 503 when disabled.
   - **Validation**: `MeshContentFetcher` performs size and SHA-256 hash validation when expected values are provided.
 
+### Mesh Network Resilience
+
+- **Fault-Tolerant UDP Overlay**: UDP overlay server now gracefully handles port binding failures, allowing mesh to operate behind firewalls.
+  - **Graceful Degradation**: When UDP overlay port (default 50305) cannot be bound (e.g., already in use, firewall blocked), the mesh continues operating in degraded mode.
+  - **Preserved Functionality**: DHT operations, relay/beacon services, and hole punching continue to function even without direct inbound UDP connections.
+  - **Clear Logging**: Warning messages clearly explain degraded mode operation and which features remain available.
+  - **Consistent Error Handling**: Matches the fault-tolerant pattern used by QUIC overlay servers.
+  - **Use Case**: Enables mesh operation behind firewalls where port forwarding is not available, relying on outbound connections, DHT, and relay services for connectivity.
+
 ### Security & hardening (40-fixes, dev/40-fixes)
 
 - **EnforceSecurity** (`web.enforce_security`): When `true`, enables strict auth, CORS, startup checks via `HardeningValidator`, and automatic 400 for invalid `ModelState` (`SuppressModelStateInvalidFilter = false`). Use for repeatable hardened testing.

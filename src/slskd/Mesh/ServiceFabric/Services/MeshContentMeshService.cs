@@ -38,16 +38,16 @@ public sealed class MeshContentMeshService : IMeshService
     private const int MaxFullResponseBytes = 32 * 1024 * 1024; // 32MB
 
     private readonly ILogger<MeshContentMeshService> _logger;
-    private readonly IShareRepository _shareRepository;
+    private readonly IShareService _shareService;
     private readonly int _maxPayload;
 
     public MeshContentMeshService(
         ILogger<MeshContentMeshService> logger,
-        IShareRepository shareRepository,
+        IShareService shareService,
         IOptions<MeshOptions>? meshOptions = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _shareRepository = shareRepository ?? throw new ArgumentNullException(nameof(shareRepository));
+        _shareService = shareService ?? throw new ArgumentNullException(nameof(shareService));
         _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
@@ -102,7 +102,8 @@ public sealed class MeshContentMeshService : IMeshService
             };
         }
 
-        var ci = _shareRepository.FindContentItem(req.ContentId);
+        var repo = _shareService.GetLocalRepository();
+        var ci = repo.FindContentItem(req.ContentId);
         if (ci == null || !ci.Value.IsAdvertisable)
         {
             return new ServiceReply
@@ -114,7 +115,7 @@ public sealed class MeshContentMeshService : IMeshService
             };
         }
 
-        var finfo = _shareRepository.FindFileInfo(ci.Value.MaskedFilename);
+        var finfo = repo.FindFileInfo(ci.Value.MaskedFilename);
         if (finfo.Filename == null || finfo.Size <= 0)
         {
             return new ServiceReply

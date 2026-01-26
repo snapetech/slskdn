@@ -941,7 +941,6 @@ using slskd.Telemetry;
             services.AddTransient<IShareRepositoryFactory, SqliteShareRepositoryFactory>();
 
             services.AddSingleton<IContentLocator, ContentLocator>();
-            services.AddSingleton<IMeshContentFetcher, MeshContentFetcher>();
             services.AddSingleton<IStreamSessionLimiter, StreamSessionLimiter>();
             services.AddSingleton<IShareTokenService, ShareTokenService>();
 
@@ -1541,6 +1540,9 @@ using slskd.Telemetry;
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDescriptorValidator, Mesh.ServiceFabric.MeshServiceDescriptorValidator>();
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDirectory, Mesh.ServiceFabric.DhtMeshServiceDirectory>();
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceClient, Mesh.ServiceFabric.MeshServiceClient>();
+            
+            // MeshContentFetcher requires IMeshServiceClient, so register after it
+            services.AddSingleton<IMeshContentFetcher, MeshContentFetcher>();
 
             // Kademlia routing table using overlay key material for node ID
             services.AddSingleton<Mesh.Dht.KademliaRoutingTable>(sp =>

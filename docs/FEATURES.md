@@ -19,6 +19,7 @@
 - QUIC/UDP with TLS encryption
 - Certificate pinning for security
 - Rendezvous and relay capabilities
+- **Fault-tolerant operation**: Mesh continues functioning behind firewalls when UDP port cannot be opened, using DHT, relay, and hole punching for connectivity
 
 ### Multi-Source Downloads
 - Chunked downloads from multiple sources

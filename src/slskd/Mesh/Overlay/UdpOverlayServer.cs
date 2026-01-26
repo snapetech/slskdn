@@ -52,16 +52,38 @@ public class UdpOverlayServer : BackgroundService
                 return;
             }
 
-            udp = new UdpClient(new IPEndPoint(IPAddress.Any, options.ListenPort))
+            try
             {
-                Client =
+                udp = new UdpClient(new IPEndPoint(IPAddress.Any, options.ListenPort))
                 {
-                    ReceiveBufferSize = options.ReceiveBufferBytes,
-                    SendBufferSize = options.SendBufferBytes
-                }
-            };
+                    Client =
+                    {
+                        ReceiveBufferSize = options.ReceiveBufferBytes,
+                        SendBufferSize = options.SendBufferBytes
+                    }
+                };
 
-            logger.LogInformation("[Overlay] UDP listening on {Port}", options.ListenPort);
+                logger.LogInformation("[Overlay] UDP listening on {Port}", options.ListenPort);
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+            {
+                logger.LogWarning(
+                    "[Overlay] UDP overlay port {Port} is already in use. Continuing without UDP overlay server. " +
+                    "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
+                    "but direct inbound UDP connections will be unavailable.",
+                    options.ListenPort);
+                return; // Gracefully exit - mesh can still function via other transports
+            }
+            catch (SocketException ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "[Overlay] UDP overlay failed to bind to port {Port} (error: {Error}). Continuing without UDP overlay server. " +
+                    "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
+                    "but direct inbound UDP connections will be unavailable.",
+                    options.ListenPort, ex.SocketErrorCode);
+                return; // Gracefully exit - mesh can still function via other transports
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -109,10 +131,14 @@ public class UdpOverlayServer : BackgroundService
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Normal shutdown
+        }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[Overlay] FATAL: UDP overlay server failed to start - {Message}", ex.Message);
-            throw; // Re-throw to stop host if UDP is critical
+            logger.LogError(ex, "[Overlay] UDP overlay server error (non-fatal): {Message}", ex.Message);
+            // Don't re-throw - allow mesh to continue operating via other transports
         }
     }
 

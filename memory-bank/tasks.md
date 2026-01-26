@@ -87,6 +87,8 @@
 
 - [x] **ShareGroups + Collections + Streaming + Hybrid Search (design merged)**: Assessment and merged design in `docs/design/sharegroups-collections-streaming-assessment.md`. Merges older agent-ticket with existing: ShareGroup, Collection, ShareGrant, SharePolicy, IShareTokenService, IContentLocator, GET /streams/{contentId} (range, token or auth), manifest, IStreamSessionLimiter; mesh search (we have overlay + MeshSearchRpcHandler + SearchResponseMerger + MeshContent.GetByContentId). Feature flags: CollectionsSharing, Streaming, StreamingRelayFallback, MeshParallelSearch (= VirtualSoulfind.MeshSearch.Enabled), MeshPublishAvailability (defer). **All phases complete** (2026-01-26): Phase 1 (foundations), Phase 2 (collections/sharing), Phase 3 (streaming), Phase 4 (mesh search improvements: MediaKinds/ContentId/Hash in MeshSearchFileDto, SearchResponseMerger normalization, MeshParallelSearch wired), Phase 5 (IMeshContentFetcher with size/hash validation, GET /api/v0/relay/streams/{contentId} endpoint).
 
+- [x] **Mesh UDP Overlay Fault Tolerance**: UDP overlay server now gracefully handles port binding failures (address already in use, firewall blocked). Mesh continues operating in degraded mode: DHT operations, relay/beacon services, and hole punching remain functional. Only direct inbound UDP connections are unavailable. Clear warning logs explain degraded mode. Matches fault-tolerant pattern used by QUIC overlay servers. Enables mesh operation behind firewalls without port forwarding. **Complete** (2026-01-26): UdpOverlayServer updated with graceful error handling, all 2430 unit tests and 190 integration tests passing.
+
 ---
 
 ## Packaging & Distribution
