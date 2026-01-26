@@ -46,6 +46,11 @@ jobs:
           rm -rf ../slskd/wwwroot/*
           cp -r build/* ../slskd/wwwroot/
 
+      - name: Fetch Test Fixtures
+        run: |
+          ./scripts/fetch-test-fixtures.sh
+        continue-on-error: true  # Don't fail if network is down, static files are enough for basic tests
+
       - name: Install E2E Dependencies
         run: |
           cd src/web

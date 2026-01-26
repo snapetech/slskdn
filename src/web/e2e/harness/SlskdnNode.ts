@@ -54,6 +54,28 @@ export class SlskdnNode {
    * Start the slskdn node process.
    */
   async start(): Promise<void> {
+    // Ensure test fixtures are available (check only, don't fetch automatically)
+    // The shareDir is like 'test-data/slskdn-test-fixtures/music'
+    // We need to check the parent directory 'test-data/slskdn-test-fixtures'
+    const repoRoot = path.join(process.cwd(), '..', '..', '..');
+    const shareDirPath = path.isAbsolute(this.config.shareDir)
+      ? this.config.shareDir
+      : path.join(repoRoot, this.config.shareDir);
+    const fixturesRoot = path.dirname(shareDirPath); // Parent of 'music' or 'book'
+    
+    // Check if fixtures exist (basic validation only)
+    // Full fixture fetching should be done in CI or manually via ./scripts/fetch-test-fixtures.sh
+    try {
+      await fs.access(fixturesRoot);
+      const manifestPath = path.join(fixturesRoot, 'meta', 'manifest.json');
+      await fs.access(manifestPath);
+    } catch (error) {
+      // Log warning but continue - static files may be enough for basic tests
+      if (process.env.DEBUG) {
+        console.warn(`[SlskdnNode] Fixture directory check: ${error}`);
+      }
+    }
+
     // Allocate ephemeral port if not provided
     if (!this.config.apiPort) {
       this.apiPort = await findFreePort();
