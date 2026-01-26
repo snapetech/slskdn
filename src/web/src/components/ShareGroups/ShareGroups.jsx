@@ -90,8 +90,19 @@ export default class ShareGroups extends Component {
       // Extract error message from response (supports ProblemDetails, object with message/error, or string)
       let errorMsg = error.message || 'Failed to create share group';
       if (error.response) {
-        console.error('[ShareGroups] Response status:', error.response.status);
+        const status = error.response.status;
+        const url = error.response.config?.url || 'unknown';
+        const contentLength = error.response.headers['content-length'];
+        
+        console.error('[ShareGroups] Response status:', status);
+        console.error('[ShareGroups] Response URL:', url);
         console.error('[ShareGroups] Response data:', error.response.data);
+        
+        // Check for empty body
+        if (contentLength === '0' || contentLength === 0) {
+          console.error(`[ShareGroups] HTTP ${status} with empty body from ${url}`);
+        }
+        
         if (error.response.data) {
           if (typeof error.response.data === 'string') {
             errorMsg = error.response.data;
@@ -106,13 +117,22 @@ export default class ShareGroups extends Component {
           } else {
             errorMsg = JSON.stringify(error.response.data);
           }
-        } else if (error.response.status === 400) {
+        } else if (status === 400) {
           // 400 with empty body likely means CSRF validation failed or user identity missing
           errorMsg = 'Request failed. This may be due to: missing CSRF token (try refreshing the page), user identity not available (configure Soulseek username or enable Identity & Friends), or invalid input.';
-        } else if (error.response.status === 401) {
+        } else if (status === 401) {
           errorMsg = 'Authentication required. Please refresh the page.';
-        } else if (error.response.status === 404) {
-          errorMsg = 'Collections sharing feature is not enabled.';
+        } else if (status === 403) {
+          errorMsg = 'Not authorized.';
+        } else if (status === 404) {
+          // 404 could be route mismatch (double prefix bug) or feature disabled
+          if (url.includes('/api/v0/api/v0')) {
+            errorMsg = `Endpoint not found: ${url} (possible route mismatch - check browser console)`;
+          } else {
+            errorMsg = 'Collections sharing feature is not enabled, or endpoint not found.';
+          }
+        } else if (status >= 500) {
+          errorMsg = 'Server error. Please check server logs.';
         }
       }
       this.setState({ error: errorMsg || 'Failed to create share group. Please configure Soulseek username or enable Identity & Friends.' });
