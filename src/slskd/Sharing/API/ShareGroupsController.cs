@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,8 @@ using slskd.Sharing;
 
 /// <summary>Share group CRUD and members. Requires Feature.CollectionsSharing.</summary>
 [ApiController]
-[Route("api/v0/sharegroups")]
+[ApiVersion("0")]
+[Route("api/v{version:apiVersion}/sharegroups")]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly]
 [Produces("application/json")]

@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,8 @@ using slskd.Sharing;
 
 /// <summary>Collection CRUD and items. Requires Feature.CollectionsSharing.</summary>
 [ApiController]
-[Route("api/v0/collections")]
+[ApiVersion("0")]
+[Route("api/v{version:apiVersion}/collections")]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly]
 [Produces("application/json")]

@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,8 @@ using slskd.Sharing;
 
 /// <summary>Share-grant CRUD, token, and manifest. "Shares" = grants of a collection to a user/group. Requires Feature.CollectionsSharing (or Streaming for manifest with token).</summary>
 [ApiController]
-[Route("api/v0/shares")]
+[ApiVersion("0")]
+[Route("api/v{version:apiVersion}/shares")]
 [ValidateCsrfForCookiesOnly]
 [Produces("application/json")]
 [Consumes("application/json")]
