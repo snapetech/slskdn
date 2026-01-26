@@ -45,8 +45,7 @@ test.describe("core pages", () => {
 
     await clickNav(page, T.navDownloads);
     await expect(page).toHaveURL(/\/downloads/);
-    // Verify page loaded (check for any visible content or specific element)
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByTestId(T.downloadsRoot)).toBeVisible();
   });
 
   test("uploads_page_loads", async ({ page, request }) => {
@@ -56,8 +55,7 @@ test.describe("core pages", () => {
 
     await clickNav(page, T.navUploads);
     await expect(page).toHaveURL(/\/uploads/);
-    // Verify page loaded
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByTestId(T.uploadsRoot)).toBeVisible();
   });
 
   test("rooms_chat_users_pages_graceful_offline", async ({ page, request }) => {

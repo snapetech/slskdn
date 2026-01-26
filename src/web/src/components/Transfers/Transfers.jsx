@@ -10,6 +10,7 @@ import { toast } from 'react-toastify';
 const AUTO_REPLACE_THRESHOLD = 0; // 0% = exact match only (configurable on backend)
 
 const Transfers = ({ direction, server }) => {
+  const testId = direction === 'download' ? 'downloads-root' : 'uploads-root';
   const [connecting, setConnecting] = useState(true);
   const [transfers, setTransfers] = useState([]);
 
@@ -245,7 +246,7 @@ const Transfers = ({ direction, server }) => {
   }
 
   return (
-    <>
+    <div data-testid={testId}>
       <TransfersHeader
         autoReplaceEnabled={autoReplaceEnabled}
         autoReplaceThreshold={autoReplaceThreshold}
@@ -280,7 +281,7 @@ const Transfers = ({ direction, server }) => {
           />
         ))
       )}
-    </>
+    </div>
   );
 };
 
