@@ -216,7 +216,13 @@
 #   Join:
 #     SignatureMode: Off   # Enforce: require Nonce on join, reject replay
 # feature:
-#   swagger: false
+#   swagger: true              # Enable Swagger API documentation UI (default: true)
+#   CollectionsSharing: false  # Enable Collections, ShareGroups, ShareGrants APIs
+#   Streaming: true            # Enable streaming API (/api/v0/streams/{contentId}) (default: true)
+#   StreamingRelayFallback: true  # Enable relay streaming fallback (controller proxies to agent) (default: true)
+#   MeshParallelSearch: true  # Run mesh overlay search in parallel with Soulseek and merge results (default: true)
+#   MeshPublishAvailability: true  # Publish availability to mesh/DHT (default: true)
+#   IdentityFriends: false     # Enable Identity & Friends (profiles, contacts, invites)
 # security:
 #   enabled: true  # Enable security features (path traversal protection is ALWAYS enabled)
 #   profile: Standard  # Security profile: Minimal, Standard, Maximum, or Custom

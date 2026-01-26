@@ -1408,22 +1408,22 @@ namespace slskd
             [EnvironmentVariable("SWAGGER")]
             [Description("enable swagger documentation and UI")]
             [RequiresRestart]
-            public bool Swagger { get; init; } = false;
+            public bool Swagger { get; init; } = true;
 
             /// <summary>ShareGroups, Collections, ShareGrants, manifest, token. When false, related APIs return 404.</summary>
             public bool CollectionsSharing { get; init; } = false;
 
             /// <summary>GET /api/v0/streams/{contentId} with range and token or normal auth. When false, streaming API returns 404.</summary>
-            public bool Streaming { get; init; } = false;
+            public bool Streaming { get; init; } = true;
 
             /// <summary>Relay streaming fallback (controller proxies to agent). Defer; when false, relay/streams returns 404.</summary>
-            public bool StreamingRelayFallback { get; init; } = false;
+            public bool StreamingRelayFallback { get; init; } = true;
 
             /// <summary>Run mesh overlay search in parallel with Soulseek and merge results. Can align with VirtualSoulfind.MeshSearch.Enabled.</summary>
-            public bool MeshParallelSearch { get; init; } = false;
+            public bool MeshParallelSearch { get; init; } = true;
 
             /// <summary>Publish availability to mesh/DHT. Defer.</summary>
-            public bool MeshPublishAvailability { get; init; } = false;
+            public bool MeshPublishAvailability { get; init; } = true;
 
             /// <summary>Identity and friends (profiles, contacts, LAN discovery, invites). When false, related APIs return 404.</summary>
             public bool IdentityFriends { get; init; } = false;
