@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd;
@@ -22,15 +23,22 @@ using TestOptionsMonitor = slskd.Tests.Unit.TestOptionsMonitor<slskd.Options>;
 public class ShareGroupsControllerTests
 {
     private readonly Mock<ISharingService> _sharingMock = new();
+    private readonly Mock<IServiceProvider> _serviceProviderMock = new();
     private IOptionsMonitor<slskd.Options> _options = new TestOptionsMonitor(new slskd.Options
     {
         Feature = new slskd.Options.FeatureOptions { CollectionsSharing = true },
         Soulseek = new slskd.Options.SoulseekOptions { Username = "alice" }
     });
 
+    public ShareGroupsControllerTests()
+    {
+        // Setup service provider to return null for GetService calls (handled gracefully in controllers)
+        _serviceProviderMock.Setup(x => x.GetService(It.IsAny<Type>())).Returns((object?)null);
+    }
+
     private ShareGroupsController CreateController()
     {
-        var c = new ShareGroupsController(_sharingMock.Object, _options);
+        var c = new ShareGroupsController(_sharingMock.Object, _options, _serviceProviderMock.Object);
         c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         c.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "u") }, "Test"));
         return c;

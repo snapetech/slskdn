@@ -2507,63 +2507,6 @@ using slskd.Telemetry;
                 app.UseSerilogRequestLogging();
             }
 
-            // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
-            // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
-            
-            // WORKAROUND: Response body finalizer middleware to ensure 400 responses have bodies
-            // This buffers the response and ensures it's written even if something clears it
-            // TODO: Find and fix the middleware that's clearing response bodies for 400 status codes
-            app.Use(async (ctx, next) =>
-            {
-                // Only buffer API routes to reduce overhead
-                if (!ctx.Request.Path.StartsWithSegments("/api"))
-                {
-                    await next();
-                    return;
-                }
-
-                var originalBody = ctx.Response.Body;
-                await using var buffer = new MemoryStream();
-                ctx.Response.Body = buffer;
-
-                await next();
-
-                // Restore original body
-                ctx.Response.Body = originalBody;
-                buffer.Position = 0;
-
-                var bufferLen = buffer.Length;
-                var statusCode = ctx.Response.StatusCode;
-
-                // For 400-499 status codes, ensure the body is written
-                if (statusCode >= 400 && statusCode < 500)
-                {
-                    if (bufferLen > 0)
-                    {
-                        // Body was written - copy it to original stream
-                        if (ctx.Response.ContentLength == 0 || ctx.Response.ContentLength == null)
-                        {
-                            ctx.Response.ContentLength = bufferLen;
-                        }
-                        await buffer.CopyToAsync(originalBody);
-                    }
-                    else
-                    {
-                        // Body is empty - log warning for debugging
-                        Log.Warning("[BodyFinalizer] {Method} {Path} -> {StatusCode} has empty body (bufferLen=0)",
-                            ctx.Request.Method, ctx.Request.Path, statusCode);
-                    }
-                }
-                else
-                {
-                    // For other status codes, just copy the buffer
-                    if (bufferLen > 0)
-                    {
-                        await buffer.CopyToAsync(originalBody);
-                    }
-                }
-            });
-
             // starting with .NET 7 the framework *really* wants you to use top level endpoint mapping
             // for whatever reason this breaks everything, and i just can't bring myself to care unless
             // UseEndpoints is going to be deprecated or if there's some material benefit
@@ -2652,6 +2595,70 @@ using slskd.Telemetry;
                 }
             });
 #pragma warning restore ASP0014 // Suggest using top level route registrations
+
+            // RESPONSE BODY FINALIZER: Ensures 4xx API responses have bodies (AFTER endpoints)
+            // This is a workaround to fix empty response bodies for BadRequest/ProblemDetails
+            // It buffers API responses and ensures the body is written even if other middleware clears it
+            // Placed after UseEndpoints to catch what endpoints write and any middleware that runs after
+            app.Use(async (ctx, next) =>
+            {
+                // Only buffer API routes to reduce overhead
+                if (!ctx.Request.Path.StartsWithSegments("/api"))
+                {
+                    await next();
+                    return;
+                }
+
+                var originalBody = ctx.Response.Body;
+
+                await using var buffer = new MemoryStream();
+                ctx.Response.Body = buffer;
+
+                await next();
+
+                // Restore original body
+                ctx.Response.Body = originalBody;
+                buffer.Position = 0;
+
+                var bufferLen = buffer.Length;
+                var statusCode = ctx.Response.StatusCode;
+                var contentType = ctx.Response.ContentType;
+                var contentLengthHeader = ctx.Response.ContentLength;
+
+                // Log diagnostic info for API routes with 4xx status codes
+                if (statusCode >= 400 && statusCode < 500)
+                {
+                    Log.Warning("[BodyFinalizer] {Method} {Path} -> {StatusCode} bufferLen={BufferLen} contentType={ContentType} contentLengthHeader={ContentLength}",
+                        ctx.Request.Method, ctx.Request.Path, statusCode, bufferLen, contentType ?? "null", contentLengthHeader?.ToString() ?? "null");
+                }
+
+                // For 400-499 status codes, ensure the body is written
+                if (statusCode >= 400 && statusCode < 500)
+                {
+                    if (bufferLen > 0)
+                    {
+                        // Body was written - ensure it's copied to original stream
+                        // If Content-Length was set to 0 by another middleware, fix it
+                        if (ctx.Response.ContentLength == 0 || ctx.Response.ContentLength == null)
+                        {
+                            ctx.Response.ContentLength = bufferLen;
+                        }
+                        await buffer.CopyToAsync(originalBody);
+                    }
+                    else
+                    {
+                        // Body is empty - already logged above with diagnostic info
+                    }
+                }
+                else
+                {
+                    // For other status codes, just copy the buffer if it has content
+                    if (bufferLen > 0)
+                    {
+                        await buffer.CopyToAsync(originalBody);
+                    }
+                }
+            });
 
             // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
             // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
