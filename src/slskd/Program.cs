@@ -2677,6 +2677,8 @@ using slskd.Telemetry;
             {
                 if (context.Request.Path.StartsWithSegments("/api"))
                 {
+                    // Log 404s for API routes to help debug route mismatches
+                    Log.Warning("[API404] {Method} {Path} - No matching endpoint found", context.Request.Method, context.Request.Path);
                     context.Response.StatusCode = 404;
                     return;
                 }
