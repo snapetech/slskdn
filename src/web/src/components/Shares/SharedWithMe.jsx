@@ -143,7 +143,7 @@ export default class SharedWithMe extends Component {
           </Header.Content>
         </Header>
 
-        {error && <ErrorSegment error={error} />}
+        {error && <ErrorSegment caption={error} />}
 
         {shares.length === 0 ? (
           <Segment placeholder>
