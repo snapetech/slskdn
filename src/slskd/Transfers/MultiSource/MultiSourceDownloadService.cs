@@ -37,6 +37,7 @@ using slskdOptions = slskd.Options;
     using slskd.Integrations.Chromaprint;
     using slskd.Audio;
     using slskd.Mesh;
+    using slskd.Transfers.MultiSource.Playback;
 using IODirectory = System.IO.Directory;
 using IOPath = System.IO.Path;
 using FileStream = System.IO.FileStream;
@@ -68,6 +69,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     private readonly IAutoTaggingService autoTaggingService;
     private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
     private readonly IMediaCoreSwarmService? _mediaCoreSwarmService;
+    private readonly IPlaybackPriorityService? _playbackPriorityService;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MultiSourceDownloadService"/> class.
@@ -88,7 +90,8 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             IAutoTaggingService autoTaggingService = null,
             IOptionsMonitor<slskdOptions> optionsMonitor = null,
             ICanonicalStatsService canonicalStatsService = null,
-            IMediaCoreSwarmService mediaCoreSwarmService = null)
+            IMediaCoreSwarmService mediaCoreSwarmService = null,
+            IPlaybackPriorityService playbackPriorityService = null)
     {
         _logger = logger;
         _client = soulseekClient;
@@ -101,6 +104,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             this.optionsMonitor = optionsMonitor;
             this.canonicalStatsService = canonicalStatsService;
             _mediaCoreSwarmService = mediaCoreSwarmService;
+            _playbackPriorityService = playbackPriorityService;
     }
 
     /// <inheritdoc/>
@@ -394,16 +398,50 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 var tempDir = IOPath.Combine(IOPath.GetTempPath(), "slskdn-multidownload", request.Id.ToString());
                 IODirectory.CreateDirectory(tempDir);
 
-                // SWARM MODE: Shared work queue
+                // SWARM MODE: Shared work queue (priority-aware if playback feedback available)
                 var chunkQueue = new ConcurrentQueue<ChunkInfo>();
-                foreach (var chunk in chunks)
+                var jobId = request.Id.ToString("N");
+                
+                // Create chunk info objects with priorities
+                var chunkInfos = chunks.Select(chunk =>
                 {
-                    chunkQueue.Enqueue(new ChunkInfo
+                    // Calculate priority based on playback position if available
+                    int priority = 5; // Default: mid priority
+                    if (_playbackPriorityService != null)
+                    {
+                        var zone = _playbackPriorityService.GetChunkPriority(jobId, chunk.StartOffset, chunk.EndOffset);
+                        priority = zone switch
+                        {
+                            Playback.PriorityZone.High => 10,  // Highest priority
+                            Playback.PriorityZone.Mid => 5,     // Medium priority
+                            Playback.PriorityZone.Low => 1,    // Lowest priority
+                            _ => 5
+                        };
+                    }
+
+                    return new ChunkInfo
                     {
                         Index = chunk.Index,
                         StartOffset = chunk.StartOffset,
                         EndOffset = chunk.EndOffset,
-                    });
+                        Priority = priority,
+                    };
+                }).ToList();
+
+                // Sort by priority (descending) so high-priority chunks are dequeued first
+                // Then enqueue in priority order
+                foreach (var chunkInfo in chunkInfos.OrderByDescending(c => c.Priority))
+                {
+                    chunkQueue.Enqueue(chunkInfo);
+                }
+
+                if (_playbackPriorityService != null)
+                {
+                    var highPriorityCount = chunkInfos.Count(c => c.Priority == 10);
+                    var midPriorityCount = chunkInfos.Count(c => c.Priority == 5);
+                    var lowPriorityCount = chunkInfos.Count(c => c.Priority == 1);
+                    _logger.LogDebug("[SWARM] Chunk priorities for job {JobId}: High={High}, Mid={Mid}, Low={Low}",
+                        jobId, highPriorityCount, midPriorityCount, lowPriorityCount);
                 }
 
                 var completedChunks = new ConcurrentDictionary<int, ChunkResult>();
@@ -489,18 +527,40 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                     _logger.LogInformation("[SWARM] Retry {Attempt}: {Missing} chunks remaining, using {Sources} sources (stuck={Stuck}/{MaxStuck})",
                         retryAttempt, failedCount, successfulSources.Count, stuckCount, maxStuckRetries);
 
-                    // Re-enqueue missing chunks
-                    foreach (var chunk in chunks)
-                    {
-                        if (!completedChunks.ContainsKey(chunk.Index))
+                    // Re-enqueue missing chunks (with priority recalculation)
+                    var retryJobId = request.Id.ToString("N");
+                    var retryChunks = chunks
+                        .Where(chunk => !completedChunks.ContainsKey(chunk.Index))
+                        .Select(chunk =>
                         {
-                            chunkQueue.Enqueue(new ChunkInfo
+                            // Recalculate priority for retry chunks if playback feedback available
+                            int priority = 5; // Default: mid priority
+                            if (_playbackPriorityService != null)
+                            {
+                                var zone = _playbackPriorityService.GetChunkPriority(retryJobId, chunk.StartOffset, chunk.EndOffset);
+                                priority = zone switch
+                                {
+                                    Playback.PriorityZone.High => 10,
+                                    Playback.PriorityZone.Mid => 5,
+                                    Playback.PriorityZone.Low => 1,
+                                    _ => 5
+                                };
+                            }
+
+                            return new ChunkInfo
                             {
                                 Index = chunk.Index,
                                 StartOffset = chunk.StartOffset,
                                 EndOffset = chunk.EndOffset,
-                            });
-                        }
+                                Priority = priority,
+                            };
+                        })
+                        .OrderByDescending(c => c.Priority)
+                        .ToList();
+
+                    foreach (var chunk in retryChunks)
+                    {
+                        chunkQueue.Enqueue(chunk);
                     }
 
                     // Spawn workers only for selected sources
@@ -713,13 +773,29 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
 
                         if (incompleteChunkData.Index >= 0 || incompleteChunkData.EndOffset > 0)
                         {
+                            // Recalculate priority for stolen chunk if playback feedback available
+                            int priority = 5; // Default: mid priority
+                            if (_playbackPriorityService != null)
+                            {
+                                var stealJobId = status.DownloadId.ToString("N");
+                                var zone = _playbackPriorityService.GetChunkPriority(stealJobId, incompleteChunkData.StartOffset, incompleteChunkData.EndOffset);
+                                priority = zone switch
+                                {
+                                    Playback.PriorityZone.High => 10,
+                                    Playback.PriorityZone.Mid => 5,
+                                    Playback.PriorityZone.Low => 1,
+                                    _ => 5
+                                };
+                            }
+
                             chunk = new ChunkInfo
                             {
                                 Index = incompleteChunkData.Index,
                                 StartOffset = incompleteChunkData.StartOffset,
                                 EndOffset = incompleteChunkData.EndOffset,
+                                Priority = priority,
                             };
-                            _logger.LogDebug("[SWARM] {Username} stealing chunk {Index} (speculative)", username, chunk.Index);
+                            _logger.LogDebug("[SWARM] {Username} stealing chunk {Index} (speculative, priority {Priority})", username, chunk.Index, chunk.Priority);
                         }
                         else
                         {
@@ -880,6 +956,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             public int Index { get; set; }
             public long StartOffset { get; set; }
             public long EndOffset { get; set; }
+            public int Priority { get; set; } // Higher = more important (for priority queue ordering)
         }
 
         /// <inheritdoc/>

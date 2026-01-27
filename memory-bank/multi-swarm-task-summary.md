@@ -84,7 +84,7 @@ Enforce upload/download ratios to ensure slskdn nodes remain net contributors to
 
 ### Phase 4: Job Manifests, Session Traces & Advanced Features
 **Tasks**: T-600 through T-611 (12 tasks)  
-**Status**: Phase 4A-4C complete, Phase 4D pending  
+**Status**: ✅ **ALL COMPLETE**  
 **Branch**: `experimental/multi-swarm`  
 **Priority**: Medium (P2) for manifests/traces, Low (P3) for warm cache/playback
 
@@ -106,12 +106,12 @@ Opt-in prefetching and caching of popular MBIDs to amplify Soulseek uploads via 
 - ✅ T-607: WarmCachePopularityService tracks popularity via IncrementPopularityAsync
 - ✅ T-608: WarmCacheService with fetch/serve/evict logic
 
-#### Phase 4D: Playback-Aware Swarming (T-609 to T-611) ✅ **MOSTLY COMPLETE** [Optional]
+#### Phase 4D: Playback-Aware Swarming (T-609 to T-611) ✅ **COMPLETE** [Optional]
 Prioritize chunks around playback head for streaming use cases.
 - ✅ T-609: PlaybackFeedbackService and PlaybackController API implemented
-- ✅ T-610: PlaybackPriorityService with PriorityZone (High/Mid/Low) and ChunkRequest.Priority support
+- ✅ T-610: PlaybackPriorityService with GetChunkPriority method - calculates priority zones (High: 0-10MB, Mid: 10-50MB, Low: 50MB+) based on chunk byte position relative to playback position. Integrated into MultiSourceDownloadService chunk queue ordering.
 - ✅ T-611: PlaybackDiagnostics and PlaybackController diagnostics endpoint implemented
-- ⚠️ Note: Playback priority calculation exists but integration with chunk scheduling is partial (ChunkScheduler sorts by Priority, but priority calculation from playback position needs full integration)
+- ✅ Full integration: Chunks are prioritized when enqueueing (high-priority chunks dequeued first), priority recalculated on retries and work stealing
 
 ---
 

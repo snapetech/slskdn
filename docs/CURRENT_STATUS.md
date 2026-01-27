@@ -2,7 +2,7 @@
 
 > **Date**: 2026-01-27  
 > **Branch**: `dev/40-fixes`  
-> **Multi-Swarm Progress**: 59 of 62 tasks complete (95%)
+> **Multi-Swarm Progress**: 62 of 62 tasks complete (100%)
 
 ---
 
@@ -23,9 +23,9 @@
 - ✅ **40-fixes plan**: All PR/§/J items done
 - ✅ **Packaging**: T-010–T-013 done
 - ✅ **Test Re-enablement**: All phases (0-5) complete
-- ✅ **Multi-Swarm Phases 1-5**: 59 of 62 tasks complete (95%)
+- ✅ **Multi-Swarm Phases 1-5**: 62 of 62 tasks complete (100%)
   - Phase 1: 14/14 ✅ | Phase 2: 12/12 ✅ | Phase 3: 11/11 ✅
-  - Phase 4: 9/12 ✅ (4D mostly complete) | Phase 5: 13/13 ✅
+  - Phase 4: 12/12 ✅ | Phase 5: 13/13 ✅
 
 ---
 
@@ -63,11 +63,11 @@
   - Phase 3B: Label Crate Mode (T-503 to T-504)
   - Phase 3C: Local-Only Peer Reputation (T-505 to T-507)
   - Phase 3D: Mesh-Level Fairness Governor (T-508 to T-510)
-- **Phase 4 Multi-Swarm**: ✅ **MOSTLY COMPLETE** - 9 of 12 tasks (T-600 to T-608) complete:
+- **Phase 4 Multi-Swarm**: ✅ **COMPLETE** - All 12 tasks (T-600 to T-611) complete:
   - Phase 4A: YAML Job Manifests (T-600 to T-602) ✅
   - Phase 4B: Session Traces (T-603 to T-605) ✅
   - Phase 4C: Warm Cache Nodes (T-606 to T-608) ✅
-  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) ✅ Mostly complete (infrastructure exists, full integration pending)
+  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) ✅ Complete (full integration with chunk scheduling)
 - **Phase 5 Multi-Swarm**: ✅ **COMPLETE** - All 13 tasks (T-700 to T-712) complete:
   - Phase 5A: slskd Compatibility Layer (T-700 to T-703) ✅
   - Phase 5B: slskdn-Native Job APIs (T-704 to T-708) ✅

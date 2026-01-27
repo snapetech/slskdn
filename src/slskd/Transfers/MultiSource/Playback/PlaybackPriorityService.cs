@@ -97,6 +97,75 @@ namespace slskd.Transfers.MultiSource.Playback
             return zone;
         }
 
+        /// <summary>
+        ///     Calculates priority for a specific chunk based on its byte position relative to playback position.
+        ///     High priority: Next 10 MB (playback buffer)
+        ///     Mid priority: 10-50 MB ahead
+        ///     Low priority: Rest of file
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="chunkStartBytes">Start byte offset of the chunk.</param>
+        /// <param name="chunkEndBytes">End byte offset of the chunk.</param>
+        /// <returns>Priority zone for this chunk.</returns>
+        public PriorityZone GetChunkPriority(string jobId, long chunkStartBytes, long chunkEndBytes)
+        {
+            if (string.IsNullOrWhiteSpace(jobId) || !latest.TryGetValue(jobId, out var fb))
+            {
+                return PriorityZone.Mid;
+            }
+
+            // Determine playback position in bytes
+            long playbackPositionBytes;
+            if (fb.PositionBytes.HasValue)
+            {
+                playbackPositionBytes = fb.PositionBytes.Value;
+            }
+            else if (fb.FileSizeBytes.HasValue && fb.FileSizeBytes.Value > 0 && fb.PositionMs > 0)
+            {
+                // Estimate bytes from milliseconds (rough approximation)
+                // This assumes constant bitrate - not perfect but better than nothing
+                var progressRatio = (double)fb.PositionMs / (fb.BufferAheadMs + fb.PositionMs);
+                playbackPositionBytes = (long)(fb.FileSizeBytes.Value * progressRatio);
+            }
+            else
+            {
+                // No position info available, use mid priority
+                return PriorityZone.Mid;
+            }
+
+            // Calculate chunk center position
+            var chunkCenterBytes = (chunkStartBytes + chunkEndBytes) / 2;
+            var distanceFromPlayback = chunkCenterBytes - playbackPositionBytes;
+
+            // Priority zones based on design doc:
+            // High: Next 10 MB (playback buffer)
+            // Mid: 10-50 MB ahead
+            // Low: Rest of file
+            const long HighPriorityZoneBytes = 10 * 1024 * 1024; // 10 MB
+            const long MidPriorityZoneBytes = 50 * 1024 * 1024;  // 50 MB
+
+            if (distanceFromPlayback < 0)
+            {
+                // Chunk is behind playback position - high priority to catch up
+                return PriorityZone.High;
+            }
+            else if (distanceFromPlayback <= HighPriorityZoneBytes)
+            {
+                // Within 10 MB of playback - high priority
+                return PriorityZone.High;
+            }
+            else if (distanceFromPlayback <= MidPriorityZoneBytes)
+            {
+                // 10-50 MB ahead - mid priority
+                return PriorityZone.Mid;
+            }
+            else
+            {
+                // More than 50 MB ahead - low priority
+                return PriorityZone.Low;
+            }
+        }
+
         public PlaybackFeedback? GetLatest(string jobId)
         {
             if (string.IsNullOrWhiteSpace(jobId))

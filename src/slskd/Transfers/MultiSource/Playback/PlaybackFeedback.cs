@@ -18,5 +18,11 @@ namespace slskd.Transfers.MultiSource.Playback
 
         /// <summary>Desired buffer ahead in milliseconds.</summary>
         public long BufferAheadMs { get; set; }
+
+        /// <summary>Current playback position in bytes (optional, for priority calculation).</summary>
+        public long? PositionBytes { get; set; }
+
+        /// <summary>File size in bytes (optional, for position conversion).</summary>
+        public long? FileSizeBytes { get; set; }
     }
 }
