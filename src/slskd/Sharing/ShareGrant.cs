@@ -34,6 +34,18 @@ public class ShareGrant
     [MaxLength(128)]
     public string? AudiencePeerId { get; set; }
 
+    /// <summary>
+    /// Optional: when this grant was discovered from another node, the owner's base URL used to stream/manifest (e.g. "http://host:port").
+    /// </summary>
+    [MaxLength(512)]
+    public string? OwnerEndpoint { get; set; }
+
+    /// <summary>
+    /// Optional: share token for remote streaming/manifest access (when OwnerEndpoint is set).
+    /// </summary>
+    [MaxLength(2048)]
+    public string? ShareToken { get; set; }
+
     // Policy (design: AllowStream, AllowDownload, AllowReshare, ExpiryUtc, MaxConcurrentStreams, MaxBitrateKbps)
     public bool AllowStream { get; set; }
     public bool AllowDownload { get; set; }

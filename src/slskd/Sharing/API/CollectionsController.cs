@@ -89,8 +89,22 @@ public class CollectionsController : ControllerBase
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
-        if (c == null || c.OwnerUserId != currentUserId) return NotFound();
-        return Ok(c);
+        if (c == null) return NotFound();
+
+        // Owner access
+        if (c.OwnerUserId == currentUserId) return Ok(c);
+
+        // Recipient access (Shared with Me): allow access when a share-grant for this collection is accessible to the user
+        if (!string.IsNullOrWhiteSpace(currentUserId))
+        {
+            var accessible = await _sharing.GetShareGrantsAccessibleByUserAsync(currentUserId, ct);
+            if (accessible.Any(g => g.CollectionId == id))
+            {
+                return Ok(c);
+            }
+        }
+
+        return NotFound();
     }
 
     [HttpPost]

@@ -130,13 +130,23 @@ public sealed class SharingService : ISharingService
         if (c == null) return null;
 
         var items = await _collections.GetItemsAsync(g.CollectionId, ct).ConfigureAwait(false);
-        var allowStream = g.AllowStream && (tokenForStreamUrl != null || currentUserId != null);
+        var effectiveToken = tokenForStreamUrl ?? g.ShareToken;
+        var ownerEndpoint = string.IsNullOrWhiteSpace(g.OwnerEndpoint) ? null : g.OwnerEndpoint.TrimEnd('/');
+        var allowStream = g.AllowStream && (effectiveToken != null || currentUserId != null);
 
         var list = items.Select(i => new ShareManifestItemDto
         {
             ContentId = i.ContentId,
             MediaKind = i.MediaKind,
-            StreamUrl = allowStream ? (tokenForStreamUrl != null ? $"{StreamsPath}/{i.ContentId}?token={Uri.EscapeDataString(tokenForStreamUrl)}" : $"{StreamsPath}/{i.ContentId}") : null,
+            StreamUrl = allowStream
+                ? (effectiveToken != null
+                    ? (ownerEndpoint != null
+                        ? $"{ownerEndpoint}{StreamsPath}/{i.ContentId}?token={Uri.EscapeDataString(effectiveToken)}"
+                        : $"{StreamsPath}/{i.ContentId}?token={Uri.EscapeDataString(effectiveToken)}")
+                    : (ownerEndpoint != null
+                        ? $"{ownerEndpoint}{StreamsPath}/{i.ContentId}"
+                        : $"{StreamsPath}/{i.ContentId}"))
+                : null,
         }).ToList();
 
         // Resolve owner contact nickname if Identity & Friends is enabled

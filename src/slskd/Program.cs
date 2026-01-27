@@ -279,7 +279,15 @@ using slskd.Telemetry;
             .WriteTo.Sink(new ConsoleWriteLineLogger())
             .CreateLogger();
             
-        private static Mutex Mutex { get; } = new Mutex(initiallyOwned: true, Compute.Sha256Hash(AppName));
+        // Mutex is created lazily after AppDirectory is set to allow multiple test instances with different app dirs
+        private static Mutex Mutex { get; set; }
+        
+        private static string GetMutexName()
+        {
+            // Use app directory in mutex name if set, otherwise use default
+            var dir = AppDirectory ?? DefaultAppDirectory;
+            return $"{AppName}_{Compute.Sha256Hash(dir)}";
+        }
         private static IDisposable DotNetRuntimeStats { get; set; }
 
         [Argument('g', "generate-cert", "generate X509 certificate and password for HTTPs")]
@@ -375,16 +383,18 @@ using slskd.Telemetry;
                 return;
             }
 
-            // the application isn't being run in command mode. check the mutex to ensure
-            // only one long-running instance.
-            if (!Mutex.WaitOne(millisecondsTimeout: 0, exitContext: false))
-            {
-                Log.Fatal($"An instance of {AppName} is already running");
-                return;
-            }
-
             // derive the application directory value and defaults that are dependent upon it
             AppDirectory ??= DefaultAppDirectory;
+            
+            // the application isn't being run in command mode. check the mutex to ensure
+            // only one long-running instance per app directory.
+            // Create mutex with name that includes app directory to allow multiple test instances
+            Mutex = new Mutex(initiallyOwned: true, GetMutexName());
+            if (!Mutex.WaitOne(millisecondsTimeout: 0, exitContext: false))
+            {
+                Log.Fatal($"An instance of {AppName} is already running in app directory: {AppDirectory}");
+                return;
+            }
             DataDirectory = Path.Combine(AppDirectory, "data");
             DataBackupDirectory = Path.Combine(DataDirectory, "backups");
             LogDirectory = Path.Combine(AppDirectory, "logs");
@@ -828,6 +838,8 @@ using slskd.Telemetry;
                 var transfersHub = sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<Transfers.API.TransfersHub>>();
                 Log.Information("[DI] Resolving EventBus...");
                 var eventBus = sp.GetRequiredService<Events.EventBus>();
+                Log.Information("[DI] Resolving ShareGrantAnnouncementService (best-effort)...");
+                _ = sp.GetService<Sharing.ShareGrantAnnouncementService>();
                 Log.Information("[DI] All dependencies resolved, constructing Application...");
                 var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
                 var app = new Application(
@@ -1890,6 +1902,37 @@ using slskd.Telemetry;
             services.AddSingleton<Sharing.ICollectionRepository, Sharing.CollectionRepository>();
             services.AddSingleton<Sharing.IShareGrantRepository, Sharing.ShareGrantRepository>();
             services.AddSingleton<Sharing.ISharingService, Sharing.SharingService>();
+            services.AddSingleton<Sharing.ShareGrantAnnouncementService>();
+
+            // Best-effort schema upgrade for sharing db (EnsureCreated does not apply schema changes)
+            try
+            {
+                using (var collectionsContext = new Sharing.CollectionsDbContext(
+                    new DbContextOptionsBuilder<Sharing.CollectionsDbContext>()
+                        .UseSqlite($"Data Source={collectionsDbPath}")
+                        .Options))
+                {
+                    collectionsContext.Database.ExecuteSqlRaw("ALTER TABLE ShareGrants ADD COLUMN OwnerEndpoint TEXT");
+                }
+            }
+            catch
+            {
+                // Column already exists or DB is read-only; ignore.
+            }
+            try
+            {
+                using (var collectionsContext = new Sharing.CollectionsDbContext(
+                    new DbContextOptionsBuilder<Sharing.CollectionsDbContext>()
+                        .UseSqlite($"Data Source={collectionsDbPath}")
+                        .Options))
+                {
+                    collectionsContext.Database.ExecuteSqlRaw("ALTER TABLE ShareGrants ADD COLUMN ShareToken TEXT");
+                }
+            }
+            catch
+            {
+                // Column already exists or DB is read-only; ignore.
+            }
 
             // Identity / friends (PeerProfile, Contact) — behind Feature.IdentityFriends
             var identityDbPath = Path.Combine(Program.AppDirectory, "identity.db");
@@ -2150,7 +2193,9 @@ using slskd.Telemetry;
             // CSRF Protection (only applies to cookie-based authentication, not JWT/API keys)
             services.AddAntiforgery(options =>
             {
-                options.Cookie.Name = "XSRF-TOKEN";
+                // Multi-instance (E2E) runs multiple nodes on the same host with different ports.
+                // Cookies are host-scoped (not port-scoped), so a fixed name will collide across nodes and break CSRF.
+                options.Cookie.Name = $"XSRF-TOKEN-{OptionsAtStartup.Web.Port}";
                 options.HeaderName = "X-CSRF-TOKEN";
                 options.Cookie.SameSite = SameSiteMode.Strict;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS in prod, HTTP in dev
@@ -2446,6 +2491,9 @@ using slskd.Telemetry;
                 var path = context.Context.Request.Path.Value ?? string.Empty;
                 var rawTarget = context.Context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpRequestFeature>()?.RawTarget ?? string.Empty;
                 
+                // Log static file requests for debugging
+                Log.Debug("[FILE_SERVER] Serving static file: {Path}, Status: {Status}", path, context.Context.Response.StatusCode);
+                
                 if (path.Contains("/etc/passwd") || path.Contains("/etc/") || 
                     rawTarget.Contains("/etc/passwd") || rawTarget.Contains("/etc/") ||
                     path.StartsWith("/etc", StringComparison.OrdinalIgnoreCase))
@@ -2593,6 +2641,9 @@ using slskd.Telemetry;
                         await context.Response.WriteAsync(metricsAsText);
                     });
                 }
+
+                // SPA Fallback endpoint removed - using middleware instead (after file server)
+                // This prevents the endpoint from intercepting static file requests
             });
 #pragma warning restore ASP0014 // Suggest using top level route registrations
 
@@ -2660,18 +2711,6 @@ using slskd.Telemetry;
                 }
             });
 
-            // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
-            // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
-            if (!OptionsAtStartup.Headless)
-            {
-                app.UseFileServer(fileServerOptions);
-                Log.Information("Serving static content from {ContentPath}", contentPath);
-            }
-            else
-            {
-                Log.Warning("Running in headless mode; web UI is DISABLED");
-            }
-
             // if this is an /api route and no API controller was matched, give up and return a 404.
             app.Use(async (context, next) =>
             {
@@ -2686,7 +2725,6 @@ using slskd.Telemetry;
                 await next();
             });
 
-
             if (OptionsAtStartup.Feature.Swagger)
             {
                 app.UseSwagger();
@@ -2696,25 +2734,52 @@ using slskd.Telemetry;
                 Log.Information("Publishing Swagger documentation to {URL}", "/swagger");
             }
 
-            /*
-                if we made it this far, the caller is either looking for a route that was synthesized with a SPA router, or is genuinely confused.
-                if the request is for a directory, modify the request to redirect it to the index, otherwise leave it alone and let it 404 in the next
-                middleware.
+            // Old SPA fallback middleware removed - using fallback after file server instead
 
-                if we're running in headless mode, do nothing and let ASP.NET return a 404
-            */
+            // UseFileServer is placed AFTER UseEndpoints to ensure routing happens first, then static files.
+            // This prevents static file middleware from short-circuiting requests before routing/security middleware runs.
             if (!OptionsAtStartup.Headless)
             {
-                app.Use(async (context, next) =>
+                app.UseFileServer(fileServerOptions);
+                Log.Information("Serving static content from {ContentPath}", contentPath);
+                
+                // SPA Fallback: Serve index.html for client-side routes AFTER file server
+                // This runs AFTER file server so static files are served first, and only 404s get index.html
+                var indexPath = Path.Combine(AppContext.BaseDirectory, OptionsAtStartup.Web.ContentPath, "index.html");
+                if (System.IO.File.Exists(indexPath))
                 {
-                    if (Path.GetExtension(context.Request.Path.ToString()) == string.Empty)
+                    app.Use(async (context, next) =>
                     {
-                        context.Request.Path = "/";
-                    }
-
-                    await next();
-                });
-
+                        await next(); // Let file server try first
+                        
+                        // If file server returned 404 and this is a client-side route, serve index.html
+                        if (context.Response.StatusCode == 404 && !context.Response.HasStarted)
+                        {
+                            var path = context.Request.Path.Value ?? "";
+                            
+                            // Only serve index.html for non-API, non-file, non-static paths
+                            var isApi = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
+                            var isSwagger = path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase);
+                            var isHub = path.StartsWith("/hub", StringComparison.OrdinalIgnoreCase);
+                            var isHealth = path.StartsWith("/health", StringComparison.OrdinalIgnoreCase);
+                            var isStatic = path.StartsWith("/static", StringComparison.OrdinalIgnoreCase);
+                            var hasExtension = Path.GetExtension(path) != string.Empty;
+                            
+                            if (!isApi && !isSwagger && !isHub && !isHealth && !isStatic && !hasExtension)
+                            {
+                                Log.Information("[SPA Fallback Middleware] Serving index.html for {Path} (file server returned 404)", path);
+                                context.Response.StatusCode = 200;
+                                context.Response.ContentType = "text/html; charset=utf-8";
+                                await context.Response.SendFileAsync(indexPath);
+                            }
+                        }
+                    });
+                    Log.Information("[SPA] Registered fallback to index.html for client-side routing (after file server)");
+                }
+            }
+            else
+            {
+                Log.Warning("Running in headless mode; web UI is DISABLED");
             }
 
             return app;

@@ -30,12 +30,16 @@ export function buildApiUrl(path) {
 
 // Helper function to get CSRF token from cookie
 const getCsrfToken = () => {
-  const name = 'XSRF-TOKEN=';
   const cookies = document.cookie.split(';');
   for (let cookie of cookies) {
     cookie = cookie.trim();
-    if (cookie.indexOf(name) === 0) {
-      return cookie.slice(name.length);
+    const idx = cookie.indexOf('=');
+    if (idx <= 0) continue;
+    const k = cookie.slice(0, idx);
+    const v = cookie.slice(idx + 1);
+    // Multi-instance E2E uses per-port CSRF cookie names: XSRF-TOKEN-<port>
+    if (k === 'XSRF-TOKEN' || k.startsWith('XSRF-TOKEN-')) {
+      return v;
     }
   }
   return null;

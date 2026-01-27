@@ -1,359 +1,266 @@
 import './Chat.css';
-import { activeChatKey } from '../../config';
 import * as chat from '../../lib/chat';
-import PlaceholderSegment from '../Shared/PlaceholderSegment';
-import UserCard from '../Shared/UserCard';
-import ChatMenu from './ChatMenu';
-import React, { Component, createRef } from 'react';
-import {
-  Card,
-  Dimmer,
-  Icon,
-  Input,
-  List,
-  Loader,
-  Ref,
-  Segment,
-} from 'semantic-ui-react';
+import ChatSession from './ChatSession';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Icon, Input, Menu, Segment, Tab } from 'semantic-ui-react';
 
-const initialState = {
-  active: '',
-  conversations: {},
-  interval: undefined,
-  loading: false,
+let tabCounter = 0;
+
+// Load tabs from localStorage
+const loadTabsFromStorage = () => {
+  try {
+      const saved = localStorage.getItem('slskd-chat-tabs');
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Restore tabCounter to avoid key collisions
+      tabCounter = parsed.tabCounter || 0;
+      return parsed.tabs || [];
+    }
+  } catch {
+    // ignore
+  }
+
+  return [];
 };
 
-class Chat extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = initialState;
-  }
-
-  componentDidMount() {
-    this.setState(
-      {
-        active: sessionStorage.getItem(activeChatKey) || '',
-        interval: window.setInterval(this.fetchConversations, 5_000),
-      },
-      async () => {
-        await this.fetchConversations();
-        this.selectConversation(
-          this.state.active || this.getFirstConversation(),
-        );
-      },
+// Save tabs to localStorage
+const saveTabsToStorage = (tabsToSave) => {
+  try {
+    localStorage.setItem(
+      'slskd-chat-tabs',
+      JSON.stringify({ tabCounter, tabs: tabsToSave }),
     );
+  } catch {
+    // ignore
   }
+};
 
-  componentWillUnmount() {
-    clearInterval(this.state.interval);
-    this.setState({ interval: undefined });
-  }
+const Chat = ({ state }) => {
+  const location = useLocation();
+  const [tabs, setTabs] = useState(() => loadTabsFromStorage());
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [usernameInput, setUsernameInput] = useState("");
+  const closeTabRef = useRef(null);
+  const updateTabRef = useRef(null);
 
-  listRef = createRef();
+  const closeTab = useCallback((tabKey) => {
+    setTabs((previous) => {
+      const newTabs = previous.filter((t) => t.key !== tabKey);
+      setActiveIndex((currentIndex) =>
+        currentIndex >= newTabs.length
+          ? Math.max(0, newTabs.length - 1)
+          : currentIndex,
+      );
+      return newTabs;
+    });
+  }, []);
 
-  messageRef = undefined;
+  const updateTabLabel = useCallback((tabKey, newUsername) => {
+    setTabs((previous) =>
+      previous.map((t) =>
+        t.key === tabKey
+          ? { ...t, label: newUsername, username: newUsername }
+          : t,
+      ),
+    );
+  }, []);
 
-  getFirstConversation = () => {
-    const names = Object.keys(this.state.conversations);
-    return names.length > 0 ? names[0] : '';
-  };
+  closeTabRef.current = closeTab;
+  updateTabRef.current = updateTabLabel;
 
-  fetchConversations = async () => {
-    // fetch all of the active conversations (but no messages)
-    let conversations = await chat.getAll();
+  const createTab = useCallback((username = "") => {
+    tabCounter += 1;
+    const tabKey = `chat-tab-${tabCounter}`;
+    return {
+      key: tabKey,
+      label: username || "New Chat",
+      username,
+    };
+  }, []);
 
-    // turn into a map, keyed by username
-    // if there are no active conversations, set to an empty map
-    if (conversations.length === 0) {
-      conversations = {};
-    } else {
-      conversations = conversations.reduce((map, current) => {
-        map[current.username] = current;
-        return map;
-      }, {});
+  // Create initial tab on mount if none exist
+  useEffect(() => {
+    if (tabs.length === 0) {
+      setTabs([createTab()]);
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const { active } = this.state;
-    const activeConversation = conversations[active];
+  // Auto-create tab if all closed, and reset counter to keep numbers reasonable
+  useEffect(() => {
+    if (tabs.length === 0) {
+      tabCounter = 0; // Reset counter when starting fresh
+      setTabs([createTab()]);
+    }
+  }, [tabs.length, createTab]);
 
-    // check to see if the active chat is still active
-    // this will happen whenever a chat is closed/removed
-    if (activeConversation) {
-      console.log('active?', activeConversation);
-      // *before* fetching messages, ack any unacked messages
-      // for the active chat
-      if (activeConversation.hasUnAcknowledgedMessages === true) {
-        await this.acknowledgeMessages(active);
+  // Save tabs to localStorage whenever they change
+  useEffect(() => {
+    if (tabs.length > 0) {
+      saveTabsToStorage(tabs);
+    }
+  }, [tabs]);
+
+  // Handle navigation with username in state (quick chat from user profile)
+  useEffect(() => {
+    const username = location.state?.user;
+
+    if (username) {
+      const existingIndex = tabs.findIndex((t) => t.username === username);
+
+      if (existingIndex === -1) {
+        // Create new tab for this user
+        setTabs((previous) => {
+          const newTabs = [...previous, createTab(username)];
+          setActiveIndex(newTabs.length - 1);
+          return newTabs;
+        });
+      } else {
+        setActiveIndex(existingIndex);
       }
 
-      conversations = {
-        ...conversations,
-        [active]: await chat.get({ username: active }),
-      };
+      // Clear the state to prevent re-triggering
+      window.history.replaceState({}, document.title);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
-    this.setState({ conversations }, () => {
-      // if a chat isn't active or the active chat is closed,
-      // select the first conversation, if there is one
-      if (!this.state.conversations[this.state.active]) {
-        this.selectConversation(this.getFirstConversation());
+  const startConversation = useCallback(
+    (username) => {
+      if (!username || !username.trim()) return;
+
+      const trimmedUsername = username.trim();
+      const existingIndex = tabs.findIndex(
+        (t) => t.username === trimmedUsername,
+      );
+
+      if (existingIndex === -1) {
+        // Create new tab for this user
+        setTabs((previous) => {
+          const newTabs = [...previous, createTab(trimmedUsername)];
+          setActiveIndex(newTabs.length - 1);
+          return newTabs;
+        });
+      } else {
+        // Switch to existing tab
+        setActiveIndex(existingIndex);
       }
+    },
+    [tabs, createTab],
+  );
+
+  const handleAddTab = () => {
+    setTabs((previous) => {
+      const newTabs = [...previous, createTab()];
+      setActiveIndex(newTabs.length - 1);
+      return newTabs;
     });
   };
 
-  acknowledgeMessages = async (username) => {
-    if (!username || username === '') return;
-    await chat.acknowledge({ username });
-  };
+  const handleDeleteConversation = useCallback(
+    (username) => {
+      // Remove the conversation from chat API
+      chat.remove({ username }).catch((error) => {
+        console.error("Failed to remove conversation:", error);
+      });
 
-  sendMessage = async (username, message) => {
-    if (!username || !message || username === '') return;
-    await chat.send({ message, username });
-  };
+      // Close the tab
+      const tabToClose = tabs.find((t) => t.username === username);
+      if (tabToClose) {
+        closeTabRef.current?.(tabToClose.key);
+      }
+    },
+    [tabs],
+  );
 
-  sendReply = async () => {
-    const { active } = this.state;
-    const message = this.messageRef.current.value;
-
-    if (!this.validInput()) {
-      return;
-    }
-
-    await this.sendMessage(active, message);
-    this.messageRef.current.value = '';
-
-    // force a refresh to append the message
-    // we could probably do this in the browser but we can be lazy
-    this.fetchConversations();
-  };
-
-  validInput = () =>
-    (this.state.active || '').length > 0 &&
-    (
-      (this.messageRef &&
-        this.messageRef.current &&
-        this.messageRef.current.value) ||
-      ''
-    ).length > 0;
-
-  focusInput = () => {
-    this.messageRef.current.focus();
-  };
-
-  formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp);
-    const dtfUS = new Intl.DateTimeFormat('en', {
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      month: 'numeric',
-    });
-
-    return dtfUS.format(date);
-  };
-
-  selectConversation = (username) => {
-    this.setState(
-      {
-        active: username,
-        loading: true,
-      },
-      async () => {
-        const { active, conversations } = this.state;
-
-        sessionStorage.setItem(activeChatKey, active);
-
-        this.setState(
-          {
-            conversations:
-              active === ''
-                ? conversations
-                : {
-                    ...conversations,
-                    [active]: await chat.get({ username: active }),
-                  },
-            loading: false,
-          },
-          () => {
-            try {
-              this.listRef.current.lastChild.scrollIntoView();
-            } catch {
-              // no-op
-            }
-          },
-        );
-      },
-    );
-  };
-
-  startConversation = async (username) => {
-    // Just select/open the conversation without sending a message
-    this.selectConversation(username);
-  };
-
-  deleteConversation = async (username) => {
-    await chat.remove({ username });
-    await this.fetchConversations();
-    this.selectConversation(this.getFirstConversation());
-  };
-
-  render() {
-    const {
-      active,
-      conversations = [],
-      loading,
-      usernameInput = '',
-    } = this.state;
-    const messages = conversations[active]?.messages || [];
-    const { user } = this.props.state;
-    const conversationNames = Object.keys(conversations);
-
-    return (
-      <div className="chats">
-        <Segment
-          className="chat-segment"
-          raised
-        >
-          <div className="chat-segment-icon">
-            <Icon
-              name="comment"
-              size="big"
-            />
-          </div>
-          <Input
-            action={{
-              icon: 'chat',
-              onClick: () => {
-                if (this.state.usernameInput?.trim()) {
-                  this.startConversation(this.state.usernameInput.trim());
-                  this.setState({ usernameInput: '' });
-                }
-              },
+  const panes = tabs.map((tab) => ({
+    menuItem: (
+      <Menu.Item key={tab.key}>
+        <Icon name={tab.username ? "comment" : "search"} />
+        {tab.label}
+        {tabs.length > 1 && (
+          <Icon
+            name="close"
+            onClick={(event) => {
+              event.stopPropagation();
+              closeTabRef.current?.(tab.key);
             }}
-            className="chat-input"
-            onChange={(event) =>
-              this.setState({ usernameInput: event.target.value })
-            }
-            onKeyUp={(event) => {
-              if (event.key === 'Enter' && this.state.usernameInput?.trim()) {
-                this.startConversation(this.state.usernameInput.trim());
-                this.setState({ usernameInput: '' });
+            style={{ marginLeft: "8px", opacity: 0.7 }}
+          />
+        )}
+      </Menu.Item>
+    ),
+    render: () => (
+      <Tab.Pane
+        attached={false}
+        key={tab.key}
+        style={{ border: 'none', boxShadow: 'none' }}
+      >
+        <ChatSession
+          key={tab.key}
+          onDelete={handleDeleteConversation}
+          user={state?.user}
+          username={tab.username}
+        />
+      </Tab.Pane>
+    ),
+  }));
+
+  return (
+    <div className="chats">
+      <Segment className="chat-segment" raised>
+        <div className="chat-segment-icon">
+          <Icon name="comment" size="big" />
+        </div>
+        <Input
+          action={{
+            icon: 'chat',
+            onClick: () => {
+              if (usernameInput?.trim()) {
+                startConversation(usernameInput.trim());
+                setUsernameInput("");
               }
-            }}
-            placeholder="Chat with user..."
-            size="big"
-            value={usernameInput}
-          />
-        </Segment>
-        {conversationNames.length > 0 && (
-          <ChatMenu
-            active={active}
-            conversations={conversations}
-            onConversationChange={(name) => this.selectConversation(name)}
-          />
-        )}
-        {Boolean(active) === false ? (
-          <PlaceholderSegment
-            caption="No chats to display"
-            icon="comment"
-          />
-        ) : (
-          <Card
-            className="chat-active-card"
-            raised
-          >
-            <Card.Content onClick={() => this.focusInput()}>
-              <Card.Header>
-                <Icon
-                  color="green"
-                  name="circle"
-                />
-                <UserCard username={active}>{active}</UserCard>
-                <Icon
-                  className="close-button"
-                  color="red"
-                  link
-                  name="close"
-                  onClick={() => this.deleteConversation(active)}
-                />
-              </Card.Header>
-              <div className="chat">
-                {loading ? (
-                  <Dimmer
-                    active
-                    inverted
-                  >
-                    <Loader inverted />
-                  </Dimmer>
-                ) : (
-                  <Segment.Group>
-                    <Segment className="chat-history">
-                      <Ref innerRef={this.listRef}>
-                        <List>
-                          {messages.map((message) => (
-                            <List.Content
-                              className={`chat-message ${message.direction === 'Out' ? 'chat-message-self' : ''}`}
-                              key={`${message.timestamp}+${message.message}`}
-                            >
-                              <span className="chat-message-time">
-                                {this.formatTimestamp(message.timestamp)}
-                              </span>
-                              <span className="chat-message-name">
-                                {message.direction === 'Out'
-                                  ? user.username
-                                  : message.username}
-                                :{' '}
-                              </span>
-                              <span className="chat-message-message">
-                                {message.message}
-                              </span>
-                            </List.Content>
-                          ))}
-                          <List.Content id="chat-history-scroll-anchor" />
-                        </List>
-                      </Ref>
-                    </Segment>
-                    <Segment className="chat-input">
-                      <Input
-                        action={{
-                          className: 'chat-message-button',
-                          disabled: !this.validInput(),
-                          icon: (
-                            <Icon
-                              color="green"
-                              name="send"
-                            />
-                          ),
-                          onClick: this.sendMessage,
-                        }}
-                        fluid
-                        input={
-                          <input
-                            autoComplete="off"
-                            data-lpignore="true"
-                            id="chat-message-input"
-                            type="text"
-                          />
-                        }
-                        onKeyUp={(event) =>
-                          event.key === 'Enter' ? this.sendReply() : ''
-                        }
-                        ref={(input) =>
-                          (this.messageRef = input && input.inputRef)
-                        }
-                        transparent
-                      />
-                    </Segment>
-                  </Segment.Group>
-                )}
-              </div>
-            </Card.Content>
-          </Card>
-        )}
-      </div>
-    );
-  }
-}
+            },
+          }}
+          className="chat-input"
+          onChange={(event) => setUsernameInput(event.target.value)}
+          onKeyUp={(event) => {
+            if (event.key === "Enter" && usernameInput?.trim()) {
+              startConversation(usernameInput.trim());
+              setUsernameInput("");
+            }
+          }}
+          placeholder="Chat with user..."
+          size="big"
+          value={usernameInput}
+        />
+      </Segment>
+      <Tab
+        activeIndex={activeIndex}
+        menu={{
+          attached: false,
+          inverted: true,
+          secondary: true,
+          tabular: false,
+        }}
+        onTabChange={(event, { activeIndex: newIndex }) =>
+          setActiveIndex(newIndex)
+        }
+        panes={[
+          ...panes,
+          {
+            menuItem: (
+              <Menu.Item key="add-tab" onClick={handleAddTab}>
+                <Icon name="plus" />
+              </Menu.Item>
+            ),
+            render: () => null,
+          },
+        ]}
+      />
+    </div>
+  );
+};
 
 export default Chat;

@@ -23,10 +23,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: —
+- **Current Task**: Feature work, TODO items, and E2E test completion
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
-- **Last Activity**: Completed QUIC overlay fault tolerance, Identity fallback for sharing controllers, and improved logs error handling. QUIC overlay gracefully handles port binding failures (degraded mode). Sharing controllers now fall back to Identity & Friends PeerId when Soulseek username unavailable. Logs page has better SignalR error handling and always-visible filter buttons. All 2294 tests passing. Committed to dev/40-fixes.
+- **Last Activity**: 
+  - ✅ Backfill feature: API endpoint and UI for downloading shared collections (supports HTTP and Soulseek)
+  - ✅ Persistent tabbed interface: Converted Chat to tabs (Rooms already had tabs)
+  - ✅ E2E tests: Completed policy, streaming, library, and search tests
+  - All builds succeed (0 errors). Ready for commit.
 
 ---
 
@@ -75,7 +79,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 3. **Packaging**: T-010–T-013 Done. **New product / other**: T-003, T-004, Phase 6/6X, Phase 7, or as prioritized.
 
-4. ~~**High Priority Tasks Available** (obsolete):~~
+4. **Recent completions** (2026-01-27):
+   - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
+   - ✅ Persistent tabbed interface for Chat (Rooms already had tabs)
+   - ✅ E2E test completion (policy, streaming, library, search)
+
+5. ~~**High Priority Tasks Available** (obsolete):~~
    - **Packaging**: T-010 to T-013 (NAS/docker packaging - 4 tasks)
    - **Medium Priority**: T-003 (Download Queue Position Polling), T-004 (Visual Group Indicators)
    - ~~T-404+~~ (done)

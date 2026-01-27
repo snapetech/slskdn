@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd;
@@ -40,7 +41,8 @@ public class SharesControllerTests
 
     private SharesController CreateController()
     {
-        var c = new SharesController(_sharingMock.Object, _tokensMock.Object, _options, _serviceProviderMock.Object);
+        var loggerMock = new Mock<ILogger<SharesController>>();
+        var c = new SharesController(_sharingMock.Object, _tokensMock.Object, loggerMock.Object, _options, _serviceProviderMock.Object, soulseekClient: null, shareService: null, downloadService: null);
         c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
         c.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "u") }, "Test"));
         return c;

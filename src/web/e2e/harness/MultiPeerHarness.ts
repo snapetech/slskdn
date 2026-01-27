@@ -15,6 +15,11 @@ export class MultiPeerHarness {
       throw new Error(`Node ${name} already exists`);
     }
 
+    // Small delay between starting nodes to avoid lock file conflicts
+    if (this.nodes.size > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     const node = new SlskdnNode({
       nodeName: name,
       shareDir,

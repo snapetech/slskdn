@@ -26,15 +26,18 @@ export const removeCollectionItem = (itemId) => api.delete(`/collections/items/$
 export const reorderCollectionItems = (id, itemIds) => api.put(`/collections/${id}/items/reorder`, { itemIds });
 
 // Share Grants (Shares)
-export const getShares = () => api.get('/shares');
-export const getShare = (id) => api.get(`/shares/${id}`);
-export const createShare = (data) => api.post('/shares', data);
-export const updateShare = (id, data) => api.put(`/shares/${id}`, data);
-export const deleteShare = (id) => api.delete(`/shares/${id}`);
-export const createShareToken = (id, expiresInSeconds) => api.post(`/shares/${id}/token`, { expiresInSeconds });
+export const getShares = () => api.get('/share-grants');
+export const getShare = (id) => api.get(`/share-grants/${id}`);
+export const getSharesByCollection = (collectionId) =>
+  api.get(`/share-grants/by-collection/${encodeURIComponent(collectionId)}`);
+export const createShare = (data) => api.post('/share-grants', data);
+export const updateShare = (id, data) => api.put(`/share-grants/${id}`, data);
+export const deleteShare = (id) => api.delete(`/share-grants/${id}`);
+export const createShareToken = (id, expiresInSeconds) => api.post(`/share-grants/${id}/token`, { expiresInSeconds });
 export const getShareManifest = (id, token) => {
   const url = token 
-    ? `/shares/${id}/manifest?token=${encodeURIComponent(token)}`
-    : `/shares/${id}/manifest`;
+    ? `/share-grants/${id}/manifest?token=${encodeURIComponent(token)}`
+    : `/share-grants/${id}/manifest`;
   return api.get(url);
 };
+export const backfillShare = (id) => api.post(`/share-grants/${id}/backfill`);

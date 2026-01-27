@@ -1,25 +1,32 @@
 # slskdn TODO
 
-## ✅ Persistent Tabbed Interface for Rooms and Chat - DOCUMENTED
+## ✅ Persistent Tabbed Interface for Rooms and Chat - COMPLETED
 
-**Status**: Documented for future implementation. Current implementation uses standard navigation.
+**Status**: ✅ **COMPLETED** (2026-01-27)
 
-**Future Enhancement**: Implement a tabbed interface for Rooms and Chat, similar to how Browse currently works:
+**Implementation**: Tabbed interface implemented for both Rooms and Chat, following the Browse pattern.
 
-### Changes (Future)
-1. **Tab-based UI** - Replace the horizontal search bar with small tabs + a `+` button to open new searches
-2. **Persistent state** - Remember opened rooms/chats in localStorage (like Browse sessions)
-3. **Survive crashes/restarts** - Tabs should restore on page reload or app restart
-4. **Explicit close** - Rooms/chats stay open until user explicitly closes them (X button on tab)
+### Changes Implemented
+1. **Tab-based UI** - ✅ Rooms already had tabs; Chat converted to tabs with `+` button to open new conversations
+2. **Persistent state** - ✅ Tabs saved to localStorage (`slskd-room-tabs`, `slskd-chat-tabs`)
+3. **Survive crashes/restarts** - ✅ Tabs restore on page reload
+4. **Explicit close** - ✅ Tabs stay open until user clicks X button
 
-### Implementation Notes
-- Can reuse the tabbed browsing logic from `Browse.jsx`/`BrowseSession.jsx`
-- Use localStorage with LRU cache cleanup (already implemented for Browse)
-- Consider using `lz-string` compression for larger chat histories
+### Implementation Details
+- **Rooms**: Already implemented with tabs (`Rooms.jsx` uses `RoomSession.jsx` per tab)
+- **Chat**: Converted from class component to functional component with hooks
+  - Created `ChatSession.jsx` component (similar to `RoomSession.jsx`)
+  - Tabs persist in localStorage (`slskd-chat-tabs`)
+  - Supports multiple concurrent conversations
+  - Each tab maintains its own conversation state
 
-### Related
-- Browse tabs implementation: `src/web/src/components/Browse/Browse.jsx`
-- Browse session persistence: `src/web/src/components/Browse/BrowseSession.jsx`
+### Related Files
+- Browse tabs: `src/web/src/components/Browse/Browse.jsx`
+- Browse session: `src/web/src/components/Browse/BrowseSession.jsx`
+- Rooms tabs: `src/web/src/components/Rooms/Rooms.jsx`
+- Rooms session: `src/web/src/components/Rooms/RoomSession.jsx`
+- Chat tabs: `src/web/src/components/Chat/Chat.jsx` (converted)
+- Chat session: `src/web/src/components/Chat/ChatSession.jsx` (new)
 
 ---
 

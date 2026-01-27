@@ -9,6 +9,7 @@ import {
   Segment,
   Modal,
 } from 'semantic-ui-react';
+import { toast } from 'react-toastify';
 import * as collectionsAPI from '../../lib/collections';
 import * as identityAPI from '../../lib/identity';
 import ErrorSegment from '../Shared/ErrorSegment';
@@ -24,6 +25,8 @@ export default class SharedWithMe extends Component {
     selectedShare: null,
     manifest: null,
     manifestLoading: false,
+    backfilling: false,
+    backfillResult: null,
   };
 
   componentDidMount() {
@@ -118,6 +121,34 @@ export default class SharedWithMe extends Component {
       ? `/api/v0/streams/${contentId}?token=${encodeURIComponent(token)}`
       : `/api/v0/streams/${contentId}`;
     window.open(url, '_blank');
+  };
+
+  handleBackfill = async () => {
+    const { selectedShare } = this.state;
+    if (!selectedShare) return;
+
+    try {
+      this.setState({ backfilling: true, backfillResult: null, error: null });
+      const result = await collectionsAPI.backfillShare(selectedShare.id);
+      this.setState({ 
+        backfilling: false, 
+        backfillResult: result.data,
+      });
+      
+      if (result.data.failed === 0) {
+        toast.success(result.data.message || 'Backfill started successfully');
+      } else {
+        toast.warning(result.data.message || 'Backfill started with some failures');
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message || 'Failed to start backfill';
+      this.setState({ 
+        backfilling: false, 
+        error: errorMsg,
+        backfillResult: null,
+      });
+      toast.error(errorMsg);
+    }
   };
 
   render() {
@@ -290,10 +321,28 @@ export default class SharedWithMe extends Component {
             )}
           </Modal.Content>
           <Modal.Actions>
+            {selectedShare?.allowDownload && (
+              <Button
+                data-testid="incoming-backfill"
+                onClick={this.handleBackfill}
+                loading={this.state.backfilling}
+                disabled={this.state.backfilling}
+                primary
+              >
+                <Icon name="download" />
+                Backfill All
+              </Button>
+            )}
+            {this.state.backfillResult && (
+              <span style={{ marginRight: '1em', fontSize: '0.9em', color: '#666' }}>
+                {this.state.backfillResult.enqueued} enqueued, {this.state.backfillResult.failed} failed
+              </span>
+            )}
             <Button onClick={() => this.setState({ 
               manifestModalOpen: false,
               selectedShare: null,
               manifest: null,
+              backfillResult: null,
             })}>
               Close
             </Button>

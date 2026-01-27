@@ -13,6 +13,7 @@ export const T = {
 
   // Nav
   navSystem: "nav-system",
+  navSearch: "nav-search",
   navDownloads: "nav-downloads",
   navUploads: "nav-uploads",
   navUsers: "nav-users",
@@ -23,6 +24,7 @@ export const T = {
   navCollections: "nav-collections",
   navShares: "nav-shares",
   navSharedWithMe: "nav-shared-with-me",
+  navBrowse: "nav-browse",
 
   // System tabs (if needed)
   systemTabShares: "system-tab-shares",
@@ -31,7 +33,9 @@ export const T = {
   contactsCreateInvite: "contacts-create-invite",
   contactsInviteOutput: "contacts-invite-output",
   contactsInviteFriendCode: "contacts-invite-friend-code",
+  contactsAddFriend: "contacts-add-friend",
   contactsAddInviteInput: "contacts-add-invite-input",
+  contactsContactNickname: "contacts-contact-nickname",
   contactsAddInviteSubmit: "contacts-add-invite-submit",
   contactsRow: (peerLabel: string) => `contact-row-${peerLabel}`,
 

@@ -14,8 +14,6 @@ import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
-import ShareGroups from './ShareGroups/ShareGroups';
-import SharedWithMe from './Shares/SharedWithMe';
 import {
   isStatusBarVisible,
   SlskdnStatusBar,
@@ -23,6 +21,9 @@ import {
 } from './Shared';
 import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
+import Collections from './Collections/Collections';
+import ShareGroups from './ShareGroups/ShareGroups';
+import SharedWithMe from './Shares/SharedWithMe';
 import System from './System/System';
 import Transfers from './Transfers/Transfers';
 import Users from './Users/Users';
@@ -296,7 +297,7 @@ class App extends Component {
 
   withTokenCheck = (component) => {
     session.check(); // async, runs in the background
-    return { ...component };
+    return component; // Return component directly, not spread object
   };
 
   // eslint-disable-next-line complexity
@@ -408,67 +409,73 @@ class App extends Component {
               </Menu.Item>
             ) : (
               <>
-                <Link to={`${urlBase}/searches`}>
+                <Link to="/searches">
                   <Menu.Item data-testid="nav-search">
                     <Icon name="search" />
                     Search
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/wishlist`}>
+                <Link to="/wishlist">
                   <Menu.Item data-testid="nav-wishlist">
                     <Icon name="star" />
                     Wishlist
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/downloads`}>
+                <Link to="/downloads">
                   <Menu.Item data-testid="nav-downloads">
                     <Icon name="download" />
                     Downloads
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/uploads`}>
+                <Link to="/uploads">
                   <Menu.Item data-testid="nav-uploads">
                     <Icon name="upload" />
                     Uploads
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/rooms`}>
+                <Link to="/rooms">
                   <Menu.Item data-testid="nav-rooms">
                     <Icon name="comments" />
                     Rooms
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/chat`}>
+                <Link to="/chat">
                   <Menu.Item data-testid="nav-chat">
                     <Icon name="comment" />
                     Chat
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/users`}>
+                <Link to="/users">
                   <Menu.Item data-testid="nav-users">
                     <Icon name="users" />
                     Users
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/contacts`}>
+                <Link to="/contacts">
                   <Menu.Item data-testid="nav-contacts">
                     <Icon name="address book" />
                     Contacts
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/sharegroups`}>
+                <Link to="/collections">
+                  <Menu.Item data-testid="nav-collections">
+                    <Icon name="list" />
+                    Collections
+                  </Menu.Item>
+                </Link>
+                <Link to="/sharegroups">
                   <Menu.Item data-testid="nav-groups">
                     <Icon name="users" />
                     Share Groups
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/shared`}>
+                <Link to="/shared">
                   <Menu.Item data-testid="nav-shared-with-me">
                     <Icon name="share" />
                     Shared with Me
                   </Menu.Item>
                 </Link>
-                <Link to={`${urlBase}/browse`}>
+                <Link to="/browse">
                   <Menu.Item data-testid="nav-browse">
                     <Icon name="folder open" />
                     Browse
@@ -510,7 +517,7 @@ class App extends Component {
               {(pendingReconnect || pendingRestart || pendingShareRescan) && (
                 <Menu.Item position="right">
                   <Icon.Group className="menu-icon-group">
-                    <Link to={`${urlBase}/system/info`}>
+                    <Link to="/system/info">
                       <Icon
                         color="yellow"
                         name="exclamation circle"
@@ -557,7 +564,7 @@ class App extends Component {
                   </Modal.Actions>
                 </Modal>
               )}
-              <Link to={`${urlBase}/system`}>
+              <Link to="/system">
                 <Menu.Item data-testid="nav-system">
                   <Icon name="cogs" />
                   System
@@ -606,7 +613,7 @@ class App extends Component {
               {isAgent ? (
                 <Switch>
                   <Route
-                    path={`${urlBase}/system/:tab?`}
+                    path="/system/:tab?"
                     render={(props) =>
                       this.withTokenCheck(
                         <System
@@ -619,13 +626,42 @@ class App extends Component {
                   />
                   <Redirect
                     from="*"
-                    to={`${urlBase}/system`}
+                    to="/system"
                   />
                 </Switch>
               ) : (
                 <Switch>
                   <Route
-                    path={`${urlBase}/searches/:id?`}
+                    exact
+                    path="/collections"
+                    render={(props) => {
+                      // This should log if route matches
+                      if (typeof window !== 'undefined') {
+                        window.__ROUTE_MATCHED_COLLECTIONS__ = true;
+                        console.log('[Router] /collections route matched!', props);
+                      }
+                      try {
+                        const result = this.withTokenCheck(
+                          <div className="view">
+                            <Collections {...props} />
+                          </div>,
+                        );
+                        console.log('[Router] Collections rendered successfully');
+                        return result;
+                      } catch (error) {
+                        console.error('[Router] Error rendering Collections:', error);
+                        // Return error UI instead of crashing
+                        return (
+                          <div className="view">
+                            <ErrorSegment caption={`Error loading Collections: ${error.message}`} />
+                          </div>
+                        );
+                      }
+                    }}
+                  />
+                  <Route
+                    exact
+                    path="/searches"
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
@@ -638,7 +674,20 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/wishlist`}
+                    path="/searches/:id"
+                    render={(props) =>
+                      this.withTokenCheck(
+                        <div className="view">
+                          <Searches
+                            server={applicationState.server}
+                            {...props}
+                          />
+                        </div>,
+                      )
+                    }
+                  />
+                  <Route
+                    path="/wishlist"
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
@@ -648,25 +697,26 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/browse`}
+                    path="/browse"
                     render={(props) =>
                       this.withTokenCheck(<Browse {...props} />)
                     }
                   />
                   <Route
-                    path={`${urlBase}/users`}
+                    path="/users"
                     render={(props) =>
                       this.withTokenCheck(<Users {...props} />)
                     }
                   />
                   <Route
-                    path={`${urlBase}/contacts`}
+                    exact
+                    path="/contacts"
                     render={(props) =>
                       this.withTokenCheck(<Contacts {...props} />)
                     }
                   />
                   <Route
-                    path={`${urlBase}/sharegroups`}
+                    path="/sharegroups"
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
@@ -676,7 +726,7 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/shared`}
+                    path="/shared"
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
@@ -686,7 +736,7 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/chat`}
+                    path="/chat"
                     render={(props) =>
                       this.withTokenCheck(
                         <Chat
@@ -697,17 +747,17 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/pods/:podId?/channels/:channelId?`}
+                    path="/pods/:podId?/channels/:channelId?"
                     render={(props) => this.withTokenCheck(<Pods {...props} />)}
                   />
                   <Route
-                    path={`${urlBase}/rooms`}
+                    path="/rooms"
                     render={(props) =>
                       this.withTokenCheck(<Rooms {...props} />)
                     }
                   />
                   <Route
-                    path={`${urlBase}/uploads`}
+                    path="/uploads"
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
@@ -720,7 +770,7 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/downloads`}
+                    path="/downloads"
                     render={(props) =>
                       this.withTokenCheck(
                         <div className="view">
@@ -734,7 +784,7 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path={`${urlBase}/system/:tab?`}
+                    path="/system/:tab?"
                     render={(props) =>
                       this.withTokenCheck(
                         <System
@@ -746,10 +796,31 @@ class App extends Component {
                       )
                     }
                   />
-                  <Redirect
-                    from="*"
-                    to={`${urlBase}/searches`}
-                  />
+                  <Route path="*">
+                    {({ location }) => {
+                      // Log route miss for debugging - this should appear in browser console
+                      console.error('[Router] Route miss for:', location.pathname);
+                      // Set flag so test can detect route miss
+                      if (typeof window !== 'undefined') {
+                        window.__ROUTE_MISS__ = location.pathname;
+                        // Also set it on the route-miss element so it persists even after redirect
+                        setTimeout(() => {
+                          const el = document.querySelector('[data-testid="route-miss"]');
+                          if (el) {
+                            window.__ROUTE_MISS_ELEMENT__ = el.textContent;
+                          }
+                        }, 100);
+                      }
+                      return (
+                        <>
+                          <div data-testid="route-miss" style={{ padding: '20px', background: 'red', color: 'white', position: 'fixed', top: 0, left: 0, zIndex: 9999 }}>
+                            Route miss: {location.pathname}
+                          </div>
+                          <Redirect to="/searches" />
+                        </>
+                      );
+                    }}
+                  </Route>
                 </Switch>
               )}
             </AppContext.Provider>

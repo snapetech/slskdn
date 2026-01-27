@@ -11,6 +11,12 @@
 
 *No high priority tasks currently active
 
+- [x] **T-914**: Cross-node share discovery (“Shared with Me”)
+ - Status: done
+ - Priority: P0
+ - Branch: `dev/40-fixes`
+ - Notes: Implemented via private message announcements. When a share-grant is created, the owner sends a `SHAREGRANT:` message to recipients via Soulseek PM containing the grant details, collection metadata, items, token, and owner endpoint. `ShareGrantAnnouncementService` listens for these messages and ingests them into the recipient's local database. All 5 multi-peer E2E tests passing (2026-01-27).
+
 ### Medium Priority
 
 **Research implementation (T-901–T-913)** — Design/scope: `docs/research/9-research-design-scope.md`. Suggested order: T-912 → T-911 → T-913 → T-901 → T-902 → T-903 → T-906 → T-907 → T-908. **T-912, T-911, T-913, T-901, T-902, T-903, T-906, T-907, T-908 done; Research (9) order complete.**
@@ -86,6 +92,10 @@
 ### Design / Backlog (ShareGroups, Collections, Streaming, Hybrid Search)
 
 - [x] **ShareGroups + Collections + Streaming + Hybrid Search (design merged)**: Assessment and merged design in `docs/design/sharegroups-collections-streaming-assessment.md`. Merges older agent-ticket with existing: ShareGroup, Collection, ShareGrant, SharePolicy, IShareTokenService, IContentLocator, GET /streams/{contentId} (range, token or auth), manifest, IStreamSessionLimiter; mesh search (we have overlay + MeshSearchRpcHandler + SearchResponseMerger + MeshContent.GetByContentId). Feature flags: CollectionsSharing, Streaming, StreamingRelayFallback, MeshParallelSearch (= VirtualSoulfind.MeshSearch.Enabled), MeshPublishAvailability (defer). **All phases complete** (2026-01-26): Phase 1 (foundations), Phase 2 (collections/sharing), Phase 3 (streaming), Phase 4 (mesh search improvements: MediaKinds/ContentId/Hash in MeshSearchFileDto, SearchResponseMerger normalization, MeshParallelSearch wired), Phase 5 (IMeshContentFetcher with size/hash validation, GET /api/v0/relay/streams/{contentId} endpoint).
+
+- [x] **Backfill for shared collections**: Backfill API endpoint and UI for downloading all items from a shared collection. Supports both HTTP downloads (cross-node, no Soulseek required) and Soulseek downloads (when available). **Complete** (2026-01-27): `POST /api/v0/share-grants/{id}/backfill` endpoint, "Backfill All" button in SharedWithMe manifest modal, validates AllowDownload policy, returns detailed results.
+
+- [x] **Persistent tabbed interface for Chat**: Converted Chat component to use tabbed interface with localStorage persistence, matching Browse and Rooms pattern. **Complete** (2026-01-27): Created `ChatSession.jsx` component, converted `Chat.jsx` to functional component with hooks, tabs persist in `slskd-chat-tabs` localStorage, supports multiple concurrent conversations.
 
 - [x] **Mesh UDP Overlay Fault Tolerance**: UDP overlay server now gracefully handles port binding failures (address already in use, firewall blocked). Mesh continues operating in degraded mode: DHT operations, relay/beacon services, and hole punching remain functional. Only direct inbound UDP connections are unavailable. Clear warning logs explain degraded mode. Matches fault-tolerant pattern used by QUIC overlay servers. Enables mesh operation behind firewalls without port forwarding. **Complete** (2026-01-26): UdpOverlayServer updated with graceful error handling, all 2430 unit tests and 190 integration tests passing.
 

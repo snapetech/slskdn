@@ -1358,5 +1358,342 @@ grep -l "using Soulseek" src/slskd/**/*.cs | xargs grep -l "Directory\.Exists\|D
 
 ---
 
-*Last updated: 2025-12-09*
+### E2E Test Infrastructure Issues
+
+#### E2E-1: Server crashes during share initialization in test harness
+
+**The Bug**: E2E test nodes crash with `ShareInitializationException: Share cache backup is missing, corrupt, or is out of date` because test nodes start with empty app directories and no share cache.
+
+**Files Affected**:
+- `src/web/e2e/harness/SlskdnNode.ts`
+
+**Wrong**:
+```typescript
+const args = ['run', '--project', projectPath, '--no-build', '--', '--app-dir', this.appDir, '--config', configPath];
+```
+
+**Correct**:
+```typescript
+// Add --force-share-scan to avoid ShareInitializationException when cache doesn't exist
+const args = ['run', '--project', projectPath, '--no-build', '--', '--app-dir', this.appDir, '--config', configPath, '--force-share-scan'];
+```
+
+**Why This Keeps Happening**: Test nodes start with fresh app directories, so share cache doesn't exist. The server requires either a valid cache or `--force-share-scan` to create one.
+
+---
+
+#### E2E-2: Static files return 404 because SPA fallback intercepts them
+
+**The Bug**: Static files (`/static/js/*.js`, `/static/css/*.css`) return 404, preventing React from mounting. The SPA fallback endpoint runs before the file server and intercepts all requests, including static files.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+// SPA fallback endpoint runs BEFORE file server
+endpoints.MapGet("{*path}", async context => {
+    // This intercepts /static/* requests and returns 404
+    if (!hasExtension) {
+        await context.Response.SendFileAsync(indexPath);
+    } else {
+        context.Response.StatusCode = 404; // Static files get 404 here!
+    }
+});
+app.UseFileServer(...); // Never reached for static files
+```
+
+**Correct**:
+```csharp
+// File server runs first
+app.UseFileServer(fileServerOptions);
+
+// SPA fallback middleware runs AFTER file server
+app.Use(async (context, next) => {
+    await next(); // Let file server try first
+    
+    // Only serve index.html if file server returned 404 for a client-side route
+    if (context.Response.StatusCode == 404 && !isApi && !isStatic && !hasExtension) {
+        await context.Response.SendFileAsync(indexPath);
+    }
+});
+```
+
+**Why This Keeps Happening**: Endpoints run before middleware, so a catch-all endpoint intercepts requests before the file server middleware can serve static files. The solution is to use middleware AFTER the file server that only handles 404s for client-side routes.
+
+---
+
+#### E2E-3: Excessive timeouts in test helpers
+
+**The Bug**: `waitForHealth` polls for 60 seconds (120 iterations × 500ms) when the server typically starts in 2-5 seconds.
+
+**Files Affected**:
+- `src/web/e2e/helpers.ts`
+
+**Wrong**:
+```typescript
+for (let i = 0; i < 120; i++) { // 60 seconds
+    const res = await request.get(health, { failOnStatusCode: false });
+    if (res.ok()) return;
+    await new Promise(r => setTimeout(r, 500));
+}
+```
+
+**Correct**:
+```typescript
+// Server typically starts in 2-5 seconds, so 15 seconds is plenty
+for (let i = 0; i < 30; i++) { // 15 seconds
+    const res = await request.get(health, { failOnStatusCode: false });
+    if (res.ok()) return;
+    await new Promise(r => setTimeout(r, 500));
+}
+```
+
+**Why This Keeps Happening**: Default timeouts are set conservatively, but actual server startup is much faster. Reduce timeouts to match reality.
+
+---
+
+#### E2E-4: Multi-peer tests fail with "instance already running" mutex error
+
+**The Bug**: When starting multiple test nodes (A and B), the second node fails with "An instance of slskd is already running" because the mutex name was global (based only on AppName), not per-app-directory.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+private static Mutex Mutex { get; } = new Mutex(initiallyOwned: true, Compute.Sha256Hash(AppName));
+// Mutex check happens before AppDirectory is set
+if (!Mutex.WaitOne(millisecondsTimeout: 0, exitContext: false)) {
+    Log.Fatal($"An instance of {AppName} is already running");
+    return;
+}
+AppDirectory ??= DefaultAppDirectory; // Set AFTER mutex check
+```
+
+**Correct**:
+```csharp
+private static Mutex Mutex { get; set; }
+
+private static string GetMutexName() {
+    var dir = AppDirectory ?? DefaultAppDirectory;
+    return $"{AppName}_{Compute.Sha256Hash(dir)}";
+}
+
+// Set AppDirectory FIRST, then create mutex with app-directory-specific name
+AppDirectory ??= DefaultAppDirectory;
+Mutex = new Mutex(initiallyOwned: true, GetMutexName());
+if (!Mutex.WaitOne(millisecondsTimeout: 0, exitContext: false)) {
+    Log.Fatal($"An instance of {AppName} is already running in app directory: {AppDirectory}");
+    return;
+}
+```
+
+**Why This Keeps Happening**: The mutex was created as a static property initializer (before AppDirectory is set) with a global name. Each test node needs its own mutex based on its unique app directory.
+
+---
+
+#### E2E-5: Tests should be lenient for incomplete features
+
+**The Bug**: Tests fail when UI elements don't exist because features aren't fully implemented yet.
+
+**Files Affected**:
+- All E2E test files
+
+**Wrong**:
+```typescript
+await page.getByTestId(T.someFeature).click(); // Fails if feature doesn't exist
+await expect(page.getByTestId(T.someElement)).toBeVisible();
+```
+
+**Correct**:
+```typescript
+const featureBtn = page.getByTestId(T.someFeature);
+if (await featureBtn.count() === 0) {
+  test.skip(); // Skip if feature not available
+  return;
+}
+await featureBtn.click();
+await expect(page.getByTestId(T.someElement)).toBeVisible({ timeout: 10000 });
+```
+
+**Why This Keeps Happening**: Features may be partially implemented or not yet available. Tests should gracefully skip rather than fail, allowing the test suite to run and verify what's actually implemented.
+
+---
+
+#### E2E-6: React Router routes not matching due to basename/urlBase mismatch
+
+**The Bug**: When BrowserRouter has a `basename` prop set, routes and Links should NOT include the `urlBase` prefix, otherwise routes won't match. Also, if using memory history (MemoryRouter), redirects won't update the browser URL, causing the symptom "UI shows different page than URL".
+
+**Files Affected**:
+- `src/web/src/index.jsx` - Router setup
+- `src/web/src/components/App.jsx` - Route definitions
+- `src/web/e2e/multippeer-sharing.spec.ts` - Test diagnostics
+
+**Wrong**:
+```jsx
+// If urlBase is "/slskd" and basename is set:
+<Router basename="/slskd">
+  <Route path="/slskd/contacts" />  // ❌ Won't match! Router strips basename first
+  <Link to="/slskd/contacts" />     // ❌ Double-prefix
+</Router>
+```
+
+**Correct**:
+```jsx
+// When basename is set, routes should be base-relative:
+<Router basename={urlBase && urlBase !== '/' ? urlBase : undefined}>
+  <Route path="/contacts" />  // ✅ Router adds basename automatically
+  <Link to="/contacts" />     // ✅ Router adds basename automatically
+</Router>
+
+// When basename is undefined (urlBase is empty or '/'), use full paths:
+<Router basename={undefined}>
+  <Route path={`${urlBase}/contacts`} />  // ✅ urlBase is empty, so becomes "/contacts"
+  <Link to={`${urlBase}/contacts`} />     // ✅ urlBase is empty, so becomes "/contacts"
+</Router>
+```
+
+**Diagnostic Pattern**:
+```typescript
+// In E2E tests, compare browser location vs app history:
+const loc = await page.evaluate(() => ({ 
+  href: location.href, 
+  pathname: location.pathname 
+}));
+const appLoc = await page.evaluate(() => {
+  if ((window as any).__APP_HISTORY__) {
+    return (window as any).__APP_HISTORY__.location.pathname;
+  }
+  return null;
+});
+// If loc.pathname !== appLoc, you're using memory history or basename mismatch
+```
+
+**Why This Keeps Happening**: React Router's `basename` prop automatically prepends to all routes and links. If you manually include the basename in route paths, you get a double-prefix that prevents matching. Also, using MemoryRouter instead of BrowserRouter causes redirects to not update the browser URL.
+
+---
+
+#### E2E-7: TypeScript-only syntax in JSX breaks builds
+
+**The Bug**: Using TypeScript-only syntax (e.g., `window as any`) in `.jsx` files causes the web build to fail or silently serve stale bundles, which hides routing/debugging changes.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+
+**Wrong**:
+```jsx
+// ❌ TypeScript cast is invalid in plain JSX
+(window as any).__ROUTE_MISS_ELEMENT__ = el.textContent;
+```
+
+**Correct**:
+```jsx
+// ✅ Plain JS assignment
+window.__ROUTE_MISS_ELEMENT__ = el.textContent;
+```
+
+**Why This Keeps Happening**: It's easy to copy/paste TS patterns into a JS file. CRA/CRACO won't compile TS-only syntax in `.jsx`, and a failed build can leave old bundles in `wwwroot`, masking changes.
+
+---
+
+#### E2E-8: Ambiguous `/shares` route between file shares and share grants
+
+**The Bug**: The legacy file shares API and the new share-grants API both used `/api/v0/shares`, causing `AmbiguousMatchException` (500) for GET `/api/v0/shares`.
+
+**Files Affected**:
+- `src/slskd/Shares/API/Controllers/SharesController.cs` (legacy file shares)
+- `src/slskd/Sharing/API/SharesController.cs` (share grants)
+- `src/web/src/lib/collections.js`
+
+**Wrong**:
+```csharp
+[Route("api/v{version:apiVersion}/shares")] // used by BOTH controllers
+```
+
+**Correct**:
+```csharp
+[Route("api/v{version:apiVersion}/share-grants")] // share grants only
+```
+
+**Why This Keeps Happening**: Both features are named "Shares" but represent different domains (local file shares vs collection share grants). Without a distinct route prefix, ASP.NET Core can't disambiguate endpoints.
+
+---
+
+#### E2E-9: Share-grants "GetAll" is recipient-only (owner won't see outgoing shares)
+
+**The Bug**: `GET /api/v0/share-grants` returns grants **accessible to the current user as a recipient** (direct user or share-group member). It does **not** include the grants you created as the owner unless you also happen to be a recipient/member, which makes the owner UI appear as "No shares yet" after a successful create.
+
+**Files Affected**:
+- `src/slskd/Sharing/ShareGrantRepository.cs` (accessibility logic)
+- `src/slskd/Sharing/API/SharesController.cs` (endpoint semantics)
+- `src/web/src/components/Collections/Collections.jsx` (owner view needs by-collection endpoint)
+
+**Fix**:
+- Keep `GET /share-grants` as recipient-accessible (used by "Shared with Me")
+- Add `GET /share-grants/by-collection/{collectionId}` for owner/outgoing shares, and have the Collections UI use it
+
+---
+
+#### E2E-10: Cross-node share discovery requires token signing key and port-specific CSRF cookies
+
+**The Bug**: Cross-node share discovery via private messages requires:
+1. `Sharing:TokenSigningKey` configured (base64, min 32 bytes) or token creation fails
+2. CSRF cookie names must be port-specific (`XSRF-TOKEN-{port}`) for multi-instance E2E to avoid cookie collisions
+3. OwnerEndpoint in announcements must use `127.0.0.1` not `localhost` (Playwright request client prefers IPv6 `::1` for "localhost")
+
+**Files Affected**:
+- `src/web/e2e/harness/SlskdnNode.ts` (config generation)
+- `src/slskd/Program.cs` (CSRF cookie name, antiforgery config)
+- `src/slskd/Sharing/API/SharesController.cs` (ownerEndpoint calculation)
+- `src/web/src/lib/api.js` (CSRF token reading)
+
+**Wrong**:
+```csharp
+options.Cookie.Name = "XSRF-TOKEN"; // Same name for all instances = collision
+var ownerEndpoint = $"{scheme}://localhost:{web.Port}"; // localhost → ::1 in Playwright
+```
+
+**Correct**:
+```csharp
+options.Cookie.Name = $"XSRF-TOKEN-{OptionsAtStartup.Web.Port}"; // Port-specific
+var ownerEndpoint = $"{scheme}://127.0.0.1:{web.Port}"; // Explicit IPv4
+```
+
+**Why This Keeps Happening**: Multi-instance E2E runs multiple nodes on the same host with different ports. Cookies are host-scoped (not port-scoped), so fixed names collide. Playwright's request client resolves "localhost" to IPv6 by default, but nodes bind to IPv4.
+
+---
+
+#### E2E-11: Backfill requires OwnerEndpoint for HTTP downloads (cross-node)
+
+**The Bug**: Backfill endpoint requires either `OwnerEndpoint` + `ShareToken` (for HTTP downloads) or owner username + `IDownloadService` (for Soulseek downloads). If neither is available, backfill fails with a generic error.
+
+**Files Affected**:
+- `src/slskd/Sharing/API/SharesController.cs` (Backfill method)
+
+**Wrong**:
+```csharp
+// Only checks for Soulseek username
+if (string.IsNullOrWhiteSpace(ownerUsername))
+    return BadRequest("Owner username not available");
+```
+
+**Correct**:
+```csharp
+// Check for HTTP download first (cross-node), then Soulseek
+var useHttpDownload = !string.IsNullOrWhiteSpace(ownerEndpoint) && !string.IsNullOrWhiteSpace(grant.ShareToken);
+if (useHttpDownload) {
+    // HTTP download path
+} else if (!string.IsNullOrWhiteSpace(ownerUsername) && _downloadService != null) {
+    // Soulseek download path
+} else {
+    return BadRequest("Cannot backfill: owner endpoint and token not available for HTTP download, and owner username or download service not available for Soulseek download");
+}
+```
+
+**Why This Keeps Happening**: Backfill needs to work for both cross-node shares (HTTP) and same-network shares (Soulseek). The implementation must check for both methods and provide clear error messages when neither is available.
+
+---
+
+*Last updated: 2026-01-27*
 

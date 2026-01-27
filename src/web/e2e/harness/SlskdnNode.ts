@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as net from 'net';
+import * as crypto from 'crypto';
 
 export interface NodeConfig {
   nodeName: string;
@@ -43,6 +44,8 @@ async function findFreePort(): Promise<number> {
 export class SlskdnNode {
   private process: ChildProcess | null = null;
   private apiPort: number = 0;
+  private soulseekListenPort: number = 0;
+  private shareTokenKey: string = '';
   private appDir: string = '';
   private config: NodeConfig;
 
@@ -65,11 +68,37 @@ export class SlskdnNode {
     }
   }
 
+  private async syncWebUi(repoRoot: string): Promise<void> {
+    const webBuildPath = path.join(repoRoot, 'src', 'web', 'build');
+    const wwwrootPath = path.join(
+      repoRoot,
+      'src',
+      'slskd',
+      'bin',
+      'Debug',
+      'net8.0',
+      'wwwroot',
+    );
+
+    try {
+      await fs.access(webBuildPath);
+    } catch (error) {
+      throw new Error(
+        'Web build not found at src/web/build. Run `npm run build` first.',
+      );
+    }
+
+    await fs.rm(wwwrootPath, { force: true, recursive: true });
+    await fs.mkdir(wwwrootPath, { recursive: true });
+    await fs.cp(webBuildPath, wwwrootPath, { recursive: true });
+  }
+
   /**
    * Start the slskdn node process.
    */
   async start(): Promise<void> {
     const repoRoot = this.getRepoRoot();
+    await this.syncWebUi(repoRoot);
     
     // Ensure test fixtures are available (check only, don't fetch automatically)
     // The shareDir is like 'test-data/slskdn-test-fixtures/music'
@@ -99,6 +128,11 @@ export class SlskdnNode {
       this.apiPort = this.config.apiPort;
     }
 
+    // Allocate a unique Soulseek listen port per node (multi-instance needs this)
+    this.soulseekListenPort = await findFreePort();
+    // Token signing key for share-grants / streams (base64, 32 bytes decoded)
+    this.shareTokenKey = crypto.randomBytes(32).toString('base64');
+
     // Create isolated app directory
     if (!this.config.appDir) {
       this.appDir = await fs.mkdtemp(path.join('/tmp', 'slskdn-test-'));
@@ -122,9 +156,17 @@ export class SlskdnNode {
     const configYaml = `web:
   port: ${this.apiPort}
   host: 127.0.0.1
+  https:
+    disabled: true
   authentication:
     username: ${this.config.nodeName === 'A' ? 'nodeA' : 'nodeB'}
     password: ${this.config.nodeName === 'A' ? 'nodeA' : 'nodeB'}
+soulseek:
+  username: ${this.config.nodeName === 'A' ? 'nodeA' : 'nodeB'}
+  password: ${this.config.nodeName === 'A' ? 'nodeA' : 'nodeB'}
+  listenPort: ${this.soulseekListenPort}
+sharing:
+  tokenSigningKey: ${this.shareTokenKey}
 directories:
   downloads: ${path.join(this.appDir, 'downloads')}
   incomplete: ${path.join(this.appDir, 'incomplete')}
@@ -150,7 +192,20 @@ flags:
       throw new Error(`Project not found: ${projectPath}`);
     }
     
-    const args = ['run', '--project', projectPath, '--no-build', '--', '--app-dir', this.appDir, '--config', configPath];
+    // Add --force-share-scan to avoid ShareInitializationException when cache doesn't exist
+    const skipBuild = process.env.SLSKDN_E2E_NO_BUILD === 'true';
+    const args = [
+      'run',
+      '--project',
+      projectPath,
+      ...(skipBuild ? ['--no-build'] : []),
+      '--',
+      '--app-dir',
+      this.appDir,
+      '--config',
+      configPath,
+      '--force-share-scan',
+    ];
 
     this.process = spawn('dotnet', args, {
       cwd: repoRoot,
@@ -207,10 +262,10 @@ flags:
       });
     }
 
-    // Wait for health endpoint
+    // Wait for health endpoint (server typically starts in 2-5 seconds)
     const healthUrl = `${this.apiUrl}/health`;
     const startTime = Date.now();
-    const timeout = 30000;
+    const timeout = 15000; // Reduced from 30s - server starts much faster
     
     while (Date.now() - startTime < timeout) {
       // Check if process died
