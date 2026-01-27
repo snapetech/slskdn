@@ -3103,3 +3103,94 @@ See `COMPILE_FIX_FOLLOWUP.md` for detailed list:
 **Test Results**:
 - All tests compile successfully
 - Tests now properly create shares and verify policy enforcement
+
+## 2026-01-27 (continued - feature work)
+
+### Code TODOs completed
+
+**Status**: ✅ **COMPLETED**
+
+**Implementation**: Addressed 5 code TODOs across the codebase.
+
+1. **ProfileService hostname detection**: Replaced hardcoded "localhost" with network interface detection
+   - Detects first non-loopback IPv4 address from active network interfaces
+   - Falls back to DNS hostname resolution
+   - Falls back to "localhost" if detection fails
+
+2. **CostBasedScheduling configuration**: Added option to `Global.Download` options
+   - New `CostBasedScheduling` property (default: true)
+   - Wired in `Program.cs` to read from `Options.Global.Download.CostBasedScheduling`
+   - Supports command-line argument and environment variable
+
+3. **MeshSearchRpcHandler ContentId lookup**: Populate ContentId from share repository
+   - Uses `ListContentItemsForFile` to look up content items
+   - Prefers advertisable content items, falls back to first item
+   - Hash lookup deferred (requires HashDb integration)
+
+4. **MeshCircuitBuilder persistent counter**: Track total circuits built
+   - Added `_totalCircuitsBuilt` field that increments on successful circuit creation
+   - `GetStatistics()` now returns actual total, not just active count
+
+5. **RescueService output path**: Use GetOutputPathForTransfer method
+   - Improved path structure using organized temp directory (`slskd/rescue`)
+   - Uses transfer ID and filename for unique paths
+
+**Files Modified**:
+- `src/slskd/Identity/ProfileService.cs`
+- `src/slskd/Core/Options.cs`
+- `src/slskd/Program.cs`
+- `src/slskd/DhtRendezvous/Search/MeshSearchRpcHandler.cs`
+- `src/slskd/Mesh/MeshCircuitBuilder.cs`
+- `src/slskd/Transfers/Rescue/RescueService.cs`
+
+**Test Results**:
+- All builds succeed (0 errors)
+- All 2430 unit tests passing
+
+---
+
+### Compatibility API improvements
+
+**Status**: ✅ **COMPLETED**
+
+**Implementation**: Improved compatibility controllers to return actual data instead of stubs.
+
+1. **DownloadsCompatibilityController**: Implement actual local path resolution
+   - Inject `IOptionsMonitor<Options>` to access Directories configuration
+   - Use `ToLocalFilename` extension method to compute actual local paths
+   - Determine base directory based on transfer state (Downloads for completed, Incomplete for in-progress)
+   - Fixed TODOs in `GetDownloads` and `GetDownload` methods
+
+2. **ServerCompatibilityController**: Implement actual server status
+   - Inject `ISoulseekClient` to get real connection state and username
+   - Return actual connection status instead of stub data
+   - Map `SoulseekClientStates` to compatibility format (logged_in/connected/disconnected)
+
+**Files Modified**:
+- `src/slskd/API/Compatibility/DownloadsCompatibilityController.cs`
+- `src/slskd/API/Compatibility/ServerCompatibilityController.cs`
+
+**Test Results**:
+- All builds succeed (0 errors)
+
+---
+
+### Test fixes
+
+**Status**: ✅ **COMPLETED**
+
+**Implementation**: Fixed 5 failing unit tests related to ProblemDetails response pattern.
+
+- Updated controller tests to correctly verify `ProblemDetails.Detail` property
+- `ShareGroupsControllerTests`: Check for `ObjectResult` with `ProblemDetails`
+- `SharesControllerTests`: Check for `BadRequestObjectResult` with `ProblemDetails`
+- `CollectionsControllerTests`: Fixed `Create_EmptyTitle` and `Get_WrongOwner` tests
+- `Get_WrongOwner`: Mock `GetShareGrantsAccessibleByUserAsync` to return empty list
+
+**Files Modified**:
+- `tests/slskd.Tests.Unit/Sharing/API/ShareGroupsControllerTests.cs`
+- `tests/slskd.Tests.Unit/Sharing/API/SharesControllerTests.cs`
+- `tests/slskd.Tests.Unit/Sharing/API/CollectionsControllerTests.cs`
+
+**Test Results**:
+- All 2430 unit tests now passing
