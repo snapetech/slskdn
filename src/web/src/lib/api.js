@@ -18,12 +18,18 @@ export function buildApiUrl(path) {
   // Guard against double-prefixing in development
   if (process.env.NODE_ENV !== 'production') {
     if (path.startsWith('/api/') || path.startsWith('api/')) {
-      throw new Error(`[api.js] Do not include /api prefix in paths. Got: ${path}`);
+      throw new Error(
+        `[api.js] Do not include /api prefix in paths. Got: ${path}`,
+      );
     }
+
     if (path.startsWith('/api/v0') || path.startsWith('api/v0')) {
-      throw new Error(`[api.js] Do not include /api/v0 prefix in paths. Got: ${path}`);
+      throw new Error(
+        `[api.js] Do not include /api/v0 prefix in paths. Got: ${path}`,
+      );
     }
   }
+
   const p = path.startsWith('/') ? path : `/${path}`;
   return `${apiBaseUrl}${p}`;
 }
@@ -33,15 +39,16 @@ const getCsrfToken = () => {
   const cookies = document.cookie.split(';');
   for (let cookie of cookies) {
     cookie = cookie.trim();
-    const idx = cookie.indexOf('=');
-    if (idx <= 0) continue;
-    const k = cookie.slice(0, idx);
-    const v = cookie.slice(idx + 1);
+    const index = cookie.indexOf('=');
+    if (index <= 0) continue;
+    const k = cookie.slice(0, index);
+    const v = cookie.slice(index + 1);
     // Multi-instance E2E uses per-port CSRF cookie names: XSRF-TOKEN-<port>
     if (k === 'XSRF-TOKEN' || k.startsWith('XSRF-TOKEN-')) {
       return v;
     }
   }
+
   return null;
 };
 
@@ -80,22 +87,24 @@ api.interceptors.response.use(
       const status = error.response.status;
       const url = error.response.config?.url || 'unknown';
       const contentLength = error.response.headers['content-length'];
-      
+
       // Log empty body responses for debugging
       if (contentLength === '0' || contentLength === 0) {
         console.error(`[api.js] HTTP ${status} with empty body from ${url}`);
       }
-      
+
       // Handle 401 (authentication)
-      if (status === 401 &&
-          !['/session', '/server', '/application'].includes(url)) {
+      if (
+        status === 401 &&
+        !['/session', '/server', '/application'].includes(url)
+      ) {
         console.debug('received 401 from api route, logging out');
         clearToken();
         window.location.reload(true);
         return Promise.reject(error);
       }
     }
-    
+
     return Promise.reject(error);
   },
 );

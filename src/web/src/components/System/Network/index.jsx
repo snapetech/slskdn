@@ -398,8 +398,8 @@ const Network = () => {
               bulleted
               size="small"
             >
-              {mesh.warnings.map((w, i) => (
-                <List.Item key={i}>{w}</List.Item>
+              {mesh.warnings.map((w, index) => (
+                <List.Item key={index}>{w}</List.Item>
               ))}
             </List>
           </Message>
@@ -409,31 +409,45 @@ const Network = () => {
           widths={7}
         >
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.signatureVerificationFailures ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.signatureVerificationFailures ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Sig. failures</Statistic.Label>
           </Statistic>
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.reputationBasedRejections ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.reputationBasedRejections ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Rep. rejections</Statistic.Label>
           </Statistic>
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.rateLimitViolations ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.rateLimitViolations ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Rate limits</Statistic.Label>
           </Statistic>
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.quarantinedPeers ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.quarantinedPeers ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Quarantined</Statistic.Label>
           </Statistic>
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.quarantineEvents ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.quarantineEvents ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Quarantine events</Statistic.Label>
           </Statistic>
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.rejectedMessages ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.rejectedMessages ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Rejected msgs</Statistic.Label>
           </Statistic>
           <Statistic>
-            <Statistic.Value>{formatNumber(mesh?.skippedEntries ?? 0)}</Statistic.Value>
+            <Statistic.Value>
+              {formatNumber(mesh?.skippedEntries ?? 0)}
+            </Statistic.Value>
             <Statistic.Label>Skipped entries</Statistic.Label>
           </Statistic>
         </Statistic.Group>

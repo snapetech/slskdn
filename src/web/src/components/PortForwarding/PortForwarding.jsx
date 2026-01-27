@@ -27,8 +27,8 @@ const initialState = {
   availablePorts: [],
   createForm: {
     destinationHost: '',
-    localPort: '',
     destinationPort: '',
+    localPort: '',
     serviceName: '',
   },
   creatingForwarding: false,

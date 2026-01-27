@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
 import { NODES, shouldLaunchNodes } from './env';
-import { waitForHealth, login, clickNav } from './helpers';
-import { T } from './selectors';
 import { MultiPeerHarness } from './harness/MultiPeerHarness';
+import { clickNav, login, waitForHealth } from './helpers';
+import { T } from './selectors';
+import { expect, test } from '@playwright/test';
 
 test.describe('streaming', () => {
   let harness: MultiPeerHarness | null = null;
@@ -33,10 +33,10 @@ test.describe('streaming', () => {
     await waitForHealth(request, nodeA.baseUrl);
     await waitForHealth(request, nodeB.baseUrl);
 
-    const ctxA = await browser.newContext();
-    const ctxB = await browser.newContext();
-    const pageA = await ctxA.newPage();
-    const pageB = await ctxB.newPage();
+    const contextA = await browser.newContext();
+    const contextB = await browser.newContext();
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
 
     await login(pageA, nodeA);
     await login(pageB, nodeB);
@@ -46,62 +46,92 @@ test.describe('streaming', () => {
     const existingGroupRow = pageA.getByTestId(T.groupRow(groupName));
     if ((await existingGroupRow.count()) === 0) {
       await pageA.getByTestId(T.groupsCreate).click();
-      await pageA.waitForSelector(`[data-testid="${T.groupsNameInput}"]`, { timeout: 5000 });
-      await pageA.getByTestId(T.groupsNameInput).locator('input').fill(groupName);
+      await pageA.waitForSelector(`[data-testid="${T.groupsNameInput}"]`, {
+        timeout: 5_000,
+      });
+      await pageA
+        .getByTestId(T.groupsNameInput)
+        .locator('input')
+        .fill(groupName);
       await pageA.getByTestId(T.groupsCreateSubmit).click();
-      await expect(pageA.getByTestId(T.groupRow(groupName))).toBeVisible({ timeout: 5000 });
+      await expect(pageA.getByTestId(T.groupRow(groupName))).toBeVisible({
+        timeout: 5_000,
+      });
     }
 
     // Create collection and share (similar to multippeer-sharing test)
     await clickNav(pageA, T.navCollections);
-    await pageA.waitForSelector('[data-testid="collections-root"]', { timeout: 10000 });
+    await pageA.waitForSelector('[data-testid="collections-root"]', {
+      timeout: 10_000,
+    });
 
-    const existingCollectionRow = pageA.getByTestId(T.collectionRow(collectionTitle));
+    const existingCollectionRow = pageA.getByTestId(
+      T.collectionRow(collectionTitle),
+    );
     if ((await existingCollectionRow.count()) === 0) {
       await pageA.getByTestId(T.collectionsCreate).click();
-      await pageA.waitForSelector(`[data-testid="${T.collectionsTypeSelect}"]`, { timeout: 5000 });
+      await pageA.waitForSelector(
+        `[data-testid="${T.collectionsTypeSelect}"]`,
+        { timeout: 5_000 },
+      );
       await pageA.getByTestId(T.collectionsTypeSelect).click();
       await pageA.getByRole('option', { name: /playlist/i }).click();
-      await pageA.getByTestId(T.collectionsTitleInput).locator('input').fill(collectionTitle);
+      await pageA
+        .getByTestId(T.collectionsTitleInput)
+        .locator('input')
+        .fill(collectionTitle);
 
       const createCollectionResponse = pageA.waitForResponse(
         (response) =>
           response.url().includes('/api/v0/collections') &&
           response.request().method() === 'POST',
-        { timeout: 5000 },
+        { timeout: 5_000 },
       );
       await pageA.getByTestId(T.collectionsCreateSubmit).click();
       const createCollectionResult = await createCollectionResponse;
       if (createCollectionResult.status() !== 201) {
         const body = await createCollectionResult.text();
-        throw new Error(`Create collection failed: ${createCollectionResult.status()} ${body}`);
+        throw new Error(
+          `Create collection failed: ${createCollectionResult.status()} ${body}`,
+        );
       }
-      await expect(pageA.getByTestId(T.collectionRow(collectionTitle))).toBeVisible({ timeout: 5000 });
+
+      await expect(
+        pageA.getByTestId(T.collectionRow(collectionTitle)),
+      ).toBeVisible({ timeout: 5_000 });
     }
 
     await pageA.getByTestId(T.collectionRow(collectionTitle)).click();
     await pageA.waitForTimeout(500);
 
     // Add item
-    const addItemBtn = pageA.getByTestId(T.collectionAddItem);
-    if ((await addItemBtn.count()) > 0) {
-      await addItemBtn.click();
-      await pageA.getByTestId(T.collectionItemPicker).locator('input').fill('synthetic');
+    const addItemButton = pageA.getByTestId(T.collectionAddItem);
+    if ((await addItemButton.count()) > 0) {
+      await addItemButton.click();
+      await pageA
+        .getByTestId(T.collectionItemPicker)
+        .locator('input')
+        .fill('synthetic');
       await pageA.getByTestId(T.collectionAddItemSubmit).click();
-      await pageA.waitForTimeout(1000);
+      await pageA.waitForTimeout(1_000);
     }
 
     // Share with stream enabled
     const shareCreate = pageA.getByTestId(T.shareCreate);
-    await expect(shareCreate).toBeVisible({ timeout: 5000 });
+    await expect(shareCreate).toBeVisible({ timeout: 5_000 });
     await shareCreate.click();
     const audiencePicker = pageA.getByTestId(T.shareAudiencePicker);
-    await expect(audiencePicker).toBeVisible({ timeout: 5000 });
+    await expect(audiencePicker).toBeVisible({ timeout: 5_000 });
     await audiencePicker.click();
-    const groupOption = pageA.getByRole('option', { name: new RegExp(groupName, 'i') });
+    const groupOption = pageA.getByRole('option', {
+      name: new RegExp(groupName, 'i'),
+    });
     if ((await groupOption.count()) === 0) {
-      throw new Error('No share groups found in picker. Ensure group creation ran.');
+      throw new Error(
+        'No share groups found in picker. Ensure group creation ran.',
+      );
     }
+
     await groupOption.first().click();
 
     await pageA.getByTestId(T.sharePolicyStream).check();
@@ -111,30 +141,36 @@ test.describe('streaming', () => {
       (response) =>
         response.url().includes('/api/v0/share-grants') &&
         response.request().method() === 'POST',
-      { timeout: 5000 },
+      { timeout: 5_000 },
     );
     await pageA.getByTestId(T.shareCreateSubmit).click();
     const createShareResult = await createShareResponse;
     if (createShareResult.status() !== 201) {
       const body = await createShareResult.text();
-      throw new Error(`Create share failed: ${createShareResult.status()} ${body}`);
+      throw new Error(
+        `Create share failed: ${createShareResult.status()} ${body}`,
+      );
     }
 
     // Wait for cross-node discovery
-    await pageB.waitForTimeout(5000);
+    await pageB.waitForTimeout(5_000);
 
     // Node B tries to stream
     await clickNav(pageB, T.navSharedWithMe);
-    await pageB.waitForTimeout(2000);
+    await pageB.waitForTimeout(2_000);
 
     // Poll for the share to appear
     let shareFound = false;
-    for (let i = 0; i < 20; i++) {
-      const shareRow = pageB.getByTestId(T.incomingShareRow(collectionTitle)).first();
+    for (let index = 0; index < 20; index++) {
+      const shareRow = pageB
+        .getByTestId(T.incomingShareRow(collectionTitle))
+        .first();
       if ((await shareRow.count()) > 0) {
         shareFound = true;
         await shareRow.getByTestId(T.incomingShareOpen).click();
-        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({ timeout: 15000 });
+        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({
+          timeout: 15_000,
+        });
 
         // Get stream URL from manifest via API (more reliable than UI)
         const streamUrl = await pageB.evaluate(
@@ -156,6 +192,7 @@ test.describe('streaming', () => {
             } catch {
               return null;
             }
+
             if (!Array.isArray(shares) || shares.length === 0) return null;
 
             for (const share of shares) {
@@ -175,21 +212,21 @@ test.describe('streaming', () => {
               } catch {
                 continue;
               }
+
               if (manifest?.title !== expectedTitle) continue;
               const item = manifest?.items?.[0];
               const url = item?.streamUrl;
               if (!url) continue;
 
               if (url.startsWith(expectedOwnerBaseUrl)) return url;
-              if (url.startsWith('/'))
-                return `${expectedOwnerBaseUrl}${url}`;
+              if (url.startsWith('/')) return `${expectedOwnerBaseUrl}${url}`;
             }
 
             return null;
           },
           {
-            expectedTitle: collectionTitle,
             expectedOwnerBaseUrl: nodeA.baseUrl,
+            expectedTitle: collectionTitle,
           },
         );
 
@@ -203,8 +240,8 @@ test.describe('streaming', () => {
             : `${nodeB.baseUrl}${normalized}`;
 
           const rangeResponse = await request.get(fullStreamUrl, {
-            headers: { Range: 'bytes=0-1' },
             failOnStatusCode: false,
+            headers: { Range: 'bytes=0-1' },
           });
 
           // Should get 206 (Partial Content) or 200 (full content) or 404 (synthetic content not found)
@@ -215,9 +252,11 @@ test.describe('streaming', () => {
             'No streamUrl found in manifest (fixture/index may not provide streamable content).',
           );
         }
+
         break;
       }
-      await pageB.waitForTimeout(1000);
+
+      await pageB.waitForTimeout(1_000);
     }
 
     if (!shareFound) {
@@ -227,8 +266,8 @@ test.describe('streaming', () => {
       );
     }
 
-    await ctxA.close();
-    await ctxB.close();
+    await contextA.close();
+    await contextB.close();
   });
 
   test('seek_works_with_range_requests', async ({ browser, request }) => {
@@ -237,22 +276,26 @@ test.describe('streaming', () => {
     await waitForHealth(request, nodeA.baseUrl);
     await waitForHealth(request, nodeB.baseUrl);
 
-    const ctxB = await browser.newContext();
-    const pageB = await ctxB.newPage();
+    const contextB = await browser.newContext();
+    const pageB = await contextB.newPage();
     await login(pageB, nodeB);
 
     // Navigate to shared content
     await clickNav(pageB, T.navSharedWithMe);
-    await pageB.waitForTimeout(2000);
+    await pageB.waitForTimeout(2_000);
 
     // Poll for the share to appear
     let shareFound = false;
-    for (let i = 0; i < 20; i++) {
-      const shareRow = pageB.getByTestId(T.incomingShareRow(collectionTitle)).first();
+    for (let index = 0; index < 20; index++) {
+      const shareRow = pageB
+        .getByTestId(T.incomingShareRow(collectionTitle))
+        .first();
       if ((await shareRow.count()) > 0) {
         shareFound = true;
         await shareRow.getByTestId(T.incomingShareOpen).click();
-        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({ timeout: 15000 });
+        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({
+          timeout: 15_000,
+        });
 
         // Get stream URL from manifest via API
         const streamUrl = await pageB.evaluate(
@@ -274,6 +317,7 @@ test.describe('streaming', () => {
             } catch {
               return null;
             }
+
             if (!Array.isArray(shares) || shares.length === 0) return null;
 
             for (const share of shares) {
@@ -293,21 +337,21 @@ test.describe('streaming', () => {
               } catch {
                 continue;
               }
+
               if (manifest?.title !== expectedTitle) continue;
               const item = manifest?.items?.[0];
               const url = item?.streamUrl;
               if (!url) continue;
 
               if (url.startsWith(expectedOwnerBaseUrl)) return url;
-              if (url.startsWith('/'))
-                return `${expectedOwnerBaseUrl}${url}`;
+              if (url.startsWith('/')) return `${expectedOwnerBaseUrl}${url}`;
             }
 
             return null;
           },
           {
-            expectedTitle: collectionTitle,
             expectedOwnerBaseUrl: nodeA.baseUrl,
+            expectedTitle: collectionTitle,
           },
         );
 
@@ -321,8 +365,8 @@ test.describe('streaming', () => {
             : `${nodeB.baseUrl}${normalized}`;
 
           const rangeResponse = await request.get(fullStreamUrl, {
-            headers: { Range: 'bytes=1000-2000' },
             failOnStatusCode: false,
+            headers: { Range: 'bytes=1000-2000' },
           });
 
           // Should get 206 (Partial Content) if range is supported
@@ -339,9 +383,11 @@ test.describe('streaming', () => {
             'No streamUrl found in manifest (fixture/index may not provide streamable content).',
           );
         }
+
         break;
       }
-      await pageB.waitForTimeout(1000);
+
+      await pageB.waitForTimeout(1_000);
     }
 
     if (!shareFound) {
@@ -351,10 +397,13 @@ test.describe('streaming', () => {
       );
     }
 
-    await ctxB.close();
+    await contextB.close();
   });
 
-  test('concurrency_limit_blocks_excess_streams', async ({ browser, request }) => {
+  test('concurrency_limit_blocks_excess_streams', async ({
+    browser,
+    request,
+  }) => {
     // This test verifies that MaxConcurrentStreams policy is enforced
     // It's optional and may be better tested at API level
     // For E2E, we can verify the UI shows appropriate error or blocks action
@@ -362,8 +411,8 @@ test.describe('streaming', () => {
     const nodeB = harness ? harness.getNode('B').nodeCfg : NODES.B;
     await waitForHealth(request, nodeB.baseUrl);
 
-    const ctxB = await browser.newContext();
-    const pageB = await ctxB.newPage();
+    const contextB = await browser.newContext();
+    const pageB = await contextB.newPage();
     await login(pageB, nodeB);
 
     await clickNav(pageB, T.navSharedWithMe);
@@ -383,12 +432,9 @@ test.describe('streaming', () => {
         'Concurrency limit test requires specific share setup - better tested at API level',
       );
     } else {
-      test.skip(
-        true,
-        'Not enough streamable items to test concurrency limit',
-      );
+      test.skip(true, 'Not enough streamable items to test concurrency limit');
     }
 
-    await ctxB.close();
+    await contextB.close();
   });
 });

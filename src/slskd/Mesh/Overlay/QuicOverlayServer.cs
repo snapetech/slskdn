@@ -55,6 +55,10 @@ public class QuicOverlayServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        // This yields immediately so Kestrel can start binding while QUIC initializes
+        await Task.Yield();
+
         logger.LogInformation("[QuicOverlayServer] ExecuteAsync called");
         if (!options.Enable)
         {

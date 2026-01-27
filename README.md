@@ -158,8 +158,17 @@ Download files from multiple peers simultaneously for faster, more reliable tran
 - **Failure resilience** continues from other sources if one fails
 - **SHA-256 verification** ensures content integrity
 - **Network-friendly** — distributes load instead of hammering single users
+- **Advanced discovery** — content-aware matching with fuzzy/variant classification
+- **Adaptive scheduling** — learns from chunk outcomes to optimize assignment
+- **Domain-aware swarming** — Movies, TV, Books, and GenericFile support
 
 📖 **Design docs**: [Network impact analysis](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Roadmap](docs/multi-swarm-roadmap.md) • [Rescue mode](docs/phase2-rescue-mode-design.md) • [Scheduling](docs/phase2-swarm-scheduling-design.md)
+
+### 📊 Swarm Analytics & Insights
+Understand swarm performance and make data-driven optimizations.
+- **Analytics service** — success rates, speed, duration, and chunk efficiency
+- **Peer rankings** — reputation, RTT, throughput, and success metrics
+- **System UI dashboard** — trends, recommendations, and summaries
 
 ### 🌐 DHT Peer Discovery & Mesh Networking
 Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
@@ -223,6 +232,11 @@ Decentralized content discovery without relying solely on the Soulseek network.
 
 
 📖 **Design docs**: [VirtualSoulfind v2](docs/virtualsoulfind-v2-design.md) • [Implementation design](docs/phase6-virtual-soulfind-implementation-design.md) • [User guide](docs/VIRTUAL_SOULFIND_USER_GUIDE.md) • [Content domains](docs/VIRTUALSOULFIND-CONTENT-DOMAINS.md)
+
+### 📈 Observability & Telemetry
+Visibility into performance and network behavior.
+- **OpenTelemetry tracing** — `telemetry.tracing` config with console, Jaeger, or OTLP exporters
+- **Component activity sources** — transfers, mesh, HashDb, and search tracing
 
 ### 🔧 Service Fabric
 Generic service layer for mesh-based applications.
@@ -439,7 +453,7 @@ mesh:
     quic_port: 50302
 ```
 
-Detailed documentation for configuration options can be found [here](https://github.com/slskd/slskd/blob/master/docs/config.md), and an example of the YAML configuration file can be reviewed [here](https://github.com/slskd/slskd/blob/master/config/slskd.example.yml).
+Detailed documentation for configuration options can be found in [docs/config.md](docs/config.md), and an example of the YAML configuration file can be reviewed in [config/slskd.example.yml](config/slskd.example.yml).
 
 ---
 
@@ -448,6 +462,7 @@ Detailed documentation for configuration options can be found [here](https://git
 | Document | Description |
 |----------|-------------|
 | [Features Overview](docs/FEATURES.md) | Complete feature list and configuration |
+| [Advanced Features](docs/advanced-features.md) | Deep dives for major slskdN features |
 | [How It Works](docs/HOW-IT-WORKS.md) | Technical architecture and design |
 | [Multi-Source Downloads](docs/multipart-downloads.md) | Network impact analysis |
 | [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) | Peer discovery architecture |
@@ -456,6 +471,8 @@ Detailed documentation for configuration options can be found [here](https://git
 | [Configuration](docs/config.md) | All configuration options |
 | [Building](docs/build.md) | Build instructions |
 | [Docker](docs/docker.md) | Container deployment |
+| [Test Coverage Summary](docs/TEST_COVERAGE_SUMMARY.md) | Current test counts and coverage |
+| [Test Coverage Assessment](docs/TEST_COVERAGE_ASSESSMENT.md) | Coverage rationale and gaps |
 
 ---
 
@@ -484,7 +501,7 @@ For the stable upstream client, see [slskd/slskd](https://github.com/slskd/slskd
 ---
 
 ## Reverse Proxy
-slskdN may require extra configuration when running it behind a reverse proxy. Refer [here](https://github.com/slskd/slskd/blob/master/docs/reverse_proxy.md) for a short guide.
+slskdN may require extra configuration when running it behind a reverse proxy. Refer to [docs/reverse_proxy.md](docs/reverse_proxy.md) for a short guide.
 
 ---
 
@@ -583,7 +600,7 @@ If you're reading this code, you should assume that:
 - **Commits ahead**: 4,473+ commits
 - **New systems**: 7 major subsystems (Mesh, Swarm, Security, Pods, MediaCore, VirtualSoulfind, Service Fabric)
 - **New features**: 127+ individual features
-- **Test coverage**: 543 tests passing (92% success rate)
+- **Test coverage**: ~2,678 total tests (~2,671 passing, 2-3 skipped)
 - **Documentation**: 100+ markdown files
 - **Files changed**: 450+ files
 

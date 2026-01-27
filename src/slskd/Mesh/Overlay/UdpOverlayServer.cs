@@ -43,6 +43,10 @@ public class UdpOverlayServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        // This yields immediately so Kestrel can start binding while UDP initializes
+        await Task.Yield();
+
         logger.LogInformation("[UdpOverlayServer] ExecuteAsync called");
         try
         {

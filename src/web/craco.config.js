@@ -6,11 +6,12 @@ module.exports = {
     configure: (webpackConfig) => {
       // Disable ESLint errors in build (warnings only)
       const eslintPlugin = webpackConfig.plugins.find(
-        (plugin) => plugin.constructor.name === 'ESLintWebpackPlugin'
+        (plugin) => plugin.constructor.name === 'ESLintWebpackPlugin',
       );
       if (eslintPlugin) {
         eslintPlugin.options.failOnError = false;
       }
+
       return webpackConfig;
     },
   },

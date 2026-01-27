@@ -2,7 +2,11 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+import * as jobsLibrary from '../../../lib/jobs';
+import { formatBytes } from '../../../lib/util';
+import SwarmVisualization from '../SwarmVisualization';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Button,
   Card,
@@ -19,10 +23,6 @@ import {
   Statistic,
   Table,
 } from 'semantic-ui-react';
-import { formatBytes } from '../../../lib/util';
-import * as jobsLib from '../../../lib/jobs';
-import { toast } from 'react-toastify';
-import SwarmVisualization from '../SwarmVisualization';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -32,34 +32,34 @@ const Jobs = () => {
   const [selectedSwarmJobId, setSelectedSwarmJobId] = useState(null);
   const [showVisualization, setShowVisualization] = useState(false);
   const [filters, setFilters] = useState({
-    type: null,
-    status: null,
     sortBy: 'created_at',
     sortOrder: 'desc',
+    status: null,
+    type: null,
   });
   const [pagination, setPagination] = useState({
+    hasMore: false,
     limit: 20,
     offset: 0,
     total: 0,
-    hasMore: false,
   });
 
   const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await jobsLib.getJobs({
-        type: filters.type || undefined,
-        status: filters.status || undefined,
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
+      const response = await jobsLibrary.getJobs({
         limit: pagination.limit,
         offset: pagination.offset,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+        status: filters.status || undefined,
+        type: filters.type || undefined,
       });
       setJobs(response.jobs || []);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.total || 0,
+      setPagination((previous) => ({
+        ...previous,
         hasMore: response.has_more || false,
+        total: response.total || 0,
       }));
     } catch (error) {
       toast.error(
@@ -76,7 +76,7 @@ const Jobs = () => {
   const fetchSwarmJobs = useCallback(async () => {
     try {
       setSwarmLoading(true);
-      const jobs = await jobsLib.getActiveSwarmJobs();
+      const jobs = await jobsLibrary.getActiveSwarmJobs();
       setSwarmJobs(jobs);
     } catch (error) {
       console.debug('Failed to fetch swarm jobs:', error);
@@ -92,48 +92,50 @@ const Jobs = () => {
 
   useEffect(() => {
     fetchSwarmJobs();
-    const interval = setInterval(fetchSwarmJobs, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchSwarmJobs, 5_000); // Refresh every 5 seconds
     return () => clearInterval(interval);
   }, [fetchSwarmJobs]);
 
   const analytics = useMemo(() => {
     const allJobs = [...jobs, ...swarmJobs];
-    const byStatus = allJobs.reduce((acc, job) => {
+    const byStatus = allJobs.reduce((accumulator, job) => {
       const status = job.status || 'unknown';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
+      accumulator[status] = (accumulator[status] || 0) + 1;
+      return accumulator;
     }, {});
 
-    const byType = allJobs.reduce((acc, job) => {
+    const byType = allJobs.reduce((accumulator, job) => {
       const type = job.type || 'unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
+      accumulator[type] = (accumulator[type] || 0) + 1;
+      return accumulator;
     }, {});
 
     const activeCount = allJobs.filter(
-      (j) => j.status === 'running' || j.status === 'pending',
+      (index) => index.status === 'running' || index.status === 'pending',
     ).length;
 
-    const completedCount = allJobs.filter((j) => j.status === 'completed').length;
+    const completedCount = allJobs.filter(
+      (index) => index.status === 'completed',
+    ).length;
 
     return {
-      total: allJobs.length,
       active: activeCount,
-      completed: completedCount,
       byStatus,
       byType,
+      completed: completedCount,
+      total: allJobs.length,
     };
   }, [jobs, swarmJobs]);
 
   const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setPagination((prev) => ({ ...prev, offset: 0 })); // Reset to first page
+    setFilters((previous) => ({ ...previous, [key]: value }));
+    setPagination((previous) => ({ ...previous, offset: 0 })); // Reset to first page
   };
 
   const handlePageChange = (_event, { activePage }) => {
-    setPagination((prev) => ({
-      ...prev,
-      offset: (activePage - 1) * prev.limit,
+    setPagination((previous) => ({
+      ...previous,
+      offset: (activePage - 1) * previous.limit,
     }));
   };
 
@@ -196,7 +198,10 @@ const Jobs = () => {
           <Grid.Column>
             <Statistic>
               <Statistic.Value>
-                <Icon color="blue" name="spinner" />
+                <Icon
+                  color="blue"
+                  name="spinner"
+                />
                 {analytics.active}
               </Statistic.Value>
               <Statistic.Label>Active</Statistic.Label>
@@ -205,7 +210,10 @@ const Jobs = () => {
           <Grid.Column>
             <Statistic>
               <Statistic.Value>
-                <Icon color="green" name="check circle" />
+                <Icon
+                  color="green"
+                  name="check circle"
+                />
                 {analytics.completed}
               </Statistic.Value>
               <Statistic.Label>Completed</Statistic.Label>
@@ -234,14 +242,22 @@ const Jobs = () => {
               </Header.Subheader>
             </Header.Content>
           </Header>
-          {swarmLoading && <Loader active inline="centered" />}
+          {swarmLoading && (
+            <Loader
+              active
+              inline="centered"
+            />
+          )}
           <Grid columns={2}>
             {swarmJobs.map((job) => (
               <Grid.Column key={job.jobId}>
                 <Card fluid>
                   <Card.Content>
                     <Card.Header>
-                      <Icon color="yellow" name="bolt" />
+                      <Icon
+                        color="yellow"
+                        name="bolt"
+                      />
                       {job.filename?.split('/').pop() ?? 'Unknown file'}
                     </Card.Header>
                     <Card.Meta>
@@ -319,11 +335,10 @@ const Jobs = () => {
         </Header>
 
         {/* Filters */}
-        <div style={{ marginBottom: '1em', display: 'flex', gap: '1em' }}>
+        <div style={{ display: 'flex', gap: '1em', marginBottom: '1em' }}>
           <Dropdown
             clearable
-            placeholder="Filter by Type"
-            selection
+            onChange={(_e, { value }) => handleFilterChange('type', value)}
             options={[
               { key: 'discography', text: 'Discography', value: 'discography' },
               {
@@ -332,32 +347,33 @@ const Jobs = () => {
                 value: 'label_crate',
               },
             ]}
+            placeholder="Filter by Type"
+            selection
             value={filters.type}
-            onChange={(_e, { value }) => handleFilterChange('type', value)}
           />
           <Dropdown
             clearable
-            placeholder="Filter by Status"
-            selection
+            onChange={(_e, { value }) => handleFilterChange('status', value)}
             options={[
               { key: 'pending', text: 'Pending', value: 'pending' },
               { key: 'running', text: 'Running', value: 'running' },
               { key: 'completed', text: 'Completed', value: 'completed' },
               { key: 'failed', text: 'Failed', value: 'failed' },
             ]}
+            placeholder="Filter by Status"
+            selection
             value={filters.status}
-            onChange={(_e, { value }) => handleFilterChange('status', value)}
           />
           <Dropdown
-            placeholder="Sort By"
-            selection
+            onChange={(_e, { value }) => handleFilterChange('sortBy', value)}
             options={[
               { key: 'created_at', text: 'Created Date', value: 'created_at' },
               { key: 'status', text: 'Status', value: 'status' },
               { key: 'id', text: 'ID', value: 'id' },
             ]}
+            placeholder="Sort By"
+            selection
             value={filters.sortBy}
-            onChange={(_e, { value }) => handleFilterChange('sortBy', value)}
           />
           <Button
             icon
@@ -374,14 +390,20 @@ const Jobs = () => {
             />
             {filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
           </Button>
-          <Button icon onClick={fetchJobs}>
+          <Button
+            icon
+            onClick={fetchJobs}
+          >
             <Icon name="refresh" />
             Refresh
           </Button>
         </div>
 
         {loading ? (
-          <Loader active inline="centered" />
+          <Loader
+            active
+            inline="centered"
+          />
         ) : jobs.length === 0 ? (
           <Segment placeholder>
             <Header icon>
@@ -432,11 +454,16 @@ const Jobs = () => {
                             progress
                             size="small"
                           />
-                          <div style={{ fontSize: '0.9em', marginTop: '0.25em' }}>
+                          <div
+                            style={{ fontSize: '0.9em', marginTop: '0.25em' }}
+                          >
                             {job.progress.releases_done || 0} /{' '}
                             {job.progress.releases_total || 0} releases
                             {job.progress.releases_failed > 0 && (
-                              <Label color="red" size="tiny">
+                              <Label
+                                color="red"
+                                size="tiny"
+                              >
                                 {job.progress.releases_failed} failed
                               </Label>
                             )}
@@ -454,7 +481,9 @@ const Jobs = () => {
 
             {totalPages > 1 && (
               <Pagination
-                activePage={Math.floor(pagination.offset / pagination.limit) + 1}
+                activePage={
+                  Math.floor(pagination.offset / pagination.limit) + 1
+                }
                 onPageChange={handlePageChange}
                 totalPages={totalPages}
               />

@@ -75,3 +75,42 @@ The `MultiPeerHarness` manages multiple slskdn instances for cross-node testing:
 - Handles cleanup on test completion
 
 See `harness/MultiPeerHarness.ts` for details.
+
+## Test Fixtures
+
+E2E tests require real fixture files to be present before running. The harness will **fail fast** if fixtures are missing.
+
+### Required Fixtures
+
+Fixtures must be in `test-data/slskdn-test-fixtures/` with a valid `meta/manifest.json`:
+
+- `book/treasure_island_pg120.txt` (text file)
+- Additional audio/video files (see `test-data/slskdn-test-fixtures/meta/fetch_media.sh`)
+
+### Generating Manifest
+
+After downloading fixtures, generate the manifest:
+
+```bash
+cd test-data/slskdn-test-fixtures/meta
+node generate-manifest.js
+```
+
+This creates `manifest.json` with sha256 checksums for validation.
+
+### Node Configuration
+
+Tests use 3 nodes:
+- **Node A**: Shares `movie/` + `book/` directories
+- **Node B**: Shares `music/` + `tv/` directories  
+- **Node C**: Recipient-only (no shares)
+
+### Fixture Validation
+
+The harness validates fixtures on startup:
+- Checks fixtures root directory exists
+- Validates manifest.json exists and is valid
+- Verifies all required files exist
+- Optional checksum validation (set `SLSKDN_VALIDATE_FIXTURE_CHECKSUMS=1`)
+
+If validation fails, tests abort immediately with clear error messages.

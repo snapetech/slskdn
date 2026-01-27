@@ -55,9 +55,10 @@ const SlskdnStatusBar = () => {
     karma: 0,
     meshPeers: 0,
     seqId: 0,
-    verifiedBeacons: 0,
-    slskdnPeersNew: 0, // peers with version info
-    slskdnPeersOld: 0, // peers without version info
+    slskdnPeersNew: 0,
+    // peers with version info
+    slskdnPeersOld: 0,
+    verifiedBeacons: 0, // peers without version info
   });
   const [visible, setVisible] = useState(() => isStatusBarVisible());
 
@@ -96,10 +97,10 @@ const SlskdnStatusBar = () => {
           meshPeers: Number(mesh.connectedPeerCount) || 0,
           seqId:
             Number(hashDatabase.currentSeqId) || Number(mesh.localSeqId) || 0,
-          verifiedBeacons:
-            Number(dht.verifiedBeaconCount) || previous.verifiedBeacons,
           slskdnPeersNew: Number(overlay.slskdnPeersWithVersion) || 0,
           slskdnPeersOld: Number(overlay.slskdnPeersWithoutVersion) || 0,
+          verifiedBeacons:
+            Number(dht.verifiedBeaconCount) || previous.verifiedBeacons,
         }));
       } catch (error) {
         // Silently handle errors - status bar is non-critical

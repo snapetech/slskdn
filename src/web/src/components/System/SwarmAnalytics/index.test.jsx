@@ -2,11 +2,16 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+import * as swarmAnalyticsLibrary from '../../../lib/swarmAnalytics';
+import SwarmAnalytics from '.';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
-import { fireEvent } from '@testing-library/react';
-import SwarmAnalytics from './index';
-import * as swarmAnalyticsLib from '../../../lib/swarmAnalytics';
 import { toast } from 'react-toastify';
 
 // Mock dependencies
@@ -19,35 +24,40 @@ jest.mock('react-toastify', () => ({
 
 describe('SwarmAnalytics', () => {
   const mockPerformanceMetrics = {
-    totalDownloads: 150,
-    successRate: 0.95,
-    averageSpeedBytesPerSecond: 1024 * 1024 * 5, // 5 MB/s
+    // 5 MB/s
     averageDurationSeconds: 45.5,
-    totalBytesDownloaded: 1024 * 1024 * 1024 * 10, // 10 GB
-    totalChunksCompleted: 5000,
+
+    averageSpeedBytesPerSecond: 1_024 * 1_024 * 5,
+
     chunkSuccessRate: 0.98,
+    successRate: 0.95,
+    totalBytesDownloaded: 1_024 * 1_024 * 1_024 * 10,
+    // 10 GB
+    totalChunksCompleted: 5_000,
+
+    totalDownloads: 150,
   };
 
   const mockPeerRankings = [
     {
+      averageRttMs: 50.5,
+      averageThroughputBytesPerSecond: 1_024 * 1_024 * 2,
+      chunksCompleted: 1_000,
+      chunkSuccessRate: 0.99,
       peerId: 'peer-1',
       rank: 1,
-      source: 'Soulseek',
       reputationScore: 0.95,
-      averageRttMs: 50.5,
-      averageThroughputBytesPerSecond: 1024 * 1024 * 2,
-      chunksCompleted: 1000,
-      chunkSuccessRate: 0.99,
+      source: 'Soulseek',
     },
     {
-      peerId: 'peer-2',
-      rank: 2,
-      source: 'Mesh',
-      reputationScore: 0.85,
       averageRttMs: 75.2,
-      averageThroughputBytesPerSecond: 1024 * 1024 * 1.5,
+      averageThroughputBytesPerSecond: 1_024 * 1_024 * 1.5,
       chunksCompleted: 800,
       chunkSuccessRate: 0.92,
+      peerId: 'peer-2',
+      rank: 2,
+      reputationScore: 0.85,
+      source: 'Mesh',
     },
   ];
 
@@ -58,40 +68,40 @@ describe('SwarmAnalytics', () => {
   };
 
   const mockTrends = {
-    timePoints: ['2026-01-27T00:00:00Z', '2026-01-27T01:00:00Z'],
     successRates: [0.95, 0.96],
+    timePoints: ['2026-01-27T00:00:00Z', '2026-01-27T01:00:00Z'],
   };
 
   const mockRecommendations = [
     {
-      type: 'PeerSelection',
+      action: 'Review peer rankings and adjust selection algorithm',
+      description: 'Consider prioritizing peers with lower latency',
+      estimatedImpact: 0.15,
       priority: 'High',
       title: 'Optimize Peer Selection',
-      description: 'Consider prioritizing peers with lower latency',
-      action: 'Review peer rankings and adjust selection algorithm',
-      estimatedImpact: 0.15,
+      type: 'PeerSelection',
     },
     {
-      type: 'ChunkSize',
+      action: 'Experiment with different chunk sizes',
+      description: 'Current chunk size may be suboptimal',
+      estimatedImpact: 0.1,
       priority: 'Medium',
       title: 'Adjust Chunk Size',
-      description: 'Current chunk size may be suboptimal',
-      action: 'Experiment with different chunk sizes',
-      estimatedImpact: 0.1,
+      type: 'ChunkSize',
     },
   ];
 
   beforeEach(() => {
     jest.clearAllMocks();
-    swarmAnalyticsLib.getPerformanceMetrics.mockResolvedValue(
+    swarmAnalyticsLibrary.getPerformanceMetrics.mockResolvedValue(
       mockPerformanceMetrics,
     );
-    swarmAnalyticsLib.getPeerRankings.mockResolvedValue(mockPeerRankings);
-    swarmAnalyticsLib.getEfficiencyMetrics.mockResolvedValue(
+    swarmAnalyticsLibrary.getPeerRankings.mockResolvedValue(mockPeerRankings);
+    swarmAnalyticsLibrary.getEfficiencyMetrics.mockResolvedValue(
       mockEfficiencyMetrics,
     );
-    swarmAnalyticsLib.getTrends.mockResolvedValue(mockTrends);
-    swarmAnalyticsLib.getRecommendations.mockResolvedValue(
+    swarmAnalyticsLibrary.getTrends.mockResolvedValue(mockTrends);
+    swarmAnalyticsLibrary.getRecommendations.mockResolvedValue(
       mockRecommendations,
     );
   });
@@ -189,11 +199,11 @@ describe('SwarmAnalytics', () => {
   });
 
   it('displays no data message when no analytics available', async () => {
-    swarmAnalyticsLib.getPerformanceMetrics.mockResolvedValue(null);
-    swarmAnalyticsLib.getPeerRankings.mockResolvedValue([]);
-    swarmAnalyticsLib.getEfficiencyMetrics.mockResolvedValue(null);
-    swarmAnalyticsLib.getTrends.mockResolvedValue(null);
-    swarmAnalyticsLib.getRecommendations.mockResolvedValue([]);
+    swarmAnalyticsLibrary.getPerformanceMetrics.mockResolvedValue(null);
+    swarmAnalyticsLibrary.getPeerRankings.mockResolvedValue([]);
+    swarmAnalyticsLibrary.getEfficiencyMetrics.mockResolvedValue(null);
+    swarmAnalyticsLibrary.getTrends.mockResolvedValue(null);
+    swarmAnalyticsLibrary.getRecommendations.mockResolvedValue([]);
 
     render(<SwarmAnalytics />);
 
@@ -204,7 +214,7 @@ describe('SwarmAnalytics', () => {
 
   it('handles API errors gracefully', async () => {
     const error = new Error('Network error');
-    swarmAnalyticsLib.getPerformanceMetrics.mockRejectedValue(error);
+    swarmAnalyticsLibrary.getPerformanceMetrics.mockRejectedValue(error);
 
     render(<SwarmAnalytics />);
 
@@ -218,14 +228,18 @@ describe('SwarmAnalytics', () => {
     render(<SwarmAnalytics />);
 
     await waitFor(() => {
-      expect(swarmAnalyticsLib.getPerformanceMetrics).toHaveBeenCalledTimes(1);
+      expect(swarmAnalyticsLibrary.getPerformanceMetrics).toHaveBeenCalledTimes(
+        1,
+      );
     });
 
     // Fast-forward 30 seconds (refresh interval)
-    jest.advanceTimersByTime(30000);
+    jest.advanceTimersByTime(30_000);
 
     await waitFor(() => {
-      expect(swarmAnalyticsLib.getPerformanceMetrics).toHaveBeenCalledTimes(2);
+      expect(swarmAnalyticsLibrary.getPerformanceMetrics).toHaveBeenCalledTimes(
+        2,
+      );
     });
 
     jest.useRealTimers();
@@ -247,7 +261,7 @@ describe('SwarmAnalytics', () => {
     });
 
     // Check that bytes are formatted (should contain "GB" or similar)
-    const totalBytesText = screen.getByText(/Total Bytes/i);
+    const totalBytesText = screen.getByText(/total bytes/i);
     expect(totalBytesText).toBeInTheDocument();
   });
 });

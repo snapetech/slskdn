@@ -150,7 +150,12 @@ export const getSlskdnStats = async () => {
           localSeqId: rawMesh.currentSeqId ?? rawMesh.localSeqId ?? 0,
           warnings: Array.isArray(rawMesh.warnings) ? rawMesh.warnings : [],
         }
-      : { connectedPeerCount: 0, isSyncing: false, localSeqId: 0, warnings: [] };
+      : {
+          connectedPeerCount: 0,
+          isSyncing: false,
+          localSeqId: 0,
+          warnings: [],
+        };
 
     // Normalize backfill response
     const rawBackfill = backfill.status === 'fulfilled' ? backfill.value : null;
@@ -177,7 +182,12 @@ export const getSlskdnStats = async () => {
       capabilities: null,
       dht: null,
       hashDb: { currentSeqId: 0, totalEntries: 0 },
-      mesh: { connectedPeerCount: 0, isSyncing: false, localSeqId: 0, warnings: [] },
+      mesh: {
+        connectedPeerCount: 0,
+        isSyncing: false,
+        localSeqId: 0,
+        warnings: [],
+      },
       swarmJobs: [],
     };
   }

@@ -1,33 +1,5 @@
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
-import { urlBase } from '../config';
-import { createApplicationHubConnection } from '../lib/hubFactory';
-import * as relayAPI from '../lib/relay';
-import { connect, disconnect } from '../lib/server';
-import * as session from '../lib/session';
-import { isPassthroughEnabled } from '../lib/token';
-import AppContext from './AppContext';
-import Browse from './Browse/Browse';
-import Chat from './Chat/Chat';
-import Contacts from './Contacts/Contacts';
-import LoginForm from './LoginForm';
-import Pods from './Pods/Pods';
-import Rooms from './Rooms/Rooms';
-import Searches from './Search/Searches';
-import {
-  isStatusBarVisible,
-  SlskdnStatusBar,
-  toggleStatusBarVisibility,
-} from './Shared';
-import ErrorSegment from './Shared/ErrorSegment';
-import Footer from './Shared/Footer';
-import Collections from './Collections/Collections';
-import ShareGroups from './ShareGroups/ShareGroups';
-import SharedWithMe from './Shares/SharedWithMe';
-import System from './System/System';
-import Transfers from './Transfers/Transfers';
-import Users from './Users/Users';
-import Wishlist from './Wishlist/Wishlist';
 import React, { Component } from 'react';
 import { Link, Redirect, Route, Switch } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
@@ -41,6 +13,33 @@ import {
   Segment,
   Sidebar,
 } from 'semantic-ui-react';
+import { createApplicationHubConnection } from '../lib/hubFactory';
+import * as relayAPI from '../lib/relay';
+import { connect, disconnect } from '../lib/server';
+import * as session from '../lib/session';
+import { isPassthroughEnabled } from '../lib/token';
+import AppContext from './AppContext';
+import Browse from './Browse/Browse';
+import Chat from './Chat/Chat';
+import Collections from './Collections/Collections';
+import Contacts from './Contacts/Contacts';
+import LoginForm from './LoginForm';
+import Pods from './Pods/Pods';
+import Rooms from './Rooms/Rooms';
+import Searches from './Search/Searches';
+import ErrorSegment from './Shared/ErrorSegment';
+import Footer from './Shared/Footer';
+import {
+  isStatusBarVisible,
+  SlskdnStatusBar,
+  toggleStatusBarVisibility,
+} from './Shared';
+import ShareGroups from './ShareGroups/ShareGroups';
+import SharedWithMe from './Shares/SharedWithMe';
+import System from './System/System';
+import Transfers from './Transfers/Transfers';
+import Users from './Users/Users';
+import Wishlist from './Wishlist/Wishlist';
 
 const initialState = {
   applicationOptions: {},
@@ -605,10 +604,10 @@ class App extends Component {
               <SlskdnStatusBar />
             ) : null}
             <AppContext.Provider
-              // eslint-disable-next-line react/jsx-no-constructed-context-values
               // Note: Context value object recreated on each render (class component limitation)
               // Deferred: Optimize with useMemo when converting to functional component
               // See memory-bank/triage-todo-fixme.md (defer section) for details
+              // eslint-disable-next-line react/jsx-no-constructed-context-values
               value={{ options: applicationOptions, state: applicationState }}
             >
               {isAgent ? (
@@ -638,23 +637,34 @@ class App extends Component {
                     render={(props) => {
                       // This should log if route matches
                       if (typeof window !== 'undefined') {
-                        window.__ROUTE_MATCHED_COLLECTIONS__ = true;
-                        console.log('[Router] /collections route matched!', props);
+                        window.routeMatchedCollections = true;
+                        console.log(
+                          '[Router] /collections route matched!',
+                          props,
+                        );
                       }
+
                       try {
                         const result = this.withTokenCheck(
                           <div className="view">
                             <Collections {...props} />
                           </div>,
                         );
-                        console.log('[Router] Collections rendered successfully');
+                        console.log(
+                          '[Router] Collections rendered successfully',
+                        );
                         return result;
-                      } catch (error) {
-                        console.error('[Router] Error rendering Collections:', error);
+                      } catch (renderError) {
+                        console.error(
+                          '[Router] Error rendering Collections:',
+                          renderError,
+                        );
                         // Return error UI instead of crashing
                         return (
                           <div className="view">
-                            <ErrorSegment caption={`Error loading Collections: ${error.message}`} />
+                            <ErrorSegment
+                              caption={`Error loading Collections: ${renderError.message}`}
+                            />
                           </div>
                         );
                       }
@@ -800,21 +810,38 @@ class App extends Component {
                   <Route path="*">
                     {({ location }) => {
                       // Log route miss for debugging - this should appear in browser console
-                      console.error('[Router] Route miss for:', location.pathname);
+                      console.error(
+                        '[Router] Route miss for:',
+                        location.pathname,
+                      );
                       // Set flag so test can detect route miss
                       if (typeof window !== 'undefined') {
-                        window.__ROUTE_MISS__ = location.pathname;
+                        window.routeMissPath = location.pathname;
                         // Also set it on the route-miss element so it persists even after redirect
                         setTimeout(() => {
-                          const el = document.querySelector('[data-testid="route-miss"]');
-                          if (el) {
-                            window.__ROUTE_MISS_ELEMENT__ = el.textContent;
+                          const element = document.querySelector(
+                            '[data-testid="route-miss"]',
+                          );
+                          if (element) {
+                            window.routeMissElement = element.textContent;
                           }
                         }, 100);
                       }
+
                       return (
                         <>
-                          <div data-testid="route-miss" style={{ padding: '20px', background: 'red', color: 'white', position: 'fixed', top: 0, left: 0, zIndex: 9999 }}>
+                          <div
+                            data-testid="route-miss"
+                            style={{
+                              background: 'red',
+                              color: 'white',
+                              left: 0,
+                              padding: '20px',
+                              position: 'fixed',
+                              top: 0,
+                              zIndex: 9_999,
+                            }}
+                          >
                             Route miss: {location.pathname}
                           </div>
                           <Redirect to="/searches" />

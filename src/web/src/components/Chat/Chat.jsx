@@ -10,7 +10,7 @@ let tabCounter = 0;
 // Load tabs from localStorage
 const loadTabsFromStorage = () => {
   try {
-      const saved = localStorage.getItem('slskd-chat-tabs');
+    const saved = localStorage.getItem('slskd-chat-tabs');
 
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -41,7 +41,7 @@ const Chat = ({ state }) => {
   const location = useLocation();
   const [tabs, setTabs] = useState(() => loadTabsFromStorage());
   const [activeIndex, setActiveIndex] = useState(0);
-  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameInput, setUsernameInput] = useState('');
   const closeTabRef = useRef(null);
   const updateTabRef = useRef(null);
 
@@ -70,12 +70,12 @@ const Chat = ({ state }) => {
   closeTabRef.current = closeTab;
   updateTabRef.current = updateTabLabel;
 
-  const createTab = useCallback((username = "") => {
+  const createTab = useCallback((username = '') => {
     tabCounter += 1;
     const tabKey = `chat-tab-${tabCounter}`;
     return {
       key: tabKey,
-      label: username || "New Chat",
+      label: username || 'New Chat',
       username,
     };
   }, []);
@@ -147,7 +147,7 @@ const Chat = ({ state }) => {
         setActiveIndex(existingIndex);
       }
     },
-    [tabs, createTab],
+    [createTab, tabs],
   );
 
   const handleAddTab = () => {
@@ -159,11 +159,13 @@ const Chat = ({ state }) => {
   };
 
   const handleDeleteConversation = useCallback(
-    (username) => {
+    async (username) => {
       // Remove the conversation from chat API
-      chat.remove({ username }).catch((error) => {
-        console.error("Failed to remove conversation:", error);
-      });
+      try {
+        await chat.remove({ username });
+      } catch (error) {
+        console.error('Failed to remove conversation:', error);
+      }
 
       // Close the tab
       const tabToClose = tabs.find((t) => t.username === username);
@@ -177,7 +179,7 @@ const Chat = ({ state }) => {
   const panes = tabs.map((tab) => ({
     menuItem: (
       <Menu.Item key={tab.key}>
-        <Icon name={tab.username ? "comment" : "search"} />
+        <Icon name={tab.username ? 'comment' : 'search'} />
         {tab.label}
         {tabs.length > 1 && (
           <Icon
@@ -186,7 +188,7 @@ const Chat = ({ state }) => {
               event.stopPropagation();
               closeTabRef.current?.(tab.key);
             }}
-            style={{ marginLeft: "8px", opacity: 0.7 }}
+            style={{ marginLeft: '8px', opacity: 0.7 }}
           />
         )}
       </Menu.Item>
@@ -209,9 +211,15 @@ const Chat = ({ state }) => {
 
   return (
     <div className="chats">
-      <Segment className="chat-segment" raised>
+      <Segment
+        className="chat-segment"
+        raised
+      >
         <div className="chat-segment-icon">
-          <Icon name="comment" size="big" />
+          <Icon
+            name="comment"
+            size="big"
+          />
         </div>
         <Input
           action={{
@@ -219,16 +227,16 @@ const Chat = ({ state }) => {
             onClick: () => {
               if (usernameInput?.trim()) {
                 startConversation(usernameInput.trim());
-                setUsernameInput("");
+                setUsernameInput('');
               }
             },
           }}
           className="chat-input"
           onChange={(event) => setUsernameInput(event.target.value)}
           onKeyUp={(event) => {
-            if (event.key === "Enter" && usernameInput?.trim()) {
+            if (event.key === 'Enter' && usernameInput?.trim()) {
               startConversation(usernameInput.trim());
-              setUsernameInput("");
+              setUsernameInput('');
             }
           }}
           placeholder="Chat with user..."
@@ -251,7 +259,10 @@ const Chat = ({ state }) => {
           ...panes,
           {
             menuItem: (
-              <Menu.Item key="add-tab" onClick={handleAddTab}>
+              <Menu.Item
+                key="add-tab"
+                onClick={handleAddTab}
+              >
                 <Icon name="plus" />
               </Menu.Item>
             ),

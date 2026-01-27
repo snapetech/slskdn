@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
 import { NODES, shouldLaunchNodes } from './env';
-import { waitForHealth, login, clickNav } from './helpers';
-import { T } from './selectors';
 import { MultiPeerHarness } from './harness/MultiPeerHarness';
+import { clickNav, login, waitForHealth } from './helpers';
+import { T } from './selectors';
+import { expect, test } from '@playwright/test';
 
 test.describe('policy enforcement', () => {
   let harness: MultiPeerHarness | null = null;
@@ -35,10 +35,10 @@ test.describe('policy enforcement', () => {
     await waitForHealth(request, nodeA.baseUrl);
     await waitForHealth(request, nodeB.baseUrl);
 
-    const ctxA = await browser.newContext();
-    const ctxB = await browser.newContext();
-    const pageA = await ctxA.newPage();
-    const pageB = await ctxB.newPage();
+    const contextA = await browser.newContext();
+    const contextB = await browser.newContext();
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
 
     await login(pageA, nodeA);
     await login(pageB, nodeB);
@@ -48,19 +48,26 @@ test.describe('policy enforcement', () => {
     const existingGroupRow = pageA.getByTestId(T.groupRow(groupName));
     if ((await existingGroupRow.count()) === 0) {
       await pageA.getByTestId(T.groupsCreate).click();
-      await pageA.waitForSelector(`[data-testid="${T.groupsNameInput}"]`, { timeout: 5000 });
-      await pageA.getByTestId(T.groupsNameInput).locator('input').fill(groupName);
+      await pageA.waitForSelector(`[data-testid="${T.groupsNameInput}"]`, {
+        timeout: 5_000,
+      });
+      await pageA
+        .getByTestId(T.groupsNameInput)
+        .locator('input')
+        .fill(groupName);
       await pageA.getByTestId(T.groupsCreateSubmit).click();
-      await expect(pageA.getByTestId(T.groupRow(groupName))).toBeVisible({ timeout: 5000 });
+      await expect(pageA.getByTestId(T.groupRow(groupName))).toBeVisible({
+        timeout: 5_000,
+      });
     }
 
     // Ensure nodeB is a member
-    const addMemberBtn = pageA
+    const addMemberButton = pageA
       .getByTestId(T.groupRow(groupName))
       .locator(`[data-testid="${T.groupAddMember}"]`)
       .first();
-    if ((await addMemberBtn.count()) > 0) {
-      await addMemberBtn.click();
+    if ((await addMemberButton.count()) > 0) {
+      await addMemberButton.click();
       const modalUserInput = pageA
         .locator('.ui.modal')
         .locator('input[placeholder*="username" i]')
@@ -68,60 +75,83 @@ test.describe('policy enforcement', () => {
       if ((await modalUserInput.count()) > 0) {
         await modalUserInput.fill('nodeB');
         await pageA.getByTestId(T.groupMemberAddSubmit).click();
-        await expect(modalUserInput).not.toBeVisible({ timeout: 5000 });
+        await expect(modalUserInput).not.toBeVisible({ timeout: 5_000 });
       }
     }
 
     // Create collection with no stream policy
     await clickNav(pageA, T.navCollections);
-    await pageA.waitForSelector('[data-testid="collections-root"]', { timeout: 10000 });
+    await pageA.waitForSelector('[data-testid="collections-root"]', {
+      timeout: 10_000,
+    });
 
-    const existingCollectionRow = pageA.getByTestId(T.collectionRow(collectionTitleNoStream));
+    const existingCollectionRow = pageA.getByTestId(
+      T.collectionRow(collectionTitleNoStream),
+    );
     if ((await existingCollectionRow.count()) === 0) {
       await pageA.getByTestId(T.collectionsCreate).click();
-      await pageA.waitForSelector(`[data-testid="${T.collectionsTypeSelect}"]`, { timeout: 5000 });
+      await pageA.waitForSelector(
+        `[data-testid="${T.collectionsTypeSelect}"]`,
+        { timeout: 5_000 },
+      );
       await pageA.getByTestId(T.collectionsTypeSelect).click();
       await pageA.getByRole('option', { name: /playlist/i }).click();
-      await pageA.getByTestId(T.collectionsTitleInput).locator('input').fill(collectionTitleNoStream);
+      await pageA
+        .getByTestId(T.collectionsTitleInput)
+        .locator('input')
+        .fill(collectionTitleNoStream);
 
       const createCollectionResponse = pageA.waitForResponse(
         (response) =>
           response.url().includes('/api/v0/collections') &&
           response.request().method() === 'POST',
-        { timeout: 5000 },
+        { timeout: 5_000 },
       );
       await pageA.getByTestId(T.collectionsCreateSubmit).click();
       const createCollectionResult = await createCollectionResponse;
       if (createCollectionResult.status() !== 201) {
         const body = await createCollectionResult.text();
-        throw new Error(`Create collection failed: ${createCollectionResult.status()} ${body}`);
+        throw new Error(
+          `Create collection failed: ${createCollectionResult.status()} ${body}`,
+        );
       }
-      await expect(pageA.getByTestId(T.collectionRow(collectionTitleNoStream))).toBeVisible({ timeout: 5000 });
+
+      await expect(
+        pageA.getByTestId(T.collectionRow(collectionTitleNoStream)),
+      ).toBeVisible({ timeout: 5_000 });
     }
 
     await pageA.getByTestId(T.collectionRow(collectionTitleNoStream)).click();
     await pageA.waitForTimeout(500);
 
     // Add item
-    const addItemBtn = pageA.getByTestId(T.collectionAddItem);
-    if ((await addItemBtn.count()) > 0) {
-      await addItemBtn.click();
-      await pageA.getByTestId(T.collectionItemPicker).locator('input').fill('synthetic');
+    const addItemButton = pageA.getByTestId(T.collectionAddItem);
+    if ((await addItemButton.count()) > 0) {
+      await addItemButton.click();
+      await pageA
+        .getByTestId(T.collectionItemPicker)
+        .locator('input')
+        .fill('synthetic');
       await pageA.getByTestId(T.collectionAddItemSubmit).click();
-      await pageA.waitForTimeout(1000);
+      await pageA.waitForTimeout(1_000);
     }
 
     // Create share with stream disabled, download enabled
     const shareCreate = pageA.getByTestId(T.shareCreate);
-    await expect(shareCreate).toBeVisible({ timeout: 5000 });
+    await expect(shareCreate).toBeVisible({ timeout: 5_000 });
     await shareCreate.click();
     const audiencePicker = pageA.getByTestId(T.shareAudiencePicker);
-    await expect(audiencePicker).toBeVisible({ timeout: 5000 });
+    await expect(audiencePicker).toBeVisible({ timeout: 5_000 });
     await audiencePicker.click();
-    const groupOption = pageA.getByRole('option', { name: new RegExp(groupName, 'i') });
+    const groupOption = pageA.getByRole('option', {
+      name: new RegExp(groupName, 'i'),
+    });
     if ((await groupOption.count()) === 0) {
-      throw new Error('No share groups found in picker. Ensure group creation ran.');
+      throw new Error(
+        'No share groups found in picker. Ensure group creation ran.',
+      );
     }
+
     await groupOption.first().click();
 
     // Disable stream, enable download
@@ -129,7 +159,7 @@ test.describe('policy enforcement', () => {
     if ((await streamPolicy.count()) > 0) {
       const isChecked = await streamPolicy.isChecked();
       if (isChecked) {
-        await streamPolicy.uncheck({ timeout: 5000 });
+        await streamPolicy.uncheck({ timeout: 5_000 });
       }
     }
 
@@ -137,7 +167,7 @@ test.describe('policy enforcement', () => {
     if ((await downloadPolicy.count()) > 0) {
       const isChecked = await downloadPolicy.isChecked();
       if (!isChecked) {
-        await downloadPolicy.check({ timeout: 5000 });
+        await downloadPolicy.check({ timeout: 5_000 });
       }
     }
 
@@ -145,30 +175,36 @@ test.describe('policy enforcement', () => {
       (response) =>
         response.url().includes('/api/v0/share-grants') &&
         response.request().method() === 'POST',
-      { timeout: 5000 },
+      { timeout: 5_000 },
     );
     await pageA.getByTestId(T.shareCreateSubmit).click();
     const createShareResult = await createShareResponse;
     if (createShareResult.status() !== 201) {
       const body = await createShareResult.text();
-      throw new Error(`Create share failed: ${createShareResult.status()} ${body}`);
+      throw new Error(
+        `Create share failed: ${createShareResult.status()} ${body}`,
+      );
     }
 
     // Wait for cross-node discovery
-    await pageB.waitForTimeout(5000);
+    await pageB.waitForTimeout(5_000);
 
     // Node B tries to access the share
     await clickNav(pageB, T.navSharedWithMe);
-    await pageB.waitForTimeout(2000);
+    await pageB.waitForTimeout(2_000);
 
     // Poll for the share to appear
     let shareFound = false;
-    for (let i = 0; i < 20; i++) {
-      const shareRow = pageB.getByTestId(T.incomingShareRow(collectionTitleNoStream)).first();
+    for (let index = 0; index < 20; index++) {
+      const shareRow = pageB
+        .getByTestId(T.incomingShareRow(collectionTitleNoStream))
+        .first();
       if ((await shareRow.count()) > 0) {
         shareFound = true;
         await shareRow.getByTestId(T.incomingShareOpen).click();
-        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({ timeout: 15000 });
+        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({
+          timeout: 15_000,
+        });
 
         // Verify stream button is not present or disabled (stream not allowed)
         const streamButton = pageB.getByTestId(T.incomingStreamButton);
@@ -183,7 +219,7 @@ test.describe('policy enforcement', () => {
               (resp) =>
                 resp.url().includes('/streams/') &&
                 (resp.status() === 403 || resp.status() === 401),
-              { timeout: 5000 },
+              { timeout: 5_000 },
             );
             await streamButton.click();
             try {
@@ -192,9 +228,13 @@ test.describe('policy enforcement', () => {
             } catch {
               // Button might open a new window - check if stream URL is missing from manifest
               const manifestHasStreamUrl = await pageB.evaluate(() => {
-                const manifest = document.querySelector('[data-testid="shared-manifest"]');
+                const manifest = document.querySelector(
+                  '[data-testid="shared-manifest"]',
+                );
                 if (!manifest) return false;
-                const streamButtons = manifest.querySelectorAll('[data-testid="incoming-stream"]');
+                const streamButtons = manifest.querySelectorAll(
+                  '[data-testid="incoming-stream"]',
+                );
                 return streamButtons.length === 0;
               });
               expect(manifestHasStreamUrl).toBe(true);
@@ -207,17 +247,22 @@ test.describe('policy enforcement', () => {
           // Button not present - policy enforced at UI level
           expect(streamCount).toBe(0);
         }
+
         break;
       }
-      await pageB.waitForTimeout(1000);
+
+      await pageB.waitForTimeout(1_000);
     }
 
     if (!shareFound) {
-      test.skip(true, 'Share not found after polling. Cross-node discovery may have failed.');
+      test.skip(
+        true,
+        'Share not found after polling. Cross-node discovery may have failed.',
+      );
     }
 
-    await ctxA.close();
-    await ctxB.close();
+    await contextA.close();
+    await contextB.close();
   });
 
   test('download_denied_when_policy_says_no', async ({ browser, request }) => {
@@ -227,10 +272,10 @@ test.describe('policy enforcement', () => {
     await waitForHealth(request, nodeA.baseUrl);
     await waitForHealth(request, nodeB.baseUrl);
 
-    const ctxA = await browser.newContext();
-    const ctxB = await browser.newContext();
-    const pageA = await ctxA.newPage();
-    const pageB = await ctxB.newPage();
+    const contextA = await browser.newContext();
+    const contextB = await browser.newContext();
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
 
     await login(pageA, nodeA);
     await login(pageB, nodeB);
@@ -240,62 +285,92 @@ test.describe('policy enforcement', () => {
     const existingGroupRow = pageA.getByTestId(T.groupRow(groupName));
     if ((await existingGroupRow.count()) === 0) {
       await pageA.getByTestId(T.groupsCreate).click();
-      await pageA.waitForSelector(`[data-testid="${T.groupsNameInput}"]`, { timeout: 5000 });
-      await pageA.getByTestId(T.groupsNameInput).locator('input').fill(groupName);
+      await pageA.waitForSelector(`[data-testid="${T.groupsNameInput}"]`, {
+        timeout: 5_000,
+      });
+      await pageA
+        .getByTestId(T.groupsNameInput)
+        .locator('input')
+        .fill(groupName);
       await pageA.getByTestId(T.groupsCreateSubmit).click();
-      await expect(pageA.getByTestId(T.groupRow(groupName))).toBeVisible({ timeout: 5000 });
+      await expect(pageA.getByTestId(T.groupRow(groupName))).toBeVisible({
+        timeout: 5_000,
+      });
     }
 
     // Create collection with no download policy
     await clickNav(pageA, T.navCollections);
-    await pageA.waitForSelector('[data-testid="collections-root"]', { timeout: 10000 });
+    await pageA.waitForSelector('[data-testid="collections-root"]', {
+      timeout: 10_000,
+    });
 
-    const existingCollectionRow = pageA.getByTestId(T.collectionRow(collectionTitleNoDownload));
+    const existingCollectionRow = pageA.getByTestId(
+      T.collectionRow(collectionTitleNoDownload),
+    );
     if ((await existingCollectionRow.count()) === 0) {
       await pageA.getByTestId(T.collectionsCreate).click();
-      await pageA.waitForSelector(`[data-testid="${T.collectionsTypeSelect}"]`, { timeout: 5000 });
+      await pageA.waitForSelector(
+        `[data-testid="${T.collectionsTypeSelect}"]`,
+        { timeout: 5_000 },
+      );
       await pageA.getByTestId(T.collectionsTypeSelect).click();
       await pageA.getByRole('option', { name: /playlist/i }).click();
-      await pageA.getByTestId(T.collectionsTitleInput).locator('input').fill(collectionTitleNoDownload);
+      await pageA
+        .getByTestId(T.collectionsTitleInput)
+        .locator('input')
+        .fill(collectionTitleNoDownload);
 
       const createCollectionResponse = pageA.waitForResponse(
         (response) =>
           response.url().includes('/api/v0/collections') &&
           response.request().method() === 'POST',
-        { timeout: 5000 },
+        { timeout: 5_000 },
       );
       await pageA.getByTestId(T.collectionsCreateSubmit).click();
       const createCollectionResult = await createCollectionResponse;
       if (createCollectionResult.status() !== 201) {
         const body = await createCollectionResult.text();
-        throw new Error(`Create collection failed: ${createCollectionResult.status()} ${body}`);
+        throw new Error(
+          `Create collection failed: ${createCollectionResult.status()} ${body}`,
+        );
       }
-      await expect(pageA.getByTestId(T.collectionRow(collectionTitleNoDownload))).toBeVisible({ timeout: 5000 });
+
+      await expect(
+        pageA.getByTestId(T.collectionRow(collectionTitleNoDownload)),
+      ).toBeVisible({ timeout: 5_000 });
     }
 
     await pageA.getByTestId(T.collectionRow(collectionTitleNoDownload)).click();
     await pageA.waitForTimeout(500);
 
     // Add item
-    const addItemBtn = pageA.getByTestId(T.collectionAddItem);
-    if ((await addItemBtn.count()) > 0) {
-      await addItemBtn.click();
-      await pageA.getByTestId(T.collectionItemPicker).locator('input').fill('synthetic');
+    const addItemButton = pageA.getByTestId(T.collectionAddItem);
+    if ((await addItemButton.count()) > 0) {
+      await addItemButton.click();
+      await pageA
+        .getByTestId(T.collectionItemPicker)
+        .locator('input')
+        .fill('synthetic');
       await pageA.getByTestId(T.collectionAddItemSubmit).click();
-      await pageA.waitForTimeout(1000);
+      await pageA.waitForTimeout(1_000);
     }
 
     // Create share with download disabled, stream enabled
     const shareCreate = pageA.getByTestId(T.shareCreate);
-    await expect(shareCreate).toBeVisible({ timeout: 5000 });
+    await expect(shareCreate).toBeVisible({ timeout: 5_000 });
     await shareCreate.click();
     const audiencePicker = pageA.getByTestId(T.shareAudiencePicker);
-    await expect(audiencePicker).toBeVisible({ timeout: 5000 });
+    await expect(audiencePicker).toBeVisible({ timeout: 5_000 });
     await audiencePicker.click();
-    const groupOption = pageA.getByRole('option', { name: new RegExp(groupName, 'i') });
+    const groupOption = pageA.getByRole('option', {
+      name: new RegExp(groupName, 'i'),
+    });
     if ((await groupOption.count()) === 0) {
-      throw new Error('No share groups found in picker. Ensure group creation ran.');
+      throw new Error(
+        'No share groups found in picker. Ensure group creation ran.',
+      );
     }
+
     await groupOption.first().click();
 
     // Enable stream, disable download
@@ -303,7 +378,7 @@ test.describe('policy enforcement', () => {
     if ((await streamPolicy.count()) > 0) {
       const isChecked = await streamPolicy.isChecked();
       if (!isChecked) {
-        await streamPolicy.check({ timeout: 5000 });
+        await streamPolicy.check({ timeout: 5_000 });
       }
     }
 
@@ -311,7 +386,7 @@ test.describe('policy enforcement', () => {
     if ((await downloadPolicy.count()) > 0) {
       const isChecked = await downloadPolicy.isChecked();
       if (isChecked) {
-        await downloadPolicy.uncheck({ timeout: 5000 });
+        await downloadPolicy.uncheck({ timeout: 5_000 });
       }
     }
 
@@ -319,30 +394,36 @@ test.describe('policy enforcement', () => {
       (response) =>
         response.url().includes('/api/v0/share-grants') &&
         response.request().method() === 'POST',
-      { timeout: 5000 },
+      { timeout: 5_000 },
     );
     await pageA.getByTestId(T.shareCreateSubmit).click();
     const createShareResult = await createShareResponse;
     if (createShareResult.status() !== 201) {
       const body = await createShareResult.text();
-      throw new Error(`Create share failed: ${createShareResult.status()} ${body}`);
+      throw new Error(
+        `Create share failed: ${createShareResult.status()} ${body}`,
+      );
     }
 
     // Wait for cross-node discovery
-    await pageB.waitForTimeout(5000);
+    await pageB.waitForTimeout(5_000);
 
     // Node B tries to backfill/download
     await clickNav(pageB, T.navSharedWithMe);
-    await pageB.waitForTimeout(2000);
+    await pageB.waitForTimeout(2_000);
 
     // Poll for the share to appear
     let shareFound = false;
-    for (let i = 0; i < 20; i++) {
-      const shareRow = pageB.getByTestId(T.incomingShareRow(collectionTitleNoDownload)).first();
+    for (let index = 0; index < 20; index++) {
+      const shareRow = pageB
+        .getByTestId(T.incomingShareRow(collectionTitleNoDownload))
+        .first();
       if ((await shareRow.count()) > 0) {
         shareFound = true;
         await shareRow.getByTestId(T.incomingShareOpen).click();
-        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({ timeout: 15000 });
+        await expect(pageB.getByTestId(T.sharedManifest)).toBeVisible({
+          timeout: 15_000,
+        });
 
         // Backfill button should be disabled or not present
         const backfillButton = pageB.getByTestId(T.incomingBackfillButton);
@@ -357,7 +438,7 @@ test.describe('policy enforcement', () => {
               (resp) =>
                 resp.url().includes('/backfill') &&
                 (resp.status() === 403 || resp.status() === 401),
-              { timeout: 5000 },
+              { timeout: 5_000 },
             );
             await backfillButton.click();
             try {
@@ -376,17 +457,22 @@ test.describe('policy enforcement', () => {
           // Button not present - policy enforced at UI level
           expect(count).toBe(0);
         }
+
         break;
       }
-      await pageB.waitForTimeout(1000);
+
+      await pageB.waitForTimeout(1_000);
     }
 
     if (!shareFound) {
-      test.skip(true, 'Share not found after polling. Cross-node discovery may have failed.');
+      test.skip(
+        true,
+        'Share not found after polling. Cross-node discovery may have failed.',
+      );
     }
 
-    await ctxA.close();
-    await ctxB.close();
+    await contextA.close();
+    await contextB.close();
   });
 
   test('expired_token_denied', async ({ browser, request }) => {
@@ -398,8 +484,8 @@ test.describe('policy enforcement', () => {
     const nodeB = harness ? harness.getNode('B').nodeCfg : NODES.B;
     await waitForHealth(request, nodeB.baseUrl);
 
-    const ctxB = await browser.newContext();
-    const pageB = await ctxB.newPage();
+    const contextB = await browser.newContext();
+    const pageB = await contextB.newPage();
     await login(pageB, nodeB);
 
     // This test would need:
@@ -409,8 +495,11 @@ test.describe('policy enforcement', () => {
     // 4. Verify 401/403 response
 
     // For now, skip - better tested at API level with precise timing
-    test.skip(true, 'Expired token test requires precise timing - better tested at API level');
+    test.skip(
+      true,
+      'Expired token test requires precise timing - better tested at API level',
+    );
 
-    await ctxB.close();
+    await contextB.close();
   });
 });

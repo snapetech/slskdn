@@ -5,8 +5,10 @@
 namespace slskd.Mesh;
 
 using Microsoft.Extensions.Logging;
+using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Aggregates transport statistics from mesh services for diagnostics.
@@ -121,15 +123,23 @@ public class MeshStatsCollector : IMeshStatsCollector
                 try
                 {
                     // If we don't have a cached result, perform detection
+                    // Use cached value if available to avoid blocking health checks
                     if (stunDetector.LastDetectedType == NatType.Unknown)
                     {
                         logger.LogDebug("Performing NAT detection for mesh stats");
-                        natType = await stunDetector.DetectAsync();
+                        // Add timeout to NAT detection to prevent hanging health checks
+                        using var natTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                        natType = await stunDetector.DetectAsync(natTimeoutCts.Token);
                     }
                     else
                     {
                         natType = stunDetector.LastDetectedType;
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    logger.LogDebug("NAT detection timed out - using Unknown");
+                    natType = NatType.Unknown;
                 }
                 catch (Exception ex)
                 {

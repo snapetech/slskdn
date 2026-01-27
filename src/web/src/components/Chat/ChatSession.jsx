@@ -1,8 +1,8 @@
-import "./Chat.css";
-import * as chat from "../../lib/chat";
-import PlaceholderSegment from "../Shared/PlaceholderSegment";
-import UserCard from "../Shared/UserCard";
-import React, { Component, createRef } from "react";
+import './Chat.css';
+import * as chat from '../../lib/chat';
+import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import UserCard from '../Shared/UserCard';
+import React, { Component, createRef } from 'react';
 import {
   Card,
   Dimmer,
@@ -12,7 +12,7 @@ import {
   Loader,
   Ref,
   Segment,
-} from "semantic-ui-react";
+} from 'semantic-ui-react';
 
 class ChatSession extends Component {
   constructor(props) {
@@ -20,8 +20,8 @@ class ChatSession extends Component {
 
     this.state = {
       conversation: null,
-      loading: false,
       interval: undefined,
+      loading: false,
     };
 
     this.listRef = createRef();
@@ -35,16 +35,16 @@ class ChatSession extends Component {
     });
   }
 
-  componentWillUnmount() {
-    if (this.state.interval) {
-      clearInterval(this.state.interval);
+  componentDidUpdate(previousProps) {
+    // If username changed, fetch new conversation
+    if (previousProps.username !== this.props.username) {
+      this.fetchConversation();
     }
   }
 
-  componentDidUpdate(prevProps) {
-    // If username changed, fetch new conversation
-    if (prevProps.username !== this.props.username) {
-      this.fetchConversation();
+  componentWillUnmount() {
+    if (this.state.interval) {
+      clearInterval(this.state.interval);
     }
   }
 
@@ -76,7 +76,7 @@ class ChatSession extends Component {
         }
       });
     } catch (error) {
-      console.error("Failed to fetch conversation:", error);
+      console.error('Failed to fetch conversation:', error);
       this.setState({ conversation: null, loading: false });
     }
   };
@@ -86,7 +86,7 @@ class ChatSession extends Component {
     if (!username || !message) return;
 
     await chat.send({ message, username });
-    this.messageRef.current.value = "";
+    this.messageRef.current.value = '';
 
     // Refresh to show new message
     await this.fetchConversation();
@@ -111,20 +111,24 @@ class ChatSession extends Component {
     }
   };
 
+  handleFocusInput = () => {
+    this.focusInput();
+  };
+
   formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
-    const dtfUS = new Intl.DateTimeFormat("en", {
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      month: "numeric",
+    const dtfUS = new Intl.DateTimeFormat('en', {
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      month: 'numeric',
     });
 
     return dtfUS.format(date);
   };
 
   deleteConversation = async () => {
-    const { username, onDelete } = this.props;
+    const { onDelete, username } = this.props;
     if (!username) return;
 
     await chat.remove({ username });
@@ -134,7 +138,7 @@ class ChatSession extends Component {
   };
 
   render() {
-    const { username, user } = this.props;
+    const { user, username } = this.props;
     const { conversation, loading } = this.state;
     const messages = conversation?.messages || [];
 
@@ -148,10 +152,16 @@ class ChatSession extends Component {
     }
 
     return (
-      <Card className="chat-active-card" raised>
-        <Card.Content onClick={() => this.focusInput()}>
+      <Card
+        className="chat-active-card"
+        raised
+      >
+        <Card.Content onClick={this.handleFocusInput}>
           <Card.Header>
-            <Icon color="green" name="circle" />
+            <Icon
+              color="green"
+              name="circle"
+            />
             <UserCard username={username}>{username}</UserCard>
             <Icon
               className="close-button"
@@ -163,7 +173,10 @@ class ChatSession extends Component {
           </Card.Header>
           <div className="chat">
             {loading ? (
-              <Dimmer active inverted>
+              <Dimmer
+                active
+                inverted
+              >
                 <Loader inverted />
               </Dimmer>
             ) : (
@@ -173,17 +186,17 @@ class ChatSession extends Component {
                     <List>
                       {messages.map((message) => (
                         <List.Content
-                          className={`chat-message ${message.direction === "Out" ? "chat-message-self" : ""}`}
+                          className={`chat-message ${message.direction === 'Out' ? 'chat-message-self' : ''}`}
                           key={`${message.timestamp}+${message.message}`}
                         >
                           <span className="chat-message-time">
                             {this.formatTimestamp(message.timestamp)}
                           </span>
                           <span className="chat-message-name">
-                            {message.direction === "Out"
-                              ? user?.username || "You"
+                            {message.direction === 'Out'
+                              ? user?.username || 'You'
                               : message.username}
-                            :{" "}
+                            :{' '}
                           </span>
                           <span className="chat-message-message">
                             {message.message}
@@ -197,9 +210,14 @@ class ChatSession extends Component {
                 <Segment className="chat-input">
                   <Input
                     action={{
-                      className: "chat-message-button",
+                      className: 'chat-message-button',
                       disabled: !this.validInput(),
-                      icon: <Icon color="green" name="send" />,
+                      icon: (
+                        <Icon
+                          color="green"
+                          name="send"
+                        />
+                      ),
                       onClick: this.sendReply,
                     }}
                     fluid
@@ -212,7 +230,7 @@ class ChatSession extends Component {
                       />
                     }
                     onKeyUp={(event) =>
-                      event.key === "Enter" ? this.sendReply() : ""
+                      event.key === 'Enter' ? this.sendReply() : ''
                     }
                     ref={(input) => (this.messageRef = input && input.inputRef)}
                     transparent

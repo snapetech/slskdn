@@ -51,7 +51,7 @@ const Bridge = () => {
       try {
         const dashboardData = await bridge.getDashboard();
         setDashboard(dashboardData);
-      } catch (error_) {
+      } catch {
         // Silently fail on refresh
       }
     }, 10_000);
@@ -60,8 +60,8 @@ const Bridge = () => {
   }, []);
 
   const handleConfigChange = (field, value) => {
-    setConfig((prev) => ({
-      ...prev,
+    setConfig((previous) => ({
+      ...previous,
       [field]: value,
     }));
   };
@@ -72,7 +72,9 @@ const Bridge = () => {
       setError(null);
       setSuccess(null);
       await bridge.updateConfig(config);
-      setSuccess('Configuration updated. Restart bridge service to apply changes.');
+      setSuccess(
+        'Configuration updated. Restart bridge service to apply changes.',
+      );
     } catch (error_) {
       setError(error_.message);
     } finally {
@@ -160,10 +162,14 @@ const Bridge = () => {
                     <Checkbox
                       checked={config?.enabled || false}
                       label="Enable Bridge"
-                      onChange={(e, { checked }) => handleConfigChange('enabled', checked)}
+                      onChange={(e, { checked }) =>
+                        handleConfigChange('enabled', checked)
+                      }
                       toggle
                     />
-                    <small>Allow legacy Soulseek clients to connect via bridge</small>
+                    <small>
+                      Allow legacy Soulseek clients to connect via bridge
+                    </small>
                   </Form.Field>
                 </Form.Group>
                 <Form.Group widths="equal">
@@ -171,9 +177,14 @@ const Bridge = () => {
                     <label>Port</label>
                     <Input
                       disabled={!config?.enabled}
-                      onChange={(e, { value }) => handleConfigChange('port', parseInt(value, 10) || 2242)}
+                      onChange={(e, { value }) =>
+                        handleConfigChange(
+                          'port',
+                          Number.parseInt(value, 10) || 2_242,
+                        )
+                      }
                       type="number"
-                      value={config?.port || 2242}
+                      value={config?.port || 2_242}
                     />
                     <small>Soulseek protocol port (default: 2242)</small>
                   </Form.Field>
@@ -181,7 +192,9 @@ const Bridge = () => {
                     <label>Soulfind Path</label>
                     <Input
                       disabled={!config?.enabled}
-                      onChange={(e, { value }) => handleConfigChange('soulfind_path', value)}
+                      onChange={(e, { value }) =>
+                        handleConfigChange('soulfind_path', value)
+                      }
                       placeholder="soulfind"
                       value={config?.soulfind_path || 'soulfind'}
                     />
@@ -195,7 +208,12 @@ const Bridge = () => {
                       disabled={!config?.enabled}
                       max={50}
                       min={1}
-                      onChange={(e, { value }) => handleConfigChange('max_clients', parseInt(value, 10) || 10)}
+                      onChange={(e, { value }) =>
+                        handleConfigChange(
+                          'max_clients',
+                          Number.parseInt(value, 10) || 10,
+                        )
+                      }
                       type="number"
                       value={config?.max_clients || 10}
                     />
@@ -206,7 +224,9 @@ const Bridge = () => {
                       checked={config?.require_auth || false}
                       disabled={!config?.enabled}
                       label="Require Authentication"
-                      onChange={(e, { checked }) => handleConfigChange('require_auth', checked)}
+                      onChange={(e, { checked }) =>
+                        handleConfigChange('require_auth', checked)
+                      }
                       toggle
                     />
                     <small>Require password for bridge connections</small>
@@ -234,7 +254,9 @@ const Bridge = () => {
               </Card.Header>
             </Card.Content>
             <Card.Content>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div
+                style={{ alignItems: 'center', display: 'flex', gap: '10px' }}
+              >
                 <Button
                   color="green"
                   disabled={health?.isHealthy}
@@ -258,11 +280,7 @@ const Bridge = () => {
                   <Icon name={health?.isHealthy ? 'checkmark' : 'remove'} />
                   {health?.isHealthy ? 'Running' : 'Stopped'}
                 </Label>
-                {health?.version && (
-                  <Label>
-                    Version: {health.version}
-                  </Label>
-                )}
+                {health?.version && <Label>Version: {health.version}</Label>}
               </div>
             </Card.Content>
           </Card>
@@ -281,19 +299,27 @@ const Bridge = () => {
               <Card.Content>
                 <Statistic.Group size="small">
                   <Statistic>
-                    <Statistic.Value>{stats.currentConnections || 0}</Statistic.Value>
+                    <Statistic.Value>
+                      {stats.currentConnections || 0}
+                    </Statistic.Value>
                     <Statistic.Label>Active Connections</Statistic.Label>
                   </Statistic>
                   <Statistic>
-                    <Statistic.Value>{stats.totalSearches || 0}</Statistic.Value>
+                    <Statistic.Value>
+                      {stats.totalSearches || 0}
+                    </Statistic.Value>
                     <Statistic.Label>Total Searches</Statistic.Label>
                   </Statistic>
                   <Statistic>
-                    <Statistic.Value>{stats.totalDownloads || 0}</Statistic.Value>
+                    <Statistic.Value>
+                      {stats.totalDownloads || 0}
+                    </Statistic.Value>
                     <Statistic.Label>Total Downloads</Statistic.Label>
                   </Statistic>
                   <Statistic>
-                    <Statistic.Value>{(stats.totalBytesProxied / 1024 / 1024).toFixed(2)}</Statistic.Value>
+                    <Statistic.Value>
+                      {(stats.totalBytesProxied / 1_024 / 1_024).toFixed(2)}
+                    </Statistic.Value>
                     <Statistic.Label>MB Proxied</Statistic.Label>
                   </Statistic>
                 </Statistic.Group>
@@ -315,11 +341,15 @@ const Bridge = () => {
               <Card.Content>
                 <Statistic.Group size="small">
                   <Statistic>
-                    <Statistic.Value>{meshBenefits.meshPercentage.toFixed(1)}%</Statistic.Value>
+                    <Statistic.Value>
+                      {meshBenefits.meshPercentage.toFixed(1)}%
+                    </Statistic.Value>
                     <Statistic.Label>Via Mesh</Statistic.Label>
                   </Statistic>
                   <Statistic>
-                    <Statistic.Value>{(meshBenefits.bytesViaMesh / 1024 / 1024).toFixed(2)}</Statistic.Value>
+                    <Statistic.Value>
+                      {(meshBenefits.bytesViaMesh / 1_024 / 1_024).toFixed(2)}
+                    </Statistic.Value>
                     <Statistic.Label>MB via Mesh</Statistic.Label>
                   </Statistic>
                 </Statistic.Group>
@@ -339,9 +369,7 @@ const Bridge = () => {
             </Card.Content>
             <Card.Content>
               {clients.length === 0 ? (
-                <Message info>
-                  No clients connected
-                </Message>
+                <Message info>No clients connected</Message>
               ) : (
                 <Table
                   compact

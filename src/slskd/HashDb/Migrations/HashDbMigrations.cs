@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 16;
+    public const int CurrentVersion = 17;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -685,27 +685,6 @@ public static class HashDbMigrations
 
             new Migration
             {
-                Version = 12,
-                Name = "Traffic accounting",
-                Apply = conn =>
-                {
-                    using var cmd = conn.CreateCommand();
-                    cmd.CommandText = @"
-                        CREATE TABLE IF NOT EXISTS TrafficStats (
-                            key TEXT PRIMARY KEY,
-                            overlay_upload_bytes INTEGER DEFAULT 0,
-                            overlay_download_bytes INTEGER DEFAULT 0,
-                            soulseek_upload_bytes INTEGER DEFAULT 0,
-                            soulseek_download_bytes INTEGER DEFAULT 0,
-                            updated_at INTEGER NOT NULL
-                        );
-                    ";
-                    cmd.ExecuteNonQuery();
-                },
-            },
-
-            new Migration
-            {
                 Version = 14,
                 Name = "Warm cache popularity",
                 Apply = conn =>
@@ -727,7 +706,7 @@ public static class HashDbMigrations
 
             new Migration
             {
-                Version = 14,
+                Version = 15,
                 Name = "Warm cache entries",
                 Apply = conn =>
                 {
@@ -761,6 +740,27 @@ public static class HashDbMigrations
                             UpdatedAt INTEGER NOT NULL
                         );
                         CREATE INDEX IF NOT EXISTS idx_pseudonyms_peer_id ON Pseudonyms(PeerId);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 17,
+                Name = "Traffic accounting",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS TrafficStats (
+                            key TEXT PRIMARY KEY,
+                            overlay_upload_bytes INTEGER DEFAULT 0,
+                            overlay_download_bytes INTEGER DEFAULT 0,
+                            soulseek_upload_bytes INTEGER DEFAULT 0,
+                            soulseek_download_bytes INTEGER DEFAULT 0,
+                            updated_at INTEGER NOT NULL
+                        );
                     ";
                     cmd.ExecuteNonQuery();
                 },

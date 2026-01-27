@@ -88,7 +88,7 @@ dotnet run --project src/slskd/slskd.csproj --no-build --configuration Release
 ```
 
 ### Option 2: Create Full Config File
-Edit `slskd-test.yml` with all required fields:
+Edit `config/slskd-test.yml` with all required fields:
 
 ```yaml
 soulseek:
@@ -112,7 +112,7 @@ mesh:
 
 Then run:
 ```bash
-dotnet run --project src/slskd/slskd.csproj --no-build --configuration Release -- -c slskd-test.yml
+dotnet run --project src/slskd/slskd.csproj --no-build --configuration Release -- -c config/slskd-test.yml
 ```
 
 ### Option 3: Check What Fields Are Required

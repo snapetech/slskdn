@@ -1,43 +1,47 @@
+import * as collectionsAPI from '../../lib/collections';
+import ErrorSegment from '../Shared/ErrorSegment';
+import LoaderSegment from '../Shared/LoaderSegment';
 import React, { Component } from 'react';
 import {
   Button,
   Container,
   Dropdown,
+  Form,
   Header,
   Icon,
-  Modal,
-  Table,
-  Form,
   Message,
+  Modal,
   Segment,
+  Table,
 } from 'semantic-ui-react';
-import * as collectionsAPI from '../../lib/collections';
-import ErrorSegment from '../Shared/ErrorSegment';
-import LoaderSegment from '../Shared/LoaderSegment';
 
 export default class Collections extends Component {
-  state = {
-    collections: [],
-    selectedCollection: null,
-    selectedCollectionItems: [],
-    shares: [],
-    shareGroups: [],
-    shareGroupsLoading: false,
-    shareModalOpen: false,
-    shareAudienceId: null,
-    shareAllowStream: true,
-    shareAllowDownload: true,
-    loading: true,
-    error: null,
-    createModalOpen: false,
-    addItemModalOpen: false,
-    newCollectionTitle: '',
-    newCollectionType: 'Playlist',
-    newCollectionDescription: '',
-    itemSearchQuery: '',
-    itemSearchResults: [],
-    itemSearchLoading: false,
-  };
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      addItemModalOpen: false,
+      collections: [],
+      createModalOpen: false,
+      error: null,
+      itemSearchLoading: false,
+      itemSearchQuery: '',
+      itemSearchResults: [],
+      loading: true,
+      newCollectionDescription: '',
+      newCollectionTitle: '',
+      newCollectionType: 'Playlist',
+      selectedCollection: null,
+      selectedCollectionItems: [],
+      shareAllowDownload: true,
+      shareAllowStream: true,
+      shareAudienceId: null,
+      shareGroups: [],
+      shareGroupsLoading: false,
+      shareModalOpen: false,
+      shares: [],
+    };
+  }
 
   componentDidMount() {
     this.loadData();
@@ -46,37 +50,43 @@ export default class Collections extends Component {
 
   loadData = async () => {
     try {
-      this.setState({ loading: true, error: null });
-      const res = await collectionsAPI.getCollections().catch((err) => {
-        if (err.response?.status === 401 || err.response?.status === 403 || 
-            err.response?.status === 404) {
+      this.setState({ error: null, loading: true });
+      const response = await collectionsAPI.getCollections().catch((error) => {
+        if (
+          error.response?.status === 401 ||
+          error.response?.status === 403 ||
+          error.response?.status === 404
+        ) {
           return { data: [] };
         }
-        throw err;
+
+        throw error;
       });
       this.setState({
-        collections: res.data || [],
+        collections: response.data || [],
         loading: false,
       });
     } catch (error) {
-      let errorMsg = error.message;
+      let errorMessage = error.message;
       if (error.response?.data) {
         if (typeof error.response.data === 'string') {
-          errorMsg = error.response.data;
+          errorMessage = error.response.data;
         } else if (error.response.data.message) {
-          errorMsg = error.response.data.message;
+          errorMessage = error.response.data.message;
         } else if (error.response.data.error) {
-          errorMsg = error.response.data.error;
+          errorMessage = error.response.data.error;
         } else {
-          errorMsg = JSON.stringify(error.response.data);
+          errorMessage = JSON.stringify(error.response.data);
         }
       }
-      const isAuthOrFeatureError = error.response?.status === 401 || 
-                                   error.response?.status === 403 || 
-                                   error.response?.status === 404;
-      this.setState({ 
-        error: isAuthOrFeatureError ? null : errorMsg, 
-        loading: false 
+
+      const isAuthOrFeatureError =
+        error.response?.status === 401 ||
+        error.response?.status === 403 ||
+        error.response?.status === 404;
+      this.setState({
+        error: isAuthOrFeatureError ? null : errorMessage,
+        loading: false,
       });
     }
   };
@@ -84,19 +94,25 @@ export default class Collections extends Component {
   loadShareGroups = async () => {
     try {
       this.setState({ shareGroupsLoading: true });
-      const response = await collectionsAPI.getShareGroups().catch((err) => {
-        if (err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 404) {
+      const response = await collectionsAPI.getShareGroups().catch((error) => {
+        if (
+          error.response?.status === 401 ||
+          error.response?.status === 403 ||
+          error.response?.status === 404
+        ) {
           return { data: [] };
         }
-        throw err;
+
+        throw error;
       });
       const shareGroups = response.data || [];
-      this.setState((prevState) => ({
+      this.setState((previousState) => ({
+        shareAudienceId:
+          previousState.shareAudienceId ?? shareGroups[0]?.id ?? null,
         shareGroups,
         shareGroupsLoading: false,
-        shareAudienceId: prevState.shareAudienceId ?? shareGroups[0]?.id ?? null,
       }));
-    } catch (error) {
+    } catch {
       this.setState({ shareGroups: [], shareGroupsLoading: false });
     }
   };
@@ -108,22 +124,29 @@ export default class Collections extends Component {
         return;
       }
 
-      const response = await collectionsAPI.getSharesByCollection(collectionId).catch((err) => {
-        if (err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 404) {
-          return { data: [] };
-        }
-        throw err;
-      });
+      const response = await collectionsAPI
+        .getSharesByCollection(collectionId)
+        .catch((error) => {
+          if (
+            error.response?.status === 401 ||
+            error.response?.status === 403 ||
+            error.response?.status === 404
+          ) {
+            return { data: [] };
+          }
+
+          throw error;
+        });
       this.setState({ shares: response.data || [] });
-    } catch (error) {
+    } catch {
       this.setState({ shares: [] });
     }
   };
 
   loadCollectionItems = async (collectionId) => {
     try {
-      const res = await collectionsAPI.getCollectionItems(collectionId);
-      this.setState({ selectedCollectionItems: res.data || [] });
+      const response = await collectionsAPI.getCollectionItems(collectionId);
+      this.setState({ selectedCollectionItems: response.data || [] });
     } catch (error) {
       console.error('[Collections] Error loading items:', error);
     }
@@ -132,44 +155,49 @@ export default class Collections extends Component {
   handleCreateCollection = async () => {
     try {
       await collectionsAPI.createCollection({
+        description: this.state.newCollectionDescription || undefined,
         title: this.state.newCollectionTitle,
         type: this.state.newCollectionType,
-        description: this.state.newCollectionDescription || undefined,
       });
-      this.setState({ 
-        createModalOpen: false, 
-        newCollectionTitle: '', 
-        newCollectionType: 'Playlist',
+      this.setState({
+        createModalOpen: false,
+        error: null,
         newCollectionDescription: '',
-        error: null 
+        newCollectionTitle: '',
+        newCollectionType: 'Playlist',
       });
       await this.loadData();
     } catch (error) {
-      let errorMsg = error.message || 'Failed to create collection';
+      let errorMessage = error.message || 'Failed to create collection';
       if (error.response?.data) {
         if (typeof error.response.data === 'string') {
-          errorMsg = error.response.data;
+          errorMessage = error.response.data;
         } else if (error.response.data.detail) {
-          errorMsg = error.response.data.detail;
+          errorMessage = error.response.data.detail;
         } else if (error.response.data.message) {
-          errorMsg = error.response.data.message;
+          errorMessage = error.response.data.message;
         } else if (error.response.data.error) {
-          errorMsg = error.response.data.error;
+          errorMessage = error.response.data.error;
         } else if (error.response.data.title) {
-          errorMsg = error.response.data.title;
+          errorMessage = error.response.data.title;
         }
       }
-      this.setState({ error: errorMsg });
+
+      this.setState({ error: errorMessage });
     }
   };
 
   handleDeleteCollection = async (id) => {
+    // eslint-disable-next-line no-alert
     if (!window.confirm('Delete this collection?')) return;
     try {
       await collectionsAPI.deleteCollection(id);
       await this.loadData();
       if (this.state.selectedCollection?.id === id) {
-        this.setState({ selectedCollection: null, selectedCollectionItems: [] });
+        this.setState({
+          selectedCollection: null,
+          selectedCollectionItems: [],
+        });
       }
     } catch (error) {
       this.setState({ error: error.response?.data || error.message });
@@ -184,74 +212,102 @@ export default class Collections extends Component {
 
   handleSearchItems = async (query) => {
     if (!query || query.length < 2) {
-      this.setState({ itemSearchResults: [], itemSearchLoading: false });
+      this.setState({ itemSearchLoading: false, itemSearchResults: [] });
       return;
     }
-    
+
     this.setState({ itemSearchLoading: true });
     try {
-      this.setState({ itemSearchResults: [], itemSearchLoading: false });
+      const response = await collectionsAPI.searchLibraryItems(query, null, 20);
+      const items = response.data?.items || [];
+      this.setState({
+        itemSearchLoading: false,
+        itemSearchResults: items,
+      });
     } catch (error) {
       console.error('[Collections] Search error:', error);
-      this.setState({ itemSearchResults: [], itemSearchLoading: false });
+      this.setState({ itemSearchLoading: false, itemSearchResults: [] });
     }
   };
 
   handleAddItem = async () => {
-    if (!this.state.selectedCollection || !this.state.itemSearchQuery) return;
-    
+    if (!this.state.selectedCollection) return;
+
+    // Use selected search result if available, otherwise use query as fallback
+    const selectedResult = this.state.itemSearchResults.find(
+      (item) => item.contentId === this.state.itemSearchQuery,
+    );
+    const contentId = selectedResult
+      ? selectedResult.contentId
+      : this.state.itemSearchQuery;
+    const mediaKind = selectedResult
+      ? selectedResult.mediaKind
+      : 'File'; // Default fallback
+
+    if (!contentId) return;
+
     try {
-      // For test purposes, use the search query as contentId
-      // In real implementation, this would use the selected search result
       await collectionsAPI.addCollectionItem(this.state.selectedCollection.id, {
-        contentId: this.state.itemSearchQuery,
-        mediaKind: 'Audio', // Default for test
+        contentId,
+        mediaKind,
+        sha256: selectedResult?.sha256,
+        bytes: selectedResult?.bytes,
+        fileName: selectedResult?.fileName,
       });
-      this.setState({ 
-        addItemModalOpen: false, 
-        itemSearchQuery: '', 
+      this.setState({
+        addItemModalOpen: false,
+        error: null,
+        itemSearchQuery: '',
         itemSearchResults: [],
-        error: null 
       });
       await this.loadCollectionItems(this.state.selectedCollection.id);
     } catch (error) {
-      let errorMsg = error.message || 'Failed to add item';
+      let errorMessage = error.message || 'Failed to add item';
       if (error.response?.data) {
         if (typeof error.response.data === 'string') {
-          errorMsg = error.response.data;
+          errorMessage = error.response.data;
         } else if (error.response.data.detail) {
-          errorMsg = error.response.data.detail;
+          errorMessage = error.response.data.detail;
         } else if (error.response.data.message) {
-          errorMsg = error.response.data.message;
+          errorMessage = error.response.data.message;
         }
       }
-      this.setState({ error: errorMsg });
+
+      this.setState({ error: errorMessage });
     }
   };
 
   handleOpenShareModal = () => {
     const { shareGroups } = this.state;
     this.setState({
-      shareModalOpen: true,
-      shareAudienceId: shareGroups[0]?.id ?? null,
-      shareAllowStream: true,
       shareAllowDownload: true,
+      shareAllowStream: true,
+      shareAudienceId: shareGroups[0]?.id ?? null,
+      shareModalOpen: true,
     });
   };
 
   handleCreateShare = async () => {
-    const { selectedCollection, shareAudienceId, shareAllowStream, shareAllowDownload } = this.state;
+    const {
+      selectedCollection,
+      shareAllowDownload,
+      shareAllowStream,
+      shareAudienceId,
+    } = this.state;
     if (!selectedCollection || !shareAudienceId) return;
 
     try {
       await collectionsAPI.createShare({
-        collectionId: selectedCollection.id,
-        audienceType: 'ShareGroup',
-        audienceId: typeof shareAudienceId === 'string' ? shareAudienceId : String(shareAudienceId),
-        allowStream: shareAllowStream,
         allowDownload: shareAllowDownload,
+        allowStream: shareAllowStream,
+        audienceId:
+          typeof shareAudienceId === 'string'
+            ? shareAudienceId
+            : String(shareAudienceId),
+        audienceType: 'ShareGroup',
+        collectionId: selectedCollection.id,
       });
-      this.setState({ shareModalOpen: false, error: null });
+      this.setState({ error: null, shareModalOpen: false });
       await this.loadShares(selectedCollection.id);
     } catch (error) {
       this.setState({ error: error.response?.data || error.message });
@@ -260,26 +316,26 @@ export default class Collections extends Component {
 
   render() {
     const {
+      addItemModalOpen,
       collections,
+      createModalOpen,
+      error,
+      itemSearchLoading,
+      itemSearchQuery,
+      itemSearchResults,
+      loading,
+      newCollectionDescription,
+      newCollectionTitle,
+      newCollectionType,
       selectedCollection,
       selectedCollectionItems,
-      shares,
+      shareAllowDownload,
+      shareAllowStream,
+      shareAudienceId,
       shareGroups,
       shareGroupsLoading,
       shareModalOpen,
-      shareAudienceId,
-      shareAllowStream,
-      shareAllowDownload,
-      loading,
-      error,
-      createModalOpen,
-      addItemModalOpen,
-      newCollectionTitle,
-      newCollectionType,
-      newCollectionDescription,
-      itemSearchQuery,
-      itemSearchResults,
-      itemSearchLoading,
+      shares,
     } = this.state;
 
     if (loading) return <LoaderSegment />;
@@ -293,22 +349,24 @@ export default class Collections extends Component {
 
     return (
       <div data-testid="collections-root">
-      <Container>
+        <Container>
           <Header as="h1">
             <Icon name="list" />
             <Header.Content>
               Collections
-              <Header.Subheader>Manage your playlists and share lists</Header.Subheader>
+              <Header.Subheader>
+                Manage your playlists and share lists
+              </Header.Subheader>
             </Header.Content>
           </Header>
 
           {error && <ErrorSegment caption={error} />}
 
           <div style={{ marginBottom: '1em' }}>
-            <Button 
-              data-testid="collections-create" 
-              primary 
+            <Button
+              data-testid="collections-create"
               onClick={() => this.setState({ createModalOpen: true })}
+              primary
             >
               <Icon name="plus" />
               Create Collection
@@ -321,10 +379,10 @@ export default class Collections extends Component {
                 <Icon name="list" />
                 No collections yet
               </Header>
-              <Button 
+              <Button
                 data-testid="collections-create-empty"
-                primary 
                 onClick={() => this.setState({ createModalOpen: true })}
+                primary
               >
                 Create Collection
               </Button>
@@ -341,23 +399,23 @@ export default class Collections extends Component {
               </Table.Header>
               <Table.Body>
                 {collections.map((collection) => (
-                  <Table.Row 
-                    key={collection.id} 
+                  <Table.Row
                     data-testid={`collection-row-${collection.title}`}
-                    style={{ cursor: 'pointer' }}
+                    key={collection.id}
                     onClick={() => this.handleSelectCollection(collection)}
+                    style={{ cursor: 'pointer' }}
                   >
                     <Table.Cell>{collection.title}</Table.Cell>
                     <Table.Cell>{collection.type || 'Playlist'}</Table.Cell>
                     <Table.Cell>{collection.itemCount || 0}</Table.Cell>
                     <Table.Cell>
                       <Button
-                        size="small"
                         negative
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.stopPropagation();
                           this.handleDeleteCollection(collection.id);
                         }}
+                        size="small"
                       >
                         Delete
                       </Button>
@@ -372,14 +430,16 @@ export default class Collections extends Component {
             <Segment style={{ marginTop: '2em' }}>
               <Header as="h2">
                 {selectedCollection.title}
-                <Header.Subheader>{selectedCollection.type || 'Playlist'}</Header.Subheader>
+                <Header.Subheader>
+                  {selectedCollection.type || 'Playlist'}
+                </Header.Subheader>
               </Header>
-              
+
               <div style={{ marginBottom: '1em' }}>
                 <Button
                   data-testid="collection-add-item"
-                  primary
                   onClick={() => this.setState({ addItemModalOpen: true })}
+                  primary
                 >
                   <Icon name="plus" />
                   Add Item
@@ -394,32 +454,45 @@ export default class Collections extends Component {
                 </Button>
               </div>
 
-              <div data-testid="collection-items">
+              <div data-testid="collection-items-table">
                 {selectedCollectionItems.length === 0 ? (
                   <Message info>No items in this collection yet.</Message>
                 ) : (
                   <Table>
                     <Table.Header>
                       <Table.Row>
-                        <Table.HeaderCell>Content ID</Table.HeaderCell>
+                        <Table.HeaderCell>File Name</Table.HeaderCell>
                         <Table.HeaderCell>Media Kind</Table.HeaderCell>
                         <Table.HeaderCell>Actions</Table.HeaderCell>
                       </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                      {selectedCollectionItems.map((item) => (
-                        <Table.Row key={item.id}>
-                          <Table.Cell>{item.contentId || 'N/A'}</Table.Cell>
+                      {selectedCollectionItems.map((item, index) => (
+                        <Table.Row
+                          data-testid={`collection-item-row-${index}`}
+                          key={item.id}
+                        >
+                          <Table.Cell>
+                            {item.fileName || item.contentId || 'N/A'}
+                          </Table.Cell>
                           <Table.Cell>{item.mediaKind || 'Unknown'}</Table.Cell>
                           <Table.Cell>
                             <Button
-                              size="small"
+                              data-testid={`collection-item-remove-${index}`}
                               negative
-                              onClick={() => {
-                                collectionsAPI.removeCollectionItem(item.id)
-                                  .then(() => this.loadCollectionItems(selectedCollection.id))
-                                  .catch((err) => this.setState({ error: err.message }));
+                              onClick={async () => {
+                                try {
+                                  await collectionsAPI.removeCollectionItem(
+                                    item.id,
+                                  );
+                                  await this.loadCollectionItems(
+                                    selectedCollection.id,
+                                  );
+                                } catch (error) {
+                                  this.setState({ error: error.message });
+                                }
                               }}
+                              size="small"
                             >
                               Remove
                             </Button>
@@ -431,7 +504,10 @@ export default class Collections extends Component {
                 )}
               </div>
 
-              <Segment data-testid="shares-list" style={{ marginTop: '1em' }}>
+              <Segment
+                data-testid="shares-list"
+                style={{ marginTop: '1em' }}
+              >
                 <Header as="h4">Shares</Header>
                 {collectionShares.length === 0 ? (
                   <Message info>No shares yet.</Message>
@@ -449,15 +525,20 @@ export default class Collections extends Component {
                       {collectionShares.map((share) => (
                         <Table.Row key={share.id}>
                           <Table.Cell>
-                            {share.collection?.title || selectedCollection.title}
+                            {share.collection?.title ||
+                              selectedCollection.title}
                           </Table.Cell>
                           <Table.Cell>
                             {share.audienceType === 'ShareGroup'
                               ? `Group ${share.audienceId}`
                               : share.audienceId}
                           </Table.Cell>
-                          <Table.Cell>{share.allowStream ? 'Yes' : 'No'}</Table.Cell>
-                          <Table.Cell>{share.allowDownload ? 'Yes' : 'No'}</Table.Cell>
+                          <Table.Cell>
+                            {share.allowStream ? 'Yes' : 'No'}
+                          </Table.Cell>
+                          <Table.Cell>
+                            {share.allowDownload ? 'Yes' : 'No'}
+                          </Table.Cell>
                         </Table.Row>
                       ))}
                     </Table.Body>
@@ -469,56 +550,71 @@ export default class Collections extends Component {
 
           {/* Create Collection Modal */}
           <Modal
+            onClose={() =>
+              this.setState({
+                createModalOpen: false,
+                newCollectionDescription: '',
+                newCollectionTitle: '',
+                newCollectionType: 'Playlist',
+              })
+            }
             open={createModalOpen}
-            onClose={() => this.setState({ 
-              createModalOpen: false, 
-              newCollectionTitle: '', 
-              newCollectionType: 'Playlist',
-              newCollectionDescription: '',
-            })}
           >
             <Modal.Header>Create Collection</Modal.Header>
             <Modal.Content>
               <Form>
                 <Form.Field>
-                  <label>Type</label>
+                  <label htmlFor="collection-type">Type</label>
                   <Dropdown
                     data-testid="collections-type-select"
-                    selection
+                    id="collection-type"
+                    onChange={(event, { value }) =>
+                      this.setState({ newCollectionType: value })
+                    }
                     options={typeOptions}
+                    selection
                     value={newCollectionType}
-                    onChange={(e, { value }) => this.setState({ newCollectionType: value })}
                   />
                 </Form.Field>
                 <Form.Input
                   data-testid="collections-title-input"
                   label="Title"
-                  value={newCollectionTitle}
-                  onChange={(e) => this.setState({ newCollectionTitle: e.target.value })}
+                  onChange={(event) =>
+                    this.setState({ newCollectionTitle: event.target.value })
+                  }
                   placeholder="Enter collection title"
+                  value={newCollectionTitle}
                 />
                 <Form.TextArea
                   label="Description"
-                  value={newCollectionDescription}
-                  onChange={(e) => this.setState({ newCollectionDescription: e.target.value })}
+                  onChange={(event) =>
+                    this.setState({
+                      newCollectionDescription: event.target.value,
+                    })
+                  }
                   placeholder="Optional description"
+                  value={newCollectionDescription}
                 />
               </Form>
             </Modal.Content>
             <Modal.Actions>
-              <Button onClick={() => this.setState({ 
-                createModalOpen: false, 
-                newCollectionTitle: '', 
-                newCollectionType: 'Playlist',
-                newCollectionDescription: '',
-              })}>
+              <Button
+                onClick={() =>
+                  this.setState({
+                    createModalOpen: false,
+                    newCollectionDescription: '',
+                    newCollectionTitle: '',
+                    newCollectionType: 'Playlist',
+                  })
+                }
+              >
                 Cancel
               </Button>
-              <Button 
-                data-testid="collections-create-submit" 
-                primary 
-                onClick={this.handleCreateCollection}
+              <Button
+                data-testid="collections-create-submit"
                 disabled={!newCollectionTitle.trim()}
+                onClick={this.handleCreateCollection}
+                primary
               >
                 Create
               </Button>
@@ -527,8 +623,8 @@ export default class Collections extends Component {
 
           {/* Share Collection Modal */}
           <Modal
-            open={shareModalOpen}
             onClose={() => this.setState({ shareModalOpen: false })}
+            open={shareModalOpen}
           >
             <Modal.Header>Share Collection</Modal.Header>
             <Modal.Content>
@@ -539,29 +635,32 @@ export default class Collections extends Component {
               ) : (
                 <Form>
                   <Form.Field>
-                    <label>Share Group</label>
+                    <label htmlFor="share-group">Share Group</label>
                     <Dropdown
                       data-testid="share-audience-picker"
-                      selection
+                      id="share-group"
+                      onChange={(event, { value }) =>
+                        this.setState({ shareAudienceId: value })
+                      }
                       options={shareGroups.map((group) => ({
                         key: group.id,
                         text: group.name,
                         value: group.id,
                       }))}
+                      selection
                       value={shareAudienceId}
-                      onChange={(event, { value }) =>
-                        this.setState({ shareAudienceId: value })
-                      }
                     />
                   </Form.Field>
                   <Form.Field>
                     <label htmlFor="share-allow-stream">Allow streaming</label>
                     <input
-                      data-testid="share-policy-stream"
                       checked={shareAllowStream}
+                      data-testid="share-policy-stream"
                       id="share-allow-stream"
                       onChange={(event) =>
-                        this.setState({ shareAllowStream: event.target.checked })
+                        this.setState({
+                          shareAllowStream: event.target.checked,
+                        })
                       }
                       type="checkbox"
                     />
@@ -569,11 +668,13 @@ export default class Collections extends Component {
                   <Form.Field>
                     <label htmlFor="share-allow-download">Allow download</label>
                     <input
-                      data-testid="share-policy-download"
                       checked={shareAllowDownload}
+                      data-testid="share-policy-download"
                       id="share-allow-download"
                       onChange={(event) =>
-                        this.setState({ shareAllowDownload: event.target.checked })
+                        this.setState({
+                          shareAllowDownload: event.target.checked,
+                        })
                       }
                       type="checkbox"
                     />
@@ -587,9 +688,9 @@ export default class Collections extends Component {
               </Button>
               <Button
                 data-testid="share-create-submit"
-                primary
-                onClick={this.handleCreateShare}
                 disabled={!shareAudienceId}
+                onClick={this.handleCreateShare}
+                primary
               >
                 Share
               </Button>
@@ -598,73 +699,89 @@ export default class Collections extends Component {
 
           {/* Add Item Modal */}
           <Modal
+            onClose={() =>
+              this.setState({
+                addItemModalOpen: false,
+                itemSearchQuery: '',
+                itemSearchResults: [],
+              })
+            }
             open={addItemModalOpen}
-            onClose={() => this.setState({ 
-              addItemModalOpen: false, 
-              itemSearchQuery: '', 
-              itemSearchResults: [],
-            })}
           >
             <Modal.Header>Add Item to {selectedCollection?.title}</Modal.Header>
             <Modal.Content>
               <Form>
                 <Form.Field>
-                  <label>Search for item</label>
+                  <label htmlFor="collection-item-search">Search for item</label>
                   <Form.Input
-                    data-testid="collection-item-picker"
-                    placeholder="Enter content ID or search..."
-                    value={itemSearchQuery}
-                    onChange={(e) => {
-                      const query = e.target.value;
+                    data-testid="collection-item-search-input"
+                    id="collection-item-search"
+                    label="Search for item"
+                    loading={itemSearchLoading}
+                    onChange={(event) => {
+                      const query = event.target.value;
                       this.setState({ itemSearchQuery: query });
                       this.handleSearchItems(query);
                     }}
-                    loading={itemSearchLoading}
+                    placeholder="Search by filename (e.g., sintel, aria, treasure)..."
+                    value={itemSearchQuery}
                   />
                 </Form.Field>
                 {itemSearchResults.length > 0 && (
-                  <Dropdown
-                    placeholder="Select an item"
-                    fluid
-                    search
-                    selection
-                    options={itemSearchResults.map((item, idx) => ({
-                      key: idx,
-                      text: item.contentId || item.name || 'Unknown',
-                      value: item.contentId || item.id,
-                    }))}
-                    onChange={(e, { value }) => {
-                      this.setState({ itemSearchQuery: value });
-                    }}
-                  />
+                  <Form.Field>
+                    <label htmlFor="collection-item-results">Search Results</label>
+                    <Dropdown
+                      data-testid="collection-item-results"
+                      fluid
+                      id="collection-item-results"
+                      onChange={(event, { value }) => {
+                        this.setState({ itemSearchQuery: value });
+                      }}
+                      options={itemSearchResults.map((item, index) => ({
+                        key: item.contentId || index,
+                        text: `${item.fileName || item.path} (${item.mediaKind || 'File'})`,
+                        value: item.contentId,
+                      }))}
+                      placeholder="Select an item from search results"
+                      search
+                      selection
+                    />
+                  </Form.Field>
                 )}
-                {itemSearchQuery && itemSearchResults.length === 0 && !itemSearchLoading && (
-                  <Message info>
-                    No results found. You can still add the search query as a content ID.
-                  </Message>
-                )}
+                {itemSearchQuery &&
+                  itemSearchResults.length === 0 &&
+                  !itemSearchLoading && (
+                    <Message info>
+                      No results found. You can still add the search query as a
+                      content ID.
+                    </Message>
+                  )}
               </Form>
             </Modal.Content>
             <Modal.Actions>
-              <Button onClick={() => this.setState({ 
-                addItemModalOpen: false, 
-                itemSearchQuery: '', 
-                itemSearchResults: [],
-              })}>
+              <Button
+                onClick={() =>
+                  this.setState({
+                    addItemModalOpen: false,
+                    itemSearchQuery: '',
+                    itemSearchResults: [],
+                  })
+                }
+              >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 data-testid="collection-add-item-submit"
-                primary 
-                onClick={this.handleAddItem}
                 disabled={!itemSearchQuery.trim()}
+                onClick={this.handleAddItem}
+                primary
               >
                 Add Item
               </Button>
             </Modal.Actions>
           </Modal>
         </Container>
-        </div>
+      </div>
     );
   }
 }

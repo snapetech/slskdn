@@ -2,8 +2,8 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-import * as swarmAnalytics from './swarmAnalytics';
 import api from './api';
+import * as swarmAnalytics from './swarmAnalytics';
 
 // Mock the api module
 jest.mock('./api', () => ({
@@ -21,9 +21,9 @@ describe('swarmAnalytics', () => {
   describe('getPerformanceMetrics', () => {
     it('calls API with default time window', async () => {
       const mockMetrics = {
-        totalDownloads: 100,
+        averageSpeedBytesPerSecond: 1_024 * 1_024,
         successRate: 0.95,
-        averageSpeedBytesPerSecond: 1024 * 1024,
+        totalDownloads: 100,
       };
       api.get.mockResolvedValue({ data: mockMetrics });
 
@@ -58,9 +58,7 @@ describe('swarmAnalytics', () => {
 
   describe('getPeerRankings', () => {
     it('calls API with default limit', async () => {
-      const mockRankings = [
-        { peerId: 'peer1', rank: 1, reputationScore: 0.9 },
-      ];
+      const mockRankings = [{ peerId: 'peer1', rank: 1, reputationScore: 0.9 }];
       api.get.mockResolvedValue({ data: mockRankings });
 
       const result = await swarmAnalytics.getPeerRankings();
@@ -123,8 +121,8 @@ describe('swarmAnalytics', () => {
   describe('getTrends', () => {
     it('calls API with default parameters', async () => {
       const mockTrends = {
-        timePoints: [],
         successRates: [],
+        timePoints: [],
       };
       api.get.mockResolvedValue({ data: mockTrends });
 
@@ -152,18 +150,16 @@ describe('swarmAnalytics', () => {
     it('calls API and returns recommendations', async () => {
       const mockRecommendations = [
         {
-          type: 'PeerSelection',
           priority: 'High',
           title: 'Optimize Peer Selection',
+          type: 'PeerSelection',
         },
       ];
       api.get.mockResolvedValue({ data: mockRecommendations });
 
       const result = await swarmAnalytics.getRecommendations();
 
-      expect(api.get).toHaveBeenCalledWith(
-        '/swarm/analytics/recommendations',
-      );
+      expect(api.get).toHaveBeenCalledWith('/swarm/analytics/recommendations');
       expect(result).toEqual(mockRecommendations);
     });
 

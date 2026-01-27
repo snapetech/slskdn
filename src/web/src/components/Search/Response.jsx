@@ -1,3 +1,4 @@
+import api from '../../lib/api';
 import * as transfers from '../../lib/transfers';
 import { getDirectoryContents, getGroup } from '../../lib/users';
 import { formatBytes, getDirectoryName } from '../../lib/util';
@@ -7,7 +8,6 @@ import UserNoteModal from '../Users/UserNoteModal';
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import api from '../../lib/api';
 import { Button, Card, Icon, Label, Popup } from 'semantic-ui-react';
 
 const buildTree = (response) => {
@@ -127,22 +127,31 @@ class Response extends Component {
   download = (username, files) => {
     this.setState({ downloadRequest: 'inProgress' }, async () => {
       try {
-        const { response, searchId, responseIndex } = this.props;
-        
+        const { response, responseIndex, searchId } = this.props;
+
         // Check if this is a bridged search result (has provenance) and we have searchId
-        if (response.sourceProviders && response.sourceProviders.length > 0 && searchId) {
+        if (
+          response.sourceProviders &&
+          response.sourceProviders.length > 0 &&
+          searchId
+        ) {
           // Use new action routing endpoint for bridged searches
           // Download all selected files
           const downloadPromises = files.map(async (file) => {
-            const fileIndex = response.files?.findIndex(f => f.filename === file.filename) ?? 
-                            response.lockedFiles?.findIndex(f => f.filename === file.filename) ?? -1;
+            const fileIndex =
+              response.files?.findIndex((f) => f.filename === file.filename) ??
+              response.lockedFiles?.findIndex(
+                (f) => f.filename === file.filename,
+              ) ??
+              -1;
             if (fileIndex < 0) {
               throw new Error(`File ${file.filename} not found in response`);
             }
+
             const itemId = `${responseIndex ?? 0}:${fileIndex}`;
             return api.post(`/searches/${searchId}/items/${itemId}/download`);
           });
-          
+
           await Promise.all(downloadPromises);
         } else {
           // Use existing download method for non-bridged searches
@@ -156,7 +165,11 @@ class Response extends Component {
         this.setState({ downloadRequest: 'complete' });
       } catch (error) {
         this.setState({
-          downloadError: error.response || { data: error.message, status: 500, statusText: 'Error' },
+          downloadError: error.response || {
+            data: error.message,
+            status: 500,
+            statusText: 'Error',
+          },
           downloadRequest: 'error',
         });
       }
@@ -267,27 +280,44 @@ class Response extends Component {
                   basic
                   color="blue"
                   content="Stream"
-                  disabled={noSelection || this.props.disabled || downloadRequest === 'inProgress'}
+                  disabled={
+                    noSelection ||
+                    this.props.disabled ||
+                    downloadRequest === 'inProgress'
+                  }
                   icon="play"
                   onClick={async () => {
                     // Stream first selected file
                     const firstFile = selectedFiles[0];
-                    const { response: responseProp, searchId, responseIndex } = this.props;
+                    const {
+                      response: responseProperty,
+                      responseIndex,
+                      searchId,
+                    } = this.props;
                     if (!firstFile || !searchId) return;
-                    
+
                     try {
-                      const fileIndex = responseProp.files?.findIndex(f => f.filename === firstFile.filename) ?? -1;
+                      const fileIndex =
+                        responseProperty.files?.findIndex(
+                          (f) => f.filename === firstFile.filename,
+                        ) ?? -1;
                       if (fileIndex < 0) return;
-                      
+
                       const itemId = `${responseIndex ?? 0}:${fileIndex}`;
-                      const result = await api.post(`/searches/${searchId}/items/${itemId}/stream`);
-                      
+                      const result = await api.post(
+                        `/searches/${searchId}/items/${itemId}/stream`,
+                      );
+
                       if (result.data?.stream_url) {
                         // Open stream URL in new tab or redirect
                         window.open(result.data.stream_url, '_blank');
                       }
                     } catch (error) {
-                      toast.error(error?.response?.data?.detail || error?.message || 'Stream failed');
+                      toast.error(
+                        error?.response?.data?.detail ||
+                          error?.message ||
+                          'Stream failed',
+                      );
                     }
                   }}
                 />
@@ -316,8 +346,11 @@ class Response extends Component {
                 size="large"
               />
               <Label>
-                {downloadError?.data || downloadError?.message || 'Download failed'}{' '}
-                {downloadError?.status && `(HTTP ${downloadError.status} ${downloadError.statusText || ''})`}
+                {downloadError?.data ||
+                  downloadError?.message ||
+                  'Download failed'}{' '}
+                {downloadError?.status &&
+                  `(HTTP ${downloadError.status} ${downloadError.statusText || ''})`}
               </Label>
             </span>
           )}
@@ -449,55 +482,56 @@ class Response extends Component {
               />
             )}
             {/* Scene ↔ Pod Bridging provenance badges */}
-            {response.sourceProviders && response.sourceProviders.length > 0 && (
-              <>
-                {response.sourceProviders.includes('pod') && (
-                  <Popup
-                    content="Available from Pod/Mesh network"
-                    position="top center"
-                    trigger={
-                      <Label
-                        color="blue"
-                        size="tiny"
-                        style={{ marginLeft: '4px' }}
-                      >
-                        POD
-                      </Label>
-                    }
-                  />
-                )}
-                {response.sourceProviders.includes('scene') && (
-                  <Popup
-                    content="Available from Soulseek Scene"
-                    position="top center"
-                    trigger={
-                      <Label
-                        color="purple"
-                        size="tiny"
-                        style={{ marginLeft: '4px' }}
-                      >
-                        SCENE
-                      </Label>
-                    }
-                  />
-                )}
-                {response.sourceProviders.length > 1 && (
-                  <Popup
-                    content={`Available from both Pod and Scene. Preferred: ${response.primarySource?.toUpperCase() || 'POD'}`}
-                    position="top center"
-                    trigger={
-                      <Label
-                        color="teal"
-                        size="tiny"
-                        style={{ marginLeft: '4px' }}
-                      >
-                        POD+SCENE
-                      </Label>
-                    }
-                  />
-                )}
-              </>
-            )}
+            {response.sourceProviders &&
+              response.sourceProviders.length > 0 && (
+                <>
+                  {response.sourceProviders.includes('pod') && (
+                    <Popup
+                      content="Available from Pod/Mesh network"
+                      position="top center"
+                      trigger={
+                        <Label
+                          color="blue"
+                          size="tiny"
+                          style={{ marginLeft: '4px' }}
+                        >
+                          POD
+                        </Label>
+                      }
+                    />
+                  )}
+                  {response.sourceProviders.includes('scene') && (
+                    <Popup
+                      content="Available from Soulseek Scene"
+                      position="top center"
+                      trigger={
+                        <Label
+                          color="purple"
+                          size="tiny"
+                          style={{ marginLeft: '4px' }}
+                        >
+                          SCENE
+                        </Label>
+                      }
+                    />
+                  )}
+                  {response.sourceProviders.length > 1 && (
+                    <Popup
+                      content={`Available from both Pod and Scene. Preferred: ${response.primarySource?.toUpperCase() || 'POD'}`}
+                      position="top center"
+                      trigger={
+                        <Label
+                          color="teal"
+                          size="tiny"
+                          style={{ marginLeft: '4px' }}
+                        >
+                          POD+SCENE
+                        </Label>
+                      }
+                    />
+                  )}
+                </>
+              )}
             <UserNoteModal
               onClose={onNoteUpdate}
               trigger={

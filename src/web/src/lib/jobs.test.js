@@ -2,8 +2,8 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-import * as jobs from './jobs';
 import api from './api';
+import * as jobs from './jobs';
 
 // Mock the api module
 jest.mock('./api', () => ({
@@ -47,12 +47,12 @@ describe('jobs', () => {
       api.get.mockResolvedValue({ data: { jobs: [], total: 0 } });
 
       await jobs.getJobs({
-        type: 'discography',
-        status: 'running',
         limit: 20,
         offset: 10,
         sortBy: 'created_at',
         sortOrder: 'desc',
+        status: 'running',
+        type: 'discography',
       });
 
       expect(api.get).toHaveBeenCalledWith(
@@ -63,23 +63,23 @@ describe('jobs', () => {
     it('returns jobs data from API response', async () => {
       const mockJobs = [
         {
-          id: 'job-1',
-          type: 'discography',
-          status: 'running',
           created_at: '2026-01-26T10:00:00Z',
+          id: 'job-1',
+          status: 'running',
+          type: 'discography',
         },
       ];
       api.get.mockResolvedValue({
-        data: { jobs: mockJobs, total: 1, limit: 20, offset: 0 },
+        data: { jobs: mockJobs, limit: 20, offset: 0, total: 1 },
       });
 
       const result = await jobs.getJobs();
 
       expect(result).toEqual({
         jobs: mockJobs,
-        total: 1,
         limit: 20,
         offset: 0,
+        total: 1,
       });
     });
 
@@ -87,9 +87,9 @@ describe('jobs', () => {
       api.get.mockResolvedValue({ data: { jobs: [], total: 0 } });
 
       await jobs.getJobs({
-        type: 'discography',
-        status: undefined,
         limit: undefined,
+        status: undefined,
+        type: 'discography',
       });
 
       expect(api.get).toHaveBeenCalledWith('/api/jobs?type=discography');
@@ -100,8 +100,8 @@ describe('jobs', () => {
     it('calls API with encoded job ID', async () => {
       const mockJob = {
         id: 'job-123',
-        type: 'discography',
         status: 'completed',
+        type: 'discography',
       };
       api.get.mockResolvedValue({ data: mockJob });
 
@@ -115,21 +115,19 @@ describe('jobs', () => {
 
       await jobs.getJob('job/with/slashes');
 
-      expect(api.get).toHaveBeenCalledWith(
-        '/api/jobs/job%2Fwith%2Fslashes',
-      );
+      expect(api.get).toHaveBeenCalledWith('/api/jobs/job%2Fwith%2Fslashes');
     });
 
     it('returns job data from API response', async () => {
       const mockJob = {
         id: 'job-1',
-        type: 'discography',
-        status: 'running',
         progress: {
-          releases_total: 10,
           releases_done: 5,
           releases_failed: 0,
+          releases_total: 10,
         },
+        status: 'running',
+        type: 'discography',
       };
       api.get.mockResolvedValue({ data: mockJob });
 
@@ -152,12 +150,12 @@ describe('jobs', () => {
     it('returns jobs array from API response', async () => {
       const mockJobs = [
         {
-          jobId: 'swarm-1',
-          filename: '/path/to/file.mp3',
           activeSources: 3,
-          downloadedBytes: 1024,
-          totalBytes: 4096,
+          downloadedBytes: 1_024,
+          filename: '/path/to/file.mp3',
+          jobId: 'swarm-1',
           progressPercent: 25,
+          totalBytes: 4_096,
         },
       ];
       api.get.mockResolvedValue({ data: { jobs: mockJobs } });
@@ -210,8 +208,8 @@ describe('jobs', () => {
     it('calls API with encoded job ID', async () => {
       const mockStatus = {
         jobId: 'swarm-1',
-        state: 'running',
         percentComplete: 50,
+        state: 'running',
       };
       api.get.mockResolvedValue({ data: mockStatus });
 
@@ -222,13 +220,13 @@ describe('jobs', () => {
 
     it('returns job status from API response', async () => {
       const mockStatus = {
-        jobId: 'swarm-1',
-        state: 'running',
-        totalChunks: 100,
-        completedChunks: 50,
-        percentComplete: 50,
         activeWorkers: 3,
         chunksPerSecond: 10.5,
+        completedChunks: 50,
+        jobId: 'swarm-1',
+        percentComplete: 50,
+        state: 'running',
+        totalChunks: 100,
       };
       api.get.mockResolvedValue({ data: mockStatus });
 

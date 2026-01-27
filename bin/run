@@ -1,20 +1,19 @@
 if [ -z "$1" ]; then
-    echo "💥  error: no image specified; provide a valid image and tag (e.g. slskd/slskd:latest)"
+    echo "💥  error: no image specified; provide a valid image and tag (e.g. ghcr.io/snapetech/slskdn:latest)"
     exit 1
 fi
 
 docker run -i \
-    -p 5030:5030 \
-    -p $SLSK_LISTEN_PORT:$SLSK_LISTEN_PORT \
-    -v $SLSK_OUTPUT_DIR:/var/slsk/download \
-    -v $SLSK_SHARED_DIR:/var/slsk/shared \
-    -e "SLSK_USERNAME=$SLSK_USERNAME" \
-    -e "SLSK_PASSWORD=$SLSK_PASSWORD" \
-    -e "SLSK_LISTEN_PORT=$SLSK_LISTEN_PORT" \
-    -e "SLSK_ENABLE_DNET=true" \
-    -e "SLSK_DNET_CHILD_LIMIT=10" \
-    -e "SLSK_DIAGNOSTIC=$SLSK_DIAGNOSTIC" \
-    -e "SLSK_ENABLE_SECURITY=$SLSK_ENABLE_SECURITY" \
-    -e "SLSK_CONNECT_TIMEOUT=5000" \
-    -e "SLSK_INACTIVITY_TIMEOUT=15000" \
+    -p "${SLSKD_HTTP_PORT:-5030}:${SLSKD_HTTP_PORT:-5030}" \
+    -p "${SLSKD_SLSK_LISTEN_PORT:-50300}:${SLSKD_SLSK_LISTEN_PORT:-50300}" \
+    -v "${SLSKD_DOWNLOADS_DIR:-$HOME/Downloads/slskdn}:/downloads" \
+    -v "${SLSKD_SHARED_DIR:-$HOME/Music}:/music:ro" \
+    -v "${SLSKD_APP_DIR:-$HOME/.config/slskdn}:/app" \
+    -e "SLSKD_SLSK_USERNAME=$SLSKD_SLSK_USERNAME" \
+    -e "SLSKD_SLSK_PASSWORD=$SLSKD_SLSK_PASSWORD" \
+    -e "SLSKD_SLSK_LISTEN_PORT=${SLSKD_SLSK_LISTEN_PORT:-50300}" \
+    -e "SLSKD_HTTP_PORT=${SLSKD_HTTP_PORT:-5030}" \
+    -e "SLSKD_SHARED_DIR=${SLSKD_SHARED_DIR:-/music}" \
+    -e "SLSKD_DOWNLOADS_DIR=${SLSKD_DOWNLOADS_DIR:-/downloads}" \
+    -e "SLSKD_APP_DIR=${SLSKD_APP_DIR:-/app}" \
     $1

@@ -311,104 +311,104 @@ export default class Contacts extends Component {
 
     return (
       <div data-testid="contacts-root">
-      <Container>
-        <Header as="h1">
-          <Icon name="address book" />
-          <Header.Content>
-            Contacts
-            <Header.Subheader>Manage your peer contacts</Header.Subheader>
-          </Header.Content>
-        </Header>
+        <Container>
+          <Header as="h1">
+            <Icon name="address book" />
+            <Header.Content>
+              Contacts
+              <Header.Subheader>Manage your peer contacts</Header.Subheader>
+            </Header.Content>
+          </Header>
 
-        {error && <ErrorSegment caption={error} />}
+          {error && <ErrorSegment caption={error} />}
 
-        <div style={{ marginBottom: '1em' }}>
-          {/* Always render Create Invite button - not conditional on loading state */}
-          <Button
-            as="button"
-            data-testid="contacts-create-invite"
-            onClick={this.handleCreateInvite}
-            primary
-          >
-            <Icon name="plus" />
-            Create Invite
-          </Button>
-          <Button
-            as="button"
-            data-testid="contacts-add-friend"
-            onClick={() => this.setState({ addFriendModalOpen: true })}
-          >
-            <Icon name="user plus" />
-            Add Friend
-          </Button>
-          <Button onClick={this.loadNearby}>
-            <Icon name="refresh" />
-            Refresh Nearby
-          </Button>
-        </div>
-
-        <Tab
-          activeIndex={activeTab}
-          onTabChange={(e, { activeIndex }) =>
-            this.setState({ activeTab: activeIndex })
-          }
-          panes={panes}
-        />
-
-        {/* Add Friend Modal */}
-        <Modal
-          onClose={() => this.setState({ addFriendModalOpen: false })}
-          open={addFriendModalOpen}
-        >
-          <Modal.Header>Add Friend from Invite</Modal.Header>
-          <Modal.Content>
-            <p>Paste an invite link:</p>
-            <AddFriendForm
-              onSubmit={(inviteLink, nickname) => {
-                this.handleAddFromInvite(inviteLink, nickname);
-              }}
-            />
-          </Modal.Content>
-        </Modal>
-
-        {/* Create Invite Modal */}
-        <Modal
-          onClose={() => this.setState({ createInviteModalOpen: false })}
-          open={createInviteModalOpen}
-        >
-          <Modal.Header>Invite Created</Modal.Header>
-          <Modal.Content>
-            <p>Share this invite link:</p>
-            <div style={{ marginBottom: '1em' }}>
-              <input
-                data-testid="contacts-invite-output"
-                onClick={(e) => e.target.select()}
-                readOnly
-                style={{ padding: '0.5em', width: '100%' }}
-                value={inviteLink || ''}
-              />
-            </div>
-            {inviteFriendCode && (
-              <p>
-                Friend Code:{' '}
-                <code data-testid="contacts-invite-friend-code">
-                  {inviteFriendCode}
-                </code>
-              </p>
-            )}
-            <p>
-              <small>QR code display coming soon</small>
-            </p>
-          </Modal.Content>
-          <Modal.Actions>
+          <div style={{ marginBottom: '1em' }}>
+            {/* Always render Create Invite button - not conditional on loading state */}
             <Button
-              onClick={() => this.setState({ createInviteModalOpen: false })}
+              as="button"
+              data-testid="contacts-create-invite"
+              onClick={this.handleCreateInvite}
+              primary
             >
-              Close
+              <Icon name="plus" />
+              Create Invite
             </Button>
-          </Modal.Actions>
-        </Modal>
-      </Container>
+            <Button
+              as="button"
+              data-testid="contacts-add-friend"
+              onClick={() => this.setState({ addFriendModalOpen: true })}
+            >
+              <Icon name="user plus" />
+              Add Friend
+            </Button>
+            <Button onClick={this.loadNearby}>
+              <Icon name="refresh" />
+              Refresh Nearby
+            </Button>
+          </div>
+
+          <Tab
+            activeIndex={activeTab}
+            onTabChange={(e, { activeIndex }) =>
+              this.setState({ activeTab: activeIndex })
+            }
+            panes={panes}
+          />
+
+          {/* Add Friend Modal */}
+          <Modal
+            onClose={() => this.setState({ addFriendModalOpen: false })}
+            open={addFriendModalOpen}
+          >
+            <Modal.Header>Add Friend from Invite</Modal.Header>
+            <Modal.Content>
+              <p>Paste an invite link:</p>
+              <AddFriendForm
+                onSubmit={(inviteLink, nickname) => {
+                  this.handleAddFromInvite(inviteLink, nickname);
+                }}
+              />
+            </Modal.Content>
+          </Modal>
+
+          {/* Create Invite Modal */}
+          <Modal
+            onClose={() => this.setState({ createInviteModalOpen: false })}
+            open={createInviteModalOpen}
+          >
+            <Modal.Header>Invite Created</Modal.Header>
+            <Modal.Content>
+              <p>Share this invite link:</p>
+              <div style={{ marginBottom: '1em' }}>
+                <input
+                  data-testid="contacts-invite-output"
+                  onClick={(e) => e.target.select()}
+                  readOnly
+                  style={{ padding: '0.5em', width: '100%' }}
+                  value={inviteLink || ''}
+                />
+              </div>
+              {inviteFriendCode && (
+                <p>
+                  Friend Code:{' '}
+                  <code data-testid="contacts-invite-friend-code">
+                    {inviteFriendCode}
+                  </code>
+                </p>
+              )}
+              <p>
+                <small>QR code display coming soon</small>
+              </p>
+            </Modal.Content>
+            <Modal.Actions>
+              <Button
+                onClick={() => this.setState({ createInviteModalOpen: false })}
+              >
+                Close
+              </Button>
+            </Modal.Actions>
+          </Modal>
+        </Container>
       </div>
     );
   }

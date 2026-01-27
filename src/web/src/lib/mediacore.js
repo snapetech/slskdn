@@ -20,7 +20,8 @@ const podVerificationBaseUrl = '/api/v0/mediacore/podcore/verification';
  * Register a mapping from external ID to ContentID.
  */
 export const registerContentId = async (externalId, contentId) => {
-  return (await api.post(`${baseUrl}/register`, { externalId, contentId })).data;
+  return (await api.post(`${baseUrl}/register`, { contentId, externalId }))
+    .data;
 };
 
 /**
@@ -28,11 +29,14 @@ export const registerContentId = async (externalId, contentId) => {
  */
 export const resolveContentId = async (externalId) => {
   try {
-    return (await api.get(`${baseUrl}/resolve/${encodeURIComponent(externalId)}`)).data;
+    return (
+      await api.get(`${baseUrl}/resolve/${encodeURIComponent(externalId)}`)
+    ).data;
   } catch (error) {
     if (error.response?.status === 404) {
       return null; // Not found
     }
+
     throw error;
   }
 };
@@ -41,14 +45,16 @@ export const resolveContentId = async (externalId) => {
  * Check if an external ID is registered.
  */
 export const checkContentIdExists = async (externalId) => {
-  return (await api.get(`${baseUrl}/exists/${encodeURIComponent(externalId)}`)).data;
+  return (await api.get(`${baseUrl}/exists/${encodeURIComponent(externalId)}`))
+    .data;
 };
 
 /**
  * Get all external IDs mapped to a ContentID.
  */
 export const getExternalIds = async (contentId) => {
-  return (await api.get(`${baseUrl}/external/${encodeURIComponent(contentId)}`)).data;
+  return (await api.get(`${baseUrl}/external/${encodeURIComponent(contentId)}`))
+    .data;
 };
 
 /**
@@ -62,47 +68,69 @@ export const getContentIdStats = async () => {
  * Find all ContentIDs for a specific domain.
  */
 export const findContentIdsByDomain = async (domain) => {
-  return (await api.get(`${baseUrl}/domain/${encodeURIComponent(domain)}`)).data;
+  return (await api.get(`${baseUrl}/domain/${encodeURIComponent(domain)}`))
+    .data;
 };
 
 /**
  * Find all ContentIDs for a specific domain and type.
  */
 export const findContentIdsByDomainAndType = async (domain, type) => {
-  return (await api.get(`${baseUrl}/domain/${encodeURIComponent(domain)}/type/${encodeURIComponent(type)}`)).data;
+  return (
+    await api.get(
+      `${baseUrl}/domain/${encodeURIComponent(domain)}/type/${encodeURIComponent(type)}`,
+    )
+  ).data;
 };
 
 /**
  * Validate a ContentID format.
  */
 export const validateContentId = async (contentId) => {
-  return (await api.get(`${baseUrl}/validate/${encodeURIComponent(contentId)}`)).data;
+  return (await api.get(`${baseUrl}/validate/${encodeURIComponent(contentId)}`))
+    .data;
 };
 
 /**
  * Traverse the content graph following a specific link type.
  */
-export const traverseContentGraph = async (startContentId, linkName, maxDepth = 3) => {
-  return (await api.get(`${ipldBaseUrl}/traverse/${encodeURIComponent(startContentId)}`, {
-    params: { linkName, maxDepth },
-  })).data;
+export const traverseContentGraph = async (
+  startContentId,
+  linkName,
+  maxDepth = 3,
+) => {
+  return (
+    await api.get(
+      `${ipldBaseUrl}/traverse/${encodeURIComponent(startContentId)}`,
+      {
+        params: { linkName, maxDepth },
+      },
+    )
+  ).data;
 };
 
 /**
  * Get the content graph for a specific ContentID.
  */
 export const getContentGraph = async (contentId, maxDepth = 2) => {
-  return (await api.get(`${ipldBaseUrl}/graph/${encodeURIComponent(contentId)}`, {
-    params: { maxDepth },
-  })).data;
+  return (
+    await api.get(`${ipldBaseUrl}/graph/${encodeURIComponent(contentId)}`, {
+      params: { maxDepth },
+    })
+  ).data;
 };
 
 /**
  * Find all content that links to the specified ContentID.
  */
 export const findInboundLinks = async (targetContentId, linkName = null) => {
-  const params = linkName ? { linkName } : {};
-  return (await api.get(`${ipldBaseUrl}/inbound/${encodeURIComponent(targetContentId)}`, { params })).data;
+  const parameters = linkName ? { linkName } : {};
+  return (
+    await api.get(
+      `${ipldBaseUrl}/inbound/${encodeURIComponent(targetContentId)}`,
+      { params: parameters },
+    )
+  ).data;
 };
 
 /**
@@ -116,28 +144,60 @@ export const validateIpldLinks = async () => {
  * Add IPLD links to a content descriptor.
  */
 export const addIpldLinks = async (contentId, links) => {
-  return (await api.post(`${ipldBaseUrl}/links/${encodeURIComponent(contentId)}`, { links })).data;
+  return (
+    await api.post(`${ipldBaseUrl}/links/${encodeURIComponent(contentId)}`, {
+      links,
+    })
+  ).data;
 };
 
 /**
  * Compute perceptual hash for audio data.
  */
-export const computeAudioHash = async (samples, sampleRate, algorithm = 'ChromaPrint') => {
-  return (await api.post(`${perceptualHashBaseUrl}/audio`, { samples, sampleRate, algorithm })).data;
+export const computeAudioHash = async (
+  samples,
+  sampleRate,
+  algorithm = 'ChromaPrint',
+) => {
+  return (
+    await api.post(`${perceptualHashBaseUrl}/audio`, {
+      algorithm,
+      sampleRate,
+      samples,
+    })
+  ).data;
 };
 
 /**
  * Compute perceptual hash for image data.
  */
-export const computeImageHash = async (pixels, width, height, algorithm = 'PHash') => {
-  return (await api.post(`${perceptualHashBaseUrl}/image`, { pixels, width, height, algorithm })).data;
+export const computeImageHash = async (
+  pixels,
+  width,
+  height,
+  algorithm = 'PHash',
+) => {
+  return (
+    await api.post(`${perceptualHashBaseUrl}/image`, {
+      algorithm,
+      height,
+      pixels,
+      width,
+    })
+  ).data;
 };
 
 /**
  * Compute similarity between two perceptual hashes.
  */
 export const computeHashSimilarity = async (hashA, hashB, threshold = 0.8) => {
-  return (await api.post(`${perceptualHashBaseUrl}/similarity`, { hashA, hashB, threshold })).data;
+  return (
+    await api.post(`${perceptualHashBaseUrl}/similarity`, {
+      hashA,
+      hashB,
+      threshold,
+    })
+  ).data;
 };
 
 /**
@@ -150,15 +210,30 @@ export const getSupportedHashAlgorithms = async () => {
 /**
  * Compute perceptual similarity between two ContentIDs.
  */
-export const computePerceptualSimilarity = async (contentIdA, contentIdB, threshold = 0.7) => {
-  return (await api.post(`${fuzzyMatchBaseUrl}/perceptual`, { contentIdA, contentIdB, threshold })).data;
+export const computePerceptualSimilarity = async (
+  contentIdA,
+  contentIdB,
+  threshold = 0.7,
+) => {
+  return (
+    await api.post(`${fuzzyMatchBaseUrl}/perceptual`, {
+      contentIdA,
+      contentIdB,
+      threshold,
+    })
+  ).data;
 };
 
 /**
  * Find similar content for a given ContentID.
  */
 export const findSimilarContent = async (contentId, options = {}) => {
-  return (await api.post(`${fuzzyMatchBaseUrl}/find/${encodeURIComponent(contentId)}`, options)).data;
+  return (
+    await api.post(
+      `${fuzzyMatchBaseUrl}/find/${encodeURIComponent(contentId)}`,
+      options,
+    )
+  ).data;
 };
 
 /**
@@ -172,21 +247,35 @@ export const computeTextSimilarity = async (textA, textB) => {
  * Export metadata for specified ContentIDs.
  */
 export const exportMetadata = async (contentIds, includeLinks = true) => {
-  return (await api.post(`${portabilityBaseUrl}/export`, { contentIds, includeLinks })).data;
+  return (
+    await api.post(`${portabilityBaseUrl}/export`, { contentIds, includeLinks })
+  ).data;
 };
 
 /**
  * Import metadata from a package.
  */
-export const importMetadata = async (packageData, conflictStrategy = 'Merge', dryRun = false) => {
-  return (await api.post(`${portabilityBaseUrl}/import`, { package: packageData, conflictStrategy, dryRun })).data;
+export const importMetadata = async (
+  packageData,
+  conflictStrategy = 'Merge',
+  dryRun = false,
+) => {
+  return (
+    await api.post(`${portabilityBaseUrl}/import`, {
+      conflictStrategy,
+      dryRun,
+      package: packageData,
+    })
+  ).data;
 };
 
 /**
  * Analyze conflicts in a metadata package.
  */
 export const analyzeMetadataConflicts = async (packageData) => {
-  return (await api.post(`${portabilityBaseUrl}/analyze`, { package: packageData })).data;
+  return (
+    await api.post(`${portabilityBaseUrl}/analyze`, { package: packageData })
+  ).data;
 };
 
 /**
@@ -206,8 +295,13 @@ export const getMergeStrategies = async () => {
 /**
  * Publish a content descriptor.
  */
-export const publishContentDescriptor = async (descriptor, forceUpdate = false) => {
-  return (await api.post(`${publishBaseUrl}/descriptor`, { descriptor, forceUpdate })).data;
+export const publishContentDescriptor = async (
+  descriptor,
+  forceUpdate = false,
+) => {
+  return (
+    await api.post(`${publishBaseUrl}/descriptor`, { descriptor, forceUpdate })
+  ).data;
 };
 
 /**
@@ -221,7 +315,12 @@ export const publishContentDescriptorsBatch = async (descriptors) => {
  * Update a published content descriptor.
  */
 export const updateContentDescriptor = async (contentId, updates) => {
-  return (await api.put(`${publishBaseUrl}/descriptor/${encodeURIComponent(contentId)}`, { updates })).data;
+  return (
+    await api.put(
+      `${publishBaseUrl}/descriptor/${encodeURIComponent(contentId)}`,
+      { updates },
+    )
+  ).data;
 };
 
 /**
@@ -235,7 +334,11 @@ export const republishExpiringDescriptors = async (contentIds = null) => {
  * Unpublish a content descriptor.
  */
 export const unpublishContentDescriptor = async (contentId) => {
-  return (await api.delete(`${publishBaseUrl}/descriptor/${encodeURIComponent(contentId)}`)).data;
+  return (
+    await api.delete(
+      `${publishBaseUrl}/descriptor/${encodeURIComponent(contentId)}`,
+    )
+  ).data;
 };
 
 /**
@@ -248,15 +351,24 @@ export const getPublishingStats = async () => {
 /**
  * Retrieve a content descriptor by ContentID.
  */
-export const retrieveContentDescriptor = async (contentId, bypassCache = false) => {
+export const retrieveContentDescriptor = async (
+  contentId,
+  bypassCache = false,
+) => {
   try {
-    return (await api.get(`${retrieveBaseUrl}/descriptor/${encodeURIComponent(contentId)}`, {
-      params: bypassCache ? { bypassCache: 'true' } : {},
-    })).data;
+    return (
+      await api.get(
+        `${retrieveBaseUrl}/descriptor/${encodeURIComponent(contentId)}`,
+        {
+          params: bypassCache ? { bypassCache: 'true' } : {},
+        },
+      )
+    ).data;
   } catch (error) {
     if (error.response?.status === 404) {
-      return { found: false, contentId };
+      return { contentId, found: false };
     }
+
     throw error;
   }
 };
@@ -271,17 +383,31 @@ export const retrieveContentDescriptorsBatch = async (contentIds) => {
 /**
  * Query descriptors by domain and type.
  */
-export const queryDescriptorsByDomain = async (domain, type = null, maxResults = 50) => {
-  const params = { maxResults };
-  if (type) params.type = type;
-  return (await api.get(`${retrieveBaseUrl}/query/domain/${encodeURIComponent(domain)}`, { params })).data;
+export const queryDescriptorsByDomain = async (
+  domain,
+  type = null,
+  maxResults = 50,
+) => {
+  const parameters = { maxResults };
+  if (type) parameters.type = type;
+  return (
+    await api.get(
+      `${retrieveBaseUrl}/query/domain/${encodeURIComponent(domain)}`,
+      { params: parameters },
+    )
+  ).data;
 };
 
 /**
  * Verify a content descriptor's signature and freshness.
  */
-export const verifyContentDescriptor = async (descriptor, retrievedAt = null) => {
-  return (await api.post(`${retrieveBaseUrl}/verify`, { descriptor, retrievedAt })).data;
+export const verifyContentDescriptor = async (
+  descriptor,
+  retrievedAt = null,
+) => {
+  return (
+    await api.post(`${retrieveBaseUrl}/verify`, { descriptor, retrievedAt })
+  ).data;
 };
 
 /**
@@ -381,21 +507,27 @@ export const updatePod = async (pod) => {
  * Unpublish pod metadata from DHT.
  */
 export const unpublishPod = async (podId) => {
-  return (await api.delete(`${podDhtBaseUrl}/unpublish/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.delete(`${podDhtBaseUrl}/unpublish/${encodeURIComponent(podId)}`)
+  ).data;
 };
 
 /**
  * Get published pod metadata from DHT.
  */
 export const getPublishedPodMetadata = async (podId) => {
-  return (await api.get(`${podDhtBaseUrl}/metadata/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.get(`${podDhtBaseUrl}/metadata/${encodeURIComponent(podId)}`)
+  ).data;
 };
 
 /**
  * Refresh published pod metadata.
  */
 export const refreshPod = async (podId) => {
-  return (await api.post(`${podDhtBaseUrl}/refresh/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.post(`${podDhtBaseUrl}/refresh/${encodeURIComponent(podId)}`)
+  ).data;
 };
 
 /**
@@ -411,56 +543,84 @@ export const getPodPublishingStats = async () => {
  * Publish membership record to DHT.
  */
 export const publishMembership = async (membershipRecord) => {
-  return (await api.post(`${podMembershipBaseUrl}/publish`, membershipRecord)).data;
+  return (await api.post(`${podMembershipBaseUrl}/publish`, membershipRecord))
+    .data;
 };
 
 /**
  * Update membership record in DHT.
  */
 export const updateMembership = async (membershipRecord) => {
-  return (await api.post(`${podMembershipBaseUrl}/update`, membershipRecord)).data;
+  return (await api.post(`${podMembershipBaseUrl}/update`, membershipRecord))
+    .data;
 };
 
 /**
  * Remove membership record from DHT.
  */
 export const removeMembership = async (podId, peerId) => {
-  return (await api.delete(`${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`)).data;
+  return (
+    await api.delete(
+      `${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`,
+    )
+  ).data;
 };
 
 /**
  * Get membership record from DHT.
  */
 export const getMembership = async (podId, peerId) => {
-  return (await api.get(`${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`)).data;
+  return (
+    await api.get(
+      `${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`,
+    )
+  ).data;
 };
 
 /**
  * Verify membership in a pod.
  */
 export const verifyMembership = async (podId, peerId) => {
-  return (await api.get(`${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/verify`)).data;
+  return (
+    await api.get(
+      `${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/verify`,
+    )
+  ).data;
 };
 
 /**
  * Ban a member from a pod.
  */
 export const banMember = async (podId, peerId, reason) => {
-  return (await api.post(`${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/ban`, { reason })).data;
+  return (
+    await api.post(
+      `${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/ban`,
+      { reason },
+    )
+  ).data;
 };
 
 /**
  * Unban a member from a pod.
  */
 export const unbanMember = async (podId, peerId) => {
-  return (await api.post(`${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/unban`)).data;
+  return (
+    await api.post(
+      `${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/unban`,
+    )
+  ).data;
 };
 
 /**
  * Change a member's role in a pod.
  */
 export const changeMemberRole = async (podId, peerId, newRole) => {
-  return (await api.post(`${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/role`, { newRole })).data;
+  return (
+    await api.post(
+      `${podMembershipBaseUrl}/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/role`,
+      { newRole },
+    )
+  ).data;
 };
 
 /**
@@ -490,7 +650,11 @@ export const registerPodForDiscovery = async (pod) => {
  * Unregister a pod from discovery.
  */
 export const unregisterPodFromDiscovery = async (podId) => {
-  return (await api.delete(`${podDiscoveryBaseUrl}/unregister/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.delete(
+      `${podDiscoveryBaseUrl}/unregister/${encodeURIComponent(podId)}`,
+    )
+  ).data;
 };
 
 /**
@@ -504,36 +668,49 @@ export const updatePodDiscovery = async (pod) => {
  * Discover pods by name.
  */
 export const discoverPodsByName = async (name) => {
-  return (await api.get(`${podDiscoveryBaseUrl}/name/${encodeURIComponent(name)}`)).data;
+  return (
+    await api.get(`${podDiscoveryBaseUrl}/name/${encodeURIComponent(name)}`)
+  ).data;
 };
 
 /**
  * Discover pods by tag.
  */
 export const discoverPodsByTag = async (tag) => {
-  return (await api.get(`${podDiscoveryBaseUrl}/tag/${encodeURIComponent(tag)}`)).data;
+  return (
+    await api.get(`${podDiscoveryBaseUrl}/tag/${encodeURIComponent(tag)}`)
+  ).data;
 };
 
 /**
  * Discover pods by multiple tags.
  */
 export const discoverPodsByTags = async (tags) => {
-  const tagsParam = tags.join(',');
-  return (await api.get(`${podDiscoveryBaseUrl}/tags/${encodeURIComponent(tagsParam)}`)).data;
+  const tagsParameter = tags.join(',');
+  return (
+    await api.get(
+      `${podDiscoveryBaseUrl}/tags/${encodeURIComponent(tagsParameter)}`,
+    )
+  ).data;
 };
 
 /**
  * Discover all pods.
  */
 export const discoverAllPods = async (limit = 50) => {
-  return (await api.get(`${podDiscoveryBaseUrl}/all`, { params: { limit } })).data;
+  return (await api.get(`${podDiscoveryBaseUrl}/all`, { params: { limit } }))
+    .data;
 };
 
 /**
  * Discover pods by content ID.
  */
 export const discoverPodsByContent = async (contentId) => {
-  return (await api.get(`${podDiscoveryBaseUrl}/content/${encodeURIComponent(contentId)}`)).data;
+  return (
+    await api.get(
+      `${podDiscoveryBaseUrl}/content/${encodeURIComponent(contentId)}`,
+    )
+  ).data;
 };
 
 /**
@@ -563,7 +740,8 @@ export const requestPodJoin = async (joinRequest) => {
  * Accept or reject a join request.
  */
 export const acceptPodJoin = async (acceptance) => {
-  return (await api.post(`${podMembershipBaseUrl}/join/accept`, acceptance)).data;
+  return (await api.post(`${podMembershipBaseUrl}/join/accept`, acceptance))
+    .data;
 };
 
 /**
@@ -577,35 +755,52 @@ export const requestPodLeave = async (leaveRequest) => {
  * Accept a leave request.
  */
 export const acceptPodLeave = async (acceptance) => {
-  return (await api.post(`${podMembershipBaseUrl}/leave/accept`, acceptance)).data;
+  return (await api.post(`${podMembershipBaseUrl}/leave/accept`, acceptance))
+    .data;
 };
 
 /**
  * Get pending join requests for a pod.
  */
 export const getPendingJoinRequests = async (podId) => {
-  return (await api.get(`${podMembershipBaseUrl}/join/pending/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.get(
+      `${podMembershipBaseUrl}/join/pending/${encodeURIComponent(podId)}`,
+    )
+  ).data;
 };
 
 /**
  * Get pending leave requests for a pod.
  */
 export const getPendingLeaveRequests = async (podId) => {
-  return (await api.get(`${podMembershipBaseUrl}/leave/pending/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.get(
+      `${podMembershipBaseUrl}/leave/pending/${encodeURIComponent(podId)}`,
+    )
+  ).data;
 };
 
 /**
  * Cancel a pending join request.
  */
 export const cancelJoinRequest = async (podId, peerId) => {
-  return (await api.delete(`${podMembershipBaseUrl}/join/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`)).data;
+  return (
+    await api.delete(
+      `${podMembershipBaseUrl}/join/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`,
+    )
+  ).data;
 };
 
 /**
  * Cancel a pending leave request.
  */
 export const cancelLeaveRequest = async (podId, peerId) => {
-  return (await api.delete(`${podMembershipBaseUrl}/leave/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`)).data;
+  return (
+    await api.delete(
+      `${podMembershipBaseUrl}/leave/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`,
+    )
+  ).data;
 };
 
 // Pod Message Routing API functions
@@ -621,7 +816,12 @@ export const routePodMessage = async (message) => {
  * Route a pod message to specific peers.
  */
 export const routePodMessageToPeers = async (message, targetPeerIds) => {
-  return (await api.post(`${podRoutingBaseUrl}/route-to-peers`, { message, targetPeerIds })).data;
+  return (
+    await api.post(`${podRoutingBaseUrl}/route-to-peers`, {
+      message,
+      targetPeerIds,
+    })
+  ).data;
 };
 
 /**
@@ -635,14 +835,22 @@ export const getPodMessageRoutingStats = async () => {
  * Check if a message has been seen for deduplication.
  */
 export const checkMessageSeen = async (messageId, podId) => {
-  return (await api.get(`${podRoutingBaseUrl}/seen/${encodeURIComponent(messageId)}/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.get(
+      `${podRoutingBaseUrl}/seen/${encodeURIComponent(messageId)}/${encodeURIComponent(podId)}`,
+    )
+  ).data;
 };
 
 /**
  * Register a message as seen for deduplication.
  */
 export const registerMessageSeen = async (messageId, podId) => {
-  return (await api.post(`${podRoutingBaseUrl}/seen/${encodeURIComponent(messageId)}/${encodeURIComponent(podId)}`)).data;
+  return (
+    await api.post(
+      `${podRoutingBaseUrl}/seen/${encodeURIComponent(messageId)}/${encodeURIComponent(podId)}`,
+    )
+  ).data;
 };
 
 /**
@@ -658,7 +866,8 @@ export const cleanupSeenMessages = async () => {
  * Sign a pod message.
  */
 export const signPodMessage = async (message, privateKey) => {
-  return (await api.post(`${podSigningBaseUrl}/sign`, { message, privateKey })).data;
+  return (await api.post(`${podSigningBaseUrl}/sign`, { message, privateKey }))
+    .data;
 };
 
 /**
@@ -688,7 +897,11 @@ export const getMessageSigningStats = async () => {
  * Verify membership in a pod.
  */
 export const verifyPodMembership = async (podId, peerId) => {
-  return (await api.get(`${podVerificationBaseUrl}/membership/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`)).data;
+  return (
+    await api.get(
+      `${podVerificationBaseUrl}/membership/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}`,
+    )
+  ).data;
 };
 
 /**
@@ -702,7 +915,11 @@ export const verifyPodMessage = async (message) => {
  * Check if a peer has a required role in a pod.
  */
 export const checkPodRole = async (podId, peerId, requiredRole) => {
-  const result = (await api.get(`${podVerificationBaseUrl}/role/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/${encodeURIComponent(requiredRole)}`)).data;
+  const result = (
+    await api.get(
+      `${podVerificationBaseUrl}/role/${encodeURIComponent(podId)}/${encodeURIComponent(peerId)}/${encodeURIComponent(requiredRole)}`,
+    )
+  ).data;
   return result.hasRole; // Assuming API returns { hasRole: boolean }
 };
 
@@ -721,10 +938,17 @@ const storageBaseUrl = `${apiBaseUrl}/pods/messages`;
 /**
  * Search messages in a pod.
  */
-export const searchMessages = async (podId, query, channelId = null, limit = 50) => {
-  const params = { query, limit };
-  if (channelId) params.channelId = channelId;
-  return (await api.get(`${storageBaseUrl}/${podId}/search`, { params })).data;
+export const searchMessages = async (
+  podId,
+  query,
+  channelId = null,
+  limit = 50,
+) => {
+  const parameters = { limit, query };
+  if (channelId) parameters.channelId = channelId;
+  return (
+    await api.get(`${storageBaseUrl}/${podId}/search`, { params: parameters })
+  ).data;
 };
 
 /**
@@ -738,14 +962,20 @@ export const getMessageStorageStats = async () => {
  * Clean up messages older than the specified timestamp.
  */
 export const cleanupMessages = async (olderThan) => {
-  return (await api.delete(`${storageBaseUrl}/cleanup`, { params: { olderThan } })).data;
+  return (
+    await api.delete(`${storageBaseUrl}/cleanup`, { params: { olderThan } })
+  ).data;
 };
 
 /**
  * Clean up messages in a specific channel older than the specified timestamp.
  */
 export const cleanupChannelMessages = async (podId, channelId, olderThan) => {
-  return (await api.delete(`${storageBaseUrl}/${podId}/${channelId}/cleanup`, { params: { olderThan } })).data;
+  return (
+    await api.delete(`${storageBaseUrl}/${podId}/${channelId}/cleanup`, {
+      params: { olderThan },
+    })
+  ).data;
 };
 
 /**
@@ -778,7 +1008,9 @@ const backfillBaseUrl = `${apiBaseUrl}/pods/backfill`;
  * Sync backfill for a pod on rejoin.
  */
 export const syncPodBackfill = async (podId, lastSeenTimestamps) => {
-  return (await api.post(`${backfillBaseUrl}/${podId}/sync`, lastSeenTimestamps)).data;
+  return (
+    await api.post(`${backfillBaseUrl}/${podId}/sync`, lastSeenTimestamps)
+  ).data;
 };
 
 /**
@@ -792,7 +1024,12 @@ export const getLastSeenTimestamps = async (podId) => {
  * Update last seen timestamp for a channel.
  */
 export const updateLastSeenTimestamp = async (podId, channelId, timestamp) => {
-  return (await api.put(`${backfillBaseUrl}/${podId}/${channelId}/last-seen`, timestamp)).data;
+  return (
+    await api.put(
+      `${backfillBaseUrl}/${podId}/${channelId}/last-seen`,
+      timestamp,
+    )
+  ).data;
 };
 
 /**
@@ -825,21 +1062,33 @@ export const publishOpinion = async (podId, opinion) => {
  * Get all opinions for a content item.
  */
 export const getContentOpinions = async (podId, contentId) => {
-  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}`)).data;
+  return (
+    await api.get(
+      `${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}`,
+    )
+  ).data;
 };
 
 /**
  * Get opinions for a specific variant.
  */
 export const getVariantOpinions = async (podId, contentId, variantHash) => {
-  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/variant/${variantHash}`)).data;
+  return (
+    await api.get(
+      `${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/variant/${variantHash}`,
+    )
+  ).data;
 };
 
 /**
  * Get opinion statistics for a content item.
  */
 export const getOpinionStatistics = async (podId, contentId) => {
-  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/stats`)).data;
+  return (
+    await api.get(
+      `${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/stats`,
+    )
+  ).data;
 };
 
 /**
@@ -853,28 +1102,41 @@ export const refreshPodOpinions = async (podId) => {
  * Get aggregated opinions with affinity weighting.
  */
 export const getAggregatedOpinions = async (podId, contentId) => {
-  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/aggregated`)).data;
+  return (
+    await api.get(
+      `${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/aggregated`,
+    )
+  ).data;
 };
 
 /**
  * Get member affinity scores.
  */
 export const getMemberAffinities = async (podId) => {
-  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/members/affinity`)).data;
+  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/members/affinity`))
+    .data;
 };
 
 /**
  * Get consensus recommendations for content variants.
  */
 export const getConsensusRecommendations = async (podId, contentId) => {
-  return (await api.get(`${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/recommendations`)).data;
+  return (
+    await api.get(
+      `${opinionBaseUrl}/${podId}/opinions/content/${encodeURIComponent(contentId)}/recommendations`,
+    )
+  ).data;
 };
 
 /**
  * Update member affinity scores.
  */
 export const updateMemberAffinities = async (podId) => {
-  return (await api.post(`${opinionBaseUrl}/${podId}/opinions/members/affinity/update`)).data;
+  return (
+    await api.post(
+      `${opinionBaseUrl}/${podId}/opinions/members/affinity/update`,
+    )
+  ).data;
 };
 
 /**
@@ -900,21 +1162,25 @@ export const getChannels = async (podId) => {
  * Get a specific channel in a pod.
  */
 export const getChannel = async (podId, channelId) => {
-  return (await api.get(`${channelBaseUrl}/${podId}/channels/${channelId}`)).data;
+  return (await api.get(`${channelBaseUrl}/${podId}/channels/${channelId}`))
+    .data;
 };
 
 /**
  * Update a channel in a pod.
  */
 export const updateChannel = async (podId, channelId, channel) => {
-  return (await api.put(`${channelBaseUrl}/${podId}/channels/${channelId}`, channel)).data;
+  return (
+    await api.put(`${channelBaseUrl}/${podId}/channels/${channelId}`, channel)
+  ).data;
 };
 
 /**
  * Delete a channel from a pod.
  */
 export const deleteChannel = async (podId, channelId) => {
-  return (await api.delete(`${channelBaseUrl}/${podId}/channels/${channelId}`)).data;
+  return (await api.delete(`${channelBaseUrl}/${podId}/channels/${channelId}`))
+    .data;
 };
 
 /**
@@ -933,16 +1199,19 @@ export const validateContentIdForPod = async (contentId) => {
  * Get metadata for a content ID.
  */
 export const getContentMetadata = async (contentId) => {
-  return (await api.get(`${contentBaseUrl}/metadata`, { params: { contentId } })).data;
+  return (
+    await api.get(`${contentBaseUrl}/metadata`, { params: { contentId } })
+  ).data;
 };
 
 /**
  * Search for content that can be linked to pods.
  */
 export const searchContent = async (query, domain = null, limit = 20) => {
-  const params = { query, limit };
-  if (domain) params.domain = domain;
-  return (await api.get(`${contentBaseUrl}/search`, { params })).data;
+  const parameters = { limit, query };
+  if (domain) parameters.domain = domain;
+  return (await api.get(`${contentBaseUrl}/search`, { params: parameters }))
+    .data;
 };
 
 /**

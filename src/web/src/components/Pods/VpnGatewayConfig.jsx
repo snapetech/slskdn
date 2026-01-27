@@ -27,14 +27,15 @@ const VpnGatewayConfig = ({ podDetail, podId }) => {
     allowedDestinations: [],
     allowPrivateRanges: true,
     allowPublicDestinations: false,
+    dialTimeout: '00:00:30',
     enabled: false,
+
     gatewayPeerId: '',
+
     // 1GB
     idleTimeout: '01:00:00',
 
     maxBytesPerDayPerPeer: 1_073_741_824,
-
-    dialTimeout: '00:00:30',
 
     maxConcurrentTunnelsPerPeer: 5,
 
@@ -77,6 +78,8 @@ const VpnGatewayConfig = ({ podDetail, podId }) => {
         allowPublicDestinations:
           podDetail.privateServicePolicy.allowPublicDestinations ?? false,
 
+        dialTimeout: podDetail.privateServicePolicy.dialTimeout || '00:00:30',
+
         gatewayPeerId: podDetail.privateServicePolicy.gatewayPeerId || '',
 
         idleTimeout: podDetail.privateServicePolicy.idleTimeout || '01:00:00',
@@ -84,17 +87,15 @@ const VpnGatewayConfig = ({ podDetail, podId }) => {
         maxBytesPerDayPerPeer:
           podDetail.privateServicePolicy.maxBytesPerDayPerPeer || 1_073_741_824,
 
-        dialTimeout: podDetail.privateServicePolicy.dialTimeout || '00:00:30',
-
         maxConcurrentTunnelsPerPeer:
           podDetail.privateServicePolicy.maxConcurrentTunnelsPerPeer || 5,
 
         maxConcurrentTunnelsPod:
           podDetail.privateServicePolicy.maxConcurrentTunnelsPod || 15,
-        
-maxLifetime: podDetail.privateServicePolicy.maxLifetime || '24:00:00',
+
+        maxLifetime: podDetail.privateServicePolicy.maxLifetime || '24:00:00',
         // Ensure defaults for missing fields
-maxMembers: podDetail.privateServicePolicy.maxMembers || 3,
+        maxMembers: podDetail.privateServicePolicy.maxMembers || 3,
         maxNewTunnelsPerMinutePerPeer:
           podDetail.privateServicePolicy.maxNewTunnelsPerMinutePerPeer || 10,
         registeredServices:

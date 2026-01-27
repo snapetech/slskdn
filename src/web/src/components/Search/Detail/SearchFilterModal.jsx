@@ -129,7 +129,7 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
                       handleChange('isLossless', true);
                       handleChange('isLossy', false);
                       handleChange('minBitDepth', 16);
-                      handleChange('minSampleRate', 44100);
+                      handleChange('minSampleRate', 44_100);
                     }}
                     size="small"
                     type="button"

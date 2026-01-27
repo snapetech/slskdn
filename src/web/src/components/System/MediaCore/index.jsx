@@ -1,22 +1,59 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Card, Dropdown, Form, Grid, Header, Icon, Input, Label, List, Loader, Message, Segment, Statistic, TextArea } from 'semantic-ui-react';
 import * as mediacore from '../../../lib/mediacore';
+import React, { useEffect, useState } from 'react';
+import {
+  Button,
+  Card,
+  Dropdown,
+  Form,
+  Grid,
+  Header,
+  Icon,
+  Input,
+  Label,
+  List,
+  Loader,
+  Message,
+  Segment,
+  Statistic,
+  TextArea,
+} from 'semantic-ui-react';
 
 // Predefined examples for different domains
 const contentExamples = {
   audio: {
-    track: { external: 'mb:recording:12345', content: 'content:audio:track:mb-12345' },
-    album: { external: 'mb:release:67890', content: 'content:audio:album:mb-67890' },
-    artist: { external: 'mb:artist:abc123', content: 'content:audio:artist:mb-abc123' }
-  },
-  video: {
-    movie: { external: 'imdb:tt0111161', content: 'content:video:movie:imdb-tt0111161' },
-    series: { external: 'tvdb:series:12345', content: 'content:video:series:tvdb-12345' }
+    album: {
+      content: 'content:audio:album:mb-67890',
+      external: 'mb:release:67890',
+    },
+    artist: {
+      content: 'content:audio:artist:mb-abc123',
+      external: 'mb:artist:abc123',
+    },
+    track: {
+      content: 'content:audio:track:mb-12345',
+      external: 'mb:recording:12345',
+    },
   },
   image: {
-    photo: { external: 'flickr:photo:67890', content: 'content:image:photo:flickr-67890' },
-    artwork: { external: 'discogs:release:11111', content: 'content:image:artwork:discogs-11111' }
-  }
+    artwork: {
+      content: 'content:image:artwork:discogs-11111',
+      external: 'discogs:release:11111',
+    },
+    photo: {
+      content: 'content:image:photo:flickr-67890',
+      external: 'flickr:photo:67890',
+    },
+  },
+  video: {
+    movie: {
+      content: 'content:video:movie:imdb-tt0111161',
+      external: 'imdb:tt0111161',
+    },
+    series: {
+      content: 'content:video:series:tvdb-12345',
+      external: 'tvdb:series:12345',
+    },
+  },
 };
 
 const MediaCore = () => {
@@ -49,7 +86,7 @@ const MediaCore = () => {
   const [gettingGraph, setGettingGraph] = useState(false);
   const [findingInbound, setFindingInbound] = useState(false);
   const [audioSamples, setAudioSamples] = useState('');
-  const [sampleRate, setSampleRate] = useState(44100);
+  const [sampleRate, setSampleRate] = useState(44_100);
   const [audioAlgorithm, setAudioAlgorithm] = useState('ChromaPrint');
   const [imagePixels, setImagePixels] = useState('');
   const [imageWidth, setImageWidth] = useState(100);
@@ -73,10 +110,12 @@ const MediaCore = () => {
   const [findSimilarMaxResults, setFindSimilarMaxResults] = useState(10);
   const [textSimilarityA, setTextSimilarityA] = useState('');
   const [textSimilarityB, setTextSimilarityB] = useState('');
-  const [perceptualSimilarityResult, setPerceptualSimilarityResult] = useState(null);
+  const [perceptualSimilarityResult, setPerceptualSimilarityResult] =
+    useState(null);
   const [findSimilarResult, setFindSimilarResult] = useState(null);
   const [textSimilarityResult, setTextSimilarityResult] = useState(null);
-  const [computingPerceptualSimilarity, setComputingPerceptualSimilarity] = useState(false);
+  const [computingPerceptualSimilarity, setComputingPerceptualSimilarity] =
+    useState(false);
   const [findingSimilarContent, setFindingSimilarContent] = useState(false);
   const [computingTextSimilarity, setComputingTextSimilarity] = useState(false);
   const [exportContentIds, setExportContentIds] = useState('');
@@ -94,7 +133,8 @@ const MediaCore = () => {
   const [retrievalResult, setRetrievalResult] = useState(null);
   const [batchRetrievalResult, setBatchRetrievalResult] = useState(null);
   const [queryResult, setQueryResult] = useState(null);
-  const [descriptorVerificationResult, setDescriptorVerificationResult] = useState(null);
+  const [descriptorVerificationResult, setDescriptorVerificationResult] =
+    useState(null);
   const [retrievalStats, setRetrievalStats] = useState(null);
   const [retrieveContentId, setRetrieveContentId] = useState('');
   const [batchRetrieveContentIds, setBatchRetrieveContentIds] = useState('');
@@ -114,7 +154,8 @@ const MediaCore = () => {
   const [fuzzyMatchingStats, setFuzzyMatchingStats] = useState(null);
   const [ipldMappingStats, setIpldMappingStats] = useState(null);
   const [perceptualHashingStats, setPerceptualHashingStats] = useState(null);
-  const [metadataPortabilityStats, setMetadataPortabilityStats] = useState(null);
+  const [metadataPortabilityStats, setMetadataPortabilityStats] =
+    useState(null);
   const [contentPublishingStats, setContentPublishingStats] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [loadingRegistryStats, setLoadingRegistryStats] = useState(false);
@@ -146,7 +187,8 @@ const MediaCore = () => {
   const [membershipPeerId, setMembershipPeerId] = useState('');
   const [gettingMembership, setGettingMembership] = useState(false);
   const [membershipResult, setMembershipResult] = useState(null);
-  const [verifyingMembershipStatus, setVerifyingMembershipStatus] = useState(false);
+  const [verifyingMembershipStatus, setVerifyingMembershipStatus] =
+    useState(false);
   const [membershipVerification, setMembershipVerification] = useState(null);
   const [banningMember, setBanningMember] = useState(false);
   const [banReason, setBanReason] = useState('');
@@ -161,17 +203,21 @@ const MediaCore = () => {
   const [verifyPodId, setVerifyPodId] = useState('');
   const [verifyPeerId, setVerifyPeerId] = useState('');
   const [verifyingMembership, setVerifyingMembership] = useState(false);
-  const [membershipVerificationResult, setMembershipVerificationResult] = useState(null);
-  const [membershipMessageToVerify, setMembershipMessageToVerify] = useState('');
+  const [membershipVerificationResult, setMembershipVerificationResult] =
+    useState(null);
+  const [membershipMessageToVerify, setMembershipMessageToVerify] =
+    useState('');
   const [verifyingMessage, setVerifyingMessage] = useState(false);
-  const [messageVerificationResult, setMessageVerificationResult] = useState(null);
+  const [messageVerificationResult, setMessageVerificationResult] =
+    useState(null);
   const [roleCheckPodId, setRoleCheckPodId] = useState('');
   const [roleCheckPeerId, setRoleCheckPeerId] = useState('');
   const [requiredRole, setRequiredRole] = useState('member');
   const [checkingRole, setCheckingRole] = useState(false);
   const [roleCheckResult, setRoleCheckResult] = useState(null);
   const [verificationStats, setVerificationStats] = useState(null);
-  const [loadingVerificationStats, setLoadingVerificationStats] = useState(false);
+  const [loadingVerificationStats, setLoadingVerificationStats] =
+    useState(false);
 
   // Pod Discovery states
   const [podToRegister, setPodToRegister] = useState('');
@@ -278,7 +324,8 @@ const MediaCore = () => {
   const [contentMetadata, setContentMetadata] = useState(null);
   const [contentSearchQuery, setContentSearchQuery] = useState('');
   const [contentSearchResults, setContentSearchResults] = useState([]);
-  const [contentValidationLoading, setContentValidationLoading] = useState(false);
+  const [contentValidationLoading, setContentValidationLoading] =
+    useState(false);
   const [contentMetadataLoading, setContentMetadataLoading] = useState(false);
   const [contentSearchLoading, setContentSearchLoading] = useState(false);
   const [createPodLoading, setCreatePodLoading] = useState(false);
@@ -304,11 +351,12 @@ const MediaCore = () => {
   const [consensusRecommendations, setConsensusRecommendations] = useState([]);
   const [getAggregatedLoading, setGetAggregatedLoading] = useState(false);
   const [getAffinitiesLoading, setGetAffinitiesLoading] = useState(false);
-  const [getRecommendationsLoading, setGetRecommendationsLoading] = useState(false);
+  const [getRecommendationsLoading, setGetRecommendationsLoading] =
+    useState(false);
   const [updateAffinitiesLoading, setUpdateAffinitiesLoading] = useState(false);
   const [publishContentId, setPublishContentId] = useState('');
   const [publishCodec, setPublishCodec] = useState('mp3');
-  const [publishSize, setPublishSize] = useState(1024);
+  const [publishSize, setPublishSize] = useState(1_024);
   const [batchContentIds, setBatchContentIds] = useState('');
   const [updateTargetId, setUpdateTargetId] = useState('');
   const [updateCodec, setUpdateCodec] = useState('');
@@ -332,8 +380,8 @@ const MediaCore = () => {
         setError(null);
         const data = await mediacore.getContentIdStats();
         setStats(data);
-      } catch (err) {
-        setError(err.message);
+      } catch (error_) {
+        setError(error_.message);
       } finally {
         setLoading(false);
       }
@@ -342,7 +390,7 @@ const MediaCore = () => {
     fetchStats();
 
     // Refresh stats every 60 seconds
-    const interval = setInterval(fetchStats, 60000);
+    const interval = setInterval(fetchStats, 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -351,7 +399,10 @@ const MediaCore = () => {
 
     try {
       setRegistering(true);
-      await mediacore.registerContentId(externalId.trim(), descriptorContentId.trim());
+      await mediacore.registerContentId(
+        externalId.trim(),
+        descriptorContentId.trim(),
+      );
       setExternalId('');
       setDescriptorContentId('');
       setContentId('');
@@ -359,8 +410,8 @@ const MediaCore = () => {
       // Refresh stats
       const data = await mediacore.getContentIdStats();
       setStats(data);
-    } catch (err) {
-      setError(`Failed to register: ${err.message}`);
+    } catch (error_) {
+      setError(`Failed to register: ${error_.message}`);
     } finally {
       setRegistering(false);
     }
@@ -374,8 +425,8 @@ const MediaCore = () => {
       setResolvedContent(null);
       const result = await mediacore.resolveContentId(resolveId.trim());
       setResolvedContent(result);
-    } catch (err) {
-      setResolvedContent({ error: err.message });
+    } catch (error_) {
+      setResolvedContent({ error: error_.message });
     } finally {
       setResolving(false);
     }
@@ -387,10 +438,12 @@ const MediaCore = () => {
     try {
       setValidating(true);
       setValidatedContent(null);
-      const result = await mediacore.validateContentId(validateContentIdInput.trim());
+      const result = await mediacore.validateContentId(
+        validateContentIdInput.trim(),
+      );
       setValidatedContent(result);
-    } catch (err) {
-      setValidatedContent({ error: err.message });
+    } catch (error_) {
+      setValidatedContent({ error: error_.message });
     } finally {
       setValidating(false);
     }
@@ -403,11 +456,14 @@ const MediaCore = () => {
       setSearchingDomain(true);
       setDomainResults(null);
       const result = type.trim()
-        ? await mediacore.findContentIdsByDomainAndType(domain.trim(), type.trim())
+        ? await mediacore.findContentIdsByDomainAndType(
+            domain.trim(),
+            type.trim(),
+          )
         : await mediacore.findContentIdsByDomain(domain.trim());
       setDomainResults(result);
-    } catch (err) {
-      setDomainResults({ error: err.message });
+    } catch (error_) {
+      setDomainResults({ error: error_.message });
     } finally {
       setSearchingDomain(false);
     }
@@ -427,10 +483,13 @@ const MediaCore = () => {
     try {
       setTraversing(true);
       setTraversalResults(null);
-      const result = await mediacore.traverseContentGraph(traverseContentId.trim(), traverseLinkName.trim());
+      const result = await mediacore.traverseContentGraph(
+        traverseContentId.trim(),
+        traverseLinkName.trim(),
+      );
       setTraversalResults(result);
-    } catch (err) {
-      setTraversalResults({ error: err.message });
+    } catch (error_) {
+      setTraversalResults({ error: error_.message });
     } finally {
       setTraversing(false);
     }
@@ -444,8 +503,8 @@ const MediaCore = () => {
       setGraphResults(null);
       const result = await mediacore.getContentGraph(graphContentId.trim());
       setGraphResults(result);
-    } catch (err) {
-      setGraphResults({ error: err.message });
+    } catch (error_) {
+      setGraphResults({ error: error_.message });
     } finally {
       setGettingGraph(false);
     }
@@ -459,8 +518,8 @@ const MediaCore = () => {
       setInboundResults(null);
       const result = await mediacore.findInboundLinks(inboundTargetId.trim());
       setInboundResults(result);
-    } catch (err) {
-      setInboundResults({ error: err.message });
+    } catch (error_) {
+      setInboundResults({ error: error_.message });
     } finally {
       setFindingInbound(false);
     }
@@ -470,8 +529,8 @@ const MediaCore = () => {
     try {
       const result = await mediacore.getSupportedHashAlgorithms();
       setSupportedAlgorithms(result);
-    } catch (err) {
-      console.error('Failed to load hash algorithms:', err);
+    } catch (error_) {
+      console.error('Failed to load hash algorithms:', error_);
     }
   };
 
@@ -483,16 +542,23 @@ const MediaCore = () => {
       setAudioHashResult(null);
 
       // Parse comma-separated float values
-      const samples = audioSamples.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+      const samples = audioSamples
+        .split(',')
+        .map((s) => Number.parseFloat(s.trim()))
+        .filter((n) => !isNaN(n));
 
       if (samples.length === 0) {
         throw new Error('No valid audio samples provided');
       }
 
-      const result = await mediacore.computeAudioHash(samples, parseInt(sampleRate), audioAlgorithm);
+      const result = await mediacore.computeAudioHash(
+        samples,
+        Number.parseInt(sampleRate),
+        audioAlgorithm,
+      );
       setAudioHashResult(result);
-    } catch (err) {
-      setAudioHashResult({ error: err.message });
+    } catch (error_) {
+      setAudioHashResult({ error: error_.message });
     } finally {
       setComputingAudioHash(false);
     }
@@ -506,16 +572,24 @@ const MediaCore = () => {
       setImageHashResult(null);
 
       // Parse comma-separated byte values (0-255)
-      const pixels = imagePixels.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 0 && n <= 255);
+      const pixels = imagePixels
+        .split(',')
+        .map((s) => Number.parseInt(s.trim()))
+        .filter((n) => !isNaN(n) && n >= 0 && n <= 255);
 
       if (pixels.length === 0) {
         throw new Error('No valid pixel data provided');
       }
 
-      const result = await mediacore.computeImageHash(pixels, parseInt(imageWidth), parseInt(imageHeight), imageAlgorithm);
+      const result = await mediacore.computeImageHash(
+        pixels,
+        Number.parseInt(imageWidth),
+        Number.parseInt(imageHeight),
+        imageAlgorithm,
+      );
       setImageHashResult(result);
-    } catch (err) {
-      setImageHashResult({ error: err.message });
+    } catch (error_) {
+      setImageHashResult({ error: error_.message });
     } finally {
       setComputingImageHash(false);
     }
@@ -527,10 +601,14 @@ const MediaCore = () => {
     try {
       setComputingSimilarity(true);
       setSimilarityResult(null);
-      const result = await mediacore.computeHashSimilarity(hashA.trim(), hashB.trim(), parseFloat(similarityThreshold));
+      const result = await mediacore.computeHashSimilarity(
+        hashA.trim(),
+        hashB.trim(),
+        Number.parseFloat(similarityThreshold),
+      );
       setSimilarityResult(result);
-    } catch (err) {
-      setSimilarityResult({ error: err.message });
+    } catch (error_) {
+      setSimilarityResult({ error: error_.message });
     } finally {
       setComputingSimilarity(false);
     }
@@ -545,11 +623,11 @@ const MediaCore = () => {
       const result = await mediacore.computePerceptualSimilarity(
         perceptualContentIdA.trim(),
         perceptualContentIdB.trim(),
-        parseFloat(perceptualThreshold)
+        Number.parseFloat(perceptualThreshold),
       );
       setPerceptualSimilarityResult(result);
-    } catch (err) {
-      setPerceptualSimilarityResult({ error: err.message });
+    } catch (error_) {
+      setPerceptualSimilarityResult({ error: error_.message });
     } finally {
       setComputingPerceptualSimilarity(false);
     }
@@ -561,13 +639,16 @@ const MediaCore = () => {
     try {
       setFindingSimilarContent(true);
       setFindSimilarResult(null);
-      const result = await mediacore.findSimilarContent(findSimilarContentId.trim(), {
-        minConfidence: parseFloat(findSimilarMinConfidence),
-        maxResults: parseInt(findSimilarMaxResults)
-      });
+      const result = await mediacore.findSimilarContent(
+        findSimilarContentId.trim(),
+        {
+          maxResults: Number.parseInt(findSimilarMaxResults),
+          minConfidence: Number.parseFloat(findSimilarMinConfidence),
+        },
+      );
       setFindSimilarResult(result);
-    } catch (err) {
-      setFindSimilarResult({ error: err.message });
+    } catch (error_) {
+      setFindSimilarResult({ error: error_.message });
     } finally {
       setFindingSimilarContent(false);
     }
@@ -579,17 +660,23 @@ const MediaCore = () => {
     try {
       setComputingTextSimilarity(true);
       setTextSimilarityResult(null);
-      const result = await mediacore.computeTextSimilarity(textSimilarityA.trim(), textSimilarityB.trim());
+      const result = await mediacore.computeTextSimilarity(
+        textSimilarityA.trim(),
+        textSimilarityB.trim(),
+      );
       setTextSimilarityResult(result);
-    } catch (err) {
-      setTextSimilarityResult({ error: err.message });
+    } catch (error_) {
+      setTextSimilarityResult({ error: error_.message });
     } finally {
       setComputingTextSimilarity(false);
     }
   };
 
   const handleExportMetadata = async () => {
-    const contentIds = exportContentIds.split('\n').map(id => id.trim()).filter(id => id);
+    const contentIds = exportContentIds
+      .split('\n')
+      .map((id) => id.trim())
+      .filter(Boolean);
     if (!contentIds.length) return;
 
     try {
@@ -597,8 +684,8 @@ const MediaCore = () => {
       setExportResult(null);
       const result = await mediacore.exportMetadata(contentIds, includeLinks);
       setExportResult(result);
-    } catch (err) {
-      setExportResult({ error: err.message });
+    } catch (error_) {
+      setExportResult({ error: error_.message });
     } finally {
       setExportingMetadata(false);
     }
@@ -614,14 +701,18 @@ const MediaCore = () => {
       let packageData;
       try {
         packageData = JSON.parse(importPackage.trim());
-      } catch (parseErr) {
+      } catch {
         throw new Error('Invalid JSON format for metadata package');
       }
 
-      const result = await mediacore.importMetadata(packageData, conflictStrategy, dryRun);
+      const result = await mediacore.importMetadata(
+        packageData,
+        conflictStrategy,
+        dryRun,
+      );
       setImportResult(result);
-    } catch (err) {
-      setImportResult({ error: err.message });
+    } catch (error_) {
+      setImportResult({ error: error_.message });
     } finally {
       setImportingMetadata(false);
     }
@@ -637,14 +728,14 @@ const MediaCore = () => {
       let packageData;
       try {
         packageData = JSON.parse(importPackage.trim());
-      } catch (parseErr) {
+      } catch {
         throw new Error('Invalid JSON format for metadata package');
       }
 
       const result = await mediacore.analyzeMetadataConflicts(packageData);
       setConflictAnalysis(result);
-    } catch (err) {
-      setConflictAnalysis({ error: err.message });
+    } catch (error_) {
+      setConflictAnalysis({ error: error_.message });
     } finally {
       setAnalyzingConflicts(false);
     }
@@ -658,23 +749,26 @@ const MediaCore = () => {
       setPublishResult(null);
 
       const descriptor = {
-        contentId: publishContentId.trim(),
-        sizeBytes: parseInt(publishSize),
         codec: publishCodec.trim(),
-        confidence: 0.8
+        confidence: 0.8,
+        contentId: publishContentId.trim(),
+        sizeBytes: Number.parseInt(publishSize),
       };
 
       const result = await mediacore.publishContentDescriptor(descriptor);
       setPublishResult(result);
-    } catch (err) {
-      setPublishResult({ error: err.message });
+    } catch (error_) {
+      setPublishResult({ error: error_.message });
     } finally {
       setPublishingDescriptor(false);
     }
   };
 
   const handlePublishBatch = async () => {
-    const contentIds = batchContentIds.split('\n').map(id => id.trim()).filter(id => id);
+    const contentIds = batchContentIds
+      .split('\n')
+      .map((id) => id.trim())
+      .filter(Boolean);
     if (!contentIds.length) return;
 
     try {
@@ -682,17 +776,20 @@ const MediaCore = () => {
       setBatchPublishResult(null);
 
       // Create mock descriptors for each ContentID
-      const descriptors = contentIds.map(contentId => ({
-        contentId,
-        sizeBytes: 1024 * 1024, // 1MB mock
+      const descriptors = contentIds.map((contentId) => ({
+        // 1MB mock
         codec: 'mock',
-        confidence: 0.8
+
+        confidence: 0.8,
+        contentId,
+        sizeBytes: 1_024 * 1_024,
       }));
 
-      const result = await mediacore.publishContentDescriptorsBatch(descriptors);
+      const result =
+        await mediacore.publishContentDescriptorsBatch(descriptors);
       setBatchPublishResult(result);
-    } catch (err) {
-      setBatchPublishResult({ error: err.message });
+    } catch (error_) {
+      setBatchPublishResult({ error: error_.message });
     } finally {
       setPublishingBatch(false);
     }
@@ -707,17 +804,21 @@ const MediaCore = () => {
 
       const updates = {};
       if (updateCodec.trim()) updates.newCodec = updateCodec.trim();
-      if (updateSize.trim()) updates.newSizeBytes = parseInt(updateSize);
-      if (updateConfidence.trim()) updates.newConfidence = parseFloat(updateConfidence);
+      if (updateSize.trim()) updates.newSizeBytes = Number.parseInt(updateSize);
+      if (updateConfidence.trim())
+        updates.newConfidence = Number.parseFloat(updateConfidence);
 
       if (Object.keys(updates).length === 0) {
         throw new Error('At least one update field is required');
       }
 
-      const result = await mediacore.updateContentDescriptor(updateTargetId.trim(), updates);
+      const result = await mediacore.updateContentDescriptor(
+        updateTargetId.trim(),
+        updates,
+      );
       setUpdateResult(result);
-    } catch (err) {
-      setUpdateResult({ error: err.message });
+    } catch (error_) {
+      setUpdateResult({ error: error_.message });
     } finally {
       setUpdatingDescriptor(false);
     }
@@ -729,8 +830,8 @@ const MediaCore = () => {
       setRepublishResult(null);
       const result = await mediacore.republishExpiringDescriptors();
       setRepublishResult(result);
-    } catch (err) {
-      setRepublishResult({ error: err.message });
+    } catch (error_) {
+      setRepublishResult({ error: error_.message });
     } finally {
       setRepublishing(false);
     }
@@ -742,8 +843,8 @@ const MediaCore = () => {
       setPublishingStats(null);
       const result = await mediacore.getPublishingStats();
       setPublishingStats(result);
-    } catch (err) {
-      setPublishingStats({ error: err.message });
+    } catch (error_) {
+      setPublishingStats({ error: error_.message });
     } finally {
       setLoadingStats(false);
     }
@@ -755,26 +856,33 @@ const MediaCore = () => {
     try {
       setRetrievingDescriptor(true);
       setRetrievalResult(null);
-      const result = await mediacore.retrieveContentDescriptor(retrieveContentId.trim(), bypassCache);
+      const result = await mediacore.retrieveContentDescriptor(
+        retrieveContentId.trim(),
+        bypassCache,
+      );
       setRetrievalResult(result);
-    } catch (err) {
-      setRetrievalResult({ error: err.message });
+    } catch (error_) {
+      setRetrievalResult({ error: error_.message });
     } finally {
       setRetrievingDescriptor(false);
     }
   };
 
   const handleRetrieveBatch = async () => {
-    const contentIds = batchRetrieveContentIds.split('\n').map(id => id.trim()).filter(id => id);
+    const contentIds = batchRetrieveContentIds
+      .split('\n')
+      .map((id) => id.trim())
+      .filter(Boolean);
     if (!contentIds.length) return;
 
     try {
       setRetrievingBatch(true);
       setBatchRetrievalResult(null);
-      const result = await mediacore.retrieveContentDescriptorsBatch(contentIds);
+      const result =
+        await mediacore.retrieveContentDescriptorsBatch(contentIds);
       setBatchRetrievalResult(result);
-    } catch (err) {
-      setBatchRetrievalResult({ error: err.message });
+    } catch (error_) {
+      setBatchRetrievalResult({ error: error_.message });
     } finally {
       setRetrievingBatch(false);
     }
@@ -789,11 +897,11 @@ const MediaCore = () => {
       const result = await mediacore.queryDescriptorsByDomain(
         queryDomain.trim(),
         queryType.trim() || null,
-        parseInt(queryMaxResults)
+        Number.parseInt(queryMaxResults),
       );
       setQueryResult(result);
-    } catch (err) {
-      setQueryResult({ error: err.message });
+    } catch (error_) {
+      setQueryResult({ error: error_.message });
     } finally {
       setQueryingDescriptors(false);
     }
@@ -809,14 +917,14 @@ const MediaCore = () => {
       let descriptor;
       try {
         descriptor = JSON.parse(verifyDescriptor.trim());
-      } catch (parseErr) {
+      } catch {
         throw new Error('Invalid JSON format for descriptor');
       }
 
       const result = await mediacore.verifyContentDescriptor(descriptor);
       setVerificationResult(result);
-    } catch (err) {
-      setVerificationResult({ error: err.message });
+    } catch (error_) {
+      setVerificationResult({ error: error_.message });
     } finally {
       setVerifyingDescriptor(false);
     }
@@ -828,8 +936,8 @@ const MediaCore = () => {
       setRetrievalStats(null);
       const result = await mediacore.getRetrievalStats();
       setRetrievalStats(result);
-    } catch (err) {
-      setRetrievalStats({ error: err.message });
+    } catch (error_) {
+      setRetrievalStats({ error: error_.message });
     } finally {
       setLoadingRetrievalStats(false);
     }
@@ -840,9 +948,11 @@ const MediaCore = () => {
       const result = await mediacore.clearRetrievalCache();
       // Reload stats to reflect changes
       await handleLoadRetrievalStats();
-      alert(`Cache cleared: ${result.entriesCleared} entries, ${result.bytesFreed} bytes freed`);
-    } catch (err) {
-      alert(`Failed to clear cache: ${err.message}`);
+      alert(
+        `Cache cleared: ${result.entriesCleared} entries, ${result.bytesFreed} bytes freed`,
+      );
+    } catch (error_) {
+      alert(`Failed to clear cache: ${error_.message}`);
     }
   };
 
@@ -852,8 +962,8 @@ const MediaCore = () => {
       setMediaCoreDashboard(null);
       const result = await mediacore.getMediaCoreDashboard();
       setMediaCoreDashboard(result);
-    } catch (err) {
-      setMediaCoreDashboard({ error: err.message });
+    } catch (error_) {
+      setMediaCoreDashboard({ error: error_.message });
     } finally {
       setLoadingDashboard(false);
     }
@@ -865,8 +975,8 @@ const MediaCore = () => {
       setContentRegistryStats(null);
       const result = await mediacore.getContentRegistryStats();
       setContentRegistryStats(result);
-    } catch (err) {
-      setContentRegistryStats({ error: err.message });
+    } catch (error_) {
+      setContentRegistryStats({ error: error_.message });
     } finally {
       setLoadingRegistryStats(false);
     }
@@ -878,8 +988,8 @@ const MediaCore = () => {
       setDescriptorStats(null);
       const result = await mediacore.getDescriptorStats();
       setDescriptorStats(result);
-    } catch (err) {
-      setDescriptorStats({ error: err.message });
+    } catch (error_) {
+      setDescriptorStats({ error: error_.message });
     } finally {
       setLoadingDescriptorStats(false);
     }
@@ -891,8 +1001,8 @@ const MediaCore = () => {
       setFuzzyMatchingStats(null);
       const result = await mediacore.getFuzzyMatchingStats();
       setFuzzyMatchingStats(result);
-    } catch (err) {
-      setFuzzyMatchingStats({ error: err.message });
+    } catch (error_) {
+      setFuzzyMatchingStats({ error: error_.message });
     } finally {
       setLoadingFuzzyStats(false);
     }
@@ -904,8 +1014,8 @@ const MediaCore = () => {
       setIpldMappingStats(null);
       const result = await mediacore.getIpldMappingStats();
       setIpldMappingStats(result);
-    } catch (err) {
-      setIpldMappingStats({ error: err.message });
+    } catch (error_) {
+      setIpldMappingStats({ error: error_.message });
     } finally {
       setLoadingIpldStats(false);
     }
@@ -917,8 +1027,8 @@ const MediaCore = () => {
       setPerceptualHashingStats(null);
       const result = await mediacore.getPerceptualHashingStats();
       setPerceptualHashingStats(result);
-    } catch (err) {
-      setPerceptualHashingStats({ error: err.message });
+    } catch (error_) {
+      setPerceptualHashingStats({ error: error_.message });
     } finally {
       setLoadingPerceptualStats(false);
     }
@@ -930,8 +1040,8 @@ const MediaCore = () => {
       setMetadataPortabilityStats(null);
       const result = await mediacore.getMetadataPortabilityStats();
       setMetadataPortabilityStats(result);
-    } catch (err) {
-      setMetadataPortabilityStats({ error: err.message });
+    } catch (error_) {
+      setMetadataPortabilityStats({ error: error_.message });
     } finally {
       setLoadingPortabilityStats(false);
     }
@@ -943,15 +1053,19 @@ const MediaCore = () => {
       setContentPublishingStats(null);
       const result = await mediacore.getContentPublishingStats();
       setContentPublishingStats(result);
-    } catch (err) {
-      setContentPublishingStats({ error: err.message });
+    } catch (error_) {
+      setContentPublishingStats({ error: error_.message });
     } finally {
       setLoadingPublishingStats(false);
     }
   };
 
   const handleResetMediaCoreStats = async () => {
-    if (!confirm('Are you sure you want to reset all MediaCore statistics? This cannot be undone.')) {
+    if (
+      !confirm(
+        'Are you sure you want to reset all MediaCore statistics? This cannot be undone.',
+      )
+    ) {
       return;
     }
 
@@ -967,8 +1081,8 @@ const MediaCore = () => {
       setMetadataPortabilityStats(null);
       setContentPublishingStats(null);
       alert('MediaCore statistics have been reset');
-    } catch (err) {
-      alert(`Failed to reset stats: ${err.message}`);
+    } catch (error_) {
+      alert(`Failed to reset stats: ${error_.message}`);
     }
   };
 
@@ -986,8 +1100,8 @@ const MediaCore = () => {
       const result = await mediacore.publishPod(pod);
       setPodPublishingResult(result);
       setPodToPublish('');
-    } catch (err) {
-      setPodPublishingResult({ error: err.message });
+    } catch (error_) {
+      setPodPublishingResult({ error: error_.message });
     } finally {
       setPublishingPod(false);
     }
@@ -1002,10 +1116,12 @@ const MediaCore = () => {
     try {
       setRetrievingPodMetadata(true);
       setPodMetadataResult(null);
-      const result = await mediacore.getPublishedPodMetadata(podMetadataToRetrieve);
+      const result = await mediacore.getPublishedPodMetadata(
+        podMetadataToRetrieve,
+      );
       setPodMetadataResult(result);
-    } catch (err) {
-      setPodMetadataResult({ error: err.message });
+    } catch (error_) {
+      setPodMetadataResult({ error: error_.message });
     } finally {
       setRetrievingPodMetadata(false);
     }
@@ -1017,7 +1133,9 @@ const MediaCore = () => {
       return;
     }
 
-    if (!confirm(`Are you sure you want to unpublish pod "${podToUnpublish}"?`)) {
+    if (
+      !confirm(`Are you sure you want to unpublish pod "${podToUnpublish}"?`)
+    ) {
       return;
     }
 
@@ -1027,8 +1145,8 @@ const MediaCore = () => {
       const result = await mediacore.unpublishPod(podToUnpublish);
       setPodUnpublishResult(result);
       setPodToUnpublish('');
-    } catch (err) {
-      setPodUnpublishResult({ error: err.message });
+    } catch (error_) {
+      setPodUnpublishResult({ error: error_.message });
     } finally {
       setUnpublishingPod(false);
     }
@@ -1040,8 +1158,8 @@ const MediaCore = () => {
       setPodPublishingStats(null);
       const result = await mediacore.getPodPublishingStats();
       setPodPublishingStats(result);
-    } catch (err) {
-      setPodPublishingStats({ error: err.message });
+    } catch (error_) {
+      setPodPublishingStats({ error: error_.message });
     } finally {
       setLoadingPodStats(false);
     }
@@ -1061,8 +1179,8 @@ const MediaCore = () => {
       const result = await mediacore.publishMembership(record);
       setMembershipPublishResult(result);
       setMembershipRecord('');
-    } catch (err) {
-      setMembershipPublishResult({ error: err.message });
+    } catch (error_) {
+      setMembershipPublishResult({ error: error_.message });
     } finally {
       setPublishingMembership(false);
     }
@@ -1077,10 +1195,13 @@ const MediaCore = () => {
     try {
       setGettingMembership(true);
       setMembershipResult(null);
-      const result = await mediacore.getMembership(membershipPodId, membershipPeerId);
+      const result = await mediacore.getMembership(
+        membershipPodId,
+        membershipPeerId,
+      );
       setMembershipResult(result);
-    } catch (err) {
-      setMembershipResult({ error: err.message });
+    } catch (error_) {
+      setMembershipResult({ error: error_.message });
     } finally {
       setGettingMembership(false);
     }
@@ -1095,10 +1216,13 @@ const MediaCore = () => {
     try {
       setVerifyingMembership(true);
       setMembershipVerification(null);
-      const result = await mediacore.verifyMembership(membershipPodId, membershipPeerId);
+      const result = await mediacore.verifyMembership(
+        membershipPodId,
+        membershipPeerId,
+      );
       setMembershipVerification(result);
-    } catch (err) {
-      setMembershipVerification({ error: err.message });
+    } catch (error_) {
+      setMembershipVerification({ error: error_.message });
     } finally {
       setVerifyingMembership(false);
     }
@@ -1110,18 +1234,26 @@ const MediaCore = () => {
       return;
     }
 
-    if (!confirm(`Are you sure you want to ban member "${membershipPeerId}" from pod "${membershipPodId}"?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to ban member "${membershipPeerId}" from pod "${membershipPodId}"?`,
+      )
+    ) {
       return;
     }
 
     try {
       setBanningMember(true);
       setBanResult(null);
-      const result = await mediacore.banMember(membershipPodId, membershipPeerId, banReason || null);
+      const result = await mediacore.banMember(
+        membershipPodId,
+        membershipPeerId,
+        banReason || null,
+      );
       setBanResult(result);
       setBanReason('');
-    } catch (err) {
-      setBanResult({ error: err.message });
+    } catch (error_) {
+      setBanResult({ error: error_.message });
     } finally {
       setBanningMember(false);
     }
@@ -1136,10 +1268,14 @@ const MediaCore = () => {
     try {
       setChangingRole(true);
       setRoleChangeResult(null);
-      const result = await mediacore.changeMemberRole(membershipPodId, membershipPeerId, newRole);
+      const result = await mediacore.changeMemberRole(
+        membershipPodId,
+        membershipPeerId,
+        newRole,
+      );
       setRoleChangeResult(result);
-    } catch (err) {
-      setRoleChangeResult({ error: err.message });
+    } catch (error_) {
+      setRoleChangeResult({ error: error_.message });
     } finally {
       setChangingRole(false);
     }
@@ -1151,25 +1287,29 @@ const MediaCore = () => {
       setMembershipStats(null);
       const result = await mediacore.getMembershipStats();
       setMembershipStats(result);
-    } catch (err) {
-      setMembershipStats({ error: err.message });
+    } catch (error_) {
+      setMembershipStats({ error: error_.message });
     } finally {
       setLoadingMembershipStats(false);
     }
   };
 
   const handleCleanupMemberships = async () => {
-    if (!confirm('Are you sure you want to cleanup expired membership records?')) {
+    if (
+      !confirm('Are you sure you want to cleanup expired membership records?')
+    ) {
       return;
     }
 
     try {
       const result = await mediacore.cleanupExpiredMemberships();
-      alert(`Cleanup completed: ${result.recordsCleaned} records cleaned, ${result.errorsEncountered} errors`);
+      alert(
+        `Cleanup completed: ${result.recordsCleaned} records cleaned, ${result.errorsEncountered} errors`,
+      );
       // Reload stats to reflect changes
       await handleLoadMembershipStats();
-    } catch (err) {
-      alert(`Failed to cleanup: ${err.message}`);
+    } catch (error_) {
+      alert(`Failed to cleanup: ${error_.message}`);
     }
   };
 
@@ -1183,10 +1323,13 @@ const MediaCore = () => {
     try {
       setVerifyingMembership(true);
       setMembershipVerificationResult(null);
-      const result = await mediacore.verifyPodMembership(verifyPodId, verifyPeerId);
+      const result = await mediacore.verifyPodMembership(
+        verifyPodId,
+        verifyPeerId,
+      );
       setMembershipVerificationResult(result);
-    } catch (err) {
-      setMembershipVerificationResult({ error: err.message });
+    } catch (error_) {
+      setMembershipVerificationResult({ error: error_.message });
     } finally {
       setVerifyingMembership(false);
     }
@@ -1204,8 +1347,8 @@ const MediaCore = () => {
       const message = JSON.parse(membershipMessageToVerify);
       const result = await mediacore.verifyPodMessage(message);
       setMessageVerificationResult(result);
-    } catch (err) {
-      setMessageVerificationResult({ error: err.message });
+    } catch (error_) {
+      setMessageVerificationResult({ error: error_.message });
     } finally {
       setVerifyingMessage(false);
     }
@@ -1220,10 +1363,14 @@ const MediaCore = () => {
     try {
       setCheckingRole(true);
       setRoleCheckResult(null);
-      const hasRole = await mediacore.checkPodRole(roleCheckPodId, roleCheckPeerId, requiredRole);
+      const hasRole = await mediacore.checkPodRole(
+        roleCheckPodId,
+        roleCheckPeerId,
+        requiredRole,
+      );
       setRoleCheckResult({ hasRole });
-    } catch (err) {
-      setRoleCheckResult({ error: err.message });
+    } catch (error_) {
+      setRoleCheckResult({ error: error_.message });
     } finally {
       setCheckingRole(false);
     }
@@ -1235,8 +1382,8 @@ const MediaCore = () => {
       setVerificationStats(null);
       const result = await mediacore.getVerificationStats();
       setVerificationStats(result);
-    } catch (err) {
-      setVerificationStats({ error: err.message });
+    } catch (error_) {
+      setVerificationStats({ error: error_.message });
     } finally {
       setLoadingVerificationStats(false);
     }
@@ -1256,8 +1403,8 @@ const MediaCore = () => {
       const result = await mediacore.registerPodForDiscovery(pod);
       setPodRegistrationResult(result);
       setPodToRegister('');
-    } catch (err) {
-      setPodRegistrationResult({ error: err.message });
+    } catch (error_) {
+      setPodRegistrationResult({ error: error_.message });
     } finally {
       setRegisteringPod(false);
     }
@@ -1272,11 +1419,12 @@ const MediaCore = () => {
     try {
       setUnregisteringPod(true);
       setPodUnregistrationResult(null);
-      const result = await mediacore.unregisterPodFromDiscovery(podToUnregister);
+      const result =
+        await mediacore.unregisterPodFromDiscovery(podToUnregister);
       setPodUnregistrationResult(result);
       setPodToUnregister('');
-    } catch (err) {
-      setPodUnregistrationResult({ error: err.message });
+    } catch (error_) {
+      setPodUnregistrationResult({ error: error_.message });
     } finally {
       setUnregisteringPod(false);
     }
@@ -1293,8 +1441,8 @@ const MediaCore = () => {
       setNameDiscoveryResult(null);
       const result = await mediacore.discoverPodsByName(discoverByName);
       setNameDiscoveryResult(result);
-    } catch (err) {
-      setNameDiscoveryResult({ error: err.message });
+    } catch (error_) {
+      setNameDiscoveryResult({ error: error_.message });
     } finally {
       setDiscoveringByName(false);
     }
@@ -1311,8 +1459,8 @@ const MediaCore = () => {
       setTagDiscoveryResult(null);
       const result = await mediacore.discoverPodsByTag(discoverByTag);
       setTagDiscoveryResult(result);
-    } catch (err) {
-      setTagDiscoveryResult({ error: err.message });
+    } catch (error_) {
+      setTagDiscoveryResult({ error: error_.message });
     } finally {
       setDiscoveringByTag(false);
     }
@@ -1327,11 +1475,14 @@ const MediaCore = () => {
     try {
       setDiscoveringByTags(true);
       setTagsDiscoveryResult(null);
-      const tagList = discoverTags.split(',').map(t => t.trim()).filter(t => t);
+      const tagList = discoverTags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
       const result = await mediacore.discoverPodsByTags(tagList);
       setTagsDiscoveryResult(result);
-    } catch (err) {
-      setTagsDiscoveryResult({ error: err.message });
+    } catch (error_) {
+      setTagsDiscoveryResult({ error: error_.message });
     } finally {
       setDiscoveringByTags(false);
     }
@@ -1343,8 +1494,8 @@ const MediaCore = () => {
       setAllDiscoveryResult(null);
       const result = await mediacore.discoverAllPods(discoverLimit);
       setAllDiscoveryResult(result);
-    } catch (err) {
-      setAllDiscoveryResult({ error: err.message });
+    } catch (error_) {
+      setAllDiscoveryResult({ error: error_.message });
     } finally {
       setDiscoveringAll(false);
     }
@@ -1361,8 +1512,8 @@ const MediaCore = () => {
       setContentDiscoveryResult(null);
       const result = await mediacore.discoverPodsByContent(discoverByContent);
       setContentDiscoveryResult(result);
-    } catch (err) {
-      setContentDiscoveryResult({ error: err.message });
+    } catch (error_) {
+      setContentDiscoveryResult({ error: error_.message });
     } finally {
       setDiscoveringByContent(false);
     }
@@ -1374,8 +1525,8 @@ const MediaCore = () => {
       setDiscoveryStats(null);
       const result = await mediacore.getPodDiscoveryStats();
       setDiscoveryStats(result);
-    } catch (err) {
-      setDiscoveryStats({ error: err.message });
+    } catch (error_) {
+      setDiscoveryStats({ error: error_.message });
     } finally {
       setLoadingDiscoveryStats(false);
     }
@@ -1384,11 +1535,13 @@ const MediaCore = () => {
   const handleRefreshDiscovery = async () => {
     try {
       const result = await mediacore.refreshPodDiscovery();
-      alert(`Discovery refresh completed: ${result.entriesRefreshed} refreshed, ${result.entriesExpired} expired`);
+      alert(
+        `Discovery refresh completed: ${result.entriesRefreshed} refreshed, ${result.entriesExpired} expired`,
+      );
       // Reload stats to reflect changes
       await handleLoadDiscoveryStats();
-    } catch (err) {
-      alert(`Failed to refresh discovery: ${err.message}`);
+    } catch (error_) {
+      alert(`Failed to refresh discovery: ${error_.message}`);
     }
   };
 
@@ -1406,8 +1559,8 @@ const MediaCore = () => {
       const result = await mediacore.requestPodJoin(joinRequest);
       setJoinRequestResult(result);
       setJoinRequestData('');
-    } catch (err) {
-      setJoinRequestResult({ error: err.message });
+    } catch (error_) {
+      setJoinRequestResult({ error: error_.message });
     } finally {
       setRequestingJoin(false);
     }
@@ -1426,8 +1579,8 @@ const MediaCore = () => {
       const result = await mediacore.acceptPodJoin(acceptance);
       setAcceptanceResult(result);
       setAcceptanceData('');
-    } catch (err) {
-      setAcceptanceResult({ error: err.message });
+    } catch (error_) {
+      setAcceptanceResult({ error: error_.message });
     } finally {
       setAcceptingJoin(false);
     }
@@ -1446,8 +1599,8 @@ const MediaCore = () => {
       const result = await mediacore.requestPodLeave(leaveRequest);
       setLeaveRequestResult(result);
       setLeaveRequestData('');
-    } catch (err) {
-      setLeaveRequestResult({ error: err.message });
+    } catch (error_) {
+      setLeaveRequestResult({ error: error_.message });
     } finally {
       setRequestingLeave(false);
     }
@@ -1466,8 +1619,8 @@ const MediaCore = () => {
       const result = await mediacore.acceptPodLeave(acceptance);
       setLeaveAcceptanceResult(result);
       setAcceptanceData('');
-    } catch (err) {
-      setLeaveAcceptanceResult({ error: err.message });
+    } catch (error_) {
+      setLeaveAcceptanceResult({ error: error_.message });
     } finally {
       setAcceptingLeave(false);
     }
@@ -1486,14 +1639,14 @@ const MediaCore = () => {
 
       const [joinRequests, leaveRequests] = await Promise.all([
         mediacore.getPendingJoinRequests(pendingPodId),
-        mediacore.getPendingLeaveRequests(pendingPodId)
+        mediacore.getPendingLeaveRequests(pendingPodId),
       ]);
 
       setPendingJoinRequests(joinRequests);
       setPendingLeaveRequests(leaveRequests);
-    } catch (err) {
-      setPendingJoinRequests({ error: err.message });
-      setPendingLeaveRequests({ error: err.message });
+    } catch (error_) {
+      setPendingJoinRequests({ error: error_.message });
+      setPendingLeaveRequests({ error: error_.message });
     } finally {
       setLoadingPendingRequests(false);
     }
@@ -1513,8 +1666,8 @@ const MediaCore = () => {
       const result = await mediacore.routePodMessage(message);
       setRoutingResult(result);
       setRouteMessageData('');
-    } catch (err) {
-      setRoutingResult({ error: err.message });
+    } catch (error_) {
+      setRoutingResult({ error: error_.message });
     } finally {
       setRoutingMessage(false);
     }
@@ -1530,13 +1683,19 @@ const MediaCore = () => {
       setRoutingToPeers(true);
       setRoutingToPeersResult(null);
       const message = JSON.parse(routeToPeersMessage);
-      const targetPeerIds = routeToPeersIds.split(',').map(id => id.trim()).filter(id => id);
-      const result = await mediacore.routePodMessageToPeers(message, targetPeerIds);
+      const targetPeerIds = routeToPeersIds
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean);
+      const result = await mediacore.routePodMessageToPeers(
+        message,
+        targetPeerIds,
+      );
       setRoutingToPeersResult(result);
       setRouteToPeersMessage('');
       setRouteToPeersIds('');
-    } catch (err) {
-      setRoutingToPeersResult({ error: err.message });
+    } catch (error_) {
+      setRoutingToPeersResult({ error: error_.message });
     } finally {
       setRoutingToPeers(false);
     }
@@ -1548,8 +1707,8 @@ const MediaCore = () => {
       setRoutingStats(null);
       const result = await mediacore.getPodMessageRoutingStats();
       setRoutingStats(result);
-    } catch (err) {
-      setRoutingStats({ error: err.message });
+    } catch (error_) {
+      setRoutingStats({ error: error_.message });
     } finally {
       setLoadingRoutingStats(false);
     }
@@ -1564,10 +1723,13 @@ const MediaCore = () => {
     try {
       setCheckingMessageSeen(true);
       setMessageSeenResult(null);
-      const result = await mediacore.checkMessageSeen(checkMessageId, checkPodId);
+      const result = await mediacore.checkMessageSeen(
+        checkMessageId,
+        checkPodId,
+      );
       setMessageSeenResult(result);
-    } catch (err) {
-      setMessageSeenResult({ error: err.message });
+    } catch (error_) {
+      setMessageSeenResult({ error: error_.message });
     } finally {
       setCheckingMessageSeen(false);
     }
@@ -1580,21 +1742,28 @@ const MediaCore = () => {
     }
 
     try {
-      const result = await mediacore.registerMessageSeen(checkMessageId, checkPodId);
-      alert(`Message registered as seen: ${result.wasNewlyRegistered ? 'New' : 'Already known'}`);
-    } catch (err) {
-      alert(`Failed to register message: ${err.message}`);
+      const result = await mediacore.registerMessageSeen(
+        checkMessageId,
+        checkPodId,
+      );
+      alert(
+        `Message registered as seen: ${result.wasNewlyRegistered ? 'New' : 'Already known'}`,
+      );
+    } catch (error_) {
+      alert(`Failed to register message: ${error_.message}`);
     }
   };
 
   const handleCleanupSeenMessages = async () => {
     try {
       const result = await mediacore.cleanupSeenMessages();
-      alert(`Cleanup completed: ${result.messagesCleaned} messages cleaned, ${result.messagesRetained} retained`);
+      alert(
+        `Cleanup completed: ${result.messagesCleaned} messages cleaned, ${result.messagesRetained} retained`,
+      );
       // Reload stats to reflect changes
       await handleLoadRoutingStats();
-    } catch (err) {
-      alert(`Failed to cleanup: ${err.message}`);
+    } catch (error_) {
+      alert(`Failed to cleanup: ${error_.message}`);
     }
   };
 
@@ -1609,11 +1778,14 @@ const MediaCore = () => {
       setSigningMessage(true);
       setSignedMessageResult(null);
       const message = JSON.parse(messageToSign);
-      const result = await mediacore.signPodMessage(message, privateKeyForSigning);
+      const result = await mediacore.signPodMessage(
+        message,
+        privateKeyForSigning,
+      );
       setSignedMessageResult(result);
       setMessageToSign('');
-    } catch (err) {
-      setSignedMessageResult({ error: err.message });
+    } catch (error_) {
+      setSignedMessageResult({ error: error_.message });
     } finally {
       setSigningMessage(false);
     }
@@ -1631,8 +1803,8 @@ const MediaCore = () => {
       const message = JSON.parse(messageToVerify);
       const result = await mediacore.verifyPodMessageSignature(message);
       setVerificationResult(result);
-    } catch (err) {
-      setVerificationResult({ error: err.message });
+    } catch (error_) {
+      setVerificationResult({ error: error_.message });
     } finally {
       setVerifyingSignature(false);
     }
@@ -1644,8 +1816,8 @@ const MediaCore = () => {
       setGeneratedKeyPair(null);
       const result = await mediacore.generateMessageKeyPair();
       setGeneratedKeyPair(result);
-    } catch (err) {
-      setGeneratedKeyPair({ error: err.message });
+    } catch (error_) {
+      setGeneratedKeyPair({ error: error_.message });
     } finally {
       setGeneratingKeyPair(false);
     }
@@ -1657,8 +1829,8 @@ const MediaCore = () => {
       setSigningStats(null);
       const result = await mediacore.getMessageSigningStats();
       setSigningStats(result);
-    } catch (err) {
-      setSigningStats({ error: err.message });
+    } catch (error_) {
+      setSigningStats({ error: error_.message });
     } finally {
       setLoadingSigningStats(false);
     }
@@ -1671,9 +1843,9 @@ const MediaCore = () => {
       setStorageStats(null);
       const result = await mediacore.getMessageStorageStats();
       setStorageStats(result);
-    } catch (err) {
-      setStorageStats({ error: err.message });
-      toast.error(`Failed to get storage stats: ${err.message}`);
+    } catch (error_) {
+      setStorageStats({ error: error_.message });
+      toast.error(`Failed to get storage stats: ${error_.message}`);
     } finally {
       setStorageStatsLoading(false);
     }
@@ -1682,13 +1854,13 @@ const MediaCore = () => {
   const handleCleanupMessages = async () => {
     try {
       setCleanupLoading(true);
-      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1_000;
       const result = await mediacore.cleanupMessages(thirtyDaysAgo);
       toast.success(`Cleaned up ${result} old messages`);
       // Refresh stats after cleanup
       await handleGetStorageStats();
-    } catch (err) {
-      toast.error(`Failed to cleanup messages: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to cleanup messages: ${error_.message}`);
     } finally {
       setCleanupLoading(false);
     }
@@ -1698,9 +1870,13 @@ const MediaCore = () => {
     try {
       setRebuildIndexLoading(true);
       const result = await mediacore.rebuildSearchIndex();
-      toast.success(result ? 'Search index rebuilt successfully' : 'Search index rebuild failed');
-    } catch (err) {
-      toast.error(`Failed to rebuild search index: ${err.message}`);
+      toast.success(
+        result
+          ? 'Search index rebuilt successfully'
+          : 'Search index rebuild failed',
+      );
+    } catch (error_) {
+      toast.error(`Failed to rebuild search index: ${error_.message}`);
     } finally {
       setRebuildIndexLoading(false);
     }
@@ -1710,9 +1886,13 @@ const MediaCore = () => {
     try {
       setVacuumLoading(true);
       const result = await mediacore.vacuumDatabase();
-      toast.success(result ? 'Database vacuum completed successfully' : 'Database vacuum failed');
-    } catch (err) {
-      toast.error(`Failed to vacuum database: ${err.message}`);
+      toast.success(
+        result
+          ? 'Database vacuum completed successfully'
+          : 'Database vacuum failed',
+      );
+    } catch (error_) {
+      toast.error(`Failed to vacuum database: ${error_.message}`);
     } finally {
       setVacuumLoading(false);
     }
@@ -1724,11 +1904,16 @@ const MediaCore = () => {
     try {
       setSearchLoading(true);
       setSearchResults(null);
-      const result = await mediacore.searchMessages('all', searchQuery, null, 50); // Search all pods
+      const result = await mediacore.searchMessages(
+        'all',
+        searchQuery,
+        null,
+        50,
+      ); // Search all pods
       setSearchResults(result);
-    } catch (err) {
+    } catch (error_) {
       setSearchResults([]);
-      toast.error(`Failed to search messages: ${err.message}`);
+      toast.error(`Failed to search messages: ${error_.message}`);
     } finally {
       setSearchLoading(false);
     }
@@ -1741,9 +1926,9 @@ const MediaCore = () => {
       setBackfillStats(null);
       const result = await mediacore.getBackfillStats();
       setBackfillStats(result);
-    } catch (err) {
-      setBackfillStats({ error: err.message });
-      toast.error(`Failed to get backfill stats: ${err.message}`);
+    } catch (error_) {
+      setBackfillStats({ error: error_.message });
+      toast.error(`Failed to get backfill stats: ${error_.message}`);
     } finally {
       setBackfillStatsLoading(false);
     }
@@ -1760,11 +1945,13 @@ const MediaCore = () => {
       // Get current last seen timestamps
       const timestamps = await mediacore.getLastSeenTimestamps(backfillPodId);
       const result = await mediacore.syncPodBackfill(backfillPodId, timestamps);
-      toast.success(`Backfill sync completed: ${result.totalMessagesReceived} messages received`);
+      toast.success(
+        `Backfill sync completed: ${result.totalMessagesReceived} messages received`,
+      );
       // Refresh stats
       await handleGetBackfillStats();
-    } catch (err) {
-      toast.error(`Failed to sync pod backfill: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to sync pod backfill: ${error_.message}`);
     } finally {
       setSyncBackfillLoading(false);
     }
@@ -1779,8 +1966,8 @@ const MediaCore = () => {
     try {
       const timestamps = await mediacore.getLastSeenTimestamps(backfillPodId);
       setLastSeenTimestamps(timestamps);
-    } catch (err) {
-      toast.error(`Failed to get last seen timestamps: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get last seen timestamps: ${error_.message}`);
       setLastSeenTimestamps(null);
     }
   };
@@ -1796,8 +1983,8 @@ const MediaCore = () => {
       setChannelsLoading(true);
       const result = await mediacore.getChannels(channelPodId);
       setChannels(result);
-    } catch (err) {
-      toast.error(`Failed to get channels: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get channels: ${error_.message}`);
       setChannels([]);
     } finally {
       setChannelsLoading(false);
@@ -1818,16 +2005,16 @@ const MediaCore = () => {
     try {
       setCreateChannelLoading(true);
       const channel = {
-        name: newChannelName,
         kind: newChannelKind,
+        name: newChannelName,
       };
       await mediacore.createChannel(channelPodId, channel);
       toast.success(`Channel "${newChannelName}" created successfully`);
       setNewChannelName('');
       // Refresh channels list
       await handleGetChannels();
-    } catch (err) {
-      toast.error(`Failed to create channel: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to create channel: ${error_.message}`);
     } finally {
       setCreateChannelLoading(false);
     }
@@ -1842,9 +2029,9 @@ const MediaCore = () => {
     try {
       setUpdateChannelLoading(true);
       const updatedChannel = {
-        channelId: channelId,
-        name: editChannelName,
+        channelId,
         kind: editingChannel.kind,
+        name: editChannelName,
       };
       await mediacore.updateChannel(channelPodId, channelId, updatedChannel);
       toast.success(`Channel updated successfully`);
@@ -1852,15 +2039,19 @@ const MediaCore = () => {
       setEditChannelName('');
       // Refresh channels list
       await handleGetChannels();
-    } catch (err) {
-      toast.error(`Failed to update channel: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to update channel: ${error_.message}`);
     } finally {
       setUpdateChannelLoading(false);
     }
   };
 
   const handleDeleteChannel = async (channelId, channelName) => {
-    if (!confirm(`Are you sure you want to delete the channel "${channelName}"? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete the channel "${channelName}"? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
@@ -1870,8 +2061,8 @@ const MediaCore = () => {
       toast.success(`Channel "${channelName}" deleted successfully`);
       // Refresh channels list
       await handleGetChannels();
-    } catch (err) {
-      toast.error(`Failed to delete channel: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to delete channel: ${error_.message}`);
     } finally {
       setDeleteChannelLoading(false);
     }
@@ -1905,9 +2096,9 @@ const MediaCore = () => {
       if (result.isValid) {
         await handleGetContentMetadata();
       }
-    } catch (err) {
-      setContentValidation({ isValid: false, error: err.message });
-      toast.error(`Failed to validate content ID: ${err.message}`);
+    } catch (error_) {
+      setContentValidation({ error: error_.message, isValid: false });
+      toast.error(`Failed to validate content ID: ${error_.message}`);
     } finally {
       setContentValidationLoading(false);
     }
@@ -1925,8 +2116,8 @@ const MediaCore = () => {
       if (!newPodName.trim() && metadata) {
         setNewPodName(`${metadata.artist} - ${metadata.title}`);
       }
-    } catch (err) {
-      toast.error(`Failed to get content metadata: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get content metadata: ${error_.message}`);
       setContentMetadata(null);
     } finally {
       setContentMetadataLoading(false);
@@ -1939,10 +2130,14 @@ const MediaCore = () => {
     try {
       setContentSearchLoading(true);
       setContentSearchResults([]);
-      const results = await mediacore.searchContent(contentSearchQuery.trim(), null, 10);
+      const results = await mediacore.searchContent(
+        contentSearchQuery.trim(),
+        null,
+        10,
+      );
       setContentSearchResults(results);
-    } catch (err) {
-      toast.error(`Failed to search content: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to search content: ${error_.message}`);
       setContentSearchResults([]);
     } finally {
       setContentSearchLoading(false);
@@ -1968,19 +2163,22 @@ const MediaCore = () => {
     try {
       setCreatePodLoading(true);
       const podRequest = {
-        podId: '', // Auto-generate
-        name: newPodName.trim(),
-        visibility: newPodVisibility,
-        contentId: contentId.trim(),
-        tags: [],
         channels: [
           {
             channelId: 'general',
+            kind: 'General',
             name: 'General',
-            kind: 'General'
-          }
+          },
         ],
-        externalBindings: []
+
+        contentId: contentId.trim(),
+
+        externalBindings: [],
+        // Auto-generate
+        name: newPodName.trim(),
+        podId: '',
+        tags: [],
+        visibility: newPodVisibility,
       };
 
       const createdPod = await mediacore.createContentLinkedPod(podRequest);
@@ -1993,9 +2191,8 @@ const MediaCore = () => {
       setNewPodName('');
       setContentSearchQuery('');
       setContentSearchResults([]);
-
-    } catch (err) {
-      toast.error(`Failed to create pod: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to create pod: ${error_.message}`);
     } finally {
       setCreatePodLoading(false);
     }
@@ -2009,7 +2206,11 @@ const MediaCore = () => {
 
   // Pod Opinion Management handlers
   const handlePublishOpinion = async () => {
-    if (!opinionPodId.trim() || !opinionContentId.trim() || !opinionVariantHash.trim()) {
+    if (
+      !opinionPodId.trim() ||
+      !opinionContentId.trim() ||
+      !opinionVariantHash.trim()
+    ) {
       toast.error('Pod ID, Content ID, and Variant Hash are required');
       return;
     }
@@ -2023,10 +2224,10 @@ const MediaCore = () => {
       setPublishOpinionLoading(true);
       const opinion = {
         contentId: opinionContentId.trim(),
-        variantHash: opinionVariantHash.trim(),
-        score: opinionScore,
         note: opinionNote.trim(),
-        senderPeerId: 'current-user', // Get from session when available
+        score: opinionScore,
+        senderPeerId: 'current-user',
+        variantHash: opinionVariantHash.trim(), // Get from session when available
       };
 
       await mediacore.publishOpinion(opinionPodId.trim(), opinion);
@@ -2042,9 +2243,8 @@ const MediaCore = () => {
       if (opinionContentId) {
         await handleGetOpinions();
       }
-
-    } catch (err) {
-      toast.error(`Failed to publish opinion: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to publish opinion: ${error_.message}`);
     } finally {
       setPublishOpinionLoading(false);
     }
@@ -2058,10 +2258,13 @@ const MediaCore = () => {
 
     try {
       setGetOpinionsLoading(true);
-      const result = await mediacore.getContentOpinions(opinionPodId.trim(), opinionContentId.trim());
+      const result = await mediacore.getContentOpinions(
+        opinionPodId.trim(),
+        opinionContentId.trim(),
+      );
       setOpinions(result);
-    } catch (err) {
-      toast.error(`Failed to get opinions: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get opinions: ${error_.message}`);
       setOpinions([]);
     } finally {
       setGetOpinionsLoading(false);
@@ -2076,10 +2279,13 @@ const MediaCore = () => {
 
     try {
       setGetStatsLoading(true);
-      const stats = await mediacore.getOpinionStatistics(opinionPodId.trim(), opinionContentId.trim());
+      const stats = await mediacore.getOpinionStatistics(
+        opinionPodId.trim(),
+        opinionContentId.trim(),
+      );
       setOpinionStatistics(stats);
-    } catch (err) {
-      toast.error(`Failed to get opinion statistics: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get opinion statistics: ${error_.message}`);
       setOpinionStatistics(null);
     } finally {
       setGetStatsLoading(false);
@@ -2101,8 +2307,8 @@ const MediaCore = () => {
       if (opinionContentId) {
         await Promise.all([handleGetOpinions(), handleGetOpinionStatistics()]);
       }
-    } catch (err) {
-      toast.error(`Failed to refresh opinions: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to refresh opinions: ${error_.message}`);
     } finally {
       setRefreshOpinionsLoading(false);
     }
@@ -2117,10 +2323,13 @@ const MediaCore = () => {
 
     try {
       setGetAggregatedLoading(true);
-      const aggregated = await mediacore.getAggregatedOpinions(opinionPodId.trim(), opinionContentId.trim());
+      const aggregated = await mediacore.getAggregatedOpinions(
+        opinionPodId.trim(),
+        opinionContentId.trim(),
+      );
       setAggregatedOpinions(aggregated);
-    } catch (err) {
-      toast.error(`Failed to get aggregated opinions: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get aggregated opinions: ${error_.message}`);
       setAggregatedOpinions(null);
     } finally {
       setGetAggregatedLoading(false);
@@ -2135,10 +2344,12 @@ const MediaCore = () => {
 
     try {
       setGetAffinitiesLoading(true);
-      const affinities = await mediacore.getMemberAffinities(opinionPodId.trim());
+      const affinities = await mediacore.getMemberAffinities(
+        opinionPodId.trim(),
+      );
       setMemberAffinities(affinities);
-    } catch (err) {
-      toast.error(`Failed to get member affinities: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get member affinities: ${error_.message}`);
       setMemberAffinities({});
     } finally {
       setGetAffinitiesLoading(false);
@@ -2153,10 +2364,13 @@ const MediaCore = () => {
 
     try {
       setGetRecommendationsLoading(true);
-      const recommendations = await mediacore.getConsensusRecommendations(opinionPodId.trim(), opinionContentId.trim());
+      const recommendations = await mediacore.getConsensusRecommendations(
+        opinionPodId.trim(),
+        opinionContentId.trim(),
+      );
       setConsensusRecommendations(recommendations);
-    } catch (err) {
-      toast.error(`Failed to get consensus recommendations: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to get consensus recommendations: ${error_.message}`);
       setConsensusRecommendations([]);
     } finally {
       setGetRecommendationsLoading(false);
@@ -2171,13 +2385,15 @@ const MediaCore = () => {
 
     try {
       setUpdateAffinitiesLoading(true);
-      const result = await mediacore.updateMemberAffinities(opinionPodId.trim());
+      const result = await mediacore.updateMemberAffinities(
+        opinionPodId.trim(),
+      );
       toast.success(`Updated affinities for ${result.membersUpdated} members`);
 
       // Refresh affinities display
       await handleGetMemberAffinities();
-    } catch (err) {
-      toast.error(`Failed to update member affinities: ${err.message}`);
+    } catch (error_) {
+      toast.error(`Failed to update member affinities: ${error_.message}`);
     } finally {
       setUpdateAffinitiesLoading(false);
     }
@@ -2192,15 +2408,18 @@ const MediaCore = () => {
     try {
       const result = await mediacore.getConflictStrategies();
       setAvailableStrategies(result);
-    } catch (err) {
-      console.error('Failed to load conflict strategies:', err);
+    } catch (error_) {
+      console.error('Failed to load conflict strategies:', error_);
     }
   };
 
   if (loading && !stats) {
     return (
       <Segment>
-        <Loader active inline="centered">
+        <Loader
+          active
+          inline="centered"
+        >
           Loading MediaCore statistics...
         </Loader>
       </Segment>
@@ -2239,21 +2458,24 @@ const MediaCore = () => {
               </Statistic>
             </Statistic.Group>
 
-            {stats?.mappingsByDomain && Object.keys(stats.mappingsByDomain).length > 0 && (
-              <div style={{ marginTop: '1em' }}>
-                <Header as="h4">Mappings by Domain</Header>
-                <List horizontal>
-                  {Object.entries(stats.mappingsByDomain).map(([domain, count]) => (
-                    <List.Item key={domain}>
-                      <Label>
-                        {domain}
-                        <Label.Detail>{count}</Label.Detail>
-                      </Label>
-                    </List.Item>
-                  ))}
-                </List>
-              </div>
-            )}
+            {stats?.mappingsByDomain &&
+              Object.keys(stats.mappingsByDomain).length > 0 && (
+                <div style={{ marginTop: '1em' }}>
+                  <Header as="h4">Mappings by Domain</Header>
+                  <List horizontal>
+                    {Object.entries(stats.mappingsByDomain).map(
+                      ([domain, count]) => (
+                        <List.Item key={domain}>
+                          <Label>
+                            {domain}
+                            <Label.Detail>{count}</Label.Detail>
+                          </Label>
+                        </List.Item>
+                      ),
+                    )}
+                  </List>
+                </div>
+              )}
           </Segment>
         </Grid.Column>
 
@@ -2274,24 +2496,28 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>External ID</label>
                   <Input
+                    onChange={(e) => setExternalId(e.target.value)}
                     placeholder="e.g., mb:recording:12345-6789-..."
                     value={externalId}
-                    onChange={(e) => setExternalId(e.target.value)}
                   />
                 </Form.Field>
                 <Form.Field>
                   <label>Content ID</label>
                   <Input
+                    onChange={(e) => setDescriptorContentId(e.target.value)}
                     placeholder="e.g., content:mb:recording:12345-6789-..."
                     value={descriptorContentId}
-                    onChange={(e) => setDescriptorContentId(e.target.value)}
                   />
                 </Form.Field>
                 <Button
-                  primary
+                  disabled={
+                    !externalId.trim() ||
+                    !descriptorContentId.trim() ||
+                    registering
+                  }
                   loading={registering}
-                  disabled={!externalId.trim() || !descriptorContentId.trim() || registering}
                   onClick={handleRegister}
+                  primary
                 >
                   Register Mapping
                 </Button>
@@ -2317,19 +2543,19 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>External ID to Resolve</label>
                   <Input
-                    placeholder="Enter external ID to resolve..."
-                    value={resolveId}
-                    onChange={(e) => setResolveId(e.target.value)}
                     action={
                       <Button
-                        primary
-                        loading={resolving}
                         disabled={!resolveId.trim() || resolving}
+                        loading={resolving}
                         onClick={handleResolve}
+                        primary
                       >
                         Resolve
                       </Button>
                     }
+                    onChange={(e) => setResolveId(e.target.value)}
+                    placeholder="Enter external ID to resolve..."
+                    value={resolveId}
                   />
                 </Form.Field>
               </Form>
@@ -2344,7 +2570,9 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Resolved Successfully</Message.Header>
                       <p>
-                        <strong>External ID:</strong> {resolvedContent.externalId}<br />
+                        <strong>External ID:</strong>{' '}
+                        {resolvedContent.externalId}
+                        <br />
                         <strong>Content ID:</strong> {resolvedContent.contentId}
                       </p>
                     </Message>
@@ -2372,19 +2600,19 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentID to Validate</label>
                   <Input
-                    placeholder="e.g., content:audio:track:mb-12345"
-                    value={validateContentIdInput}
-                    onChange={(e) => setValidateContentIdInput(e.target.value)}
                     action={
                       <Button
-                        primary
-                        loading={validating}
                         disabled={!validateContentIdInput.trim() || validating}
+                        loading={validating}
                         onClick={handleValidate}
+                        primary
                       >
                         Validate
                       </Button>
                     }
+                    onChange={(e) => setValidateContentIdInput(e.target.value)}
+                    placeholder="e.g., content:audio:track:mb-12345"
+                    value={validateContentIdInput}
                   />
                 </Form.Field>
               </Form>
@@ -2399,12 +2627,18 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Valid ContentID</Message.Header>
                       <p>
-                        <strong>Domain:</strong> {validatedContent.domain}<br />
-                        <strong>Type:</strong> {validatedContent.type}<br />
-                        <strong>ID:</strong> {validatedContent.id}<br />
-                        <strong>Audio:</strong> {validatedContent.isAudio ? 'Yes' : 'No'} |
-                        <strong>Video:</strong> {validatedContent.isVideo ? 'Yes' : 'No'} |
-                        <strong>Image:</strong> {validatedContent.isImage ? 'Yes' : 'No'}
+                        <strong>Domain:</strong> {validatedContent.domain}
+                        <br />
+                        <strong>Type:</strong> {validatedContent.type}
+                        <br />
+                        <strong>ID:</strong> {validatedContent.id}
+                        <br />
+                        <strong>Audio:</strong>{' '}
+                        {validatedContent.isAudio ? 'Yes' : 'No'} |
+                        <strong>Video:</strong>{' '}
+                        {validatedContent.isVideo ? 'Yes' : 'No'} |
+                        <strong>Image:</strong>{' '}
+                        {validatedContent.isImage ? 'Yes' : 'No'}
                       </p>
                     </Message>
                   )}
@@ -2432,25 +2666,25 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Domain</label>
                     <Input
+                      onChange={(e) => setDomain(e.target.value)}
                       placeholder="e.g., audio, video, image"
                       value={domain}
-                      onChange={(e) => setDomain(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Type (optional)</label>
                     <Input
+                      onChange={(e) => setType(e.target.value)}
                       placeholder="e.g., track, movie, photo"
                       value={type}
-                      onChange={(e) => setType(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
-                  loading={searchingDomain}
                   disabled={!domain.trim() || searchingDomain}
+                  loading={searchingDomain}
                   onClick={handleDomainSearch}
+                  primary
                 >
                   Search Domain
                 </Button>
@@ -2464,9 +2698,18 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <div>
-                      <p><strong>Found {domainResults.contentIds?.length || 0} ContentIDs</strong></p>
+                      <p>
+                        <strong>
+                          Found {domainResults.contentIds?.length || 0}{' '}
+                          ContentIDs
+                        </strong>
+                      </p>
                       {domainResults.contentIds?.length > 0 && (
-                        <List divided relaxed style={{ maxHeight: '200px', overflow: 'auto' }}>
+                        <List
+                          divided
+                          relaxed
+                          style={{ maxHeight: '200px', overflow: 'auto' }}
+                        >
                           {domainResults.contentIds.map((id, index) => (
                             <List.Item key={index}>
                               <List.Content>
@@ -2497,12 +2740,12 @@ const MediaCore = () => {
                 Object.entries(types).map(([typeName, example]) => (
                   <Button
                     key={`${domainName}-${typeName}`}
-                    size="small"
                     onClick={() => fillExample(domainName, typeName)}
+                    size="small"
                   >
                     {domainName}:{typeName}
                   </Button>
-                ))
+                )),
               )}
             </div>
           </Segment>
@@ -2526,25 +2769,29 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Start ContentID</label>
                     <Input
+                      onChange={(e) => setTraverseContentId(e.target.value)}
                       placeholder="e.g., content:audio:track:mb-12345"
                       value={traverseContentId}
-                      onChange={(e) => setTraverseContentId(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Link Type</label>
                     <Input
+                      onChange={(e) => setTraverseLinkName(e.target.value)}
                       placeholder="e.g., album, artist, artwork"
                       value={traverseLinkName}
-                      onChange={(e) => setTraverseLinkName(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
+                  disabled={
+                    !traverseContentId.trim() ||
+                    !traverseLinkName.trim() ||
+                    traversing
+                  }
                   loading={traversing}
-                  disabled={!traverseContentId.trim() || !traverseLinkName.trim() || traversing}
                   onClick={handleTraverse}
+                  primary
                 >
                   Traverse Graph
                 </Button>
@@ -2558,16 +2805,29 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <div>
-                      <p><strong>Traversal completed:</strong> {traversalResults.completedTraversal ? 'Yes' : 'No'}</p>
-                      <p><strong>Visited {traversalResults.visitedNodes?.length || 0} nodes</strong></p>
+                      <p>
+                        <strong>Traversal completed:</strong>{' '}
+                        {traversalResults.completedTraversal ? 'Yes' : 'No'}
+                      </p>
+                      <p>
+                        <strong>
+                          Visited {traversalResults.visitedNodes?.length || 0}{' '}
+                          nodes
+                        </strong>
+                      </p>
                       {traversalResults.visitedNodes?.length > 0 && (
-                        <List divided relaxed style={{ maxHeight: '150px', overflow: 'auto' }}>
+                        <List
+                          divided
+                          relaxed
+                          style={{ maxHeight: '150px', overflow: 'auto' }}
+                        >
                           {traversalResults.visitedNodes.map((node, index) => (
                             <List.Item key={index}>
                               <List.Content>
                                 <List.Header>{node.contentId}</List.Header>
                                 <List.Description>
-                                  {node.outgoingLinks?.length || 0} outgoing links
+                                  {node.outgoingLinks?.length || 0} outgoing
+                                  links
                                 </List.Description>
                               </List.Content>
                             </List.Item>
@@ -2599,19 +2859,19 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentID</label>
                   <Input
-                    placeholder="Enter ContentID to get its graph"
-                    value={graphContentId}
-                    onChange={(e) => setGraphContentId(e.target.value)}
                     action={
                       <Button
-                        primary
-                        loading={gettingGraph}
                         disabled={!graphContentId.trim() || gettingGraph}
+                        loading={gettingGraph}
                         onClick={handleGetGraph}
+                        primary
                       >
                         Get Graph
                       </Button>
                     }
+                    onChange={(e) => setGraphContentId(e.target.value)}
+                    placeholder="Enter ContentID to get its graph"
+                    value={graphContentId}
                   />
                 </Form.Field>
               </Form>
@@ -2624,11 +2884,23 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <div>
-                      <p><strong>Root:</strong> {graphResults.rootContentId}</p>
-                      <p><strong>Nodes:</strong> {graphResults.nodes?.length || 0}</p>
-                      <p><strong>Paths:</strong> {graphResults.paths?.length || 0}</p>
+                      <p>
+                        <strong>Root:</strong> {graphResults.rootContentId}
+                      </p>
+                      <p>
+                        <strong>Nodes:</strong>{' '}
+                        {graphResults.nodes?.length || 0}
+                      </p>
+                      <p>
+                        <strong>Paths:</strong>{' '}
+                        {graphResults.paths?.length || 0}
+                      </p>
                       {graphResults.nodes?.length > 0 && (
-                        <List divided relaxed style={{ maxHeight: '150px', overflow: 'auto' }}>
+                        <List
+                          divided
+                          relaxed
+                          style={{ maxHeight: '150px', overflow: 'auto' }}
+                        >
                           {graphResults.nodes.slice(0, 5).map((node, index) => (
                             <List.Item key={index}>
                               <List.Content>
@@ -2636,7 +2908,8 @@ const MediaCore = () => {
                                   {node.contentId}
                                 </List.Header>
                                 <List.Description style={{ fontSize: '0.8em' }}>
-                                  {node.outgoingLinks?.length || 0} outgoing, {node.incomingLinks?.length || 0} incoming
+                                  {node.outgoingLinks?.length || 0} outgoing,{' '}
+                                  {node.incomingLinks?.length || 0} incoming
                                 </List.Description>
                               </List.Content>
                             </List.Item>
@@ -2644,7 +2917,10 @@ const MediaCore = () => {
                           {graphResults.nodes.length > 5 && (
                             <List.Item>
                               <List.Content>
-                                <em>... and {graphResults.nodes.length - 5} more nodes</em>
+                                <em>
+                                  ... and {graphResults.nodes.length - 5} more
+                                  nodes
+                                </em>
                               </List.Content>
                             </List.Item>
                           )}
@@ -2675,19 +2951,19 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>Target ContentID</label>
                   <Input
-                    placeholder="Find content that links to this ID"
-                    value={inboundTargetId}
-                    onChange={(e) => setInboundTargetId(e.target.value)}
                     action={
                       <Button
-                        primary
-                        loading={findingInbound}
                         disabled={!inboundTargetId.trim() || findingInbound}
+                        loading={findingInbound}
                         onClick={handleFindInbound}
+                        primary
                       >
                         Find Links
                       </Button>
                     }
+                    onChange={(e) => setInboundTargetId(e.target.value)}
+                    placeholder="Find content that links to this ID"
+                    value={inboundTargetId}
                   />
                 </Form.Field>
               </Form>
@@ -2700,13 +2976,24 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <div>
-                      <p><strong>Found {inboundResults.inboundLinks?.length || 0} inbound links</strong></p>
+                      <p>
+                        <strong>
+                          Found {inboundResults.inboundLinks?.length || 0}{' '}
+                          inbound links
+                        </strong>
+                      </p>
                       {inboundResults.inboundLinks?.length > 0 && (
-                        <List divided relaxed style={{ maxHeight: '150px', overflow: 'auto' }}>
+                        <List
+                          divided
+                          relaxed
+                          style={{ maxHeight: '150px', overflow: 'auto' }}
+                        >
                           {inboundResults.inboundLinks.map((link, index) => (
                             <List.Item key={index}>
                               <List.Content>
-                                <code style={{ fontSize: '0.9em' }}>{link}</code>
+                                <code style={{ fontSize: '0.9em' }}>
+                                  {link}
+                                </code>
                               </List.Content>
                             </List.Item>
                           ))}
@@ -2738,35 +3025,41 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Algorithm</label>
                     <Dropdown
-                      selection
-                      options={supportedAlgorithms?.algorithms?.map(alg => ({ key: alg, text: alg, value: alg })) || []}
-                      value={audioAlgorithm}
                       onChange={(e, { value }) => setAudioAlgorithm(value)}
+                      options={
+                        supportedAlgorithms?.algorithms?.map((alg) => ({
+                          key: alg,
+                          text: alg,
+                          value: alg,
+                        })) || []
+                      }
+                      selection
+                      value={audioAlgorithm}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Sample Rate (Hz)</label>
                     <Input
+                      onChange={(e) => setSampleRate(e.target.value)}
                       type="number"
                       value={sampleRate}
-                      onChange={(e) => setSampleRate(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Form.Field>
                   <label>Audio Samples (comma-separated floats)</label>
                   <TextArea
-                    placeholder="0.1, -0.2, 0.3, ... (normalized -1.0 to 1.0)"
-                    value={audioSamples}
                     onChange={(e) => setAudioSamples(e.target.value)}
+                    placeholder="0.1, -0.2, 0.3, ... (normalized -1.0 to 1.0)"
                     rows={3}
+                    value={audioSamples}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={computingAudioHash}
                   disabled={!audioSamples.trim() || computingAudioHash}
+                  loading={computingAudioHash}
                   onClick={handleComputeAudioHash}
+                  primary
                 >
                   Compute Audio Hash
                 </Button>
@@ -2782,9 +3075,12 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Audio Hash Computed</Message.Header>
                       <p>
-                        <strong>Algorithm:</strong> {audioHashResult.algorithm}<br />
-                        <strong>Hex Hash:</strong> {audioHashResult.hex}<br />
-                        <strong>Sample Count:</strong> {audioSamples.split(',').filter(s => s.trim()).length}
+                        <strong>Algorithm:</strong> {audioHashResult.algorithm}
+                        <br />
+                        <strong>Hex Hash:</strong> {audioHashResult.hex}
+                        <br />
+                        <strong>Sample Count:</strong>{' '}
+                        {audioSamples.split(',').filter((s) => s.trim()).length}
                       </p>
                     </Message>
                   )}
@@ -2812,39 +3108,49 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Algorithm</label>
                     <Dropdown
-                      selection
-                      options={supportedAlgorithms?.algorithms?.filter(alg => alg !== 'ChromaPrint').map(alg => ({ key: alg, text: alg, value: alg })) || []}
-                      value={imageAlgorithm}
                       onChange={(e, { value }) => setImageAlgorithm(value)}
+                      options={
+                        supportedAlgorithms?.algorithms
+                          ?.filter((alg) => alg !== 'ChromaPrint')
+                          .map((alg) => ({
+                            key: alg,
+                            text: alg,
+                            value: alg,
+                          })) || []
+                      }
+                      selection
+                      value={imageAlgorithm}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Dimensions</label>
                     <Input
-                      placeholder="Width x Height"
-                      value={`${imageWidth}x${imageHeight}`}
                       onChange={(e) => {
-                        const [w, h] = e.target.value.split('x').map(s => parseInt(s.trim()));
+                        const [w, h] = e.target.value
+                          .split('x')
+                          .map((s) => Number.parseInt(s.trim()));
                         if (!isNaN(w)) setImageWidth(w);
                         if (!isNaN(h)) setImageHeight(h);
                       }}
+                      placeholder="Width x Height"
+                      value={`${imageWidth}x${imageHeight}`}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Form.Field>
                   <label>Pixel Data (comma-separated bytes 0-255)</label>
                   <TextArea
-                    placeholder="255, 128, 64, ... (RGBA pixel data)"
-                    value={imagePixels}
                     onChange={(e) => setImagePixels(e.target.value)}
+                    placeholder="255, 128, 64, ... (RGBA pixel data)"
                     rows={3}
+                    value={imagePixels}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={computingImageHash}
                   disabled={!imagePixels.trim() || computingImageHash}
+                  loading={computingImageHash}
                   onClick={handleComputeImageHash}
+                  primary
                 >
                   Compute Image Hash
                 </Button>
@@ -2860,8 +3166,10 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Image Hash Computed</Message.Header>
                       <p>
-                        <strong>Algorithm:</strong> {imageHashResult.algorithm}<br />
-                        <strong>Hex Hash:</strong> {imageHashResult.hex}<br />
+                        <strong>Algorithm:</strong> {imageHashResult.algorithm}
+                        <br />
+                        <strong>Hex Hash:</strong> {imageHashResult.hex}
+                        <br />
                         <strong>Dimensions:</strong> {imageWidth}x{imageHeight}
                       </p>
                     </Message>
@@ -2890,36 +3198,38 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Hash A (hex)</label>
                     <Input
+                      onChange={(e) => setHashA(e.target.value)}
                       placeholder="First hash value (hexadecimal)"
                       value={hashA}
-                      onChange={(e) => setHashA(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Hash B (hex)</label>
                     <Input
+                      onChange={(e) => setHashB(e.target.value)}
                       placeholder="Second hash value (hexadecimal)"
                       value={hashB}
-                      onChange={(e) => setHashB(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Similarity Threshold</label>
                     <Input
-                      type="number"
-                      min="0"
                       max="1"
-                      step="0.1"
-                      value={similarityThreshold}
+                      min="0"
                       onChange={(e) => setSimilarityThreshold(e.target.value)}
+                      step="0.1"
+                      type="number"
+                      value={similarityThreshold}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
+                  disabled={
+                    !hashA.trim() || !hashB.trim() || computingSimilarity
+                  }
                   loading={computingSimilarity}
-                  disabled={!hashA.trim() || !hashB.trim() || computingSimilarity}
                   onClick={handleComputeSimilarity}
+                  primary
                 >
                   Analyze Similarity
                 </Button>
@@ -2933,11 +3243,18 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <Message info>
-                      <Message.Header>Similarity Analysis Results</Message.Header>
+                      <Message.Header>
+                        Similarity Analysis Results
+                      </Message.Header>
                       <p>
-                        <strong>Hamming Distance:</strong> {similarityResult.hammingDistance} bits<br />
-                        <strong>Similarity Score:</strong> {(similarityResult.similarity * 100).toFixed(1)}%<br />
-                        <strong>Are Similar:</strong> {similarityResult.areSimilar ? 'Yes' : 'No'} (threshold: {(similarityResult.threshold * 100).toFixed(1)}%)
+                        <strong>Hamming Distance:</strong>{' '}
+                        {similarityResult.hammingDistance} bits
+                        <br />
+                        <strong>Similarity Score:</strong>{' '}
+                        {(similarityResult.similarity * 100).toFixed(1)}%<br />
+                        <strong>Are Similar:</strong>{' '}
+                        {similarityResult.areSimilar ? 'Yes' : 'No'} (threshold:{' '}
+                        {(similarityResult.threshold * 100).toFixed(1)}%)
                       </p>
                     </Message>
                   )}
@@ -2964,39 +3281,43 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>Target ContentID</label>
                   <Input
+                    onChange={(e) => setFindSimilarContentId(e.target.value)}
                     placeholder="ContentID to find matches for"
                     value={findSimilarContentId}
-                    onChange={(e) => setFindSimilarContentId(e.target.value)}
                   />
                 </Form.Field>
                 <Form.Group widths="equal">
                   <Form.Field>
                     <label>Min Confidence</label>
                     <Input
-                      type="number"
-                      min="0"
                       max="1"
+                      min="0"
+                      onChange={(e) =>
+                        setFindSimilarMinConfidence(e.target.value)
+                      }
                       step="0.1"
+                      type="number"
                       value={findSimilarMinConfidence}
-                      onChange={(e) => setFindSimilarMinConfidence(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Max Results</label>
                     <Input
-                      type="number"
-                      min="1"
                       max="50"
-                      value={findSimilarMaxResults}
+                      min="1"
                       onChange={(e) => setFindSimilarMaxResults(e.target.value)}
+                      type="number"
+                      value={findSimilarMaxResults}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
+                  disabled={
+                    !findSimilarContentId.trim() || findingSimilarContent
+                  }
                   loading={findingSimilarContent}
-                  disabled={!findSimilarContentId.trim() || findingSimilarContent}
                   onClick={handleFindSimilarContent}
+                  primary
                 >
                   Find Similar Content
                 </Button>
@@ -3010,11 +3331,27 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <div>
-                      <p><strong>Target:</strong> {findSimilarResult.targetContentId}</p>
-                      <p><strong>Searched {findSimilarResult.totalCandidates} candidates</strong></p>
-                      <p><strong>Found {findSimilarResult.matches?.length || 0} matches</strong></p>
+                      <p>
+                        <strong>Target:</strong>{' '}
+                        {findSimilarResult.targetContentId}
+                      </p>
+                      <p>
+                        <strong>
+                          Searched {findSimilarResult.totalCandidates}{' '}
+                          candidates
+                        </strong>
+                      </p>
+                      <p>
+                        <strong>
+                          Found {findSimilarResult.matches?.length || 0} matches
+                        </strong>
+                      </p>
                       {findSimilarResult.matches?.length > 0 && (
-                        <List divided relaxed style={{ maxHeight: '200px', overflow: 'auto' }}>
+                        <List
+                          divided
+                          relaxed
+                          style={{ maxHeight: '200px', overflow: 'auto' }}
+                        >
                           {findSimilarResult.matches.map((match, index) => (
                             <List.Item key={index}>
                               <List.Content>
@@ -3022,7 +3359,8 @@ const MediaCore = () => {
                                   {match.candidateContentId}
                                 </List.Header>
                                 <List.Description>
-                                  Confidence: {(match.confidence * 100).toFixed(1)}% |
+                                  Confidence:{' '}
+                                  {(match.confidence * 100).toFixed(1)}% |
                                   Reason: {match.reason}
                                 </List.Description>
                               </List.Content>
@@ -3056,36 +3394,40 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>ContentID A</label>
                     <Input
+                      onChange={(e) => setPerceptualContentIdA(e.target.value)}
                       placeholder="First ContentID"
                       value={perceptualContentIdA}
-                      onChange={(e) => setPerceptualContentIdA(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>ContentID B</label>
                     <Input
+                      onChange={(e) => setPerceptualContentIdB(e.target.value)}
                       placeholder="Second ContentID"
                       value={perceptualContentIdB}
-                      onChange={(e) => setPerceptualContentIdB(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Form.Field>
                   <label>Similarity Threshold</label>
                   <Input
-                    type="number"
-                    min="0"
                     max="1"
-                    step="0.1"
-                    value={perceptualThreshold}
+                    min="0"
                     onChange={(e) => setPerceptualThreshold(e.target.value)}
+                    step="0.1"
+                    type="number"
+                    value={perceptualThreshold}
                   />
                 </Form.Field>
                 <Button
-                  primary
+                  disabled={
+                    !perceptualContentIdA.trim() ||
+                    !perceptualContentIdB.trim() ||
+                    computingPerceptualSimilarity
+                  }
                   loading={computingPerceptualSimilarity}
-                  disabled={!perceptualContentIdA.trim() || !perceptualContentIdB.trim() || computingPerceptualSimilarity}
                   onClick={handleComputePerceptualSimilarity}
+                  primary
                 >
                   Compute Similarity
                 </Button>
@@ -3101,10 +3443,24 @@ const MediaCore = () => {
                     <Message info>
                       <Message.Header>Similarity Analysis</Message.Header>
                       <p>
-                        <strong>Content A:</strong> {perceptualSimilarityResult.contentIdA}<br />
-                        <strong>Content B:</strong> {perceptualSimilarityResult.contentIdB}<br />
-                        <strong>Similarity:</strong> {(perceptualSimilarityResult.similarity * 100).toFixed(1)}%<br />
-                        <strong>Are Similar:</strong> {perceptualSimilarityResult.isSimilar ? 'Yes' : 'No'} (threshold: {(perceptualSimilarityResult.threshold * 100).toFixed(1)}%)
+                        <strong>Content A:</strong>{' '}
+                        {perceptualSimilarityResult.contentIdA}
+                        <br />
+                        <strong>Content B:</strong>{' '}
+                        {perceptualSimilarityResult.contentIdB}
+                        <br />
+                        <strong>Similarity:</strong>{' '}
+                        {(perceptualSimilarityResult.similarity * 100).toFixed(
+                          1,
+                        )}
+                        %<br />
+                        <strong>Are Similar:</strong>{' '}
+                        {perceptualSimilarityResult.isSimilar ? 'Yes' : 'No'}{' '}
+                        (threshold:{' '}
+                        {(perceptualSimilarityResult.threshold * 100).toFixed(
+                          1,
+                        )}
+                        %)
                       </p>
                     </Message>
                   )}
@@ -3123,7 +3479,8 @@ const MediaCore = () => {
                 Text Similarity Analysis
               </Card.Header>
               <Card.Description>
-                Compare text strings using Levenshtein distance and phonetic matching
+                Compare text strings using Levenshtein distance and phonetic
+                matching
               </Card.Description>
             </Card.Content>
             <Card.Content>
@@ -3132,25 +3489,29 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Text A</label>
                     <Input
+                      onChange={(e) => setTextSimilarityA(e.target.value)}
                       placeholder="First text string"
                       value={textSimilarityA}
-                      onChange={(e) => setTextSimilarityA(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Text B</label>
                     <Input
+                      onChange={(e) => setTextSimilarityB(e.target.value)}
                       placeholder="Second text string"
                       value={textSimilarityB}
-                      onChange={(e) => setTextSimilarityB(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
+                  disabled={
+                    !textSimilarityA.trim() ||
+                    !textSimilarityB.trim() ||
+                    computingTextSimilarity
+                  }
                   loading={computingTextSimilarity}
-                  disabled={!textSimilarityA.trim() || !textSimilarityB.trim() || computingTextSimilarity}
                   onClick={handleComputeTextSimilarity}
+                  primary
                 >
                   Analyze Text Similarity
                 </Button>
@@ -3166,11 +3527,25 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Text Similarity Results</Message.Header>
                       <p>
-                        <strong>Text A:</strong> "{textSimilarityResult.textA}"<br />
-                        <strong>Text B:</strong> "{textSimilarityResult.textB}"<br />
-                        <strong>Levenshtein Similarity:</strong> {(textSimilarityResult.levenshteinSimilarity * 100).toFixed(1)}%<br />
-                        <strong>Phonetic Similarity:</strong> {(textSimilarityResult.phoneticSimilarity * 100).toFixed(1)}%<br />
-                        <strong>Combined Similarity:</strong> {(textSimilarityResult.combinedSimilarity * 100).toFixed(1)}%
+                        <strong>Text A:</strong> "{textSimilarityResult.textA}"
+                        <br />
+                        <strong>Text B:</strong> "{textSimilarityResult.textB}"
+                        <br />
+                        <strong>Levenshtein Similarity:</strong>{' '}
+                        {(
+                          textSimilarityResult.levenshteinSimilarity * 100
+                        ).toFixed(1)}
+                        %<br />
+                        <strong>Phonetic Similarity:</strong>{' '}
+                        {(
+                          textSimilarityResult.phoneticSimilarity * 100
+                        ).toFixed(1)}
+                        %<br />
+                        <strong>Combined Similarity:</strong>{' '}
+                        {(
+                          textSimilarityResult.combinedSimilarity * 100
+                        ).toFixed(1)}
+                        %
                       </p>
                     </Message>
                   )}
@@ -3197,24 +3572,24 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentIDs (one per line)</label>
                   <TextArea
-                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
-                    value={exportContentIds}
                     onChange={(e) => setExportContentIds(e.target.value)}
+                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
                     rows={4}
+                    value={exportContentIds}
                   />
                 </Form.Field>
                 <Form.Field>
                   <Checkbox
-                    label="Include IPLD links"
                     checked={includeLinks}
+                    label="Include IPLD links"
                     onChange={(e, { checked }) => setIncludeLinks(checked)}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={exportingMetadata}
                   disabled={!exportContentIds.trim() || exportingMetadata}
+                  loading={exportingMetadata}
                   onClick={handleExportMetadata}
+                  primary
                 >
                   Export Metadata
                 </Button>
@@ -3230,14 +3605,26 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Export Successful</Message.Header>
                       <p>
-                        <strong>Version:</strong> {exportResult.version}<br />
-                        <strong>Entries:</strong> {exportResult.metadata?.totalEntries || 0}<br />
-                        <strong>Links:</strong> {exportResult.metadata?.totalLinks || 0}<br />
-                        <strong>Checksum:</strong> {exportResult.metadata?.checksum?.substring(0, 16)}...
+                        <strong>Version:</strong> {exportResult.version}
+                        <br />
+                        <strong>Entries:</strong>{' '}
+                        {exportResult.metadata?.totalEntries || 0}
+                        <br />
+                        <strong>Links:</strong>{' '}
+                        {exportResult.metadata?.totalLinks || 0}
+                        <br />
+                        <strong>Checksum:</strong>{' '}
+                        {exportResult.metadata?.checksum?.slice(0, 16)}...
                       </p>
                       <details>
                         <summary>View Package JSON</summary>
-                        <pre style={{ fontSize: '0.8em', maxHeight: '200px', overflow: 'auto' }}>
+                        <pre
+                          style={{
+                            fontSize: '0.8em',
+                            maxHeight: '200px',
+                            overflow: 'auto',
+                          }}
+                        >
                           {JSON.stringify(exportResult, null, 2)}
                         </pre>
                       </details>
@@ -3266,37 +3653,39 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>Conflict Resolution Strategy</label>
                   <Dropdown
-                    selection
-                    options={availableStrategies?.strategies?.map(s => ({
-                      key: s.strategy,
-                      text: s.name,
-                      value: s.strategy,
-                      description: s.description
-                    })) || []}
-                    value={conflictStrategy}
                     onChange={(e, { value }) => setConflictStrategy(value)}
+                    options={
+                      availableStrategies?.strategies?.map((s) => ({
+                        description: s.description,
+                        key: s.strategy,
+                        text: s.name,
+                        value: s.strategy,
+                      })) || []
+                    }
+                    selection
+                    value={conflictStrategy}
                   />
                 </Form.Field>
                 <Form.Field>
                   <Checkbox
-                    label="Dry run (preview changes without applying)"
                     checked={dryRun}
+                    label="Dry run (preview changes without applying)"
                     onChange={(e, { checked }) => setDryRun(checked)}
                   />
                 </Form.Field>
                 <Button
-                  secondary
-                  loading={analyzingConflicts}
                   disabled={!importPackage.trim() || analyzingConflicts}
+                  loading={analyzingConflicts}
                   onClick={handleAnalyzeConflicts}
+                  secondary
                 >
                   Analyze Conflicts
                 </Button>
                 <Button
-                  primary
-                  loading={importingMetadata}
                   disabled={!importPackage.trim() || importingMetadata}
+                  loading={importingMetadata}
                   onClick={handleImportMetadata}
+                  primary
                   style={{ marginLeft: '0.5em' }}
                 >
                   Import Metadata
@@ -3308,10 +3697,10 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>Metadata Package (JSON)</label>
                   <TextArea
-                    placeholder="Paste exported metadata package JSON here..."
-                    value={importPackage}
                     onChange={(e) => setImportPackage(e.target.value)}
+                    placeholder="Paste exported metadata package JSON here..."
                     rows={6}
+                    value={importPackage}
                   />
                 </Form.Field>
               </Form>
@@ -3327,11 +3716,18 @@ const MediaCore = () => {
                     <Message info>
                       <Message.Header>Conflict Analysis</Message.Header>
                       <p>
-                        <strong>Total Entries:</strong> {conflictAnalysis.totalEntries}<br />
-                        <strong>Conflicting:</strong> {conflictAnalysis.conflictingEntries}<br />
-                        <strong>Clean:</strong> {conflictAnalysis.cleanEntries}<br />
-                        <strong>Recommended Strategy:</strong> {Object.entries(conflictAnalysis.recommendedStrategies || {})
-                          .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Merge'}
+                        <strong>Total Entries:</strong>{' '}
+                        {conflictAnalysis.totalEntries}
+                        <br />
+                        <strong>Conflicting:</strong>{' '}
+                        {conflictAnalysis.conflictingEntries}
+                        <br />
+                        <strong>Clean:</strong> {conflictAnalysis.cleanEntries}
+                        <br />
+                        <strong>Recommended Strategy:</strong>{' '}
+                        {Object.entries(
+                          conflictAnalysis.recommendedStrategies || {},
+                        ).sort(([, a], [, b]) => b - a)[0]?.[0] || 'Merge'}
                       </p>
                     </Message>
                   )}
@@ -3346,17 +3742,32 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Import {importResult.success ? 'Successful' : 'Completed with Issues'}</Message.Header>
+                      <Message.Header>
+                        Import{' '}
+                        {importResult.success
+                          ? 'Successful'
+                          : 'Completed with Issues'}
+                      </Message.Header>
                       <p>
-                        <strong>Processed:</strong> {importResult.entriesProcessed}<br />
-                        <strong>Imported:</strong> {importResult.entriesImported}<br />
-                        <strong>Skipped:</strong> {importResult.entriesSkipped}<br />
-                        <strong>Conflicts Resolved:</strong> {importResult.conflictsResolved}<br />
-                        <strong>Duration:</strong> {importResult.duration?.TotalSeconds.toFixed(2)}s
+                        <strong>Processed:</strong>{' '}
+                        {importResult.entriesProcessed}
+                        <br />
+                        <strong>Imported:</strong>{' '}
+                        {importResult.entriesImported}
+                        <br />
+                        <strong>Skipped:</strong> {importResult.entriesSkipped}
+                        <br />
+                        <strong>Conflicts Resolved:</strong>{' '}
+                        {importResult.conflictsResolved}
+                        <br />
+                        <strong>Duration:</strong>{' '}
+                        {importResult.duration?.TotalSeconds.toFixed(2)}s
                       </p>
                       {importResult.errors?.length > 0 && (
                         <details>
-                          <summary>Errors ({importResult.errors.length})</summary>
+                          <summary>
+                            Errors ({importResult.errors.length})
+                          </summary>
                           <List bulleted>
                             {importResult.errors.map((error, index) => (
                               <List.Item key={index}>{error}</List.Item>
@@ -3389,34 +3800,34 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentID</label>
                   <Input
+                    onChange={(e) => setPublishContentId(e.target.value)}
                     placeholder="content:audio:track:mb-12345"
                     value={publishContentId}
-                    onChange={(e) => setPublishContentId(e.target.value)}
                   />
                 </Form.Field>
                 <Form.Group widths="equal">
                   <Form.Field>
                     <label>Codec</label>
                     <Input
+                      onChange={(e) => setPublishCodec(e.target.value)}
                       placeholder="mp3, flac, etc."
                       value={publishCodec}
-                      onChange={(e) => setPublishCodec(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Size (bytes)</label>
                     <Input
+                      onChange={(e) => setPublishSize(e.target.value)}
                       type="number"
                       value={publishSize}
-                      onChange={(e) => setPublishSize(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
-                  loading={publishingDescriptor}
                   disabled={!publishContentId.trim() || publishingDescriptor}
+                  loading={publishingDescriptor}
                   onClick={handlePublishDescriptor}
+                  primary
                 >
                   Publish Descriptor
                 </Button>
@@ -3432,10 +3843,15 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Published Successfully</Message.Header>
                       <p>
-                        <strong>ContentID:</strong> {publishResult.contentId}<br />
-                        <strong>Version:</strong> {publishResult.version}<br />
-                        <strong>TTL:</strong> {publishResult.ttl?.totalMinutes} minutes<br />
-                        <strong>Was Updated:</strong> {publishResult.wasUpdated ? 'Yes' : 'No'}
+                        <strong>ContentID:</strong> {publishResult.contentId}
+                        <br />
+                        <strong>Version:</strong> {publishResult.version}
+                        <br />
+                        <strong>TTL:</strong> {publishResult.ttl?.totalMinutes}{' '}
+                        minutes
+                        <br />
+                        <strong>Was Updated:</strong>{' '}
+                        {publishResult.wasUpdated ? 'Yes' : 'No'}
                       </p>
                     </Message>
                   )}
@@ -3462,17 +3878,17 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentIDs (one per line)</label>
                   <TextArea
-                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
-                    value={batchContentIds}
                     onChange={(e) => setBatchContentIds(e.target.value)}
+                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
                     rows={6}
+                    value={batchContentIds}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={publishingBatch}
                   disabled={!batchContentIds.trim() || publishingBatch}
+                  loading={publishingBatch}
                   onClick={handlePublishBatch}
+                  primary
                 >
                   Publish Batch
                 </Button>
@@ -3488,11 +3904,22 @@ const MediaCore = () => {
                     <Message info>
                       <Message.Header>Batch Publish Results</Message.Header>
                       <p>
-                        <strong>Total Requested:</strong> {batchPublishResult.totalRequested}<br />
-                        <strong>Successfully Published:</strong> {batchPublishResult.successfullyPublished}<br />
-                        <strong>Failed:</strong> {batchPublishResult.failedToPublish}<br />
-                        <strong>Skipped:</strong> {batchPublishResult.skipped}<br />
-                        <strong>Duration:</strong> {batchPublishResult.totalDuration?.totalSeconds.toFixed(2)}s
+                        <strong>Total Requested:</strong>{' '}
+                        {batchPublishResult.totalRequested}
+                        <br />
+                        <strong>Successfully Published:</strong>{' '}
+                        {batchPublishResult.successfullyPublished}
+                        <br />
+                        <strong>Failed:</strong>{' '}
+                        {batchPublishResult.failedToPublish}
+                        <br />
+                        <strong>Skipped:</strong> {batchPublishResult.skipped}
+                        <br />
+                        <strong>Duration:</strong>{' '}
+                        {batchPublishResult.totalDuration?.totalSeconds.toFixed(
+                          2,
+                        )}
+                        s
                       </p>
                     </Message>
                   )}
@@ -3519,42 +3946,42 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>Target ContentID</label>
                   <Input
+                    onChange={(e) => setUpdateTargetId(e.target.value)}
                     placeholder="ContentID to update"
                     value={updateTargetId}
-                    onChange={(e) => setUpdateTargetId(e.target.value)}
                   />
                 </Form.Field>
                 <Form.Group widths="equal">
                   <Form.Field>
                     <label>New Codec</label>
                     <Input
+                      onChange={(e) => setUpdateCodec(e.target.value)}
                       placeholder="Leave empty to keep current"
                       value={updateCodec}
-                      onChange={(e) => setUpdateCodec(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>New Size (bytes)</label>
                     <Input
+                      onChange={(e) => setUpdateSize(e.target.value)}
                       placeholder="Leave empty to keep current"
                       value={updateSize}
-                      onChange={(e) => setUpdateSize(e.target.value)}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Form.Field>
                   <label>New Confidence (0.0-1.0)</label>
                   <Input
+                    onChange={(e) => setUpdateConfidence(e.target.value)}
                     placeholder="Leave empty to keep current"
                     value={updateConfidence}
-                    onChange={(e) => setUpdateConfidence(e.target.value)}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={updatingDescriptor}
                   disabled={!updateTargetId.trim() || updatingDescriptor}
+                  loading={updatingDescriptor}
                   onClick={handleUpdateDescriptor}
+                  primary
                 >
                   Update Descriptor
                 </Button>
@@ -3570,9 +3997,13 @@ const MediaCore = () => {
                     <Message success>
                       <Message.Header>Update Successful</Message.Header>
                       <p>
-                        <strong>ContentID:</strong> {updateResult.contentId}<br />
-                        <strong>Version:</strong> {updateResult.previousVersion} → {updateResult.newVersion}<br />
-                        <strong>Updates Applied:</strong> {updateResult.appliedUpdates?.join(', ') || 'none'}
+                        <strong>ContentID:</strong> {updateResult.contentId}
+                        <br />
+                        <strong>Version:</strong> {updateResult.previousVersion}{' '}
+                        → {updateResult.newVersion}
+                        <br />
+                        <strong>Updates Applied:</strong>{' '}
+                        {updateResult.appliedUpdates?.join(', ') || 'none'}
                       </p>
                     </Message>
                   )}
@@ -3597,15 +4028,15 @@ const MediaCore = () => {
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  loading={republishing}
                   disabled={republishing}
+                  loading={republishing}
                   onClick={handleRepublishExpiring}
                 >
                   Republish Expiring
                 </Button>
                 <Button
-                  loading={loadingStats}
                   disabled={loadingStats}
+                  loading={loadingStats}
                   onClick={handleLoadPublishingStats}
                 >
                   Load Stats
@@ -3623,11 +4054,18 @@ const MediaCore = () => {
                     <Message info>
                       <Message.Header>Republish Results</Message.Header>
                       <p>
-                        <strong>Checked:</strong> {republishResult.totalChecked}<br />
-                        <strong>Republished:</strong> {republishResult.republished}<br />
-                        <strong>Failed:</strong> {republishResult.failed}<br />
-                        <strong>Still Valid:</strong> {republishResult.stillValid}<br />
-                        <strong>Duration:</strong> {republishResult.duration?.totalSeconds.toFixed(2)}s
+                        <strong>Checked:</strong> {republishResult.totalChecked}
+                        <br />
+                        <strong>Republished:</strong>{' '}
+                        {republishResult.republished}
+                        <br />
+                        <strong>Failed:</strong> {republishResult.failed}
+                        <br />
+                        <strong>Still Valid:</strong>{' '}
+                        {republishResult.stillValid}
+                        <br />
+                        <strong>Duration:</strong>{' '}
+                        {republishResult.duration?.totalSeconds.toFixed(2)}s
                       </p>
                     </Message>
                   )}
@@ -3645,22 +4083,44 @@ const MediaCore = () => {
                     <Message>
                       <Message.Header>Publishing Statistics</Message.Header>
                       <p>
-                        <strong>Total Published:</strong> {publishingStats.totalPublishedDescriptors}<br />
-                        <strong>Active Publications:</strong> {publishingStats.activePublications}<br />
-                        <strong>Expiring Soon:</strong> {publishingStats.expiringSoon}<br />
-                        <strong>Average TTL:</strong> {publishingStats.averageTtlHours?.toFixed(1)} hours<br />
-                        <strong>Total Storage:</strong> {(publishingStats.totalStorageBytes / 1024 / 1024)?.toFixed(1)} MB
+                        <strong>Total Published:</strong>{' '}
+                        {publishingStats.totalPublishedDescriptors}
+                        <br />
+                        <strong>Active Publications:</strong>{' '}
+                        {publishingStats.activePublications}
+                        <br />
+                        <strong>Expiring Soon:</strong>{' '}
+                        {publishingStats.expiringSoon}
+                        <br />
+                        <strong>Average TTL:</strong>{' '}
+                        {publishingStats.averageTtlHours?.toFixed(1)} hours
+                        <br />
+                        <strong>Total Storage:</strong>{' '}
+                        {(
+                          publishingStats.totalStorageBytes /
+                          1_024 /
+                          1_024
+                        )?.toFixed(1)}{' '}
+                        MB
                       </p>
-                      {publishingStats.publicationsByDomain && Object.keys(publishingStats.publicationsByDomain).length > 0 && (
-                        <div style={{ marginTop: '0.5em' }}>
-                          <strong>By Domain:</strong>
-                          {Object.entries(publishingStats.publicationsByDomain).map(([domain, count]) => (
-                            <Label key={domain} size="tiny" style={{ margin: '0.1em' }}>
-                              {domain}: {count}
-                            </Label>
-                          ))}
-                        </div>
-                      )}
+                      {publishingStats.publicationsByDomain &&
+                        Object.keys(publishingStats.publicationsByDomain)
+                          .length > 0 && (
+                          <div style={{ marginTop: '0.5em' }}>
+                            <strong>By Domain:</strong>
+                            {Object.entries(
+                              publishingStats.publicationsByDomain,
+                            ).map(([domain, count]) => (
+                              <Label
+                                key={domain}
+                                size="tiny"
+                                style={{ margin: '0.1em' }}
+                              >
+                                {domain}: {count}
+                              </Label>
+                            ))}
+                          </div>
+                        )}
                     </Message>
                   )}
                 </div>
@@ -3686,23 +4146,23 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentID</label>
                   <Input
+                    onChange={(e) => setRetrieveContentId(e.target.value)}
                     placeholder="content:audio:track:mb-12345"
                     value={retrieveContentId}
-                    onChange={(e) => setRetrieveContentId(e.target.value)}
                   />
                 </Form.Field>
                 <Form.Field>
                   <Checkbox
-                    label="Bypass cache (force fresh retrieval)"
                     checked={bypassCache}
+                    label="Bypass cache (force fresh retrieval)"
                     onChange={(e, { checked }) => setBypassCache(checked)}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={retrievingDescriptor}
                   disabled={!retrieveContentId.trim() || retrievingDescriptor}
+                  loading={retrievingDescriptor}
                   onClick={handleRetrieveDescriptor}
+                  primary
                 >
                   Retrieve Descriptor
                 </Button>
@@ -3716,24 +4176,45 @@ const MediaCore = () => {
                     </Message>
                   ) : !retrievalResult.found ? (
                     <Message warning>
-                      <p>Content descriptor not found for: {retrievalResult.contentId || retrieveContentId}</p>
+                      <p>
+                        Content descriptor not found for:{' '}
+                        {retrievalResult.contentId || retrieveContentId}
+                      </p>
                     </Message>
                   ) : (
                     <Message success>
                       <Message.Header>Descriptor Retrieved</Message.Header>
                       <p>
-                        <strong>ContentID:</strong> {retrievalResult.descriptor?.contentId}<br />
-                        <strong>From Cache:</strong> {retrievalResult.fromCache ? 'Yes' : 'No'}<br />
-                        <strong>Retrieved:</strong> {new Date(retrievalResult.retrievedAt).toLocaleString()}<br />
-                        <strong>Duration:</strong> {retrievalResult.retrievalDuration?.totalMilliseconds.toFixed(0)}ms<br />
-                        <strong>Verified:</strong> {retrievalResult.verification?.isValid ? 'Yes' : 'No'}
+                        <strong>ContentID:</strong>{' '}
+                        {retrievalResult.descriptor?.contentId}
+                        <br />
+                        <strong>From Cache:</strong>{' '}
+                        {retrievalResult.fromCache ? 'Yes' : 'No'}
+                        <br />
+                        <strong>Retrieved:</strong>{' '}
+                        {new Date(retrievalResult.retrievedAt).toLocaleString()}
+                        <br />
+                        <strong>Duration:</strong>{' '}
+                        {retrievalResult.retrievalDuration?.totalMilliseconds.toFixed(
+                          0,
+                        )}
+                        ms
+                        <br />
+                        <strong>Verified:</strong>{' '}
+                        {retrievalResult.verification?.isValid ? 'Yes' : 'No'}
                         {retrievalResult.verification?.warnings?.length > 0 && (
                           <span> (with warnings)</span>
                         )}
                       </p>
                       <details>
                         <summary>View Descriptor JSON</summary>
-                        <pre style={{ fontSize: '0.8em', maxHeight: '200px', overflow: 'auto' }}>
+                        <pre
+                          style={{
+                            fontSize: '0.8em',
+                            maxHeight: '200px',
+                            overflow: 'auto',
+                          }}
+                        >
                           {JSON.stringify(retrievalResult.descriptor, null, 2)}
                         </pre>
                       </details>
@@ -3762,17 +4243,17 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>ContentIDs (one per line)</label>
                   <TextArea
-                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
-                    value={batchRetrieveContentIds}
                     onChange={(e) => setBatchRetrieveContentIds(e.target.value)}
+                    placeholder="content:audio:track:mb-12345&#10;content:video:movie:imdb-tt0111161&#10;..."
                     rows={6}
+                    value={batchRetrieveContentIds}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={retrievingBatch}
                   disabled={!batchRetrieveContentIds.trim() || retrievingBatch}
+                  loading={retrievingBatch}
                   onClick={handleRetrieveBatch}
+                  primary
                 >
                   Retrieve Batch
                 </Button>
@@ -3788,10 +4269,18 @@ const MediaCore = () => {
                     <Message info>
                       <Message.Header>Batch Retrieval Results</Message.Header>
                       <p>
-                        <strong>Requested:</strong> {batchRetrievalResult.requested}<br />
-                        <strong>Found:</strong> {batchRetrievalResult.found}<br />
-                        <strong>Failed:</strong> {batchRetrievalResult.failed}<br />
-                        <strong>Duration:</strong> {batchRetrievalResult.totalDuration?.totalSeconds.toFixed(2)}s
+                        <strong>Requested:</strong>{' '}
+                        {batchRetrievalResult.requested}
+                        <br />
+                        <strong>Found:</strong> {batchRetrievalResult.found}
+                        <br />
+                        <strong>Failed:</strong> {batchRetrievalResult.failed}
+                        <br />
+                        <strong>Duration:</strong>{' '}
+                        {batchRetrievalResult.totalDuration?.totalSeconds.toFixed(
+                          2,
+                        )}
+                        s
                       </p>
                     </Message>
                   )}
@@ -3819,42 +4308,46 @@ const MediaCore = () => {
                   <Form.Field>
                     <label>Domain</label>
                     <Dropdown
-                      selection
+                      onChange={(e, { value }) => setQueryDomain(value)}
                       options={[
                         { key: 'audio', text: 'Audio', value: 'audio' },
                         { key: 'video', text: 'Video', value: 'video' },
                         { key: 'image', text: 'Image', value: 'image' },
                         { key: 'text', text: 'Text', value: 'text' },
-                        { key: 'application', text: 'Application', value: 'application' }
+                        {
+                          key: 'application',
+                          text: 'Application',
+                          value: 'application',
+                        },
                       ]}
+                      selection
                       value={queryDomain}
-                      onChange={(e, { value }) => setQueryDomain(value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Type (optional)</label>
                     <Input
+                      onChange={(e) => setQueryType(e.target.value)}
                       placeholder="track, album, movie, etc."
                       value={queryType}
-                      onChange={(e) => setQueryType(e.target.value)}
                     />
                   </Form.Field>
                   <Form.Field>
                     <label>Max Results</label>
                     <Input
-                      type="number"
-                      min="1"
                       max="1000"
-                      value={queryMaxResults}
+                      min="1"
                       onChange={(e) => setQueryMaxResults(e.target.value)}
+                      type="number"
+                      value={queryMaxResults}
                     />
                   </Form.Field>
                 </Form.Group>
                 <Button
-                  primary
-                  loading={queryingDescriptors}
                   disabled={!queryDomain.trim() || queryingDescriptors}
+                  loading={queryingDescriptors}
                   onClick={handleQueryDescriptors}
+                  primary
                 >
                   Query Domain
                 </Button>
@@ -3871,10 +4364,23 @@ const MediaCore = () => {
                       <Message.Header>Query Results</Message.Header>
                       <p>
                         <strong>Domain:</strong> {queryResult.domain}
-                        {queryResult.type && <span> | <strong>Type:</strong> {queryResult.type}</span>}<br />
-                        <strong>Found:</strong> {queryResult.totalFound}<br />
-                        <strong>Query Time:</strong> {queryResult.queryDuration?.totalMilliseconds.toFixed(0)}ms<br />
-                        <strong>Has More:</strong> {queryResult.hasMoreResults ? 'Yes' : 'No'}
+                        {queryResult.type && (
+                          <span>
+                            {' '}
+                            | <strong>Type:</strong> {queryResult.type}
+                          </span>
+                        )}
+                        <br />
+                        <strong>Found:</strong> {queryResult.totalFound}
+                        <br />
+                        <strong>Query Time:</strong>{' '}
+                        {queryResult.queryDuration?.totalMilliseconds.toFixed(
+                          0,
+                        )}
+                        ms
+                        <br />
+                        <strong>Has More:</strong>{' '}
+                        {queryResult.hasMoreResults ? 'Yes' : 'No'}
                       </p>
                     </Message>
                   )}
@@ -3901,17 +4407,17 @@ const MediaCore = () => {
                 <Form.Field>
                   <label>Descriptor JSON</label>
                   <TextArea
-                    placeholder="Paste descriptor JSON to verify..."
-                    value={verifyDescriptor}
                     onChange={(e) => setVerifyDescriptor(e.target.value)}
+                    placeholder="Paste descriptor JSON to verify..."
                     rows={8}
+                    value={verifyDescriptor}
                   />
                 </Form.Field>
                 <Button
-                  primary
-                  loading={verifyingDescriptor}
                   disabled={!verifyDescriptor.trim() || verifyingDescriptor}
+                  loading={verifyingDescriptor}
                   onClick={handleVerifyDescriptor}
+                  primary
                 >
                   Verify Descriptor
                 </Button>
@@ -3924,22 +4430,42 @@ const MediaCore = () => {
                       <p>{descriptorVerificationResult.error}</p>
                     </Message>
                   ) : (
-                    <Message success={descriptorVerificationResult.isValid} warning={!descriptorVerificationResult.isValid}>
+                    <Message
+                      success={descriptorVerificationResult.isValid}
+                      warning={!descriptorVerificationResult.isValid}
+                    >
                       <Message.Header>
-                        Verification Result: {descriptorVerificationResult.isValid ? 'Valid' : 'Invalid'}
+                        Verification Result:{' '}
+                        {descriptorVerificationResult.isValid
+                          ? 'Valid'
+                          : 'Invalid'}
                       </Message.Header>
                       <p>
-                        <strong>Signature Valid:</strong> {descriptorVerificationResult.signatureValid ? 'Yes' : 'No'}<br />
-                        <strong>Freshness Valid:</strong> {descriptorVerificationResult.freshnessValid ? 'Yes' : 'No'}<br />
-                        <strong>Age:</strong> {descriptorVerificationResult.age?.totalMinutes.toFixed(1)} minutes
+                        <strong>Signature Valid:</strong>{' '}
+                        {descriptorVerificationResult.signatureValid
+                          ? 'Yes'
+                          : 'No'}
+                        <br />
+                        <strong>Freshness Valid:</strong>{' '}
+                        {descriptorVerificationResult.freshnessValid
+                          ? 'Yes'
+                          : 'No'}
+                        <br />
+                        <strong>Age:</strong>{' '}
+                        {descriptorVerificationResult.age?.totalMinutes.toFixed(
+                          1,
+                        )}{' '}
+                        minutes
                       </p>
                       {descriptorVerificationResult.warnings?.length > 0 && (
                         <div>
                           <strong>Warnings:</strong>
                           <List bulleted>
-                            {descriptorVerificationResult.warnings.map((warning, index) => (
-                              <List.Item key={index}>{warning}</List.Item>
-                            ))}
+                            {descriptorVerificationResult.warnings.map(
+                              (warning, index) => (
+                                <List.Item key={index}>{warning}</List.Item>
+                              ),
+                            )}
                           </List>
                         </div>
                       )}
@@ -3966,17 +4492,13 @@ const MediaCore = () => {
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  loading={loadingRetrievalStats}
                   disabled={loadingRetrievalStats}
+                  loading={loadingRetrievalStats}
                   onClick={handleLoadRetrievalStats}
                 >
                   Load Stats
                 </Button>
-                <Button
-                  onClick={handleClearRetrievalCache}
-                >
-                  Clear Cache
-                </Button>
+                <Button onClick={handleClearRetrievalCache}>Clear Cache</Button>
               </Button.Group>
 
               {/* Retrieval Stats */}
@@ -3990,13 +4512,27 @@ const MediaCore = () => {
                     <Message>
                       <Message.Header>Retrieval Statistics</Message.Header>
                       <p>
-                        <strong>Total Retrievals:</strong> {retrievalStats.totalRetrievals}<br />
-                        <strong>Cache Hits:</strong> {retrievalStats.cacheHits}<br />
-                        <strong>Cache Misses:</strong> {retrievalStats.cacheMisses}<br />
-                        <strong>Hit Ratio:</strong> {(retrievalStats.cacheHitRatio * 100).toFixed(1)}%<br />
-                        <strong>Avg Retrieval Time:</strong> {retrievalStats.averageRetrievalTime?.totalMilliseconds.toFixed(0)}ms<br />
-                        <strong>Active Cache Entries:</strong> {retrievalStats.activeCacheEntries}<br />
-                        <strong>Cache Size:</strong> {(retrievalStats.cacheSizeBytes / 1024).toFixed(1)} KB
+                        <strong>Total Retrievals:</strong>{' '}
+                        {retrievalStats.totalRetrievals}
+                        <br />
+                        <strong>Cache Hits:</strong> {retrievalStats.cacheHits}
+                        <br />
+                        <strong>Cache Misses:</strong>{' '}
+                        {retrievalStats.cacheMisses}
+                        <br />
+                        <strong>Hit Ratio:</strong>{' '}
+                        {(retrievalStats.cacheHitRatio * 100).toFixed(1)}%<br />
+                        <strong>Avg Retrieval Time:</strong>{' '}
+                        {retrievalStats.averageRetrievalTime?.totalMilliseconds.toFixed(
+                          0,
+                        )}
+                        ms
+                        <br />
+                        <strong>Active Cache Entries:</strong>{' '}
+                        {retrievalStats.activeCacheEntries}
+                        <br />
+                        <strong>Cache Size:</strong>{' '}
+                        {(retrievalStats.cacheSizeBytes / 1_024).toFixed(1)} KB
                       </p>
                     </Message>
                   )}
@@ -4015,16 +4551,17 @@ const MediaCore = () => {
                 MediaCore Statistics Dashboard
               </Card.Header>
               <Card.Description>
-                Comprehensive overview of all MediaCore system performance and usage metrics
+                Comprehensive overview of all MediaCore system performance and
+                usage metrics
               </Card.Description>
             </Card.Content>
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  primary
-                  loading={loadingDashboard}
                   disabled={loadingDashboard}
+                  loading={loadingDashboard}
                   onClick={handleLoadMediaCoreDashboard}
+                  primary
                 >
                   Load Full Dashboard
                 </Button>
@@ -4042,8 +4579,17 @@ const MediaCore = () => {
                   <Message info>
                     <Message.Header>System Overview</Message.Header>
                     <p>
-                      <strong>Uptime:</strong> {mediaCoreDashboard.uptime ? `${Math.floor(mediaCoreDashboard.uptime.totalHours)}h ${mediaCoreDashboard.uptime.minutes}m` : 'N/A'}<br />
-                      <strong>Last Updated:</strong> {mediaCoreDashboard.timestamp ? new Date(mediaCoreDashboard.timestamp).toLocaleString() : 'N/A'}
+                      <strong>Uptime:</strong>{' '}
+                      {mediaCoreDashboard.uptime
+                        ? `${Math.floor(mediaCoreDashboard.uptime.totalHours)}h ${mediaCoreDashboard.uptime.minutes}m`
+                        : 'N/A'}
+                      <br />
+                      <strong>Last Updated:</strong>{' '}
+                      {mediaCoreDashboard.timestamp
+                        ? new Date(
+                            mediaCoreDashboard.timestamp,
+                          ).toLocaleString()
+                        : 'N/A'}
                     </p>
                   </Message>
 
@@ -4052,10 +4598,34 @@ const MediaCore = () => {
                     <Message>
                       <Message.Header>System Resources</Message.Header>
                       <p>
-                        <strong>Working Set:</strong> {(mediaCoreDashboard.systemResources.workingSetBytes / 1024 / 1024).toFixed(1)} MB<br />
-                        <strong>Private Memory:</strong> {(mediaCoreDashboard.systemResources.privateMemoryBytes / 1024 / 1024).toFixed(1)} MB<br />
-                        <strong>GC Memory:</strong> {(mediaCoreDashboard.systemResources.gcTotalMemoryBytes / 1024 / 1024).toFixed(1)} MB<br />
-                        <strong>Thread Count:</strong> {mediaCoreDashboard.systemResources.threadCount}
+                        <strong>Working Set:</strong>{' '}
+                        {(
+                          mediaCoreDashboard.systemResources.workingSetBytes /
+                          1_024 /
+                          1_024
+                        ).toFixed(1)}{' '}
+                        MB
+                        <br />
+                        <strong>Private Memory:</strong>{' '}
+                        {(
+                          mediaCoreDashboard.systemResources
+                            .privateMemoryBytes /
+                          1_024 /
+                          1_024
+                        ).toFixed(1)}{' '}
+                        MB
+                        <br />
+                        <strong>GC Memory:</strong>{' '}
+                        {(
+                          mediaCoreDashboard.systemResources
+                            .gcTotalMemoryBytes /
+                          1_024 /
+                          1_024
+                        ).toFixed(1)}{' '}
+                        MB
+                        <br />
+                        <strong>Thread Count:</strong>{' '}
+                        {mediaCoreDashboard.systemResources.threadCount}
                       </p>
                     </Message>
                   )}
@@ -4064,7 +4634,10 @@ const MediaCore = () => {
 
               {/* Error Display */}
               {mediaCoreDashboard?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>Failed to load dashboard: {mediaCoreDashboard.error}</p>
                 </Message>
               )}
@@ -4086,9 +4659,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingRegistryStats}
                 fluid
                 loading={loadingRegistryStats}
-                disabled={loadingRegistryStats}
                 onClick={handleLoadContentRegistryStats}
               >
                 Load Registry Stats
@@ -4099,26 +4672,42 @@ const MediaCore = () => {
                   <Message success>
                     <Message.Header>Registry Overview</Message.Header>
                     <p>
-                      <strong>Total Mappings:</strong> {contentRegistryStats.totalMappings}<br />
-                      <strong>Domains:</strong> {contentRegistryStats.totalDomains}<br />
-                      <strong>Avg Mappings/Domain:</strong> {contentRegistryStats.averageMappingsPerDomain.toFixed(1)}
+                      <strong>Total Mappings:</strong>{' '}
+                      {contentRegistryStats.totalMappings}
+                      <br />
+                      <strong>Domains:</strong>{' '}
+                      {contentRegistryStats.totalDomains}
+                      <br />
+                      <strong>Avg Mappings/Domain:</strong>{' '}
+                      {contentRegistryStats.averageMappingsPerDomain.toFixed(1)}
                     </p>
-                    {contentRegistryStats.mappingsByDomain && Object.keys(contentRegistryStats.mappingsByDomain).length > 0 && (
-                      <div style={{ marginTop: '0.5em' }}>
-                        <strong>Mappings by Domain:</strong>
-                        {Object.entries(contentRegistryStats.mappingsByDomain).map(([domain, count]) => (
-                          <Label key={domain} size="tiny" style={{ margin: '0.1em' }}>
-                            {domain}: {count}
-                          </Label>
-                        ))}
-                      </div>
-                    )}
+                    {contentRegistryStats.mappingsByDomain &&
+                      Object.keys(contentRegistryStats.mappingsByDomain)
+                        .length > 0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>Mappings by Domain:</strong>
+                          {Object.entries(
+                            contentRegistryStats.mappingsByDomain,
+                          ).map(([domain, count]) => (
+                            <Label
+                              key={domain}
+                              size="tiny"
+                              style={{ margin: '0.1em' }}
+                            >
+                              {domain}: {count}
+                            </Label>
+                          ))}
+                        </div>
+                      )}
                   </Message>
                 </div>
               )}
 
               {contentRegistryStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{contentRegistryStats.error}</p>
                 </Message>
               )}
@@ -4140,9 +4729,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingDescriptorStats}
                 fluid
                 loading={loadingDescriptorStats}
-                disabled={loadingDescriptorStats}
                 onClick={handleLoadDescriptorStats}
               >
                 Load Descriptor Stats
@@ -4153,20 +4742,37 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Cache Performance</Message.Header>
                     <p>
-                      <strong>Total Retrievals:</strong> {descriptorStats.totalRetrievals}<br />
-                      <strong>Cache Hits:</strong> {descriptorStats.cacheHits}<br />
-                      <strong>Cache Misses:</strong> {descriptorStats.cacheMisses}<br />
-                      <strong>Hit Ratio:</strong> {(descriptorStats.cacheHitRatio * 100).toFixed(1)}%<br />
-                      <strong>Avg Retrieval Time:</strong> {descriptorStats.averageRetrievalTime?.totalMilliseconds.toFixed(0)}ms<br />
-                      <strong>Active Cache Entries:</strong> {descriptorStats.activeCacheEntries}<br />
-                      <strong>Cache Size:</strong> {(descriptorStats.cacheSizeBytes / 1024).toFixed(1)} KB
+                      <strong>Total Retrievals:</strong>{' '}
+                      {descriptorStats.totalRetrievals}
+                      <br />
+                      <strong>Cache Hits:</strong> {descriptorStats.cacheHits}
+                      <br />
+                      <strong>Cache Misses:</strong>{' '}
+                      {descriptorStats.cacheMisses}
+                      <br />
+                      <strong>Hit Ratio:</strong>{' '}
+                      {(descriptorStats.cacheHitRatio * 100).toFixed(1)}%<br />
+                      <strong>Avg Retrieval Time:</strong>{' '}
+                      {descriptorStats.averageRetrievalTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
+                      <br />
+                      <strong>Active Cache Entries:</strong>{' '}
+                      {descriptorStats.activeCacheEntries}
+                      <br />
+                      <strong>Cache Size:</strong>{' '}
+                      {(descriptorStats.cacheSizeBytes / 1_024).toFixed(1)} KB
                     </p>
                   </Message>
                 </div>
               )}
 
               {descriptorStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{descriptorStats.error}</p>
                 </Message>
               )}
@@ -4188,9 +4794,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingFuzzyStats}
                 fluid
                 loading={loadingFuzzyStats}
-                disabled={loadingFuzzyStats}
                 onClick={handleLoadFuzzyMatchingStats}
               >
                 Load Fuzzy Stats
@@ -4201,27 +4807,51 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Matching Performance</Message.Header>
                     <p>
-                      <strong>Total Matches:</strong> {fuzzyMatchingStats.totalMatches}<br />
-                      <strong>Success Rate:</strong> {(fuzzyMatchingStats.successRate * 100).toFixed(1)}%<br />
-                      <strong>Avg Confidence:</strong> {(fuzzyMatchingStats.averageConfidenceScore * 100).toFixed(1)}%<br />
-                      <strong>Avg Match Time:</strong> {fuzzyMatchingStats.averageMatchingTime?.totalMilliseconds.toFixed(0)}ms
+                      <strong>Total Matches:</strong>{' '}
+                      {fuzzyMatchingStats.totalMatches}
+                      <br />
+                      <strong>Success Rate:</strong>{' '}
+                      {(fuzzyMatchingStats.successRate * 100).toFixed(1)}%<br />
+                      <strong>Avg Confidence:</strong>{' '}
+                      {(
+                        fuzzyMatchingStats.averageConfidenceScore * 100
+                      ).toFixed(1)}
+                      %<br />
+                      <strong>Avg Match Time:</strong>{' '}
+                      {fuzzyMatchingStats.averageMatchingTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
                     </p>
-                    {fuzzyMatchingStats.accuracyByAlgorithm && Object.keys(fuzzyMatchingStats.accuracyByAlgorithm).length > 0 && (
-                      <div style={{ marginTop: '0.5em' }}>
-                        <strong>Algorithm Accuracy:</strong>
-                        {Object.entries(fuzzyMatchingStats.accuracyByAlgorithm).map(([algorithm, stats]) => (
-                          <div key={algorithm} style={{ margin: '0.2em 0' }}>
-                            <small>{algorithm}: F1={stats.f1Score.toFixed(2)}, Precision={stats.precision.toFixed(2)}</small>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {fuzzyMatchingStats.accuracyByAlgorithm &&
+                      Object.keys(fuzzyMatchingStats.accuracyByAlgorithm)
+                        .length > 0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>Algorithm Accuracy:</strong>
+                          {Object.entries(
+                            fuzzyMatchingStats.accuracyByAlgorithm,
+                          ).map(([algorithm, stats]) => (
+                            <div
+                              key={algorithm}
+                              style={{ margin: '0.2em 0' }}
+                            >
+                              <small>
+                                {algorithm}: F1={stats.f1Score.toFixed(2)},
+                                Precision={stats.precision.toFixed(2)}
+                              </small>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                   </Message>
                 </div>
               )}
 
               {fuzzyMatchingStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{fuzzyMatchingStats.error}</p>
                 </Message>
               )}
@@ -4243,9 +4873,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingPerceptualStats}
                 fluid
                 loading={loadingPerceptualStats}
-                disabled={loadingPerceptualStats}
                 onClick={handleLoadPerceptualHashingStats}
               >
                 Load Hashing Stats
@@ -4256,27 +4886,53 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Hashing Performance</Message.Header>
                     <p>
-                      <strong>Total Hashes:</strong> {perceptualHashingStats.totalHashesComputed}<br />
-                      <strong>Avg Computation Time:</strong> {perceptualHashingStats.averageComputationTime?.totalMilliseconds.toFixed(0)}ms<br />
-                      <strong>Overall Accuracy:</strong> {(perceptualHashingStats.overallAccuracy * 100).toFixed(1)}%<br />
-                      <strong>Duplicates Detected:</strong> {perceptualHashingStats.duplicateHashesDetected}
+                      <strong>Total Hashes:</strong>{' '}
+                      {perceptualHashingStats.totalHashesComputed}
+                      <br />
+                      <strong>Avg Computation Time:</strong>{' '}
+                      {perceptualHashingStats.averageComputationTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
+                      <br />
+                      <strong>Overall Accuracy:</strong>{' '}
+                      {(perceptualHashingStats.overallAccuracy * 100).toFixed(
+                        1,
+                      )}
+                      %<br />
+                      <strong>Duplicates Detected:</strong>{' '}
+                      {perceptualHashingStats.duplicateHashesDetected}
                     </p>
-                    {perceptualHashingStats.statsByAlgorithm && Object.keys(perceptualHashingStats.statsByAlgorithm).length > 0 && (
-                      <div style={{ marginTop: '0.5em' }}>
-                        <strong>Algorithm Breakdown:</strong>
-                        {Object.entries(perceptualHashingStats.statsByAlgorithm).map(([algorithm, stats]) => (
-                          <div key={algorithm} style={{ margin: '0.2em 0' }}>
-                            <small>{algorithm}: {stats.hashesComputed} hashes, {stats.averageTime.totalMilliseconds.toFixed(0)}ms avg, {stats.accuracy.toFixed(2)} accuracy</small>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {perceptualHashingStats.statsByAlgorithm &&
+                      Object.keys(perceptualHashingStats.statsByAlgorithm)
+                        .length > 0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>Algorithm Breakdown:</strong>
+                          {Object.entries(
+                            perceptualHashingStats.statsByAlgorithm,
+                          ).map(([algorithm, stats]) => (
+                            <div
+                              key={algorithm}
+                              style={{ margin: '0.2em 0' }}
+                            >
+                              <small>
+                                {algorithm}: {stats.hashesComputed} hashes,{' '}
+                                {stats.averageTime.totalMilliseconds.toFixed(0)}
+                                ms avg, {stats.accuracy.toFixed(2)} accuracy
+                              </small>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                   </Message>
                 </div>
               )}
 
               {perceptualHashingStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{perceptualHashingStats.error}</p>
                 </Message>
               )}
@@ -4298,9 +4954,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingIpldStats}
                 fluid
                 loading={loadingIpldStats}
-                disabled={loadingIpldStats}
                 onClick={handleLoadIpldMappingStats}
               >
                 Load IPLD Stats
@@ -4311,19 +4967,38 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Graph Statistics</Message.Header>
                     <p>
-                      <strong>Total Links:</strong> {ipldMappingStats.totalLinks}<br />
-                      <strong>Total Nodes:</strong> {ipldMappingStats.totalNodes}<br />
-                      <strong>Total Graphs:</strong> {ipldMappingStats.totalGraphs}<br />
-                      <strong>Connectivity Ratio:</strong> {(ipldMappingStats.graphConnectivityRatio * 100).toFixed(1)}%<br />
-                      <strong>Broken Links:</strong> {ipldMappingStats.brokenLinksDetected}<br />
-                      <strong>Avg Traversal Time:</strong> {ipldMappingStats.averageTraversalTime?.totalMilliseconds.toFixed(0)}ms
+                      <strong>Total Links:</strong>{' '}
+                      {ipldMappingStats.totalLinks}
+                      <br />
+                      <strong>Total Nodes:</strong>{' '}
+                      {ipldMappingStats.totalNodes}
+                      <br />
+                      <strong>Total Graphs:</strong>{' '}
+                      {ipldMappingStats.totalGraphs}
+                      <br />
+                      <strong>Connectivity Ratio:</strong>{' '}
+                      {(ipldMappingStats.graphConnectivityRatio * 100).toFixed(
+                        1,
+                      )}
+                      %<br />
+                      <strong>Broken Links:</strong>{' '}
+                      {ipldMappingStats.brokenLinksDetected}
+                      <br />
+                      <strong>Avg Traversal Time:</strong>{' '}
+                      {ipldMappingStats.averageTraversalTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
                     </p>
                   </Message>
                 </div>
               )}
 
               {ipldMappingStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{ipldMappingStats.error}</p>
                 </Message>
               )}
@@ -4345,9 +5020,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingPortabilityStats}
                 fluid
                 loading={loadingPortabilityStats}
-                disabled={loadingPortabilityStats}
                 onClick={handleLoadMetadataPortabilityStats}
               >
                 Load Portability Stats
@@ -4358,19 +5033,44 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Portability Metrics</Message.Header>
                     <p>
-                      <strong>Total Exports:</strong> {metadataPortabilityStats.totalExports}<br />
-                      <strong>Total Imports:</strong> {metadataPortabilityStats.totalImports}<br />
-                      <strong>Import Success Rate:</strong> {(metadataPortabilityStats.importSuccessRate * 100).toFixed(1)}%<br />
-                      <strong>Data Transferred:</strong> {(metadataPortabilityStats.totalDataTransferred / 1024).toFixed(1)} KB<br />
-                      <strong>Avg Export Time:</strong> {metadataPortabilityStats.averageExportTime?.totalMilliseconds.toFixed(0)}ms<br />
-                      <strong>Avg Import Time:</strong> {metadataPortabilityStats.averageImportTime?.totalMilliseconds.toFixed(0)}ms
+                      <strong>Total Exports:</strong>{' '}
+                      {metadataPortabilityStats.totalExports}
+                      <br />
+                      <strong>Total Imports:</strong>{' '}
+                      {metadataPortabilityStats.totalImports}
+                      <br />
+                      <strong>Import Success Rate:</strong>{' '}
+                      {(
+                        metadataPortabilityStats.importSuccessRate * 100
+                      ).toFixed(1)}
+                      %<br />
+                      <strong>Data Transferred:</strong>{' '}
+                      {(
+                        metadataPortabilityStats.totalDataTransferred / 1_024
+                      ).toFixed(1)}{' '}
+                      KB
+                      <br />
+                      <strong>Avg Export Time:</strong>{' '}
+                      {metadataPortabilityStats.averageExportTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
+                      <br />
+                      <strong>Avg Import Time:</strong>{' '}
+                      {metadataPortabilityStats.averageImportTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
                     </p>
                   </Message>
                 </div>
               )}
 
               {metadataPortabilityStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{metadataPortabilityStats.error}</p>
                 </Message>
               )}
@@ -4392,9 +5092,9 @@ const MediaCore = () => {
             </Card.Content>
             <Card.Content>
               <Button
+                disabled={loadingPublishingStats}
                 fluid
                 loading={loadingPublishingStats}
-                disabled={loadingPublishingStats}
                 onClick={handleLoadContentPublishingStats}
               >
                 Load Publishing Stats
@@ -4405,30 +5105,59 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Publishing Overview</Message.Header>
                     <p>
-                      <strong>Total Published:</strong> {contentPublishingStats.totalPublished}<br />
-                      <strong>Active Publications:</strong> {contentPublishingStats.activePublications}<br />
-                      <strong>Expired Publications:</strong> {contentPublishingStats.expiredPublications}<br />
-                      <strong>Success Rate:</strong> {(contentPublishingStats.publicationSuccessRate * 100).toFixed(1)}%<br />
-                      <strong>Republished:</strong> {contentPublishingStats.republishedDescriptors}<br />
-                      <strong>Failed:</strong> {contentPublishingStats.failedPublications}<br />
-                      <strong>Avg Publish Time:</strong> {contentPublishingStats.averagePublishTime?.totalMilliseconds.toFixed(0)}ms
+                      <strong>Total Published:</strong>{' '}
+                      {contentPublishingStats.totalPublished}
+                      <br />
+                      <strong>Active Publications:</strong>{' '}
+                      {contentPublishingStats.activePublications}
+                      <br />
+                      <strong>Expired Publications:</strong>{' '}
+                      {contentPublishingStats.expiredPublications}
+                      <br />
+                      <strong>Success Rate:</strong>{' '}
+                      {(
+                        contentPublishingStats.publicationSuccessRate * 100
+                      ).toFixed(1)}
+                      %<br />
+                      <strong>Republished:</strong>{' '}
+                      {contentPublishingStats.republishedDescriptors}
+                      <br />
+                      <strong>Failed:</strong>{' '}
+                      {contentPublishingStats.failedPublications}
+                      <br />
+                      <strong>Avg Publish Time:</strong>{' '}
+                      {contentPublishingStats.averagePublishTime?.totalMilliseconds.toFixed(
+                        0,
+                      )}
+                      ms
                     </p>
-                    {contentPublishingStats.publicationsByDomain && Object.keys(contentPublishingStats.publicationsByDomain).length > 0 && (
-                      <div style={{ marginTop: '0.5em' }}>
-                        <strong>Publications by Domain:</strong>
-                        {Object.entries(contentPublishingStats.publicationsByDomain).map(([domain, count]) => (
-                          <Label key={domain} size="tiny" style={{ margin: '0.1em' }}>
-                            {domain}: {count}
-                          </Label>
-                        ))}
-                      </div>
-                    )}
+                    {contentPublishingStats.publicationsByDomain &&
+                      Object.keys(contentPublishingStats.publicationsByDomain)
+                        .length > 0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>Publications by Domain:</strong>
+                          {Object.entries(
+                            contentPublishingStats.publicationsByDomain,
+                          ).map(([domain, count]) => (
+                            <Label
+                              key={domain}
+                              size="tiny"
+                              style={{ margin: '0.1em' }}
+                            >
+                              {domain}: {count}
+                            </Label>
+                          ))}
+                        </div>
+                      )}
                   </Message>
                 </div>
               )}
 
               {contentPublishingStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>{contentPublishingStats.error}</p>
                 </Message>
               )}
@@ -4445,7 +5174,8 @@ const MediaCore = () => {
                 PodCore DHT Publishing
               </Card.Header>
               <Card.Description>
-                Publish and manage pod metadata on the decentralized DHT for discovery
+                Publish and manage pod metadata on the decentralized DHT for
+                discovery
               </Card.Description>
             </Card.Content>
 
@@ -4455,16 +5185,16 @@ const MediaCore = () => {
               <Form>
                 <Form.TextArea
                   label="Pod JSON"
-                  placeholder='{"id": {"value": "pod:artist:mb:daft-punk-hash"}, "displayName": "Daft Punk Fans", "visibility": "Listed", "focusType": "ContentId", "focusContentId": {"domain": "audio", "type": "artist", "id": "daft-punk-hash"}, "tags": ["electronic", "french-house"], "createdAt": "2024-01-01T00:00:00Z", "createdBy": "alice", "metadata": {"description": "A community for Daft Punk fans", "memberCount": 150}}'
-                  value={podToPublish}
                   onChange={(e) => setPodToPublish(e.target.value)}
+                  placeholder='{"id": {"value": "pod:artist:mb:daft-punk-hash"}, "displayName": "Daft Punk Fans", "visibility": "Listed", "focusType": "ContentId", "focusContentId": {"domain": "audio", "type": "artist", "id": "daft-punk-hash"}, "tags": ["electronic", "french-house"], "createdAt": "2024-01-01T00:00:00Z", "createdBy": "alice", "metadata": {"description": "A community for Daft Punk fans", "memberCount": 150}}'
                   rows={6}
+                  value={podToPublish}
                 />
                 <Button
-                  primary
-                  loading={publishingPod}
                   disabled={publishingPod || !podToPublish.trim()}
+                  loading={publishingPod}
                   onClick={handlePublishPod}
+                  primary
                 >
                   Publish Pod
                 </Button>
@@ -4478,12 +5208,25 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Pod Published Successfully</Message.Header>
+                      <Message.Header>
+                        Pod Published Successfully
+                      </Message.Header>
                       <p>
-                        <strong>Pod ID:</strong> {podPublishingResult.podId?.value || podPublishingResult.podId}<br />
-                        <strong>DHT Key:</strong> {podPublishingResult.dhtKey}<br />
-                        <strong>Published:</strong> {new Date(podPublishingResult.publishedAt).toLocaleString()}<br />
-                        <strong>Expires:</strong> {new Date(podPublishingResult.expiresAt).toLocaleString()}
+                        <strong>Pod ID:</strong>{' '}
+                        {podPublishingResult.podId?.value ||
+                          podPublishingResult.podId}
+                        <br />
+                        <strong>DHT Key:</strong> {podPublishingResult.dhtKey}
+                        <br />
+                        <strong>Published:</strong>{' '}
+                        {new Date(
+                          podPublishingResult.publishedAt,
+                        ).toLocaleString()}
+                        <br />
+                        <strong>Expires:</strong>{' '}
+                        {new Date(
+                          podPublishingResult.expiresAt,
+                        ).toLocaleString()}
                       </p>
                     </Message>
                   )}
@@ -4499,14 +5242,16 @@ const MediaCore = () => {
                   <Form>
                     <Form.Input
                       label="Pod ID"
+                      onChange={(e) => setPodMetadataToRetrieve(e.target.value)}
                       placeholder="pod:artist:mb:daft-punk-hash"
                       value={podMetadataToRetrieve}
-                      onChange={(e) => setPodMetadataToRetrieve(e.target.value)}
                     />
                     <Button
+                      disabled={
+                        retrievingPodMetadata || !podMetadataToRetrieve.trim()
+                      }
                       fluid
                       loading={retrievingPodMetadata}
-                      disabled={retrievingPodMetadata || !podMetadataToRetrieve.trim()}
                       onClick={handleRetrievePodMetadata}
                     >
                       Retrieve Metadata
@@ -4517,18 +5262,40 @@ const MediaCore = () => {
                     <div style={{ marginTop: '1em' }}>
                       {podMetadataResult.error ? (
                         <Message error>
-                          <p>Failed to retrieve metadata: {podMetadataResult.error}</p>
+                          <p>
+                            Failed to retrieve metadata:{' '}
+                            {podMetadataResult.error}
+                          </p>
                         </Message>
                       ) : podMetadataResult.found ? (
                         <Message success>
-                          <Message.Header>Pod Metadata Retrieved</Message.Header>
+                          <Message.Header>
+                            Pod Metadata Retrieved
+                          </Message.Header>
                           <p>
-                            <strong>Pod ID:</strong> {podMetadataResult.podId?.value || podMetadataResult.podId}<br />
-                            <strong>Signature Valid:</strong> {podMetadataResult.isValidSignature ? 'Yes' : 'No'}<br />
-                            <strong>Retrieved:</strong> {new Date(podMetadataResult.retrievedAt).toLocaleString()}<br />
-                            <strong>Expires:</strong> {new Date(podMetadataResult.expiresAt).toLocaleString()}<br />
-                            <strong>Display Name:</strong> {podMetadataResult.publishedPod?.displayName}<br />
-                            <strong>Members:</strong> {podMetadataResult.publishedPod?.metadata?.memberCount || 'Unknown'}
+                            <strong>Pod ID:</strong>{' '}
+                            {podMetadataResult.podId?.value ||
+                              podMetadataResult.podId}
+                            <br />
+                            <strong>Signature Valid:</strong>{' '}
+                            {podMetadataResult.isValidSignature ? 'Yes' : 'No'}
+                            <br />
+                            <strong>Retrieved:</strong>{' '}
+                            {new Date(
+                              podMetadataResult.retrievedAt,
+                            ).toLocaleString()}
+                            <br />
+                            <strong>Expires:</strong>{' '}
+                            {new Date(
+                              podMetadataResult.expiresAt,
+                            ).toLocaleString()}
+                            <br />
+                            <strong>Display Name:</strong>{' '}
+                            {podMetadataResult.publishedPod?.displayName}
+                            <br />
+                            <strong>Members:</strong>{' '}
+                            {podMetadataResult.publishedPod?.metadata
+                              ?.memberCount || 'Unknown'}
                           </p>
                         </Message>
                       ) : (
@@ -4546,15 +5313,15 @@ const MediaCore = () => {
                   <Form>
                     <Form.Input
                       label="Pod ID"
+                      onChange={(e) => setPodToUnpublish(e.target.value)}
                       placeholder="pod:artist:mb:daft-punk-hash"
                       value={podToUnpublish}
-                      onChange={(e) => setPodToUnpublish(e.target.value)}
                     />
                     <Button
-                      fluid
                       color="red"
-                      loading={unpublishingPod}
                       disabled={unpublishingPod || !podToUnpublish.trim()}
+                      fluid
+                      loading={unpublishingPod}
                       onClick={handleUnpublishPod}
                     >
                       Unpublish Pod
@@ -4565,7 +5332,9 @@ const MediaCore = () => {
                     <div style={{ marginTop: '1em' }}>
                       {podUnpublishResult.error ? (
                         <Message error>
-                          <p>Failed to unpublish pod: {podUnpublishResult.error}</p>
+                          <p>
+                            Failed to unpublish pod: {podUnpublishResult.error}
+                          </p>
                         </Message>
                       ) : (
                         <Message success>
@@ -4582,10 +5351,10 @@ const MediaCore = () => {
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  primary
-                  loading={loadingPodStats}
                   disabled={loadingPodStats}
+                  loading={loadingPodStats}
                   onClick={handleLoadPodPublishingStats}
+                  primary
                 >
                   Load Pod Publishing Stats
                 </Button>
@@ -4596,30 +5365,61 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Pod Publishing Statistics</Message.Header>
                     <p>
-                      <strong>Total Published:</strong> {podPublishingStats.totalPublished}<br />
-                      <strong>Active Publications:</strong> {podPublishingStats.activePublications}<br />
-                      <strong>Expired Publications:</strong> {podPublishingStats.expiredPublications}<br />
-                      <strong>Failed Publications:</strong> {podPublishingStats.failedPublications}<br />
-                      <strong>Avg Publish Time:</strong> {podPublishingStats.averagePublishTime ? `${podPublishingStats.averagePublishTime.totalMilliseconds.toFixed(0)}ms` : 'N/A'}<br />
-                      <strong>Last Operation:</strong> {podPublishingStats.lastPublishOperation ? new Date(podPublishingStats.lastPublishOperation).toLocaleString() : 'Never'}
+                      <strong>Total Published:</strong>{' '}
+                      {podPublishingStats.totalPublished}
+                      <br />
+                      <strong>Active Publications:</strong>{' '}
+                      {podPublishingStats.activePublications}
+                      <br />
+                      <strong>Expired Publications:</strong>{' '}
+                      {podPublishingStats.expiredPublications}
+                      <br />
+                      <strong>Failed Publications:</strong>{' '}
+                      {podPublishingStats.failedPublications}
+                      <br />
+                      <strong>Avg Publish Time:</strong>{' '}
+                      {podPublishingStats.averagePublishTime
+                        ? `${podPublishingStats.averagePublishTime.totalMilliseconds.toFixed(0)}ms`
+                        : 'N/A'}
+                      <br />
+                      <strong>Last Operation:</strong>{' '}
+                      {podPublishingStats.lastPublishOperation
+                        ? new Date(
+                            podPublishingStats.lastPublishOperation,
+                          ).toLocaleString()
+                        : 'Never'}
                     </p>
-                    {podPublishingStats.publicationsByVisibility && Object.keys(podPublishingStats.publicationsByVisibility).length > 0 && (
-                      <div style={{ marginTop: '0.5em' }}>
-                        <strong>Publications by Visibility:</strong>
-                        {Object.entries(podPublishingStats.publicationsByVisibility).map(([visibility, count]) => (
-                          <Label key={visibility} size="tiny" style={{ margin: '0.1em' }}>
-                            {visibility}: {count}
-                          </Label>
-                        ))}
-                      </div>
-                    )}
+                    {podPublishingStats.publicationsByVisibility &&
+                      Object.keys(podPublishingStats.publicationsByVisibility)
+                        .length > 0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>Publications by Visibility:</strong>
+                          {Object.entries(
+                            podPublishingStats.publicationsByVisibility,
+                          ).map(([visibility, count]) => (
+                            <Label
+                              key={visibility}
+                              size="tiny"
+                              style={{ margin: '0.1em' }}
+                            >
+                              {visibility}: {count}
+                            </Label>
+                          ))}
+                        </div>
+                      )}
                   </Message>
                 </div>
               )}
 
               {podPublishingStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
-                  <p>Failed to load pod publishing stats: {podPublishingStats.error}</p>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
+                  <p>
+                    Failed to load pod publishing stats:{' '}
+                    {podPublishingStats.error}
+                  </p>
                 </Message>
               )}
             </Card.Content>
@@ -4635,7 +5435,8 @@ const MediaCore = () => {
                 Pod Membership Management
               </Card.Header>
               <Card.Description>
-                Manage signed membership records in DHT with role-based access control
+                Manage signed membership records in DHT with role-based access
+                control
               </Card.Description>
             </Card.Content>
 
@@ -4645,16 +5446,16 @@ const MediaCore = () => {
               <Form>
                 <Form.TextArea
                   label="Membership Record JSON"
-                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "role": "member", "isBanned": false, "publicKey": "base64-ed25519-key", "joinedAt": "2024-01-01T00:00:00Z"}'
-                  value={membershipRecord}
                   onChange={(e) => setMembershipRecord(e.target.value)}
+                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "role": "member", "isBanned": false, "publicKey": "base64-ed25519-key", "joinedAt": "2024-01-01T00:00:00Z"}'
                   rows={4}
+                  value={membershipRecord}
                 />
                 <Button
-                  primary
-                  loading={publishingMembership}
                   disabled={publishingMembership || !membershipRecord.trim()}
+                  loading={publishingMembership}
                   onClick={handlePublishMembership}
+                  primary
                 >
                   Publish Membership
                 </Button>
@@ -4664,17 +5465,34 @@ const MediaCore = () => {
                 <div style={{ marginTop: '1em' }}>
                   {membershipPublishResult.error ? (
                     <Message error>
-                      <p>Failed to publish membership: {membershipPublishResult.error}</p>
+                      <p>
+                        Failed to publish membership:{' '}
+                        {membershipPublishResult.error}
+                      </p>
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Membership Published Successfully</Message.Header>
+                      <Message.Header>
+                        Membership Published Successfully
+                      </Message.Header>
                       <p>
-                        <strong>Pod ID:</strong> {membershipPublishResult.podId}<br />
-                        <strong>Peer ID:</strong> {membershipPublishResult.peerId}<br />
-                        <strong>DHT Key:</strong> {membershipPublishResult.dhtKey}<br />
-                        <strong>Published:</strong> {new Date(membershipPublishResult.publishedAt).toLocaleString()}<br />
-                        <strong>Expires:</strong> {new Date(membershipPublishResult.expiresAt).toLocaleString()}
+                        <strong>Pod ID:</strong> {membershipPublishResult.podId}
+                        <br />
+                        <strong>Peer ID:</strong>{' '}
+                        {membershipPublishResult.peerId}
+                        <br />
+                        <strong>DHT Key:</strong>{' '}
+                        {membershipPublishResult.dhtKey}
+                        <br />
+                        <strong>Published:</strong>{' '}
+                        {new Date(
+                          membershipPublishResult.publishedAt,
+                        ).toLocaleString()}
+                        <br />
+                        <strong>Expires:</strong>{' '}
+                        {new Date(
+                          membershipPublishResult.expiresAt,
+                        ).toLocaleString()}
                       </p>
                     </Message>
                   )}
@@ -4690,27 +5508,35 @@ const MediaCore = () => {
                   <Form>
                     <Form.Input
                       label="Pod ID"
+                      onChange={(e) => setMembershipPodId(e.target.value)}
                       placeholder="pod:artist:mb:daft-punk-hash"
                       value={membershipPodId}
-                      onChange={(e) => setMembershipPodId(e.target.value)}
                     />
                     <Form.Input
                       label="Peer ID"
+                      onChange={(e) => setMembershipPeerId(e.target.value)}
                       placeholder="alice"
                       value={membershipPeerId}
-                      onChange={(e) => setMembershipPeerId(e.target.value)}
                     />
                     <Button.Group fluid>
                       <Button
+                        disabled={
+                          gettingMembership ||
+                          !membershipPodId.trim() ||
+                          !membershipPeerId.trim()
+                        }
                         loading={gettingMembership}
-                        disabled={gettingMembership || !membershipPodId.trim() || !membershipPeerId.trim()}
                         onClick={handleGetMembership}
                       >
                         Get Membership
                       </Button>
                       <Button
+                        disabled={
+                          verifyingMembership ||
+                          !membershipPodId.trim() ||
+                          !membershipPeerId.trim()
+                        }
                         loading={verifyingMembership}
-                        disabled={verifyingMembership || !membershipPodId.trim() || !membershipPeerId.trim()}
                         onClick={handleVerifyMembership}
                       >
                         Verify Membership
@@ -4723,18 +5549,35 @@ const MediaCore = () => {
                     <div style={{ marginTop: '1em' }}>
                       {membershipResult.error ? (
                         <Message error>
-                          <p>Failed to get membership: {membershipResult.error}</p>
+                          <p>
+                            Failed to get membership: {membershipResult.error}
+                          </p>
                         </Message>
                       ) : membershipResult.found ? (
                         <Message success>
                           <Message.Header>Membership Found</Message.Header>
                           <p>
-                            <strong>Pod ID:</strong> {membershipResult.podId}<br />
-                            <strong>Peer ID:</strong> {membershipResult.peerId}<br />
-                            <strong>Role:</strong> {membershipResult.signedRecord?.membership?.role}<br />
-                            <strong>Banned:</strong> {membershipResult.signedRecord?.membership?.isBanned ? 'Yes' : 'No'}<br />
-                            <strong>Signature Valid:</strong> {membershipResult.isValidSignature ? 'Yes' : 'No'}<br />
-                            <strong>Joined:</strong> {membershipResult.signedRecord?.membership?.joinedAt ? new Date(membershipResult.signedRecord.membership.joinedAt).toLocaleString() : 'Unknown'}
+                            <strong>Pod ID:</strong> {membershipResult.podId}
+                            <br />
+                            <strong>Peer ID:</strong> {membershipResult.peerId}
+                            <br />
+                            <strong>Role:</strong>{' '}
+                            {membershipResult.signedRecord?.membership?.role}
+                            <br />
+                            <strong>Banned:</strong>{' '}
+                            {membershipResult.signedRecord?.membership?.isBanned
+                              ? 'Yes'
+                              : 'No'}
+                            <br />
+                            <strong>Signature Valid:</strong>{' '}
+                            {membershipResult.isValidSignature ? 'Yes' : 'No'}
+                            <br />
+                            <strong>Joined:</strong>{' '}
+                            {membershipResult.signedRecord?.membership?.joinedAt
+                              ? new Date(
+                                  membershipResult.signedRecord.membership.joinedAt,
+                                ).toLocaleString()
+                              : 'Unknown'}
                           </p>
                         </Message>
                       ) : (
@@ -4750,15 +5593,27 @@ const MediaCore = () => {
                     <div style={{ marginTop: '1em' }}>
                       {membershipVerification.error ? (
                         <Message error>
-                          <p>Failed to verify membership: {membershipVerification.error}</p>
+                          <p>
+                            Failed to verify membership:{' '}
+                            {membershipVerification.error}
+                          </p>
                         </Message>
                       ) : (
                         <Message info>
-                          <Message.Header>Membership Verification</Message.Header>
+                          <Message.Header>
+                            Membership Verification
+                          </Message.Header>
                           <p>
-                            <strong>Valid Member:</strong> {membershipVerification.isValidMember ? 'Yes' : 'No'}<br />
-                            <strong>Role:</strong> {membershipVerification.role || 'None'}<br />
-                            <strong>Banned:</strong> {membershipVerification.isBanned ? 'Yes' : 'No'}
+                            <strong>Valid Member:</strong>{' '}
+                            {membershipVerification.isValidMember
+                              ? 'Yes'
+                              : 'No'}
+                            <br />
+                            <strong>Role:</strong>{' '}
+                            {membershipVerification.role || 'None'}
+                            <br />
+                            <strong>Banned:</strong>{' '}
+                            {membershipVerification.isBanned ? 'Yes' : 'No'}
                           </p>
                         </Message>
                       )}
@@ -4774,15 +5629,19 @@ const MediaCore = () => {
                   <Form style={{ marginBottom: '1em' }}>
                     <Form.Input
                       label="Ban Reason (optional)"
+                      onChange={(e) => setBanReason(e.target.value)}
                       placeholder="Violation of community rules"
                       value={banReason}
-                      onChange={(e) => setBanReason(e.target.value)}
                     />
                     <Button
-                      fluid
                       color="red"
+                      disabled={
+                        banningMember ||
+                        !membershipPodId.trim() ||
+                        !membershipPeerId.trim()
+                      }
+                      fluid
                       loading={banningMember}
-                      disabled={banningMember || !membershipPodId.trim() || !membershipPeerId.trim()}
                       onClick={handleBanMember}
                     >
                       Ban Member
@@ -4793,19 +5652,23 @@ const MediaCore = () => {
                   <Form>
                     <Form.Select
                       label="New Role"
+                      onChange={(e, { value }) => setNewRole(value)}
                       options={[
                         { key: 'member', text: 'Member', value: 'member' },
                         { key: 'mod', text: 'Moderator', value: 'mod' },
-                        { key: 'owner', text: 'Owner', value: 'owner' }
+                        { key: 'owner', text: 'Owner', value: 'owner' },
                       ]}
                       value={newRole}
-                      onChange={(e, { value }) => setNewRole(value)}
                     />
                     <Button
-                      fluid
                       color="blue"
+                      disabled={
+                        changingRole ||
+                        !membershipPodId.trim() ||
+                        !membershipPeerId.trim()
+                      }
+                      fluid
                       loading={changingRole}
-                      disabled={changingRole || !membershipPodId.trim() || !membershipPeerId.trim()}
                       onClick={handleChangeRole}
                     >
                       Change Role
@@ -4814,13 +5677,19 @@ const MediaCore = () => {
 
                   {/* Management Results */}
                   {banResult && (
-                    <Message success style={{ marginTop: '1em' }}>
+                    <Message
+                      style={{ marginTop: '1em' }}
+                      success
+                    >
                       <p>Member banned successfully</p>
                     </Message>
                   )}
 
                   {roleChangeResult && (
-                    <Message success style={{ marginTop: '1em' }}>
+                    <Message
+                      style={{ marginTop: '1em' }}
+                      success
+                    >
                       <p>Member role changed successfully</p>
                     </Message>
                   )}
@@ -4832,10 +5701,10 @@ const MediaCore = () => {
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  primary
-                  loading={loadingMembershipStats}
                   disabled={loadingMembershipStats}
+                  loading={loadingMembershipStats}
                   onClick={handleLoadMembershipStats}
+                  primary
                 >
                   Load Membership Stats
                 </Button>
@@ -4852,29 +5721,55 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Membership Statistics</Message.Header>
                     <p>
-                      <strong>Total Memberships:</strong> {membershipStats.totalMemberships}<br />
-                      <strong>Active Memberships:</strong> {membershipStats.activeMemberships}<br />
-                      <strong>Banned Memberships:</strong> {membershipStats.bannedMemberships}<br />
-                      <strong>Expired Memberships:</strong> {membershipStats.expiredMemberships}<br />
-                      <strong>Last Operation:</strong> {membershipStats.lastOperation ? new Date(membershipStats.lastOperation).toLocaleString() : 'Never'}
+                      <strong>Total Memberships:</strong>{' '}
+                      {membershipStats.totalMemberships}
+                      <br />
+                      <strong>Active Memberships:</strong>{' '}
+                      {membershipStats.activeMemberships}
+                      <br />
+                      <strong>Banned Memberships:</strong>{' '}
+                      {membershipStats.bannedMemberships}
+                      <br />
+                      <strong>Expired Memberships:</strong>{' '}
+                      {membershipStats.expiredMemberships}
+                      <br />
+                      <strong>Last Operation:</strong>{' '}
+                      {membershipStats.lastOperation
+                        ? new Date(
+                            membershipStats.lastOperation,
+                          ).toLocaleString()
+                        : 'Never'}
                     </p>
-                    {membershipStats.membershipsByRole && Object.keys(membershipStats.membershipsByRole).length > 0 && (
-                      <div style={{ marginTop: '0.5em' }}>
-                        <strong>Memberships by Role:</strong>
-                        {Object.entries(membershipStats.membershipsByRole).map(([role, count]) => (
-                          <Label key={role} size="tiny" style={{ margin: '0.1em' }}>
-                            {role}: {count}
-                          </Label>
-                        ))}
-                      </div>
-                    )}
+                    {membershipStats.membershipsByRole &&
+                      Object.keys(membershipStats.membershipsByRole).length >
+                        0 && (
+                        <div style={{ marginTop: '0.5em' }}>
+                          <strong>Memberships by Role:</strong>
+                          {Object.entries(
+                            membershipStats.membershipsByRole,
+                          ).map(([role, count]) => (
+                            <Label
+                              key={role}
+                              size="tiny"
+                              style={{ margin: '0.1em' }}
+                            >
+                              {role}: {count}
+                            </Label>
+                          ))}
+                        </div>
+                      )}
                   </Message>
                 </div>
               )}
 
               {membershipStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
-                  <p>Failed to load membership stats: {membershipStats.error}</p>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
+                  <p>
+                    Failed to load membership stats: {membershipStats.error}
+                  </p>
                 </Message>
               )}
             </Card.Content>
@@ -4890,7 +5785,8 @@ const MediaCore = () => {
                 Pod Membership Verification
               </Card.Header>
               <Card.Description>
-                Verify membership status, message authenticity, and role permissions for pod security
+                Verify membership status, message authenticity, and role
+                permissions for pod security
               </Card.Description>
             </Card.Content>
 
@@ -4901,21 +5797,25 @@ const MediaCore = () => {
                 <Form.Group widths="equal">
                   <Form.Input
                     label="Pod ID"
+                    onChange={(e) => setVerifyPodId(e.target.value)}
                     placeholder="pod:artist:mb:daft-punk-hash"
                     value={verifyPodId}
-                    onChange={(e) => setVerifyPodId(e.target.value)}
                   />
                   <Form.Input
                     label="Peer ID"
+                    onChange={(e) => setVerifyPeerId(e.target.value)}
                     placeholder="alice"
                     value={verifyPeerId}
-                    onChange={(e) => setVerifyPeerId(e.target.value)}
                   />
                 </Form.Group>
                 <Button
+                  disabled={
+                    verifyingMembership ||
+                    !verifyPodId.trim() ||
+                    !verifyPeerId.trim()
+                  }
                   fluid
                   loading={verifyingMembership}
-                  disabled={verifyingMembership || !verifyPodId.trim() || !verifyPeerId.trim()}
                   onClick={handleVerifyPodMembership}
                 >
                   Verify Membership
@@ -4926,15 +5826,27 @@ const MediaCore = () => {
                 <div style={{ marginTop: '1em' }}>
                   {membershipVerificationResult.error ? (
                     <Message error>
-                      <p>Failed to verify membership: {membershipVerificationResult.error}</p>
+                      <p>
+                        Failed to verify membership:{' '}
+                        {membershipVerificationResult.error}
+                      </p>
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Membership Verification Result</Message.Header>
+                      <Message.Header>
+                        Membership Verification Result
+                      </Message.Header>
                       <p>
-                        <strong>Valid Member:</strong> {membershipVerificationResult.isValidMember ? 'Yes' : 'No'}<br />
-                        <strong>Role:</strong> {membershipVerificationResult.role || 'None'}<br />
-                        <strong>Banned:</strong> {membershipVerificationResult.isBanned ? 'Yes' : 'No'}
+                        <strong>Valid Member:</strong>{' '}
+                        {membershipVerificationResult.isValidMember
+                          ? 'Yes'
+                          : 'No'}
+                        <br />
+                        <strong>Role:</strong>{' '}
+                        {membershipVerificationResult.role || 'None'}
+                        <br />
+                        <strong>Banned:</strong>{' '}
+                        {membershipVerificationResult.isBanned ? 'Yes' : 'No'}
                       </p>
                     </Message>
                   )}
@@ -4950,15 +5862,15 @@ const MediaCore = () => {
                   <Form>
                     <Form.TextArea
                       label="Pod Message JSON"
-                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello everyone!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
-                      value={messageToVerify}
                       onChange={(e) => setMessageToVerify(e.target.value)}
+                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello everyone!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
                       rows={4}
+                      value={messageToVerify}
                     />
                     <Button
+                      disabled={verifyingMessage || !messageToVerify.trim()}
                       fluid
                       loading={verifyingMessage}
-                      disabled={verifyingMessage || !messageToVerify.trim()}
                       onClick={handleVerifyMessage}
                     >
                       Verify Message
@@ -4969,16 +5881,34 @@ const MediaCore = () => {
                     <div style={{ marginTop: '1em' }}>
                       {messageVerificationResult.error ? (
                         <Message error>
-                          <p>Failed to verify message: {messageVerificationResult.error}</p>
+                          <p>
+                            Failed to verify message:{' '}
+                            {messageVerificationResult.error}
+                          </p>
                         </Message>
                       ) : (
                         <Message info>
-                          <Message.Header>Message Verification Result</Message.Header>
+                          <Message.Header>
+                            Message Verification Result
+                          </Message.Header>
                           <p>
-                            <strong>Valid:</strong> {messageVerificationResult.isValid ? 'Yes' : 'No'}<br />
-                            <strong>From Valid Member:</strong> {messageVerificationResult.isFromValidMember ? 'Yes' : 'No'}<br />
-                            <strong>Not Banned:</strong> {messageVerificationResult.isNotBanned ? 'Yes' : 'No'}<br />
-                            <strong>Valid Signature:</strong> {messageVerificationResult.hasValidSignature ? 'Yes' : 'No'}
+                            <strong>Valid:</strong>{' '}
+                            {messageVerificationResult.isValid ? 'Yes' : 'No'}
+                            <br />
+                            <strong>From Valid Member:</strong>{' '}
+                            {messageVerificationResult.isFromValidMember
+                              ? 'Yes'
+                              : 'No'}
+                            <br />
+                            <strong>Not Banned:</strong>{' '}
+                            {messageVerificationResult.isNotBanned
+                              ? 'Yes'
+                              : 'No'}
+                            <br />
+                            <strong>Valid Signature:</strong>{' '}
+                            {messageVerificationResult.hasValidSignature
+                              ? 'Yes'
+                              : 'No'}
                           </p>
                         </Message>
                       )}
@@ -4993,31 +5923,35 @@ const MediaCore = () => {
                     <Form.Group widths="equal">
                       <Form.Input
                         label="Pod ID"
+                        onChange={(e) => setRoleCheckPodId(e.target.value)}
                         placeholder="pod:artist:mb:daft-punk-hash"
                         value={roleCheckPodId}
-                        onChange={(e) => setRoleCheckPodId(e.target.value)}
                       />
                       <Form.Input
                         label="Peer ID"
+                        onChange={(e) => setRoleCheckPeerId(e.target.value)}
                         placeholder="alice"
                         value={roleCheckPeerId}
-                        onChange={(e) => setRoleCheckPeerId(e.target.value)}
                       />
                     </Form.Group>
                     <Form.Select
                       label="Required Role"
+                      onChange={(e, { value }) => setRequiredRole(value)}
                       options={[
                         { key: 'member', text: 'Member', value: 'member' },
                         { key: 'mod', text: 'Moderator', value: 'mod' },
-                        { key: 'owner', text: 'Owner', value: 'owner' }
+                        { key: 'owner', text: 'Owner', value: 'owner' },
                       ]}
                       value={requiredRole}
-                      onChange={(e, { value }) => setRequiredRole(value)}
                     />
                     <Button
+                      disabled={
+                        checkingRole ||
+                        !roleCheckPodId.trim() ||
+                        !roleCheckPeerId.trim()
+                      }
                       fluid
                       loading={checkingRole}
-                      disabled={checkingRole || !roleCheckPodId.trim() || !roleCheckPeerId.trim()}
                       onClick={handleCheckRole}
                     >
                       Check Role
@@ -5034,7 +5968,8 @@ const MediaCore = () => {
                         <Message>
                           <Message.Header>Role Check Result</Message.Header>
                           <p>
-                            <strong>Has Required Role ({requiredRole}):</strong> {roleCheckResult.hasRole ? 'Yes' : 'No'}
+                            <strong>Has Required Role ({requiredRole}):</strong>{' '}
+                            {roleCheckResult.hasRole ? 'Yes' : 'No'}
                           </p>
                         </Message>
                       )}
@@ -5048,10 +5983,10 @@ const MediaCore = () => {
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  primary
-                  loading={loadingVerificationStats}
                   disabled={loadingVerificationStats}
+                  loading={loadingVerificationStats}
                   onClick={handleLoadVerificationStats}
+                  primary
                 >
                   Load Verification Stats
                 </Button>
@@ -5062,21 +5997,43 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Verification Statistics</Message.Header>
                     <p>
-                      <strong>Total Verifications:</strong> {verificationStats.totalVerifications}<br />
-                      <strong>Successful:</strong> {verificationStats.successfulVerifications}<br />
-                      <strong>Failed Membership:</strong> {verificationStats.failedMembershipChecks}<br />
-                      <strong>Failed Signatures:</strong> {verificationStats.failedSignatureChecks}<br />
-                      <strong>Banned Rejections:</strong> {verificationStats.bannedMemberRejections}<br />
-                      <strong>Avg Time:</strong> {verificationStats.averageVerificationTimeMs.toFixed(2)}ms<br />
-                      <strong>Last Verification:</strong> {verificationStats.lastVerification ? new Date(verificationStats.lastVerification).toLocaleString() : 'Never'}
+                      <strong>Total Verifications:</strong>{' '}
+                      {verificationStats.totalVerifications}
+                      <br />
+                      <strong>Successful:</strong>{' '}
+                      {verificationStats.successfulVerifications}
+                      <br />
+                      <strong>Failed Membership:</strong>{' '}
+                      {verificationStats.failedMembershipChecks}
+                      <br />
+                      <strong>Failed Signatures:</strong>{' '}
+                      {verificationStats.failedSignatureChecks}
+                      <br />
+                      <strong>Banned Rejections:</strong>{' '}
+                      {verificationStats.bannedMemberRejections}
+                      <br />
+                      <strong>Avg Time:</strong>{' '}
+                      {verificationStats.averageVerificationTimeMs.toFixed(2)}ms
+                      <br />
+                      <strong>Last Verification:</strong>{' '}
+                      {verificationStats.lastVerification
+                        ? new Date(
+                            verificationStats.lastVerification,
+                          ).toLocaleString()
+                        : 'Never'}
                     </p>
                   </Message>
                 </div>
               )}
 
               {verificationStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
-                  <p>Failed to load verification stats: {verificationStats.error}</p>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
+                  <p>
+                    Failed to load verification stats: {verificationStats.error}
+                  </p>
                 </Message>
               )}
             </Card.Content>
@@ -5092,7 +6049,8 @@ const MediaCore = () => {
                 Pod Discovery
               </Card.Header>
               <Card.Description>
-                Discover pods via DHT using name slugs, tags, and content associations
+                Discover pods via DHT using name slugs, tags, and content
+                associations
               </Card.Description>
             </Card.Content>
 
@@ -5102,16 +6060,16 @@ const MediaCore = () => {
               <Form>
                 <Form.TextArea
                   label="Pod JSON (must have Visibility: Listed)"
-                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "name": "Daft Punk Fans", "visibility": "Listed", "focusContentId": "content:audio:artist:daft-punk", "tags": ["electronic", "french-house"]}'
-                  value={podToRegister}
                   onChange={(e) => setPodToRegister(e.target.value)}
+                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "name": "Daft Punk Fans", "visibility": "Listed", "focusContentId": "content:audio:artist:daft-punk", "tags": ["electronic", "french-house"]}'
                   rows={3}
+                  value={podToRegister}
                 />
                 <Button
-                  primary
-                  loading={registeringPod}
                   disabled={registeringPod || !podToRegister.trim()}
+                  loading={registeringPod}
                   onClick={handleRegisterPodForDiscovery}
+                  primary
                 >
                   Register Pod
                 </Button>
@@ -5121,16 +6079,30 @@ const MediaCore = () => {
                 <div style={{ marginTop: '1em' }}>
                   {podRegistrationResult.error ? (
                     <Message error>
-                      <p>Failed to register pod: {podRegistrationResult.error}</p>
+                      <p>
+                        Failed to register pod: {podRegistrationResult.error}
+                      </p>
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Pod Registered for Discovery</Message.Header>
+                      <Message.Header>
+                        Pod Registered for Discovery
+                      </Message.Header>
                       <p>
-                        <strong>Pod ID:</strong> {podRegistrationResult.podId}<br />
-                        <strong>Discovery Keys:</strong> {podRegistrationResult.discoveryKeys?.join(', ')}<br />
-                        <strong>Registered:</strong> {new Date(podRegistrationResult.registeredAt).toLocaleString()}<br />
-                        <strong>Expires:</strong> {new Date(podRegistrationResult.expiresAt).toLocaleString()}
+                        <strong>Pod ID:</strong> {podRegistrationResult.podId}
+                        <br />
+                        <strong>Discovery Keys:</strong>{' '}
+                        {podRegistrationResult.discoveryKeys?.join(', ')}
+                        <br />
+                        <strong>Registered:</strong>{' '}
+                        {new Date(
+                          podRegistrationResult.registeredAt,
+                        ).toLocaleString()}
+                        <br />
+                        <strong>Expires:</strong>{' '}
+                        {new Date(
+                          podRegistrationResult.expiresAt,
+                        ).toLocaleString()}
                       </p>
                     </Message>
                   )}
@@ -5143,14 +6115,14 @@ const MediaCore = () => {
               <Form>
                 <Form.Input
                   label="Pod ID"
+                  onChange={(e) => setPodToUnregister(e.target.value)}
                   placeholder="pod:artist:mb:daft-punk-hash"
                   value={podToUnregister}
-                  onChange={(e) => setPodToUnregister(e.target.value)}
                 />
                 <Button
                   color="red"
-                  loading={unregisteringPod}
                   disabled={unregisteringPod || !podToUnregister.trim()}
+                  loading={unregisteringPod}
                   onClick={handleUnregisterPodFromDiscovery}
                 >
                   Unregister Pod
@@ -5161,7 +6133,10 @@ const MediaCore = () => {
                 <div style={{ marginTop: '1em' }}>
                   {podUnregistrationResult.error ? (
                     <Message error>
-                      <p>Failed to unregister pod: {podUnregistrationResult.error}</p>
+                      <p>
+                        Failed to unregister pod:{' '}
+                        {podUnregistrationResult.error}
+                      </p>
                     </Message>
                   ) : (
                     <Message success>
@@ -5179,14 +6154,14 @@ const MediaCore = () => {
                   <Header size="small">By Name</Header>
                   <Form>
                     <Form.Input
+                      onChange={(e) => setDiscoverByName(e.target.value)}
                       placeholder="daft-punk-fans"
                       value={discoverByName}
-                      onChange={(e) => setDiscoverByName(e.target.value)}
                     />
                     <Button
+                      disabled={discoveringByName || !discoverByName.trim()}
                       fluid
                       loading={discoveringByName}
-                      disabled={discoveringByName || !discoverByName.trim()}
                       onClick={handleDiscoverByName}
                     >
                       Discover
@@ -5196,11 +6171,17 @@ const MediaCore = () => {
                   {nameDiscoveryResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {nameDiscoveryResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{nameDiscoveryResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Found {nameDiscoveryResult.totalFound} pods</p>
                         </Message>
                       )}
@@ -5213,14 +6194,14 @@ const MediaCore = () => {
                   <Header size="small">By Tag</Header>
                   <Form>
                     <Form.Input
+                      onChange={(e) => setDiscoverByTag(e.target.value)}
                       placeholder="electronic"
                       value={discoverByTag}
-                      onChange={(e) => setDiscoverByTag(e.target.value)}
                     />
                     <Button
+                      disabled={discoveringByTag || !discoverByTag.trim()}
                       fluid
                       loading={discoveringByTag}
-                      disabled={discoveringByTag || !discoverByTag.trim()}
                       onClick={handleDiscoverByTag}
                     >
                       Discover
@@ -5230,11 +6211,17 @@ const MediaCore = () => {
                   {tagDiscoveryResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {tagDiscoveryResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{tagDiscoveryResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Found {tagDiscoveryResult.totalFound} pods</p>
                         </Message>
                       )}
@@ -5247,14 +6234,14 @@ const MediaCore = () => {
                   <Header size="small">By Tags (AND)</Header>
                   <Form>
                     <Form.Input
+                      onChange={(e) => setDiscoverTags(e.target.value)}
                       placeholder="electronic,french-house"
                       value={discoverTags}
-                      onChange={(e) => setDiscoverTags(e.target.value)}
                     />
                     <Button
+                      disabled={discoveringByTags || !discoverTags.trim()}
                       fluid
                       loading={discoveringByTags}
-                      disabled={discoveringByTags || !discoverTags.trim()}
                       onClick={handleDiscoverByTags}
                     >
                       Discover
@@ -5264,11 +6251,17 @@ const MediaCore = () => {
                   {tagsDiscoveryResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {tagsDiscoveryResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{tagsDiscoveryResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Found {tagsDiscoveryResult.totalFound} pods</p>
                         </Message>
                       )}
@@ -5282,16 +6275,18 @@ const MediaCore = () => {
                   <Form>
                     <Form.Input
                       label="Limit"
-                      type="number"
-                      min="1"
                       max="1000"
+                      min="1"
+                      onChange={(e) =>
+                        setDiscoverLimit(Number.parseInt(e.target.value) || 50)
+                      }
+                      type="number"
                       value={discoverLimit}
-                      onChange={(e) => setDiscoverLimit(parseInt(e.target.value) || 50)}
                     />
                     <Button
+                      disabled={discoveringAll}
                       fluid
                       loading={discoveringAll}
-                      disabled={discoveringAll}
                       onClick={handleDiscoverAll}
                     >
                       Discover
@@ -5301,11 +6296,17 @@ const MediaCore = () => {
                   {allDiscoveryResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {allDiscoveryResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{allDiscoveryResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Found {allDiscoveryResult.totalFound} pods</p>
                         </Message>
                       )}
@@ -5322,14 +6323,16 @@ const MediaCore = () => {
                   <Header size="small">By Content ID</Header>
                   <Form>
                     <Form.Input
+                      onChange={(e) => setDiscoverByContent(e.target.value)}
                       placeholder="content:audio:artist:daft-punk"
                       value={discoverByContent}
-                      onChange={(e) => setDiscoverByContent(e.target.value)}
                     />
                     <Button
+                      disabled={
+                        discoveringByContent || !discoverByContent.trim()
+                      }
                       fluid
                       loading={discoveringByContent}
-                      disabled={discoveringByContent || !discoverByContent.trim()}
                       onClick={handleDiscoverByContent}
                     >
                       Discover
@@ -5339,11 +6342,17 @@ const MediaCore = () => {
                   {contentDiscoveryResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {contentDiscoveryResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{contentDiscoveryResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Found {contentDiscoveryResult.totalFound} pods</p>
                         </Message>
                       )}
@@ -5356,8 +6365,8 @@ const MediaCore = () => {
                   <Header size="small">Discovery Statistics</Header>
                   <Button.Group fluid>
                     <Button
-                      loading={loadingDiscoveryStats}
                       disabled={loadingDiscoveryStats}
+                      loading={loadingDiscoveryStats}
                       onClick={handleLoadDiscoveryStats}
                     >
                       Load Stats
@@ -5374,17 +6383,31 @@ const MediaCore = () => {
                     <div style={{ marginTop: '0.5em' }}>
                       <Message size="tiny">
                         <p>
-                          <strong>Registered Pods:</strong> {discoveryStats.totalRegisteredPods}<br />
-                          <strong>Active Entries:</strong> {discoveryStats.activeDiscoveryEntries}<br />
-                          <strong>Expired Entries:</strong> {discoveryStats.expiredEntries}<br />
-                          <strong>Avg Search Time:</strong> {discoveryStats.averageDiscoveryTime?.totalMilliseconds.toFixed(0)}ms
+                          <strong>Registered Pods:</strong>{' '}
+                          {discoveryStats.totalRegisteredPods}
+                          <br />
+                          <strong>Active Entries:</strong>{' '}
+                          {discoveryStats.activeDiscoveryEntries}
+                          <br />
+                          <strong>Expired Entries:</strong>{' '}
+                          {discoveryStats.expiredEntries}
+                          <br />
+                          <strong>Avg Search Time:</strong>{' '}
+                          {discoveryStats.averageDiscoveryTime?.totalMilliseconds.toFixed(
+                            0,
+                          )}
+                          ms
                         </p>
                       </Message>
                     </div>
                   )}
 
                   {discoveryStats?.error && (
-                    <Message error size="tiny" style={{ marginTop: '0.5em' }}>
+                    <Message
+                      error
+                      size="tiny"
+                      style={{ marginTop: '0.5em' }}
+                    >
                       <p>{discoveryStats.error}</p>
                     </Message>
                   )}
@@ -5403,7 +6426,8 @@ const MediaCore = () => {
                 Pod Join/Leave Operations
               </Card.Header>
               <Card.Description>
-                Manage signed pod membership operations with cryptographic verification and role-based approvals
+                Manage signed pod membership operations with cryptographic
+                verification and role-based approvals
               </Card.Description>
             </Card.Content>
 
@@ -5413,16 +6437,16 @@ const MediaCore = () => {
               <Form>
                 <Form.TextArea
                   label="Join Request JSON (signed by requester)"
-                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "requestedRole": "member", "publicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Please let me join!"}'
-                  value={joinRequestData}
                   onChange={(e) => setJoinRequestData(e.target.value)}
+                  placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "requestedRole": "member", "publicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Please let me join!"}'
                   rows={4}
+                  value={joinRequestData}
                 />
                 <Button
-                  primary
-                  loading={requestingJoin}
                   disabled={requestingJoin || !joinRequestData.trim()}
+                  loading={requestingJoin}
                   onClick={handleRequestJoin}
+                  primary
                 >
                   Submit Join Request
                 </Button>
@@ -5432,15 +6456,22 @@ const MediaCore = () => {
                 <div style={{ marginTop: '1em' }}>
                   {joinRequestResult.error ? (
                     <Message error>
-                      <p>Failed to submit join request: {joinRequestResult.error}</p>
+                      <p>
+                        Failed to submit join request: {joinRequestResult.error}
+                      </p>
                     </Message>
                   ) : (
                     <Message success>
                       <Message.Header>Join Request Submitted</Message.Header>
                       <p>
-                        <strong>Pod ID:</strong> {joinRequestResult.podId}<br />
-                        <strong>Peer ID:</strong> {joinRequestResult.peerId}<br />
-                        <strong>Status:</strong> {joinRequestResult.success ? 'Pending approval' : 'Failed'}
+                        <strong>Pod ID:</strong> {joinRequestResult.podId}
+                        <br />
+                        <strong>Peer ID:</strong> {joinRequestResult.peerId}
+                        <br />
+                        <strong>Status:</strong>{' '}
+                        {joinRequestResult.success
+                          ? 'Pending approval'
+                          : 'Failed'}
                       </p>
                     </Message>
                   )}
@@ -5456,16 +6487,16 @@ const MediaCore = () => {
                   <Form>
                     <Form.TextArea
                       label="Acceptance JSON (signed by owner/mod)"
-                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "acceptedRole": "member", "acceptorPeerId": "bob", "acceptorPublicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Welcome!"}'
-                      value={acceptanceData}
                       onChange={(e) => setAcceptanceData(e.target.value)}
+                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "acceptedRole": "member", "acceptorPeerId": "bob", "acceptorPublicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Welcome!"}'
                       rows={4}
+                      value={acceptanceData}
                     />
                     <Button
-                      positive
-                      loading={acceptingJoin}
                       disabled={acceptingJoin || !acceptanceData.trim()}
+                      loading={acceptingJoin}
                       onClick={handleAcceptJoin}
+                      positive
                     >
                       Accept Join
                     </Button>
@@ -5474,11 +6505,17 @@ const MediaCore = () => {
                   {acceptanceResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {acceptanceResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{acceptanceResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Join accepted successfully</p>
                         </Message>
                       )}
@@ -5492,14 +6529,14 @@ const MediaCore = () => {
                   <Form>
                     <Form.TextArea
                       label="Leave Request JSON (signed by member)"
-                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "publicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Goodbye!"}'
-                      value={leaveRequestData}
                       onChange={(e) => setLeaveRequestData(e.target.value)}
+                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "publicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Goodbye!"}'
                       rows={4}
+                      value={leaveRequestData}
                     />
                     <Button
-                      loading={requestingLeave}
                       disabled={requestingLeave || !leaveRequestData.trim()}
+                      loading={requestingLeave}
                       onClick={handleRequestLeave}
                     >
                       Submit Leave Request
@@ -5509,11 +6546,17 @@ const MediaCore = () => {
                   {leaveRequestResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {leaveRequestResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{leaveRequestResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Leave request submitted</p>
                         </Message>
                       )}
@@ -5527,19 +6570,21 @@ const MediaCore = () => {
               <Grid>
                 <Grid.Column width={8}>
                   {/* Accept Leave */}
-                  <Header size="small">Accept Leave Request (Owner/Mod Only)</Header>
+                  <Header size="small">
+                    Accept Leave Request (Owner/Mod Only)
+                  </Header>
                   <Form>
                     <Form.TextArea
                       label="Leave Acceptance JSON (signed by owner/mod)"
-                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "acceptorPeerId": "bob", "acceptorPublicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Farewell!"}'
-                      value={acceptanceData}
                       onChange={(e) => setAcceptanceData(e.target.value)}
+                      placeholder='{"podId": "pod:artist:mb:daft-punk-hash", "peerId": "alice", "acceptorPeerId": "bob", "acceptorPublicKey": "base64-ed25519-public-key", "timestampUnixMs": 1703123456789, "signature": "base64-signature", "message": "Farewell!"}'
                       rows={4}
+                      value={acceptanceData}
                     />
                     <Button
-                      negative
-                      loading={acceptingLeave}
                       disabled={acceptingLeave || !acceptanceData.trim()}
+                      loading={acceptingLeave}
+                      negative
                       onClick={handleAcceptLeave}
                     >
                       Accept Leave
@@ -5549,11 +6594,17 @@ const MediaCore = () => {
                   {leaveAcceptanceResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {leaveAcceptanceResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{leaveAcceptanceResult.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <p>Leave accepted successfully</p>
                         </Message>
                       )}
@@ -5567,13 +6618,13 @@ const MediaCore = () => {
                   <Form>
                     <Form.Input
                       label="Pod ID"
+                      onChange={(e) => setPendingPodId(e.target.value)}
                       placeholder="pod:artist:mb:daft-punk-hash"
                       value={pendingPodId}
-                      onChange={(e) => setPendingPodId(e.target.value)}
                     />
                     <Button
-                      loading={loadingPendingRequests}
                       disabled={loadingPendingRequests || !pendingPodId.trim()}
+                      loading={loadingPendingRequests}
                       onClick={handleLoadPendingRequests}
                     >
                       Load Pending Requests
@@ -5583,7 +6634,8 @@ const MediaCore = () => {
                   {pendingJoinRequests && !pendingJoinRequests.error && (
                     <div style={{ marginTop: '0.5em' }}>
                       <Message size="tiny">
-                        <strong>Join Requests:</strong> {pendingJoinRequests.pendingJoinRequests?.length || 0}
+                        <strong>Join Requests:</strong>{' '}
+                        {pendingJoinRequests.pendingJoinRequests?.length || 0}
                       </Message>
                     </div>
                   )}
@@ -5591,13 +6643,19 @@ const MediaCore = () => {
                   {pendingLeaveRequests && !pendingLeaveRequests.error && (
                     <div style={{ marginTop: '0.5em' }}>
                       <Message size="tiny">
-                        <strong>Leave Requests:</strong> {pendingLeaveRequests.pendingLeaveRequests?.length || 0}
+                        <strong>Leave Requests:</strong>{' '}
+                        {pendingLeaveRequests.pendingLeaveRequests?.length || 0}
                       </Message>
                     </div>
                   )}
 
-                  {(pendingJoinRequests?.error || pendingLeaveRequests?.error) && (
-                    <Message error size="tiny" style={{ marginTop: '0.5em' }}>
+                  {(pendingJoinRequests?.error ||
+                    pendingLeaveRequests?.error) && (
+                    <Message
+                      error
+                      size="tiny"
+                      style={{ marginTop: '0.5em' }}
+                    >
                       <p>Failed to load pending requests</p>
                     </Message>
                   )}
@@ -5616,7 +6674,8 @@ const MediaCore = () => {
                 Pod Message Routing
               </Card.Header>
               <Card.Description>
-                Decentralized message routing via overlay network with fanout and deduplication for reliable pod communication
+                Decentralized message routing via overlay network with fanout
+                and deduplication for reliable pod communication
               </Card.Description>
             </Card.Content>
 
@@ -5626,16 +6685,16 @@ const MediaCore = () => {
               <Form>
                 <Form.TextArea
                   label="Pod Message JSON"
-                  placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
-                  value={routeMessageData}
                   onChange={(e) => setRouteMessageData(e.target.value)}
+                  placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
                   rows={4}
+                  value={routeMessageData}
                 />
                 <Button
-                  primary
-                  loading={routingMessage}
                   disabled={routingMessage || !routeMessageData.trim()}
+                  loading={routingMessage}
                   onClick={handleRouteMessage}
+                  primary
                 >
                   Route Message
                 </Button>
@@ -5649,14 +6708,28 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Message Routed Successfully</Message.Header>
+                      <Message.Header>
+                        Message Routed Successfully
+                      </Message.Header>
                       <p>
-                        <strong>Message ID:</strong> {routingResult.messageId}<br />
-                        <strong>Pod ID:</strong> {routingResult.podId}<br />
-                        <strong>Target Peers:</strong> {routingResult.targetPeerCount}<br />
-                        <strong>Successfully Routed:</strong> {routingResult.successfullyRoutedCount}<br />
-                        <strong>Failed:</strong> {routingResult.failedRoutingCount}<br />
-                        <strong>Duration:</strong> {routingResult.routingDuration?.totalMilliseconds?.toFixed(0)}ms
+                        <strong>Message ID:</strong> {routingResult.messageId}
+                        <br />
+                        <strong>Pod ID:</strong> {routingResult.podId}
+                        <br />
+                        <strong>Target Peers:</strong>{' '}
+                        {routingResult.targetPeerCount}
+                        <br />
+                        <strong>Successfully Routed:</strong>{' '}
+                        {routingResult.successfullyRoutedCount}
+                        <br />
+                        <strong>Failed:</strong>{' '}
+                        {routingResult.failedRoutingCount}
+                        <br />
+                        <strong>Duration:</strong>{' '}
+                        {routingResult.routingDuration?.totalMilliseconds?.toFixed(
+                          0,
+                        )}
+                        ms
                       </p>
                     </Message>
                   )}
@@ -5672,21 +6745,25 @@ const MediaCore = () => {
                   <Form>
                     <Form.TextArea
                       label="Pod Message JSON"
-                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Direct message", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
-                      value={routeToPeersMessage}
                       onChange={(e) => setRouteToPeersMessage(e.target.value)}
+                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Direct message", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
                       rows={3}
+                      value={routeToPeersMessage}
                     />
                     <Form.Input
                       label="Target Peer IDs (comma-separated)"
+                      onChange={(e) => setRouteToPeersIds(e.target.value)}
                       placeholder="bob,charlie,diana"
                       value={routeToPeersIds}
-                      onChange={(e) => setRouteToPeersIds(e.target.value)}
                     />
                     <Button
+                      disabled={
+                        routingToPeers ||
+                        !routeToPeersMessage.trim() ||
+                        !routeToPeersIds.trim()
+                      }
                       fluid
                       loading={routingToPeers}
-                      disabled={routingToPeers || !routeToPeersMessage.trim() || !routeToPeersIds.trim()}
                       onClick={handleRouteMessageToPeers}
                     >
                       Route to Peers
@@ -5696,12 +6773,22 @@ const MediaCore = () => {
                   {routingToPeersResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {routingToPeersResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{routingToPeersResult.error}</p>
                         </Message>
                       ) : (
-                        <Message info size="tiny">
-                          <p>Routed to {routingToPeersResult.successfullyRoutedCount}/{routingToPeersResult.targetPeerCount} peers</p>
+                        <Message
+                          info
+                          size="tiny"
+                        >
+                          <p>
+                            Routed to{' '}
+                            {routingToPeersResult.successfullyRoutedCount}/
+                            {routingToPeersResult.targetPeerCount} peers
+                          </p>
                         </Message>
                       )}
                     </div>
@@ -5715,29 +6802,33 @@ const MediaCore = () => {
                     <Form.Group widths="equal">
                       <Form.Input
                         label="Message ID"
+                        onChange={(e) => setCheckMessageId(e.target.value)}
                         placeholder="msg123"
                         value={checkMessageId}
-                        onChange={(e) => setCheckMessageId(e.target.value)}
                       />
                       <Form.Input
                         label="Pod ID"
+                        onChange={(e) => setCheckPodId(e.target.value)}
                         placeholder="pod:artist:mb:daft-punk-hash"
                         value={checkPodId}
-                        onChange={(e) => setCheckPodId(e.target.value)}
                       />
                     </Form.Group>
                     <Button.Group fluid>
                       <Button
+                        disabled={
+                          checkingMessageSeen ||
+                          !checkMessageId.trim() ||
+                          !checkPodId.trim()
+                        }
                         loading={checkingMessageSeen}
-                        disabled={checkingMessageSeen || !checkMessageId.trim() || !checkPodId.trim()}
                         onClick={handleCheckMessageSeen}
                       >
                         Check Seen
                       </Button>
                       <Button
                         color="blue"
-                        onClick={handleRegisterMessageSeen}
                         disabled={!checkMessageId.trim() || !checkPodId.trim()}
+                        onClick={handleRegisterMessageSeen}
                       >
                         Mark Seen
                       </Button>
@@ -5747,12 +6838,21 @@ const MediaCore = () => {
                   {messageSeenResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {messageSeenResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{messageSeenResult.error}</p>
                         </Message>
                       ) : (
                         <Message size="tiny">
-                          <p>Message {messageSeenResult.isSeen ? 'has been' : 'has not been'} seen in pod {messageSeenResult.podId}</p>
+                          <p>
+                            Message{' '}
+                            {messageSeenResult.isSeen
+                              ? 'has been'
+                              : 'has not been'}{' '}
+                            seen in pod {messageSeenResult.podId}
+                          </p>
                         </Message>
                       )}
                     </div>
@@ -5765,10 +6865,10 @@ const MediaCore = () => {
             <Card.Content>
               <Button.Group fluid>
                 <Button
-                  primary
-                  loading={loadingRoutingStats}
                   disabled={loadingRoutingStats}
+                  loading={loadingRoutingStats}
                   onClick={handleLoadRoutingStats}
+                  primary
                 >
                   Load Routing Stats
                 </Button>
@@ -5785,31 +6885,54 @@ const MediaCore = () => {
                   <Message>
                     <Message.Header>Message Routing Statistics</Message.Header>
                     <p>
-                      <strong>Total Messages Routed:</strong> {routingStats.totalMessagesRouted}<br />
-                      <strong>Total Routing Attempts:</strong> {routingStats.totalRoutingAttempts}<br />
-                      <strong>Successful Routes:</strong> {routingStats.successfulRoutingCount}<br />
-                      <strong>Failed Routes:</strong> {routingStats.failedRoutingCount}<br />
-                      <strong>Avg Routing Time:</strong> {routingStats.averageRoutingTimeMs.toFixed(2)}ms<br />
-                      <strong>Deduplication Items:</strong> {routingStats.activeDeduplicationItems}<br />
-                      <strong>Bloom Filter Fill:</strong> {(routingStats.bloomFilterFillRatio * 100).toFixed(1)}%<br />
-                      <strong>Est. False Positive:</strong> {(routingStats.estimatedFalsePositiveRate * 100).toFixed(4)}%<br />
-                      <strong>Last Operation:</strong> {routingStats.lastRoutingOperation ? new Date(routingStats.lastRoutingOperation).toLocaleString() : 'Never'}
+                      <strong>Total Messages Routed:</strong>{' '}
+                      {routingStats.totalMessagesRouted}
+                      <br />
+                      <strong>Total Routing Attempts:</strong>{' '}
+                      {routingStats.totalRoutingAttempts}
+                      <br />
+                      <strong>Successful Routes:</strong>{' '}
+                      {routingStats.successfulRoutingCount}
+                      <br />
+                      <strong>Failed Routes:</strong>{' '}
+                      {routingStats.failedRoutingCount}
+                      <br />
+                      <strong>Avg Routing Time:</strong>{' '}
+                      {routingStats.averageRoutingTimeMs.toFixed(2)}ms
+                      <br />
+                      <strong>Deduplication Items:</strong>{' '}
+                      {routingStats.activeDeduplicationItems}
+                      <br />
+                      <strong>Bloom Filter Fill:</strong>{' '}
+                      {(routingStats.bloomFilterFillRatio * 100).toFixed(1)}%
+                      <br />
+                      <strong>Est. False Positive:</strong>{' '}
+                      {(routingStats.estimatedFalsePositiveRate * 100).toFixed(
+                        4,
+                      )}
+                      %<br />
+                      <strong>Last Operation:</strong>{' '}
+                      {routingStats.lastRoutingOperation
+                        ? new Date(
+                            routingStats.lastRoutingOperation,
+                          ).toLocaleString()
+                        : 'Never'}
                     </p>
                   </Message>
 
                   <Button
-                    size="tiny"
                     color="blue"
-                    onClick={() => handleRebuildSearchIndex()}
                     loading={rebuildIndexLoading}
+                    onClick={() => handleRebuildSearchIndex()}
+                    size="tiny"
                   >
                     Rebuild Search Index
                   </Button>
                   <Button
-                    size="tiny"
                     color="orange"
-                    onClick={() => handleVacuumDatabase()}
                     loading={vacuumLoading}
+                    onClick={() => handleVacuumDatabase()}
+                    size="tiny"
                   >
                     Vacuum Database
                   </Button>
@@ -5817,7 +6940,10 @@ const MediaCore = () => {
               )}
 
               {routingStats?.error && (
-                <Message error style={{ marginTop: '1em' }}>
+                <Message
+                  error
+                  style={{ marginTop: '1em' }}
+                >
                   <p>Failed to load routing stats: {routingStats.error}</p>
                 </Message>
               )}
@@ -5834,7 +6960,8 @@ const MediaCore = () => {
                 Pod Message Storage
               </Card.Header>
               <Card.Description>
-                SQLite-backed message storage with full-text search and retention policies
+                SQLite-backed message storage with full-text search and
+                retention policies
               </Card.Description>
             </Card.Content>
 
@@ -5844,84 +6971,116 @@ const MediaCore = () => {
 
               <div style={{ marginBottom: '1em' }}>
                 <Button
-                  size="small"
                   color="teal"
-                  onClick={() => handleGetStorageStats()}
                   loading={storageStatsLoading}
+                  onClick={() => handleGetStorageStats()}
+                  size="small"
                 >
                   Get Storage Stats
                 </Button>
 
                 <Button
-                  size="small"
                   color="purple"
-                  onClick={() => handleCleanupMessages()}
                   loading={cleanupLoading}
+                  onClick={() => handleCleanupMessages()}
+                  size="small"
                 >
                   Cleanup Old Messages (30 days)
                 </Button>
 
                 <Button
-                  size="small"
                   color="blue"
-                  onClick={() => handleRebuildSearchIndex()}
                   loading={rebuildIndexLoading}
+                  onClick={() => handleRebuildSearchIndex()}
+                  size="small"
                 >
                   Rebuild Search Index
                 </Button>
 
                 <Button
-                  size="small"
                   color="orange"
-                  onClick={() => handleVacuumDatabase()}
                   loading={vacuumLoading}
+                  onClick={() => handleVacuumDatabase()}
+                  size="small"
                 >
                   Vacuum Database
                 </Button>
               </div>
 
               {storageStats && (
-                <Message size="small" style={{ marginBottom: '1em' }}>
+                <Message
+                  size="small"
+                  style={{ marginBottom: '1em' }}
+                >
                   <Message.Header>Message Storage Statistics</Message.Header>
                   <p>
-                    <strong>Total Messages:</strong> {storageStats.totalMessages?.toLocaleString() || 0}<br />
-                    <strong>Estimated Size:</strong> {(storageStats.totalSizeBytes / (1024 * 1024)).toFixed(2)} MB<br />
-                    <strong>Oldest Message:</strong> {storageStats.oldestMessage ? new Date(storageStats.oldestMessage).toLocaleString() : 'None'}<br />
-                    <strong>Newest Message:</strong> {storageStats.newestMessage ? new Date(storageStats.newestMessage).toLocaleString() : 'None'}<br />
-                    <strong>Pods with Messages:</strong> {Object.keys(storageStats.messagesPerPod || {}).length}<br />
-                    <strong>Active Channels:</strong> {Object.keys(storageStats.messagesPerChannel || {}).length}
+                    <strong>Total Messages:</strong>{' '}
+                    {storageStats.totalMessages?.toLocaleString() || 0}
+                    <br />
+                    <strong>Estimated Size:</strong>{' '}
+                    {(storageStats.totalSizeBytes / (1_024 * 1_024)).toFixed(2)}{' '}
+                    MB
+                    <br />
+                    <strong>Oldest Message:</strong>{' '}
+                    {storageStats.oldestMessage
+                      ? new Date(storageStats.oldestMessage).toLocaleString()
+                      : 'None'}
+                    <br />
+                    <strong>Newest Message:</strong>{' '}
+                    {storageStats.newestMessage
+                      ? new Date(storageStats.newestMessage).toLocaleString()
+                      : 'None'}
+                    <br />
+                    <strong>Pods with Messages:</strong>{' '}
+                    {Object.keys(storageStats.messagesPerPod || {}).length}
+                    <br />
+                    <strong>Active Channels:</strong>{' '}
+                    {Object.keys(storageStats.messagesPerChannel || {}).length}
                   </p>
                 </Message>
               )}
 
               <Header size="small">Message Search</Header>
               <Input
-                placeholder="Search messages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
                 action={
                   <Button
                     color="green"
-                    onClick={() => handleSearchMessages()}
-                    loading={searchLoading}
                     disabled={!searchQuery.trim()}
+                    loading={searchLoading}
+                    onClick={() => handleSearchMessages()}
                   >
                     Search
                   </Button>
                 }
-                style={{ width: '100%', marginBottom: '1em' }}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={searchQuery}
               />
 
               {searchResults && searchResults.length > 0 && (
                 <Message size="small">
-                  <Message.Header>Search Results ({searchResults.length})</Message.Header>
+                  <Message.Header>
+                    Search Results ({searchResults.length})
+                  </Message.Header>
                   <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {searchResults.map((msg, idx) => (
-                      <div key={idx} style={{ marginBottom: '0.5em', padding: '0.5em', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    {searchResults.map((message, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          marginBottom: '0.5em',
+                          padding: '0.5em',
+                        }}
+                      >
                         <small style={{ color: '#666' }}>
-                          {new Date(msg.timestampUnixMs).toLocaleString()} • {msg.senderPeerId} • {msg.channelId}
+                          {new Date(message.timestampUnixMs).toLocaleString()} •{' '}
+                          {message.senderPeerId} • {message.channelId}
                         </small>
-                        <div style={{ marginTop: '0.25em' }}>{msg.body}</div>
+                        <div style={{ marginTop: '0.25em' }}>
+                          {message.body}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -5929,7 +7088,10 @@ const MediaCore = () => {
               )}
 
               {searchResults && searchResults.length === 0 && searchQuery && (
-                <Message size="small" warning>
+                <Message
+                  size="small"
+                  warning
+                >
                   No messages found matching "{searchQuery}"
                 </Message>
               )}
@@ -5956,74 +7118,112 @@ const MediaCore = () => {
 
               <div style={{ marginBottom: '1em' }}>
                 <Button
-                  size="small"
                   color="purple"
-                  onClick={() => handleGetBackfillStats()}
                   loading={backfillStatsLoading}
+                  onClick={() => handleGetBackfillStats()}
+                  size="small"
                 >
                   Get Backfill Stats
                 </Button>
               </div>
 
               {backfillStats && (
-                <Message size="small" style={{ marginBottom: '1em' }}>
+                <Message
+                  size="small"
+                  style={{ marginBottom: '1em' }}
+                >
                   <Message.Header>Backfill Statistics</Message.Header>
                   <p>
-                    <strong>Requests Sent:</strong> {backfillStats.totalBackfillRequestsSent?.toLocaleString() || 0}<br />
-                    <strong>Requests Received:</strong> {backfillStats.totalBackfillRequestsReceived?.toLocaleString() || 0}<br />
-                    <strong>Messages Backfilled:</strong> {backfillStats.totalMessagesBackfilled?.toLocaleString() || 0}<br />
-                    <strong>Data Transferred:</strong> {(backfillStats.totalBackfillBytesTransferred / (1024 * 1024)).toFixed(2)} MB<br />
-                    <strong>Avg Duration:</strong> {backfillStats.averageBackfillDurationMs?.toFixed(2) || 0}ms<br />
-                    <strong>Last Operation:</strong> {backfillStats.lastBackfillOperation ? new Date(backfillStats.lastBackfillOperation).toLocaleString() : 'Never'}
+                    <strong>Requests Sent:</strong>{' '}
+                    {backfillStats.totalBackfillRequestsSent?.toLocaleString() ||
+                      0}
+                    <br />
+                    <strong>Requests Received:</strong>{' '}
+                    {backfillStats.totalBackfillRequestsReceived?.toLocaleString() ||
+                      0}
+                    <br />
+                    <strong>Messages Backfilled:</strong>{' '}
+                    {backfillStats.totalMessagesBackfilled?.toLocaleString() ||
+                      0}
+                    <br />
+                    <strong>Data Transferred:</strong>{' '}
+                    {(
+                      backfillStats.totalBackfillBytesTransferred /
+                      (1_024 * 1_024)
+                    ).toFixed(2)}{' '}
+                    MB
+                    <br />
+                    <strong>Avg Duration:</strong>{' '}
+                    {backfillStats.averageBackfillDurationMs?.toFixed(2) || 0}ms
+                    <br />
+                    <strong>Last Operation:</strong>{' '}
+                    {backfillStats.lastBackfillOperation
+                      ? new Date(
+                          backfillStats.lastBackfillOperation,
+                        ).toLocaleString()
+                      : 'Never'}
                   </p>
                 </Message>
               )}
 
               <Header size="small">Pod Backfill Sync</Header>
               <Input
-                placeholder="Pod ID for backfill sync"
-                value={backfillPodId}
-                onChange={(e) => setBackfillPodId(e.target.value)}
                 action={
                   <>
                     <Button
                       color="blue"
-                      onClick={() => handleGetLastSeenTimestamps()}
                       disabled={!backfillPodId.trim()}
+                      onClick={() => handleGetLastSeenTimestamps()}
                     >
                       Get Timestamps
                     </Button>
                     <Button
                       color="green"
-                      onClick={() => handleSyncPodBackfill()}
-                      loading={syncBackfillLoading}
                       disabled={!backfillPodId.trim()}
+                      loading={syncBackfillLoading}
+                      onClick={() => handleSyncPodBackfill()}
                     >
                       Sync Backfill
                     </Button>
                   </>
                 }
-                style={{ width: '100%', marginBottom: '1em' }}
+                onChange={(e) => setBackfillPodId(e.target.value)}
+                placeholder="Pod ID for backfill sync"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={backfillPodId}
               />
 
-              {lastSeenTimestamps && Object.keys(lastSeenTimestamps).length > 0 && (
-                <Message size="small">
-                  <Message.Header>Last Seen Timestamps for Pod {backfillPodId}</Message.Header>
-                  <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                    {Object.entries(lastSeenTimestamps).map(([channelId, timestamp]) => (
-                      <div key={channelId} style={{ marginBottom: '0.25em' }}>
-                        <strong>{channelId}:</strong> {new Date(timestamp).toLocaleString()}
-                      </div>
-                    ))}
-                  </div>
-                </Message>
-              )}
+              {lastSeenTimestamps &&
+                Object.keys(lastSeenTimestamps).length > 0 && (
+                  <Message size="small">
+                    <Message.Header>
+                      Last Seen Timestamps for Pod {backfillPodId}
+                    </Message.Header>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      {Object.entries(lastSeenTimestamps).map(
+                        ([channelId, timestamp]) => (
+                          <div
+                            key={channelId}
+                            style={{ marginBottom: '0.25em' }}
+                          >
+                            <strong>{channelId}:</strong>{' '}
+                            {new Date(timestamp).toLocaleString()}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </Message>
+                )}
 
-              {lastSeenTimestamps && Object.keys(lastSeenTimestamps).length === 0 && (
-                <Message size="small" info>
-                  No last seen timestamps recorded for pod {backfillPodId}
-                </Message>
-              )}
+              {lastSeenTimestamps &&
+                Object.keys(lastSeenTimestamps).length === 0 && (
+                  <Message
+                    info
+                    size="small"
+                  >
+                    No last seen timestamps recorded for pod {backfillPodId}
+                  </Message>
+                )}
             </Card.Content>
           </Card>
         </Grid.Column>
@@ -6037,7 +7237,8 @@ const MediaCore = () => {
                 Pod Channel Management
               </Card.Header>
               <Card.Description>
-                Create, update, and manage channels within pods for organized messaging
+                Create, update, and manage channels within pods for organized
+                messaging
               </Card.Description>
             </Card.Content>
 
@@ -6046,34 +7247,35 @@ const MediaCore = () => {
               <Header size="small">Pod Channel Operations</Header>
 
               <Input
-                placeholder="Pod ID for channel management"
-                value={channelPodId}
-                onChange={(e) => setChannelPodId(e.target.value)}
                 action={
                   <Button
                     color="blue"
-                    onClick={() => handleGetChannels()}
-                    loading={channelsLoading}
                     disabled={!channelPodId.trim()}
+                    loading={channelsLoading}
+                    onClick={() => handleGetChannels()}
                   >
                     Load Channels
                   </Button>
                 }
-                style={{ width: '100%', marginBottom: '1em' }}
+                onChange={(e) => setChannelPodId(e.target.value)}
+                placeholder="Pod ID for channel management"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={channelPodId}
               />
 
               {/* Create New Channel */}
               <Header size="tiny">Create New Channel</Header>
               <Input
-                placeholder="Channel name"
-                value={newChannelName}
-                onChange={(e) => setNewChannelName(e.target.value)}
                 action={
                   <>
                     <select
-                      value={newChannelKind}
                       onChange={(e) => setNewChannelKind(e.target.value)}
-                      style={{ padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                      style={{
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        padding: '0.5em',
+                      }}
+                      value={newChannelKind}
                     >
                       <option value="General">General</option>
                       <option value="Custom">Custom</option>
@@ -6081,15 +7283,18 @@ const MediaCore = () => {
                     </select>
                     <Button
                       color="green"
-                      onClick={() => handleCreateChannel()}
-                      loading={createChannelLoading}
                       disabled={!newChannelName.trim() || !channelPodId.trim()}
+                      loading={createChannelLoading}
+                      onClick={() => handleCreateChannel()}
                     >
                       Create
                     </Button>
                   </>
                 }
-                style={{ width: '100%', marginBottom: '1em' }}
+                onChange={(e) => setNewChannelName(e.target.value)}
+                placeholder="Channel name"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={newChannelName}
               />
 
               {/* Channels List */}
@@ -6098,59 +7303,91 @@ const MediaCore = () => {
                   <Header size="tiny">Existing Channels</Header>
                   <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                     {channels.map((channel) => (
-                      <Card key={channel.channelId} style={{ marginBottom: '0.5em' }}>
+                      <Card
+                        key={channel.channelId}
+                        style={{ marginBottom: '0.5em' }}
+                      >
                         <Card.Content style={{ padding: '0.5em' }}>
-                          {editingChannel && editingChannel.channelId === channel.channelId ? (
+                          {editingChannel &&
+                          editingChannel.channelId === channel.channelId ? (
                             <div>
                               <Input
-                                placeholder="Channel name"
-                                value={editChannelName}
-                                onChange={(e) => setEditChannelName(e.target.value)}
                                 action={
                                   <>
                                     <Button
-                                      size="small"
                                       color="green"
-                                      onClick={() => handleUpdateChannel(channel.channelId)}
-                                      loading={updateChannelLoading}
                                       disabled={!editChannelName.trim()}
+                                      loading={updateChannelLoading}
+                                      onClick={() =>
+                                        handleUpdateChannel(channel.channelId)
+                                      }
+                                      size="small"
                                     >
                                       Save
                                     </Button>
                                     <Button
-                                      size="small"
                                       onClick={() => cancelEditingChannel()}
+                                      size="small"
                                     >
                                       Cancel
                                     </Button>
                                   </>
                                 }
+                                onChange={(e) =>
+                                  setEditChannelName(e.target.value)
+                                }
+                                placeholder="Channel name"
                                 style={{ width: '100%' }}
+                                value={editChannelName}
                               />
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div
+                              style={{
+                                alignItems: 'center',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                              }}
+                            >
                               <div>
                                 <strong>{channel.name}</strong>
-                                <div style={{ fontSize: '0.8em', color: '#666', marginTop: '0.25em' }}>
+                                <div
+                                  style={{
+                                    color: '#666',
+                                    fontSize: '0.8em',
+                                    marginTop: '0.25em',
+                                  }}
+                                >
                                   ID: {channel.channelId} • Type: {channel.kind}
-                                  {channel.bindingInfo && ` • Binding: ${channel.bindingInfo}`}
+                                  {channel.bindingInfo &&
+                                    ` • Binding: ${channel.bindingInfo}`}
                                 </div>
                               </div>
                               <div>
                                 <Button
-                                  size="tiny"
+                                  disabled={
+                                    channel.name.toLowerCase() === 'general' &&
+                                    channel.kind === 'General'
+                                  }
                                   onClick={() => startEditingChannel(channel)}
-                                  disabled={channel.name.toLowerCase() === 'general' && channel.kind === 'General'}
+                                  size="tiny"
                                 >
                                   Edit
                                 </Button>
                                 <Button
-                                  size="tiny"
                                   color="red"
-                                  onClick={() => handleDeleteChannel(channel.channelId, channel.name)}
+                                  disabled={
+                                    channel.name.toLowerCase() === 'general' &&
+                                    channel.kind === 'General'
+                                  }
                                   loading={deleteChannelLoading}
-                                  disabled={channel.name.toLowerCase() === 'general' && channel.kind === 'General'}
+                                  onClick={() =>
+                                    handleDeleteChannel(
+                                      channel.channelId,
+                                      channel.name,
+                                    )
+                                  }
+                                  size="tiny"
                                 >
                                   Delete
                                 </Button>
@@ -6165,8 +7402,12 @@ const MediaCore = () => {
               )}
 
               {channels.length === 0 && channelPodId && !channelsLoading && (
-                <Message size="small" info>
-                  No channels found in pod {channelPodId}. Create the first channel above.
+                <Message
+                  info
+                  size="small"
+                >
+                  No channels found in pod {channelPodId}. Create the first
+                  channel above.
                 </Message>
               )}
             </Card.Content>
@@ -6182,7 +7423,8 @@ const MediaCore = () => {
                 Pod Content Linking
               </Card.Header>
               <Card.Description>
-                Create pods linked to specific content (music, videos, etc.) for focused discussions
+                Create pods linked to specific content (music, videos, etc.) for
+                focused discussions
               </Card.Description>
             </Card.Content>
 
@@ -6192,33 +7434,38 @@ const MediaCore = () => {
 
               {/* Content Search */}
               <Input
-                placeholder="Search for content (artist, album, movie, etc.)"
-                value={contentSearchQuery}
-                onChange={(e) => setContentSearchQuery(e.target.value)}
                 action={
                   <Button
                     color="blue"
-                    onClick={() => handleSearchContent()}
-                    loading={contentSearchLoading}
                     disabled={!contentSearchQuery.trim()}
+                    loading={contentSearchLoading}
+                    onClick={() => handleSearchContent()}
                   >
                     Search
                   </Button>
                 }
-                style={{ width: '100%', marginBottom: '1em' }}
+                onChange={(e) => setContentSearchQuery(e.target.value)}
+                placeholder="Search for content (artist, album, movie, etc.)"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={contentSearchQuery}
               />
 
               {/* Search Results */}
               {contentSearchResults.length > 0 && (
                 <div style={{ marginBottom: '1em' }}>
                   <Header size="tiny">Search Results</Header>
-                  {contentSearchResults.map((item, idx) => (
-                    <Card key={idx} style={{ marginBottom: '0.5em', cursor: 'pointer' }}
-                          onClick={() => selectContentFromSearch(item)}>
+                  {contentSearchResults.map((item, index) => (
+                    <Card
+                      key={index}
+                      onClick={() => selectContentFromSearch(item)}
+                      style={{ cursor: 'pointer', marginBottom: '0.5em' }}
+                    >
                       <Card.Content style={{ padding: '0.5em' }}>
                         <strong>{item.title}</strong>
                         {item.subtitle && <div>{item.subtitle}</div>}
-                        <small>{item.domain} • {item.type}</small>
+                        <small>
+                          {item.domain} • {item.type}
+                        </small>
                       </Card.Content>
                     </Card>
                   ))}
@@ -6227,45 +7474,57 @@ const MediaCore = () => {
 
               {/* Content Validation */}
               <Input
-                placeholder="Content ID (e.g., content:audio:album:mb-release-id)"
-                value={contentId}
-                onChange={(e) => setContentId(e.target.value)}
                 action={
                   <Button
                     color="green"
-                    onClick={() => handleValidateContentId()}
-                    loading={contentValidationLoading}
                     disabled={!contentId.trim()}
+                    loading={contentValidationLoading}
+                    onClick={() => handleValidateContentId()}
                   >
                     Validate
                   </Button>
                 }
-                style={{ width: '100%', marginBottom: '1em' }}
+                onChange={(e) => setContentId(e.target.value)}
+                placeholder="Content ID (e.g., content:audio:album:mb-release-id)"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={contentId}
               />
 
               {/* Validation Result */}
               {contentValidation && (
-                <Message size="small"
-                         positive={contentValidation.isValid}
-                         negative={!contentValidation.isValid}
-                         style={{ marginBottom: '1em' }}>
+                <Message
+                  negative={!contentValidation.isValid}
+                  positive={contentValidation.isValid}
+                  size="small"
+                  style={{ marginBottom: '1em' }}
+                >
                   <Message.Header>
-                    {contentValidation.isValid ? '✓ Valid Content ID' : '✗ Invalid Content ID'}
+                    {contentValidation.isValid
+                      ? '✓ Valid Content ID'
+                      : '✗ Invalid Content ID'}
                   </Message.Header>
-                  {!contentValidation.isValid && contentValidation.errorMessage && (
-                    <p>{contentValidation.errorMessage}</p>
-                  )}
+                  {!contentValidation.isValid &&
+                    contentValidation.errorMessage && (
+                      <p>{contentValidation.errorMessage}</p>
+                    )}
                 </Message>
               )}
 
               {/* Content Metadata */}
               {contentMetadata && (
-                <Message size="small" info style={{ marginBottom: '1em' }}>
+                <Message
+                  info
+                  size="small"
+                  style={{ marginBottom: '1em' }}
+                >
                   <Message.Header>Content Metadata</Message.Header>
                   <p>
-                    <strong>Title:</strong> {contentMetadata.title}<br />
-                    <strong>Artist:</strong> {contentMetadata.artist}<br />
-                    <strong>Type:</strong> {contentMetadata.type} ({contentMetadata.domain})
+                    <strong>Title:</strong> {contentMetadata.title}
+                    <br />
+                    <strong>Artist:</strong> {contentMetadata.artist}
+                    <br />
+                    <strong>Type:</strong> {contentMetadata.type} (
+                    {contentMetadata.domain})
                   </p>
                 </Message>
               )}
@@ -6276,17 +7535,17 @@ const MediaCore = () => {
                   <Header size="small">Create Content-Linked Pod</Header>
 
                   <Input
-                    placeholder="Pod name (auto-filled from content)"
-                    value={newPodName}
                     onChange={(e) => setNewPodName(e.target.value)}
-                    style={{ width: '100%', marginBottom: '1em' }}
+                    placeholder="Pod name (auto-filled from content)"
+                    style={{ marginBottom: '1em', width: '100%' }}
+                    value={newPodName}
                   />
 
                   <div style={{ marginBottom: '1em' }}>
                     <label style={{ marginRight: '1em' }}>Visibility:</label>
                     <select
-                      value={newPodVisibility}
                       onChange={(e) => setNewPodVisibility(e.target.value)}
+                      value={newPodVisibility}
                     >
                       <option value="Unlisted">Unlisted</option>
                       <option value="Listed">Listed</option>
@@ -6296,9 +7555,9 @@ const MediaCore = () => {
 
                   <Button
                     color="teal"
-                    onClick={() => handleCreateContentLinkedPod()}
-                    loading={createPodLoading}
                     disabled={!newPodName.trim()}
+                    loading={createPodLoading}
+                    onClick={() => handleCreateContentLinkedPod()}
                   >
                     Create Content-Linked Pod
                   </Button>
@@ -6317,7 +7576,8 @@ const MediaCore = () => {
                 Pod Opinion Management
               </Card.Header>
               <Card.Description>
-                Publish and view opinions on content variants within pods for quality assessment and community feedback
+                Publish and view opinions on content variants within pods for
+                quality assessment and community feedback
               </Card.Description>
             </Card.Content>
 
@@ -6327,17 +7587,17 @@ const MediaCore = () => {
 
               {/* Pod Selection */}
               <Input
-                placeholder="Pod ID"
-                value={opinionPodId}
                 onChange={(e) => setOpinionPodId(e.target.value)}
-                style={{ width: '100%', marginBottom: '1em' }}
+                placeholder="Pod ID"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={opinionPodId}
               />
 
               <Button
                 color="blue"
-                onClick={() => handleRefreshOpinions()}
-                loading={refreshOpinionsLoading}
                 disabled={!opinionPodId.trim()}
+                loading={refreshOpinionsLoading}
+                onClick={() => handleRefreshOpinions()}
                 style={{ marginBottom: '1em' }}
               >
                 Refresh Pod Opinions
@@ -6346,18 +7606,18 @@ const MediaCore = () => {
               {/* Content Opinions */}
               <Header size="tiny">Content Opinions</Header>
               <Input
-                placeholder="Content ID (e.g., content:audio:album:mb-id)"
-                value={opinionContentId}
                 onChange={(e) => setOpinionContentId(e.target.value)}
-                style={{ width: '100%', marginBottom: '1em' }}
+                placeholder="Content ID (e.g., content:audio:album:mb-id)"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={opinionContentId}
               />
 
               <div style={{ marginBottom: '1em' }}>
                 <Button
                   color="teal"
-                  onClick={() => handleGetOpinions()}
-                  loading={getOpinionsLoading}
                   disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  loading={getOpinionsLoading}
+                  onClick={() => handleGetOpinions()}
                   style={{ marginRight: '0.5em' }}
                 >
                   Get Opinions
@@ -6365,9 +7625,9 @@ const MediaCore = () => {
 
                 <Button
                   color="purple"
-                  onClick={() => handleGetOpinionStatistics()}
-                  loading={getStatsLoading}
                   disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  loading={getStatsLoading}
+                  onClick={() => handleGetOpinionStatistics()}
                 >
                   Get Statistics
                 </Button>
@@ -6375,14 +7635,26 @@ const MediaCore = () => {
 
               {/* Opinion Statistics */}
               {opinionStatistics && (
-                <Message info style={{ marginBottom: '1em' }}>
+                <Message
+                  info
+                  style={{ marginBottom: '1em' }}
+                >
                   <Message.Header>Opinion Statistics</Message.Header>
                   <p>
-                    <strong>Total Opinions:</strong> {opinionStatistics.totalOpinions}<br />
-                    <strong>Unique Variants:</strong> {opinionStatistics.uniqueVariants}<br />
-                    <strong>Average Score:</strong> {opinionStatistics.averageScore.toFixed(1)}<br />
-                    <strong>Score Range:</strong> {opinionStatistics.minScore} - {opinionStatistics.maxScore}<br />
-                    <strong>Last Updated:</strong> {new Date(opinionStatistics.lastUpdated).toLocaleString()}
+                    <strong>Total Opinions:</strong>{' '}
+                    {opinionStatistics.totalOpinions}
+                    <br />
+                    <strong>Unique Variants:</strong>{' '}
+                    {opinionStatistics.uniqueVariants}
+                    <br />
+                    <strong>Average Score:</strong>{' '}
+                    {opinionStatistics.averageScore.toFixed(1)}
+                    <br />
+                    <strong>Score Range:</strong> {opinionStatistics.minScore} -{' '}
+                    {opinionStatistics.maxScore}
+                    <br />
+                    <strong>Last Updated:</strong>{' '}
+                    {new Date(opinionStatistics.lastUpdated).toLocaleString()}
                   </p>
                 </Message>
               )}
@@ -6391,16 +7663,27 @@ const MediaCore = () => {
               {opinions.length > 0 && (
                 <div style={{ marginBottom: '1em' }}>
                   <Header size="tiny">Opinions ({opinions.length})</Header>
-                  {opinions.map((opinion, idx) => (
-                    <Card key={idx} style={{ marginBottom: '0.5em' }}>
+                  {opinions.map((opinion, index) => (
+                    <Card
+                      key={index}
+                      style={{ marginBottom: '0.5em' }}
+                    >
                       <Card.Content style={{ padding: '0.5em' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                          }}
+                        >
                           <div>
-                            <strong>Variant:</strong> {opinion.variantHash.substring(0, 8)}...<br />
+                            <strong>Variant:</strong>{' '}
+                            {opinion.variantHash.slice(0, 8)}...
+                            <br />
                             <strong>Score:</strong> {opinion.score}/10
                             {opinion.note && (
                               <>
-                                <br /><strong>Note:</strong> {opinion.note}
+                                <br />
+                                <strong>Note:</strong> {opinion.note}
                               </>
                             )}
                           </div>
@@ -6416,38 +7699,44 @@ const MediaCore = () => {
               <Header size="small">Publish New Opinion</Header>
 
               <Input
-                placeholder="Variant Hash"
-                value={opinionVariantHash}
                 onChange={(e) => setOpinionVariantHash(e.target.value)}
-                style={{ width: '100%', marginBottom: '1em' }}
+                placeholder="Variant Hash"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={opinionVariantHash}
               />
 
               <div style={{ marginBottom: '1em' }}>
                 <label style={{ marginRight: '1em' }}>Score (0-10):</label>
                 <input
-                  type="range"
-                  min="0"
                   max="10"
+                  min="0"
+                  onChange={(e) =>
+                    setOpinionScore(Number.parseFloat(e.target.value))
+                  }
                   step="0.5"
-                  value={opinionScore}
-                  onChange={(e) => setOpinionScore(parseFloat(e.target.value))}
                   style={{ width: '200px' }}
+                  type="range"
+                  value={opinionScore}
                 />
                 <span style={{ marginLeft: '1em' }}>{opinionScore}/10</span>
               </div>
 
               <Input
-                placeholder="Optional note about this variant"
-                value={opinionNote}
                 onChange={(e) => setOpinionNote(e.target.value)}
-                style={{ width: '100%', marginBottom: '1em' }}
+                placeholder="Optional note about this variant"
+                style={{ marginBottom: '1em', width: '100%' }}
+                value={opinionNote}
               />
 
               <Button
                 color="green"
-                onClick={() => handlePublishOpinion()}
+                disabled={
+                  !opinionPodId.trim() ||
+                  !opinionContentId.trim() ||
+                  !opinionVariantHash.trim()
+                }
                 loading={publishOpinionLoading}
-                disabled={!opinionPodId.trim() || !opinionContentId.trim() || !opinionVariantHash.trim()}
+                onClick={() => handlePublishOpinion()}
               >
                 Publish Opinion
               </Button>
@@ -6460,9 +7749,9 @@ const MediaCore = () => {
               <div style={{ marginBottom: '1em' }}>
                 <Button
                   color="purple"
-                  onClick={() => handleGetAggregatedOpinions()}
-                  loading={getAggregatedLoading}
                   disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  loading={getAggregatedLoading}
+                  onClick={() => handleGetAggregatedOpinions()}
                   style={{ marginRight: '0.5em' }}
                 >
                   Get Aggregated Opinions
@@ -6470,9 +7759,9 @@ const MediaCore = () => {
 
                 <Button
                   color="blue"
-                  onClick={() => handleGetMemberAffinities()}
-                  loading={getAffinitiesLoading}
                   disabled={!opinionPodId.trim()}
+                  loading={getAffinitiesLoading}
+                  onClick={() => handleGetMemberAffinities()}
                   style={{ marginRight: '0.5em' }}
                 >
                   Get Member Affinities
@@ -6480,9 +7769,9 @@ const MediaCore = () => {
 
                 <Button
                   color="teal"
-                  onClick={() => handleGetConsensusRecommendations()}
-                  loading={getRecommendationsLoading}
                   disabled={!opinionPodId.trim() || !opinionContentId.trim()}
+                  loading={getRecommendationsLoading}
+                  onClick={() => handleGetConsensusRecommendations()}
                   style={{ marginRight: '0.5em' }}
                 >
                   Get Recommendations
@@ -6490,9 +7779,9 @@ const MediaCore = () => {
 
                 <Button
                   color="orange"
-                  onClick={() => handleUpdateMemberAffinities()}
-                  loading={updateAffinitiesLoading}
                   disabled={!opinionPodId.trim()}
+                  loading={updateAffinitiesLoading}
+                  onClick={() => handleUpdateMemberAffinities()}
                 >
                   Update Affinities
                 </Button>
@@ -6503,31 +7792,60 @@ const MediaCore = () => {
                 <div style={{ marginBottom: '1em' }}>
                   <Header size="tiny">Aggregated Opinion Results</Header>
                   <Message info>
-                    <strong>Weighted Average:</strong> {aggregatedOpinions.weightedAverageScore.toFixed(2)}/10<br />
-                    <strong>Unweighted Average:</strong> {aggregatedOpinions.unweightedAverageScore.toFixed(2)}/10<br />
-                    <strong>Consensus Strength:</strong> {(aggregatedOpinions.consensusStrength * 100).toFixed(1)}%<br />
-                    <strong>Total Opinions:</strong> {aggregatedOpinions.totalOpinions}<br />
-                    <strong>Unique Variants:</strong> {aggregatedOpinions.uniqueVariants}<br />
-                    <strong>Contributing Members:</strong> {aggregatedOpinions.contributingMembers}
+                    <strong>Weighted Average:</strong>{' '}
+                    {aggregatedOpinions.weightedAverageScore.toFixed(2)}/10
+                    <br />
+                    <strong>Unweighted Average:</strong>{' '}
+                    {aggregatedOpinions.unweightedAverageScore.toFixed(2)}/10
+                    <br />
+                    <strong>Consensus Strength:</strong>{' '}
+                    {(aggregatedOpinions.consensusStrength * 100).toFixed(1)}%
+                    <br />
+                    <strong>Total Opinions:</strong>{' '}
+                    {aggregatedOpinions.totalOpinions}
+                    <br />
+                    <strong>Unique Variants:</strong>{' '}
+                    {aggregatedOpinions.uniqueVariants}
+                    <br />
+                    <strong>Contributing Members:</strong>{' '}
+                    {aggregatedOpinions.contributingMembers}
                   </Message>
 
                   {/* Variant Breakdown */}
                   {aggregatedOpinions.variantAggregates.length > 0 && (
                     <div style={{ marginTop: '1em' }}>
                       <Header size="tiny">Variant Analysis</Header>
-                      {aggregatedOpinions.variantAggregates.map((variant, idx) => (
-                        <Card key={idx} style={{ marginBottom: '0.5em' }}>
-                          <Card.Content style={{ padding: '0.5em' }}>
-                            <div>
-                              <strong>Variant:</strong> {variant.variantHash.substring(0, 8)}...<br />
-                              <strong>Weighted Score:</strong> {variant.weightedAverageScore.toFixed(2)}/10<br />
-                              <strong>Unweighted Score:</strong> {variant.unweightedAverageScore.toFixed(2)}/10<br />
-                              <strong>Opinions:</strong> {variant.opinionCount}<br />
-                              <strong>Agreement:</strong> {(1 - variant.scoreStandardDeviation / 5).toFixed(2)} (lower std dev = higher agreement)
-                            </div>
-                          </Card.Content>
-                        </Card>
-                      ))}
+                      {aggregatedOpinions.variantAggregates.map(
+                        (variant, index) => (
+                          <Card
+                            key={index}
+                            style={{ marginBottom: '0.5em' }}
+                          >
+                            <Card.Content style={{ padding: '0.5em' }}>
+                              <div>
+                                <strong>Variant:</strong>{' '}
+                                {variant.variantHash.slice(0, 8)}...
+                                <br />
+                                <strong>Weighted Score:</strong>{' '}
+                                {variant.weightedAverageScore.toFixed(2)}/10
+                                <br />
+                                <strong>Unweighted Score:</strong>{' '}
+                                {variant.unweightedAverageScore.toFixed(2)}/10
+                                <br />
+                                <strong>Opinions:</strong>{' '}
+                                {variant.opinionCount}
+                                <br />
+                                <strong>Agreement:</strong>{' '}
+                                {(
+                                  1 -
+                                  variant.scoreStandardDeviation / 5
+                                ).toFixed(2)}{' '}
+                                (lower std dev = higher agreement)
+                              </div>
+                            </Card.Content>
+                          </Card>
+                        ),
+                      )}
                     </div>
                   )}
                 </div>
@@ -6537,22 +7855,41 @@ const MediaCore = () => {
               {consensusRecommendations.length > 0 && (
                 <div style={{ marginBottom: '1em' }}>
                   <Header size="tiny">Consensus Recommendations</Header>
-                  {consensusRecommendations.map((rec, idx) => (
-                    <Card key={idx} style={{
-                      marginBottom: '0.5em',
-                      borderLeft: rec.recommendation === 'StronglyRecommended' ? '5px solid #21ba45' :
-                                 rec.recommendation === 'Recommended' ? '5px solid #2185d0' :
-                                 rec.recommendation === 'Neutral' ? '5px solid #fbbd08' :
-                                 rec.recommendation === 'NotRecommended' ? '5px solid #f2711c' :
-                                 '5px solid #db2828'
-                    }}>
+                  {consensusRecommendations.map((rec, index) => (
+                    <Card
+                      key={index}
+                      style={{
+                        borderLeft:
+                          rec.recommendation === 'StronglyRecommended'
+                            ? '5px solid #21ba45'
+                            : rec.recommendation === 'Recommended'
+                              ? '5px solid #2185d0'
+                              : rec.recommendation === 'Neutral'
+                                ? '5px solid #fbbd08'
+                                : rec.recommendation === 'NotRecommended'
+                                  ? '5px solid #f2711c'
+                                  : '5px solid #db2828',
+                        marginBottom: '0.5em',
+                      }}
+                    >
                       <Card.Content style={{ padding: '0.5em' }}>
                         <div>
-                          <strong>Variant:</strong> {rec.variantHash.substring(0, 8)}...<br />
-                          <strong>Recommendation:</strong> {rec.recommendation.replace(/([A-Z])/g, ' $1').trim()}<br />
-                          <strong>Consensus Score:</strong> {(rec.consensusScore * 100).toFixed(1)}%<br />
-                          <strong>Reasoning:</strong> {rec.reasoning}<br />
-                          <small><strong>Factors:</strong> {rec.supportingFactors.join(', ')}</small>
+                          <strong>Variant:</strong>{' '}
+                          {rec.variantHash.slice(0, 8)}...
+                          <br />
+                          <strong>Recommendation:</strong>{' '}
+                          {rec.recommendation
+                            .replaceAll(/([A-Z])/g, ' $1')
+                            .trim()}
+                          <br />
+                          <strong>Consensus Score:</strong>{' '}
+                          {(rec.consensusScore * 100).toFixed(1)}%<br />
+                          <strong>Reasoning:</strong> {rec.reasoning}
+                          <br />
+                          <small>
+                            <strong>Factors:</strong>{' '}
+                            {rec.supportingFactors.join(', ')}
+                          </small>
                         </div>
                       </Card.Content>
                     </Card>
@@ -6563,21 +7900,38 @@ const MediaCore = () => {
               {/* Member Affinities */}
               {Object.keys(memberAffinities).length > 0 && (
                 <div style={{ marginBottom: '1em' }}>
-                  <Header size="tiny">Member Affinities ({Object.keys(memberAffinities).length})</Header>
-                  {Object.entries(memberAffinities).map(([peerId, affinity], idx) => (
-                    <Card key={idx} style={{ marginBottom: '0.5em' }}>
-                      <Card.Content style={{ padding: '0.5em' }}>
-                        <div>
-                          <strong>Peer:</strong> {peerId.substring(0, 8)}...<br />
-                          <strong>Affinity Score:</strong> {(affinity.affinityScore * 100).toFixed(1)}%<br />
-                          <strong>Trust Score:</strong> {(affinity.trustScore * 100).toFixed(1)}%<br />
-                          <strong>Messages:</strong> {affinity.messageCount}<br />
-                          <strong>Opinions:</strong> {affinity.opinionCount}<br />
-                          <small>Last Activity: {new Date(affinity.lastActivity).toLocaleDateString()}</small>
-                        </div>
-                      </Card.Content>
-                    </Card>
-                  ))}
+                  <Header size="tiny">
+                    Member Affinities ({Object.keys(memberAffinities).length})
+                  </Header>
+                  {Object.entries(memberAffinities).map(
+                    ([peerId, affinity], index) => (
+                      <Card
+                        key={index}
+                        style={{ marginBottom: '0.5em' }}
+                      >
+                        <Card.Content style={{ padding: '0.5em' }}>
+                          <div>
+                            <strong>Peer:</strong> {peerId.slice(0, 8)}...
+                            <br />
+                            <strong>Affinity Score:</strong>{' '}
+                            {(affinity.affinityScore * 100).toFixed(1)}%<br />
+                            <strong>Trust Score:</strong>{' '}
+                            {(affinity.trustScore * 100).toFixed(1)}%<br />
+                            <strong>Messages:</strong> {affinity.messageCount}
+                            <br />
+                            <strong>Opinions:</strong> {affinity.opinionCount}
+                            <br />
+                            <small>
+                              Last Activity:{' '}
+                              {new Date(
+                                affinity.lastActivity,
+                              ).toLocaleDateString()}
+                            </small>
+                          </div>
+                        </Card.Content>
+                      </Card>
+                    ),
+                  )}
                 </div>
               )}
             </Card.Content>
@@ -6593,7 +7947,8 @@ const MediaCore = () => {
                 Pod Message Signing
               </Card.Header>
               <Card.Description>
-                Cryptographic signing and verification of pod messages for authenticity and integrity
+                Cryptographic signing and verification of pod messages for
+                authenticity and integrity
               </Card.Description>
             </Card.Content>
 
@@ -6603,23 +7958,27 @@ const MediaCore = () => {
               <Form>
                 <Form.TextArea
                   label="Pod Message JSON"
-                  placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789}'
-                  value={messageToSign}
                   onChange={(e) => setMessageToSign(e.target.value)}
+                  placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789}'
                   rows={3}
+                  value={messageToSign}
                 />
                 <Form.Input
                   label="Private Key"
-                  type="password"
-                  placeholder="base64-encoded private key"
-                  value={privateKeyForSigning}
                   onChange={(e) => setPrivateKeyForSigning(e.target.value)}
+                  placeholder="base64-encoded private key"
+                  type="password"
+                  value={privateKeyForSigning}
                 />
                 <Button
-                  primary
+                  disabled={
+                    signingMessage ||
+                    !messageToSign.trim() ||
+                    !privateKeyForSigning.trim()
+                  }
                   loading={signingMessage}
-                  disabled={signingMessage || !messageToSign.trim() || !privateKeyForSigning.trim()}
                   onClick={handleSignMessage}
+                  primary
                 >
                   Sign Message
                 </Button>
@@ -6633,11 +7992,18 @@ const MediaCore = () => {
                     </Message>
                   ) : (
                     <Message success>
-                      <Message.Header>Message Signed Successfully</Message.Header>
+                      <Message.Header>
+                        Message Signed Successfully
+                      </Message.Header>
                       <p>
-                        <strong>Message ID:</strong> {signedMessageResult.messageId}<br />
-                        <strong>Channel:</strong> {signedMessageResult.channelId}<br />
-                        <strong>Signature:</strong> {signedMessageResult.signature?.substring(0, 50)}...
+                        <strong>Message ID:</strong>{' '}
+                        {signedMessageResult.messageId}
+                        <br />
+                        <strong>Channel:</strong>{' '}
+                        {signedMessageResult.channelId}
+                        <br />
+                        <strong>Signature:</strong>{' '}
+                        {signedMessageResult.signature?.slice(0, 50)}...
                       </p>
                     </Message>
                   )}
@@ -6653,15 +8019,15 @@ const MediaCore = () => {
                   <Form>
                     <Form.TextArea
                       label="Pod Message JSON (with signature)"
-                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
-                      value={messageToVerify}
                       onChange={(e) => setMessageToVerify(e.target.value)}
+                      placeholder='{"messageId": "msg123", "channelId": "pod:artist:mb:daft-punk-hash:general", "senderPeerId": "alice", "body": "Hello pod!", "timestampUnixMs": 1703123456789, "signature": "base64-signature"}'
                       rows={4}
+                      value={messageToVerify}
                     />
                     <Button
+                      disabled={verifyingSignature || !messageToVerify.trim()}
                       fluid
                       loading={verifyingSignature}
-                      disabled={verifyingSignature || !messageToVerify.trim()}
                       onClick={handleVerifySignature}
                     >
                       Verify Signature
@@ -6671,12 +8037,18 @@ const MediaCore = () => {
                   {verificationResult && (
                     <div style={{ marginTop: '0.5em' }}>
                       {verificationResult.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{verificationResult.error}</p>
                         </Message>
                       ) : (
                         <Message size="tiny">
-                          <p>Message {verificationResult.messageId}: Signature is {verificationResult.isValid ? 'VALID' : 'INVALID'}</p>
+                          <p>
+                            Message {verificationResult.messageId}: Signature is{' '}
+                            {verificationResult.isValid ? 'VALID' : 'INVALID'}
+                          </p>
                         </Message>
                       )}
                     </div>
@@ -6688,9 +8060,9 @@ const MediaCore = () => {
                   <Header size="small">Generate Key Pair</Header>
                   <Form>
                     <Button
+                      disabled={generatingKeyPair}
                       fluid
                       loading={generatingKeyPair}
-                      disabled={generatingKeyPair}
                       onClick={handleGenerateKeyPair}
                     >
                       Generate New Key Pair
@@ -6700,15 +8072,25 @@ const MediaCore = () => {
                   {generatedKeyPair && (
                     <div style={{ marginTop: '0.5em' }}>
                       {generatedKeyPair.error ? (
-                        <Message error size="tiny">
+                        <Message
+                          error
+                          size="tiny"
+                        >
                           <p>{generatedKeyPair.error}</p>
                         </Message>
                       ) : (
-                        <Message success size="tiny">
+                        <Message
+                          size="tiny"
+                          success
+                        >
                           <Message.Header>Key Pair Generated</Message.Header>
                           <p>
-                            <strong>Public Key:</strong> {generatedKeyPair.publicKey?.substring(0, 30)}...<br />
-                            <strong>Private Key:</strong> {generatedKeyPair.privateKey?.substring(0, 30)}...<br />
+                            <strong>Public Key:</strong>{' '}
+                            {generatedKeyPair.publicKey?.slice(0, 30)}...
+                            <br />
+                            <strong>Private Key:</strong>{' '}
+                            {generatedKeyPair.privateKey?.slice(0, 30)}...
+                            <br />
                             <em>⚠️ Keep private key secure!</em>
                           </p>
                         </Message>
@@ -6717,11 +8099,16 @@ const MediaCore = () => {
                   )}
 
                   {/* Signing Statistics */}
-                  <Header size="small" style={{ marginTop: '1em' }}>Signing Statistics</Header>
+                  <Header
+                    size="small"
+                    style={{ marginTop: '1em' }}
+                  >
+                    Signing Statistics
+                  </Header>
                   <Button.Group fluid>
                     <Button
-                      loading={loadingSigningStats}
                       disabled={loadingSigningStats}
+                      loading={loadingSigningStats}
                       onClick={handleLoadSigningStats}
                     >
                       Load Stats
@@ -6732,19 +8119,34 @@ const MediaCore = () => {
                     <div style={{ marginTop: '0.5em' }}>
                       <Message size="tiny">
                         <p>
-                          <strong>Signatures Created:</strong> {signingStats.totalSignaturesCreated}<br />
-                          <strong>Signatures Verified:</strong> {signingStats.totalSignaturesVerified}<br />
-                          <strong>Successful:</strong> {signingStats.successfulVerifications}<br />
-                          <strong>Failed:</strong> {signingStats.failedVerifications}<br />
-                          <strong>Avg Sign Time:</strong> {signingStats.averageSigningTimeMs.toFixed(2)}ms<br />
-                          <strong>Avg Verify Time:</strong> {signingStats.averageVerificationTimeMs.toFixed(2)}ms
+                          <strong>Signatures Created:</strong>{' '}
+                          {signingStats.totalSignaturesCreated}
+                          <br />
+                          <strong>Signatures Verified:</strong>{' '}
+                          {signingStats.totalSignaturesVerified}
+                          <br />
+                          <strong>Successful:</strong>{' '}
+                          {signingStats.successfulVerifications}
+                          <br />
+                          <strong>Failed:</strong>{' '}
+                          {signingStats.failedVerifications}
+                          <br />
+                          <strong>Avg Sign Time:</strong>{' '}
+                          {signingStats.averageSigningTimeMs.toFixed(2)}ms
+                          <br />
+                          <strong>Avg Verify Time:</strong>{' '}
+                          {signingStats.averageVerificationTimeMs.toFixed(2)}ms
                         </p>
                       </Message>
                     </div>
                   )}
 
                   {signingStats?.error && (
-                    <Message error size="tiny" style={{ marginTop: '0.5em' }}>
+                    <Message
+                      error
+                      size="tiny"
+                      style={{ marginTop: '0.5em' }}
+                    >
                       <p>{signingStats.error}</p>
                     </Message>
                   )}
@@ -6762,8 +8164,11 @@ const MediaCore = () => {
                 <Icon name="cogs" />
                 Supported Hash Algorithms
               </Header>
-              <List divided relaxed>
-                {supportedAlgorithms.algorithms.map(alg => (
+              <List
+                divided
+                relaxed
+              >
+                {supportedAlgorithms.algorithms.map((alg) => (
                   <List.Item key={alg}>
                     <List.Content>
                       <List.Header>{alg}</List.Header>

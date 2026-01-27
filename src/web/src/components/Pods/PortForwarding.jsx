@@ -24,13 +24,13 @@ import {
 
 const initialState = {
   availablePorts: [],
-  creatingForwarding: false,
   createForm: {
     destinationHost: '',
-    localPort: '',
     destinationPort: '',
+    localPort: '',
     serviceName: '',
   },
+  creatingForwarding: false,
   error: null,
   forwardingStatus: [],
   intervals: {

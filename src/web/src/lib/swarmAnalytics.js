@@ -7,7 +7,7 @@ import api from './api';
 /**
  * Get swarm performance metrics.
  * @param {number} timeWindowHours - Time window in hours (default: 24)
- * @returns {Promise<Object>} Performance metrics
+ * @returns {Promise<object>} Performance metrics
  */
 export const getPerformanceMetrics = async (timeWindowHours = 24) => {
   try {
@@ -41,7 +41,7 @@ export const getPeerRankings = async (limit = 20) => {
 /**
  * Get swarm efficiency metrics.
  * @param {number} timeWindowHours - Time window in hours (default: 24)
- * @returns {Promise<Object>} Efficiency metrics
+ * @returns {Promise<object>} Efficiency metrics
  */
 export const getEfficiencyMetrics = async (timeWindowHours = 24) => {
   try {
@@ -59,7 +59,7 @@ export const getEfficiencyMetrics = async (timeWindowHours = 24) => {
  * Get historical trends for swarm metrics.
  * @param {number} timeWindowHours - Time window in hours (default: 24)
  * @param {number} dataPoints - Number of data points (default: 24)
- * @returns {Promise<Object>} Trend data
+ * @returns {Promise<object>} Trend data
  */
 export const getTrends = async (timeWindowHours = 24, dataPoints = 24) => {
   try {

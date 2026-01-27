@@ -60,6 +60,7 @@ export const create = ({ id, searchText, providers = null }) => {
   if (providers && Array.isArray(providers)) {
     body.providers = providers;
   }
+
   return api.post('/searches', body);
 };
 
@@ -132,16 +133,16 @@ export const parseFiltersFromString = (string) => {
     include: [],
     isCBR: false,
     isLossless: false,
+    extensions: [],
     isLossy: false,
     isVBR: false,
     maxFileSize: Number.MAX_SAFE_INTEGER,
     minBitDepth: 0,
     minBitRate: 0,
-    minSampleRate: 0,
     minFilesInFolder: 0,
     minFileSize: 0,
     minLength: 0,
-    extensions: [],
+    minSampleRate: 0,
   };
 
   filters.minBitRate =
@@ -173,10 +174,10 @@ export const parseFiltersFromString = (string) => {
   filters.isLossy = Boolean(/islossy/iu.test(string));
 
   // Parse extensions: ext:flac,mp3 or ext:flac mp3
-  const extMatch = string.match(/ext:([^\s]+)/iu);
-  if (extMatch) {
-    filters.extensions = extMatch[1]
-      .split(/[, ]/)
+  const extensionMatch = string.match(/ext:(\S+)/iu);
+  if (extensionMatch) {
+    filters.extensions = extensionMatch[1]
+      .split(/[ ,]/)
       .map((e) => e.toLowerCase().trim())
       .filter((e) => e.length > 0);
   }
@@ -244,8 +245,8 @@ const filterFile = (file, filters) => {
 
   // Filter by file extension
   if (extensions.length > 0) {
-    const fileExt = filename.split('.').pop()?.toLowerCase();
-    if (!fileExt || !extensions.includes(fileExt)) return false;
+    const fileExtension = filename.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !extensions.includes(fileExtension)) return false;
   }
 
   if (
@@ -268,16 +269,16 @@ export const filterResponse = ({
     include: [],
     isCBR: false,
     isLossless: false,
+    extensions: [],
     isLossy: false,
     isVBR: false,
     maxFileSize: Number.MAX_SAFE_INTEGER,
     minBitDepth: 0,
     minBitRate: 0,
-    minSampleRate: 0,
     minFilesInFolder: 0,
     minFileSize: 0,
     minLength: 0,
-    extensions: [],
+    minSampleRate: 0,
   },
   response = {
     files: [],

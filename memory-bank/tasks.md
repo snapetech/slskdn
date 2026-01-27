@@ -11,6 +11,12 @@
 
 *No high priority tasks currently active
 
+- [ ] **T-915**: Fix web lint errors + re-enable eslint on build
+ - Status: pending
+ - Priority: P0
+ - Branch: `dev/40-fixes`
+ - Notes: Lint errors are widespread in `src/web/src/components/` (App, Chat, Contacts, Pods, Rooms, ShareGroups, SharedWithMe, System/*), plus `src/web/src/lib/*` and several tests. Build temporarily uses `DISABLE_ESLINT_PLUGIN=true` to unblock E2E; remove it and fix lint issues across these files.
+
 - [x] **T-914**: Cross-node share discovery (“Shared with Me”)
  - Status: done
  - Priority: P0

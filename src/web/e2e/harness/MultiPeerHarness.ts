@@ -1,4 +1,4 @@
-import { SlskdnNode, NodeConfig } from './SlskdnNode';
+import { NodeConfig, SlskdnNode } from './SlskdnNode';
 
 /**
  * Manages multiple slskdn test nodes for multi-peer scenarios.
@@ -9,21 +9,28 @@ export class MultiPeerHarness {
 
   /**
    * Start a new test node.
+   * @param name Node name (A, B, C, etc.)
+   * @param shareDir Single share directory path, or array of paths for multiple shares
+   * @param flags Optional flags (noConnect, etc.)
    */
-  async startNode(name: string, shareDir: string, flags?: { noConnect?: boolean }): Promise<SlskdnNode> {
+  async startNode(
+    name: string,
+    shareDir: string | string[],
+    flags?: { noConnect?: boolean },
+  ): Promise<SlskdnNode> {
     if (this.nodes.has(name)) {
       throw new Error(`Node ${name} already exists`);
     }
 
     // Small delay between starting nodes to avoid lock file conflicts
     if (this.nodes.size > 0) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
     }
 
     const node = new SlskdnNode({
+      flags,
       nodeName: name,
       shareDir,
-      flags
     });
 
     await node.start();
@@ -39,6 +46,7 @@ export class MultiPeerHarness {
     if (!node) {
       throw new Error(`Node ${name} not found`);
     }
+
     return node;
   }
 
@@ -46,7 +54,7 @@ export class MultiPeerHarness {
    * Stop all nodes and clean up.
    */
   async stopAll(): Promise<void> {
-    await Promise.all([...this.nodes.values()].map(node => node.stop()));
+    await Promise.all([...this.nodes.values()].map((node) => node.stop()));
     this.nodes.clear();
   }
 

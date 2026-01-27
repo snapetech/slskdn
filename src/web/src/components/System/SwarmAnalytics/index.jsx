@@ -2,7 +2,10 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+import * as swarmAnalyticsLibrary from '../../../lib/swarmAnalytics';
+import { formatBytes } from '../../../lib/util';
 import React, { useCallback, useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Card,
   Dropdown,
@@ -17,9 +20,6 @@ import {
   Statistic,
   Table,
 } from 'semantic-ui-react';
-import { formatBytes } from '../../../lib/util';
-import * as swarmAnalyticsLib from '../../../lib/swarmAnalytics';
-import { toast } from 'react-toastify';
 
 const SwarmAnalytics = () => {
   const [performanceMetrics, setPerformanceMetrics] = useState(null);
@@ -44,11 +44,11 @@ const SwarmAnalytics = () => {
       setLoading(true);
       const [performance, peers, efficiency, trendsData, recs] =
         await Promise.all([
-          swarmAnalyticsLib.getPerformanceMetrics(timeWindow),
-          swarmAnalyticsLib.getPeerRankings(rankingLimit),
-          swarmAnalyticsLib.getEfficiencyMetrics(timeWindow),
-          swarmAnalyticsLib.getTrends(timeWindow, 24),
-          swarmAnalyticsLib.getRecommendations(),
+          swarmAnalyticsLibrary.getPerformanceMetrics(timeWindow),
+          swarmAnalyticsLibrary.getPeerRankings(rankingLimit),
+          swarmAnalyticsLibrary.getEfficiencyMetrics(timeWindow),
+          swarmAnalyticsLibrary.getTrends(timeWindow, 24),
+          swarmAnalyticsLibrary.getRecommendations(),
         ]);
 
       setPerformanceMetrics(performance);
@@ -64,11 +64,11 @@ const SwarmAnalytics = () => {
     } finally {
       setLoading(false);
     }
-  }, [timeWindow, rankingLimit]);
+  }, [rankingLimit, timeWindow]);
 
   useEffect(() => {
     fetchAnalytics();
-    const interval = setInterval(fetchAnalytics, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchAnalytics, 30_000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, [fetchAnalytics]);
 
@@ -106,7 +106,10 @@ const SwarmAnalytics = () => {
 
   return (
     <div>
-      <Header as="h2" dividing>
+      <Header
+        as="h2"
+        dividing
+      >
         <Icon name="chart line" />
         <Header.Content>Swarm Analytics</Header.Content>
       </Header>
@@ -117,30 +120,35 @@ const SwarmAnalytics = () => {
           <Grid.Column>
             <label>Time Window</label>
             <Dropdown
-              selection
-              options={timeWindowOptions}
-              value={timeWindow}
               onChange={(e, { value }) => setTimeWindow(value)}
+              options={timeWindowOptions}
+              selection
+              value={timeWindow}
             />
           </Grid.Column>
           <Grid.Column>
             <label>Peer Rankings Limit</label>
             <Dropdown
-              selection
+              onChange={(e, { value }) => setRankingLimit(value)}
               options={[
                 { key: '10', text: 'Top 10', value: 10 },
                 { key: '20', text: 'Top 20', value: 20 },
                 { key: '50', text: 'Top 50', value: 50 },
                 { key: '100', text: 'Top 100', value: 100 },
               ]}
+              selection
               value={rankingLimit}
-              onChange={(e, { value }) => setRankingLimit(value)}
             />
           </Grid.Column>
         </Grid>
       </Segment>
 
-      {loading && <Loader active inline="centered" />}
+      {loading && (
+        <Loader
+          active
+          inline="centered"
+        />
+      )}
 
       {!loading && (
         <>
@@ -154,7 +162,10 @@ const SwarmAnalytics = () => {
                 </Card.Meta>
               </Card.Content>
               <Card.Content>
-                <Grid columns={4} divided>
+                <Grid
+                  columns={4}
+                  divided
+                >
                   <Grid.Column>
                     <Statistic>
                       <Statistic.Value>
@@ -186,14 +197,19 @@ const SwarmAnalytics = () => {
                   <Grid.Column>
                     <Statistic>
                       <Statistic.Value>
-                        {performanceMetrics.averageDurationSeconds?.toFixed(1) ??
-                          0}s
+                        {performanceMetrics.averageDurationSeconds?.toFixed(
+                          1,
+                        ) ?? 0}
+                        s
                       </Statistic.Value>
                       <Statistic.Label>Avg Duration</Statistic.Label>
                     </Statistic>
                   </Grid.Column>
                 </Grid>
-                <Grid columns={3} style={{ marginTop: '1em' }}>
+                <Grid
+                  columns={3}
+                  style={{ marginTop: '1em' }}
+                >
                   <Grid.Column>
                     <Statistic size="small">
                       <Statistic.Value>
@@ -214,9 +230,7 @@ const SwarmAnalytics = () => {
                   <Grid.Column>
                     <Statistic size="small">
                       <Statistic.Value>
-                        {(performanceMetrics.chunkSuccessRate * 100).toFixed(
-                          1,
-                        )}
+                        {(performanceMetrics.chunkSuccessRate * 100).toFixed(1)}
                         %
                       </Statistic.Value>
                       <Statistic.Label>Chunk Success Rate</Statistic.Label>
@@ -229,18 +243,24 @@ const SwarmAnalytics = () => {
 
           {/* Efficiency Metrics */}
           {efficiencyMetrics && (
-            <Card fluid style={{ marginTop: '1em' }}>
+            <Card
+              fluid
+              style={{ marginTop: '1em' }}
+            >
               <Card.Content>
                 <Card.Header>Efficiency Metrics</Card.Header>
               </Card.Content>
               <Card.Content>
-                <Grid columns={3} divided>
+                <Grid
+                  columns={3}
+                  divided
+                >
                   <Grid.Column>
                     <div>
                       <label>Chunk Utilization</label>
                       <Progress
-                        percent={efficiencyMetrics.chunkUtilization * 100}
                         indicating
+                        percent={efficiencyMetrics.chunkUtilization * 100}
                       />
                     </div>
                   </Grid.Column>
@@ -248,8 +268,8 @@ const SwarmAnalytics = () => {
                     <div>
                       <label>Peer Utilization</label>
                       <Progress
-                        percent={efficiencyMetrics.peerUtilization * 100}
                         indicating
+                        percent={efficiencyMetrics.peerUtilization * 100}
                       />
                     </div>
                   </Grid.Column>
@@ -258,8 +278,7 @@ const SwarmAnalytics = () => {
                       <label>Redundancy Factor</label>
                       <Statistic size="small">
                         <Statistic.Value>
-                          {efficiencyMetrics.redundancyFactor?.toFixed(2) ??
-                            0}
+                          {efficiencyMetrics.redundancyFactor?.toFixed(2) ?? 0}
                         </Statistic.Value>
                       </Statistic>
                     </div>
@@ -271,7 +290,10 @@ const SwarmAnalytics = () => {
 
           {/* Peer Rankings */}
           {peerRankings.length > 0 && (
-            <Card fluid style={{ marginTop: '1em' }}>
+            <Card
+              fluid
+              style={{ marginTop: '1em' }}
+            >
               <Card.Content>
                 <Card.Header>Top Peer Rankings</Card.Header>
               </Card.Content>
@@ -293,7 +315,10 @@ const SwarmAnalytics = () => {
                     {peerRankings.map((peer) => (
                       <Table.Row key={peer.peerId}>
                         <Table.Cell>
-                          <Label circular color="blue">
+                          <Label
+                            circular
+                            color="blue"
+                          >
                             {peer.rank}
                           </Label>
                         </Table.Cell>
@@ -303,8 +328,6 @@ const SwarmAnalytics = () => {
                         </Table.Cell>
                         <Table.Cell>
                           <Progress
-                            percent={peer.reputationScore * 100}
-                            size="tiny"
                             color={
                               peer.reputationScore > 0.7
                                 ? 'green'
@@ -312,10 +335,14 @@ const SwarmAnalytics = () => {
                                   ? 'yellow'
                                   : 'red'
                             }
+                            percent={peer.reputationScore * 100}
+                            size="tiny"
                           />
                           {(peer.reputationScore * 100).toFixed(1)}%
                         </Table.Cell>
-                        <Table.Cell>{peer.averageRttMs?.toFixed(1)} ms</Table.Cell>
+                        <Table.Cell>
+                          {peer.averageRttMs?.toFixed(1)} ms
+                        </Table.Cell>
                         <Table.Cell>
                           {formatBytes(peer.averageThroughputBytesPerSecond)}/s
                         </Table.Cell>
@@ -335,16 +362,19 @@ const SwarmAnalytics = () => {
 
           {/* Recommendations */}
           {recommendations.length > 0 && (
-            <Card fluid style={{ marginTop: '1em' }}>
+            <Card
+              fluid
+              style={{ marginTop: '1em' }}
+            >
               <Card.Content>
                 <Card.Header>Optimization Recommendations</Card.Header>
               </Card.Content>
               <Card.Content>
                 {recommendations.map((rec, index) => (
                   <Message
-                    key={index}
                     color={getPriorityColor(rec.priority)}
                     icon
+                    key={index}
                   >
                     <Icon name={getTypeIcon(rec.type)} />
                     <Message.Content>

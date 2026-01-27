@@ -1,152 +1,37 @@
 {
-  "generated_utc": "2026-01-26T03:30:49Z",
-  "purpose": "Public-domain / CC test fixtures for slskdn CI + local test instance.",
-  "constraints": {
-    "note": "This zip includes text + images. Audio/video binaries are not embedded here; use scripts in meta/ to download them into place.",
-    "offline_mode_note": "For offline-from-day-1 CI, run meta/fetch_media.sh once and commit the resulting fixtures tree to your artifact store (or Git LFS), then point CI at that cache."
-  },
-  "assets": [
+  "version": 1,
+  "generated_utc": "2026-01-27T21:35:59.716Z",
+  "purpose": "E2E test fixtures manifest with checksums for offline validation",
+  "files": [
     {
-      "id": "book_treasure_island",
-      "category": "book",
-      "title": "Treasure Island",
-      "creator": "Robert Louis Stevenson",
-      "license": "Public Domain (Project Gutenberg)",
-      "source": {
-        "primary": "https://www.gutenberg.org/ebooks/120",
-        "download": "https://www.gutenberg.org/ebooks/120.txt.utf-8"
-      },
-      "local_files": [
-        "book/treasure_island_pg120.txt"
-      ],
-      "recommended_tests": {
-        "search_queries": [
-          "Treasure Island",
-          "Robert Louis Stevenson Treasure Island"
-        ],
-        "expected_keywords": [
-          "pirate",
-          "treasure",
-          "Jim Hawkins",
-          "Long John Silver"
-        ]
-      }
+      "path": "book/treasure_island_pg120.txt",
+      "sha256": "2e93caf3f954e8e8457d9846ad7756f74ccf192dab77b7247d48ba134a8e2c1b",
+      "bytes": 399906
     },
     {
-      "id": "movie_sintel",
-      "category": "movie",
-      "title": "Sintel",
-      "creator": "Blender Foundation",
-      "license": "CC BY 3.0 (Blender Foundation)",
-      "source": {
-        "details": "https://archive.org/details/Sintel",
-        "poster": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Sintel_poster.jpg",
-        "video_download": "https://archive.org/download/Sintel/sintel-2048-stereo_512kb.mp4"
-      },
-      "local_files": [
-        "movie/sintel_poster.jpg"
-      ],
-      "download_via_script": [
-        {
-          "url": "https://archive.org/download/Sintel/sintel-2048-stereo_512kb.mp4",
-          "path": "movie/sintel_512kb_stereo.mp4",
-          "approx_bytes": 77380000
-        }
-      ],
-      "recommended_tests": {
-        "search_queries": [
-          "Sintel",
-          "Blender Sintel open movie"
-        ],
-        "expected_keywords": [
-          "dragon",
-          "Blender",
-          "open movie"
-        ]
-      }
+      "path": "movie/sintel_512kb_stereo.mp4",
+      "sha256": "93df4e31869e879354a5055a8549fb9335df0f5f73f4963c9bf0db2c888bb704",
+      "bytes": 77410288
     },
     {
-      "id": "tv_pioneer_one_s01e01_sample",
-      "category": "tv",
-      "title": "Pioneer One S01E01 (Sample)",
-      "creator": "VODO / Pioneer One team",
-      "license": "See tv/license.txt (as provided by the Internet Archive item)",
-      "source": {
-        "details": "https://archive.org/details/PioneerOneS01E01720pHD",
-        "thumb": "https://archive.org/download/PioneerOneS01E01720pHD/__ia_thumb.jpg",
-        "sample_video_download": "https://archive.org/download/PioneerOneS01E01720pHD/Content/Sample/Pioneer.One.S01E01.REFIX.720p.x264.Sample-VODO.mp4"
-      },
-      "local_files": [
-        "tv/pioneer_one_thumb.jpg",
-        "tv/license.txt",
-        "tv/ClearBits.txt",
-        "tv/Description.txt"
-      ],
-      "download_via_script": [
-        {
-          "url": "https://archive.org/download/PioneerOneS01E01720pHD/Content/Sample/Pioneer.One.S01E01.REFIX.720p.x264.Sample-VODO.mp4",
-          "path": "tv/pioneer_one_s01e01_sample.mp4",
-          "approx_bytes": 5300000
-        }
-      ],
-      "recommended_tests": {
-        "search_queries": [
-          "Pioneer One",
-          "Pioneer One episode 1"
-        ],
-        "expected_keywords": [
-          "radiation",
-          "Homeland Security",
-          "object in the sky"
-        ]
-      }
+      "path": "music/open_goldberg/01_aria.ogg",
+      "sha256": "76e02575a0cb999d1938c2d4052a7f1cf4d6809778f326ef9f09d25e4152acd8",
+      "bytes": 3568881
     },
     {
-      "id": "album_open_goldberg_variations_excerpt",
-      "category": "album",
-      "title": "The Open Goldberg Variations (excerpt)",
-      "creator": "Kimiko Ishizaka",
-      "license": "CC0 1.0 Universal",
-      "source": {
-        "details": "https://archive.org/details/OpenGoldbergVariations",
-        "cover": "https://ia600300.us.archive.org/15/items/OpenGoldbergVariations/cover.jpg",
-        "musicbrainz_release": "https://musicbrainz.org/release/3c53507c-8a62-4c00-933f-d5bfda475b02"
-      },
-      "local_files": [
-        "music/open_goldberg/cover.jpg"
-      ],
-      "download_via_script": [
-        {
-          "url": "https://archive.org/download/OpenGoldbergVariations/Kimiko%20Ishizaka%20-%20J.S.%20Bach-%20-Open-%20Goldberg%20Variations%2C%20BWV%20988%20%28Piano%29%20-%2001%20Aria.ogg",
-          "path": "music/open_goldberg/01_aria.ogg",
-          "approx_bytes": 3500000
-        },
-        {
-          "url": "https://archive.org/download/OpenGoldbergVariations/Kimiko%20Ishizaka%20-%20J.S.%20Bach-%20-Open-%20Goldberg%20Variations%2C%20BWV%20988%20%28Piano%29%20-%2002%20Variatio%201%20a%201%20Clav..ogg",
-          "path": "music/open_goldberg/02_variatio_1.ogg",
-          "approx_bytes": 1400000
-        },
-        {
-          "url": "https://archive.org/download/OpenGoldbergVariations/Kimiko%20Ishizaka%20-%20J.S.%20Bach-%20-Open-%20Goldberg%20Variations%2C%20BWV%20988%20%28Piano%29%20-%2003%20Variatio%202%20a%201%20Clav..ogg",
-          "path": "music/open_goldberg/03_variatio_2.ogg",
-          "approx_bytes": 1400000
-        }
-      ],
-      "recommended_tests": {
-        "musicbrainz_lookup": {
-          "entity": "release",
-          "mbid": "3c53507c-8a62-4c00-933f-d5bfda475b02"
-        },
-        "search_queries": [
-          "Open Goldberg Variations",
-          "Kimiko Ishizaka Goldberg Variations"
-        ],
-        "expected_keywords": [
-          "Bach",
-          "Goldberg Variations",
-          "BWV 988"
-        ]
-      }
+      "path": "music/open_goldberg/02_variatio_1.ogg",
+      "sha256": "27901978812880ae5ce674089dd60aa3f6a0f33d1abd9b8186af0eac55b04fd1",
+      "bytes": 1368979
+    },
+    {
+      "path": "music/open_goldberg/03_variatio_2.ogg",
+      "sha256": "722c431d8d9d2db5972e918a1a019ad2dc35b30b8c439cc7df7a835418928633",
+      "bytes": 1454982
+    },
+    {
+      "path": "tv/pioneer_one_s01e01_sample.mp4",
+      "sha256": "b72039744bed2bd5e4bd3bf5325af88b49ace689063c28c8b3a9b1cd08ea3de1",
+      "bytes": 5537655
     }
   ]
 }

@@ -6,8 +6,8 @@ import { Button, ButtonGroup, Table } from 'semantic-ui-react';
 
 const initialState = {
   connected: false,
-  logs: [],
-  filterLevel: 'all', // 'all', 'Information', 'Warning', 'Error', 'Debug'
+  filterLevel: 'all',
+  logs: [], // 'all', 'Information', 'Warning', 'Error', 'Debug'
 };
 
 const levels = {
@@ -68,10 +68,11 @@ class Logs extends Component {
   };
 
   getFilteredLogs = () => {
-    const { logs, filterLevel } = this.state;
+    const { filterLevel, logs } = this.state;
     if (filterLevel === 'all') {
       return logs;
     }
+
     return logs.filter((log) => log.level === filterLevel);
   };
 
@@ -114,8 +115,10 @@ class Logs extends Component {
               Debug
             </Button>
           </ButtonGroup>
-          <span style={{ marginLeft: '1em', color: '#666' }}>
-            {connected ? `Showing ${filteredLogs.length} of ${this.state.logs.length} logs` : 'Connecting to logs...'}
+          <span style={{ color: '#666', marginLeft: '1em' }}>
+            {connected
+              ? `Showing ${filteredLogs.length} of ${this.state.logs.length} logs`
+              : 'Connecting to logs...'}
           </span>
         </div>
         {!connected && <LoaderSegment />}
@@ -134,7 +137,10 @@ class Logs extends Component {
             <Table.Body className="logs-table-body">
               {filteredLogs.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan="3" textAlign="center">
+                  <Table.Cell
+                    colSpan="3"
+                    textAlign="center"
+                  >
                     No logs match the selected filter
                   </Table.Cell>
                 </Table.Row>
@@ -146,7 +152,9 @@ class Logs extends Component {
                     negative={log.level === 'Error'}
                     warning={log.level === 'Warning'}
                   >
-                    <Table.Cell>{this.formatTimestamp(log.timestamp)}</Table.Cell>
+                    <Table.Cell>
+                      {this.formatTimestamp(log.timestamp)}
+                    </Table.Cell>
                     <Table.Cell>{levels[log.level] || log.level}</Table.Cell>
                     <Table.Cell className="logs-table-message">
                       {log.message}

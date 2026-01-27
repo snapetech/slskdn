@@ -142,14 +142,20 @@ const Searches = ({ server } = {}) => {
             // For now, assume enabled unless explicitly disabled
             setScenePodBridgeEnabled(true);
           }
-        } catch (err) {
+        } catch (error_) {
           // Feature flag check failed - assume enabled by default
-          console.debug('Scene ↔ Pod Bridging feature flag check failed:', err);
+          console.debug(
+            'Scene ↔ Pod Bridging feature flag check failed:',
+            error_,
+          );
           setScenePodBridgeEnabled(true);
         }
-      } catch (err) {
+      } catch (error_) {
         // Feature flag check failed - assume disabled
-        console.debug('Scene ↔ Pod Bridging feature flag check failed:', err);
+        console.debug(
+          'Scene ↔ Pod Bridging feature flag check failed:',
+          error_,
+        );
       }
     };
 
@@ -174,13 +180,13 @@ const Searches = ({ server } = {}) => {
 
     try {
       setCreating(true);
-      
+
       // Include provider selection if Scene ↔ Pod Bridging is enabled
       const providers = scenePodBridgeEnabled
         ? [providerPod && 'pod', providerScene && 'scene'].filter(Boolean)
         : null;
 
-      await library.create({ id, searchText, providers });
+      await library.create({ id, providers, searchText });
 
       if (ref) {
         ref.value = '';
@@ -192,6 +198,7 @@ const Searches = ({ server } = {}) => {
       if (navigate) {
         history.push(`${match.url}/${id}`);
       }
+
       return id;
     } catch (createError) {
       console.error(createError);
@@ -338,14 +345,33 @@ const Searches = ({ server } = {}) => {
           size="big"
         />
         {scenePodBridgeEnabled && (
-          <div style={{ marginTop: '0.75em', padding: '0.75em', background: 'rgba(0,0,0,0.05)', borderRadius: '4px' }}>
-            <div style={{ display: 'flex', gap: '1em', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 'bold', fontSize: '0.95em' }}>Search Sources:</span>
+          <div
+            style={{
+              background: 'rgba(0,0,0,0.05)',
+              borderRadius: '4px',
+              marginTop: '0.75em',
+              padding: '0.75em',
+            }}
+          >
+            <div
+              style={{
+                alignItems: 'center',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1em',
+              }}
+            >
+              <span style={{ fontSize: '0.95em', fontWeight: 'bold' }}>
+                Search Sources:
+              </span>
               <Checkbox
                 checked={providerPod}
                 label={
                   <label>
-                    <Icon name="sitemap" style={{ marginRight: '0.25em' }} />
+                    <Icon
+                      name="sitemap"
+                      style={{ marginRight: '0.25em' }}
+                    />
                     Pod/Mesh
                   </label>
                 }
@@ -356,7 +382,10 @@ const Searches = ({ server } = {}) => {
                 checked={providerScene}
                 label={
                   <label>
-                    <Icon name="globe" style={{ marginRight: '0.25em' }} />
+                    <Icon
+                      name="globe"
+                      style={{ marginRight: '0.25em' }}
+                    />
                     Soulseek Scene
                   </label>
                 }
@@ -364,7 +393,13 @@ const Searches = ({ server } = {}) => {
                 toggle
               />
               {!providerPod && !providerScene && (
-                <span style={{ color: 'orange', fontSize: '0.9em', fontStyle: 'italic' }}>
+                <span
+                  style={{
+                    color: 'orange',
+                    fontSize: '0.9em',
+                    fontStyle: 'italic',
+                  }}
+                >
                   <Icon name="warning" /> At least one source must be selected
                 </span>
               )}

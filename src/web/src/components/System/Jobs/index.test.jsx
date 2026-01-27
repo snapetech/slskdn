@@ -2,10 +2,16 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+import * as jobsLibrary from '../../../lib/jobs';
+import Jobs from '.';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import React from 'react';
-import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
-import Jobs from './index';
-import * as jobsLib from '../../../lib/jobs';
 import { toast } from 'react-toastify';
 
 // Mock dependencies
@@ -17,71 +23,78 @@ jest.mock('react-toastify', () => ({
 }));
 jest.mock('../SwarmVisualization', () => {
   return function SwarmVisualization({ jobId }) {
-    return <div data-testid="swarm-visualization">Swarm Visualization: {jobId}</div>;
+    return (
+      <div data-testid="swarm-visualization">Swarm Visualization: {jobId}</div>
+    );
   };
 });
 
 describe('Jobs', () => {
   const mockJobs = [
     {
-      id: 'job-1',
-      type: 'discography',
-      status: 'running',
       created_at: '2026-01-27T10:00:00Z',
+      id: 'job-1',
       progress: {
-        releases_total: 10,
         releases_done: 5,
         releases_failed: 0,
+        releases_total: 10,
       },
+      status: 'running',
+      type: 'discography',
     },
     {
-      id: 'job-2',
-      type: 'label_crate',
-      status: 'completed',
       created_at: '2026-01-27T09:00:00Z',
+      id: 'job-2',
       progress: {
-        releases_total: 5,
         releases_done: 5,
         releases_failed: 0,
+        releases_total: 5,
       },
+      status: 'completed',
+      type: 'label_crate',
     },
   ];
 
   const mockSwarmJobs = [
     {
-      jobId: 'swarm-1',
-      filename: '/path/to/file.mp3',
       activeSources: 3,
-      downloadedBytes: 1024 * 1024 * 100, // 100 MB
-      totalBytes: 1024 * 1024 * 500, // 500 MB
-      progressPercent: 20,
       chunksPerSecond: 10.5,
+      downloadedBytes: 1_024 * 1_024 * 100,
       estimatedSecondsRemaining: 120,
+
+      filename: '/path/to/file.mp3',
+
+      jobId: 'swarm-1',
+
+      // 500 MB
+      progressPercent: 20,
+      // 100 MB
+      totalBytes: 1_024 * 1_024 * 500,
     },
   ];
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jobsLib.getJobs.mockResolvedValue({
+    jobsLibrary.getJobs.mockResolvedValue({
+      has_more: false,
       jobs: mockJobs,
-      total: 2,
       limit: 20,
       offset: 0,
-      has_more: false,
+      total: 2,
     });
-    jobsLib.getActiveSwarmJobs.mockResolvedValue(mockSwarmJobs);
+    jobsLibrary.getActiveSwarmJobs.mockResolvedValue(mockSwarmJobs);
   });
 
   it('renders the component', () => {
     render(<Jobs />);
     // Component should render (may not have explicit "Jobs" header)
-    expect(jobsLib.getJobs).toHaveBeenCalled();
+    expect(jobsLibrary.getJobs).toHaveBeenCalled();
   });
 
   it('displays loading state initially', () => {
     render(<Jobs />);
     // Component should render and start fetching
-    expect(jobsLib.getJobs).toHaveBeenCalled();
+    expect(jobsLibrary.getJobs).toHaveBeenCalled();
   });
 
   it('fetches and displays jobs', async () => {
@@ -176,7 +189,7 @@ describe('Jobs', () => {
 
   it('handles API errors gracefully', async () => {
     const error = new Error('Network error');
-    jobsLib.getJobs.mockRejectedValue(error);
+    jobsLibrary.getJobs.mockRejectedValue(error);
 
     render(<Jobs />);
 
@@ -190,26 +203,26 @@ describe('Jobs', () => {
     render(<Jobs />);
 
     await waitFor(() => {
-      expect(jobsLib.getActiveSwarmJobs).toHaveBeenCalledTimes(1);
+      expect(jobsLibrary.getActiveSwarmJobs).toHaveBeenCalledTimes(1);
     });
 
     // Fast-forward 5 seconds (refresh interval)
-    jest.advanceTimersByTime(5000);
+    jest.advanceTimersByTime(5_000);
 
     await waitFor(() => {
-      expect(jobsLib.getActiveSwarmJobs).toHaveBeenCalledTimes(2);
+      expect(jobsLibrary.getActiveSwarmJobs).toHaveBeenCalledTimes(2);
     });
 
     jest.useRealTimers();
   });
 
   it('displays pagination controls when there are more jobs', async () => {
-    jobsLib.getJobs.mockResolvedValue({
+    jobsLibrary.getJobs.mockResolvedValue({
+      has_more: true,
       jobs: mockJobs,
-      total: 50,
       limit: 20,
       offset: 0,
-      has_more: true,
+      total: 50,
     });
 
     render(<Jobs />);
@@ -219,26 +232,28 @@ describe('Jobs', () => {
     });
 
     // Pagination should be visible
-    const pagination = screen.queryByRole('navigation', { name: /pagination/i });
+    const pagination = screen.queryByRole('navigation', {
+      name: /pagination/i,
+    });
     // Pagination may or may not be visible depending on implementation
     expect(screen.getByText('job-1')).toBeInTheDocument();
   });
 
   it('displays empty state when no jobs available', async () => {
-    jobsLib.getJobs.mockResolvedValue({
+    jobsLibrary.getJobs.mockResolvedValue({
+      has_more: false,
       jobs: [],
-      total: 0,
       limit: 20,
       offset: 0,
-      has_more: false,
+      total: 0,
     });
-    jobsLib.getActiveSwarmJobs.mockResolvedValue([]);
+    jobsLibrary.getActiveSwarmJobs.mockResolvedValue([]);
 
     render(<Jobs />);
 
     await waitFor(() => {
       // Should show empty state or no jobs message
-      expect(jobsLib.getJobs).toHaveBeenCalled();
+      expect(jobsLibrary.getJobs).toHaveBeenCalled();
     });
   });
 });

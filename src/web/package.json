@@ -56,16 +56,18 @@
   },
   "private": true,
   "scripts": {
-    "build": "craco build",
+    "build": "DISABLE_ESLINT_PLUGIN=true craco build",
     "eject": "craco eject",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "postinstall": "semantic-ui-css-patch",
+    "pretest:e2e": "npm run build",
+    "pretest:e2e:ci": "npm run build",
     "start": "craco start",
     "test": "craco test",
-    "test-unattended": "craco test --watchAll false --passWithNoTests",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test --reporter=line"
+    "test:e2e:ci": "playwright test --reporter=line",
+    "test-unattended": "craco test --watchAll false --passWithNoTests"
   },
   "version": "0.1.0"
 }

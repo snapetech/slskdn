@@ -147,6 +147,33 @@ foreach (var source in sources)
 
 ---
 
+### 4. HashDb Migration Version Collisions
+
+**The Bug**: Duplicate migration version numbers cause `UNIQUE constraint failed: __HashDbMigrations.version`, blocking startup and E2E health checks.
+
+**Files Affected**:
+- `src/slskd/HashDb/Migrations/HashDbMigrations.cs`
+
+**Wrong**:
+```csharp
+new Migration { Version = 12, Name = "Label crate job cache", ... },
+new Migration { Version = 12, Name = "Traffic accounting", ... }, // 💥 duplicate
+new Migration { Version = 14, Name = "Warm cache popularity", ... },
+new Migration { Version = 14, Name = "Warm cache entries", ... }, // 💥 duplicate
+```
+
+**Correct**:
+```csharp
+new Migration { Version = 12, Name = "Label crate job cache", ... },
+new Migration { Version = 13, Name = "Peer metrics storage", ... },
+new Migration { Version = 14, Name = "Warm cache popularity", ... },
+new Migration { Version = 15, Name = "Warm cache entries", ... },
+new Migration { Version = 16, Name = "Virtual Soulfind pseudonyms", ... },
+new Migration { Version = 17, Name = "Traffic accounting", ... },
+```
+
+**Why This Keeps Happening**: Migrations were appended without re-checking version uniqueness, and the list order wasn’t kept strictly ascending.
+
 ## ⚠️ HIGH: Common Mistakes
 
 ### 4. Copyright Headers - Wrong Company Attribution
@@ -1490,6 +1517,57 @@ if (!Mutex.WaitOne(millisecondsTimeout: 0, exitContext: false)) {
 ```
 
 **Why This Keeps Happening**: The mutex was created as a static property initializer (before AppDirectory is set) with a global name. Each test node needs its own mutex based on its unique app directory.
+
+---
+
+#### E2E-6: Health check hangs during server startup
+
+**The Bug**: E2E test nodes hang during startup because the `/health` endpoint never responds. The `MeshHealthCheck` calls `GetStatsAsync()` which can hang if mesh services aren't initialized yet, especially NAT detection which tries to connect to external STUN servers.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshHealthCheck.cs`
+- `src/slskd/Mesh/MeshStatsCollector.cs`
+- `src/slskd/Program.cs`
+- `src/web/e2e/harness/SlskdnNode.ts`
+
+**Wrong**:
+```csharp
+// MeshHealthCheck.cs - no timeout, hangs if services not ready
+var stats = await _statsCollector.GetStatsAsync();
+
+// MeshStatsCollector.cs - NAT detection can hang
+natType = await stunDetector.DetectAsync();
+```
+
+**Correct**:
+```csharp
+// MeshHealthCheck.cs - add timeout and handle gracefully
+using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+var stats = await _statsCollector.GetStatsAsync().WaitAsync(timeoutCts.Token);
+// Return Degraded instead of Unhealthy if timeout/error occurs
+
+// MeshStatsCollector.cs - add timeout to NAT detection
+using var natTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+natType = await stunDetector.DetectAsync(natTimeoutCts.Token);
+
+// Program.cs - configure health check timeout
+services.AddHealthChecks()
+    .AddMeshHealthCheck(
+        failureStatus: HealthStatus.Degraded, // Don't fail entire endpoint
+        timeout: TimeSpan.FromSeconds(5));
+
+// SlskdnNode.ts - use simpler readiness endpoint
+const readinessUrl = `${this.apiUrl}/health/ready`; // Simple endpoint, no complex checks
+```
+
+**Why This Keeps Happening**: Health checks run during startup before all services are initialized. Mesh services (especially NAT detection) can hang waiting for external resources. The health endpoint waits for all checks to complete, so a hanging check blocks the entire endpoint.
+
+**Prevention**:
+- Always add timeouts to health checks that call async operations
+- Return `Degraded` instead of `Unhealthy` for startup-time issues
+- Use simpler readiness endpoints for E2E tests that bypass complex checks
+- Add timeouts to any external service calls in health checks (NAT detection, DNS, etc.)
 
 ---
 

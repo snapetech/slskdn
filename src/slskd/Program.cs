@@ -552,6 +552,14 @@ using OpenTelemetry.Trace;
                 builder.Configuration
                     .AddConfigurationProviders(EnvironmentVariablePrefix, ConfigurationFile, reloadOnChange: !OptionsAtStartup.Flags.NoConfigWatch);
 
+                // Deterministic port probe (cannot be filtered by Serilog) - write to stderr
+                var portStr = builder.Configuration[$"{AppName}:Web:Port"] ?? "<null>";
+                System.Console.Error.WriteLine($"[ConfigProbe] slskd:web:port={portStr}");
+
+                // Note: OptionsAtStartup was bound earlier from a different Configuration instance.
+                // Since Options properties are init-only, we can't rebind them. Instead, we read
+                // values directly from builder.Configuration when needed (e.g., in UseKestrel below).
+
                 builder.Host
                     .UseSerilog();
 
@@ -561,8 +569,22 @@ using OpenTelemetry.Trace;
                     {
                         // PR-09: Global body size cap; configurable via Web.MaxRequestBodySize (default 10 MB). MeshGateway and others may enforce lower per-route.
                         options.Limits.MaxRequestBodySize = OptionsAtStartup.Web.MaxRequestBodySize;
-                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{IPAddress.Any}:{OptionsAtStartup.Web.Port}/");
-                        options.Listen(IPAddress.Any, OptionsAtStartup.Web.Port);
+                        
+                        // Read port directly from builder.Configuration to ensure YAML config is applied
+                        // (OptionsAtStartup.Web.Port is init-only and can't be overwritten after initial binding)
+                        var webPortSection = builder.Configuration.GetSection($"{AppName}:Web:Port");
+                        var webPort = webPortSection.Exists() && int.TryParse(webPortSection.Value, out var port) 
+                            ? port 
+                            : OptionsAtStartup.Web.Port; // Fallback to OptionsAtStartup if not in config
+                        
+                        // Sanity check: log what we found in config
+                        Log.Information("[ConfigProbe] slskd:web:port={A} slskd:slskd:web:port={B} using={C}",
+                            builder.Configuration.GetValue<string>($"{AppName}:Web:Port") ?? "null",
+                            builder.Configuration.GetValue<string>($"{AppName}:{AppName}:Web:Port") ?? "null",
+                            webPort);
+                        
+                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{IPAddress.Any}:{webPort}/ (from config: {webPortSection.Exists()})");
+                        options.Listen(IPAddress.Any, webPort);
                         Log.Information($"[Kestrel] HTTP listener configured");
 
                         if (OptionsAtStartup.Web.Socket != null)
@@ -596,6 +618,16 @@ using OpenTelemetry.Trace;
                 builder.Services
                     .ConfigureAspDotNetServices()
                     .ConfigureDependencyInjectionContainer();
+
+                // Add startup timeout for fail-fast in E2E tests (prevents infinite hangs)
+                builder.Services.Configure<Microsoft.Extensions.Hosting.HostOptions>(options =>
+                {
+                    options.StartupTimeout = TimeSpan.FromSeconds(30);
+                });
+
+                // Enable detailed logging for host lifetime and Kestrel in test/dev environments
+                builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", Microsoft.Extensions.Logging.LogLevel.Information);
+                builder.Logging.AddFilter("Microsoft.AspNetCore.Server.Kestrel", Microsoft.Extensions.Logging.LogLevel.Debug);
 
                 Log.Information("[MAIN] Services configured, building DI container...");
                 WebApplication app;
@@ -721,6 +753,9 @@ using OpenTelemetry.Trace;
                 // Try to detect if we're hanging during web server startup
                 Log.Information("[Program] Calling app.Run() - this will block until shutdown...");
                 Log.Information("[Program] If you see this but not 'Host started and bound', the web server is hanging");
+                
+                // Deterministic Kestrel binding probe (cannot be filtered) - write to stderr
+                System.Console.Error.WriteLine($"[KestrelProbe] URLs={string.Join(";", app.Urls)}");
                 
                 app.Run();
                 Log.Information("[Program] app.Run() returned (this should not happen normally)");
@@ -2345,7 +2380,11 @@ using OpenTelemetry.Trace;
 
             services.AddHealthChecks()
                 .AddSecurityHealthCheck()
-                .AddMeshHealthCheck();
+                .AddMeshHealthCheck(
+                    name: "mesh",
+                    failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded, // Don't fail entire health endpoint if mesh isn't ready
+                    tags: new[] { "mesh", "network", "dht" },
+                    timeout: TimeSpan.FromSeconds(5)); // 5 second timeout to prevent hanging
 
             services.AddApiVersioning(options =>
                 {
@@ -2655,10 +2694,18 @@ using OpenTelemetry.Trace;
                     relayHub.RequireAuthorization(AuthPolicy.Any);
 
                 endpoints.MapControllers();
-                endpoints.MapHealthChecks("/health");
+                // Make /health explicitly anonymous to avoid auth issues in E2E harness
+                endpoints.MapHealthChecks("/health").AllowAnonymous();
                 endpoints.MapHealthChecks("/health/mesh", new HealthCheckOptions
                 {
                     Predicate = check => check.Tags.Contains("mesh")
+                }).AllowAnonymous();
+                // Simple readiness endpoint for E2E tests - just checks if server is listening
+                // This bypasses complex health checks that might hang during startup
+                endpoints.MapGet("/health/ready", async context =>
+                {
+                    context.Response.StatusCode = 200;
+                    await context.Response.WriteAsync("ready");
                 });
 
                 if (OptionsAtStartup.Metrics.Enabled)

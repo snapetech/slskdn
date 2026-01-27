@@ -1,94 +1,140 @@
 /**
  * Centralized selector map for E2E tests.
- * 
+ *
  * All selectors use data-testid attributes for stability.
  * Update this file when adding new test IDs to components.
  */
 export const T = {
+  loginPassword: 'login-password',
+
+  loginSubmit: 'login-submit',
   // Auth
-  loginUsername: "login-username",
-  loginPassword: "login-password",
-  loginSubmit: "login-submit",
-  logout: "logout",
+  loginUsername: 'login-username',
+  logout: 'logout',
 
-  // Nav
-  navSystem: "nav-system",
-  navSearch: "nav-search",
-  navDownloads: "nav-downloads",
-  navUploads: "nav-uploads",
-  navUsers: "nav-users",
-  navChat: "nav-chat",
-  navRooms: "nav-rooms",
-  navContacts: "nav-contacts",
-  navGroups: "nav-groups",
-  navCollections: "nav-collections",
-  navShares: "nav-shares",
-  navSharedWithMe: "nav-shared-with-me",
-  navBrowse: "nav-browse",
+  navChat: 'nav-chat',
 
-  // System tabs (if needed)
-  systemTabShares: "system-tab-shares",
+  navCollections: 'nav-collections',
+
+  navContacts: 'nav-contacts',
+
+  navDownloads: 'nav-downloads',
+
+  navBrowse: 'nav-browse',
+
+  navGroups: 'nav-groups',
 
   // Contacts / Invites
-  contactsCreateInvite: "contacts-create-invite",
-  contactsInviteOutput: "contacts-invite-output",
-  contactsInviteFriendCode: "contacts-invite-friend-code",
-  contactsAddFriend: "contacts-add-friend",
-  contactsAddInviteInput: "contacts-add-invite-input",
-  contactsContactNickname: "contacts-contact-nickname",
-  contactsAddInviteSubmit: "contacts-add-invite-submit",
+contactsCreateInvite: 'contacts-create-invite',
+
+  
+  navSearch: 'nav-search',
+
+  
+  contactsInviteFriendCode: 'contacts-invite-friend-code',
+
+  // Nav
+navSystem: 'nav-system',
+
+  contactsAddFriend: 'contacts-add-friend',
+
+  navUploads: 'nav-uploads',
+
+  contactsAddInviteInput: 'contacts-add-invite-input',
+
+  navUsers: 'nav-users',
+
+  contactsAddInviteSubmit: 'contacts-add-invite-submit',
+
+  navRooms: 'nav-rooms',
+
+  contactsContactNickname: 'contacts-contact-nickname',
+
+  navSharedWithMe: 'nav-shared-with-me',
+
+  contactsInviteOutput: 'contacts-invite-output',
+
+  navShares: 'nav-shares',
+
   contactsRow: (peerLabel: string) => `contact-row-${peerLabel}`,
+  
+// Collections / Shares
+collectionsCreate: 'collections-create',
+
+  
+  // System tabs (if needed)
+systemTabShares: 'system-tab-shares',
+
+  collectionRow: (title: string) => `collection-row-${title}`,
+  groupAddMember: 'group-add-member',
+
+  groupMemberAddSubmit: 'group-member-add-submit',
+
+  collectionAddItem: 'collection-add-item',
+
+  
+collectionAddItemSubmit: 'collection-add-item-submit',
 
   // Groups
-  groupsCreate: "groups-create",
-  groupsNameInput: "groups-name-input",
-  groupsCreateSubmit: "groups-create-submit",
+groupsCreate: 'groups-create',
+
+  collectionItemPicker: 'collection-item-picker',
+  groupsCreateSubmit: 'groups-create-submit',
+  collectionsCreateSubmit: 'collections-create-submit',
+  groupsNameInput: 'groups-name-input',
+  collectionsTitleInput: 'collections-title-input',
   groupRow: (groupName: string) => `group-row-${groupName}`,
-  groupAddMember: "group-add-member",
-  groupMemberPicker: "group-member-picker",
-  groupMemberAddSubmit: "group-member-add-submit",
+  collectionsTypeSelect: 'collections-type-select',
+  groupMemberPicker: 'group-member-picker',
 
-  // Collections / Shares
-  collectionsCreate: "collections-create",
-  collectionsTypeSelect: "collections-type-select",
-  collectionsTitleInput: "collections-title-input",
-  collectionsCreateSubmit: "collections-create-submit",
-  collectionRow: (title: string) => `collection-row-${title}`,
-  collectionAddItem: "collection-add-item",
-  collectionItemPicker: "collection-item-picker",
-  collectionAddItemSubmit: "collection-add-item-submit",
-
-  shareCreate: "share-create",
-  shareAudiencePicker: "share-audience-picker",
-  sharePolicyStream: "share-policy-stream",
-  sharePolicyDownload: "share-policy-download",
-  shareCreateSubmit: "share-create-submit",
-
-  // Recipient
-  incomingShareRow: (title: string) => `incoming-share-row-${title}`,
-  incomingShareOpen: "incoming-share-open",
-  incomingStreamButton: "incoming-stream",
-  incomingBackfillButton: "incoming-backfill",
   downloadRow: (fileName: string) => `download-row-${fileName}`,
 
-  // Page roots (for existence checks)
-  pageRoot: "page-root",
-  downloadsRoot: "downloads-root",
-  uploadsRoot: "uploads-root",
-  systemSharesTable: "system-shares-table",
-  connectionStatus: "connection-status",
-  sharedManifest: "shared-manifest",
-  sharesList: "shares-list",
-  collectionItems: "collection-items",
-  groupMembers: "group-members",
   
-  // Search
-  searchInput: "search-input",
-  searchResult: "search-result",
+incomingBackfillButton: 'incoming-backfill',
+
+  
+downloadsRoot: 'downloads-root',
+
+  // Recipient
+incomingShareRow: (title: string) => `incoming-share-row-${title}`,
+
+  incomingShareOpen: 'incoming-share-open',
+
+  shareAudiencePicker: 'share-audience-picker',
+  connectionStatus: 'connection-status',
+  shareCreate: 'share-create',
+  collectionItems: 'collection-items',
+  sharePolicyDownload: 'share-policy-download',
+
+  groupMembers: 'group-members',
+
+  sharePolicyStream: 'share-policy-stream',
+
+  incomingStreamButton: 'incoming-stream',
+
+  shareCreateSubmit: 'share-create-submit',
+
+  
+  browseContent: 'browse-content',
+
   
   // Library/Browse
-  libraryContent: "library-content",
-  browseContent: "browse-content",
-  libraryItem: "library-item",
-  browseItem: "browse-item",
+libraryContent: 'library-content',
+  
+browseItem: 'browse-item',
+  // Page roots (for existence checks)
+pageRoot: 'page-root',
+  sharedManifest: 'shared-manifest',
+
+  systemSharesTable: 'system-shares-table',
+
+  libraryItem: 'library-item',
+
+  uploadsRoot: 'uploads-root',
+
+  // Search
+  searchInput: 'search-input',
+
+  searchResult: 'search-result',
+  sharesList: 'shares-list',
 } as const;

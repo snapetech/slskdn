@@ -2,65 +2,65 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-import React from 'react';
+import * as jobsLibrary from '../../../lib/jobs';
+import SwarmVisualization from '.';
 import { render, screen, waitFor } from '@testing-library/react';
-import SwarmVisualization from './index';
-import * as jobsLib from '../../../lib/jobs';
+import React from 'react';
 
 // Mock dependencies
 jest.mock('../../../lib/jobs');
 
 describe('SwarmVisualization', () => {
   const mockJobStatus = {
-    jobId: 'swarm-1',
-    state: 'running',
-    totalChunks: 100,
-    completedChunks: 50,
-    percentComplete: 50,
     activeWorkers: 3,
     chunksPerSecond: 10.5,
+    completedChunks: 50,
     estimatedSecondsRemaining: 120,
+    jobId: 'swarm-1',
+    percentComplete: 50,
+    state: 'running',
+    totalChunks: 100,
   };
 
   const mockTraceSummary = {
     peers: [
       {
-        peerId: 'peer-1',
+        bytesServed: 1_024 * 1_024 * 50,
         chunksCompleted: 30,
         chunksFailed: 2,
         chunksTimedOut: 1,
-        bytesServed: 1024 * 1024 * 50, // 50 MB
+        peerId: 'peer-1', // 50 MB
       },
       {
-        peerId: 'peer-2',
+        bytesServed: 1_024 * 1_024 * 30,
         chunksCompleted: 20,
         chunksFailed: 0,
         chunksTimedOut: 0,
-        bytesServed: 1024 * 1024 * 30, // 30 MB
+        peerId: 'peer-2', // 30 MB
       },
     ],
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jobsLib.getSwarmJobStatus.mockResolvedValue(mockJobStatus);
-    jobsLib.getSwarmTraceSummary.mockResolvedValue(mockTraceSummary);
+    jobsLibrary.getSwarmJobStatus.mockResolvedValue(mockJobStatus);
+    jobsLibrary.getSwarmTraceSummary.mockResolvedValue(mockTraceSummary);
   });
 
   it('displays loading state when jobId is provided but data is loading', () => {
     render(<SwarmVisualization jobId="swarm-1" />);
     // Should show loader while loading
-    expect(jobsLib.getSwarmJobStatus).toHaveBeenCalledWith('swarm-1');
+    expect(jobsLibrary.getSwarmJobStatus).toHaveBeenCalledWith('swarm-1');
   });
 
   it('displays error message when job status fetch fails', async () => {
     const error = new Error('Job not found');
-    jobsLib.getSwarmJobStatus.mockRejectedValue(error);
+    jobsLibrary.getSwarmJobStatus.mockRejectedValue(error);
 
     render(<SwarmVisualization jobId="swarm-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Error Loading Swarm Data/i)).toBeInTheDocument();
+      expect(screen.getByText(/error loading swarm data/i)).toBeInTheDocument();
     });
   });
 
@@ -70,12 +70,16 @@ describe('SwarmVisualization', () => {
     // When jobId is null, fetchData returns early but loading starts as true
     // Component will show loader briefly, then placeholder when loading becomes false
     // Wait for placeholder to appear (component checks !jobStatus after loading check)
-    await waitFor(() => {
-      // Check for placeholder text - component shows "No swarm job selected" in Header
-      const placeholder = screen.queryByText(/No swarm job selected/i) ||
-                         screen.queryByText(/Select a swarm download job/i);
-      expect(placeholder).toBeInTheDocument();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        // Check for placeholder text - component shows "No swarm job selected" in Header
+        const placeholder =
+          screen.queryByText(/no swarm job selected/i) ||
+          screen.queryByText(/select a swarm download job/i);
+        expect(placeholder).toBeInTheDocument();
+      },
+      { timeout: 2_000 },
+    );
   });
 
   it('displays job status when loaded', async () => {
@@ -136,21 +140,21 @@ describe('SwarmVisualization', () => {
     render(<SwarmVisualization jobId="swarm-1" />);
 
     await waitFor(() => {
-      expect(jobsLib.getSwarmJobStatus).toHaveBeenCalledTimes(1);
+      expect(jobsLibrary.getSwarmJobStatus).toHaveBeenCalledTimes(1);
     });
 
     // Fast-forward 2 seconds (refresh interval)
-    jest.advanceTimersByTime(2000);
+    jest.advanceTimersByTime(2_000);
 
     await waitFor(() => {
-      expect(jobsLib.getSwarmJobStatus).toHaveBeenCalledTimes(2);
+      expect(jobsLibrary.getSwarmJobStatus).toHaveBeenCalledTimes(2);
     });
 
     jest.useRealTimers();
   });
 
   it('handles missing trace summary gracefully', async () => {
-    jobsLib.getSwarmTraceSummary.mockResolvedValue(null);
+    jobsLibrary.getSwarmTraceSummary.mockResolvedValue(null);
 
     render(<SwarmVisualization jobId="swarm-1" />);
 
@@ -177,7 +181,7 @@ describe('SwarmVisualization', () => {
   it('handles 404 error for trace summary gracefully', async () => {
     const error = new Error('Not found');
     error.response = { status: 404 };
-    jobsLib.getSwarmTraceSummary.mockRejectedValue(error);
+    jobsLibrary.getSwarmTraceSummary.mockRejectedValue(error);
 
     render(<SwarmVisualization jobId="swarm-1" />);
 

@@ -1,9 +1,9 @@
 import 'semantic-ui-less/semantic.less';
 import App from './components/App';
+import { urlBase } from './config';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { urlBase } from './config';
 
 // Expose router history/location for E2E diagnostics
 // BrowserRouter uses browser history, so we expose window.location

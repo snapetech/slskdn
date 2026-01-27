@@ -954,6 +954,29 @@ public bool Verify(ControlEnvelope envelope)
 
 ---
 
+## Rule 36: Never Introduce Lint Errors
+
+**Problem**: AI changes often introduce lint errors that break builds (CRA treats warnings as errors in CI).
+
+**Slop**:
+```jsx
+// Introduced lint errors: unused imports, unsorted keys, bad naming
+import { urlBase } from '../config';
+const data = { b: 1, a: 2 };
+```
+
+**Correct**: Keep lint clean and fix immediately.
+```jsx
+const data = { a: 2, b: 1 };
+```
+
+**Rules**:
+- **Do not introduce lint errors.**
+- **Fix lint issues immediately** before running builds/tests.
+- **Avoid disabling lint rules** unless there is a documented, unavoidable reason.
+
+---
+
 ## Quick Self-Check
 
 Before submitting code, ask yourself:

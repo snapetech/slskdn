@@ -30,7 +30,7 @@ This is **highest priority** - do it before moving on to other work.
 
 ### Required Reading (in order)
 
-1. **`docs/AI_START_HERE.md`** - Complete AI assistant guide
+1. **`docs/archive/implementation/AI_START_HERE.md`** - Complete AI assistant guide
 2. **`memory-bank/decisions/adr-0001-known-gotchas.md`** - Critical bugs to avoid
 3. **`memory-bank/decisions/adr-0002-code-patterns.md`** - Exact patterns to follow
 4. **`memory-bank/decisions/adr-0003-anti-slop-rules.md`** - What NOT to do
@@ -85,6 +85,7 @@ Every button must have a helpful mouseover tooltip (using Semantic UI's `Popup` 
 - Use Semantic UI React components
 - Maintain compatibility with React 16.8.6 (no hooks that require newer versions)
 - Keep state management simple (no Redux unless already used)
+- **Never introduce lint errors.** Fix any lint issues immediately before running builds/tests. Avoid disabling lint rules unless there is a documented, unavoidable reason.
 
 ### Copyright Headers [[memory:11969255]]
 
@@ -273,7 +274,7 @@ See `memory-bank/decisions/adr-0005-tagging-system.md` for detailed tag format a
 | `memory-bank/progress.md` | Work log |
 | `memory-bank/scratch.md` | Temporary notes, commands |
 | `docs/dev/40-fixes-plan.md` | dev/40-fixes security plan; **Deferred and Follow-up Work** table — add rows when leaving work out; remove when completing deferred items. See AGENTS.md § After Completing Work. |
-| `FORK_VISION.md` | Feature roadmap |
-| `DEVELOPMENT_HISTORY.md` | Release history |
+| `docs/archive/FORK_VISION.md` | Feature roadmap |
+| `docs/archive/DEVELOPMENT_HISTORY.md` | Release history |
 | `TODO.md` | Human-maintained todo list |
 

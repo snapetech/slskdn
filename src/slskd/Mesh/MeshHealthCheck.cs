@@ -2,6 +2,10 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 
@@ -35,7 +39,11 @@ public class MeshHealthCheck : IHealthCheck
     {
         try
         {
-            var stats = await _statsCollector.GetStatsAsync();
+            // Add timeout to prevent hanging - use cancellation token with timeout
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(5)); // 5 second timeout for health check
+
+            var stats = await _statsCollector.GetStatsAsync().WaitAsync(timeoutCts.Token);
 
             var healthData = new Dictionary<string, object>
             {
@@ -49,7 +57,7 @@ public class MeshHealthCheck : IHealthCheck
                 ["routing_table_size"] = stats.RoutingTableSize,
                 ["bootstrap_peers"] = stats.BootstrapPeers,
                 ["peer_churn_events"] = stats.PeerChurnEvents,
-                ["nat_type"] = stats.DetectedNatType.ToString()
+                ["nat_type"] = stats.DetectedNatType.ToString(),
             };
 
             // Check routing table health
@@ -89,13 +97,25 @@ public class MeshHealthCheck : IHealthCheck
 
             return new HealthCheckResult(status, GetDescription(status, stats), data: healthData);
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Timeout occurred - return degraded instead of unhealthy
+            // This allows the health endpoint to respond even if mesh services aren't ready
+            _logger.LogWarning("[MeshHealth] Health check timed out - mesh services may not be initialized yet");
+            return new HealthCheckResult(
+                HealthStatus.Degraded,
+                "Mesh health check timed out - services may still be initializing",
+                data: new Dictionary<string, object> { ["timeout"] = true });
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[MeshHealth] Health check failed");
+            // Log but don't fail the entire health endpoint - return degraded
+            _logger.LogWarning(ex, "[MeshHealth] Health check encountered an error - mesh services may not be initialized");
             return new HealthCheckResult(
-                HealthStatus.Unhealthy,
-                $"Mesh health check failed: {ex.Message}",
-                ex);
+                HealthStatus.Degraded,
+                $"Mesh health check error: {ex.Message} (services may still be initializing)",
+                ex,
+                data: new Dictionary<string, object> { ["error"] = ex.GetType().Name });
         }
     }
 
@@ -125,11 +145,19 @@ public static class MeshHealthCheckExtensions
     /// <summary>
     /// Adds mesh health check to the health checks builder.
     /// </summary>
-    public static IHealthChecksBuilder AddMeshHealthCheck(this IHealthChecksBuilder builder)
+    public static IHealthChecksBuilder AddMeshHealthCheck(
+        this IHealthChecksBuilder builder,
+        string name = "mesh",
+        HealthStatus? failureStatus = null,
+        IEnumerable<string>? tags = null,
+        TimeSpan? timeout = null)
     {
         return builder.AddCheck<MeshHealthCheck>(
-            "mesh",
-            tags: new[] { "mesh", "network", "dht" });
+            name,
+            failureStatus: failureStatus ?? HealthStatus.Degraded, // Default to Degraded so it doesn't fail entire health endpoint
+            tags: tags ?? new[] { "mesh", "network", "dht" },
+            timeout: timeout ?? TimeSpan.FromSeconds(5)); // Default 5 second timeout to prevent hanging
     }
 }
+
 

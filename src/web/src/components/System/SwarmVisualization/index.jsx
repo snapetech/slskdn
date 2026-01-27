@@ -2,6 +2,8 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+import * as jobsLibrary from '../../../lib/jobs';
+import { formatBytes } from '../../../lib/util';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Card,
@@ -15,8 +17,6 @@ import {
   Statistic,
   Table,
 } from 'semantic-ui-react';
-import { formatBytes } from '../../../lib/util';
-import * as jobsLib from '../../../lib/jobs';
 
 const SwarmVisualization = ({ jobId }) => {
   const [jobStatus, setJobStatus] = useState(null);
@@ -35,8 +35,8 @@ const SwarmVisualization = ({ jobId }) => {
       setError(null);
 
       const [status, summary] = await Promise.allSettled([
-        jobsLib.getSwarmJobStatus(jobId),
-        jobsLib.getSwarmTraceSummary(jobId),
+        jobsLibrary.getSwarmJobStatus(jobId),
+        jobsLibrary.getSwarmTraceSummary(jobId),
       ]);
 
       if (status.status === 'fulfilled') {
@@ -49,9 +49,9 @@ const SwarmVisualization = ({ jobId }) => {
         setTraceSummary(summary.value);
       }
       // Trace summary is optional - don't error if not available
-    } catch (err) {
-      setError(err?.message || 'Failed to fetch swarm data');
-      console.error('Failed to fetch swarm visualization data:', err);
+    } catch (error_) {
+      setError(error_?.message || 'Failed to fetch swarm data');
+      console.error('Failed to fetch swarm visualization data:', error_);
     } finally {
       setLoading(false);
     }
@@ -59,18 +59,18 @@ const SwarmVisualization = ({ jobId }) => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 2000); // Refresh every 2 seconds
+    const interval = setInterval(fetchData, 2_000); // Refresh every 2 seconds
     return () => clearInterval(interval);
   }, [fetchData]);
 
   const peerContributions = useMemo(() => {
     if (traceSummary?.peers && traceSummary.peers.length > 0) {
       return traceSummary.peers.map((peer) => ({
-        peerId: peer.peerId,
+        bytesServed: peer.bytesServed || 0,
         chunksCompleted: peer.chunksCompleted || 0,
         chunksFailed: peer.chunksFailed || 0,
         chunksTimedOut: peer.chunksTimedOut || 0,
-        bytesServed: peer.bytesServed || 0,
+        peerId: peer.peerId,
         successRate:
           peer.chunksCompleted + peer.chunksFailed + peer.chunksTimedOut > 0
             ? (peer.chunksCompleted /
@@ -81,6 +81,7 @@ const SwarmVisualization = ({ jobId }) => {
             : 0,
       }));
     }
+
     return [];
   }, [traceSummary]);
 
@@ -93,26 +94,34 @@ const SwarmVisualization = ({ jobId }) => {
 
     // Create a simple grid representation
     const rows = [];
-    for (let i = 0; i < totalChunks; i += chunksPerRow) {
+    for (let index = 0; index < totalChunks; index += chunksPerRow) {
       const rowChunks = [];
-      for (let j = 0; j < chunksPerRow && i + j < totalChunks; j++) {
-        const chunkIndex = i + j;
+      for (
+        let index_ = 0;
+        index_ < chunksPerRow && index + index_ < totalChunks;
+        index_++
+      ) {
+        const chunkIndex = index + index_;
         const isCompleted = chunkIndex < completedChunks;
         rowChunks.push({
-          index: chunkIndex,
           completed: isCompleted,
+          index: chunkIndex,
         });
       }
+
       rows.push(rowChunks);
     }
 
-    return { rows, chunksPerRow };
+    return { chunksPerRow, rows };
   }, [jobStatus, traceSummary]);
 
   if (loading && !jobStatus) {
     return (
       <Segment>
-        <Loader active inline="centered" />
+        <Loader
+          active
+          inline="centered"
+        />
       </Segment>
     );
   }
@@ -120,7 +129,10 @@ const SwarmVisualization = ({ jobId }) => {
   if (error && !jobStatus) {
     return (
       <Segment>
-        <Header as="h4" color="red">
+        <Header
+          as="h4"
+          color="red"
+        >
           <Icon name="exclamation triangle" />
           <Header.Content>Error Loading Swarm Data</Header.Content>
         </Header>
@@ -165,9 +177,7 @@ const SwarmVisualization = ({ jobId }) => {
           </Grid.Column>
           <Grid.Column>
             <Statistic>
-              <Statistic.Value>
-                {jobStatus.activeWorkers || 0}
-              </Statistic.Value>
+              <Statistic.Value>{jobStatus.activeWorkers || 0}</Statistic.Value>
               <Statistic.Label>Active Workers</Statistic.Label>
             </Statistic>
           </Grid.Column>
@@ -200,9 +210,9 @@ const SwarmVisualization = ({ jobId }) => {
           size="large"
           style={{ marginTop: '1em' }}
         />
-        <div style={{ marginTop: '0.5em', fontSize: '0.9em' }}>
+        <div style={{ fontSize: '0.9em', marginTop: '0.5em' }}>
           {formatBytes(jobStatus.bytesDownloaded || 0)} /{' '}
-          {formatBytes((jobStatus.totalChunks || 0) * 512 * 1024)}
+          {formatBytes((jobStatus.totalChunks || 0) * 512 * 1_024)}
         </div>
       </Segment>
 
@@ -242,12 +252,18 @@ const SwarmVisualization = ({ jobId }) => {
                   <Table.Cell>{formatBytes(peer.bytesServed)}</Table.Cell>
                   <Table.Cell>
                     <Progress
-                      color={peer.successRate >= 80 ? 'green' : peer.successRate >= 50 ? 'yellow' : 'red'}
+                      color={
+                        peer.successRate >= 80
+                          ? 'green'
+                          : peer.successRate >= 50
+                            ? 'yellow'
+                            : 'red'
+                      }
                       percent={peer.successRate}
                       progress
                       size="small"
                     />
-                    <span style={{ marginLeft: '0.5em', fontSize: '0.9em' }}>
+                    <span style={{ fontSize: '0.9em', marginLeft: '0.5em' }}>
                       {peer.successRate.toFixed(1)}%
                     </span>
                   </Table.Cell>
@@ -277,41 +293,48 @@ const SwarmVisualization = ({ jobId }) => {
               overflow: 'auto',
             }}
           >
-            {chunkHeatmap.rows.map((row, rowIdx) => (
+            {chunkHeatmap.rows.map((row, rowIndex) => (
               <div
-                key={rowIdx}
+                key={rowIndex}
                 style={{
                   display: 'flex',
-                  gap: '2px',
                   flexWrap: 'wrap',
+                  gap: '2px',
                 }}
               >
                 {row.map((chunk) => (
                   <div
                     key={chunk.index}
                     style={{
-                      width: '12px',
-                      height: '12px',
                       backgroundColor: chunk.completed ? '#21ba45' : '#767676',
                       borderRadius: '2px',
                       cursor: 'pointer',
+                      height: '12px',
                       title: `Chunk ${chunk.index + 1}: ${chunk.completed ? 'Completed' : 'Pending'}`,
+                      width: '12px',
                     }}
                   />
                 ))}
               </div>
             ))}
           </div>
-          <div style={{ marginTop: '0.5em', fontSize: '0.9em', display: 'flex', gap: '1em' }}>
+          <div
+            style={{
+              display: 'flex',
+              fontSize: '0.9em',
+              gap: '1em',
+              marginTop: '0.5em',
+            }}
+          >
             <div>
               <span
                 style={{
-                  display: 'inline-block',
-                  width: '12px',
-                  height: '12px',
                   backgroundColor: '#21ba45',
                   borderRadius: '2px',
+                  display: 'inline-block',
+                  height: '12px',
                   marginRight: '0.25em',
+                  width: '12px',
                 }}
               />
               Completed
@@ -319,12 +342,12 @@ const SwarmVisualization = ({ jobId }) => {
             <div>
               <span
                 style={{
-                  display: 'inline-block',
-                  width: '12px',
-                  height: '12px',
                   backgroundColor: '#767676',
                   borderRadius: '2px',
+                  display: 'inline-block',
+                  height: '12px',
                   marginRight: '0.25em',
+                  width: '12px',
                 }}
               />
               Pending
@@ -360,9 +383,9 @@ const SwarmVisualization = ({ jobId }) => {
                           const parts = traceSummary.duration.split(':');
                           if (parts.length === 3) {
                             const totalSeconds =
-                              parseInt(parts[0], 10) * 3600 +
-                              parseInt(parts[1], 10) * 60 +
-                              parseInt(parts[2], 10);
+                              Number.parseInt(parts[0], 10) * 3_600 +
+                              Number.parseInt(parts[1], 10) * 60 +
+                              Number.parseInt(parts[2], 10);
                             return `${totalSeconds}s`;
                           }
                         } else if (
@@ -373,10 +396,12 @@ const SwarmVisualization = ({ jobId }) => {
                           if (dur.totalSeconds !== undefined) {
                             return `${Math.round(dur.totalSeconds)}s`;
                           }
+
                           if (dur.seconds !== undefined) {
                             return `${Math.round(dur.seconds)}s`;
                           }
                         }
+
                         return 'N/A';
                       })()
                     : 'N/A'}
@@ -388,9 +413,15 @@ const SwarmVisualization = ({ jobId }) => {
               <Statistic>
                 <Statistic.Value>
                   {traceSummary.rescueInvoked ? (
-                    <Icon color="orange" name="exclamation triangle" />
+                    <Icon
+                      color="orange"
+                      name="exclamation triangle"
+                    />
                   ) : (
-                    <Icon color="green" name="check circle" />
+                    <Icon
+                      color="green"
+                      name="check circle"
+                    />
                   )}
                 </Statistic.Value>
                 <Statistic.Label>
@@ -402,7 +433,10 @@ const SwarmVisualization = ({ jobId }) => {
           {traceSummary.bytesBySource &&
             Object.keys(traceSummary.bytesBySource).length > 0 && (
               <div style={{ marginTop: '1em' }}>
-                <Header as="h4" size="small">
+                <Header
+                  as="h4"
+                  size="small"
+                >
                   Bytes by Source
                 </Header>
                 <Table size="small">
@@ -424,13 +458,17 @@ const SwarmVisualization = ({ jobId }) => {
 
       {!traceSummary && (
         <Segment>
-          <Header as="h4" size="small" color="grey">
+          <Header
+            as="h4"
+            color="grey"
+            size="small"
+          >
             <Icon name="info circle" />
             <Header.Content>Trace Data Not Available</Header.Content>
           </Header>
           <p>
-            Detailed peer contribution and performance metrics require trace data.
-            This may not be available for all swarm downloads.
+            Detailed peer contribution and performance metrics require trace
+            data. This may not be available for all swarm downloads.
           </p>
         </Segment>
       )}
