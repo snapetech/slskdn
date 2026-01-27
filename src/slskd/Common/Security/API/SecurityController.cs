@@ -9,13 +9,20 @@ using slskd.Core.Security;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using slskd;
 using slskd.Common.Security;
 using slskd.Mesh;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+using YamlDotNet.RepresentationModel;
+using IOFile = System.IO.File;
 
 /// <summary>
 /// API controller for security monitoring and management.
@@ -32,6 +39,8 @@ public class SecurityController : ControllerBase
     private readonly AnonymityTransportSelector? _transportSelector;
     private readonly Mesh.IMeshCircuitBuilder? _circuitBuilder;
     private readonly Mesh.IMeshPeerManager? _peerManager;
+    private readonly IOptionsSnapshot<slskd.Options>? _optionsSnapshot;
+    private readonly ILogger<SecurityController>? _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurityController"/> class.
@@ -42,7 +51,9 @@ public class SecurityController : ControllerBase
         AdversarialOptions? adversarialOptions = null,
         AnonymityTransportSelector? transportSelector = null,
         Mesh.IMeshCircuitBuilder? circuitBuilder = null,
-        Mesh.IMeshPeerManager? peerManager = null)
+        Mesh.IMeshPeerManager? peerManager = null,
+        IOptionsSnapshot<slskd.Options>? optionsSnapshot = null,
+        ILogger<SecurityController>? logger = null)
     {
         _security = security;
         _eventSink = eventSink ?? security?.EventSink;
@@ -50,6 +61,8 @@ public class SecurityController : ControllerBase
         _transportSelector = transportSelector;
         _circuitBuilder = circuitBuilder;
         _peerManager = peerManager;
+        _optionsSnapshot = optionsSnapshot;
+        _logger = logger;
     }
 
     /// <summary>
@@ -420,8 +433,6 @@ public class SecurityController : ControllerBase
     [HttpPut("adversarial")]
     public ActionResult UpdateAdversarialSettings([FromBody] AdversarialOptions settings)
     {
-        // NOTE: In a real implementation, this would persist the settings
-        // For now, just validate the input
         if (settings == null)
         {
             return BadRequest("Settings cannot be null");
@@ -434,8 +445,90 @@ public class SecurityController : ControllerBase
             return BadRequest("Bucket sizes must be positive");
         }
 
-        // TODO: Implement persistence and runtime configuration updates
-        return Ok(new { message = "Adversarial settings updated (persistence not yet implemented)" });
+        // Check if remote configuration is enabled
+        if (_optionsSnapshot?.Value?.RemoteConfiguration != true)
+        {
+            return Forbid("Remote configuration is not enabled. Set Options.Web.RemoteConfiguration to true to allow runtime configuration updates.");
+        }
+
+        try
+        {
+            var configFile = Program.ConfigurationFile;
+            if (string.IsNullOrEmpty(configFile) || !IOFile.Exists(configFile))
+            {
+                return BadRequest($"Configuration file not found: {configFile}");
+            }
+
+            // Read current YAML
+            var yamlContent = IOFile.ReadAllText(configFile);
+
+            // Parse YAML
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                .Build();
+
+            var yamlStream = new YamlStream();
+            using (var reader = new StringReader(yamlContent))
+            {
+                yamlStream.Load(reader);
+            }
+
+            // Update Security:Adversarial section
+            if (yamlStream.Documents.Count > 0)
+            {
+                var rootNode = (YamlMappingNode)yamlStream.Documents[0].RootNode;
+
+                // Get or create Security node
+                var securityKey = new YamlScalarNode("Security");
+                if (!rootNode.Children.ContainsKey(securityKey))
+                {
+                    rootNode.Children[securityKey] = new YamlMappingNode();
+                }
+
+                var securityNode = (YamlMappingNode)rootNode.Children[securityKey];
+
+                // Get or create Adversarial node
+                var adversarialKey = new YamlScalarNode("Adversarial");
+                if (!securityNode.Children.ContainsKey(adversarialKey))
+                {
+                    securityNode.Children[adversarialKey] = new YamlMappingNode();
+                }
+
+                // Serialize new settings to YAML and parse into node
+                var newSettingsYaml = serializer.Serialize(settings);
+                var newSettingsStream = new YamlStream();
+                using (var newReader = new StringReader(newSettingsYaml))
+                {
+                    newSettingsStream.Load(newReader);
+                }
+
+                if (newSettingsStream.Documents.Count > 0)
+                {
+                    securityNode.Children[adversarialKey] = (YamlMappingNode)newSettingsStream.Documents[0].RootNode;
+                }
+            }
+
+            // Write updated YAML back to file
+            using (var writer = new StringWriter())
+            {
+                yamlStream.Save(writer, false);
+                IOFile.WriteAllText(configFile, writer.ToString());
+            }
+
+            // Check if config watch is disabled (requires restart)
+            if (_optionsSnapshot?.Value?.Flags?.NoConfigWatch == true)
+            {
+                _logger?.LogInformation("Configuration watch is disabled; restart required for adversarial settings changes to take effect");
+                return Ok(new { message = "Adversarial settings updated. Restart required for changes to take effect." });
+            }
+
+            return Ok(new { message = "Adversarial settings updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to persist adversarial settings");
+            return StatusCode(500, $"Failed to persist settings: {ex.Message}");
+        }
     }
 
     [HttpGet("adversarial/stats")]
