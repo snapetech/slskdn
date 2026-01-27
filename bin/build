@@ -14,6 +14,11 @@ while test $# -gt 0; do
       echo '--dotnet-only       skip web build'
       echo '--skip-tests        skip execution of npm and dotnet tests'
       echo '--version           version for the binary. defaults to current git tag+SHA'
+      echo ''
+      echo 'Note: Protocol contract tests require Soulfind server simulator.'
+      echo '      If Docker is available, the build script will attempt to pull'
+      echo '      the Soulfind image. Tests will skip gracefully if unavailable.'
+      echo '      See docs/dev/SOULFIND_CI_INTEGRATION.md for details.'
       exit 0
       ;;
     --web-only)
