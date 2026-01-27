@@ -195,8 +195,7 @@ namespace slskd.Transfers.Rescue
                             Method = VerificationMethod.None,  // Overlay peers are trusted
                         }).ToList(),
                         TargetMusicBrainzRecordingId = recordingId,
-                        // TODO: Get proper output path from transfer service
-                        OutputPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"rescue_{transferId}.tmp"),
+                        OutputPath = GetOutputPathForTransfer(transferId),
                     };
 
                     log.Information("[RESCUE] Creating multi-source download job for {RangeCount} missing ranges totaling {Bytes} bytes",
@@ -282,7 +281,7 @@ namespace slskd.Transfers.Rescue
         {
             if (downloadService == null || !Guid.TryParse(transferId, out var transferGuid))
             {
-                return Path.Combine(Path.GetTempPath(), $"rescue_{transferId}.tmp");
+                return Path.Combine(Path.GetTempPath(), "slskd", "rescue", $"rescue_{transferId}.tmp");
             }
 
             try
@@ -290,11 +289,14 @@ namespace slskd.Transfers.Rescue
                 var transfer = downloadService.Find(t => t.Id == transferGuid);
                 if (transfer != null)
                 {
-                    // Try to get the actual download path from transfer
-                    // Note: Transfer model may not have LocalPath, so fallback to temp
-                    var downloadDir = Path.Combine(Path.GetTempPath(), "slskd", "downloads");
-                    Directory.CreateDirectory(downloadDir);
-                    return Path.Combine(downloadDir, Path.GetFileName(transfer.Filename));
+                    // Use organized temp directory structure for rescue downloads
+                    // Note: In a full implementation, this would use OptionsMonitor.CurrentValue.Directories.Downloads
+                    // but RescueService doesn't currently have access to options
+                    var rescueDir = Path.Combine(Path.GetTempPath(), "slskd", "rescue");
+                    Directory.CreateDirectory(rescueDir);
+                    var safeFilename = Path.GetFileName(transfer.Filename) ?? $"rescue_{transferId}.tmp";
+                    // Ensure filename is safe and unique
+                    return Path.Combine(rescueDir, $"{transferId}_{safeFilename}");
                 }
             }
             catch (Exception ex)
@@ -302,7 +304,7 @@ namespace slskd.Transfers.Rescue
                 log.Warning(ex, "[RESCUE] Failed to get output path for transfer {TransferId}, using temp", transferId);
             }
 
-            return Path.Combine(Path.GetTempPath(), $"rescue_{transferId}.tmp");
+            return Path.Combine(Path.GetTempPath(), "slskd", "rescue", $"rescue_{transferId}.tmp");
         }
 
         private async Task<string> ResolveRecordingIdAsync(string filename, long bytesTransferred, CancellationToken ct)

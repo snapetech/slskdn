@@ -20,6 +20,7 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
 
     private readonly Dictionary<string, MeshCircuit> _activeCircuits = new();
     private readonly object _circuitsLock = new();
+    private int _totalCircuitsBuilt = 0;
 
     private bool _disposed;
 
@@ -82,6 +83,7 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
             lock (_circuitsLock)
             {
                 _activeCircuits[circuit.CircuitId] = circuit;
+                _totalCircuitsBuilt++;
             }
 
             _logger.LogInformation("Successfully built circuit {CircuitId} to {TargetPeerId} with {HopCount} hops",
@@ -155,7 +157,7 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
             return new CircuitStatistics
             {
                 ActiveCircuits = _activeCircuits.Count,
-                TotalCircuitsBuilt = _activeCircuits.Count, // TODO: Add persistent counter
+                TotalCircuitsBuilt = _totalCircuitsBuilt,
                 AverageCircuitLength = _activeCircuits.Values.Any()
                     ? _activeCircuits.Values.Average(c => c.Hops.Count)
                     : 0,
