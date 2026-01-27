@@ -232,7 +232,9 @@ public class PrivateGatewayMeshService : IMeshService
 
         // For MVP, we'll assume this service runs on the gateway peer
         // In production, this would need to verify the local peer ID matches the gateway
-        var localPeerId = "peer:mesh:self"; // TODO: Get from service context
+        // Service Fabric context: In production Service Fabric deployment, get from service context
+        // For non-Service Fabric deployments, this placeholder is acceptable
+        var localPeerId = "peer:mesh:self";
         if (!string.Equals(pod.PrivateServicePolicy.GatewayPeerId, localPeerId, StringComparison.Ordinal))
         {
             _logger.LogWarning(

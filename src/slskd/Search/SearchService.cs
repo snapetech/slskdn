@@ -721,8 +721,8 @@ namespace slskd.Search
 
             Log.Debug("[VSF-DISASTER-SEARCH] Query '{Query}' is not an MBID - mesh search may return limited results", query);
 
-            // TODO: Integrate with MusicBrainz API for proper query resolution
-            // For now, return empty to indicate no MBIDs found
+            // MusicBrainz API integration deferred: requires IMusicBrainzClient integration
+            // For now, return empty to indicate no MBIDs found (mesh search will proceed with text query)
             return mbids;
         }
 
