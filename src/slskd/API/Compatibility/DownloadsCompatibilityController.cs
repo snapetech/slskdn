@@ -10,6 +10,8 @@ using System.Linq.Expressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using slskd;
 using slskd.Transfers;
 using slskd.Transfers.Downloads;
 using Soulseek;
@@ -25,13 +27,16 @@ public class DownloadsCompatibilityController : ControllerBase
 {
     private readonly IDownloadService downloadService;
     private readonly ILogger<DownloadsCompatibilityController> logger;
+    private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
 
     public DownloadsCompatibilityController(
         IDownloadService downloadService,
-        ILogger<DownloadsCompatibilityController> logger)
+        ILogger<DownloadsCompatibilityController> logger,
+        IOptionsMonitor<slskd.Options> optionsMonitor)
     {
         this.downloadService = downloadService;
         this.logger = logger;
+        this.optionsMonitor = optionsMonitor;
     }
 
     /// <summary>
@@ -122,16 +127,25 @@ public class DownloadsCompatibilityController : ControllerBase
         }
 
         // Convert to compatibility format
-        var downloads = allDownloads.Select(d => new
+        var options = optionsMonitor.CurrentValue;
+        var downloads = allDownloads.Select(d =>
         {
-            Id = d.Id.ToString("N"),
-            User = d.Username,
-            RemotePath = d.Filename,
-            LocalPath = d.Filename, // TODO: Get actual local path
-            Status = MapStatus(d.State),
-            Progress = d.PercentComplete / 100.0,
-            Size = d.Size,
-            Remaining = d.Size - d.BytesTransferred
+            // Determine base directory based on transfer state
+            var baseDirectory = d.State.HasFlag(TransferStates.Completed) && d.State.HasFlag(TransferStates.Succeeded)
+                ? options.Directories.Downloads
+                : options.Directories.Incomplete;
+            var localPath = d.Filename.ToLocalFilename(baseDirectory);
+            return new
+            {
+                Id = d.Id.ToString("N"),
+                User = d.Username,
+                RemotePath = d.Filename,
+                LocalPath = localPath,
+                Status = MapStatus(d.State),
+                Progress = d.PercentComplete / 100.0,
+                Size = d.Size,
+                Remaining = d.Size - d.BytesTransferred
+            };
         }).ToList();
 
         await Task.CompletedTask;
@@ -162,13 +176,20 @@ public class DownloadsCompatibilityController : ControllerBase
             return NotFound(new { error = "Download not found" });
         }
 
+        // Determine base directory based on transfer state
+        var options = optionsMonitor.CurrentValue;
+        var baseDirectory = download.State.HasFlag(TransferStates.Completed) && download.State.HasFlag(TransferStates.Succeeded)
+            ? options.Directories.Downloads
+            : options.Directories.Incomplete;
+        var localPath = download.Filename.ToLocalFilename(baseDirectory);
+
         await Task.CompletedTask;
         return Ok(new
         {
             Id = download.Id.ToString("N"),
             User = download.Username,
             RemotePath = download.Filename,
-            LocalPath = download.Filename, // TODO: Get actual local path
+            LocalPath = localPath,
             Status = MapStatus(download.State),
             Progress = download.PercentComplete / 100.0,
             Size = download.Size,
