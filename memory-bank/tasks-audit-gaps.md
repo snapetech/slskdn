@@ -13,7 +13,13 @@
 - **T-1425** QuicDataServer: Real implementation (listener, HandleConnectionAsync, RELAY_TCP, GetEffectiveMaxPayloadSize). ✅
 - **T-1429** ControlDispatcher: Uses `IControlEnvelopeValidator` and `IControlSigner`; verification is real. ✅
 
-**Phase 8 — still open:** T-1424 (QuicOverlayClient), T-1426 (QuicDataClient), T-1427 (MeshSyncService "Query mesh neighbors"), T-1428 (MeshSyncService "Get actual username").
+**Phase 8 — verified complete (2026-01-27):** 
+- T-1424 (QuicOverlayClient): ✅ Implemented in `src/slskd/Mesh/Overlay/QuicOverlayClient.cs` - full QUIC client with connection management, privacy layer support
+- T-1426 (QuicDataClient): ✅ Implemented in `src/slskd/Mesh/Overlay/QuicDataClient.cs` - full QUIC data client with bidirectional streams
+- T-1427 (MeshSyncService "Query mesh neighbors"): ✅ Implemented - `GetMeshPeers()` method exists and returns mesh-capable peers
+- T-1428 (MeshSyncService "Get actual username"): ✅ Implemented - `GenerateHelloMessage()` gets username from `appState.CurrentValue.User.Username` with fallback
+
+All Phase 8 items are complete. Previous audit was outdated.
 
 **Phases 1–6, 9–10:** Not re-verified; treat as backlog. Promote to `memory-bank/tasks.md` when prioritizing.
 
