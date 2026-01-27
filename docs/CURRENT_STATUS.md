@@ -27,12 +27,11 @@
 
 ## ⚠️ Non-Blocking Issues
 
-### Integration Test Failures (2)
-- **Soulbeet Compatibility Tests**: 2 failing tests
-  - `GetDownload_ById_ShouldReturnDetails`
-  - `CompatMode_FullWorkflow_ShouldSucceed`
-  - **Status**: Non-blocking - APIs are implemented, likely test setup issues
-  - **Impact**: Low - compatibility APIs verified working
+### Integration Test Failures
+- **Status**: ✅ **All fixed** (2026-01-27)
+- **Soulbeet Compatibility Tests**: Fixed 2 failing tests
+  - Root cause: JSON property name mismatch (snake_case vs camelCase) and missing Directories config
+  - **Result**: All 6 tests passing
 
 ### Protocol Contract Tests (3)
 - **Require Soulfind server simulator**
@@ -72,10 +71,10 @@
 - **Status**: ✅ Excellent
 
 ### Integration Tests
-- **188 passing**
+- **190 passing**
 - **0 skipped**
-- **2 failing** (non-blocking - Soulbeet compatibility)
-- **Status**: ✅ Good (failures are non-critical)
+- **0 failing**
+- **Status**: ✅ Excellent
 
 ### API Tests
 - **46 passing**
