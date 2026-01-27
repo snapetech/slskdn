@@ -22,6 +22,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using slskd.Telemetry;
+using static slskd.Telemetry.SwarmMetrics;
     using System.Security.Cryptography;
     using System.Threading;
     using System.Threading.Tasks;
@@ -70,6 +72,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
     private readonly IMediaCoreSwarmService? _mediaCoreSwarmService;
     private readonly IPlaybackPriorityService? _playbackPriorityService;
+    private readonly Optimization.IChunkSizeOptimizer? _chunkSizeOptimizer;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MultiSourceDownloadService"/> class.
@@ -91,21 +94,23 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             IOptionsMonitor<slskdOptions> optionsMonitor = null,
             ICanonicalStatsService canonicalStatsService = null,
             IMediaCoreSwarmService mediaCoreSwarmService = null,
-            IPlaybackPriorityService playbackPriorityService = null)
-    {
-        _logger = logger;
-        _client = soulseekClient;
-        _contentVerification = contentVerificationService;
-        _hashDb = hashDb;
-        _meshSync = meshSync;
+            IPlaybackPriorityService playbackPriorityService = null,
+            Optimization.IChunkSizeOptimizer chunkSizeOptimizer = null)
+        {
+            _logger = logger;
+            _client = soulseekClient;
+            _contentVerification = contentVerificationService;
+            _hashDb = hashDb;
+            _meshSync = meshSync;
             this.fingerprintExtractionService = fingerprintExtractionService;
             this.acoustIdClient = acoustIdClient;
             this.autoTaggingService = autoTaggingService;
             this.optionsMonitor = optionsMonitor;
             this.canonicalStatsService = canonicalStatsService;
-            _mediaCoreSwarmService = mediaCoreSwarmService;
-            _playbackPriorityService = playbackPriorityService;
-    }
+        _mediaCoreSwarmService = mediaCoreSwarmService;
+        _playbackPriorityService = playbackPriorityService;
+        _chunkSizeOptimizer = chunkSizeOptimizer;
+        }
 
     /// <inheritdoc/>
     public ConcurrentDictionary<Guid, MultiSourceDownloadStatus> ActiveDownloads { get; } = new();
@@ -352,6 +357,16 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             MultiSourceDownloadRequest request,
             CancellationToken cancellationToken = default)
         {
+            Activity? activity = MultiSourceActivitySource.Source.StartActivity("swarm.download");
+            activity?.SetTag("swarm.download.id", request.Id);
+            activity?.SetTag("swarm.download.filename", request.Filename);
+            activity?.SetTag("swarm.download.size", request.FileSize);
+            activity?.SetTag("swarm.download.sources", request.Sources.Count);
+
+            // Update Prometheus metrics
+            Telemetry.SwarmMetrics.SwarmDownloadsActive.Inc();
+            Telemetry.SwarmMetrics.SwarmDownloadsTotal.WithLabels("started").Inc();
+
             var result = new MultiSourceDownloadResult
             {
                 Id = request.Id,
@@ -382,10 +397,15 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                     return result;
                 }
 
-                // Calculate chunks - use smaller chunks for more parallelism
-                var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : DefaultChunkSize;
+                // Calculate chunks - optimize chunk size if optimizer available
+                var chunkSize = request.ChunkSize > 0
+                    ? request.ChunkSize
+                    : await OptimizeChunkSizeAsync(request.FileSize, request.Sources.Count, cancellationToken);
+
                 var chunks = CalculateChunksFixed(request.FileSize, chunkSize);
                 status.TotalChunks = chunks.Count;
+                activity?.SetTag("swarm.download.chunk_size", chunkSize);
+                activity?.SetTag("swarm.download.total_chunks", chunks.Count);
 
                 _logger.LogInformation(
                     "SWARM DOWNLOAD: {Filename} ({Size} bytes) = {Chunks} chunks from {Sources} sources",
@@ -692,6 +712,21 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 result.Success = true;
                 status.State = MultiSourceDownloadState.Completed;
 
+                activity?.SetTag("swarm.download.success", true);
+                activity?.SetTag("swarm.download.duration_ms", result.TotalTimeMs);
+                activity?.SetTag("swarm.download.sources_used", result.SourcesUsed);
+                activity?.SetTag("swarm.download.speed_mbps", (request.FileSize / 1024.0 / 1024.0) / (result.TotalTimeMs / 1000.0));
+
+                // Update Prometheus metrics
+                var durationSeconds = result.TotalTimeMs / 1000.0;
+                var speedBytesPerSecond = durationSeconds > 0 ? request.FileSize / durationSeconds : 0;
+                SwarmDownloadDurationSeconds.Observe(durationSeconds);
+                SwarmDownloadSpeedBytesPerSecond.Observe(speedBytesPerSecond);
+                SwarmDownloadSourcesUsed.Observe(result.SourcesUsed);
+                SwarmBytesDownloadedTotal.Inc(request.FileSize);
+                SwarmDownloadsTotal.WithLabels("success").Inc();
+                SwarmDownloadsActive.Dec();
+
                 _logger.LogInformation(
                     "SWARM SUCCESS: {Filename} in {Time}ms ({Speed:F2} MB/s) from {Sources} sources",
                     request.Filename,
@@ -706,6 +741,9 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             }
             catch (Exception ex)
             {
+                activity?.SetTag("swarm.download.success", false);
+                activity?.SetTag("swarm.download.error", ex.Message);
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 _logger.LogError(ex, "SWARM DOWNLOAD FAILED: {Message}", ex.Message);
                 result.Error = ex.Message;
                 result.Success = false;
@@ -714,6 +752,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             }
             finally
             {
+                activity?.Dispose();
                 ActiveDownloads.TryRemove(request.Id, out _);
             }
         }
@@ -845,6 +884,16 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             // TryAdd returns false if another worker already completed it
                             if (completedChunks.TryAdd(chunk.Index, result))
                             {
+                                using var chunkActivity = MultiSourceActivitySource.Source.StartActivity("swarm.chunk.completed");
+                                chunkActivity?.SetTag("swarm.chunk.index", chunk.Index);
+                                chunkActivity?.SetTag("swarm.chunk.username", username);
+                                chunkActivity?.SetTag("swarm.chunk.speed_kbps", result.SpeedBps / 1024.0);
+
+                                // Update Prometheus metrics
+                                SwarmChunksCompletedTotal.WithLabels("success").Inc();
+                                SwarmChunkDurationMilliseconds.Observe(result.TimeMs);
+                                SwarmChunkSpeedBytesPerSecond.Observe(result.SpeedBps);
+
                                 // We won the race - move our file to final path
                                 if (System.IO.File.Exists(workerTempPath))
                                 {
@@ -874,6 +923,18 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                         }
                         else
                         {
+                            // Update Prometheus metrics for failed chunks
+                            var statusLabel = "failed";
+                            if (result.Error?.Contains("timeout") == true || result.Error?.Contains("timed out") == true)
+                            {
+                                statusLabel = "timeout";
+                            }
+                            else if (result.Error?.Contains("corrupted") == true || result.Error?.Contains("hash") == true)
+                            {
+                                statusLabel = "corrupted";
+                            }
+                            SwarmChunksCompletedTotal.WithLabels(statusLabel).Inc();
+
                             // Check for rejection (peer doesn't support partial downloads)
                             var isRejection = result.Error?.Contains("reported as failed") == true ||
                                               result.Error?.Contains("rejected") == true;
@@ -991,6 +1052,48 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             }
 
             return chunks;
+        }
+
+        /// <summary>
+        ///     Optimizes chunk size based on file size, peer count, and performance metrics.
+        /// </summary>
+        private async Task<int> OptimizeChunkSizeAsync(long fileSize, int peerCount, CancellationToken cancellationToken)
+        {
+            if (_chunkSizeOptimizer == null)
+            {
+                return DefaultChunkSize;
+            }
+
+            try
+            {
+                // Get average performance metrics if available
+                double? avgThroughput = null;
+                double? avgRtt = null;
+
+                // TODO: Aggregate peer metrics if metrics service is available
+                // For now, use base optimization without performance data
+
+                var optimizedSize = await _chunkSizeOptimizer.RecommendChunkSizeAsync(
+                    fileSize,
+                    peerCount,
+                    avgThroughput,
+                    avgRtt,
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Optimized chunk size: {OptimizedSize} bytes (file: {FileSize}, peers: {PeerCount}, default: {DefaultSize})",
+                    optimizedSize,
+                    fileSize,
+                    peerCount,
+                    DefaultChunkSize);
+
+                return optimizedSize;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to optimize chunk size, using default: {DefaultSize}", DefaultChunkSize);
+                return DefaultChunkSize;
+            }
         }
 
         private List<(int Index, long StartOffset, long EndOffset)> CalculateChunksFixed(long fileSize, long chunkSize)

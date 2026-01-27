@@ -4,6 +4,9 @@ Complete guide to all slskdn documentation.
 
 ## 🚀 Quick Start
 
+- **[Getting Started](getting-started.md)** ← **Start here!** Complete guide for new users
+- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+- **[Advanced Features](advanced-features.md)** - Detailed walkthrough of advanced features
 - [System Requirements](system_requirements.md) - Hardware and software requirements
 - [Configuration](config.md) - Complete configuration reference
 - [Building from Source](build.md) - Build instructions
@@ -34,6 +37,8 @@ Complete guide to all slskdn documentation.
 - [Development History](archive/DEVELOPMENT_HISTORY.md) - Feature completion timeline and releases
 - [Fork Vision](archive/FORK_VISION.md) - Project philosophy and roadmap
 - [Contributing](../CONTRIBUTING.md) - How to contribute to the project
+- [API Documentation](api-documentation.md) - Complete API reference
+- [Local Development](dev/LOCAL_DEVELOPMENT.md) - Development environment setup
 
 ## 🔍 Additional Resources
 

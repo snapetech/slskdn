@@ -5,8 +5,10 @@ import Data from './Data';
 import Events from './Events';
 import Files from './Files';
 import Info from './Info';
+import Jobs from './Jobs';
 import LibraryHealth from './LibraryHealth';
 import Logs from './Logs';
+import SwarmAnalytics from './SwarmAnalytics';
 import MediaCore from './MediaCore';
 import Mesh from './Mesh';
 import Network from './Network';
@@ -166,6 +168,32 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'shares',
+    },
+    {
+      menuItem: {
+        content: 'Jobs',
+        icon: 'tasks',
+        key: 'jobs',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <Jobs />
+        </Tab.Pane>
+      ),
+      route: 'jobs',
+    },
+    {
+      menuItem: {
+        content: 'Swarm Analytics',
+        icon: 'chart line',
+        key: 'swarm-analytics',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <SwarmAnalytics />
+        </Tab.Pane>
+      ),
+      route: 'swarm-analytics',
     },
     {
       menuItem: {

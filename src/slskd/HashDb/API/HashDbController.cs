@@ -18,6 +18,7 @@
 namespace slskd.HashDb.API
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
     using Asp.Versioning;
@@ -26,6 +27,7 @@ namespace slskd.HashDb.API
     using Microsoft.EntityFrameworkCore;
     using Serilog;
     using slskd.HashDb.Models;
+    using slskd.HashDb.Optimization;
     using slskd.Search;
     using slskd.Core.Security;
 
@@ -38,18 +40,24 @@ namespace slskd.HashDb.API
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class HashDbController : ControllerBase
     {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="HashDbController"/> class.
-        /// </summary>
-        public HashDbController(IHashDbService hashDb, IDbContextFactory<SearchDbContext> searchContextFactory)
-        {
-            HashDb = hashDb;
-            SearchContextFactory = searchContextFactory;
-        }
 
         private IHashDbService HashDb { get; }
         private IDbContextFactory<SearchDbContext> SearchContextFactory { get; }
+        private Optimization.IHashDbOptimizationService? OptimizationService { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<HashDbController>();
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="HashDbController"/> class.
+        /// </summary>
+        public HashDbController(
+            IHashDbService hashDb,
+            IDbContextFactory<SearchDbContext> searchContextFactory,
+            Optimization.IHashDbOptimizationService? optimizationService = null)
+        {
+            HashDb = hashDb;
+            SearchContextFactory = searchContextFactory;
+            OptimizationService = optimizationService;
+        }
 
         /// <summary>
         ///     Gets database statistics.
@@ -357,6 +365,141 @@ namespace slskd.HashDb.API
                     : $"Processed {searchesProcessed} searches, discovered {totalFlacs} FLACs. {newRemaining} searches remaining - click again to continue.",
             });
         }
+
+        /// <summary>
+        ///     Optimizes database indexes.
+        /// </summary>
+        [HttpPost("optimize/indexes")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> OptimizeIndexes()
+        {
+            if (OptimizationService == null)
+            {
+                return NotFound(new { error = "Optimization service not available" });
+            }
+
+            try
+            {
+                await OptimizationService.OptimizeIndexesAsync();
+                return Ok(new { message = "Index optimization completed" });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[HashDb] Error optimizing indexes");
+                return StatusCode(500, new { error = "Failed to optimize indexes", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        ///     Analyzes database and returns optimization recommendations.
+        /// </summary>
+        [HttpGet("optimize/analyze")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> AnalyzeDatabase()
+        {
+            if (OptimizationService == null)
+            {
+                return NotFound(new { error = "Optimization service not available" });
+            }
+
+            try
+            {
+                var recommendations = await OptimizationService.AnalyzeDatabaseAsync();
+                return Ok(recommendations);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[HashDb] Error analyzing database");
+                return StatusCode(500, new { error = "Failed to analyze database", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        ///     Runs VACUUM and ANALYZE to optimize database.
+        /// </summary>
+        [HttpPost("optimize/vacuum")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> VacuumAndAnalyze()
+        {
+            if (OptimizationService == null)
+            {
+                return NotFound(new { error = "Optimization service not available" });
+            }
+
+            try
+            {
+                await OptimizationService.VacuumAndAnalyzeAsync();
+                return Ok(new { message = "VACUUM and ANALYZE completed" });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[HashDb] Error running VACUUM/ANALYZE");
+                return StatusCode(500, new { error = "Failed to run VACUUM/ANALYZE", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        ///     Profiles a query and returns performance metrics.
+        /// </summary>
+        [HttpPost("optimize/profile")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> ProfileQuery([FromBody] ProfileQueryRequest request)
+        {
+            if (OptimizationService == null)
+            {
+                return NotFound(new { error = "Optimization service not available" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request?.Query))
+            {
+                return BadRequest(new { error = "Query is required" });
+            }
+
+            try
+            {
+                var result = await OptimizationService.ProfileQueryAsync(
+                    request.Query,
+                    request.Parameters,
+                    HttpContext.RequestAborted);
+
+                // Record the metric for tracking
+                OptimizationService.RecordQueryMetric(
+                    request.Query,
+                    result.ExecutionTimeMs,
+                    result.RowsReturned);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[HashDb] Error profiling query");
+                return StatusCode(500, new { error = "Failed to profile query", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        ///     Gets slow query statistics.
+        /// </summary>
+        [HttpGet("optimize/slow-queries")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        public async Task<IActionResult> GetSlowQueries([FromQuery] int limit = 20)
+        {
+            if (OptimizationService == null)
+            {
+                return NotFound(new { error = "Optimization service not available" });
+            }
+
+            try
+            {
+                var stats = await OptimizationService.GetSlowQueryStatsAsync(limit, HttpContext.RequestAborted);
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[HashDb] Error getting slow query stats");
+                return StatusCode(500, new { error = "Failed to get slow query stats", message = ex.Message });
+            }
+        }
     }
 
     /// <summary>
@@ -391,6 +534,20 @@ namespace slskd.HashDb.API
         /// <summary>Gets or sets the bit depth.</summary>
         public int? BitDepth { get; set; }
     }
+
+    /// <summary>
+    ///     Request model for query profiling.
+    /// </summary>
+    public class ProfileQueryRequest
+    {
+        /// <summary>
+        ///     SQL query to profile.
+        /// </summary>
+        public string Query { get; set; } = string.Empty;
+
+        /// <summary>
+        ///     Query parameters (optional).
+        /// </summary>
+        public Dictionary<string, object>? Parameters { get; set; }
+    }
 }
-
-

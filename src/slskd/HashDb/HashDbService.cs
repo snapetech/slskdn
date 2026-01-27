@@ -26,6 +26,8 @@ namespace slskd.HashDb
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Data.Sqlite;
+    using Microsoft.Extensions.Caching.Memory;
+using slskd.Telemetry;
     using Microsoft.Extensions.Options;
     using Serilog;
     using slskd;
@@ -70,6 +72,7 @@ namespace slskd.HashDb
         private readonly Mp3Analyzer mp3Analyzer = new();
         private readonly OpusAnalyzer opusAnalyzer = new();
         private readonly AacAnalyzer aacAnalyzer = new();
+        private readonly IMemoryCache? hashCache;
         private long currentSeqId;
 
         /// <summary>
@@ -86,7 +89,8 @@ namespace slskd.HashDb
             IAcoustIdClient acoustIdClient = null,
             IAutoTaggingService autoTaggingService = null,
             IMusicBrainzClient musicBrainzClient = null,
-            IOptionsMonitor<slskdOptions> optionsMonitor = null)
+            IOptionsMonitor<slskdOptions> optionsMonitor = null,
+            IMemoryCache hashCache = null)
         {
             this.serviceProvider = serviceProvider;
             this.fingerprintExtractionService = fingerprintExtractionService;
@@ -94,6 +98,7 @@ namespace slskd.HashDb
             this.autoTaggingService = autoTaggingService;
             this.musicBrainzClient = musicBrainzClient;
             this.optionsMonitor = optionsMonitor;
+            this.hashCache = hashCache;
             if (optionsMonitor != null)
             {
                 audioSketchService = new AudioSketchService(optionsMonitor);
@@ -1093,6 +1098,18 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<HashDbEntry> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
         {
+            using var activity = HashDbActivitySource.Source.StartActivity("hashdb.lookup");
+            activity?.SetTag("hashdb.lookup.key", flacKey);
+
+            // Check cache first
+            if (hashCache != null && hashCache.TryGetValue($"hashdb:lookup:{flacKey}", out object cachedObj) && cachedObj is HashDbEntry cached)
+            {
+                activity?.SetTag("hashdb.lookup.cache_hit", true);
+                log.Debug("[HashDb] Cache hit for flac_key: {Key}", flacKey);
+                return cached;
+            }
+            activity?.SetTag("hashdb.lookup.cache_hit", false);
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM HashDb WHERE flac_key = @flac_key";
@@ -1101,9 +1118,23 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
-                return ReadHashEntry(reader);
+                var entry = ReadHashEntry(reader);
+                
+                // Cache the result (5 minute TTL)
+                if (hashCache != null)
+                {
+                    hashCache.Set($"hashdb:lookup:{flacKey}", entry, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                    });
+                    log.Debug("[HashDb] Cached lookup result for flac_key: {Key}", flacKey);
+                }
+                
+                activity?.SetTag("hashdb.lookup.found", true);
+                return entry;
             }
 
+            activity?.SetTag("hashdb.lookup.found", false);
             return null;
         }
 
@@ -1135,6 +1166,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task StoreHashAsync(HashDbEntry entry, CancellationToken cancellationToken = default)
         {
+            // Invalidate cache when storing
+            if (hashCache != null && !string.IsNullOrEmpty(entry.FlacKey))
+            {
+                hashCache.Remove($"hashdb:lookup:{entry.FlacKey}");
+            }
+            
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var newSeqId = Interlocked.Increment(ref currentSeqId);
 
@@ -1187,6 +1224,12 @@ namespace slskd.HashDb
             if (string.IsNullOrWhiteSpace(musicBrainzId))
             {
                 return;
+            }
+
+            // Invalidate cache when updating
+            if (hashCache != null)
+            {
+                hashCache.Remove($"hashdb:lookup:{flacKey}");
             }
 
             using var conn = GetConnection();
@@ -1453,6 +1496,12 @@ namespace slskd.HashDb
                 return;
             }
 
+            // Invalidate cache when updating
+            if (hashCache != null)
+            {
+                hashCache.Remove($"hashdb:lookup:{flacKey}");
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -1472,6 +1521,12 @@ namespace slskd.HashDb
             if (variant == null)
             {
                 return;
+            }
+
+            // Invalidate cache when updating metadata
+            if (hashCache != null)
+            {
+                hashCache.Remove($"hashdb:lookup:{flacKey}");
             }
 
             using var conn = GetConnection();

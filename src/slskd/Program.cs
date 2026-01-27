@@ -23,6 +23,7 @@ using slskd.Mesh.Realm.Bridge;
 using slskd.Mesh.Governance;
 using slskd.Mesh.Gossip;
 using slskd.SocialFederation;
+using slskd.VirtualSoulfind.Core;
 
 namespace slskd
 {
@@ -95,6 +96,7 @@ using slskd.Shares;
 using slskd.Streaming;
 using slskd.Identity;
 using slskd.Telemetry;
+using OpenTelemetry.Trace;
     using slskd.Transfers;
     using slskd.Transfers.Downloads;
     using slskd.Transfers.MultiSource;
@@ -1092,7 +1094,11 @@ using slskd.Telemetry;
             services.AddSingleton<Jobs.Manifests.IJobManifestService, Jobs.Manifests.JobManifestService>();
             services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmEventStore, Transfers.MultiSource.Tracing.SwarmEventStore>();
             services.AddSingleton<Transfers.MultiSource.Tracing.ISwarmTraceSummarizer, Transfers.MultiSource.Tracing.SwarmTraceSummarizer>();
+
+            // OpenTelemetry distributed tracing
+            services.AddOpenTelemetryTracing(OptionsAtStartup);
             services.AddSingleton<Transfers.MultiSource.Caching.IWarmCachePopularityService, Transfers.MultiSource.Caching.WarmCachePopularityService>();
+            services.AddSingleton<Transfers.MultiSource.Optimization.IChunkSizeOptimizer, Transfers.MultiSource.Optimization.ChunkSizeOptimizer>();
             services.AddSingleton<Transfers.MultiSource.Caching.IWarmCacheService, Transfers.MultiSource.Caching.WarmCacheService>();
 
             // Add signal system
@@ -1177,6 +1183,12 @@ using slskd.Telemetry;
 
             // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03) (IMusicContentDomainProvider in AddAudioCore)
             services.AddSingleton<VirtualSoulfind.Core.GenericFile.IGenericFileContentDomainProvider, VirtualSoulfind.Core.GenericFile.GenericFileContentDomainProvider>();
+            services.AddSingleton<VirtualSoulfind.Core.Movie.IMovieContentDomainProvider, VirtualSoulfind.Core.Movie.MovieContentDomainProvider>();
+            services.AddSingleton<VirtualSoulfind.Core.Tv.ITvContentDomainProvider, VirtualSoulfind.Core.Tv.TvContentDomainProvider>();
+            services.AddSingleton<VirtualSoulfind.Core.Book.IBookContentDomainProvider, VirtualSoulfind.Core.Book.BookContentDomainProvider>();
+
+            // Content Domain Provider Registry (P3: Custom Domain Matching Logic)
+            services.AddContentDomainProviders();
 
             // Peer Reputation System (T-MCP04)
             services.AddSingleton<Common.Moderation.IPeerReputationStore>(sp =>
@@ -1870,6 +1882,8 @@ using slskd.Telemetry;
                 sp.GetRequiredService<ISoulseekClient>(),
                 sp.GetRequiredService<Transfers.MultiSource.IContentVerificationService>()));
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
+            services.AddSingleton<Transfers.MultiSource.Analytics.ISwarmAnalyticsService, Transfers.MultiSource.Analytics.SwarmAnalyticsService>();
+            services.AddSingleton<Transfers.MultiSource.Discovery.IAdvancedDiscoveryService, Transfers.MultiSource.Discovery.AdvancedDiscoveryService>();
             services.AddSingleton<IRescueGuardrailService, RescueGuardrailService>();
             services.AddSingleton<IRescueService>(sp => new RescueService(
                 sp.GetService<HashDb.IHashDbService>(),

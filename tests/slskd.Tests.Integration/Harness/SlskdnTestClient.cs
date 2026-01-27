@@ -138,6 +138,18 @@ public class SlskdnTestClient : IAsyncDisposable
                 x.State == Soulseek.SoulseekClientStates.LoggedIn && 
                 x.Username == $"test-{testId}"));
         
+        // Bridge services for BridgeController and BridgeAdminController
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.IBridgeApi>(_ => 
+            new StubBridgeApiForTests());
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ISoulfindBridgeService>(_ => 
+            new StubSoulfindBridgeServiceForTests());
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.IBridgeDashboard>(_ => 
+            new StubBridgeDashboardForTests());
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>(_ => 
+            CreateNullProxy<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>());
+        builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
+            new StaticOptionsMonitorForTests());
+        
         // Add only the controllers needed for DisasterMode/ProtocolContract tests to avoid
         // resolving the full slskd app's controller tree (which can hang on missing deps).
         var slskdAssembly = typeof(global::slskd.API.Compatibility.SearchCompatibilityController).Assembly;
@@ -323,7 +335,9 @@ internal sealed class IncludeOnlyControllersFeatureProvider : ControllerFeatureP
         typeof(global::slskd.API.Compatibility.UsersCompatibilityController),
         typeof(global::slskd.API.VirtualSoulfind.CanonicalController),
         typeof(global::slskd.API.VirtualSoulfind.ShadowIndexController),
-        typeof(global::slskd.API.Native.LibraryHealthController)
+        typeof(global::slskd.API.Native.LibraryHealthController),
+        typeof(global::slskd.API.VirtualSoulfind.BridgeController),
+        typeof(global::slskd.API.VirtualSoulfind.BridgeAdminController)
     };
 
     protected override bool IsController(TypeInfo typeInfo)
@@ -397,4 +411,119 @@ internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHe
             IssuesOpen = 0, 
             IssuesResolved = 0 
         });
+}
+
+// Bridge service stubs for BridgeController and BridgeAdminController tests
+internal class StubBridgeApiForTests : global::slskd.VirtualSoulfind.Bridge.IBridgeApi
+{
+    public Task<global::slskd.VirtualSoulfind.Bridge.BridgeSearchResult> SearchAsync(string query, CancellationToken ct = default) =>
+        Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeSearchResult
+        {
+            Query = query,
+            Users = new List<global::slskd.VirtualSoulfind.Bridge.BridgeUser>
+            {
+                new global::slskd.VirtualSoulfind.Bridge.BridgeUser
+                {
+                    PeerId = "peer:test",
+                    Username = "test-user",
+                    Files = new List<global::slskd.VirtualSoulfind.Bridge.BridgeFile>()
+                }
+            }
+        });
+
+    public Task<string> DownloadAsync(string username, string filename, string? targetPath, CancellationToken ct = default) =>
+        Task.FromResult(Guid.NewGuid().ToString("N"));
+
+    public Task<List<global::slskd.VirtualSoulfind.Bridge.BridgeRoom>> GetRoomsAsync(CancellationToken ct = default) =>
+        Task.FromResult(new List<global::slskd.VirtualSoulfind.Bridge.BridgeRoom>
+        {
+            new global::slskd.VirtualSoulfind.Bridge.BridgeRoom
+            {
+                Name = "test-scene",
+                MemberCount = 5
+            }
+        });
+}
+
+internal class StubSoulfindBridgeServiceForTests : global::slskd.VirtualSoulfind.Bridge.ISoulfindBridgeService
+{
+    private bool _isRunning = false;
+
+    public bool IsRunning => _isRunning;
+
+    public Task StartAsync(CancellationToken ct = default)
+    {
+        _isRunning = true;
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken ct = default)
+    {
+        _isRunning = false;
+        return Task.CompletedTask;
+    }
+
+    public Task<global::slskd.VirtualSoulfind.Bridge.BridgeHealthStatus> GetHealthAsync(CancellationToken ct = default) =>
+        Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeHealthStatus
+        {
+            IsHealthy = _isRunning,
+            Version = "1.0.0-test",
+            ActiveConnections = 0,
+            StartedAt = _isRunning ? DateTimeOffset.UtcNow : DateTimeOffset.MinValue
+        });
+}
+
+internal class StubBridgeDashboardForTests : global::slskd.VirtualSoulfind.Bridge.IBridgeDashboard
+{
+    public Task<global::slskd.VirtualSoulfind.Bridge.BridgeDashboardData> GetDashboardDataAsync(CancellationToken ct = default) =>
+        Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeDashboardData
+        {
+            Health = new global::slskd.VirtualSoulfind.Bridge.BridgeHealthStatus
+            {
+                IsHealthy = true,
+                Version = "1.0.0-test",
+                ActiveConnections = 0,
+                StartedAt = DateTimeOffset.UtcNow
+            },
+            ConnectedClients = new List<global::slskd.VirtualSoulfind.Bridge.ConnectedClient>(),
+            Stats = new global::slskd.VirtualSoulfind.Bridge.BridgeStatistics(),
+            MeshBenefits = new global::slskd.VirtualSoulfind.Bridge.MeshBenefits()
+        });
+
+    public Task<List<global::slskd.VirtualSoulfind.Bridge.ConnectedClient>> GetConnectedClientsAsync(CancellationToken ct = default) =>
+        Task.FromResult(new List<global::slskd.VirtualSoulfind.Bridge.ConnectedClient>());
+
+    public Task<global::slskd.VirtualSoulfind.Bridge.BridgeStatistics> GetStatsAsync(CancellationToken ct = default) =>
+        Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeStatistics());
+
+    public void RecordRequest(string clientId, string requestType) { }
+
+    public void RecordMeshBenefit(long bytesViaMesh) { }
+}
+
+internal class StaticOptionsMonitorForTests : Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>
+{
+    private readonly slskd.Options _options = new slskd.Options
+    {
+        VirtualSoulfind = new global::slskd.Core.VirtualSoulfindOptions
+        {
+            Bridge = new global::slskd.VirtualSoulfind.Bridge.BridgeOptions
+            {
+                Enabled = true,
+                Port = 2242,
+                SoulfindPath = "soulfind",
+                MaxClients = 10,
+                RequireAuth = false
+            }
+        }
+    };
+
+    public slskd.Options CurrentValue => _options;
+    public slskd.Options Get(string name) => _options;
+    public System.IDisposable OnChange(System.Action<slskd.Options, string> listener) => new NullDisposableForTests();
+}
+
+internal class NullDisposableForTests : System.IDisposable
+{
+    public void Dispose() { }
 }

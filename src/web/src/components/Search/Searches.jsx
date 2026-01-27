@@ -33,6 +33,7 @@ const Searches = ({ server } = {}) => {
   const [scenePodBridgeEnabled, setScenePodBridgeEnabled] = useState(true);
   const [providerPod, setProviderPod] = useState(true);
   const [providerScene, setProviderScene] = useState(true); // Enabled by default when feature is on
+  const [showProviderOptions, setShowProviderOptions] = useState(false);
 
   const inputRef = useRef();
 
@@ -337,24 +338,37 @@ const Searches = ({ server } = {}) => {
           size="big"
         />
         {scenePodBridgeEnabled && (
-          <div style={{ marginTop: '0.5em', display: 'flex', gap: '1em', alignItems: 'center' }}>
-            <Checkbox
-              checked={providerPod}
-              label="Pod"
-              onChange={(e, { checked }) => setProviderPod(checked)}
-              toggle
-            />
-            <Checkbox
-              checked={providerScene}
-              label="Scene"
-              onChange={(e, { checked }) => setProviderScene(checked)}
-              toggle
-            />
-            {!providerPod && !providerScene && (
-              <span style={{ color: 'orange', fontSize: '0.9em' }}>
-                At least one provider must be selected
-              </span>
-            )}
+          <div style={{ marginTop: '0.75em', padding: '0.75em', background: 'rgba(0,0,0,0.05)', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', gap: '1em', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 'bold', fontSize: '0.95em' }}>Search Sources:</span>
+              <Checkbox
+                checked={providerPod}
+                label={
+                  <label>
+                    <Icon name="sitemap" style={{ marginRight: '0.25em' }} />
+                    Pod/Mesh
+                  </label>
+                }
+                onChange={(e, { checked }) => setProviderPod(checked)}
+                toggle
+              />
+              <Checkbox
+                checked={providerScene}
+                label={
+                  <label>
+                    <Icon name="globe" style={{ marginRight: '0.25em' }} />
+                    Soulseek Scene
+                  </label>
+                }
+                onChange={(e, { checked }) => setProviderScene(checked)}
+                toggle
+              />
+              {!providerPod && !providerScene && (
+                <span style={{ color: 'orange', fontSize: '0.9em', fontStyle: 'italic' }}>
+                  <Icon name="warning" /> At least one source must be selected
+                </span>
+              )}
+            </div>
           </div>
         )}
       </Segment>

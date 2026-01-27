@@ -28,8 +28,10 @@ public class ApplicationHostedServiceWrapper : IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _logger?.LogInformation("[ApplicationHostedServiceWrapper] StartAsync called - about to call Application.StartAsync");
+        // Application.StartAsync returns immediately (runs initialization in background)
+        // This should not block the web server from starting
         var result = _application.StartAsync(cancellationToken);
-        _logger?.LogInformation("[ApplicationHostedServiceWrapper] Application.StartAsync returned");
+        _logger?.LogInformation("[ApplicationHostedServiceWrapper] Application.StartAsync returned (non-blocking)");
         return result;
     }
 

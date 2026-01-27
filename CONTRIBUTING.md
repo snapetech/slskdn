@@ -69,12 +69,293 @@ You're free to use whichever development tools you prefer.  If you don't yet hav
 
 [Visual Studio](https://visualstudio.microsoft.com/downloads/) for back end development.
 
+## Development Setup
+
+### Prerequisites
+
+- **.NET 8.0 SDK**: [Download](https://dotnet.microsoft.com/en-us/download)
+- **Node.js 18+**: [Download](https://nodejs.org/en/)
+- **Git**: For version control
+- **IDE**: Visual Studio Code or Visual Studio (recommended)
+
+### Initial Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/snapetech/slskdn.git
+   cd slskdn
+   ```
+
+2. **Restore dependencies:**
+   ```bash
+   # Backend
+   dotnet restore
+   
+   # Frontend
+   cd src/web
+   npm install
+   cd ../..
+   ```
+
+3. **Build the project:**
+   ```bash
+   dotnet build
+   ```
+
+4. **Run tests:**
+   ```bash
+   dotnet test
+   ```
+
+### Development Workflow
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make your changes:**
+   - Follow code style guidelines (see below)
+   - Write tests for new features
+   - Update documentation as needed
+
+3. **Run tests before committing:**
+   ```bash
+   dotnet test
+   ./bin/lint  # Run linter
+   ```
+
+4. **Commit your changes:**
+   ```bash
+   git add .
+   git commit -m "feat: Add your feature description"
+   ```
+
+5. **Push and create PR:**
+   ```bash
+   git push origin feature/your-feature-name
+   # Then create PR on GitHub
+   ```
+
+## Code Style & Guidelines
+
+### C# Backend
+
+- **File-scoped namespaces**: Use `namespace slskd.Feature;` (C# 10+)
+- **Primary constructors**: Use where appropriate (C# 12+)
+- **Pattern matching**: Prefer pattern matching over if/else
+- **Async/await**: Always use async/await, never `.Result` or `.Wait()`
+- **Error handling**: Let errors propagate, don't swallow exceptions
+- **Logging**: Use `ILogger<T>`, not `Serilog.Log.ForContext<T>`
+- **Dependency injection**: Use constructor injection, not service locator
+
+**Example:**
+```csharp
+public class MyService : IMyService
+{
+    private readonly ILogger<MyService> _logger;
+    
+    public MyService(ILogger<MyService> logger)
+    {
+        _logger = logger;
+    }
+    
+    public async Task DoWorkAsync()
+    {
+        try
+        {
+            await SomeWorkAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to do work");
+            throw; // Don't swallow
+        }
+    }
+}
+```
+
+### React Frontend
+
+- **Function components**: Use function components with hooks, not class components
+- **Hooks**: Use `useState`, `useEffect`, `useCallback`, `useMemo` appropriately
+- **Semantic UI**: Use Semantic UI React components
+- **Error handling**: Always handle errors in async functions
+- **API calls**: Use API library functions, return safe values (empty arrays, not undefined)
+
+**Example:**
+```jsx
+const MyComponent = ({ prop }) => {
+  const [data, setData] = useState([]);
+  
+  const fetch = async () => {
+    try {
+      const response = await myLib.getAll();
+      setData(Array.isArray(response) ? response : []);
+    } catch (error) {
+      toast.error(error?.response?.data ?? error?.message ?? error);
+    }
+  };
+  
+  useEffect(() => { fetch(); }, []);
+  
+  return <div>...</div>;
+};
+```
+
+### Copyright Headers
+
+**New slskdN files:**
+```csharp
+// <copyright file="MyFile.cs" company="slskdN Team">
+// Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+```
+
+**Existing upstream files:** Keep original `company="slskd Team"` attribution.
+
+**Fork-specific directories** (always use slskdN headers):
+- `Capabilities/`, `HashDb/`, `Mesh/`, `Backfill/`
+- `Transfers/MultiSource/`, `Transfers/Ranking/`
+- `Users/Notes/`, `Wishlist/`
+
+## Testing
+
+### Running Tests
+
+```bash
+# All tests
+dotnet test
+
+# Specific test project
+dotnet test tests/slskd.Tests.Unit/
+
+# Specific test class
+dotnet test --filter "FullyQualifiedName~TestClassName"
+
+# With coverage
+dotnet test /p:CollectCoverage=true
+```
+
+### Writing Tests
+
+- **Unit tests**: Test individual components in isolation
+- **Integration tests**: Test component interactions
+- **E2E tests**: Test full workflows (use `SlskdnFullInstanceRunner` for TCP tests)
+
+**Example unit test:**
+```csharp
+[Fact]
+public void MyService_Should_DoSomething()
+{
+    // Arrange
+    var logger = new Mock<ILogger<MyService>>();
+    var service = new MyService(logger.Object);
+    
+    // Act
+    var result = service.DoSomething();
+    
+    // Assert
+    Assert.NotNull(result);
+}
+```
+
+### Test Organization
+
+- **Unit tests**: `tests/slskd.Tests.Unit/`
+- **Integration tests**: `tests/slskd.Tests.Integration/`
+- **Frontend tests**: `src/web/src/**/*.test.js`
+
 ## Debugging
 
 ### Back End
 
-Run `./bin/watch` from the root of the repository.
+Run `./bin/watch` from the root of the repository. This starts the backend in watch mode with hot reload.
+
+**Debug in IDE:**
+- Set breakpoints in your IDE
+- Attach debugger to running process
+- Or run directly from IDE with debug configuration
 
 ### Front End
 
-Run `./bin/watch --web` from the root of the directory.  Make sure the back end is running first.
+Run `./bin/watch --web` from the root of the directory. Make sure the back end is running first.
+
+**Debug in browser:**
+- Open browser DevTools (F12)
+- Set breakpoints in Sources tab
+- Use React DevTools extension for component inspection
+
+### Common Debugging Scenarios
+
+**Backend not starting:**
+- Check logs: `tail -f ~/.config/slskd/logs/slskd.log`
+- Verify configuration: `config/slskd.yml`
+- Check port availability: `netstat -an | grep 5000`
+
+**Frontend not connecting:**
+- Verify backend is running
+- Check CORS settings
+- Verify API endpoint URLs
+
+**Tests failing:**
+- Run tests individually to isolate
+- Check test output for specific errors
+- Verify test data/fixtures
+
+## Project Structure
+
+```
+slskdn/
+├── src/
+│   ├── slskd/              # Backend C# code
+│   │   ├── API/            # API controllers
+│   │   ├── Core/           # Core services
+│   │   ├── Mesh/           # Mesh networking
+│   │   ├── Transfers/      # Download/upload logic
+│   │   └── ...
+│   └── web/                # Frontend React code
+│       ├── src/
+│       │   ├── components/ # React components
+│       │   ├── lib/        # API client libraries
+│       │   └── ...
+│       └── package.json
+├── tests/                  # Test projects
+├── docs/                   # Documentation
+├── config/                 # Configuration examples
+└── bin/                    # Build scripts
+```
+
+## Key Documentation
+
+Before contributing, read:
+
+1. **[AGENTS.md](AGENTS.md)**: AI agent guidelines and rules
+2. **[memory-bank/decisions/adr-0001-known-gotchas.md](memory-bank/decisions/adr-0001-known-gotchas.md)**: Critical bugs to avoid
+3. **[memory-bank/decisions/adr-0002-code-patterns.md](memory-bank/decisions/adr-0002-code-patterns.md)**: Code patterns to follow
+4. **[memory-bank/decisions/adr-0003-anti-slop-rules.md](memory-bank/decisions/adr-0003-anti-slop-rules.md)**: What NOT to do
+5. **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**: Architecture overview
+
+## Code Review Checklist
+
+Before submitting a PR, ensure:
+
+- [ ] Code follows style guidelines
+- [ ] Tests are written and passing
+- [ ] Documentation is updated
+- [ ] No linter errors (`./bin/lint`)
+- [ ] Copyright headers are correct
+- [ ] No hardcoded paths or secrets
+- [ ] Error handling is appropriate
+- [ ] Logging is meaningful (not spam)
+- [ ] No stubs or `NotImplementedException` (create tasks instead)
+
+## Getting Help
+
+- **Discord**: [Join our Discord](https://discord.gg/NRzj8xycQZ)
+- **GitHub Issues**: [Open an issue](https://github.com/snapetech/slskdn/issues)
+- **Documentation**: See [docs/README.md](docs/README.md)
+
+---
+
+Thank you for contributing to slskdN!

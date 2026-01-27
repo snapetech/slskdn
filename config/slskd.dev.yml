@@ -36,6 +36,9 @@ global:
 #     - ./test-data/slskdn-test-fixtures
 shares: []
 
+flags:
+  no_share_scan: true  # Skip share scanning to speed up startup
+
 debug: true
 
 security:

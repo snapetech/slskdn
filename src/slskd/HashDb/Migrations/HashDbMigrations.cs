@@ -30,7 +30,7 @@ public static class HashDbMigrations
     /// <summary>
     ///     Current schema version. Increment when adding new migrations.
     /// </summary>
-    public const int CurrentVersion = 9;
+    public const int CurrentVersion = 16;
 
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HashDbMigrations));
 
@@ -592,6 +592,33 @@ public static class HashDbMigrations
             new Migration
             {
                 Version = 10,
+                Name = "Database optimization indexes",
+                Apply = conn =>
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        -- Indexes for frequently queried columns
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_musicbrainz_id ON HashDb(musicbrainz_id);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_use_count ON HashDb(use_count);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_last_updated ON HashDb(last_updated_at);
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_first_seen ON HashDb(first_seen_at);
+                        
+                        -- Composite index for size + use_count ordering (common query pattern)
+                        CREATE INDEX IF NOT EXISTS idx_hashdb_size_use_count ON HashDb(size, use_count DESC);
+                        
+                        -- Composite index for FlacInventory status + discovered_at ordering
+                        CREATE INDEX IF NOT EXISTS idx_inventory_status_discovered ON FlacInventory(hash_status, discovered_at DESC);
+                        
+                        -- Index for Peers backfill queries
+                        CREATE INDEX IF NOT EXISTS idx_peers_backfill_reset ON Peers(backfill_reset_date, backfills_today);
+                    ";
+                    cmd.ExecuteNonQuery();
+                },
+            },
+
+            new Migration
+            {
+                Version = 12,
                 Name = "Label crate job cache",
                 Apply = conn =>
                 {
@@ -624,7 +651,7 @@ public static class HashDbMigrations
 
             new Migration
             {
-                Version = 11,
+                Version = 13,
                 Name = "Peer metrics storage",
                 Apply = conn =>
                 {
@@ -679,7 +706,7 @@ public static class HashDbMigrations
 
             new Migration
             {
-                Version = 13,
+                Version = 14,
                 Name = "Warm cache popularity",
                 Apply = conn =>
                 {
@@ -722,7 +749,7 @@ public static class HashDbMigrations
 
             new Migration
             {
-                Version = 15,
+                Version = 16,
                 Name = "Virtual Soulfind pseudonyms",
                 Apply = conn =>
                 {

@@ -154,6 +154,9 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddApplicationPart(typeof(SearchCompatibilityController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.DisasterModeController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.Search.API.SearchActionsController).Assembly)
+                        .AddApplicationPart(typeof(global::slskd.Transfers.MultiSource.API.AnalyticsController).Assembly)
+                        .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeController).Assembly)
+                        .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeAdminController).Assembly)
                         .ConfigureApplicationPartManager(manager =>
                         {
                             // Exclude conflicting controllers - use JobsController instead
@@ -196,6 +199,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddSingleton<ITransferService>(_ => NullProxy<ITransferService>.Create())
                         .AddSingleton<ISearchService, StubSearchService>()
                         .AddSingleton<IWarmCachePopularityService>(_ => NullProxy<IWarmCachePopularityService>.Create())
+                        .AddSingleton<slskd.Transfers.MultiSource.Analytics.ISwarmAnalyticsService, StubSwarmAnalyticsService>()
                         // ISoulseekClient for CompatibilityController (GET /api/info) — Soulbeet
                         .AddSingleton<ISoulseekClient>(_ => Mock.Of<ISoulseekClient>(x =>
                             x.State == SoulseekClientStates.LoggedIn && x.Username == "test-user"));
@@ -228,6 +232,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                     services.AddSingleton<IBridgeApi>(sp => sp.GetRequiredService<StubBridgeApi>());
                     services.AddSingleton<ISoulfindBridgeService, TestSoulfindBridgeService>();
                     services.AddSingleton<IBridgeDashboard, BridgeDashboard>();
+                    services.AddSingleton<ITransferProgressProxy>(_ => NullProxy<ITransferProgressProxy>.Create());
                 });
                 
                 webBuilder.Configure(app =>
@@ -268,6 +273,47 @@ internal class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptio
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, "Test");
         return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+}
+
+internal class StubSwarmAnalyticsService : slskd.Transfers.MultiSource.Analytics.ISwarmAnalyticsService
+{
+    public Task<slskd.Transfers.MultiSource.Analytics.SwarmPerformanceMetrics> GetPerformanceMetricsAsync(
+        TimeSpan? timeWindow = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new slskd.Transfers.MultiSource.Analytics.SwarmPerformanceMetrics
+        {
+            TimeWindow = timeWindow ?? TimeSpan.FromHours(24)
+        });
+    }
+
+    public Task<List<slskd.Transfers.MultiSource.Analytics.PeerPerformanceRanking>> GetPeerRankingsAsync(
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new List<slskd.Transfers.MultiSource.Analytics.PeerPerformanceRanking>());
+    }
+
+    public Task<slskd.Transfers.MultiSource.Analytics.SwarmEfficiencyMetrics> GetEfficiencyMetricsAsync(
+        TimeSpan? timeWindow = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new slskd.Transfers.MultiSource.Analytics.SwarmEfficiencyMetrics());
+    }
+
+    public Task<slskd.Transfers.MultiSource.Analytics.SwarmTrends> GetTrendsAsync(
+        TimeSpan timeWindow,
+        int dataPoints = 24,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new slskd.Transfers.MultiSource.Analytics.SwarmTrends());
+    }
+
+    public Task<List<slskd.Transfers.MultiSource.Analytics.SwarmRecommendation>> GetRecommendationsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new List<slskd.Transfers.MultiSource.Analytics.SwarmRecommendation>());
     }
 }
 

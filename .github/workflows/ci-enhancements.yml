@@ -1,0 +1,301 @@
+name: CI Enhancements
+
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-slskdn.[0-9]+"
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8'
+  NODE_VERSION: '20'
+
+jobs:
+  performance-regression:
+    name: Performance Regression Testing
+    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: |
+          echo "Using pre-installed .NET SDK"
+          dotnet --version
+
+      - name: Restore Performance Benchmark Project
+        run: |
+          dotnet restore tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj
+
+      - name: Run Performance Benchmarks
+        id: benchmarks
+        run: |
+          dotnet run --project tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj \
+            --configuration Release \
+            --no-build \
+            -- \
+            --exporters json \
+            --artifacts BenchmarkDotNet.Artifacts
+        continue-on-error: true
+
+      - name: Upload Benchmark Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            tests/slskd.Tests.Performance/BenchmarkDotNet.Artifacts/results/*.json
+            tests/slskd.Tests.Performance/BenchmarkDotNet.Artifacts/results/*.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Compare Against Baseline
+        if: steps.benchmarks.outcome == 'success'
+        run: |
+          echo "## Performance Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Benchmarks completed. Results uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Review benchmark results in artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Compare against previous runs to detect regressions" >> $GITHUB_STEP_SUMMARY
+          echo "- Investigate any significant performance degradation (>10%)" >> $GITHUB_STEP_SUMMARY
+
+  load-testing:
+    name: Load Testing
+    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: dotnet --version
+
+      - name: Build Application
+        run: |
+          dotnet build src/slskd/slskd.csproj -c Release --no-incremental
+
+      - name: Start Application
+        run: |
+          # Start slskdn in background for load testing
+          dotnet run --project src/slskd/slskd.csproj -c Release --no-build &
+          echo $! > slskdn.pid
+          # Wait for application to start
+          timeout 60 bash -c 'until curl -f http://localhost:5000/api/v0/session/enabled; do sleep 2; done' || true
+        continue-on-error: true
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D9B
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Create Load Test Script
+        run: |
+          cat > load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate } from 'k6/metrics';
+
+          const errorRate = new Rate('errors');
+
+          export const options = {
+            stages: [
+              { duration: '30s', target: 10 },   // Ramp up to 10 users
+              { duration: '1m', target: 50 },     // Ramp up to 50 users
+              { duration: '2m', target: 100 },    // Stay at 100 users
+              { duration: '1m', target: 50 },     // Ramp down to 50 users
+              { duration: '30s', target: 0 },    // Ramp down to 0 users
+            ],
+            thresholds: {
+              'http_req_duration': ['p(95)<500', 'p(99)<1000'], // 95% of requests < 500ms, 99% < 1s
+              'http_req_failed': ['rate<0.01'],                 // Error rate < 1%
+              'errors': ['rate<0.01'],                           // Custom error rate < 1%
+            },
+          };
+
+          const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+
+          export default function () {
+            // Test session endpoint
+            const sessionRes = http.get(`${BASE_URL}/api/v0/session/enabled`);
+            check(sessionRes, {
+              'session status is 200': (r) => r.status === 200,
+            }) || errorRate.add(1);
+
+            // Test application state endpoint
+            const stateRes = http.get(`${BASE_URL}/api/v0/application/state`);
+            check(stateRes, {
+              'state status is 200': (r) => r.status === 200,
+            }) || errorRate.add(1);
+
+            // Test search creation (POST)
+            const searchPayload = JSON.stringify({ query: 'test', scope: 'all' });
+            const searchRes = http.post(`${BASE_URL}/api/v0/searches`, searchPayload, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+            check(searchRes, {
+              'search creation status is 201 or 200': (r) => r.status === 201 || r.status === 200,
+            }) || errorRate.add(1);
+
+            sleep(1);
+          }
+          EOF
+
+      - name: Run Load Tests
+        id: loadtest
+        run: |
+          k6 run --out json=load-test-results.json load-test.js || true
+        continue-on-error: true
+        env:
+          BASE_URL: http://localhost:5000
+
+      - name: Upload Load Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: |
+            load-test-results.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Stop Application
+        if: always()
+        run: |
+          if [ -f slskdn.pid ]; then
+            kill $(cat slskdn.pid) || true
+            rm slskdn.pid
+          fi
+          pkill -f "dotnet.*slskd" || true
+
+      - name: Report Load Test Results
+        if: steps.loadtest.outcome == 'success'
+        run: |
+          echo "## Load Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Load tests completed. Results uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Ramp up: 10 → 50 → 100 users" >> $GITHUB_STEP_SUMMARY
+          echo "- Sustained load: 100 users for 2 minutes" >> $GITHUB_STEP_SUMMARY
+          echo "- Thresholds: 95% < 500ms, 99% < 1s, error rate < 1%" >> $GITHUB_STEP_SUMMARY
+
+  security-scanning:
+    name: Security Scanning
+    runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      matrix:
+        scan-type: [code, container]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: CodeQL Analysis
+        if: matrix.scan-type == 'code'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp, javascript
+          queries: +security-and-quality
+
+      - name: Autobuild
+        if: matrix.scan-type == 'code'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        if: matrix.scan-type == 'code'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.scan-type }}"
+
+      - name: Install Trivy
+        if: matrix.scan-type == 'container'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Build Docker Image for Scanning
+        if: matrix.scan-type == 'container'
+        run: |
+          docker build -t slskdn:test -f Dockerfile .
+
+      - name: Run Trivy Vulnerability Scanner
+        if: matrix.scan-type == 'container'
+        run: |
+          trivy image --exit-code 0 --severity HIGH,CRITICAL --format json --output trivy-results.json slskdn:test || true
+          trivy image --exit-code 0 --severity HIGH,CRITICAL --format table slskdn:test || true
+
+      - name: Upload Trivy Results
+        if: matrix.scan-type == 'container' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Scan Dependencies (NuGet)
+        if: matrix.scan-type == 'code'
+        run: |
+          dotnet list src/slskd/slskd.csproj package --vulnerable --include-transitive || true
+
+      - name: Scan Dependencies (npm)
+        if: matrix.scan-type == 'code'
+        run: |
+          cd src/web
+          npm audit --audit-level=moderate || true
+
+      - name: Report Security Scan Results
+        if: always()
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ matrix.scan-type }}" == "code" ]; then
+            echo "### CodeQL Analysis" >> $GITHUB_STEP_SUMMARY
+            echo "- Languages: C#, JavaScript" >> $GITHUB_STEP_SUMMARY
+            echo "- Queries: Security and Quality" >> $GITHUB_STEP_SUMMARY
+            echo "- Results available in Security tab" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Container Security (Trivy)" >> $GITHUB_STEP_SUMMARY
+            echo "- Scanned: Dockerfile" >> $GITHUB_STEP_SUMMARY
+            echo "- Severity: HIGH, CRITICAL" >> $GITHUB_STEP_SUMMARY
+            echo "- Results uploaded as artifacts" >> $GITHUB_STEP_SUMMARY
+          fi

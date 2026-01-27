@@ -338,6 +338,13 @@ namespace slskd
         public MetricsOptions Metrics { get; init; } = new MetricsOptions();
 
         /// <summary>
+        ///     Gets telemetry options (OpenTelemetry tracing).
+        /// </summary>
+        [Validate]
+        [RequiresRestart]
+        public TelemetryOptions Telemetry { get; init; } = new TelemetryOptions();
+
+        /// <summary>
         ///     Gets feature options.
         /// </summary>
         [Validate]
@@ -3423,6 +3430,69 @@ namespace slskd
             [Description("download speed limit during night hours")]
             [Range(1, int.MaxValue)]
             public int NightDownloadSpeedLimit { get; init; } = 200;
+        }
+
+        /// <summary>
+        ///     Telemetry options for OpenTelemetry distributed tracing.
+        /// </summary>
+        public class TelemetryOptions
+        {
+            /// <summary>
+            ///     Gets tracing options.
+            /// </summary>
+            [Validate]
+            public TracingOptions Tracing { get; init; } = new TracingOptions();
+
+            /// <summary>
+            ///     Tracing options for OpenTelemetry.
+            /// </summary>
+            public class TracingOptions
+            {
+                /// <summary>
+                ///     Gets a value indicating whether distributed tracing is enabled.
+                /// </summary>
+                [Argument(default, "telemetry-tracing")]
+                [EnvironmentVariable("TELEMETRY_TRACING")]
+                [Description("enable OpenTelemetry distributed tracing")]
+                [RequiresRestart]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the tracing exporter type (console, jaeger, otlp).
+                /// </summary>
+                [Argument(default, "telemetry-tracing-exporter")]
+                [EnvironmentVariable("TELEMETRY_TRACING_EXPORTER")]
+                [Description("tracing exporter type (console, jaeger, otlp)")]
+                [RequiresRestart]
+                public string Exporter { get; init; } = "console";
+
+                /// <summary>
+                ///     Gets the Jaeger endpoint (host:port or host).
+                /// </summary>
+                [Argument(default, "telemetry-jaeger-endpoint")]
+                [EnvironmentVariable("TELEMETRY_JAEGER_ENDPOINT")]
+                [Description("Jaeger endpoint (host:port or host)")]
+                [RequiresRestart]
+                public string? JaegerEndpoint { get; init; }
+
+                /// <summary>
+                ///     Gets the Jaeger port (if not specified in endpoint).
+                /// </summary>
+                [Argument(default, "telemetry-jaeger-port")]
+                [EnvironmentVariable("TELEMETRY_JAEGER_PORT")]
+                [Description("Jaeger port (if not specified in endpoint)")]
+                [RequiresRestart]
+                public int? JaegerPort { get; init; }
+
+                /// <summary>
+                ///     Gets the OTLP endpoint URL.
+                /// </summary>
+                [Argument(default, "telemetry-otlp-endpoint")]
+                [EnvironmentVariable("TELEMETRY_OTLP_ENDPOINT")]
+                [Description("OTLP endpoint URL")]
+                [RequiresRestart]
+                public string? OtlpEndpoint { get; init; }
+            }
         }
     }
 }

@@ -3,7 +3,7 @@ import {
   serializeFiltersToString,
 } from '../../../lib/searches';
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Header, Modal, Segment } from 'semantic-ui-react';
+import { Button, Form, Header, Icon, Modal, Segment } from 'semantic-ui-react';
 
 const SearchFilterModal = ({ filterString, onChange, trigger }) => {
   const [open, setOpen] = useState(false);
@@ -68,6 +68,19 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
                 type="number"
                 value={filters.minBitDepth || ''}
               />
+              <Form.Input
+                label="Min Sample Rate (Hz)"
+                min={0}
+                onChange={(event) =>
+                  handleChange(
+                    'minSampleRate',
+                    Number.parseInt(event.target.value, 10) || 0,
+                  )
+                }
+                placeholder="e.g. 44100"
+                type="number"
+                value={filters.minSampleRate || ''}
+              />
             </Form.Group>
             <Form.Group inline>
               <Form.Checkbox
@@ -92,6 +105,55 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
                 label="Lossy"
                 onChange={(_, { checked }) => handleChange('isLossy', checked)}
               />
+            </Form.Group>
+            <Form.Group>
+              <Form.Field>
+                <label>Quality Presets</label>
+                <Button.Group>
+                  <Button
+                    compact
+                    onClick={() => {
+                      handleChange('minBitRate', 320);
+                      handleChange('isLossless', false);
+                      handleChange('isLossy', true);
+                    }}
+                    size="small"
+                    type="button"
+                  >
+                    <Icon name="music" />
+                    High Quality (320kbps+)
+                  </Button>
+                  <Button
+                    compact
+                    onClick={() => {
+                      handleChange('isLossless', true);
+                      handleChange('isLossy', false);
+                      handleChange('minBitDepth', 16);
+                      handleChange('minSampleRate', 44100);
+                    }}
+                    size="small"
+                    type="button"
+                  >
+                    <Icon name="star" />
+                    Lossless Only
+                  </Button>
+                  <Button
+                    compact
+                    onClick={() => {
+                      handleChange('minBitRate', 0);
+                      handleChange('isLossless', false);
+                      handleChange('isLossy', false);
+                      handleChange('minBitDepth', 0);
+                      handleChange('minSampleRate', 0);
+                    }}
+                    size="small"
+                    type="button"
+                  >
+                    <Icon name="eraser" />
+                    Clear Quality
+                  </Button>
+                </Button.Group>
+              </Form.Field>
             </Form.Group>
           </Segment>
 
@@ -185,6 +247,31 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
               placeholder="live demo"
               value={(filters.exclude || []).join(' ')}
             />
+          </Segment>
+
+          <Segment>
+            <Header size="tiny">Format/Codec</Header>
+            <Form.Group>
+              <Form.Field>
+                <label>File Extensions (space separated)</label>
+                <Form.Input
+                  onChange={(event) =>
+                    handleChange(
+                      'extensions',
+                      event.target.value
+                        .split(' ')
+                        .filter((t) => t.trim())
+                        .map((t) => t.toLowerCase().replace(/^\./, '')),
+                    )
+                  }
+                  placeholder="flac mp3 wav"
+                  value={(filters.extensions || []).join(' ')}
+                />
+                <label style={{ fontSize: '0.9em', opacity: 0.8 }}>
+                  Filter by file extension (e.g., flac, mp3, wav, m4a)
+                </label>
+              </Form.Field>
+            </Form.Group>
           </Segment>
         </Form>
       </Modal.Content>

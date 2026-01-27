@@ -16,6 +16,8 @@
 // </copyright>
 
 using Microsoft.Extensions.Options;
+using slskd.Telemetry;
+using System.Diagnostics;
 
 namespace slskd.Search
 {
@@ -268,6 +270,12 @@ namespace slskd.Search
         /// <returns>The completed search.</returns>
         public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null)
         {
+            using var activity = SearchActivitySource.Source.StartActivity("search.start");
+            activity?.SetTag("search.id", id.ToString());
+            activity?.SetTag("search.query", query.SearchText);
+            activity?.SetTag("search.scope", scope.ToString());
+            activity?.SetTag("search.providers", requestedProviders != null ? string.Join(",", requestedProviders) : "all");
+
             // Check if Scene ↔ Pod Bridging is enabled
             var scenePodBridgeEnabled = OptionsMonitor.CurrentValue.Feature.ScenePodBridge;
             if (scenePodBridgeEnabled && SearchProviders.Any())

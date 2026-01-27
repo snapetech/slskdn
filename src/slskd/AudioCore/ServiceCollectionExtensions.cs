@@ -11,6 +11,7 @@ namespace slskd.AudioCore
     using slskd.Audio;
     using slskd.Events;
     using slskd.HashDb;
+    using slskd.HashDb.Optimization;
     using slskd.Integrations.AcoustId;
     using slskd.Integrations.AutoTagging;
     using slskd.Integrations.Chromaprint;
@@ -20,6 +21,7 @@ namespace slskd.AudioCore
     using slskd.LibraryHealth.Remediation;
     using slskd.MediaCore;
     using slskd.VirtualSoulfind.Core.Music;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>
     ///     DI extensions for the AudioCore domain module. T-913.
@@ -64,8 +66,26 @@ namespace slskd.AudioCore
                 sp.GetRequiredService<IAcoustIdClient>(),
                 sp.GetRequiredService<IAutoTaggingService>(),
                 sp.GetRequiredService<IMusicBrainzClient>(),
-                sp.GetRequiredService<IOptionsMonitor<slskdOptions>>()));
+                sp.GetRequiredService<IOptionsMonitor<slskdOptions>>(),
+                sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
             services.AddSingleton<IMediaVariantStore, HashDbMediaVariantStore>();
+
+            // HashDb optimization service
+            var hashDbPath = System.IO.Path.Combine(appDirectory, "hashdb.db");
+            services.AddSingleton<HashDb.Optimization.IHashDbOptimizationService>(sp =>
+                new HashDb.Optimization.HashDbOptimizationService(
+                    hashDbPath,
+                    sp.GetRequiredService<ILogger<HashDb.Optimization.HashDbOptimizationService>>()));
+
+            // HashDb optimization options (default: auto-optimize disabled)
+            services.Configure<HashDb.Optimization.HashDbOptimizationOptions>(options =>
+            {
+                // Auto-optimization disabled by default (users can enable via config if needed)
+                options.AutoOptimizeOnStartup = false;
+            });
+
+            // HashDb optimization hosted service (runs optimization on startup if enabled)
+            services.AddHostedService<HashDb.Optimization.HashDbOptimizationHostedService>();
 
             // Canonical, dedupe, analyzer migration
             services.AddSingleton<ICanonicalStatsService, CanonicalStatsService>();

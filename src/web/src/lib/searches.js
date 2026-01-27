@@ -137,9 +137,11 @@ export const parseFiltersFromString = (string) => {
     maxFileSize: Number.MAX_SAFE_INTEGER,
     minBitDepth: 0,
     minBitRate: 0,
+    minSampleRate: 0,
     minFilesInFolder: 0,
     minFileSize: 0,
     minLength: 0,
+    extensions: [],
   };
 
   filters.minBitRate =
@@ -147,6 +149,9 @@ export const parseFiltersFromString = (string) => {
   filters.minBitDepth =
     getNthMatch(string, /(minbd|minbitdepth):(\d+)/iu, 2) ||
     filters.minBitDepth;
+  filters.minSampleRate =
+    getNthMatch(string, /(minsr|minsamplerate):(\d+)/iu, 2) ||
+    filters.minSampleRate;
 
   filters.minFileSize =
     getSizeFromRegex(string, /(minfs|minfilesize):(\d+)(kb|mb|gb)?/iu) ||
@@ -167,6 +172,15 @@ export const parseFiltersFromString = (string) => {
   filters.isLossless = Boolean(/islossless/iu.test(string));
   filters.isLossy = Boolean(/islossy/iu.test(string));
 
+  // Parse extensions: ext:flac,mp3 or ext:flac mp3
+  const extMatch = string.match(/ext:([^\s]+)/iu);
+  if (extMatch) {
+    filters.extensions = extMatch[1]
+      .split(/[, ]/)
+      .map((e) => e.toLowerCase().trim())
+      .filter((e) => e.length > 0);
+  }
+
   const terms = string
     .toLowerCase()
     .split(' ')
@@ -176,7 +190,8 @@ export const parseFiltersFromString = (string) => {
         term !== 'isvbr' &&
         term !== 'iscbr' &&
         term !== 'islossless' &&
-        term !== 'islossy',
+        term !== 'islossy' &&
+        !term.startsWith('ext:'),
     );
 
   filters.include = terms.filter((term) => !term.startsWith('-'));
@@ -205,11 +220,13 @@ const filterFile = (file, filters) => {
     isLossy,
     minBitRate,
     minBitDepth,
+    minSampleRate,
     maxFileSize,
     minFileSize,
     minLength,
     include = [],
     exclude = [],
+    extensions = [],
   } = filters;
 
   if (isCBR && (isVariableBitRate === undefined || isVariableBitRate))
@@ -220,9 +237,16 @@ const filterFile = (file, filters) => {
   if (isLossy && (sampleRate || bitDepth)) return false;
   if (bitRate < minBitRate) return false;
   if (bitDepth < minBitDepth) return false;
+  if (minSampleRate && sampleRate && sampleRate < minSampleRate) return false;
   if (size < minFileSize) return false;
   if (size > maxFileSize) return false;
   if (length < minLength) return false;
+
+  // Filter by file extension
+  if (extensions.length > 0) {
+    const fileExt = filename.split('.').pop()?.toLowerCase();
+    if (!fileExt || !extensions.includes(fileExt)) return false;
+  }
 
   if (
     include.length > 0 &&
@@ -249,9 +273,11 @@ export const filterResponse = ({
     maxFileSize: Number.MAX_SAFE_INTEGER,
     minBitDepth: 0,
     minBitRate: 0,
+    minSampleRate: 0,
     minFilesInFolder: 0,
     minFileSize: 0,
     minLength: 0,
+    extensions: [],
   },
   response = {
     files: [],
@@ -292,6 +318,7 @@ export const serializeFiltersToString = (filters) => {
 
   if (filters.minBitRate) parts.push(`minbr:${filters.minBitRate}`);
   if (filters.minBitDepth) parts.push(`minbd:${filters.minBitDepth}`);
+  if (filters.minSampleRate) parts.push(`minsr:${filters.minSampleRate}`);
   if (filters.minFileSize) parts.push(`minfs:${filters.minFileSize}`);
   if (filters.maxFileSize && filters.maxFileSize < Number.MAX_SAFE_INTEGER)
     parts.push(`maxfs:${filters.maxFileSize}`);
@@ -303,6 +330,10 @@ export const serializeFiltersToString = (filters) => {
   if (filters.isCBR) parts.push('iscbr');
   if (filters.isLossless) parts.push('islossless');
   if (filters.isLossy) parts.push('islossy');
+
+  if (filters.extensions && filters.extensions.length > 0) {
+    parts.push(`ext:${filters.extensions.join(',')}`);
+  }
 
   return parts.join(' ');
 };

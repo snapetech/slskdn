@@ -208,6 +208,13 @@
 #     disabled: false
 #     username: slskd
 #     password: slskd
+# telemetry:
+#   tracing:
+#     enabled: false              # Enable OpenTelemetry distributed tracing (default: false)
+#     exporter: console           # Exporter type: console, jaeger, otlp (default: console)
+#     jaeger_endpoint: localhost  # Jaeger agent host (default: localhost)
+#     jaeger_port: 6831          # Jaeger agent port (default: 6831)
+#     otlp_endpoint: http://localhost:4317  # OTLP collector endpoint (default: http://localhost:4317)
 # PodCore.Security (MessageSigner). PR-12. Binds to PodCore:Security.
 # PodCore.Join (6.4). Binds to PodCore:Join. When SignatureMode Enforce: PodJoinRequest requires Nonce and replay is rejected.
 # PodCore:

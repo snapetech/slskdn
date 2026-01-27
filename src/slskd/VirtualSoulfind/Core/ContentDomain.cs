@@ -87,7 +87,61 @@ namespace slskd.VirtualSoulfind.Core
         /// </summary>
         Video = 3,
 
-        // Future: Movie, Tv, Book, Game, Software
+        /// <summary>
+        ///     Movie domain (films, feature films).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         Supports movie content with:
+        ///         - IMDB ID-based matching
+        ///         - Hash-based matching (SHA256)
+        ///         - File size matching
+        ///         - NO Soulseek backend (mesh/DHT/torrent/HTTP/local only)
+        ///     </para>
+        ///     <para>
+        ///         Works correspond to Movies.
+        ///         Items correspond to specific encodings/editions.
+        ///     </para>
+        /// </remarks>
+        Movie = 4,
+
+        /// <summary>
+        ///     TV domain (television shows, series, episodes).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         Supports TV content with:
+        ///         - TVDB ID-based matching (series, season, episode)
+        ///         - Hash-based matching (SHA256)
+        ///         - File size matching
+        ///         - NO Soulseek backend (mesh/DHT/torrent/HTTP/local only)
+        ///     </para>
+        ///     <para>
+        ///         Works correspond to TV Series.
+        ///         Items correspond to Episodes.
+        ///     </para>
+        /// </remarks>
+        Tv = 5,
+
+        /// <summary>
+        ///     Book domain (books, documents, ebooks).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         Supports book content with:
+        ///         - ISBN-based matching
+        ///         - Hash-based matching (SHA256)
+        ///         - Format detection (PDF, EPUB, etc.)
+        ///         - NO Soulseek backend (mesh/DHT/torrent/HTTP/local only)
+        ///     </para>
+        ///     <para>
+        ///         Works correspond to Books.
+        ///         Items correspond to specific editions/formats.
+        ///     </para>
+        /// </remarks>
+        Book = 6,
+
+        // Future: Game, Software
     }
 }
 

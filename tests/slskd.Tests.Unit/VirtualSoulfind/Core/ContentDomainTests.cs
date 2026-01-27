@@ -29,6 +29,11 @@ public class ContentDomainTests
     [Theory]
     [InlineData(0, ContentDomain.Music)]
     [InlineData(1, ContentDomain.GenericFile)]
+    [InlineData(2, ContentDomain.Image)]
+    [InlineData(3, ContentDomain.Video)]
+    [InlineData(4, ContentDomain.Movie)]
+    [InlineData(5, ContentDomain.Tv)]
+    [InlineData(6, ContentDomain.Book)]
     public void ContentDomain_CanBeCastFromInt(int value, ContentDomain expected)
     {
         // Arrange & Act
@@ -44,6 +49,11 @@ public class ContentDomainTests
         // Arrange & Act & Assert
         Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.Music));
         Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.GenericFile));
+        Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.Image));
+        Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.Video));
+        Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.Movie));
+        Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.Tv));
+        Assert.True(Enum.IsDefined(typeof(ContentDomain), ContentDomain.Book));
     }
 }
 

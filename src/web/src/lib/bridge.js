@@ -1,4 +1,4 @@
-import * as api from './api';
+import api from './api';
 
 /**
  * Bridge API library for legacy client compatibility.

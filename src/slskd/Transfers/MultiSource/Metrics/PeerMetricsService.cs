@@ -17,14 +17,16 @@
 
 namespace slskd.Transfers.MultiSource.Metrics
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Microsoft.Extensions.Logging;
-    using slskd.HashDb;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using slskd.HashDb;
+using slskd.Telemetry;
+using static slskd.Telemetry.PeerMetrics;
 
     /// <summary>
     ///     Service for tracking per-peer performance metrics with exponential moving averages.
@@ -65,6 +67,8 @@ namespace slskd.Transfers.MultiSource.Metrics
         public async Task RecordRttSampleAsync(string peerId, double rttMs, CancellationToken ct = default)
         {
             var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, ct).ConfigureAwait(false);
+            var sourceLabel = metrics.Source.ToString().ToLowerInvariant();
+            PeerRttMilliseconds.WithLabels(sourceLabel).Observe(rttMs);
 
             lock (metrics)
             {
@@ -111,8 +115,13 @@ namespace slskd.Transfers.MultiSource.Metrics
             }
 
             var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, ct).ConfigureAwait(false);
+            var sourceLabel = metrics.Source.ToString().ToLowerInvariant();
 
             double bytesPerSec = bytesTransferred / duration.TotalSeconds;
+
+            // Update Prometheus metrics
+            PeerThroughputBytesPerSecond.WithLabels(sourceLabel).Observe(bytesPerSec);
+            PeerBytesTransferredTotal.WithLabels(sourceLabel).Inc(bytesTransferred);
 
             lock (metrics)
             {
@@ -156,6 +165,20 @@ namespace slskd.Transfers.MultiSource.Metrics
         public async Task RecordChunkCompletionAsync(string peerId, ChunkCompletionResult result, CancellationToken ct = default)
         {
             var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, ct).ConfigureAwait(false);
+            var sourceLabel = metrics.Source.ToString().ToLowerInvariant();
+
+            // Update Prometheus metrics
+            PeerChunksRequestedTotal.WithLabels(sourceLabel).Inc();
+
+            string statusLabel = result switch
+            {
+                ChunkCompletionResult.Success => "success",
+                ChunkCompletionResult.Failed => "failed",
+                ChunkCompletionResult.TimedOut => "timeout",
+                ChunkCompletionResult.Corrupted => "corrupted",
+                _ => "unknown"
+            };
+            PeerChunksCompletedTotal.WithLabels(sourceLabel, statusLabel).Inc();
 
             lock (metrics)
             {

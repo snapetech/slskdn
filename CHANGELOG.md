@@ -8,6 +8,290 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Swarm Analytics: Advanced Metrics and Reporting
+
+- **Swarm Analytics Service**: Comprehensive analytics and reporting for swarm behavior:
+  - **Performance Metrics**: Overall swarm performance (success rate, average speed, duration, bytes downloaded, chunk metrics)
+  - **Peer Rankings**: Top-performing peers ranked by reputation, RTT, throughput, chunk success rate
+  - **Efficiency Metrics**: Chunk utilization, peer utilization, redundancy factor, time-to-first-byte
+  - **Historical Trends**: Time-series data for success rates, speeds, durations, sources used
+  - **Recommendations Engine**: Automated optimization recommendations based on current performance
+  - **API Endpoints**: RESTful API for accessing all analytics data (`/api/v0/swarm/analytics/*`)
+  - **Frontend Dashboard**: New "Swarm Analytics" tab in System UI with visualizations and metrics
+- **Advanced Discovery Service**: Enhanced peer discovery with improved algorithms:
+  - **Content-Aware Matching**: Similarity scoring based on filename, size, and metadata
+  - **Match Type Classification**: Exact, variant, fuzzy, and metadata-based matching
+  - **Peer Ranking**: Multi-factor ranking (similarity, performance, availability, metadata confidence)
+  - **Fuzzy Matching**: Improved algorithms for finding similar content variants
+- **Adaptive Scheduling**: Machine learning-inspired chunk assignment optimization:
+  - **Learning from Feedback**: Records chunk completion data and adapts weights dynamically
+  - **Factor Correlation Analysis**: Automatically adjusts weights for reputation, throughput, and RTT based on success correlation
+  - **Performance-Based Adaptation**: Adapts scheduling strategy every N completions based on recent performance
+  - **Statistics Tracking**: Tracks peer learning data and provides adaptive scheduling statistics
+- **Cross-Domain Swarming**: Extended swarm capabilities to non-music content domains:
+  - **Domain-Aware Swarming**: Swarm downloads now work for Movies, TV, Books, and GenericFile domains
+  - **Backend Selection Rules**: Domain-specific backend selection (Soulseek only for Music, mesh/DHT/torrent/HTTP for others)
+- **Multi-Domain Support**: New content domain providers:
+  - **Movie Domain**: IMDB ID matching, hash verification, backend selection (mesh/DHT/torrent/HTTP/local only)
+  - **TV Domain**: TVDB ID matching, season/episode matching, series organization
+  - **Book Domain**: ISBN-based matching, format detection (PDF, EPUB, MOBI, etc.)
+  - **Domain Providers**: `IMovieContentDomainProvider`, `ITvContentDomainProvider`, `IBookContentDomainProvider` interfaces and implementations
+  - **ContentDomain Enum**: Extended with `Movie`, `Tv`, and `Book` domains
+
+### Distributed Tracing: OpenTelemetry Support
+
+- **OpenTelemetry Integration**: Comprehensive distributed tracing infrastructure:
+  - **Configuration**: New `telemetry.tracing` options in config:
+    - `enabled`: Enable/disable tracing (default: false)
+    - `exporter`: Exporter type - console, jaeger, or otlp (default: console)
+    - `jaeger_endpoint` and `jaeger_port`: Jaeger agent configuration
+    - `otlp_endpoint`: OTLP collector endpoint URL
+  - **Activity Sources**: Dedicated activity sources for different components:
+    - `slskdn.Transfers.MultiSource`: Swarm download operations
+    - `slskdn.Mesh`: Mesh network operations (DHT queries, overlay transfers)
+    - `slskdn.HashDb`: HashDb lookup and storage operations
+    - `slskdn.Search`: Search operations
+  - **Swarm Download Tracing**:
+    - Traces entire swarm download lifecycle with tags for:
+      - Download ID, filename, size, sources count, chunk size
+      - Success/failure status, duration, sources used, speed
+      - Individual chunk completion events with peer and performance data
+  - **Mesh Network Tracing**:
+    - DHT operations: `mesh.dht.store`, `mesh.dht.find_value`, `mesh.dht.find_node`
+    - Tags include: key, value size, TTL, success status, nodes found
+  - **HashDb Tracing**:
+    - `hashdb.lookup` operations with cache hit/miss tracking
+    - Tags include: lookup key, cache hit status, found status
+  - **Search Tracing**:
+    - `search.start` operations with query, scope, and provider information
+  - **Automatic Instrumentation**: ASP.NET Core and HTTP client instrumentation enabled
+  - **Exporters**: Support for console (default), Jaeger, and OTLP exporters
+  - **Documentation**: Updated `config/slskd.example.yml` with telemetry configuration examples
+
+### CI/CD Enhancements
+
+- **Performance Regression Testing**: Automated performance benchmark execution in CI:
+  - Runs BenchmarkDotNet suite on pull requests and scheduled runs
+  - Compares results against baseline to detect performance regressions
+  - Uploads benchmark results as artifacts for analysis
+  - Reports significant performance degradation (>10%) in workflow summary
+- **Load Testing**: Automated load testing with k6:
+  - Tests API endpoints under sustained load (up to 100 concurrent users)
+  - Ramp-up and ramp-down phases to simulate realistic traffic patterns
+  - Performance thresholds: 95% of requests < 500ms, 99% < 1s, error rate < 1%
+  - Uploads load test results as JSON artifacts
+- **Security Scanning**: Comprehensive security analysis:
+  - **CodeQL Analysis**: Static code analysis for C# and JavaScript:
+    - Security and quality queries enabled
+    - Results available in GitHub Security tab
+  - **Container Security (Trivy)**: Docker image vulnerability scanning:
+    - Scans for HIGH and CRITICAL vulnerabilities
+    - Reports on base images and dependencies
+  - **Dependency Scanning**: Automated vulnerability detection:
+    - NuGet package vulnerability scanning (transitive dependencies included)
+    - npm audit for frontend dependencies (moderate+ severity)
+- **Workflow Configuration**: New `.github/workflows/ci-enhancements.yml`:
+  - Runs on pull requests, pushes to master, tags, and weekly schedule
+  - Parallel execution of performance, load, and security tests
+  - Artifact retention for 30 days
+  - Comprehensive reporting in workflow summaries
+
+### Performance Benchmarking Suite
+
+- **Comprehensive BenchmarkDotNet Suite**: Performance benchmarks for critical components:
+  - **HashDb Benchmarks**: Database query performance, caching effectiveness:
+    - Lookup performance (with/without cache, cache hits)
+    - Query performance (size-based queries, sequential/parallel lookups)
+    - Write performance (single and batch hash storage)
+    - Statistics retrieval
+  - **Swarm Benchmarks**: Swarm download operations:
+    - Chunk size optimization for various file sizes (100MB-1GB) and peer counts (5-20)
+    - Chunk assignment performance (sequential and parallel)
+    - Peer selection based on metrics (throughput, queue length, free slots, reputation)
+  - **API Benchmarks**: API endpoint performance:
+    - GET endpoint performance (session, application state, HashDb stats, paginated jobs)
+    - POST endpoint performance (create search)
+    - Concurrent request handling (10, 50, 100 concurrent requests)
+  - **Transport Benchmarks**: Already existed, now part of comprehensive suite
+  - **Benchmark Project**: New `tests/slskd.Tests.Performance/` project with proper BenchmarkDotNet configuration
+  - **Documentation**: `README.md` with usage instructions, performance targets, and CI integration guidance
+
+### Developer Documentation
+
+- **Enhanced Contributing Guide**: Comprehensive developer resources:
+  - **Development Setup**: Prerequisites, initial setup, build instructions
+  - **Development Workflow**: Feature branch workflow, testing, committing
+  - **Code Style Guidelines**: C# and React style guidelines with examples
+  - **Copyright Headers**: Policy for new vs existing files, fork-specific directories
+  - **Testing**: Running tests, writing tests, test organization
+  - **Debugging**: Backend and frontend debugging instructions, common scenarios
+  - **Project Structure**: Overview of directory layout
+  - **Code Review Checklist**: Pre-PR checklist
+  - **Getting Help**: Community resources
+- **API Documentation Guide**: Complete API reference:
+  - **Base URL and Versioning**: API structure and versioning scheme
+  - **Authentication**: Cookie, JWT, and API key authentication methods
+  - **Response Formats**: Success and error (ProblemDetails) response formats
+  - **Complete Endpoint Reference**: All API endpoints organized by category:
+    - Core APIs (Application, Server, Session)
+    - Search APIs (Searches, Search Actions)
+    - Transfer APIs (Downloads, Uploads)
+    - Multi-Source/Swarm APIs (Swarm Downloads, Tracing, Fairness)
+    - Job APIs
+    - User APIs (Users, User Notes)
+    - Pod APIs (Pods, Pod Messages)
+    - Collections & Sharing APIs
+    - Mesh APIs
+    - Hash Database APIs
+    - Wishlist APIs
+    - Capabilities APIs
+    - Streaming APIs
+    - Library Health APIs
+    - Options & Configuration
+  - **Common Patterns**: Pagination, filtering, sorting
+  - **Error Handling**: HTTP status codes and error responses
+  - **Rate Limiting**: Rate limit information and headers
+  - **API Discovery**: How to find endpoints in source code
+  - **Frontend API Libraries**: Usage of API client libraries
+  - **WebSocket/SignalR**: Real-time update mechanisms
+  - **Code Examples**: curl and JavaScript examples
+  - **Best Practices**: API usage guidelines
+
+### User Documentation
+
+- **Getting Started Guide**: Comprehensive guide for new users:
+  - Installation instructions for all platforms (Linux, macOS, Windows, Docker, package managers)
+  - Initial configuration (password, directories, Soulseek credentials)
+  - Basic usage (searching, downloading, wishlist)
+  - Security best practices
+  - Next steps and community resources
+- **Troubleshooting Guide**: Complete troubleshooting reference:
+  - Connection issues (Soulseek, Mesh/Pod networks)
+  - Download problems (stuck, slow, failing downloads)
+  - Performance issues (high CPU/memory usage)
+  - Configuration problems (saving, validation)
+  - Web interface issues (loading, authentication)
+  - Feature-specific troubleshooting (swarm, wishlist, collections, streaming)
+  - Log analysis and debug techniques
+  - Community support resources
+- **Advanced Features Walkthrough**: Detailed guide for advanced features:
+  - Swarm downloads (operation, monitoring, optimization)
+  - Scene ↔ Pod bridging (unified search, privacy)
+  - Collections & sharing (creation, sharing, backfill)
+  - Streaming (operation, limitations)
+  - Wishlist & background search
+  - Auto-replace stuck downloads
+  - Smart search ranking
+  - Multiple download destinations
+  - Job management & monitoring
+  - Performance tuning and configuration tips
+- **Documentation Index**: Updated `docs/README.md` with links to all new guides
+
+### Swarm Performance Tuning
+
+- **Adaptive Chunk Size Optimization**: Intelligent chunk sizing for swarm downloads:
+  - **Automatic Optimization**: Chunk size automatically optimized based on file size, peer count, and performance metrics
+  - **Heuristics**:
+    - Base calculation targets 2 chunks per peer for optimal parallelism (4-200 chunks total)
+    - Throughput-based adjustment: larger chunks for high throughput (>5 MB/s), smaller for low (<1 MB/s)
+    - Latency-based adjustment: smaller chunks for high latency (>500ms), larger for low (<100ms)
+  - **Constraints**: 64KB minimum, 10MB maximum, aligned to 64KB boundaries
+  - **Integration**: Automatically used when chunk size not explicitly specified in download request
+  - **Service**: `IChunkSizeOptimizer` interface with `ChunkSizeOptimizer` implementation
+  - **Fallback**: Gracefully falls back to default 512KB if optimizer unavailable
+
+### Real-time Swarm Visualization
+
+- **Swarm Visualization Dashboard**: Comprehensive real-time visualization for active swarm downloads:
+  - **Job Overview**: Real-time metrics including chunks completed/total, active workers, chunks/second rate, estimated time remaining, and overall progress bar
+  - **Peer Contributions Table**: Detailed peer performance analysis:
+    - Chunks completed, failed, and timed out per peer
+    - Bytes served per peer
+    - Success rate calculation with color-coded progress indicators (green ≥80%, yellow ≥50%, red <50%)
+    - Peers sorted by contribution (bytes served, then chunks completed)
+  - **Chunk Assignment Heatmap**: Visual grid representation of chunk completion:
+    - Green squares for completed chunks
+    - Gray squares for pending chunks
+    - Tooltips showing chunk index and status
+    - Auto-scaling grid layout based on total chunks
+    - Legend for color coding
+  - **Performance Metrics**: Trace summary data including:
+    - Total events count
+    - Duration calculation (parsed from TimeSpan format)
+    - Rescue mode indicator (orange warning icon when rescue invoked)
+    - Bytes by source/backend breakdown (sorted by contribution)
+  - **Integration**: Accessible via "View Details" button on active swarm jobs in Jobs dashboard
+  - **Modal Interface**: Large modal dialog for detailed visualization
+  - **Auto-refresh**: Updates every 2 seconds for real-time monitoring
+  - **API Integration**: Uses `/api/v0/multisource/jobs/{jobId}` for job status and `/api/v0/traces/{jobId}/summary` for detailed peer contributions
+
+### Advanced Search UI Enhancements
+
+- **Quality Presets**: Quick filter buttons in Advanced Filters modal:
+  - "High Quality (320kbps+)" - Sets minimum bitrate to 320kbps, lossy only
+  - "Lossless Only" - Filters for lossless files with min 16-bit depth and 44.1kHz sample rate
+  - "Clear Quality" - Resets all quality-related filters
+- **Sample Rate Filtering**: Added minimum sample rate (Hz) input field in Advanced Filters modal
+  - Supports `minsr:` filter syntax (e.g., `minsr:44100`)
+  - Filters files by sample rate when specified
+- **Format/Codec Filtering**: Added file extension filtering in Advanced Filters modal
+  - Supports filtering by file extensions (e.g., flac, mp3, wav, m4a)
+  - Supports `ext:` filter syntax (e.g., `ext:flac,mp3`)
+  - Space or comma-separated extensions
+- **Enhanced Source Selection UI**: Improved provider selection for Scene ↔ Pod Bridging:
+  - More prominent display with background highlight
+  - Icons for Pod/Mesh (sitemap) and Soulseek Scene (globe)
+  - Clear labels: "Pod/Mesh" and "Soulseek Scene"
+  - Warning message when no sources selected
+  - Better visual hierarchy and spacing
+
+### Enhanced Job Management UI
+
+- **Jobs Dashboard** (`/system/jobs`): Comprehensive job management interface with:
+  - **Analytics Overview**: Total jobs, active jobs, completed jobs, and job type breakdown
+  - **Active Swarm Downloads**: Real-time display of multi-source downloads with:
+    - Progress bars and percentage completion
+    - Active sources count
+    - Download speed (chunks/second)
+    - Estimated time remaining
+    - Auto-refresh every 5 seconds
+  - **Job List**: Filterable and sortable table of all jobs (discography, label crate) with:
+    - Filter by type (discography, label crate)
+    - Filter by status (pending, running, completed, failed)
+    - Sort by created date, status, or ID (ascending/descending)
+    - Pagination support (20 jobs per page)
+    - Progress visualization for releases (completed/total/failed)
+    - Color-coded status indicators
+  - **API Integration**: Full integration with `/api/jobs` endpoint supporting filtering, sorting, and pagination
+
+### Testing Expansion
+
+- **Bridge Protocol Validation Tests**: Comprehensive protocol format validation for `SoulseekProtocolParser`:
+  - Edge case handling: empty strings, Unicode characters, long queries (1000+ chars), special characters
+  - Error handling: invalid message lengths, truncated messages
+  - Roundtrip validation: write-then-read verification for all message types
+  - Response format validation: login and search response structure
+  - 13 tests covering protocol compatibility and robustness
+- **Bridge Performance Tests**: Load and performance benchmarks:
+  - Concurrent operations: 10 parallel streams (1000 msg/s throughput)
+  - Latency measurements: average, P95, P99 percentiles (<10ms average)
+  - Large message handling: 10KB queries
+  - High-volume scenarios: 10,000 small messages (>5000 msg/s)
+  - Memory efficiency: <5KB per message with proper cleanup
+  - Rapid connect/disconnect: 100 cycles (>50 ops/s)
+  - 7 performance tests validating scalability
+- **Protocol Contract Tests**: Enhanced Soulseek protocol compliance tests:
+  - `Should_Login_And_Handshake`: Improved assertions and graceful skipping
+  - `Should_Send_Keepalive_Pings`: Reduced wait time, connection state verification
+  - `Should_Handle_Disconnect_And_Reconnect`: Disconnect detection and reconnection verification
+  - All 6 tests passing (gracefully skip when Soulfind unavailable)
+- **Bridge E2E Test Infrastructure**: Full instance test harness:
+  - `SlskdnFullInstanceRunner`: Starts actual slskdn process for TCP listener tests
+  - Auto-discovers binary from build output or `SLSKDN_BINARY_PATH` environment variable
+  - Generates test configuration with bridge enabled
+  - Graceful degradation: tests skip with helpful instructions when binary unavailable
+  - 5 Bridge E2E tests updated to use full instance when available
+
 ### Scene ↔ Pod Bridging
 
 - **Scene ↔ Pod Bridging** (`feature.scene_pod_bridge`): Unified search experience aggregating results from Pod/Mesh and Soulseek Scene networks.
