@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-01-27
+
+### Code Cleanup: TODO Comments
+- **Status**: ✅ **COMPLETED**
+- **Updated TODO comments** to reference triage document (`memory-bank/triage-todo-fixme.md`)
+- **SwarmSignalHandlers**: BT fallback ack, job cancellation, variant check - marked as deferred with proper references
+- **MonoTorrentBitTorrentBackend**: Manual peer addition - documented as deferred
+- **TorrentBackend**: Health check (T-V2-P4-04) - documented as deferred
+- **DhtMeshServiceDirectory**: FindById implementation - documented as deferred with implementation options
+- **App.jsx**: useMemo optimization - documented as deferred (class component limitation)
+- All items properly documented in triage as deferred tech debt with clear references
+
+### Test Re-enablement Status Verification
+- **Status**: ✅ **ALREADY COMPLETE**
+- **Verified**: 2430 tests passing, 0 skipped, 0 failed
+- **All phases (0-5) complete** per `docs/dev/slskd-tests-unit-completion-plan.md`
+- **No Compile Remove** remaining in `slskd.Tests.Unit.csproj`
+- **All test files enabled** and passing
+
+### Soulfind Integration
+- **Status**: ✅ **COMPLETED**
+- **CI Integration**: Added Docker image pull step in `.github/workflows/ci.yml`
+- **Local Build Integration**: Added automatic Docker check/pull in `bin/build`
+- **SoulfindRunner**: Updated to use correct Docker image (`ghcr.io/soulfind-dev/soulfind:latest`)
+- **Documentation**: Created `docs/dev/SOULFIND_CI_INTEGRATION.md` and `docs/dev/LOCAL_DEVELOPMENT.md`
+- **Protocol contract tests**: Will run when Soulfind available, skip gracefully when not
+
+---
+
 ## 2025-01-20
 
 ### PR-14: ActivityPub HTTP signatures + SSRF (§6.1, §6.2)
