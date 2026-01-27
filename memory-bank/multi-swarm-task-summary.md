@@ -117,28 +117,33 @@ Prioritize chunks around playback head for streaming use cases.
 
 ### Phase 5: Soulbeet Integration
 **Tasks**: T-700 through T-712 (13 tasks)  
-**Status**: Not started  
+**Status**: ✅ **ALL COMPLETE**  
 **Branch**: `experimental/multi-swarm`  
 **Priority**: High (P1) for compat layer, Medium (P2) for advanced APIs
 
-#### Phase 5A: slskd Compatibility Layer (T-700 to T-703)
+#### Phase 5A: slskd Compatibility Layer (T-700 to T-703) ✅ **COMPLETE**
 Implement drop-in replacement endpoints so Soulbeet works unchanged:
-- `/api/info`, `/api/search`, `/api/downloads` (POST + GET)
+- ✅ T-700: CompatibilityController with GET /api/info
+- ✅ T-701: SearchCompatibilityController with POST /api/search
+- ✅ T-702: DownloadsCompatibilityController with POST /api/downloads
+- ✅ T-703: DownloadsCompatibilityController with GET /api/downloads and GET /api/downloads/{id}
 
-#### Phase 5B: slskdn-Native Job APIs (T-704 to T-708)
+#### Phase 5B: slskdn-Native Job APIs (T-704 to T-708) ✅ **COMPLETE**
 Advanced features for MBID-aware downloads:
-- `/api/slskdn/capabilities` - Feature detection
-- `/api/jobs/mb-release` - Album download by MB Release ID
-- `/api/jobs/discography` - Artist discography download
-- `/api/jobs/label-crate` - Label catalog download
-- `/api/jobs` and `/api/jobs/{id}` - Job listing/inspection
+- ✅ T-704: CapabilitiesController with GET /api/slskdn/capabilities
+- ✅ T-705: JobsController with POST /api/jobs/mb-release
+- ✅ T-706: JobsController with POST /api/jobs/discography
+- ✅ T-707: JobsController with POST /api/jobs/label-crate
+- ✅ T-708: JobsController with GET /api/jobs and GET /api/jobs/{id}
 
-#### Phase 5C: Optional Advanced APIs (T-709 to T-710)
-- Warm cache hints endpoint
-- Library health summary endpoint
+#### Phase 5C: Optional Advanced APIs (T-709 to T-710) ✅ **COMPLETE**
+- ✅ T-709: WarmCacheController with POST /api/slskdn/warm-cache/hints
+- ✅ T-710: LibraryHealthController with GET /api/slskdn/library/health
 
-#### Phase 5D: Soulbeet Client Integration (T-711 to T-712)
+#### Phase 5D: Soulbeet Client Integration (T-711 to T-712) ✅ **COMPLETE**
 Documentation and test suite for Soulbeet client modifications.
+- ✅ T-711: SoulbeetCompatibilityTests integration test suite (6 tests, all passing)
+- ✅ T-712: Tests cover compat mode (search, download) and advanced mode workflows
 
 ---
 
