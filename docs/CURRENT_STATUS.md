@@ -54,6 +54,16 @@
   - Phase 2B: Library Health (T-403 to T-405) - deep scanning implemented
   - Phase 2C: RTT + Throughput-Aware Scheduler (T-406 to T-408)
   - Phase 2D: Rescue Mode (T-409 to T-411)
+- **Phase 3 Multi-Swarm**: ✅ **COMPLETE** - All 11 tasks (T-500 to T-510) complete:
+  - Phase 3A: Release-Graph Guided Discovery (T-500 to T-502)
+  - Phase 3B: Label Crate Mode (T-503 to T-504)
+  - Phase 3C: Local-Only Peer Reputation (T-505 to T-507)
+  - Phase 3D: Mesh-Level Fairness Governor (T-508 to T-510)
+- **Phase 4 Multi-Swarm**: ✅ **MOSTLY COMPLETE** - 9 of 12 tasks (T-600 to T-608) complete:
+  - Phase 4A: YAML Job Manifests (T-600 to T-602) ✅
+  - Phase 4B: Session Traces (T-603 to T-605) ✅
+  - Phase 4C: Warm Cache Nodes (T-606 to T-608) ✅
+  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) ⏳ Pending (optional)
 - **Phase 2-7 Multi-Swarm**: Various tasks in backlog (see `memory-bank/multi-swarm-task-summary.md`)
 
 ### Deferred Tech Debt
