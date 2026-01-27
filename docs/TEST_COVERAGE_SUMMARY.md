@@ -106,16 +106,10 @@
 
 **Recommendation**: These can be fixed by ensuring `SoulfindRunner` starts correctly, or marked as `[Fact(Skip = "Requires Soulseek server")]` if the simulator isn't available in CI.
 
-#### Soulbeet Compatibility Tests (2 failures)
-- `GetDownload_ById_ShouldReturnDetails` - Compatibility API test
-- `CompatMode_FullWorkflow_ShouldSucceed` - Full workflow test
-
-**Status**: ⚠️ **Non-blocking** - These test compatibility with Soulbeet client. The compatibility APIs are implemented (we verified DownloadsCompatibilityController and ServerCompatibilityController work). These failures may be due to:
-- Test setup issues
-- API response format mismatches
-- Missing test data
-
-**Recommendation**: Investigate and fix, or document as known issues if Soulbeet compatibility isn't critical.
+#### Soulbeet Compatibility Tests ✅
+- **Status**: ✅ **All passing** (6/6 tests)
+- **Fixed** (2026-01-27): Updated test JSON property names from snake_case to camelCase and added Directories configuration to test factory
+- Tests verify backwards compatibility with Soulbeet client
 
 ---
 
