@@ -106,11 +106,12 @@ Opt-in prefetching and caching of popular MBIDs to amplify Soulseek uploads via 
 - ✅ T-607: WarmCachePopularityService tracks popularity via IncrementPopularityAsync
 - ✅ T-608: WarmCacheService with fetch/serve/evict logic
 
-#### Phase 4D: Playback-Aware Swarming (T-609 to T-611) ⏳ **PENDING** [Optional]
+#### Phase 4D: Playback-Aware Swarming (T-609 to T-611) ✅ **MOSTLY COMPLETE** [Optional]
 Prioritize chunks around playback head for streaming use cases.
-- ⏳ T-609: Playback feedback API (not implemented)
-- ⏳ T-610: Priority zones for buffer ahead (not implemented)
-- ⏳ T-611: Streaming diagnostics (not implemented)
+- ✅ T-609: PlaybackFeedbackService and PlaybackController API implemented
+- ✅ T-610: PlaybackPriorityService with PriorityZone (High/Mid/Low) and ChunkRequest.Priority support
+- ✅ T-611: PlaybackDiagnostics and PlaybackController diagnostics endpoint implemented
+- ⚠️ Note: Playback priority calculation exists but integration with chunk scheduling is partial (ChunkScheduler sorts by Priority, but priority calculation from playback position needs full integration)
 
 ---
 
