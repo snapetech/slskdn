@@ -49,6 +49,11 @@
 - **T-003**: ✅ Download Queue Position Polling (confirmed done - implemented in Transfers.jsx)
 - **T-004**: ✅ Visual Group Indicators (confirmed done - implemented in Response.jsx)
 - **Phase 1 Multi-Swarm**: ✅ **COMPLETE** - T-312 (Album completion UI) and T-313 (Unit + integration tests) both implemented
+- **Phase 2 Multi-Swarm**: ✅ **COMPLETE** - All 12 tasks (T-400 to T-411) complete:
+  - Phase 2A: Canonical Edition Scoring (T-400 to T-402)
+  - Phase 2B: Library Health (T-403 to T-405) - deep scanning implemented
+  - Phase 2C: RTT + Throughput-Aware Scheduler (T-406 to T-408)
+  - Phase 2D: Rescue Mode (T-409 to T-411)
 - **Phase 2-7 Multi-Swarm**: Various tasks in backlog (see `memory-bank/multi-swarm-task-summary.md`)
 
 ### Deferred Tech Debt
