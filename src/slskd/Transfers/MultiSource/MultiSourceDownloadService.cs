@@ -587,6 +587,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                                         failedUsers,
                                         tempDir,
                                         status,
+                                        request.Id,
                                         cancellationToken);
                                 }
                                 finally
