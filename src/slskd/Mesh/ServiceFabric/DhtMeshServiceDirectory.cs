@@ -180,11 +180,13 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
 
             _logger.LogDebug("[ServiceDirectory] FindById not yet fully implemented: {ServiceId}", serviceId);
 
-            // TODO: Implement efficient FindById
+            // Deferred: Implement efficient FindById
+            // See memory-bank/triage-todo-fixme.md (defer section) for details
             // Options:
             // 1. Maintain a separate DHT key: svcid:<ServiceId> -> descriptor
             // 2. Scan known service names (inefficient but works for now)
             // 3. Use DHT FindValue with serviceId directly
+            // Current implementation returns empty array (service not found)
 
             return Array.Empty<MeshServiceDescriptor>();
         }

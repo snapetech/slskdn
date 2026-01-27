@@ -605,9 +605,10 @@ class App extends Component {
               <SlskdnStatusBar />
             ) : null}
             <AppContext.Provider
-              // eslint-disable-next-line no-warning-comments
-              // TODO: needs useMemo, but class component. yolo for now.
               // eslint-disable-next-line react/jsx-no-constructed-context-values
+              // Note: Context value object recreated on each render (class component limitation)
+              // Deferred: Optimize with useMemo when converting to functional component
+              // See memory-bank/triage-todo-fixme.md (defer section) for details
               value={{ options: applicationOptions, state: applicationState }}
             >
               {isAgent ? (

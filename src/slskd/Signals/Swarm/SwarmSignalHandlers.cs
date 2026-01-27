@@ -171,13 +171,15 @@ public class SwarmSignalHandlers
                 return;
             }
 
-            // TODO: Look up pending fallback request and handle ack
-            // For now, just log
+            // Deferred: Look up pending fallback request and handle ack
+            // See memory-bank/triage-todo-fixme.md (defer section) for details
+            // Requires: ISwarmJobStore lookup, ISwarmCore integration for BT fallback activation
             if (accepted)
             {
                 logger.LogInformation("BT fallback accepted for job {JobId}, variant {VariantId}, btFallbackId: {BtFallbackId}",
                     jobId, variantId, btFallbackId);
-                // TODO: Enable BT fallback in SwarmCore
+                // Deferred: Enable BT fallback in SwarmCore
+                // See memory-bank/triage-todo-fixme.md (defer section)
             }
             else
             {
@@ -207,7 +209,9 @@ public class SwarmSignalHandlers
                 return;
             }
 
-            // TODO: Cancel the job in SwarmCore
+            // Deferred: Cancel the job in SwarmCore
+            // See memory-bank/triage-todo-fixme.md (defer section) for details
+            // Requires: ISwarmJobStore cancellation, ISwarmCore integration
             logger.LogInformation("Job cancellation requested for job {JobId} from peer {PeerId}", jobId, signal.FromPeerId);
         }
         catch (Exception ex)
@@ -269,8 +273,10 @@ public static class SwarmJobExtensions
 {
     public static bool HasVariant(this SwarmJob job, string variantId)
     {
-        // TODO: Implement actual variant check
-        // For now, assume all jobs have variants
+        // Deferred: Implement actual variant check
+        // See memory-bank/triage-todo-fixme.md (defer section) for details
+        // Requires: SwarmJob.Variants collection or similar structure to check membership
+        // For now, assume all jobs have variants (placeholder implementation)
         return true;
     }
 }

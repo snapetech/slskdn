@@ -138,8 +138,9 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 return Task.FromResult(SourceCandidateValidationResult.Invalid($"Seeders {candidate.ExpectedQuality} below minimum {opts.MinimumSeeders}"));
             }
 
-            // TODO: T-V2-P4-04 - Add actual torrent health check via ITorrentClient when available
-            // For now, accept if seeders are adequate
+            // Deferred: T-V2-P4-04 - Add actual torrent health check via ITorrentClient when available
+            // See memory-bank/triage-todo-fixme.md (defer section) for details
+            // For now, accept if seeders are adequate (ExpectedQuality contains seeder count)
             return Task.FromResult(SourceCandidateValidationResult.Valid(candidate.TrustScore, candidate.ExpectedQuality));
         }
     }

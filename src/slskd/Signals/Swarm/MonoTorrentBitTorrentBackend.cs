@@ -179,8 +179,10 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
 
     private static Task AddManualPeersAsync(TorrentManager manager, IReadOnlyList<string> peers)
     {
-        // TODO: MonoTorrent PeerInfo/AddPeersAsync API for manual peers (InviteList, job.Sources).
+        // Deferred: MonoTorrent PeerInfo/AddPeersAsync API for manual peers (InviteList, job.Sources)
+        // See memory-bank/triage-todo-fixme.md (defer section) for details
         // Engine-level DhtEndPoint=null and AllowLocalPeerDiscovery avoid DHT/PEX when PrivateMode.
+        // Manual peer addition requires MonoTorrent API integration for private torrents.
         return Task.CompletedTask;
     }
 
