@@ -92,6 +92,12 @@ else
     if [ "$skip_tests" == true ]; then
         echo $'\n\t⏩  dotnet tests skipped\n'
     else
+        # Optional: Setup Soulfind for protocol contract tests (if Docker available)
+        if command -v docker &> /dev/null; then
+            echo $'\n\t🐳  Checking for Soulfind Docker image (optional, for protocol tests)...\n'
+            docker pull ghcr.io/soulfind-dev/soulfind:latest 2>/dev/null || echo $'   ⚠️  Soulfind image not available - protocol tests will skip gracefully\n'
+        fi
+
         echo $'\n\t🧪  dotnet test --configuration Release ../../tests/slskd.Tests.Unit\n'
         dotnet test --configuration Release ../../tests/slskd.Tests.Unit
 
