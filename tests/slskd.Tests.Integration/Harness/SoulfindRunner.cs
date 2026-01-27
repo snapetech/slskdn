@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
 
 /// <summary>
 /// Soulfind test harness for integration testing.

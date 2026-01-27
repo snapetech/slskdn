@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.IO;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
