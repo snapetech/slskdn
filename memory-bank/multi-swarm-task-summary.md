@@ -53,21 +53,32 @@ Detect stalled Soulseek transfers and use overlay mesh to complete them while ke
 
 ### Phase 3: Discovery, Reputation, and Fairness
 **Tasks**: T-500 through T-510 (11 tasks)  
-**Status**: Not started  
+**Status**: ✅ **ALL COMPLETE**  
 **Branch**: `experimental/multi-swarm`  
 **Priority**: Medium (P2)
 
-#### Phase 3A: Release-Graph Guided Discovery (T-500 to T-502)
+#### Phase 3A: Release-Graph Guided Discovery (T-500 to T-502) ✅ **COMPLETE**
 Fetch artist discographies from MusicBrainz, create multi-album download jobs with configurable profiles (core/extended/all).
+- ✅ T-500: ArtistReleaseGraphService with MusicBrainz integration and caching
+- ✅ T-501: DiscographyProfileService with core/extended/all profiles
+- ✅ T-502: DiscographyJobService with sub-job spawning and tracking
 
-#### Phase 3B: Label Crate Mode (T-503 to T-504)
+#### Phase 3B: Label Crate Mode (T-503 to T-504) ✅ **COMPLETE**
 Download popular releases from a label based on mesh popularity metrics.
+- ✅ T-503: LabelCrateJobService with label presence aggregation
+- ✅ T-504: LabelCrateJobsController API and GetReleaseIdsByLabelAsync
 
-#### Phase 3C: Local-Only Peer Reputation (T-505 to T-507)
+#### Phase 3C: Local-Only Peer Reputation (T-505 to T-507) ✅ **COMPLETE**
 Track per-peer success/failure rates locally (never shared) and avoid low-reputation peers.
+- ✅ T-505: PeerMetricsService tracks chunk success/failure with reputation scoring
+- ✅ T-506: Reputation decay algorithm (exponential decay toward neutral)
+- ✅ T-507: ChunkScheduler integrates reputation (ReputationCutoff = 0.2)
 
-#### Phase 3D: Mesh-Level Fairness Governor (T-508 to T-510)
+#### Phase 3D: Mesh-Level Fairness Governor (T-508 to T-510) ✅ **COMPLETE**
 Enforce upload/download ratios to ensure slskdn nodes remain net contributors to the ecosystem.
+- ✅ T-508: TrafficAccountingService tracks overlay/Soulseek upload/download bytes
+- ✅ T-509: FairnessGuard evaluates ratios and throttles when needed
+- ✅ T-510: FairnessController API for summary and monitoring
 
 ---
 
