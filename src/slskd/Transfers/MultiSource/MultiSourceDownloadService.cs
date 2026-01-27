@@ -466,6 +466,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             failedUsers,
                             tempDir,
                             status,
+                            request.Id,
                             cancellationToken);
                     }, cancellationToken));
                 }
@@ -727,6 +728,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             ConcurrentDictionary<string, bool> failedUsers,
             string tempDir,
             MultiSourceDownloadStatus status,
+            Guid downloadId,
             CancellationToken cancellationToken)
         {
             var username = source.Username;
@@ -777,7 +779,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             int priority = 5; // Default: mid priority
                             if (_playbackPriorityService != null)
                             {
-                                var stealJobId = status.DownloadId.ToString("N");
+                                var stealJobId = downloadId.ToString("N");
                                 var zone = _playbackPriorityService.GetChunkPriority(stealJobId, incompleteChunkData.StartOffset, incompleteChunkData.EndOffset);
                                 priority = zone switch
                                 {
