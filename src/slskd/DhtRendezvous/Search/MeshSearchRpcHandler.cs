@@ -81,18 +81,43 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
             var truncated = ordered.Count > maxResults;
             var toReturn = truncated ? ordered.Take(maxResults) : ordered;
 
+            var repo = _shareService.GetLocalRepository();
             var dtos = toReturn
-                .Select(f => new MeshSearchFileDto
+                .Select(f =>
                 {
-                    Filename = f.Filename, // Virtual share path only; repository must not expose absolute paths
-                    Size = f.Size,
-                    Extension = string.IsNullOrEmpty(f.Extension) ? null : f.Extension,
-                    Bitrate = f.BitRate,
-                    Duration = f.Length,
-                    Codec = DeriveCodec(f.Extension),
-                    MediaKinds = DeriveMediaKinds(f.Extension),
-                    ContentId = null, // TODO: Populate from share repository if available
-                    Hash = null, // TODO: Populate from share repository if available
+                    // Look up ContentId from share repository
+                    string? contentId = null;
+                    try
+                    {
+                        var contentItems = repo.ListContentItemsForFile(f.Filename).ToList();
+                        if (contentItems.Count > 0)
+                        {
+                            // Use the first advertisable content item, or first item if none are advertisable
+                            var item = contentItems.FirstOrDefault(ci => ci.IsAdvertisable);
+                            if (item.ContentId == null)
+                            {
+                                item = contentItems.FirstOrDefault();
+                            }
+                            contentId = item.ContentId;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Failed to look up ContentId for file {Filename}", f.Filename);
+                    }
+
+                    return new MeshSearchFileDto
+                    {
+                        Filename = f.Filename, // Virtual share path only; repository must not expose absolute paths
+                        Size = f.Size,
+                        Extension = string.IsNullOrEmpty(f.Extension) ? null : f.Extension,
+                        Bitrate = f.BitRate,
+                        Duration = f.Length,
+                        Codec = DeriveCodec(f.Extension),
+                        MediaKinds = DeriveMediaKinds(f.Extension),
+                        ContentId = contentId,
+                        Hash = null, // TODO: Hash lookup would require HashDb integration or on-demand computation
+                    };
                 })
                 .ToList();
 
