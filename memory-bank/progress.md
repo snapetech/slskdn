@@ -7,6 +7,21 @@
 
 ## 2026-01-27
 
+### Phase 2 Multi-Swarm Implementation
+- **Phase 2A (T-400 to T-402)**: ✅ Verified complete - Canonical Edition Scoring fully implemented
+- **Phase 2B (T-403 to T-405)**: ✅ **COMPLETED** - Implemented deep library health scanning
+  - Replaced placeholder PerformScanAsync with full implementation
+  - Added dependencies: IMetadataFacade, ICanonicalStatsService, IMusicBrainzClient
+  - Implemented ScanFileAsync with:
+    - MusicBrainz ID resolution via metadata facade
+    - AudioVariant creation and quality scoring
+    - Transcode detection using TranscodeDetector
+    - Canonical variant upgrade detection
+    - Release completeness checking
+  - Parallel file processing with concurrency limit
+  - Thread-safe issue counting
+  - T-404 (UI/API) and T-405 (remediation) already existed
+
 ### Fix Soulbeet Compatibility Tests
 - **Status**: ✅ **COMPLETED**
 - **Fixed 2 failing integration tests**: `GetDownload_ById_ShouldReturnDetails` and `CompatMode_FullWorkflow_ShouldSucceed`
