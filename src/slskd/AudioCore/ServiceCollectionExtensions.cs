@@ -14,6 +14,7 @@ namespace slskd.AudioCore
     using slskd.Integrations.AcoustId;
     using slskd.Integrations.AutoTagging;
     using slskd.Integrations.Chromaprint;
+    using slskd.Integrations.MetadataFacade;
     using slskd.Integrations.MusicBrainz;
     using slskd.LibraryHealth;
     using slskd.LibraryHealth.Remediation;
@@ -72,7 +73,13 @@ namespace slskd.AudioCore
             services.AddSingleton<IAnalyzerMigrationService, AnalyzerMigrationService>();
 
             // Library health
-            services.AddSingleton<ILibraryHealthService, LibraryHealthService>();
+            services.AddSingleton<ILibraryHealthService>(sp => new LibraryHealthService(
+                sp.GetRequiredService<IHashDbService>(),
+                sp.GetRequiredService<ILibraryHealthRemediationService>(),
+                sp.GetRequiredService<IMetadataFacade>(),
+                sp.GetRequiredService<ICanonicalStatsService>(),
+                sp.GetRequiredService<IMusicBrainzClient>(),
+                sp.GetRequiredService<ILogger<LibraryHealth.LibraryHealthService>>()));
             services.AddSingleton<ILibraryHealthRemediationService, LibraryHealthRemediationService>();
 
             // Music domain provider

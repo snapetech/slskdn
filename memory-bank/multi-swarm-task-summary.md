@@ -21,12 +21,15 @@ Key achievements:
 
 ### Phase 2: Mesh Integration & Advanced Swarm Features
 **Tasks**: T-400 through T-411 (12 tasks)  
-**Status**: Not started  
+**Status**: Phase 2A complete, Phase 2B-2D pending  
 **Branch**: `experimental/multi-swarm`  
 **Priority**: High (P1)
 
-#### Phase 2A: Canonical Edition Scoring (T-400 to T-402)
+#### Phase 2A: Canonical Edition Scoring (T-400 to T-402) ✅ **COMPLETE**
 Build quality scoring for audio variants and prefer canonical/best versions in downloads.
+- ✅ T-400: AudioVariant model, QualityScorer, TranscodeDetector, CodecProfile
+- ✅ T-401: CanonicalStatsService, aggregation logic, tests
+- ✅ T-402: SelectCanonicalSourcesAsync, ShouldSkipDownloadAsync in MultiSourceDownloadService
 
 #### Phase 2B: Collection Doctor / Library Health (T-403 to T-405)
 Scan library for suspected transcodes, non-canonical variants, missing tracks. One-click fix via multi-swarm.
