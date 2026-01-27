@@ -7,6 +7,17 @@
 
 ## 2026-01-27
 
+### Fix Soulbeet Compatibility Tests
+- **Status**: ✅ **COMPLETED**
+- **Fixed 2 failing integration tests**: `GetDownload_ById_ShouldReturnDetails` and `CompatMode_FullWorkflow_ShouldSucceed`
+- **Root causes**:
+  1. Test JSON used snake_case (`remote_path`, `target_dir`) but ASP.NET Core expects camelCase (`remotePath`, `targetDir`)
+  2. `StubWebApplicationFactory` Options missing `Directories` configuration (Downloads/Incomplete paths were null)
+- **Fixes applied**:
+  1. Updated test JSON property names to camelCase in `SoulbeetCompatibilityTests.cs`
+  2. Added `Directories` configuration to `StaticOptionsMonitor<OptionsModel>` in `StubWebApplicationFactory.cs`
+- **Result**: All 6 Soulbeet compatibility tests passing. Full integration test suite: **190 passing, 0 failing**
+
 ### Code Cleanup: TODO Comments
 - **Status**: ✅ **COMPLETED**
 - **Updated TODO comments** to reference triage document (`memory-bank/triage-todo-fixme.md`)
