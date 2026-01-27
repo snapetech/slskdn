@@ -84,8 +84,9 @@ public class SharesControllerTests
 
         var r = await c.Create(new CreateShareGrantRequest { CollectionId = default }, CancellationToken.None);
 
-        var bad = Assert.IsType<BadRequestObjectResult>(r);
-        Assert.Equal("CollectionId is required.", bad.Value);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(r);
+        var problemDetails = Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(badRequest.Value);
+        Assert.Equal("CollectionId is required.", problemDetails.Detail);
     }
 
     [Fact]

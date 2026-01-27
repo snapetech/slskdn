@@ -92,8 +92,10 @@ public class ShareGroupsControllerTests
 
         var r = await c.Create(new CreateShareGroupRequest { Name = "" }, CancellationToken.None);
 
-        var bad = Assert.IsType<BadRequestObjectResult>(r);
-        Assert.Equal("Name is required.", bad.Value);
+        var objResult = Assert.IsType<ObjectResult>(r);
+        Assert.Equal(400, objResult.StatusCode);
+        var problemDetails = Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(objResult.Value);
+        Assert.Equal("Name is required.", problemDetails.Detail);
     }
 
     [Fact]
