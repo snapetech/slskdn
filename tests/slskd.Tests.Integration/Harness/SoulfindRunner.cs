@@ -1,6 +1,7 @@
 namespace slskd.Tests.Integration.Harness;
 
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -24,13 +25,141 @@ public class SoulfindRunner : IAsyncDisposable
 
     /// <summary>
     /// Start Soulfind with ephemeral port.
+    /// Tries multiple strategies:
+    /// 1. Start Soulfind binary if available (SOULFIND_PATH or discovered)
+    /// 2. Start Docker container if available
+    /// 3. Fall back to stub mode (tests will need to mock ISoulseekClient)
     /// </summary>
     public async Task StartAsync(CancellationToken ct = default)
     {
-        logger.LogInformation("[TEST-SOULFIND] Stub Soulfind start");
         port = AllocateEphemeralPort();
-        isRunning = true;
-        await Task.CompletedTask;
+        
+        // Strategy 1: Try to start Soulfind binary
+        var binaryPath = DiscoverSoulfindBinary();
+        if (!string.IsNullOrEmpty(binaryPath))
+        {
+            logger.LogInformation("[TEST-SOULFIND] Starting Soulfind binary: {Path} on port {Port}", binaryPath, port);
+            try
+            {
+                await StartSoulfindProcessAsync(binaryPath, ct);
+                isRunning = true;
+                logger.LogInformation("[TEST-SOULFIND] Soulfind started successfully on port {Port}", port);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[TEST-SOULFIND] Failed to start Soulfind binary, trying alternatives");
+            }
+        }
+        
+        // Strategy 2: Try Docker (if available)
+        if (await TryStartDockerContainerAsync(ct))
+        {
+            isRunning = true;
+            logger.LogInformation("[TEST-SOULFIND] Soulfind running in Docker on port {Port}", port);
+            return;
+        }
+        
+        // Strategy 3: Stub mode - tests should use mocked ISoulseekClient
+        logger.LogWarning("[TEST-SOULFIND] Soulfind binary and Docker not available - using stub mode. Tests should mock ISoulseekClient.");
+        isRunning = false; // Indicates stub mode
+    }
+    
+    private async Task StartSoulfindProcessAsync(string binaryPath, CancellationToken ct)
+    {
+        var tempDataDir = Path.Combine(Path.GetTempPath(), "slskdn-test", $"soulfind-{port}");
+        Directory.CreateDirectory(tempDataDir);
+        
+        var psi = new ProcessStartInfo
+        {
+            FileName = binaryPath,
+            Arguments = $"--port {port} --data-dir \"{tempDataDir}\"",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        
+        soulfindProcess = Process.Start(psi);
+        if (soulfindProcess == null)
+        {
+            throw new InvalidOperationException($"Failed to start Soulfind process: {binaryPath}");
+        }
+        
+        // Wait for process to be ready
+        await WaitForReadinessAsync(ct);
+    }
+    
+    private async Task<bool> TryStartDockerContainerAsync(CancellationToken ct)
+    {
+        // Check if Docker is available
+        try
+        {
+            var dockerCheck = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = "version",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            
+            using var checkProcess = Process.Start(dockerCheck);
+            if (checkProcess == null)
+            {
+                return false;
+            }
+            
+            await checkProcess.WaitForExitAsync(ct);
+            if (checkProcess.ExitCode != 0)
+            {
+                return false;
+            }
+        }
+        catch
+        {
+            // Docker not available
+            return false;
+        }
+        
+        // Try to start Soulfind container
+        // Note: This assumes a soulfind Docker image exists
+        // If not available, this will fail gracefully
+        try
+        {
+            var containerName = $"soulfind-test-{port}";
+            var startArgs = $"run -d --name {containerName} -p {port}:2242 soulfind/soulfind:latest";
+            
+            var startProcess = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = startArgs,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            
+            using var process = Process.Start(startProcess);
+            if (process == null)
+            {
+                return false;
+            }
+            
+            await process.WaitForExitAsync(ct);
+            if (process.ExitCode == 0)
+            {
+                // Wait for container to be ready
+                await Task.Delay(2000, ct); // Give container time to start
+                await WaitForReadinessAsync(ct);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "[TEST-SOULFIND] Docker container start failed (image may not exist)");
+        }
+        
+        return false;
     }
 
     /// <summary>
@@ -39,6 +168,64 @@ public class SoulfindRunner : IAsyncDisposable
     public async Task StopAsync()
     {
         isRunning = false;
+        
+        // Stop process if running
+        if (soulfindProcess != null && !soulfindProcess.HasExited)
+        {
+            try
+            {
+                soulfindProcess.Kill();
+                await soulfindProcess.WaitForExitAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[TEST-SOULFIND] Error stopping Soulfind process");
+            }
+            finally
+            {
+                soulfindProcess?.Dispose();
+                soulfindProcess = null;
+            }
+        }
+        
+        // Stop Docker container if running
+        try
+        {
+            var containerName = $"soulfind-test-{port}";
+            var stopArgs = $"stop {containerName}";
+            var removeArgs = $"rm -f {containerName}";
+            
+            using var stopProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = stopArgs,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            });
+            if (stopProcess != null)
+            {
+                await stopProcess.WaitForExitAsync();
+            }
+            
+            using var removeProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = removeArgs,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            });
+            if (removeProcess != null)
+            {
+                await removeProcess.WaitForExitAsync();
+            }
+        }
+        catch
+        {
+            // Ignore Docker cleanup errors
+        }
+        
         await Task.CompletedTask;
     }
 
