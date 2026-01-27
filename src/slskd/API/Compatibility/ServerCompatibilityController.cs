@@ -8,6 +8,7 @@ using slskd.Core.Security;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Soulseek;
 
 /// <summary>
 /// Provides slskd-compatible server status API.
@@ -18,10 +19,14 @@ using Microsoft.AspNetCore.Mvc;
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ServerCompatibilityController : ControllerBase
 {
+    private readonly ISoulseekClient soulseek;
     private readonly ILogger<ServerCompatibilityController> logger;
 
-    public ServerCompatibilityController(ILogger<ServerCompatibilityController> logger)
+    public ServerCompatibilityController(
+        ISoulseekClient soulseek,
+        ILogger<ServerCompatibilityController> logger)
     {
+        this.soulseek = soulseek;
         this.logger = logger;
     }
 
@@ -34,12 +39,17 @@ public class ServerCompatibilityController : ControllerBase
     {
         logger.LogDebug("Server status requested");
 
-        // Return stub status - connected by default in test
+        var isConnected = soulseek.State == SoulseekClientStates.Connected ||
+                         soulseek.State == SoulseekClientStates.LoggedIn;
+        var stateString = isConnected
+            ? (soulseek.State.HasFlag(SoulseekClientStates.LoggedIn) ? "logged_in" : "connected")
+            : "disconnected";
+
         return Ok(new
         {
-            connected = true,
-            state = "logged_in",
-            username = "test-user"
+            connected = isConnected,
+            state = stateString,
+            username = soulseek.Username ?? string.Empty
         });
     }
 }
