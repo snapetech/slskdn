@@ -443,7 +443,7 @@ const SearchDetail = ({
           </Segment>
         )}
         {loaded &&
-          sortedAndFilteredResults.slice(0, displayCount).map((r) => (
+          sortedAndFilteredResults.slice(0, displayCount).map((r, index) => (
             <Response
               disabled={disabled}
               downloadStats={r.downloadStats}
@@ -455,6 +455,8 @@ const SearchDetail = ({
               onNoteUpdate={fetchUserNotes}
               onUnblock={() => handleUnblockUser(r.username)}
               response={r}
+              responseIndex={index}
+              searchId={id}
               smartScore={r.smartScore}
               userNote={userNotes[r.username]}
             />

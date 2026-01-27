@@ -116,14 +116,21 @@ public class ShadowIndexBuilder : IShadowIndexBuilder
             })
             .ToList();
 
+        // Apply eviction policy limits
+        var trimmedPeerHints = peerIdHints.Take(ShardEvictionPolicy.MaxPeerHintsPerShard).ToList();
+        var trimmedVariants = canonicalVariants
+            .OrderByDescending(v => v.QualityScore)
+            .Take(ShardEvictionPolicy.MaxVariantsPerShard)
+            .ToList();
+
         var shard = new ShadowIndexShard
         {
             ShardVersion = "1.0",
             Timestamp = DateTimeOffset.UtcNow,
-            TTLSeconds = 3600,  // 1 hour
-            PeerIdHints = peerIdHints,
-            CanonicalVariants = canonicalVariants,
-            ApproximatePeerCount = peerIdHints.Count
+            TTLSeconds = ShardEvictionPolicy.DefaultRecordingTTLSeconds,
+            PeerIdHints = trimmedPeerHints,
+            CanonicalVariants = trimmedVariants,
+            ApproximatePeerCount = trimmedPeerHints.Count
         };
 
         logger.LogInformation("[VSF-SHADOW] Built shard for {MBID}: {PeerCount} peers, {VariantCount} variants",

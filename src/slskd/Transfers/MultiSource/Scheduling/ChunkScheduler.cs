@@ -18,6 +18,7 @@
 namespace slskd.Transfers.MultiSource.Scheduling
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
@@ -35,6 +36,9 @@ namespace slskd.Transfers.MultiSource.Scheduling
         private readonly ILogger log = Log.ForContext<ChunkScheduler>();
         private readonly bool enableCostBasedScheduling;
         private const double ReputationCutoff = 0.2; // Peers below this reputation are temporarily skipped
+        
+        // T-1405: Track active chunk assignments for reassignment
+        private readonly ConcurrentDictionary<int, string> activeAssignments = new(); // chunkIndex -> peerId
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ChunkScheduler"/> class.
@@ -125,6 +129,9 @@ namespace slskd.Transfers.MultiSource.Scheduling
 
             // Assign to best peer (lowest cost = rank 1)
             var bestPeer = rankedPeers.First();
+
+            // T-1405: Register assignment for tracking
+            RegisterAssignment(request.ChunkIndex, bestPeer.PeerId);
 
             log.Debug(
                 "[ChunkScheduler] Assigned chunk {ChunkIndex} to peer {PeerId} (rank {Rank}, cost {Cost:F3})",
@@ -255,7 +262,7 @@ namespace slskd.Transfers.MultiSource.Scheduling
         }
 
         /// <inheritdoc/>
-        public async Task HandlePeerDegradationAsync(
+        public async Task<List<int>> HandlePeerDegradationAsync(
             string peerId,
             DegradationReason reason,
             CancellationToken ct = default)
@@ -265,10 +272,6 @@ namespace slskd.Transfers.MultiSource.Scheduling
             // Get current metrics
             var metrics = await metricsService.GetMetricsAsync(peerId, PeerSource.Soulseek, ct);
 
-            // Strategy: Re-rank and suggest shifting work away from this peer
-            // For now, we just log the degradation. In a full swarm manager,
-            // this would trigger chunk reassignment.
-
             var currentCost = costFunction.ComputeCost(metrics);
             log.Information(
                 "[ChunkScheduler] Peer {PeerId} current cost: {Cost:F3} (error rate: {ErrorRate:F2}%, timeout rate: {TimeoutRate:F2}%)",
@@ -277,8 +280,38 @@ namespace slskd.Transfers.MultiSource.Scheduling
                 metrics.ErrorRate * 100,
                 metrics.TimeoutRate * 100);
 
-            // TODO: In full implementation, trigger chunk reassignment to better peers
-            await Task.CompletedTask;
+            // T-1405: Find all chunks assigned to this degraded peer
+            var chunksToReassign = activeAssignments
+                .Where(kvp => kvp.Value == peerId)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            if (chunksToReassign.Count > 0)
+            {
+                log.Information(
+                    "[ChunkScheduler] Marking {Count} chunks for reassignment from degraded peer {PeerId}",
+                    chunksToReassign.Count, peerId);
+
+                // Unregister assignments - they'll be reassigned by the orchestrator
+                foreach (var chunkIndex in chunksToReassign)
+                {
+                    activeAssignments.TryRemove(chunkIndex, out _);
+                }
+            }
+
+            return chunksToReassign;
+        }
+
+        /// <inheritdoc/>
+        public void RegisterAssignment(int chunkIndex, string peerId)
+        {
+            activeAssignments[chunkIndex] = peerId;
+        }
+
+        /// <inheritdoc/>
+        public void UnregisterAssignment(int chunkIndex)
+        {
+            activeAssignments.TryRemove(chunkIndex, out _);
         }
     }
 

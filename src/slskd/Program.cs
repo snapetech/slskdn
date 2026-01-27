@@ -89,6 +89,7 @@ namespace slskd
     using slskd.Relay;
     using slskd.Search;
     using slskd.Search.API;
+    using Microsoft.AspNetCore.SignalR;
 using slskd.Sharing;
 using slskd.Shares;
 using slskd.Streaming;
@@ -627,10 +628,11 @@ using slskd.Telemetry;
 
                 // hack: services that exist only to subscribe to the event bus are not referenced by anything else
                 //       and are thus never instantiated.  force a reference here so they are created.
-                Log.Information("[DI] Forcing construction of ScriptService and WebhookService...");
+                Log.Information("[DI] Forcing construction of ScriptService, WebhookService, and TrafficObserverIntegrationService...");
                 _ = app.Services.GetService<ScriptService>();
                 _ = app.Services.GetService<WebhookService>();
-                Log.Information("[DI] ScriptService and WebhookService constructed");
+                _ = app.Services.GetService<VirtualSoulfind.Capture.TrafficObserverIntegrationService>();
+                Log.Information("[DI] ScriptService, WebhookService, and TrafficObserverIntegrationService constructed");
 
                 Log.Information("[DI] About to configure ASP.NET pipeline...");
                 try
@@ -956,7 +958,44 @@ using slskd.Telemetry;
             services.AddSingleton<IStreamSessionLimiter, StreamSessionLimiter>();
             services.AddSingleton<IShareTokenService, ShareTokenService>();
 
-            services.AddSingleton<ISearchService, SearchService>();
+            // Register search providers for Scene ↔ Pod Bridging
+            services.AddSingleton<slskd.Search.Providers.ISearchProvider>(sp =>
+                new slskd.Search.Providers.SceneSearchProvider(
+                    sp.GetRequiredService<ISoulseekClient>(),
+                    sp.GetRequiredService<slskd.Common.Security.ISoulseekSafetyLimiter>(),
+                    sp.GetRequiredService<ILogger<slskd.Search.Providers.SceneSearchProvider>>()));
+            services.AddSingleton<slskd.Search.Providers.ISearchProvider>(sp =>
+                new slskd.Search.Providers.PodSearchProvider(
+                    sp.GetRequiredService<slskd.DhtRendezvous.Search.IMeshOverlaySearchService>(),
+                    sp.GetRequiredService<ILogger<slskd.Search.Providers.PodSearchProvider>>()));
+
+            services.AddSingleton<ISearchService>(sp =>
+            {
+                var searchHub = sp.GetRequiredService<IHubContext<SearchHub>>();
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<Options>>();
+                var soulseekClient = sp.GetRequiredService<ISoulseekClient>();
+                var contextFactory = sp.GetRequiredService<IDbContextFactory<SearchDbContext>>();
+                var safetyLimiter = sp.GetRequiredService<slskd.Common.Security.ISoulseekSafetyLimiter>();
+                var eventBus = sp.GetService<slskd.Events.EventBus>();
+                var disasterModeCoordinator = sp.GetService<slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator>();
+                var meshSearchService = sp.GetService<slskd.VirtualSoulfind.DisasterMode.IMeshSearchService>();
+                var meshOverlaySearchService = sp.GetService<slskd.DhtRendezvous.Search.IMeshOverlaySearchService>();
+                var trafficObserver = sp.GetService<slskd.VirtualSoulfind.Capture.ITrafficObserver>();
+                var searchProviders = sp.GetServices<slskd.Search.Providers.ISearchProvider>();
+
+                return new SearchService(
+                    searchHub,
+                    optionsMonitor,
+                    soulseekClient,
+                    contextFactory,
+                    safetyLimiter,
+                    eventBus,
+                    disasterModeCoordinator,
+                    meshSearchService,
+                    meshOverlaySearchService,
+                    trafficObserver,
+                    searchProviders);
+            });
 
             services.AddSingleton<IUserService, UserService>();
 
@@ -1067,23 +1106,52 @@ using slskd.Telemetry;
             services.AddSingleton<VirtualSoulfind.Capture.INormalizationPipeline, VirtualSoulfind.Capture.NormalizationPipeline>();
             services.AddSingleton<VirtualSoulfind.Capture.IUsernamePseudonymizer, VirtualSoulfind.Capture.UsernamePseudonymizer>();
             services.AddSingleton<VirtualSoulfind.Capture.IObservationStore, VirtualSoulfind.Capture.InMemoryObservationStore>();
+            services.AddSingleton<VirtualSoulfind.Capture.TrafficObserverIntegrationService>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilder>();
-            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient, VirtualSoulfind.ShadowIndex.DhtClientStub>();
+            // Note: IDhtClient is registered later in MeshCore section (line ~1456) as InMemoryDhtClient
+            services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtRateLimiter>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptionsMonitor<slskd.Options>>();
+                var maxOpsPerMin = options.CurrentValue.VirtualSoulfind?.ShadowIndex?.MaxDhtOperationsPerMinute ?? 60;
+                return new VirtualSoulfind.ShadowIndex.DhtRateLimiter(
+                    sp.GetRequiredService<ILogger<VirtualSoulfind.ShadowIndex.DhtRateLimiter>>(),
+                    maxOpsPerMin);
+            });
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardPublisher, VirtualSoulfind.ShadowIndex.ShardPublisher>();
+            services.AddHostedService(sp => (VirtualSoulfind.ShadowIndex.ShardPublisher)sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IShardPublisher>());
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexQuery, VirtualSoulfind.ShadowIndex.ShadowIndexQuery>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardMerger, VirtualSoulfind.ShadowIndex.ShardMerger>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShardCache, VirtualSoulfind.ShadowIndex.ShardCache>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtRateLimiter, VirtualSoulfind.ShadowIndex.DhtRateLimiter>();
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneService, VirtualSoulfind.Scenes.SceneService>();
-            services.AddSingleton<VirtualSoulfind.Scenes.ISceneAnnouncementService, VirtualSoulfind.Scenes.SceneAnnouncementService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneAnnouncementService>(sp =>
+                new VirtualSoulfind.Scenes.SceneAnnouncementService(
+                    sp.GetRequiredService<ILogger<VirtualSoulfind.Scenes.SceneAnnouncementService>>(),
+                    sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>(),
+                    sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtRateLimiter>(),
+                    sp.GetService<Identity.IProfileService>(),
+                    sp.GetService<VirtualSoulfind.Scenes.ISceneService>()));
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneMembershipTracker, VirtualSoulfind.Scenes.SceneMembershipTracker>();
-            services.AddSingleton<VirtualSoulfind.Scenes.IScenePubSubService, VirtualSoulfind.Scenes.ScenePubSubService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.IScenePubSubService>(sp =>
+                new VirtualSoulfind.Scenes.ScenePubSubService(
+                    sp.GetRequiredService<ILogger<VirtualSoulfind.Scenes.ScenePubSubService>>(),
+                    sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>()));
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneJobService, VirtualSoulfind.Scenes.SceneJobService>();
-            services.AddSingleton<VirtualSoulfind.Scenes.ISceneChatService, VirtualSoulfind.Scenes.SceneChatService>();
+            services.AddSingleton<VirtualSoulfind.Scenes.ISceneChatService>(sp =>
+                new VirtualSoulfind.Scenes.SceneChatService(
+                    sp.GetRequiredService<ILogger<VirtualSoulfind.Scenes.SceneChatService>>(),
+                    sp.GetRequiredService<VirtualSoulfind.Scenes.IScenePubSubService>(),
+                    sp.GetRequiredService<IOptionsMonitor<slskd.Options>>(),
+                    sp.GetService<Identity.IProfileService>()));
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneModerationService, VirtualSoulfind.Scenes.SceneModerationService>();
             services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekClient>(sp => 
                 new VirtualSoulfind.DisasterMode.SoulseekClientWrapper(sp.GetRequiredService<Soulseek.ISoulseekClient>()));
-            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekHealthMonitor, VirtualSoulfind.DisasterMode.SoulseekHealthMonitor>();
+            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekHealthMonitor>(sp =>
+                new VirtualSoulfind.DisasterMode.SoulseekHealthMonitor(
+                    sp.GetRequiredService<ILogger<VirtualSoulfind.DisasterMode.SoulseekHealthMonitor>>(),
+                    sp.GetRequiredService<Soulseek.ISoulseekClient>(),
+                    sp.GetRequiredService<IOptionsMonitor<slskd.Options>>()));
+            services.AddHostedService(sp => (VirtualSoulfind.DisasterMode.SoulseekHealthMonitor)sp.GetRequiredService<VirtualSoulfind.DisasterMode.ISoulseekHealthMonitor>());
             services.AddSingleton<VirtualSoulfind.DisasterMode.IDisasterModeCoordinator, VirtualSoulfind.DisasterMode.DisasterModeCoordinator>();
             services.AddSingleton<VirtualSoulfind.DisasterMode.IMeshSearchService, VirtualSoulfind.DisasterMode.MeshSearchService>();
             services.AddSingleton<VirtualSoulfind.DisasterMode.IMeshTransferService, VirtualSoulfind.DisasterMode.MeshTransferService>();
@@ -1099,6 +1167,8 @@ using slskd.Telemetry;
             services.AddSingleton<VirtualSoulfind.Integration.ITelemetryDashboard, VirtualSoulfind.Integration.TelemetryDashboardService>();
             services.AddSingleton<VirtualSoulfind.Bridge.ISoulfindBridgeService, VirtualSoulfind.Bridge.SoulfindBridgeService>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
+            services.AddSingleton<VirtualSoulfind.Bridge.Protocol.SoulseekProtocolParser>();
+            services.AddHostedService<VirtualSoulfind.Bridge.Proxy.BridgeProxyServer>();
             services.AddSingleton<VirtualSoulfind.Bridge.IPeerIdAnonymizer, VirtualSoulfind.Bridge.PeerIdAnonymizer>();
             services.AddSingleton<VirtualSoulfind.Bridge.IFilenameGenerator, VirtualSoulfind.Bridge.FilenameGenerator>();
             services.AddSingleton<VirtualSoulfind.Bridge.IRoomSceneMapper, VirtualSoulfind.Bridge.RoomSceneMapper>();

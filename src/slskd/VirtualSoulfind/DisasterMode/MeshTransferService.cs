@@ -243,14 +243,49 @@ public class MeshTransferService : IMeshTransferService
 
     private async Task<List<string>> DiscoverPeersAsync(string fileHash, CancellationToken ct)
     {
-        // Query shadow index for peers with this file
-        // In a real implementation, this would query by file hash
-        // For now, we'll use a placeholder
+        // Phase 6D: T-824 - Real peer discovery via shadow index and scenes
+        logger.LogDebug("[VSF-MESH-TRANSFER] Discovering peers for file hash: {Hash}", fileHash);
 
-        await Task.Delay(500, ct); // Simulate DHT lookup
+        var discoveredPeers = new HashSet<string>();
 
-        var peers = new List<string> { "peer:vsf:abc123", "peer:vsf:def456" };
-        return peers;
+        // Strategy 1: Query shadow index by file hash (if we can map hash to MBID)
+        // Note: This is simplified - in practice, we'd need a hash→MBID mapping
+        if (shadowIndex != null)
+        {
+            try
+            {
+                // For now, we can't directly query by hash, but we could query by MBID if available
+                // This is a placeholder - real implementation would need hash→MBID lookup
+                logger.LogDebug("[VSF-MESH-TRANSFER] Shadow index query not yet implemented for hash lookup");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-MESH-TRANSFER] Shadow index query failed");
+            }
+        }
+
+        // Strategy 2: Scene-based peer discovery (T-825)
+        if (scenePeers != null)
+        {
+            try
+            {
+                // Discover peers from scenes (fileHash not used in current implementation)
+                var scenePeersList = await scenePeers.DiscoverPeersAsync(ct);
+                foreach (var peer in scenePeersList)
+                {
+                    discoveredPeers.Add(peer);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-MESH-TRANSFER] Scene peer discovery failed");
+            }
+        }
+
+        logger.LogInformation("[VSF-MESH-TRANSFER] Discovered {Count} peers for file hash: {Hash}",
+            discoveredPeers.Count, fileHash);
+
+        return discoveredPeers.ToList();
     }
 
     private async Task PerformMultiSwarmTransferAsync(
@@ -304,14 +339,36 @@ public class MeshTransferService : IMeshTransferService
 
     private async Task VerifyFileIntegrityAsync(MeshTransferStatus status, CancellationToken ct)
     {
-        // In a real implementation, this would verify file hash
+        // Phase 6D: T-824 - Real hash verification
         logger.LogDebug("[VSF-MESH-TRANSFER] {TransferId}: Verifying file integrity",
             status.TransferId);
 
-        await Task.Delay(100, ct); // Simulate hash verification
+        if (!System.IO.File.Exists(status.TargetPath))
+        {
+            throw new System.IO.FileNotFoundException($"File not found: {status.TargetPath}");
+        }
 
-        // TODO: Actual hash verification
-        // if (computedHash != status.FileHash) throw new Exception("Hash mismatch");
+        var fileInfo = new System.IO.FileInfo(status.TargetPath);
+        if (fileInfo.Length != status.FileSize)
+        {
+            throw new InvalidOperationException($"File size mismatch: expected {status.FileSize}, got {fileInfo.Length}");
+        }
+
+        // Compute SHA256 hash of downloaded file
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        await using var stream = System.IO.File.OpenRead(status.TargetPath);
+        var computedHash = await sha256.ComputeHashAsync(stream, ct);
+        var computedHashHex = BitConverter.ToString(computedHash).Replace("-", "").ToLowerInvariant();
+
+        // Compare with expected hash
+        if (!string.IsNullOrEmpty(status.FileHash) && 
+            !computedHashHex.Equals(status.FileHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Hash mismatch: expected {status.FileHash}, got {computedHashHex}");
+        }
+
+        logger.LogInformation("[VSF-MESH-TRANSFER] {TransferId}: File integrity verified (hash: {Hash})",
+            status.TransferId, computedHashHex);
     }
 
     private void PublishProgress(string transferId, MeshTransferStatus status)

@@ -204,4 +204,9 @@ public class BridgeOptions
     /// Require authentication for bridge connections.
     /// </summary>
     public bool RequireAuth { get; set; } = false;
+    
+    /// <summary>
+    /// Bridge authentication password (required if RequireAuth is true).
+    /// </summary>
+    public string? Password { get; set; }
 }

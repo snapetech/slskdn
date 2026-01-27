@@ -45,6 +45,11 @@ using slskd.VirtualSoulfind.v2.Planning;
 using slskd.VirtualSoulfind.v2.Sources;
 using slskd.VirtualSoulfind.Bridge;
 using slskd.Core;
+using slskd.Streaming;
+using slskd.Mesh;
+using slskd.Search.Providers;
+using System.Linq;
+using System.Linq.Expressions;
 using Moq;
 using OptionsModel = global::slskd.Options;
 
@@ -98,6 +103,25 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         options.DefaultPolicy = new AuthorizationPolicyBuilder("Test")
                             .RequireAuthenticatedUser()
                             .Build();
+                        
+                        // Register AuthPolicy.Any for controllers that use it
+                        options.AddPolicy(slskd.AuthPolicy.Any, policy =>
+                        {
+                            policy.AuthenticationSchemes.Add("Test");
+                            policy.RequireAuthenticatedUser();
+                        });
+                        
+                        options.AddPolicy(slskd.AuthPolicy.JwtOnly, policy =>
+                        {
+                            policy.AuthenticationSchemes.Add("Test");
+                            policy.RequireAuthenticatedUser();
+                        });
+                        
+                        options.AddPolicy(slskd.AuthPolicy.ApiKeyOnly, policy =>
+                        {
+                            policy.AuthenticationSchemes.Add("Test");
+                            policy.RequireAuthenticatedUser();
+                        });
                     });
 
                     // Add API versioning (required for routes with apiVersion constraint)
@@ -129,6 +153,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddApplicationPart(typeof(JobsController).Assembly)
                         .AddApplicationPart(typeof(SearchCompatibilityController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.DisasterModeController).Assembly)
+                        .AddApplicationPart(typeof(global::slskd.Search.API.SearchActionsController).Assembly)
                         .ConfigureApplicationPartManager(manager =>
                         {
                             // Exclude conflicting controllers - use JobsController instead
@@ -169,7 +194,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddSingleton<ILibraryHealthService, StubLibraryHealthService>()
                         .AddSingleton<IDownloadService, StubDownloadService>()
                         .AddSingleton<ITransferService>(_ => NullProxy<ITransferService>.Create())
-                        .AddSingleton<ISearchService>(_ => NullProxy<ISearchService>.Create())
+                        .AddSingleton<ISearchService, StubSearchService>()
                         .AddSingleton<IWarmCachePopularityService>(_ => NullProxy<IWarmCachePopularityService>.Create())
                         // ISoulseekClient for CompatibilityController (GET /api/info) — Soulbeet
                         .AddSingleton<ISoulseekClient>(_ => Mock.Of<ISoulseekClient>(x =>
@@ -189,6 +214,14 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                     services.AddSingleton<IShareRepository, StubShareRepository>();
                     services.AddSingleton<IContentBackend, LocalLibraryBackend>();
                     services.AddSingleton<IPlanner, MultiSourcePlanner>();
+
+                    // ShareService and ContentLocator for SearchActionsController
+                    services.AddSingleton<IShareService>(sp => new StubShareService(sp.GetRequiredService<IShareRepository>()));
+                    services.AddSingleton<IContentLocator>(sp => new StubContentLocator(sp.GetRequiredService<IShareService>(), sp.GetRequiredService<ILogger<StubContentLocator>>()));
+
+                    // Mesh services for remote pod download
+                    services.AddSingleton<IMeshContentFetcher, StubMeshContentFetcher>();
+                    services.AddSingleton<IMeshDirectory, StubMeshDirectory>();
 
                     // Bridge (NicotinePlus / legacy client) — BridgeController, BridgeAdminController
                     services.AddSingleton<StubBridgeApi>();
@@ -503,5 +536,236 @@ internal class NullProxy<T> : DispatchProxy where T : class
 
         return returnType.IsValueType ? Activator.CreateInstance(returnType) : null;
     }
+}
+
+// Stub implementations for SearchActionsController tests
+
+internal class StubShareService : IShareService
+{
+    private readonly IShareRepository _repository;
+    private readonly slskd.Shares.Host _localHost;
+
+    public StubShareService(IShareRepository repository)
+    {
+        _repository = repository;
+        _localHost = new slskd.Shares.Host("local");
+    }
+
+    public IShareRepository GetLocalRepository() => _repository;
+    public IReadOnlyList<slskd.Shares.Host> Hosts => new[] { _localHost };
+    public slskd.Shares.Host LocalHost => _localHost;
+    public slskd.IStateMonitor<slskd.ShareState> StateMonitor => NullProxy<slskd.IStateMonitor<slskd.ShareState>>.Create();
+    public bool IsScanning => false;
+    
+    public void AddOrUpdateHost(slskd.Shares.Host host) { }
+    public Task<IEnumerable<Soulseek.Directory>> BrowseAsync(slskd.Shares.Share share = null) => Task.FromResult(Enumerable.Empty<Soulseek.Directory>());
+    public Task DumpAsync(string filename) => Task.CompletedTask;
+    public Task InitializeAsync(bool forceRescan = false) => Task.CompletedTask;
+    public Task<Soulseek.Directory> ListDirectoryAsync(string directory) => Task.FromResult(new Soulseek.Directory(directory));
+    public Task<IEnumerable<slskd.Shares.Scan>> ListScansAsync(long startedAtOrAfter = 0) => Task.FromResult(Enumerable.Empty<slskd.Shares.Scan>());
+    public void RequestScan() { }
+    public Task<(string Host, string Filename, long Size)> ResolveFileAsync(string remoteFilename) => Task.FromResult(("local", remoteFilename, 0L));
+    public Task ScanAsync() => Task.CompletedTask;
+    public Task<IEnumerable<Soulseek.File>> SearchAsync(Soulseek.SearchQuery query) => Task.FromResult(Enumerable.Empty<Soulseek.File>());
+    public Task<IEnumerable<Soulseek.File>> SearchLocalAsync(Soulseek.SearchQuery query) => Task.FromResult(Enumerable.Empty<Soulseek.File>());
+    public bool TryCancelScan() => false;
+    public bool TryGetHost(string name, out slskd.Shares.Host host) { host = _localHost; return name == "local"; }
+    public bool TryRemoveHost(string name) => false;
+}
+
+internal class StubContentLocator : IContentLocator
+{
+    private readonly IShareService _shareService;
+    private readonly ILogger<StubContentLocator> _logger;
+
+    public StubContentLocator(IShareService shareService, ILogger<StubContentLocator> logger)
+    {
+        _shareService = shareService;
+        _logger = logger;
+    }
+
+    public ResolvedContent? Resolve(string contentId, CancellationToken cancellationToken = default)
+    {
+        // For tests, return null (content not local) to test remote download path
+        return null;
+    }
+}
+
+internal class StubMeshContentFetcher : IMeshContentFetcher
+{
+    private readonly Dictionary<(string PeerId, string ContentId), byte[]> _contentStore = new();
+
+    /// <summary>
+    /// Seeds content for testing. Call this in tests to set up expected fetch results.
+    /// </summary>
+    public void SeedContent(string peerId, string contentId, byte[] content)
+    {
+        _contentStore[(peerId, contentId)] = content;
+    }
+
+    public Task<MeshContentFetchResult> FetchAsync(
+        string peerId,
+        string contentId,
+        long? expectedSize = null,
+        string? expectedHash = null,
+        long offset = 0,
+        int length = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var key = (peerId, contentId);
+        if (!_contentStore.TryGetValue(key, out var content))
+        {
+            return Task.FromResult(new MeshContentFetchResult
+            {
+                Error = "Content not found",
+                SizeValid = false,
+                HashValid = false
+            });
+        }
+
+        // Handle range requests
+        var actualContent = content;
+        if (offset > 0 || (length > 0 && length < content.Length))
+        {
+            var start = (int)offset;
+            var end = length > 0 ? Math.Min(start + length, content.Length) : content.Length;
+            actualContent = new byte[end - start];
+            Array.Copy(content, start, actualContent, 0, end - start);
+        }
+
+        var result = new MeshContentFetchResult
+        {
+            Data = new MemoryStream(actualContent),
+            Size = actualContent.Length,
+            SizeValid = !expectedSize.HasValue || actualContent.Length == expectedSize.Value,
+            HashValid = true // Skip hash validation in tests for simplicity
+        };
+
+        return Task.FromResult(result);
+    }
+}
+
+internal class StubMeshDirectory : IMeshDirectory
+{
+    private readonly Dictionary<string, List<MeshPeerDescriptor>> _peersByContent = new();
+
+    /// <summary>
+    /// Seeds peers for testing. Call this in tests to set up expected peer lookups.
+    /// </summary>
+    public void SeedPeers(string contentId, params MeshPeerDescriptor[] peers)
+    {
+        _peersByContent[contentId] = peers.ToList();
+    }
+
+    public Task<MeshPeerDescriptor?> FindPeerByIdAsync(string peerId, CancellationToken ct = default)
+    {
+        // Find peer in any content's peer list
+        foreach (var peers in _peersByContent.Values)
+        {
+            var peer = peers.FirstOrDefault(p => p.PeerId == peerId);
+            if (peer != null)
+                return Task.FromResult<MeshPeerDescriptor?>(peer);
+        }
+        return Task.FromResult<MeshPeerDescriptor?>(null);
+    }
+
+    public Task<IReadOnlyList<MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
+    {
+        if (_peersByContent.TryGetValue(contentId, out var peers))
+        {
+            return Task.FromResult<IReadOnlyList<MeshPeerDescriptor>>(peers);
+        }
+        return Task.FromResult<IReadOnlyList<MeshPeerDescriptor>>(Array.Empty<MeshPeerDescriptor>());
+    }
+
+    public Task<IReadOnlyList<MeshContentDescriptor>> FindContentByPeerAsync(string peerId, CancellationToken ct = default)
+    {
+        var contentList = new List<MeshContentDescriptor>();
+        foreach (var (contentId, peers) in _peersByContent)
+        {
+            if (peers.Any(p => p.PeerId == peerId))
+            {
+                contentList.Add(new MeshContentDescriptor(contentId, null, null, null));
+            }
+        }
+        return Task.FromResult<IReadOnlyList<MeshContentDescriptor>>(contentList);
+    }
+}
+
+internal class StubSearchService : ISearchService
+{
+    private readonly ConcurrentDictionary<Guid, global::slskd.Search.Search> _searches = new();
+
+    /// <summary>
+    /// Seeds a search for testing. Call this in tests to set up expected search results.
+    /// </summary>
+    public void SeedSearch(global::slskd.Search.Search search)
+    {
+        _searches[search.Id] = search;
+    }
+
+    public Task DeleteAsync(global::slskd.Search.Search search)
+    {
+        _searches.TryRemove(search.Id, out _);
+        return Task.CompletedTask;
+    }
+
+    public Task<global::slskd.Search.Search> FindAsync(System.Linq.Expressions.Expression<Func<global::slskd.Search.Search, bool>> expression, bool includeResponses = false)
+    {
+        var compiled = expression.Compile();
+        var search = _searches.Values.FirstOrDefault(compiled);
+        if (search == null)
+        {
+            return Task.FromResult<global::slskd.Search.Search>(null!);
+        }
+        return Task.FromResult(search);
+    }
+
+    public Task<List<global::slskd.Search.Search>> ListAsync(System.Linq.Expressions.Expression<Func<global::slskd.Search.Search, bool>> expression = null, int limit = 0, int offset = 0)
+    {
+        var searches = expression != null
+            ? _searches.Values.Where(expression.Compile()).ToList()
+            : _searches.Values.ToList();
+        
+        if (offset > 0)
+            searches = searches.Skip(offset).ToList();
+        if (limit > 0)
+            searches = searches.Take(limit).ToList();
+        
+        return Task.FromResult(searches);
+    }
+
+    public void Update(global::slskd.Search.Search search)
+    {
+        _searches[search.Id] = search;
+    }
+
+    public Task<global::slskd.Search.Search> StartAsync(Guid id, Soulseek.SearchQuery query, Soulseek.SearchScope scope, Soulseek.SearchOptions options = null, List<string> requestedProviders = null)
+    {
+        var search = new global::slskd.Search.Search
+        {
+            Id = id,
+            SearchText = query.SearchText,
+            State = Soulseek.SearchStates.Completed,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Token = 0
+        };
+        _searches[id] = search;
+        return Task.FromResult(search);
+    }
+
+    public bool TryCancel(Guid id)
+    {
+        if (_searches.TryGetValue(id, out var search))
+        {
+            search.State = Soulseek.SearchStates.Cancelled;
+            return true;
+        }
+        return false;
+    }
+
+    public Task<int> PruneAsync(int age) => Task.FromResult(0);
+    public Task<int> DeleteAllAsync() => Task.FromResult(0);
 }
 

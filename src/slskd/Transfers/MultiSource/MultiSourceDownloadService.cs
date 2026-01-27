@@ -905,6 +905,11 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             {
                                 _logger.LogWarning("[SWARM] {Username} giving up after {Fails} consecutive failures", username, consecutiveFailures);
                                 failedUsers.TryAdd(username, true);
+                                
+                                // T-1405: Trigger peer degradation for chunk reassignment (if using ChunkScheduler)
+                                // Note: MultiSourceDownloadService uses work-stealing queue, so chunks are already re-queued
+                                // This is more relevant for SwarmDownloadOrchestrator which uses ChunkScheduler directly
+                                
                                 break;
                             }
 

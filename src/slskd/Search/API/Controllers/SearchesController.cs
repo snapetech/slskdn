@@ -24,6 +24,7 @@ using Microsoft.Extensions.Options;
 namespace slskd.Search.API
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
@@ -96,7 +97,12 @@ namespace slskd.Search.API
 
                 try
                 {
-                    search = await Searches.StartAsync(id, SearchQuery.FromText(request.SearchText), SearchScope.Network, request.ToSearchOptions());
+                    search = await Searches.StartAsync(
+                        id,
+                        SearchQuery.FromText(request.SearchText),
+                        SearchScope.Network,
+                        request.ToSearchOptions(),
+                        request.Providers);
                     return Ok(search);
                 }
                 catch (Exception ex) when (ex is ArgumentException || ex is Soulseek.DuplicateTokenException)

@@ -35,22 +35,26 @@ public interface ISceneChatService
 
 /// <summary>
 /// Optional scene chat service (overlay pubsub-based).
+/// Phase 6C: T-819 - Real implementation with MessagePack serialization.
 /// </summary>
 public class SceneChatService : ISceneChatService
 {
     private readonly ILogger<SceneChatService> logger;
     private readonly IScenePubSubService pubsub;
     private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
+    private readonly Identity.IProfileService? profileService;
     private readonly ConcurrentDictionary<string, List<SceneChatMessage>> messageCache = new();
 
     public SceneChatService(
         ILogger<SceneChatService> logger,
         IScenePubSubService pubsub,
-        IOptionsMonitor<OptionsModel> optionsMonitor)
+        IOptionsMonitor<OptionsModel> optionsMonitor,
+        Identity.IProfileService? profileService = null)
     {
         this.logger = logger;
         this.pubsub = pubsub;
         this.optionsMonitor = optionsMonitor;
+        this.profileService = profileService;
 
         // Subscribe to pubsub messages
         pubsub.MessageReceived += OnPubSubMessageReceived;
@@ -69,12 +73,27 @@ public class SceneChatService : ISceneChatService
         logger.LogDebug("[VSF-SCENE-CHAT] Sending message to scene {SceneId}: {Content}",
             sceneId, content);
 
+        // Get actual peer ID
+        string peerId = "local";
+        if (profileService != null)
+        {
+            try
+            {
+                var profile = await profileService.GetMyProfileAsync(ct);
+                peerId = profile.PeerId;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-SCENE-CHAT] Failed to get peer ID, using placeholder");
+            }
+        }
+
         // Create chat message
         var message = new SceneChatMessage
         {
             MessageId = Ulid.NewUlid().ToString(),
             SceneId = sceneId,
-            PeerId = "local", // TODO: Use actual peer ID
+            PeerId = peerId,
             Timestamp = DateTimeOffset.UtcNow,
             Content = content
         };
@@ -144,18 +163,43 @@ public class SceneChatService : ISceneChatService
 
     private byte[] SerializeMessage(SceneChatMessage message)
     {
-        // TODO: Implement proper serialization (MessagePack or similar)
-        return System.Text.Encoding.UTF8.GetBytes(message.Content);
+        // Phase 6C: T-819 - MessagePack serialization for scene chat
+        try
+        {
+            return MessagePack.MessagePackSerializer.Serialize(message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[VSF-SCENE-CHAT] Failed to serialize message, falling back to UTF-8");
+            return System.Text.Encoding.UTF8.GetBytes(message.Content);
+        }
     }
 
     private SceneChatMessage? DeserializeMessage(byte[] data)
     {
-        // TODO: Implement proper deserialization
-        return new SceneChatMessage
+        // Phase 6C: T-819 - MessagePack deserialization for scene chat
+        try
         {
-            MessageId = Ulid.NewUlid().ToString(),
-            Content = System.Text.Encoding.UTF8.GetString(data),
-            Timestamp = DateTimeOffset.UtcNow
-        };
+            return MessagePack.MessagePackSerializer.Deserialize<SceneChatMessage>(data);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[VSF-SCENE-CHAT] Failed to deserialize message, falling back to simple parsing");
+            // Fallback: try to parse as simple text
+            try
+            {
+                var content = System.Text.Encoding.UTF8.GetString(data);
+                return new SceneChatMessage
+                {
+                    MessageId = Ulid.NewUlid().ToString(),
+                    Content = content,
+                    Timestamp = DateTimeOffset.UtcNow
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

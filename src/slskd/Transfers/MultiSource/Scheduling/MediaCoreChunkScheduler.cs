@@ -5,6 +5,7 @@
 namespace slskd.Transfers.MultiSource.Scheduling;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,6 +22,9 @@ public class MediaCoreChunkScheduler : IChunkScheduler
     private readonly IDescriptorRetriever _descriptorRetriever;
     private readonly IFuzzyMatcher _fuzzyMatcher;
     private readonly IContentIdRegistry _contentRegistry;
+    
+    // T-1405: Track active chunk assignments for reassignment
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, string> _activeAssignments = new(); // chunkIndex -> peerId
 
     public MediaCoreChunkScheduler(
         ILogger<MediaCoreChunkScheduler> logger,
@@ -70,6 +74,9 @@ public class MediaCoreChunkScheduler : IChunkScheduler
             _logger.LogDebug(
                 "[MediaCoreChunkScheduler] Assigned chunk {ChunkIndex} to {Peer} (score: {Score:F2})",
                 request.ChunkIndex, selectedPeer.Username, selectedPeer.Score);
+
+            // T-1405: Register assignment for tracking
+            RegisterAssignment(request.ChunkIndex, selectedPeer.Username);
 
             return new ChunkAssignment
             {
@@ -151,6 +158,10 @@ public class MediaCoreChunkScheduler : IChunkScheduler
 
                 // Select the best peer
                 var selectedPeer = adjustedScores.OrderByDescending(ps => ps.Score).First();
+                
+                // T-1405: Register assignment for tracking
+                RegisterAssignment(request.ChunkIndex, selectedPeer.Username);
+                
                 assignments.Add(new ChunkAssignment
                 {
                     ChunkIndex = request.ChunkIndex,
@@ -457,7 +468,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         string Reason);
 
     /// <inheritdoc/>
-    public async Task HandlePeerDegradationAsync(
+    public async Task<List<int>> HandlePeerDegradationAsync(
         string peerId,
         DegradationReason reason,
         CancellationToken ct = default)
@@ -466,14 +477,45 @@ public class MediaCoreChunkScheduler : IChunkScheduler
             "[MediaCoreChunkScheduler] Handling peer degradation: {PeerId}, Reason: {Reason}",
             peerId, reason);
 
+        // T-1405: Find chunks assigned to this peer for reassignment
+        var chunksToReassign = new List<int>();
+        foreach (var kvp in _activeAssignments)
+        {
+            if (kvp.Value == peerId)
+            {
+                chunksToReassign.Add(kvp.Key);
+            }
+        }
+
+        if (chunksToReassign.Count > 0)
+        {
+            _logger.LogInformation(
+                "[MediaCoreChunkScheduler] Marking {Count} chunks for reassignment from degraded peer {PeerId}",
+                chunksToReassign.Count, peerId);
+
+            // Unregister assignments
+            foreach (var chunkIndex in chunksToReassign)
+            {
+                _activeAssignments.TryRemove(chunkIndex, out _);
+            }
+        }
+
         // In a MediaCore-aware scheduler, we could:
         // 1. Update peer reliability metrics in swarm intelligence
         // 2. Adjust future peer scoring based on degradation history
         // 3. Trigger re-evaluation of optimal swarm configuration
         // 4. Log degradation patterns for content-specific optimization
 
-        // For now, just log the degradation event
-        // Future enhancement: integrate with swarm intelligence service
-        await Task.CompletedTask;
+        return chunksToReassign;
+    }
+
+    public void RegisterAssignment(int chunkIndex, string peerId)
+    {
+        _activeAssignments[chunkIndex] = peerId;
+    }
+
+    public void UnregisterAssignment(int chunkIndex)
+    {
+        _activeAssignments.TryRemove(chunkIndex, out _);
     }
 }

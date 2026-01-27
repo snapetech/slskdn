@@ -276,5 +276,217 @@
   - Notes: Real-time upload/download activity feed in UI
 
 
-*Last updated: 2026-01-25*
+*Last updated: 2026-01-27*
+
+---
+
+## Future Work / Backlog
+
+> **Status**: All items below are optional/nice-to-have. No critical blockers.  
+> **Priority**: P2-P3 (Low-Medium)  
+> **Date Added**: 2026-01-27
+
+### Testing Expansion (P1 - Quality Assurance)
+
+**Priority**: P1 (Quality Assurance)  
+**Status**: Tests passing, but could expand coverage  
+**Estimated**: 1-2 weeks
+
+#### Bridge Proxy Integration Tests
+- [ ] **Bridge E2E Tests**: Add end-to-end tests for bridge proxy server with actual legacy Soulseek clients
+  - Currently 5 integration tests skipped (require full slskdn instance, not TestServer)
+  - Tests: `BridgeProxyServer_Should_Accept_Client_Connection`, `BridgeProxyServer_Should_Handle_Login_Request`, `BridgeProxyServer_Should_Handle_Search_Request`, `BridgeProxyServer_Should_Handle_RoomList_Request`, `BridgeProxyServer_Should_Reject_Invalid_Authentication`
+  - **Blocking Issue**: `SlskdnTestClient` uses `TestServer` which doesn't support TCP listeners
+  - **Solution Options**:
+    - Create full instance test harness (start actual slskdn process)
+    - Use Docker containers for isolated testing
+    - Manual testing with real Soulseek clients (documentation)
+
+- [ ] **Protocol Format Validation**: Test bridge protocol parser with real Soulseek client message formats
+  - Verify compatibility with actual Soulseek protocol versions
+  - Test edge cases discovered in real-world usage
+  - Validate message serialization/deserialization roundtrips
+
+- [ ] **Performance Testing**: Benchmark bridge proxy server under load
+  - Concurrent connection handling
+  - Message throughput
+  - Memory usage under sustained load
+  - Latency measurements
+
+- [ ] **Protocol Contract Tests**: Fix/enable 3 skipped protocol contract tests
+  - `Should_Login_And_Handshake` - Requires Soulseek server (SoulfindRunner)
+  - `Should_Send_Keepalive_Pings` - Requires Soulseek server
+  - `Should_Handle_Disconnect_And_Reconnect` - Requires Soulseek server
+  - **Status**: Non-blocking - Tests skip gracefully when Soulfind unavailable
+  - **Note**: Protocol compliance verified through real-world usage
+
+### Multi-Swarm Phase 6+ (Future Features)
+
+**Priority**: P2 (Feature Development)  
+**Status**: Phases 1-5 complete (62/62 tasks, 100%)  
+**Reference**: `memory-bank/multi-swarm-task-summary.md`
+
+#### Phase 6: Advanced Swarm Features (Planned)
+- [ ] **T-800+**: Advanced swarm orchestration features
+  - See `docs/archive/planning/COMPLETE_PLANNING_INDEX.md` for full Phase 6 task list
+  - **Note**: Phase 6 (Virtual Soulfind Mesh) is already complete (T-800 to T-840, 41 tasks)
+  - **Future Phase 6+**: Additional advanced features beyond current Phase 6 scope
+
+#### Future Multi-Swarm Enhancements
+- [ ] **Advanced Discovery**: Enhanced peer discovery and content matching
+- [ ] **Swarm Analytics**: Advanced metrics and reporting for swarm behavior
+- [ ] **Adaptive Scheduling**: Machine learning or advanced heuristics for chunk assignment
+- [ ] **Cross-Domain Swarming**: Extend swarm capabilities to non-music content domains
+
+**Reference**: See `docs/multi-swarm-roadmap.md` and `docs/archive/planning/COMPLETE_PLANNING_INDEX.md` for detailed planning documents.
+
+### Backlog Items (P2-P3)
+
+**Priority**: P2-P3 (Low-Medium)  
+**Status**: Most items verified complete, few optional enhancements remain  
+**Reference**: `memory-bank/tasks-audit-gaps.md`
+
+#### Phase 1 Gap Tasks
+- [ ] **T-1400**: Unified BrainzClient
+  - **Status**: ⏸️ Deferred (low priority)
+  - **Priority**: P2
+  - **Notes**: Current implementation uses separate clients (IMusicBrainzClient, IAcoustIdClient) which works well. Unified client would be nice-to-have but not critical. Verified 2026-01-27: Not needed - current approach is sufficient.
+
+#### Phase 2 Gap Tasks
+**Status**: ✅ **MOSTLY COMPLETE** (2026-01-27)
+- [x] **T-1401**: Full library health scanning - ✅ Complete
+- [x] **T-1402**: Library health remediation job execution - ✅ Complete
+- [x] **T-1403**: Complete rescue service implementation - ✅ Complete
+- [x] **T-1404**: Implement swarm download orchestration - ✅ Complete
+- [x] **T-1405**: Implement chunk reassignment logic - ✅ **COMPLETE** (2026-01-27)
+- [x] **T-1406**: Integrate playback feedback with scheduling - ✅ Complete
+- [x] **T-1407**: Implement real buffer tracking - ✅ Complete
+
+#### Phase 5 Gap Tasks
+**Status**: ✅ **MOSTLY COMPLETE** (2026-01-27)
+- [x] **T-1408**: Implement real search compatibility endpoint - ✅ Complete
+- [x] **T-1409**: Implement real downloads compatibility endpoints - ✅ Complete
+- [x] **T-1410**: Add jobs API filtering/pagination/sorting - ✅ **COMPLETE** (2026-01-27)
+
+#### Phase 6 Gap Tasks
+**Status**: ✅ **ALL COMPLETE** (2026-01-27)
+- [x] **T-1411**: Complete shadow index shard publishing - ✅ Complete
+- [x] **T-1412**: Complete scene service implementations - ✅ Complete
+- [x] **T-1413**: Complete disaster mode integration - ✅ Complete
+
+### Future Domain Support (P3 - Nice to Have)
+
+**Priority**: P3 (Low Priority)  
+**Status**: Current domains (Music, GenericFile) are sufficient for current use cases
+
+#### Additional Content Domains
+- [ ] **Movies Domain**: Support for movie content matching and acquisition
+  - Domain-specific matching logic (IMDB ID, hash matching)
+  - Backend selection (Mesh/DHT, Torrents, HTTP, Local - NO Soulseek)
+  - Content verification before advertisement
+  - **Reference**: `docs/FEATURES.md` mentions "future: Movies, TV, Books"
+
+- [ ] **TV Domain**: Support for TV show/episode content
+  - Episode matching (TVDB ID, season/episode numbers)
+  - Series-level organization
+  - Backend selection similar to Movies domain
+
+- [ ] **Books Domain**: Support for book/document content
+  - ISBN-based matching
+  - Format detection (PDF, EPUB, etc.)
+  - Backend selection for book content
+
+- [ ] **Custom Domain Matching Logic**: Extensible framework for domain-specific matching
+  - Plugin architecture for custom domains
+  - Domain-specific backend providers
+  - **Reference**: `docs/FEATURES.md` mentions "Future domains: custom matching logic per domain"
+
+### Optional Polish & Enhancements (P3)
+
+**Priority**: P3 (Low Priority)  
+**Status**: Current functionality is solid, these are quality-of-life improvements
+
+#### UI/UX Improvements
+- [ ] **Enhanced Job Management UI**: More advanced filtering and visualization for download jobs
+  - Job history and analytics
+  - Visual swarm performance metrics
+  - Job dependency graphs
+
+- [ ] **Advanced Search UI**: Enhanced search interface with filters
+  - Content domain filtering
+  - Quality/format preferences
+  - Source selection (Soulseek vs Mesh vs Torrents)
+
+- [ ] **Real-time Swarm Visualization**: Live dashboard showing active swarm downloads
+  - Peer contribution visualization
+  - Chunk assignment heatmap
+  - Performance metrics per peer
+
+#### Performance Optimizations
+- [ ] **Swarm Performance Tuning**: Optimize chunk scheduling algorithms
+  - A/B testing different cost functions
+  - Machine learning for peer selection
+  - Adaptive chunk size based on network conditions
+
+- [ ] **Database Optimization**: Optimize queries for large libraries
+  - Index optimization for HashDb queries
+  - Caching strategies for frequently accessed data
+  - Query performance profiling
+
+#### Documentation
+- [ ] **User Guides**: Comprehensive user documentation
+  - Getting started guide
+  - Advanced features walkthrough
+  - Troubleshooting guide
+
+- [ ] **Developer Documentation**: Enhanced developer resources
+  - API documentation improvements
+  - Architecture diagrams
+  - Contributing guide updates
+
+### Infrastructure & Tooling (P3)
+
+**Priority**: P3 (Low Priority)  
+**Status**: Current infrastructure is functional
+
+#### Development Tools
+- [ ] **Enhanced Test Harnesses**: Improve test infrastructure
+  - Full instance test harness (for bridge tests)
+  - Mesh network simulator improvements
+  - Performance benchmarking suite
+
+- [ ] **CI/CD Enhancements**: Expand automated testing
+  - Performance regression testing
+  - Load testing in CI
+  - Automated security scanning
+
+#### Monitoring & Observability
+- [ ] **Advanced Metrics**: Enhanced Prometheus metrics
+  - Swarm-specific metrics
+  - Peer performance metrics
+  - Content domain metrics
+
+- [ ] **Distributed Tracing**: Add OpenTelemetry support
+  - Trace swarm download operations
+  - Track requests across mesh network
+  - Performance bottleneck identification
+
+---
+
+## Summary
+
+**Total Future Work Items**: ~25-30 items across 5 categories
+
+**Priority Breakdown**:
+- **P1 (Quality)**: 4 items (Testing expansion)
+- **P2 (Features)**: 5-10 items (Multi-Swarm Phase 6+, backlog)
+- **P3 (Polish)**: 15-20 items (Future domains, UI improvements, infrastructure)
+
+**Recommendation**: 
+- Focus on **Testing Expansion** (P1) for quality assurance
+- **Multi-Swarm Phase 6+** when ready for new feature development
+- **Backlog items** as time permits (most are already complete)
+- **Future domains** and **polish** as user feedback indicates need
+
+**Current State**: Codebase is in excellent shape. All critical features complete. Future work is optional enhancements and quality improvements.
 

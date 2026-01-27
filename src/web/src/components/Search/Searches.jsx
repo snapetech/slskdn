@@ -16,7 +16,7 @@ import {
   useRouteMatch,
 } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Button, Icon, Input, Segment } from 'semantic-ui-react';
+import { Button, Checkbox, Icon, Input, Segment } from 'semantic-ui-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const Searches = ({ server } = {}) => {
@@ -28,6 +28,11 @@ const Searches = ({ server } = {}) => {
   const [removingAll, setRemovingAll] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  // Scene ↔ Pod Bridging provider selection (enabled by default)
+  const [scenePodBridgeEnabled, setScenePodBridgeEnabled] = useState(true);
+  const [providerPod, setProviderPod] = useState(true);
+  const [providerScene, setProviderScene] = useState(true); // Enabled by default when feature is on
 
   const inputRef = useRef();
 
@@ -122,6 +127,33 @@ const Searches = ({ server } = {}) => {
 
     connect();
 
+    // Check if Scene ↔ Pod Bridging is enabled
+    const checkFeatureFlag = async () => {
+      try {
+        // Check if Scene ↔ Pod Bridging is enabled (default: true)
+        // For now, we'll enable UI by default and check capabilities
+        // In a full implementation, we'd check a specific flag from options
+        try {
+          const response = await fetch('/api/slskdn/capabilities');
+          if (response.ok) {
+            const data = await response.json();
+            // Feature is enabled by default, but we can check if it's explicitly disabled
+            // For now, assume enabled unless explicitly disabled
+            setScenePodBridgeEnabled(true);
+          }
+        } catch (err) {
+          // Feature flag check failed - assume enabled by default
+          console.debug('Scene ↔ Pod Bridging feature flag check failed:', err);
+          setScenePodBridgeEnabled(true);
+        }
+      } catch (err) {
+        // Feature flag check failed - assume disabled
+        console.debug('Scene ↔ Pod Bridging feature flag check failed:', err);
+      }
+    };
+
+    checkFeatureFlag();
+
     return () => {
       searchHub.stop();
     };
@@ -141,7 +173,13 @@ const Searches = ({ server } = {}) => {
 
     try {
       setCreating(true);
-      await library.create({ id, searchText });
+      
+      // Include provider selection if Scene ↔ Pod Bridging is enabled
+      const providers = scenePodBridgeEnabled
+        ? [providerPod && 'pod', providerScene && 'scene'].filter(Boolean)
+        : null;
+
+      await library.create({ id, searchText, providers });
 
       if (ref) {
         ref.value = '';
@@ -298,6 +336,27 @@ const Searches = ({ server } = {}) => {
           ref={inputRef}
           size="big"
         />
+        {scenePodBridgeEnabled && (
+          <div style={{ marginTop: '0.5em', display: 'flex', gap: '1em', alignItems: 'center' }}>
+            <Checkbox
+              checked={providerPod}
+              label="Pod"
+              onChange={(e, { checked }) => setProviderPod(checked)}
+              toggle
+            />
+            <Checkbox
+              checked={providerScene}
+              label="Scene"
+              onChange={(e, { checked }) => setProviderScene(checked)}
+              toggle
+            />
+            {!providerPod && !providerScene && (
+              <span style={{ color: 'orange', fontSize: '0.9em' }}>
+                At least one provider must be selected
+              </span>
+            )}
+          </div>
+        )}
       </Segment>
       <MusicBrainzLookup disabled={!server?.isConnected} />
       <AlbumCompletionPanel disabled={!server?.isConnected} />

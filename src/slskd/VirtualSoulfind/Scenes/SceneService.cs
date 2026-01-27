@@ -171,12 +171,40 @@ public class SceneService : ISceneService
         return members;
     }
 
-    public Task<List<SceneMetadata>> SearchScenesAsync(string query, CancellationToken ct)
+    public async Task<List<SceneMetadata>> SearchScenesAsync(string query, CancellationToken ct)
     {
         logger.LogDebug("[VSF-SCENE] Searching scenes: {Query}", query);
 
-        // TODO: Implement DHT-based scene search
-        // For now, return empty list
-        return Task.FromResult(new List<SceneMetadata>());
+        // Phase 6C: T-813 - DHT-based scene search
+        // Search for scenes by querying DHT with scene key patterns
+        // For now, implement basic search by scene ID prefix matching
+        var results = new List<SceneMetadata>();
+
+        // Common scene prefixes to search
+        var prefixes = new[]
+        {
+            $"scene:label:{query}",
+            $"scene:genre:{query}",
+            query // Direct scene ID
+        };
+
+        foreach (var sceneId in prefixes)
+        {
+            try
+            {
+                var metadata = await GetSceneMetadataAsync(sceneId, ct);
+                if (metadata != null)
+                {
+                    results.Add(metadata);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "[VSF-SCENE] Failed to get metadata for scene {SceneId}", sceneId);
+            }
+        }
+
+        logger.LogInformation("[VSF-SCENE] Scene search '{Query}' returned {Count} results", query, results.Count);
+        return results;
     }
 }

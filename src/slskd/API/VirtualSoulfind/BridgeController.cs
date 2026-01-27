@@ -21,15 +21,18 @@ public class BridgeController : ControllerBase
     private readonly ILogger<BridgeController> logger;
     private readonly IBridgeApi bridgeApi;
     private readonly ISoulfindBridgeService bridgeService;
+    private readonly ITransferProgressProxy progressProxy;
 
     public BridgeController(
         ILogger<BridgeController> logger,
         IBridgeApi bridgeApi,
-        ISoulfindBridgeService bridgeService)
+        ISoulfindBridgeService bridgeService,
+        ITransferProgressProxy progressProxy)
     {
         this.logger = logger;
         this.bridgeApi = bridgeApi;
         this.bridgeService = bridgeService;
+        this.progressProxy = progressProxy;
     }
 
     /// <summary>
@@ -159,6 +162,35 @@ public class BridgeController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Bridge stop failed: {Message}", ex.Message);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get transfer progress (T-857: Transfer progress proxying).
+    /// </summary>
+    [HttpGet("transfer/{transferId}/progress")]
+    [Authorize]
+    public async Task<IActionResult> GetTransferProgress(string transferId, CancellationToken ct)
+    {
+        logger.LogDebug("Bridge transfer progress: {TransferId}", transferId);
+
+        try
+        {
+            // Try to find proxy ID from transfer ID
+            // In practice, we'd maintain a mapping, but for now we'll use transfer ID as proxy ID
+            var progress = await progressProxy.GetLegacyProgressAsync(transferId, ct);
+            
+            if (progress == null)
+            {
+                return NotFound(new { error = "Transfer not found" });
+            }
+
+            return Ok(progress);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Bridge transfer progress failed: {Message}", ex.Message);
             return StatusCode(500, new { error = ex.Message });
         }
     }

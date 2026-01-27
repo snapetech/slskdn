@@ -41,20 +41,36 @@ public class Scene
 
 /// <summary>
 /// Scene metadata from DHT.
+/// Phase 6C: T-815 - MessagePack serializable.
 /// </summary>
+[MessagePack.MessagePackObject]
 public class SceneMetadata
 {
+    [MessagePack.Key(0)]
     public string SceneId { get; set; } = string.Empty;
+    
+    [MessagePack.Key(1)]
     public string DisplayName { get; set; } = string.Empty;
+    
+    [MessagePack.Key(2)]
     public string? Description { get; set; }
+    
+    [MessagePack.Key(3)]
     public SceneType Type { get; set; }
+    
+    [MessagePack.Key(4)]
     public int ApproximateMemberCount { get; set; }
+    
+    [MessagePack.Key(5)]
     public DateTimeOffset CreatedAt { get; set; }
+    
+    [MessagePack.Key(6)]
     public DateTimeOffset LastUpdatedAt { get; set; }
     
     /// <summary>
     /// Top content shared in this scene (MBIDs).
     /// </summary>
+    [MessagePack.Key(7)]
     public List<string> PopularContent { get; set; } = new();
 }
 

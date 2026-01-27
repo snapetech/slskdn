@@ -56,11 +56,24 @@ namespace slskd.Transfers.MultiSource.Scheduling
         /// <param name="peerId">The degraded peer ID.</param>
         /// <param name="reason">Reason for degradation.</param>
         /// <param name="ct">Cancellation token.</param>
-        /// <returns>A task.</returns>
-        Task HandlePeerDegradationAsync(
+        /// <returns>List of chunk indices that should be reassigned (T-1405).</returns>
+        Task<List<int>> HandlePeerDegradationAsync(
             string peerId,
             DegradationReason reason,
             CancellationToken ct = default);
+
+        /// <summary>
+        ///     Register active chunk assignments for tracking (T-1405).
+        /// </summary>
+        /// <param name="chunkIndex">The chunk index.</param>
+        /// <param name="peerId">The peer assigned to this chunk.</param>
+        void RegisterAssignment(int chunkIndex, string peerId);
+
+        /// <summary>
+        ///     Unregister chunk assignment when completed or cancelled.
+        /// </summary>
+        /// <param name="chunkIndex">The chunk index.</param>
+        void UnregisterAssignment(int chunkIndex);
     }
 }
 

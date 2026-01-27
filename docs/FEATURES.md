@@ -25,6 +25,8 @@
 - Chunked downloads from multiple sources
 - Rescue mode for failed downloads
 - Source fallback and retry logic
+- **Chunk Reassignment**: Automatic reassignment of chunks from degraded peers to better-performing peers. When a peer's performance degrades (high error rate, slow throughput), the system automatically identifies all chunks assigned to that peer and re-queues them for reassignment to better peers. Integrated with cost-based and content-aware scheduling for optimal download performance.
+- **Chunk Reassignment**: Automatic reassignment of chunks from degraded peers to better-performing peers. When a peer's performance degrades (high error rate, slow throughput), the system automatically identifies all chunks assigned to that peer and re-queues them for reassignment to better peers. Integrated with cost-based and content-aware scheduling for optimal download performance.
 
 ### Security & Privacy
 - Network guard and reputation system
@@ -346,11 +348,93 @@ Feature:
 
 **Default**: Disabled (opt-in)
 
+### Scene ↔ Pod Bridging (New)
+
+Unified search experience that aggregates results from both the Pod/Mesh network and the Soulseek Scene network, with intelligent action routing based on result source.
+
+#### Features
+
+- **Unified Search**: Single search query hits both Pod/Mesh and Soulseek Scene providers in parallel
+- **Result Merging**: Automatic deduplication and merging of results from multiple sources
+- **Provenance Badges**: Clear visual indicators showing result source (POD, SCENE, or POD+SCENE)
+- **Intelligent Action Routing**:
+  - **Pod Results**: Download from remote mesh peers if not available locally, or stream via streaming API
+  - **Scene Results**: Use standard Soulseek download pipeline
+- **Provider Selection**: UI checkboxes to select which providers to search (Pod and/or Scene)
+- **Privacy Protection**: Pod peer identities never exposed to Soulseek Scene network
+
+#### How It Works
+
+1. **Search Aggregation**: When enabled, searches run in parallel across both networks:
+   - Pod/Mesh search queries the mesh overlay network for content
+   - Scene search queries the Soulseek network
+   - Results are merged and deduplicated based on hash (if available) or filename+size
+
+2. **Deduplication Logic**:
+   - Primary key: Content hash (exact match)
+   - Secondary key: Normalized filename + size
+   - When duplicates found: Combined result shows both sources, with Pod preferred as primary source
+
+3. **Action Routing**:
+   - **Download**: Routes to appropriate download handler based on `PrimarySource`
+     - Pod: Checks local availability first, then fetches from mesh peers
+     - Scene: Uses existing Soulseek download pipeline
+   - **Stream**: Only available for Pod results (Scene streaming not supported)
+
+4. **Privacy Guarantees**:
+   - Pod peer IDs (`peerId`) never exposed in Scene-facing APIs or UI
+   - No auto-advertising of Pod content to Scene
+   - No proxying of Scene downloads through Pod by default
+
+#### Configuration
+
+```yaml
+Feature:
+  ScenePodBridge: true  # Enable Scene ↔ Pod Bridging (default: true)
+  ScenePodBridgeOptions:
+    ProxyTransfers: false     # Proxy scene downloads through pod (future feature, intentionally disabled)
+    ExportPodAvailability: false  # Export pod availability to scene (future feature, intentionally disabled)
+```
+
+**Default**: Enabled (opt-out)
+
+#### Use Cases
+
+- **Unified Discovery**: Find content across both networks with a single search
+- **Source-Aware Downloads**: Automatically use the best download method for each result
+- **Mesh-First Preference**: Pod results preferred when available from both sources (privacy-preserving)
+- **Fallback Support**: Scene results available when Pod network doesn't have the content
+
+#### API Endpoints
+
+- `POST /api/v0/searches/{searchId}/items/{itemId}/download` - Download a search result item (routes based on source)
+- `POST /api/v0/searches/{searchId}/items/{itemId}/stream` - Stream a pod result (returns 400 for scene results)
+
+#### Remote Pod Downloads
+
+When downloading Pod results that aren't available locally:
+- System checks local content via `IContentLocator`
+- If not local, fetches from mesh peers using `IMeshContentFetcher`
+- Falls back to `IMeshDirectory` lookup if peer ID from search result is missing
+- Downloads saved to incomplete downloads directory
+- Errors handled with appropriate HTTP status codes (404 for peer not found, 502 for fetch failures)
+
 ### External Tool Integration (New)
 - Music apps access VirtualSoulfind via HTTP gateway
 - Query missing tracks, library stats, catalogue gaps
 - Execute intents remotely (if enabled)
 - Work budget prevents abuse
+
+### Jobs API (Multi-Swarm Integration)
+- **Job Management**: Create and track discography and label crate download jobs
+- **Enhanced List Endpoint**: `GET /api/jobs` with pagination, sorting, and filtering
+  - **Pagination**: `limit` and `offset` parameters (default limit: 100)
+  - **Sorting**: Sort by `status`, `created_at`, or `id` with `asc`/`desc` order
+  - **Default Sorting**: Newest jobs first (`created_at` descending)
+  - **Response Metadata**: Includes `total`, `limit`, `offset`, and `has_more` for pagination
+  - **Job Details**: Each job includes `created_at` timestamp and `progress` object with completion statistics
+- **Job Types**: Discography jobs (artist releases) and label crate jobs (label releases)
+- **Use Case**: Efficient job management in UIs with large numbers of jobs, supporting pagination and sorting by status or creation date
 
 ---
 

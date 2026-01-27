@@ -19,6 +19,7 @@ namespace slskd.Search
 {
     using System.Collections.Generic;
     using System.Linq;
+    using slskd.Search.Providers;
 
     public class Response
     {
@@ -31,6 +32,30 @@ namespace slskd.Search
         public int Token { get; init; }
         public int UploadSpeed { get; init; }
         public string Username { get; init; }
+
+        /// <summary>
+        ///     Gets or sets the source providers (e.g., ["pod"], ["scene"], or ["pod", "scene"]).
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<string> SourceProviders { get; set; } = new();
+
+        /// <summary>
+        ///     Gets or sets the primary source for action routing ("pod" or "scene").
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public string PrimarySource { get; set; } = string.Empty;
+
+        /// <summary>
+        ///     Gets or sets the pod content reference (for pod results).
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public PodContentRef? PodContentRef { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the scene content reference (for scene results).
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public SceneContentRef? SceneContentRef { get; set; }
 
         public static Response FromSoulseekSearchResponse(Soulseek.SearchResponse searchResponse)
         {

@@ -110,4 +110,14 @@ public class DisasterModeOptions
     /// Enable graceful degradation (partial Soulseek use).
     /// </summary>
     public bool EnableGracefulDegradation { get; set; } = true;
+    
+    /// <summary>
+    /// Recovery check interval in minutes (how often to check if recovery is possible).
+    /// </summary>
+    public int RecoveryCheckIntervalMinutes { get; set; } = 5;
+    
+    /// <summary>
+    /// Number of consecutive healthy checks required before recovery.
+    /// </summary>
+    public int RecoveryHealthyChecksRequired { get; set; } = 3;
 }

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using slskd.HashDb;
@@ -14,7 +15,8 @@ using slskd.HashDb;
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 /// <summary>
-/// Interface for DHT operations (stub for Phase 6B).
+/// Interface for DHT operations.
+/// Phase 6B: Real implementation uses Mesh.Dht.InMemoryDhtClient (registered in Program.cs).
 /// </summary>
 public interface IDhtClient
 {
@@ -24,41 +26,8 @@ public interface IDhtClient
 }
 
 /// <summary>
-/// Stub DHT client (Phase 6B will implement real DHT).
-/// </summary>
-public class DhtClientStub : IDhtClient
-{
-    private readonly ILogger<DhtClientStub> logger;
-
-    public DhtClientStub(ILogger<DhtClientStub> logger)
-    {
-        this.logger = logger;
-    }
-
-    public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct)
-    {
-        logger.LogDebug("[DHT-STUB] PUT key={KeyHex} size={Size}b ttl={TTL}s",
-            DhtKeyDerivation.ToHexString(key), value.Length, ttlSeconds);
-        return Task.CompletedTask;
-    }
-
-    public Task<byte[]?> GetAsync(byte[] key, CancellationToken ct)
-    {
-        logger.LogDebug("[DHT-STUB] GET key={KeyHex}",
-            DhtKeyDerivation.ToHexString(key));
-        return Task.FromResult<byte[]?>(null);
-    }
-
-    public Task<List<byte[]>> GetMultipleAsync(byte[] key, CancellationToken ct)
-    {
-        logger.LogDebug("[DHT-STUB] GET_MULTIPLE key={KeyHex}",
-            DhtKeyDerivation.ToHexString(key));
-        return Task.FromResult(new List<byte[]>());
-    }
-}
-
-/// <summary>
 /// Publishes shadow index shards to DHT periodically.
+/// Phase 6B: T-808 - Background service implementation.
 /// </summary>
 public interface IShardPublisher
 {
@@ -66,31 +35,41 @@ public interface IShardPublisher
 }
 
 /// <summary>
-/// Background service that publishes shards to DHT.
+/// Background service that publishes shards to DHT periodically.
+/// Phase 6B: T-808 - Real implementation as BackgroundService.
 /// </summary>
-public class ShardPublisher : IShardPublisher
+public class ShardPublisher : BackgroundService, IShardPublisher
 {
     private readonly ILogger<ShardPublisher> logger;
     private readonly IShadowIndexBuilder builder;
     private readonly IDhtClient dht;
     private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
-    private readonly IHashDbService hashDb;
+    private readonly IHashDbService? hashDb;
+    private readonly IDhtRateLimiter? rateLimiter;
 
     public ShardPublisher(
         ILogger<ShardPublisher> logger,
         IShadowIndexBuilder builder,
         IDhtClient dht,
         IOptionsMonitor<slskd.Options> optionsMonitor,
-        IHashDbService hashDb = null)
+        IHashDbService? hashDb = null,
+        IDhtRateLimiter? rateLimiter = null)
     {
         this.logger = logger;
         this.builder = builder;
         this.dht = dht;
         this.optionsMonitor = optionsMonitor;
         this.hashDb = hashDb;
+        this.rateLimiter = rateLimiter;
     }
 
-    public async Task StartPublishingAsync(CancellationToken ct)
+    public Task StartPublishingAsync(CancellationToken ct = default)
+    {
+        // This method is kept for interface compatibility but ExecuteAsync is the real implementation
+        return Task.CompletedTask;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var options = optionsMonitor.CurrentValue;
         if (options.VirtualSoulfind?.ShadowIndex?.Enabled != true)
@@ -104,19 +83,29 @@ public class ShardPublisher : IShardPublisher
             : 15;
         logger.LogInformation("[VSF-PUBLISH] Starting shard publisher (interval: {Interval}m)", intervalMinutes);
 
-        while (!ct.IsCancellationRequested)
+        // Wait a bit before first publish to let system stabilize
+        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await PublishShardsAsync(ct);
+                await PublishShardsAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Shutdown requested
+                break;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "[VSF-PUBLISH] Failed to publish shards");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct);
+            await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), stoppingToken);
         }
+
+        logger.LogInformation("[VSF-PUBLISH] Shard publisher stopped");
     }
 
     private async Task PublishShardsAsync(CancellationToken ct)
@@ -135,7 +124,7 @@ public class ShardPublisher : IShardPublisher
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "[VSF-PUBLISH] Failed to get recording IDs from HashDb");
+                logger.LogWarning(ex, "[VSF-PUBLISH] Failed to get recording IDs from HashDb: {Message}", ex.Message);
                 recordingIds = new List<string>();
             }
         }
@@ -151,8 +140,11 @@ public class ShardPublisher : IShardPublisher
             return;
         }
 
+        var options = optionsMonitor.CurrentValue;
         // Limit to reasonable number per cycle to avoid overwhelming DHT
-        const int maxShardsPerCycle = 50; // Publish max 50 shards per cycle
+        var maxShardsPerCycle = options.VirtualSoulfind?.ShadowIndex?.MaxShardsPerPublish > 0
+            ? options.VirtualSoulfind.ShadowIndex.MaxShardsPerPublish
+            : 50; // Default: 50 shards per cycle
         var idsToPublish = recordingIds.Take(maxShardsPerCycle).ToList();
 
         logger.LogInformation(
@@ -163,13 +155,25 @@ public class ShardPublisher : IShardPublisher
         var publishedCount = 0;
         var failedCount = 0;
 
-        // Publish shards in parallel (with limit)
+        // Publish shards in parallel (with limit and rate limiting)
         var semaphore = new SemaphoreSlim(5, 5); // Max 5 concurrent publishes
         var publishTasks = idsToPublish.Select(async mbid =>
         {
             await semaphore.WaitAsync(ct);
             try
             {
+                // Apply rate limiting (T-812)
+                if (rateLimiter != null)
+                {
+                    var acquired = await rateLimiter.TryAcquireAsync(ct);
+                    if (!acquired)
+                    {
+                        logger.LogWarning("[VSF-PUBLISH] Rate limit exceeded, skipping {MBID}", mbid);
+                        Interlocked.Increment(ref failedCount);
+                        return;
+                    }
+                }
+
                 await PublishShardForMbidAsync(mbid, ct);
                 Interlocked.Increment(ref publishedCount);
             }
@@ -195,15 +199,31 @@ public class ShardPublisher : IShardPublisher
         var shard = await builder.BuildShardAsync(mbid, ct);
         if (shard == null)
         {
+            logger.LogDebug("[VSF-PUBLISH] No shard data for {MBID}", mbid);
             return;
         }
+
+        // Apply eviction policy (trim if needed)
+        if (ShardEvictionPolicy.ExceedsSizeLimit(shard))
+        {
+            logger.LogDebug("[VSF-PUBLISH] Shard for {MBID} exceeds size limit, trimming", mbid);
+            shard = ShardEvictionPolicy.TrimShard(shard);
+        }
+
+        // Use TTL from options if configured
+        var options = optionsMonitor.CurrentValue;
+        var ttlSeconds = options.VirtualSoulfind?.ShadowIndex?.ShardTTLHours > 0
+            ? options.VirtualSoulfind.ShadowIndex.ShardTTLHours * 3600
+            : shard.TTLSeconds;
 
         var key = DhtKeyDerivation.DeriveRecordingKey(mbid);
         var value = ShardSerializer.Serialize(shard);
 
-        await dht.PutAsync(key, value, shard.TTLSeconds, ct);
+        // Apply rate limiting (T-812)
+        // Note: Rate limiter would be injected if needed, but for now we rely on semaphore in PublishShardsAsync
+        await dht.PutAsync(key, value, ttlSeconds, ct);
 
-        logger.LogInformation("[VSF-PUBLISH] Published shard for {MBID}: {PeerCount} peers, {VariantCount} variants",
-            mbid, shard.ApproximatePeerCount, shard.CanonicalVariants.Count);
+        logger.LogInformation("[VSF-PUBLISH] Published shard for {MBID}: {PeerCount} peers, {VariantCount} variants, TTL={TTL}s",
+            mbid, shard.ApproximatePeerCount, shard.CanonicalVariants.Count, ttlSeconds);
     }
 }

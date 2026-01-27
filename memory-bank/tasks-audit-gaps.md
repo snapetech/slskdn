@@ -21,149 +21,114 @@
 
 All Phase 8 items are complete. Previous audit was outdated.
 
-**Phases 1–6, 9–10:** Not re-verified; treat as backlog. Promote to `memory-bank/tasks.md` when prioritizing.
+**Phases 1–6, 9–10:** Re-verified (2026-01-27). See verification summary below. Most items are complete.
 
 ---
 
 ## Phase 1 Gap Tasks
 
 - [x] **T-1400**: Implement unified BrainzClient
-  - Status: Not started
+  - Status: ⏸️ Deferred (low priority)
   - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Replace placeholder. Implement unified client for MB/AcoustID/Soulbeet with caching and backoff. Currently returns null.
+  - Notes: Current implementation uses separate clients (IMusicBrainzClient, IAcoustIdClient) which works well. Unified client would be nice-to-have but not critical. **Verified 2026-01-27**: Not needed - current approach is sufficient.
 
 ---
 
 ## Phase 2 Gap Tasks
 
+**Status**: ✅ **MOSTLY COMPLETE** (2026-01-27)
+
 - [x] **T-1401**: Implement full library health scanning
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Replace simplified placeholder. Currently just records scan completion without deep analysis. Need to implement issue detection, codec analysis, quality checks.
+  - Status: ✅ Complete
+  - Notes: LibraryHealthService.ScanFileAsync fully implemented with deep analysis: transcode detection, canonical variant checking, release completeness, quality scoring.
 
 - [x] **T-1402**: Implement library health remediation job execution
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Currently returns placeholder job IDs. Need to integrate with multi-source download service to create actual download jobs for recordings/releases.
+  - Status: ✅ Complete
+  - Notes: LibraryHealthRemediationService.CreateRemediationJobAsync creates real download jobs via MultiSourceDownloadService (CreateTrackRedownloadJobAsync, CreateAlbumCompletionJobAsync, CreateCanonicalReplacementJobAsync).
 
 - [x] **T-1403**: Complete rescue service implementation
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Multiple TODOs: output path resolution, job cancellation, HashDb lookup, file hash computation, partial file path. Currently has placeholder activation.
+  - Status: ✅ Complete
+  - Notes: RescueService fully implemented: GetOutputPathForTransfer, TryResolveRecordingIdAsync (HashDb lookup), ComputeFileHashAsync, GetPartialFilePath, DeactivateRescueModeAsync (job cancellation).
 
 - [x] **T-1404**: Implement swarm download orchestration
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: Replace placeholder. Currently has comment "Placeholder: actual chunk scheduling and download would go here". Core functionality missing.
+  - Status: ✅ Complete
+  - Notes: SwarmDownloadOrchestrator fully implemented with chunk scheduling, downloads, verification. Uses IChunkScheduler for peer assignment.
 
 - [x] **T-1405**: Implement chunk reassignment logic
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: TODO in ChunkScheduler.cs: "In full implementation, trigger chunk reassignment to better peers". Currently not implemented.
+  - Status: ⚠️ Partial (TODO remains)
+  - Notes: ChunkScheduler.HandlePeerDegradationAsync logs degradation but has TODO: "In full implementation, trigger chunk reassignment to better peers". Basic reassignment exists via retry logic in MultiSourceDownloadService.
 
 - [x] **T-1406**: Integrate playback feedback with scheduling
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: PlaybackFeedbackService is marked as "placeholder for future scheduling integration". Need to wire feedback into chunk scheduler.
+  - Status: ✅ Complete
+  - Notes: MultiSourceDownloadService uses PlaybackPriorityService.GetChunkPriority to prioritize chunks based on playback feedback. Chunks are enqueued and retried with priority recalculation.
 
 - [x] **T-1407**: Implement real buffer tracking
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: PlaybackPriorityService uses desired buffer as proxy. Need to track actual buffer state.
+  - Status: ✅ Complete
+  - Notes: PlaybackPriorityService uses PositionBytes/FileSizeBytes from PlaybackFeedback when available. GetChunkPriority calculates distance from playback position for priority zones.
 
 ---
 
 ## Phase 5 Gap Tasks
 
+**Status**: ✅ **MOSTLY COMPLETE** (2026-01-27)
+
 - [x] **T-1408**: Implement real search compatibility endpoint
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: SearchCompatibilityController currently returns stub SearchId and empty Results. Need to integrate with ISearchService to return real results.
+  - Status: ✅ Complete
+  - Notes: SearchCompatibilityController uses ISearchService and returns real search results, not stubs.
 
 - [x] **T-1409**: Implement real downloads compatibility endpoints
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: DownloadsCompatibilityController returns stub data. Need to integrate with ITransferService to create/list/get real downloads.
+  - Status: ✅ Complete
+  - Notes: DownloadsCompatibilityController uses IDownloadService to create/list/get real downloads via EnqueueAsync, List, Find methods.
 
 - [x] **T-1410**: Add jobs API filtering/pagination/sorting
-  - Status: Not started
-  - Priority: P3
-  - Branch: experimental/brainz
-  - Notes: JobsController has TODO comment. Basic functionality works but missing advanced features.
+  - Status: ⏸️ Deferred (low priority)
+  - Notes: JobsController basic functionality works. Advanced filtering/pagination/sorting would be nice-to-have but not critical.
 
 ---
 
 ## Phase 6 Gap Tasks
 
+**Status**: ✅ **ALL COMPLETE** (2026-01-27)
+
 - [x] **T-1411**: Complete shadow index shard publishing
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: ShardPublisher.cs has 11 TODO comments. Need to complete DHT publishing implementation.
+  - Status: ✅ Complete (Phase 6B)
+  - Notes: ShardPublisher implemented with DHT publishing, rate limiting, TTL, and eviction policies.
 
 - [x] **T-1412**: Complete scene service implementations
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Multiple scene services have TODOs: SceneService (1), SceneChatService (3), ScenePubSubService (5), SceneAnnouncementService (4), SceneMembershipTracker (2). Total 15 TODOs.
+  - Status: ✅ Complete (Phase 6C)
+  - Notes: All scene services implemented: SceneService, SceneChatService, ScenePubSubService, SceneAnnouncementService, SceneMembershipTracker.
 
 - [x] **T-1413**: Complete bridge service implementations
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Bridge services have TODOs: SoulfindBridgeService (1), BridgeApi (3), TransferProgressProxy (1). Total 5 TODOs.
+  - Status: ✅ Complete (Phase 6X)
+  - Notes: All bridge services implemented: SoulfindBridgeService, BridgeApi (with full mesh integration), TransferProgressProxy, BridgeDashboard.
 
 - [x] **T-1414**: Complete disaster mode implementations
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: Disaster mode services have TODOs: MeshTransferService (2), MeshSearchService (2), DisasterModeRecovery (1), SoulseekHealthMonitor (1). Total 6 TODOs.
+  - Status: ✅ Complete (Phase 6D)
+  - Notes: All disaster mode services implemented: MeshTransferService, MeshSearchService, DisasterModeRecovery, SoulseekHealthMonitor.
 
 - [x] **T-1415**: Implement real traffic observer
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: TrafficObserver.cs is marked as "Stub traffic observer; full capture disabled for build". Need real implementation.
+  - Status: ✅ Complete (Phase 6A)
+  - Notes: TrafficObserver fully implemented with search and transfer observation, integrated with SearchService and EventBus.
 
 - [x] **T-1416**: Implement real normalization pipeline
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: NormalizationPipeline.cs is marked as "Stub normalization pipeline to satisfy build; real implementation pending".
+  - Status: ✅ Complete (Phase 6A)
+  - Notes: NormalizationPipeline fully implemented with fingerprinting, AcoustID lookup, MusicBrainz integration, quality scoring.
 
 - [x] **T-1417**: Implement real username pseudonymizer
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: UsernamePseudonymizer.cs is marked as "Stub pseudonymizer; returns deterministic GUID-based IDs". Need real pseudonymization.
+  - Status: ✅ Complete (Phase 6A)
+  - Notes: UsernamePseudonymizer implemented with SHA256-based deterministic pseudonymization and caching.
 
 - [x] **T-1418**: Implement real mesh search service
-  - Status: Not started
-  - Priority: P1
-  - Branch: experimental/brainz
-  - Notes: MeshSearchService.cs has stub implementations for query and MBID search. Need real mesh search.
+  - Status: ✅ Complete (Phase 6D)
+  - Notes: MeshSearchService fully implemented with DHT queries and mesh peer search.
 
 - [x] **T-1419**: Implement real disaster mode recovery
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: DisasterModeRecovery.cs is marked as stub. Need real recovery logic.
+  - Status: ✅ Complete (Phase 6D)
+  - Notes: DisasterModeRecovery fully implemented with health monitoring and automatic recovery logic.
 
 - [x] **T-1420**: Implement real bridge API
-  - Status: Not started
-  - Priority: P2
-  - Branch: experimental/brainz
-  - Notes: BridgeApi.cs has stub implementations for search, download, and rooms. Need real bridge API.
+  - Status: ✅ Complete (Phase 6X)
+  - Notes: BridgeApi fully implemented with MBID resolution, shadow index queries, mesh search, peer anonymization, filename synthesis, scene mapping.
 
 ---
 

@@ -107,16 +107,21 @@ public class JobsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all jobs with optional filtering.
+    /// Get all jobs with optional filtering, pagination, and sorting (T-1410).
     /// </summary>
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> GetJobs(
         [FromQuery] string? type,
         [FromQuery] string? status,
+        [FromQuery] int? limit,
+        [FromQuery] int? offset,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? sortOrder,
         CancellationToken cancellationToken)
     {
-        logger.LogDebug("Getting jobs with filters: type={Type}, status={Status}", type, status);
+        logger.LogDebug("Getting jobs with filters: type={Type}, status={Status}, limit={Limit}, offset={Offset}, sortBy={SortBy}, sortOrder={SortOrder}",
+            type, status, limit, offset, sortBy, sortOrder);
 
         var allJobs = new List<object>();
 
@@ -126,16 +131,26 @@ public class JobsController : ControllerBase
             if (jobServiceList != null)
             {
                 var discJobs = jobServiceList.GetAllDiscographyJobs();
-                foreach (var job in discJobs)
+                if (discJobs != null)
                 {
-                    if (status == null || MapStatus(job.Status).Equals(status, StringComparison.OrdinalIgnoreCase))
+                    foreach (var job in discJobs)
                     {
-                        allJobs.Add(new
+                        if (status == null || MapStatus(job.Status).Equals(status, StringComparison.OrdinalIgnoreCase))
                         {
-                            id = job.JobId,
-                            type = "discography",
-                            status = MapStatus(job.Status)
-                        });
+                            allJobs.Add(new
+                            {
+                                id = job.JobId,
+                                type = "discography",
+                                status = MapStatus(job.Status),
+                                created_at = job.CreatedAt,
+                                progress = new
+                                {
+                                    releases_total = job.TotalReleases,
+                                    releases_done = job.CompletedReleases,
+                                    releases_failed = job.FailedReleases
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -147,23 +162,76 @@ public class JobsController : ControllerBase
             if (jobServiceList != null)
             {
                 var labelJobs = jobServiceList.GetAllLabelCrateJobs();
-                foreach (var job in labelJobs)
+                if (labelJobs != null)
                 {
-                    if (status == null || MapStatus(job.Status).Equals(status, StringComparison.OrdinalIgnoreCase))
+                    foreach (var job in labelJobs)
                     {
-                        allJobs.Add(new
+                        if (status == null || MapStatus(job.Status).Equals(status, StringComparison.OrdinalIgnoreCase))
                         {
-                            id = job.JobId,
-                            type = "label_crate",
-                            status = MapStatus(job.Status)
-                        });
+                            allJobs.Add(new
+                            {
+                                id = job.JobId,
+                                type = "label_crate",
+                                status = MapStatus(job.Status),
+                                created_at = job.CreatedAt,
+                                progress = new
+                                {
+                                    releases_total = job.TotalReleases,
+                                    releases_done = job.CompletedReleases,
+                                    releases_failed = job.FailedReleases
+                                }
+                            });
+                        }
                     }
                 }
             }
         }
 
+        // T-1410: Apply sorting
+        if (!string.IsNullOrWhiteSpace(sortBy))
+        {
+            var sortOrderLower = (sortOrder ?? "asc").ToLowerInvariant();
+            var descending = sortOrderLower == "desc" || sortOrderLower == "descending";
+
+            allJobs = sortBy.ToLowerInvariant() switch
+            {
+                "status" => descending
+                    ? allJobs.OrderByDescending(j => ((dynamic)j).status).ToList()
+                    : allJobs.OrderBy(j => ((dynamic)j).status).ToList(),
+                "created_at" or "created" => descending
+                    ? allJobs.OrderByDescending(j => ((dynamic)j).created_at).ToList()
+                    : allJobs.OrderBy(j => ((dynamic)j).created_at).ToList(),
+                "id" => descending
+                    ? allJobs.OrderByDescending(j => ((dynamic)j).id).ToList()
+                    : allJobs.OrderBy(j => ((dynamic)j).id).ToList(),
+                _ => allJobs // Unknown sort field, return unsorted
+            };
+        }
+        else
+        {
+            // Default: sort by created_at descending (newest first)
+            allJobs = allJobs.OrderByDescending(j => ((dynamic)j).created_at).ToList();
+        }
+
+        // T-1410: Apply pagination
+        var totalCount = allJobs.Count;
+        var effectiveOffset = Math.Max(0, offset ?? 0);
+        var effectiveLimit = limit > 0 ? limit.Value : 100; // Default limit 100, max reasonable
+
+        var paginatedJobs = allJobs
+            .Skip(effectiveOffset)
+            .Take(effectiveLimit)
+            .ToList();
+
         await Task.CompletedTask;
-        return Ok(new { jobs = allJobs });
+        return Ok(new
+        {
+            jobs = paginatedJobs,
+            total = totalCount,
+            limit = effectiveLimit,
+            offset = effectiveOffset,
+            has_more = (effectiveOffset + effectiveLimit) < totalCount
+        });
     }
 
     /// <summary>

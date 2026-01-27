@@ -30,6 +30,7 @@ namespace slskd.Search
     using Microsoft.EntityFrameworkCore;
     using Serilog;
     using slskd.Search.API;
+    using slskd.Search.Providers;
     using Soulseek;
     using SearchOptions = Soulseek.SearchOptions;
     using SearchQuery = Soulseek.SearchQuery;
@@ -82,8 +83,9 @@ namespace slskd.Search
         /// <param name="query">The search query.</param>
         /// <param name="scope">The search scope.</param>
         /// <param name="options">Search options.</param>
+        /// <param name="requestedProviders">Optional list of provider names for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"]).</param>
         /// <returns>The completed search.</returns>
-        Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null);
+        Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null);
 
         /// <summary>
         ///     Cancels the search matching the specified <paramref name="id"/>, if it is in progress.
@@ -109,7 +111,7 @@ namespace slskd.Search
     /// <summary>
     ///     Handles the lifecycle and persistence of searches.
     /// </summary>
-    public class SearchService : ISearchService
+    public partial class SearchService : ISearchService
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="SearchService"/> class.
@@ -129,7 +131,9 @@ namespace slskd.Search
             slskd.Events.EventBus eventBus = null,
             slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator = null,
             slskd.VirtualSoulfind.DisasterMode.IMeshSearchService meshSearchService = null,
-            slskd.DhtRendezvous.Search.IMeshOverlaySearchService meshOverlaySearchService = null)
+            slskd.DhtRendezvous.Search.IMeshOverlaySearchService meshOverlaySearchService = null,
+            slskd.VirtualSoulfind.Capture.ITrafficObserver trafficObserver = null,
+            IEnumerable<ISearchProvider> searchProviders = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
@@ -140,6 +144,8 @@ namespace slskd.Search
             DisasterModeCoordinator = disasterModeCoordinator;
             MeshSearchService = meshSearchService;
             MeshOverlaySearchService = meshOverlaySearchService;
+            TrafficObserver = trafficObserver;
+            SearchProviders = searchProviders?.ToList() ?? new List<ISearchProvider>();
         }
 
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; }
@@ -155,6 +161,8 @@ namespace slskd.Search
         private slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator DisasterModeCoordinator { get; }
         private slskd.VirtualSoulfind.DisasterMode.IMeshSearchService MeshSearchService { get; }
         private slskd.DhtRendezvous.Search.IMeshOverlaySearchService MeshOverlaySearchService { get; }
+        private slskd.VirtualSoulfind.Capture.ITrafficObserver TrafficObserver { get; }
+        private List<ISearchProvider> SearchProviders { get; }
 
         /// <summary>
         ///     Deletes the specified search.
@@ -258,8 +266,23 @@ namespace slskd.Search
         /// <param name="scope">The search scope.</param>
         /// <param name="options">Search options.</param>
         /// <returns>The completed search.</returns>
-        public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null)
+        public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null)
         {
+            // Check if Scene ↔ Pod Bridging is enabled
+            var scenePodBridgeEnabled = OptionsMonitor.CurrentValue.Feature.ScenePodBridge;
+            if (scenePodBridgeEnabled && SearchProviders.Any())
+            {
+                // Filter providers based on request, or use all if not specified
+                var providersToUse = requestedProviders != null && requestedProviders.Any()
+                    ? SearchProviders.Where(p => requestedProviders.Contains(p.Name)).ToList()
+                    : SearchProviders;
+                
+                if (providersToUse.Any())
+                {
+                    return await StartBridgedSearchAsync(id, query, scope, options, providersToUse);
+                }
+            }
+
             // H-08: Check Soulseek safety caps before initiating search
             if (!SafetyLimiter.TryConsumeSearch("user"))
             {
@@ -432,6 +455,24 @@ namespace slskd.Search
                             {
                                 Responses = responses,
                             });
+                        }
+
+                        // Notify traffic observer for Virtual Soulfind capture (Phase 6A: T-803)
+                        if (TrafficObserver != null && responses.Count > 0)
+                        {
+                            try
+                            {
+                                // Call TrafficObserver for each search response
+                                // Each SearchResponse represents one user's results for the query
+                                foreach (var response in responses)
+                                {
+                                    _ = TrafficObserver.OnSearchResultsAsync(query.SearchText, response, CancellationToken.None);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Debug(ex, "Failed to notify traffic observer for search '{Query}'", query.SearchText);
+                            }
                         }
 
                         // zero responses before broadcasting, as we don't want to blast this

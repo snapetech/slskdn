@@ -1,5 +1,6 @@
 import './System.css';
 import { Switch } from '../Shared';
+import Bridge from './Bridge';
 import Data from './Data';
 import Events from './Events';
 import Files from './Files';
@@ -82,6 +83,19 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'mesh',
+    },
+    {
+      menuItem: {
+        content: 'Bridge',
+        icon: 'exchange',
+        key: 'bridge',
+      },
+      render: () => (
+        <Tab.Pane>
+          <Bridge />
+        </Tab.Pane>
+      ),
+      route: 'bridge',
     },
     {
       menuItem: {

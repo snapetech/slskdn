@@ -6,6 +6,7 @@ namespace slskd.VirtualSoulfind.Scenes;
 
 using slskd.VirtualSoulfind.ShadowIndex;
 using System.Collections.Concurrent;
+using MessagePack;
 
 /// <summary>
 /// Interface for scene membership tracking.
@@ -76,16 +77,30 @@ public class SceneMembershipTracker : ISceneMembershipTracker
             return null;
         }
 
-        // Parse metadata (TODO: implement proper deserialization)
-        var metadata = new SceneMetadata
+        // Parse metadata (Phase 6C: T-815 - MessagePack deserialization)
+        SceneMetadata metadata;
+        try
         {
-            SceneId = sceneId,
-            DisplayName = sceneId.Split(':').Last(),
-            Type = ParseSceneType(sceneId),
-            ApproximateMemberCount = 0,
-            CreatedAt = DateTimeOffset.UtcNow.AddDays(-30), // Placeholder
-            LastUpdatedAt = DateTimeOffset.UtcNow
-        };
+            metadata = MessagePack.MessagePackSerializer.Deserialize<SceneMetadata>(data);
+            if (metadata == null)
+            {
+                throw new InvalidOperationException("Deserialized metadata is null");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[VSF-SCENE-TRACK] Failed to deserialize scene metadata, using defaults");
+            // Fallback: create metadata from scene ID
+            metadata = new SceneMetadata
+            {
+                SceneId = sceneId,
+                DisplayName = sceneId.Split(':').LastOrDefault() ?? sceneId,
+                Type = ParseSceneType(sceneId),
+                ApproximateMemberCount = 0,
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(-30),
+                LastUpdatedAt = DateTimeOffset.UtcNow
+            };
+        }
 
         // Get member count from members list
         var members = await GetMembersAsync(sceneId, ct);

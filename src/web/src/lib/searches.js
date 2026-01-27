@@ -54,8 +54,13 @@ export const isUserBlocked = (username) => {
   return getBlockedUsers().includes(username);
 };
 
-export const create = ({ id, searchText }) => {
-  return api.post('/searches', { id, searchText });
+export const create = ({ id, searchText, providers = null }) => {
+  const body = { id, searchText };
+  // Include providers if specified (for Scene ↔ Pod Bridging)
+  if (providers && Array.isArray(providers)) {
+    body.providers = providers;
+  }
+  return api.post('/searches', body);
 };
 
 export const getStatus = async ({ id, includeResponses = false }) => {

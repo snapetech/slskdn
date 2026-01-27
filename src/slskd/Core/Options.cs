@@ -1420,7 +1420,7 @@ namespace slskd
             public bool Swagger { get; init; } = true;
 
             /// <summary>ShareGroups, Collections, ShareGrants, manifest, token. When false, related APIs return 404.</summary>
-            public bool CollectionsSharing { get; init; } = false;
+            public bool CollectionsSharing { get; init; } = true;
 
             /// <summary>GET /api/v0/streams/{contentId} with range and token or normal auth. When false, streaming API returns 404.</summary>
             public bool Streaming { get; init; } = true;
@@ -1435,7 +1435,25 @@ namespace slskd
             public bool MeshPublishAvailability { get; init; } = true;
 
             /// <summary>Identity and friends (profiles, contacts, LAN discovery, invites). When false, related APIs return 404.</summary>
-            public bool IdentityFriends { get; init; } = false;
+            public bool IdentityFriends { get; init; } = true;
+
+            /// <summary>Scene ↔ Pod Bridging: Unified search aggregation from Pod/Mesh and Soulseek Scene. When false, search behaves as before.</summary>
+            public bool ScenePodBridge { get; init; } = true;
+
+            /// <summary>Scene ↔ Pod Bridging options.</summary>
+            public ScenePodBridgeOptions ScenePodBridgeOptions { get; init; } = new ScenePodBridgeOptions();
+        }
+
+        /// <summary>
+        ///     Scene ↔ Pod Bridging options.
+        /// </summary>
+        public class ScenePodBridgeOptions
+        {
+            /// <summary>Proxy scene downloads through pod (future feature, keep OFF). When false, scene downloads use existing Soulseek pipeline.</summary>
+            public bool ProxyTransfers { get; init; } = false;
+
+            /// <summary>Export pod availability to scene (future feature, keep OFF). When false, pod content is never advertised to scene.</summary>
+            public bool ExportPodAvailability { get; init; } = false;
         }
 
         /// <summary>

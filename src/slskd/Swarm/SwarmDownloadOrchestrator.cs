@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Soulseek;
 using slskd.Transfers.MultiSource;
 using slskd.Transfers.MultiSource.Scheduling;
+using System.Collections.Generic;
 using IODirectory = System.IO.Directory;
 using IOFile = System.IO.File;
 using IOPath = System.IO.Path;
@@ -129,12 +130,58 @@ public class SwarmDownloadOrchestrator : BackgroundService
 
             var completedChunks = new ConcurrentDictionary<int, ChunkResult>();
             var chunkAssignments = new ConcurrentDictionary<int, ChunkAssignment>();
+            var activeDownloadTasks = new ConcurrentDictionary<int, Task>(); // Track active downloads by chunk index
+
+            // T-1405: Subscribe to peer degradation events for reassignment
+            var degradedPeers = new ConcurrentDictionary<string, bool>();
 
             // Process chunks using chunk scheduler
             var downloadTasks = new List<Task>();
 
-            while (!chunkQueue.IsEmpty || completedChunks.Count < chunks.Count)
+            while (!chunkQueue.IsEmpty || completedChunks.Count < chunks.Count || activeDownloadTasks.Count > 0)
             {
+                // T-1405: Check for peer degradation and reassign chunks
+                foreach (var degradedPeer in degradedPeers.Keys.ToList())
+                {
+                    if (degradedPeers.TryRemove(degradedPeer, out _))
+                    {
+                        var chunksToReassign = await chunkScheduler.HandlePeerDegradationAsync(
+                            degradedPeer,
+                            slskd.Transfers.MultiSource.Scheduling.DegradationReason.HighErrorRate,
+                            ct);
+
+                        if (chunksToReassign != null && chunksToReassign.Count > 0)
+                        {
+                            logger.LogInformation(
+                                "[SwarmOrchestrator] Reassigning {Count} chunks from degraded peer {PeerId}",
+                                chunksToReassign.Count, degradedPeer);
+
+                            // Cancel and re-queue chunks assigned to degraded peer
+                            foreach (var chunkIndex in chunksToReassign)
+                            {
+                                // Cancel active download task if exists
+                                if (activeDownloadTasks.TryRemove(chunkIndex, out var downloadTask))
+                                {
+                                    try
+                                    {
+                                        // Task will handle cancellation and re-queue the chunk
+                                    }
+                                    catch { }
+                                }
+
+                                // Re-queue chunk for reassignment
+                                var chunkToRequeue = chunks.Find(c => c.Index == chunkIndex);
+                                if (chunkToRequeue != null && !completedChunks.ContainsKey(chunkIndex))
+                                {
+                                    chunkQueue.Enqueue(chunkToRequeue);
+                                    chunkAssignments.TryRemove(chunkIndex, out _);
+                                    chunkScheduler.UnregisterAssignment(chunkIndex);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (chunkQueue.TryDequeue(out var chunk))
                 {
                     // Get chunk assignment from scheduler
@@ -144,15 +191,15 @@ public class SwarmDownloadOrchestrator : BackgroundService
                             ChunkIndex = chunk.Index,
                             Size = chunk.EndOffset - chunk.StartOffset,
                         },
-                        availablePeers,
+                        availablePeers.Where(p => !degradedPeers.ContainsKey(p)).ToList(), // Exclude degraded peers
                         ct);
 
                     if (assignment.Success && !string.IsNullOrEmpty(assignment.AssignedPeer))
                     {
                         chunkAssignments[chunk.Index] = assignment;
 
-                        // Download chunk from assigned peer
-                        downloadTasks.Add(Task.Run(async () =>
+                        // T-1405: Track active download task for reassignment
+                        var downloadTask = Task.Run(async () =>
                         {
                             try
                             {
@@ -175,6 +222,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                     if (verified)
                                     {
                                         completedChunks[chunk.Index] = chunkResult;
+                                        chunkScheduler.UnregisterAssignment(chunk.Index);
                                         var completed = Interlocked.Increment(ref status.CompletedChunks);
                                         logger.LogDebug("[SwarmOrchestrator] Job {JobId}: Chunk {ChunkIndex} completed and verified ({Completed}/{Total})",
                                             job.JobId, chunk.Index, completed, status.TotalChunks);
@@ -183,6 +231,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                     {
                                         logger.LogWarning("[SwarmOrchestrator] Job {JobId}: Chunk {ChunkIndex} verification failed",
                                             job.JobId, chunk.Index);
+                                        chunkScheduler.UnregisterAssignment(chunk.Index);
                                         // Re-enqueue for retry
                                         chunkQueue.Enqueue(chunk);
                                     }
@@ -191,6 +240,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                 {
                                     logger.LogWarning("[SwarmOrchestrator] Job {JobId}: Chunk {ChunkIndex} download failed: {Error}",
                                         job.JobId, chunk.Index, chunkResult.Error);
+                                    chunkScheduler.UnregisterAssignment(chunk.Index);
                                     // Re-enqueue for retry
                                     chunkQueue.Enqueue(chunk);
                                 }
@@ -199,10 +249,18 @@ public class SwarmDownloadOrchestrator : BackgroundService
                             {
                                 logger.LogError(ex, "[SwarmOrchestrator] Job {JobId}: Error processing chunk {ChunkIndex}",
                                     job.JobId, chunk.Index);
+                                chunkScheduler.UnregisterAssignment(chunk.Index);
                                 // Re-enqueue for retry
                                 chunkQueue.Enqueue(chunk);
                             }
-                        }, ct));
+                            finally
+                            {
+                                activeDownloadTasks.TryRemove(chunk.Index, out _);
+                            }
+                        }, ct);
+                        
+                        activeDownloadTasks[chunk.Index] = downloadTask;
+                        downloadTasks.Add(downloadTask);
                     }
                     else
                     {

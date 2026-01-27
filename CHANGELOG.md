@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Scene ↔ Pod Bridging
+
+- **Scene ↔ Pod Bridging** (`feature.scene_pod_bridge`): Unified search experience aggregating results from Pod/Mesh and Soulseek Scene networks.
+  - **Unified Search**: Single search query hits both Pod/Mesh and Soulseek Scene providers in parallel, with automatic result merging and deduplication.
+  - **Provenance Badges**: Clear visual indicators (POD, SCENE, POD+SCENE) showing result source in search results.
+  - **Intelligent Action Routing**: 
+    - **Pod Results**: Downloads from remote mesh peers if not available locally, or streams via streaming API. Falls back to mesh directory lookup if peer ID missing.
+    - **Scene Results**: Uses standard Soulseek download pipeline.
+  - **Provider Selection**: UI checkboxes to select which providers to search (Pod and/or Scene).
+  - **Remote Pod Downloads**: Full implementation of downloading Pod content from remote mesh peers when not available locally, with proper error handling (404 for peer not found, 502 for fetch failures).
+  - **Privacy Protection**: Pod peer identities never exposed to Soulseek Scene network. No auto-advertising of Pod content to Scene.
+  - **API Endpoints**:
+    - `POST /api/v0/searches/{searchId}/items/{itemId}/download` - Download a search result item (routes based on source)
+    - `POST /api/v0/searches/{searchId}/items/{itemId}/stream` - Stream a pod result (returns 400 for scene results)
+  - **Feature Flag**: `feature.scene_pod_bridge` (default: `true`). When disabled, search behaves exactly as before.
+  - **Deduplication**: Results deduplicated by hash (if available) or normalized filename + size. Pod results preferred when duplicates found.
+  - **Tests**: 8 integration tests covering remote pod downloads, fallback to mesh directory, error handling, and stream URL generation. All E2E tests updated for new functionality.
+  - **Documentation**: Comprehensive feature documentation in `docs/FEATURES.md` covering architecture, privacy guarantees, configuration, and use cases.
+
 ### Identity & Friends (Phases 1-4)
 
 - **Identity & Friends System** (`feature.identity_friends`): Human-friendly peer addressing and discovery system for the sharing workflow.
@@ -134,6 +153,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Mesh:Security** (`mesh.security`): `enforceRemotePayloadLimits`, `maxRemotePayloadSize`; safe MessagePack/JSON deserialization, overlay/transport caps.
 - **Mesh:SyncSecurity** (`mesh.sync_security`): Rate limiting, quarantine, proof-of-possession, consensus, alert thresholds (T-1432–T-1435). See `docs/security/mesh-sync-security.md`.
+- **Phase 12 Database Poisoning Protection**: ✅ **100% COMPLETE** (Jan 2026). All 10 tasks (T-1430 through T-1439) implemented including Ed25519 signature verification, reputation integration, rate limiting, automatic quarantine, proof-of-possession challenges, cross-peer consensus, security metrics, comprehensive tests, and documentation. See `docs/security/mesh-sync-security.md` and `docs/security/database-poisoning-tasks.md` for details.
 
 ### Anonymity / transports
 
@@ -143,6 +163,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Audio / MediaCore
 
 - **AudioUtilities.ExtractPcmSamples**: Via ffmpeg; `ExtractPcmSamplesAsync`. Test expects `FileNotFoundException` when file missing (replacing `FeatureNotImplementedException`).
+
+### Multi-Source Downloads & Swarm Scheduling
+
+- **Chunk Reassignment Logic (T-1405)**: Enhanced swarm download orchestration with automatic chunk reassignment from degraded peers.
+  - **Assignment Tracking**: `IChunkScheduler` now tracks active chunk assignments via `RegisterAssignment`/`UnregisterAssignment` methods
+  - **Degradation Handling**: `HandlePeerDegradationAsync` returns list of chunk indices to reassign when peer performance degrades
+  - **Automatic Re-queuing**: `SwarmDownloadOrchestrator` detects degraded peers and automatically re-queues their assigned chunks for reassignment to better peers
+  - **Implementation**: Works with both `ChunkScheduler` and `MediaCoreChunkScheduler` for cost-based and content-aware scheduling
+  - **Benefits**: Improves download reliability by quickly shifting work away from underperforming peers to maintain optimal swarm performance
+
+- **Jobs API Enhancements (T-1410)**: Enhanced `/api/jobs` endpoint with pagination, sorting, and improved filtering.
+  - **Pagination**: `limit` and `offset` query parameters (default limit: 100)
+  - **Sorting**: `sortBy` parameter supports `status`, `created_at`, or `id`; `sortOrder` parameter supports `asc`/`desc` (default: `desc`)
+  - **Default Sorting**: Jobs sorted by `created_at` descending (newest first) when no sort specified
+  - **Enhanced Response**: Includes `total`, `limit`, `offset`, and `has_more` fields for pagination metadata
+  - **Enhanced Job Objects**: Job objects now include `created_at` timestamp and `progress` object with `releases_total`, `releases_done`, `releases_failed` for better sorting and filtering
+  - **Use Case**: Enables efficient job management in UIs with large numbers of jobs, supporting pagination and sorting by status or creation date
+
+### Legacy Client Compatibility Bridge
+
+- **Bridge Proxy Server Testing (T-851)**: Expanded test coverage for bridge protocol parser.
+  - **Additional Unit Tests**: Added 7 new edge case tests for `SoulseekProtocolParser` covering:
+    - Empty string handling (username, password, query)
+    - Long filename handling (1000+ characters)
+    - Invalid message length handling
+    - Message roundtrip validation (write then read)
+    - Empty file/room list handling
+  - **Test Coverage**: All 15 protocol parser tests passing (8 original + 7 new)
+  - **Benefits**: Improved confidence in protocol parser robustness and edge case handling
 
 ### Test infrastructure
 
