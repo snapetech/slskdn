@@ -123,7 +123,8 @@ public class ShareGroupsControllerTests
         var r = await c.AddMember(id, new AddMemberRequest(), CancellationToken.None);
 
         var bad = Assert.IsType<BadRequestObjectResult>(r);
-        Assert.Equal("UserId or PeerId is required.", bad.Value);
+        var problemDetails = Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(bad.Value);
+        Assert.Equal("UserId or PeerId is required.", problemDetails.Detail);
     }
 
     [Fact]

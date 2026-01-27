@@ -92,6 +92,8 @@ public class CollectionsControllerTests
         var id = Guid.NewGuid();
         _sharingMock.Setup(x => x.GetCollectionAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Collection { Id = id, OwnerUserId = "bob" });
+        _sharingMock.Setup(x => x.GetShareGrantsAccessibleByUserAsync("alice", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ShareGrant>()); // Empty list - user has no share grants for this collection
 
         var r = await c.Get(id, CancellationToken.None);
 
@@ -106,7 +108,8 @@ public class CollectionsControllerTests
         var r = await c.Create(new CreateCollectionRequest { Title = "" }, CancellationToken.None);
 
         var bad = Assert.IsType<BadRequestObjectResult>(r);
-        Assert.Equal("Title is required.", bad.Value);
+        var problemDetails = Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(bad.Value);
+        Assert.Equal("Title is required.", problemDetails.Detail);
     }
 
     [Fact]
