@@ -15,6 +15,8 @@ using System.Reflection;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Moq;
+using Soulseek;
 
 /// <summary>
 /// slskdn test client harness for isolated test instances.
@@ -127,6 +129,13 @@ public class SlskdnTestClient : IAsyncDisposable
         // IOptionsMonitor<Options> for Native LibraryHealthController (api/slskdn/library)
         builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
             new slskd.Tests.Integration.StaticOptionsMonitor<slskd.Options>(new slskd.Options()));
+        
+        // ISoulseekClient for ServerCompatibilityController (GET /api/server/status) - ProtocolContractTests
+        // If Soulfind is running, we'd need a real client connection, but for stub mode we use a mock
+        builder.Services.AddSingleton<Soulseek.ISoulseekClient>(_ => 
+            Moq.Mock.Of<Soulseek.ISoulseekClient>(x =>
+                x.State == Soulseek.SoulseekClientStates.LoggedIn && 
+                x.Username == $"test-{testId}"));
         
         // Add only the controllers needed for DisasterMode/ProtocolContract tests to avoid
         // resolving the full slskd app's controller tree (which can hang on missing deps).
