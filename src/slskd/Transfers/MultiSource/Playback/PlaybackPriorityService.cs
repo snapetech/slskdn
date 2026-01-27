@@ -20,6 +20,18 @@ namespace slskd.Transfers.MultiSource.Playback
         PriorityZone GetPriority(string jobId);
 
         /// <summary>
+        ///     Calculates priority for a specific chunk based on its byte position relative to playback position.
+        ///     High priority: Next 10 MB (playback buffer)
+        ///     Mid priority: 10-50 MB ahead
+        ///     Low priority: Rest of file
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="chunkStartBytes">Start byte offset of the chunk.</param>
+        /// <param name="chunkEndBytes">End byte offset of the chunk.</param>
+        /// <returns>Priority zone for this chunk.</returns>
+        PriorityZone GetChunkPriority(string jobId, long chunkStartBytes, long chunkEndBytes);
+
+        /// <summary>
         ///     Gets the latest feedback for a job, if any.
         /// </summary>
         PlaybackFeedback? GetLatest(string jobId);
