@@ -21,7 +21,7 @@ Key achievements:
 
 ### Phase 2: Mesh Integration & Advanced Swarm Features
 **Tasks**: T-400 through T-411 (12 tasks)  
-**Status**: Phase 2A complete, Phase 2B-2D pending  
+**Status**: ✅ **ALL COMPLETE** (Phase 2A, 2B, 2C, 2D)  
 **Branch**: `experimental/multi-swarm`  
 **Priority**: High (P1)
 
@@ -37,11 +37,17 @@ Scan library for suspected transcodes, non-canonical variants, missing tracks. O
 - ✅ T-404: LibraryHealthController API endpoints exist
 - ✅ T-405: LibraryHealthRemediationService with multi-swarm integration exists
 
-#### Phase 2C: RTT + Throughput-Aware Swarm Scheduler (T-406 to T-408)
+#### Phase 2C: RTT + Throughput-Aware Swarm Scheduler (T-406 to T-408) ✅ **COMPLETE**
 Track per-peer metrics (RTT, throughput, error rate) and use cost function to optimize chunk assignment.
+- ✅ T-406: PeerMetricsService with RTT/throughput tracking, EMA calculations
+- ✅ T-407: PeerCostFunction with configurable weights and cost computation
+- ✅ T-408: ChunkScheduler integrates cost-based scheduling with metrics service
 
-#### Phase 2D: Rescue Mode for Underperforming Soulseek Transfers (T-409 to T-411)
+#### Phase 2D: Rescue Mode for Underperforming Soulseek Transfers (T-409 to T-411) ✅ **COMPLETE**
 Detect stalled Soulseek transfers and use overlay mesh to complete them while keeping Soulseek primary.
+- ✅ T-409: UnderperformanceDetectorHostedService detects queued/throughput/stalled issues
+- ✅ T-410: RescueService activates rescue mode and discovers overlay peers
+- ✅ T-411: Multi-source integration completes missing byte ranges via overlay
 
 ---
 
