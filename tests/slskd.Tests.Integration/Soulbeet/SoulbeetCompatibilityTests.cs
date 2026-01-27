@@ -73,8 +73,8 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
                 new
                 {
                     user = "test_user",
-                    remote_path = "test/path/file.flac",
-                    target_dir = "/tmp/downloads"
+                    remotePath = "test/path/file.flac",
+                    targetDir = "/tmp/downloads"
                 }
             }
         };
@@ -115,8 +115,8 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
                 new
                 {
                     user = "test_user",
-                    remote_path = "test/file.flac",
-                    target_dir = "/tmp"
+                    remotePath = "test/file.flac",
+                    targetDir = "/tmp"
                 }
             }
         };
@@ -162,8 +162,8 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
                 new
                 {
                     user = firstResult.User,
-                    remote_path = firstResult.Files[0].Path,
-                    target_dir = "/tmp/downloads"
+                    remotePath = firstResult.Files[0].Path,
+                    targetDir = "/tmp/downloads"
                 }
             }
         });

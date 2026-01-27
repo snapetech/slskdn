@@ -156,6 +156,11 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         VirtualSoulfind = new VirtualSoulfindOptions
                         {
                             Bridge = new BridgeOptions { Enabled = true, Port = 2242 }
+                        },
+                        Directories = new OptionsModel.DirectoriesOptions
+                        {
+                            Downloads = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "slskdn-test", "downloads"),
+                            Incomplete = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "slskdn-test", "incomplete")
                         }
                     }))
                         .AddSingleton<IDiscographyJobService>(discographyService)
