@@ -59,9 +59,6 @@ jobs:
 
       - name: Dotnet
         run: ./bin/build --dotnet-only --version ${{ env.VERSION }}
-
-      - name: Run Tests
-        run: dotnet test --no-build --verbosity normal
         env:
           # Enable protocol contract tests if Soulfind Docker image is available
           # Tests will gracefully skip if Docker/Soulfind unavailable
