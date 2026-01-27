@@ -46,8 +46,8 @@
 ## 📋 Optional / Backlog Items
 
 ### Feature Work (Low Priority)
-- **T-003**: Download Queue Position Polling (marked done in tasks.md - verify)
-- **T-004**: Visual Group Indicators (marked done in tasks.md - verify)
+- **T-003**: ✅ Download Queue Position Polling (confirmed done - implemented in Transfers.jsx)
+- **T-004**: ✅ Visual Group Indicators (confirmed done - implemented in Response.jsx)
 - **Phase 1 Multi-Swarm**: T-312 (Album completion UI), T-313 (Unit + integration tests)
 - **Phase 2-7 Multi-Swarm**: Various tasks in backlog (see `memory-bank/multi-swarm-task-summary.md`)
 
@@ -89,18 +89,13 @@
 
 ## 🎯 Next Steps (Optional)
 
-### Immediate (If Desired)
-1. **Fix 2 failing Soulbeet tests** - Investigate and fix test setup/assertions
-2. **Verify T-003, T-004** - Confirm they're actually done or implement if needed
-3. **Update activeContext.md** - Fix outdated "Continue Phase 2-6" text
-
 ### Short Term (Optional)
-4. **Phase 1 Multi-Swarm**: Complete T-312, T-313
-5. **New feature work**: As prioritized by user
+1. **Phase 1 Multi-Swarm**: Complete T-312 (Album completion UI), T-313 (Unit + integration tests)
+2. **New feature work**: As prioritized by user
 
 ### Long Term (Backlog)
-6. **Multi-Swarm Phases 2-7**: Various features in backlog
-7. **Tasks Audit Gaps**: Phases 1-6, 9-10 items
+3. **Multi-Swarm Phases 2-7**: Various features in backlog (see `memory-bank/multi-swarm-task-summary.md`)
+4. **Tasks Audit Gaps**: Phases 1-6, 9-10 items (see `memory-bank/tasks-audit-gaps.md`)
 
 ---
 
@@ -109,8 +104,8 @@
 **Current State**: Excellent
 - All builds passing
 - All unit tests passing (2430)
+- All integration tests passing (190)
 - All critical features complete
-- Only 2 non-blocking integration test failures
 - All TODOs properly documented
 
 **Recommendation**: Codebase is in excellent shape. Remaining work is optional/backlog items. Ready for:
