@@ -31,8 +31,11 @@ Build quality scoring for audio variants and prefer canonical/best versions in d
 - ✅ T-401: CanonicalStatsService, aggregation logic, tests
 - ✅ T-402: SelectCanonicalSourcesAsync, ShouldSkipDownloadAsync in MultiSourceDownloadService
 
-#### Phase 2B: Collection Doctor / Library Health (T-403 to T-405)
+#### Phase 2B: Collection Doctor / Library Health (T-403 to T-405) ✅ **COMPLETE**
 Scan library for suspected transcodes, non-canonical variants, missing tracks. One-click fix via multi-swarm.
+- ✅ T-403: Deep library scanning logic implemented (LibraryHealthService.ScanFileAsync)
+- ✅ T-404: LibraryHealthController API endpoints exist
+- ✅ T-405: LibraryHealthRemediationService with multi-swarm integration exists
 
 #### Phase 2C: RTT + Throughput-Aware Swarm Scheduler (T-406 to T-408)
 Track per-peer metrics (RTT, throughput, error rate) and use cost function to optimize chunk assignment.
