@@ -124,12 +124,12 @@ public class SoulfindRunner : IAsyncDisposable
         }
         
         // Try to start Soulfind container
-        // Note: This assumes a soulfind Docker image exists
-        // If not available, this will fail gracefully
+        // Uses official Soulfind image from GitHub Container Registry
+        // ghcr.io/soulfind-dev/soulfind (see https://github.com/soulfind-dev/soulfind)
         try
         {
             var containerName = $"soulfind-test-{port}";
-            var startArgs = $"run -d --name {containerName} -p {port}:2242 soulfind/soulfind:latest";
+            var startArgs = $"run -d --name {containerName} -p {port}:2242 ghcr.io/soulfind-dev/soulfind:latest";
             
             var startProcess = new ProcessStartInfo
             {

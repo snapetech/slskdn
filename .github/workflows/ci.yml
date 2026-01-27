@@ -39,6 +39,14 @@ jobs:
           echo "Using pre-installed .NET SDK"
           dotnet --version
 
+      - name: Setup Soulfind (Docker)
+        if: ${{ !contains(runner.name, 'keith') }}
+        run: |
+          # Pull Soulfind Docker image for protocol contract tests
+          # Image: ghcr.io/soulfind-dev/soulfind (official Soulseek server simulator)
+          docker pull ghcr.io/soulfind-dev/soulfind:latest || echo "Soulfind image not available - protocol tests will skip"
+        continue-on-error: true
+
       - name: Set Environment Variables
         id: version
         run: |
@@ -51,6 +59,13 @@ jobs:
 
       - name: Dotnet
         run: ./bin/build --dotnet-only --version ${{ env.VERSION }}
+
+      - name: Run Tests
+        run: dotnet test --no-build --verbosity normal
+        env:
+          # Enable protocol contract tests if Soulfind Docker image is available
+          # Tests will gracefully skip if Docker/Soulfind unavailable
+          DOCKER_AVAILABLE: ${{ !contains(runner.name, 'keith') }}
 
       - name: Upload Static Web Content
         if: startsWith(github.ref, 'refs/tags/')
