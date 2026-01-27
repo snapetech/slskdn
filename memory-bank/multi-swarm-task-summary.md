@@ -84,21 +84,33 @@ Enforce upload/download ratios to ensure slskdn nodes remain net contributors to
 
 ### Phase 4: Job Manifests, Session Traces & Advanced Features
 **Tasks**: T-600 through T-611 (12 tasks)  
-**Status**: Not started  
+**Status**: Phase 4A-4C complete, Phase 4D pending  
 **Branch**: `experimental/multi-swarm`  
 **Priority**: Medium (P2) for manifests/traces, Low (P3) for warm cache/playback
 
-#### Phase 4A: YAML Job Manifests (T-600 to T-602)
+#### Phase 4A: YAML Job Manifests (T-600 to T-602) ✅ **COMPLETE**
 Export/import job definitions as portable YAML files for reproducibility and sharing.
+- ✅ T-600: JobManifest schema with YAML serialization
+- ✅ T-601: JobManifestService with export to jobs/active|completed/
+- ✅ T-602: Import with validation via JobManifestValidator
 
-#### Phase 4B: Session Traces / Swarm Debugging (T-603 to T-605)
+#### Phase 4B: Session Traces / Swarm Debugging (T-603 to T-605) ✅ **COMPLETE**
 Structured event logging for debugging swarm behavior (peer contributions, rescue mode triggers, etc.).
+- ✅ T-603: SwarmEvent model with 10 event types (ChunkRequest, ChunkReceived, RescueInvoked, etc.)
+- ✅ T-604: SwarmEventStore with file-based persistence, rotation, and TTL cleanup
+- ✅ T-605: SwarmTraceSummarizer with peer contribution analysis and TracingController API
 
-#### Phase 4C: Warm Cache Nodes (T-606 to T-608) [Optional]
+#### Phase 4C: Warm Cache Nodes (T-606 to T-608) ✅ **COMPLETE** [Optional]
 Opt-in prefetching and caching of popular MBIDs to amplify Soulseek uploads via fast overlay serving.
+- ✅ T-606: WarmCacheOptions configuration
+- ✅ T-607: WarmCachePopularityService tracks popularity via IncrementPopularityAsync
+- ✅ T-608: WarmCacheService with fetch/serve/evict logic
 
-#### Phase 4D: Playback-Aware Swarming (T-609 to T-611) [Optional]
+#### Phase 4D: Playback-Aware Swarming (T-609 to T-611) ⏳ **PENDING** [Optional]
 Prioritize chunks around playback head for streaming use cases.
+- ⏳ T-609: Playback feedback API (not implemented)
+- ⏳ T-610: Priority zones for buffer ahead (not implemented)
+- ⏳ T-611: Streaming diagnostics (not implemented)
 
 ---
 
