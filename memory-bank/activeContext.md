@@ -71,7 +71,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **slskd.Tests.Unit re-enablement:** ✅ **COMPLETE** (2026-01-27): All phases (0-5) done. 2430 tests passing, 0 skipped, 0 failed. No `Compile Remove` remaining. All test files enabled and passing per `docs/dev/slskd-tests-unit-completion-plan.md`.
 - **New product work**: As prioritized.
 
-**Research (9) implementation:** Unpinned; in progress. T-901–T-913 in `memory-bank/tasks.md` § Medium Priority. Start: T-912 (Metadata facade). Design: `docs/research/9-research-design-scope.md`.
+**Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
 1. **slskd.Tests.Unit Re-enablement** — Continue Phase 2–6 per `docs/dev/40-fixes-plan.md` and **live status** `docs/dev/slskd-tests-unit-completion-plan.md` (§ Completed, § Status and What Remains): Phase 2 (Common Moderation/Security/Files), Phase 3 (PodCore), Phase 4 (Mesh), Phase 5 (SocialFederation, MediaCore, etc.), Phase 6 (VirtualSoulfind). Un-skip or fix LocalPortForwarderTests’ 6 skipped tests when internal API/JSON alignment is done.
