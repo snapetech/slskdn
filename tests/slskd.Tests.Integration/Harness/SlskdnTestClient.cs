@@ -39,8 +39,8 @@ public class SlskdnTestClient : IAsyncDisposable
         this.configDir = Path.Combine(Path.GetTempPath(), "slskdn-test", testId, "config");
         this.shareDir = Path.Combine(Path.GetTempPath(), "slskdn-test", testId, "shares");
         
-        Directory.CreateDirectory(configDir);
-        Directory.CreateDirectory(shareDir);
+        System.IO.Directory.CreateDirectory(configDir);
+        System.IO.Directory.CreateDirectory(shareDir);
     }
 
     public string ConfigDirectory => configDir;
@@ -219,9 +219,9 @@ public class SlskdnTestClient : IAsyncDisposable
         // Clean up test directories
         try
         {
-            if (Directory.Exists(configDir))
+            if (System.IO.Directory.Exists(configDir))
             {
-                Directory.Delete(Path.GetDirectoryName(configDir)!, recursive: true);
+                System.IO.Directory.Delete(Path.GetDirectoryName(configDir)!, recursive: true);
             }
         }
         catch (Exception ex)
@@ -236,8 +236,8 @@ public class SlskdnTestClient : IAsyncDisposable
     public async Task AddSharedFileAsync(string filename, byte[] content)
     {
         var path = Path.Combine(shareDir, filename);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        await File.WriteAllBytesAsync(path, content);
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await System.IO.File.WriteAllBytesAsync(path, content);
         
         logger.LogDebug("[TEST-SLSKDN] Added shared file: {File}", filename);
     }
