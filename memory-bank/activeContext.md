@@ -68,7 +68,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 ### Current focus (the rest)
 - **40-fixes plan (PR-00–PR-14):** Done. slskd.Tests 46, slskd.Tests.Unit 2257 pass; Epic implemented. Deferred table: status only.
 - **T-404+:** Done. t410-backfill-wire (RescueMode underperformance detector → RescueService); codec/fingerprint (T-420–T-430) done per dashboard.
-- **slskd.Tests.Unit re-enablement:** Phase 1 (PrivacyLayerIntegrationTests, ContentDomainTests, SimpleMatchEngineTests, RealmAwareGossip/Governance/RealmService, MeshCircuitBuilder/SyncSecurity/TransportService, Phase8Mesh) and Phase 3 (MembershipGate, FederationService, ActivityPubBridge, BridgeFlow*, Realm*/RealmMigration/RealmChangeValidator/MultiRealm/RealmConfig/RealmIsolation, CircuitMaintenanceService, ActivityPubKeyStore) per `docs/dev/slskd-tests-unit-completion-plan.md`.
+- **slskd.Tests.Unit re-enablement:** ✅ **COMPLETE** (2026-01-27): All phases (0-5) done. 2430 tests passing, 0 skipped, 0 failed. No `Compile Remove` remaining. All test files enabled and passing per `docs/dev/slskd-tests-unit-completion-plan.md`.
 - **New product work**: As prioritized.
 
 **Research (9) implementation:** Unpinned; in progress. T-901–T-913 in `memory-bank/tasks.md` § Medium Priority. Start: T-912 (Metadata facade). Design: `docs/research/9-research-design-scope.md`.
@@ -83,6 +83,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
    - ✅ Persistent tabbed interface for Chat (Rooms already had tabs)
    - ✅ E2E test completion (policy, streaming, library, search)
+   - ✅ Code cleanup: TODO comments updated to reference triage document
+   - ✅ Soulfind integration: CI and local build workflows integrated
 
 5. ~~**High Priority Tasks Available** (obsolete):~~
    - **Packaging**: T-010 to T-013 (NAS/docker packaging - 4 tasks)
