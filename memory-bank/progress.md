@@ -28,11 +28,14 @@
   - Phase 3C: Local-Only Peer Reputation (T-505 to T-507) - PeerMetricsService with reputation scoring and decay
   - Phase 3D: Mesh-Level Fairness Governor (T-508 to T-510) - TrafficAccountingService, FairnessGuard, FairnessController
 
-- **Phase 4 Multi-Swarm (T-600 to T-608)**: ✅ **VERIFIED COMPLETE** (9 of 12 tasks)
+- **Phase 4 Multi-Swarm (T-600 to T-611)**: ✅ **VERIFIED COMPLETE** (all 12 tasks)
   - Phase 4A: YAML Job Manifests (T-600 to T-602) - JobManifestService with export/import
   - Phase 4B: Session Traces (T-603 to T-605) - SwarmEventStore, SwarmTraceSummarizer, TracingController
   - Phase 4C: Warm Cache Nodes (T-606 to T-608) - WarmCacheService, WarmCachePopularityService
-  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) - ⏳ Pending (optional feature)
+  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) - ✅ **COMPLETED** - Full integration with chunk scheduling
+    - Enhanced PlaybackFeedback with PositionBytes/FileSizeBytes
+    - Added GetChunkPriority method to PlaybackPriorityService (High: 0-10MB, Mid: 10-50MB, Low: 50MB+)
+    - Integrated into MultiSourceDownloadService: chunks prioritized on enqueue, priority recalculated on retries
 
 ### Fix Soulbeet Compatibility Tests
 - **Status**: ✅ **COMPLETED**
