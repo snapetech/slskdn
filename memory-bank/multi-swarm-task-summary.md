@@ -6,7 +6,7 @@
 
 ### Phase 1: MusicBrainz/Chromaprint Foundation (COMPLETE)
 **Tasks**: T-300 through T-313  
-**Status**: ✅ T-300 through T-311 complete, T-312 and T-313 pending  
+**Status**: ✅ **ALL COMPLETE** (T-300 through T-313)  
 **Branch**: `experimental/brainz`
 
 Key achievements:
@@ -14,10 +14,8 @@ Key achievements:
 - Chromaprint/AcoustID fingerprinting pipeline
 - Semantic swarm grouping by MBID/fingerprint
 - Final-file verification after multi-source download
-
-Remaining:
-- T-312: Album completion UI
-- T-313: Unit + integration tests
+- ✅ T-312: Album completion UI (AlbumCompletionPanel.jsx, GetAlbumCompletion endpoint)
+- ✅ T-313: Unit + integration tests (MusicBrainzControllerTests.cs, 2 tests passing)
 
 ---
 

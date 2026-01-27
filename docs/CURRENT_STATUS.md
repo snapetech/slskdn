@@ -48,7 +48,7 @@
 ### Feature Work (Low Priority)
 - **T-003**: ✅ Download Queue Position Polling (confirmed done - implemented in Transfers.jsx)
 - **T-004**: ✅ Visual Group Indicators (confirmed done - implemented in Response.jsx)
-- **Phase 1 Multi-Swarm**: T-312 (Album completion UI), T-313 (Unit + integration tests)
+- **Phase 1 Multi-Swarm**: ✅ **COMPLETE** - T-312 (Album completion UI) and T-313 (Unit + integration tests) both implemented
 - **Phase 2-7 Multi-Swarm**: Various tasks in backlog (see `memory-bank/multi-swarm-task-summary.md`)
 
 ### Deferred Tech Debt
@@ -90,8 +90,8 @@
 ## 🎯 Next Steps (Optional)
 
 ### Short Term (Optional)
-1. **Phase 1 Multi-Swarm**: Complete T-312 (Album completion UI), T-313 (Unit + integration tests)
-2. **New feature work**: As prioritized by user
+1. **New feature work**: As prioritized by user
+2. **Multi-Swarm Phase 2+**: Various features in backlog (see `memory-bank/multi-swarm-task-summary.md`)
 
 ### Long Term (Backlog)
 3. **Multi-Swarm Phases 2-7**: Various features in backlog (see `memory-bank/multi-swarm-task-summary.md`)
