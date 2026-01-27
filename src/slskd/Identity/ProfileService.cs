@@ -8,6 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -100,7 +103,7 @@ public sealed class ProfileService : IProfileService
         if (webOpts.Port > 0)
         {
             var scheme = webOpts.Https?.Disabled != true ? "https" : "http";
-            var host = "localhost"; // TODO: detect actual hostname/IP
+            var host = DetectHostname();
             endpoints.Add(new PeerEndpoint { Type = "Direct", Address = $"{scheme}://{host}:{webOpts.Port}", Priority = 1 });
         }
         var profile2 = new PeerProfile
@@ -223,6 +226,54 @@ public sealed class ProfileService : IProfileService
         // or do fuzzy matching against all known PeerIds
         // For now, return null (caller should use full PeerId lookup)
         return null;
+    }
+
+    private string DetectHostname()
+    {
+        try
+        {
+            // Try to get the first non-loopback IPv4 address from network interfaces
+            var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                            ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+
+            foreach (var ni in networkInterfaces)
+            {
+                var ipProperties = ni.GetIPProperties();
+                foreach (var unicast in ipProperties.UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily == AddressFamily.InterNetwork &&
+                        !IPAddress.IsLoopback(unicast.Address) &&
+                        unicast.Address.ToString() != "0.0.0.0")
+                    {
+                        return unicast.Address.ToString();
+                    }
+                }
+            }
+
+            // Fallback: try to get hostname
+            try
+            {
+                var hostname = Dns.GetHostName();
+                var hostEntry = Dns.GetHostEntry(hostname);
+                var ipv4 = hostEntry.AddressList
+                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip));
+                if (ipv4 != null)
+                {
+                    return ipv4.ToString();
+                }
+            }
+            catch
+            {
+                // Ignore DNS resolution errors
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[ProfileService] Failed to detect hostname, using localhost");
+        }
+
+        return "localhost";
     }
 
     private static string Base32Encode(byte[] data)

@@ -1815,9 +1815,8 @@ using slskd.Telemetry;
             services.AddSingleton<Transfers.MultiSource.Metrics.IPeerMetricsService, Transfers.MultiSource.Metrics.PeerMetricsService>();
             services.AddSingleton<Transfers.MultiSource.Scheduling.IChunkScheduler>(sp =>
             {
-                // TODO: Get enableCostBasedScheduling from configuration (Options.Transfers.CostBasedScheduling)
-                // For now, default to enabled
-                bool enableCostBasedScheduling = true;
+                var options = sp.GetRequiredService<IOptionsMonitor<slskd.Options>>();
+                bool enableCostBasedScheduling = options.CurrentValue.Global.Download.CostBasedScheduling;
                 return new Transfers.MultiSource.Scheduling.ChunkScheduler(
                     sp.GetRequiredService<Transfers.MultiSource.Metrics.IPeerMetricsService>(),
                     enableCostBasedScheduling: enableCostBasedScheduling);

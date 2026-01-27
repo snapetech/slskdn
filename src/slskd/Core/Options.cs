@@ -1159,6 +1159,15 @@ namespace slskd
                 [Description("interval in seconds between auto-replace checks")]
                 [Range(10, 3600)]
                 public int AutoReplaceInterval { get; init; } = 60;
+
+                /// <summary>
+                ///     Gets a value indicating whether cost-based scheduling is enabled for multi-source downloads.
+                /// </summary>
+                [Argument(default, "cost-based-scheduling")]
+                [EnvironmentVariable("COST_BASED_SCHEDULING")]
+                [Description("enable cost-based scheduling for multi-source downloads")]
+                [RequiresRestart]
+                public bool CostBasedScheduling { get; init; } = true;
             }
         }
 
