@@ -63,7 +63,12 @@
   - Phase 4A: YAML Job Manifests (T-600 to T-602) ✅
   - Phase 4B: Session Traces (T-603 to T-605) ✅
   - Phase 4C: Warm Cache Nodes (T-606 to T-608) ✅
-  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) ⏳ Pending (optional)
+  - Phase 4D: Playback-Aware Swarming (T-609 to T-611) ✅ Mostly complete (infrastructure exists, full integration pending)
+- **Phase 5 Multi-Swarm**: ✅ **COMPLETE** - All 13 tasks (T-700 to T-712) complete:
+  - Phase 5A: slskd Compatibility Layer (T-700 to T-703) ✅
+  - Phase 5B: slskdn-Native Job APIs (T-704 to T-708) ✅
+  - Phase 5C: Optional Advanced APIs (T-709 to T-710) ✅
+  - Phase 5D: Soulbeet Client Integration (T-711 to T-712) ✅
 - **Phase 2-7 Multi-Swarm**: Various tasks in backlog (see `memory-bank/multi-swarm-task-summary.md`)
 
 ### Deferred Tech Debt
