@@ -1296,6 +1296,11 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VirtualSoulfind.Integration.IPerformanceOptimizer, VirtualSoulfind.Integration.PerformanceOptimizer>();
             services.AddSingleton<VirtualSoulfind.Integration.ITelemetryDashboard, VirtualSoulfind.Integration.TelemetryDashboardService>();
             services.AddSingleton<VirtualSoulfind.Bridge.ISoulfindBridgeService, VirtualSoulfind.Bridge.SoulfindBridgeService>();
+            // Register ITransferProgressProxy BEFORE BridgeApi (BridgeApi depends on it)
+            services.AddSingleton<VirtualSoulfind.Bridge.IPeerIdAnonymizer, VirtualSoulfind.Bridge.PeerIdAnonymizer>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IFilenameGenerator, VirtualSoulfind.Bridge.FilenameGenerator>();
+            services.AddSingleton<VirtualSoulfind.Bridge.IRoomSceneMapper, VirtualSoulfind.Bridge.RoomSceneMapper>();
+            services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
             services.AddSingleton<VirtualSoulfind.Bridge.Protocol.SoulseekProtocolParser>();
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_BRIDGE_PROXY")))
@@ -1306,10 +1311,6 @@ using OpenTelemetry.Trace;
             {
                 Log.Information("[DI] SLSKDN_E2E_SKIP_BRIDGE_PROXY=1; skipping BridgeProxyServer");
             }
-            services.AddSingleton<VirtualSoulfind.Bridge.IPeerIdAnonymizer, VirtualSoulfind.Bridge.PeerIdAnonymizer>();
-            services.AddSingleton<VirtualSoulfind.Bridge.IFilenameGenerator, VirtualSoulfind.Bridge.FilenameGenerator>();
-            services.AddSingleton<VirtualSoulfind.Bridge.IRoomSceneMapper, VirtualSoulfind.Bridge.RoomSceneMapper>();
-            services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
             // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03) (IMusicContentDomainProvider in AddAudioCore)
