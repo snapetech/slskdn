@@ -2,13 +2,9 @@ name: Build on Tag
 
 # Trigger: push tag matching build-dev-* or build-main-*
 #
-# Dev builds:   Version MUST increase for PPA/Debian (version compare).
-#               Use build-dev-0.24.1.dev.9$(date +%s) — "9" + Unix epoch so
-#               version sorts higher than any previous (e.g. 0.24.1.dev.91769609285).
-#               WRONG: build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S) — 20260128... sorts
-#               BELOW 91769609285 → PPA rejects "Version older than that in the archive".
-#
-# Main builds:  build-main-0.24.1-slskdn.35 → release 0.24.1-slskdn.35
+# Dev builds:   Version must increase for PPA. Use build-dev-0.24.1.dev.9$(date +%s)
+#               (9 + Unix epoch). Do NOT use date +%Y%m%d — PPA rejects "older" version.
+# Main builds:  build-main-0.24.1-slskdn.35
 #
 # Examples:
 #   git tag build-dev-0.24.1.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
@@ -639,7 +635,7 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2: explicit .nupkg path first so --prerelease is not parsed as the file
+          # Chocolatey v2 requires explicit .nupkg path as first argument; otherwise --prerelease is parsed as the file
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
           Write-Host "Pushing: $Nupkg"
@@ -884,17 +880,16 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
 
-          # Pre-install base so snapcraft "Installing build-snaps" does not fail on GHA
           sudo snap install core22
           sudo snap install snapcraft --classic
 
           cd packaging/snap
           snapcraft --destructive-mode
-
+          
           echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
           snapcraft login --with snap.login
           snapcraft upload --release=edge *.snap
-
+          
           echo "✅ Published to Snap (edge channel)"
 
       - name: Skip if no credentials
@@ -1543,7 +1538,7 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2: explicit .nupkg path first
+          # Chocolatey v2 requires explicit .nupkg path as first argument
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
           Write-Host "Pushing: $Nupkg"
@@ -1737,17 +1732,16 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
 
-          # Pre-install base so snapcraft "Installing build-snaps" does not fail on GHA
           sudo snap install core22
           sudo snap install snapcraft --classic
 
           cd packaging/snap
           snapcraft --destructive-mode
-
+          
           echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
           snapcraft login --with snap.login
           snapcraft upload --release=stable *.snap
-
+          
           echo "✅ Published to Snap (stable channel)"
 
       - name: Skip if no credentials
