@@ -637,9 +637,10 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2 requires explicit .nupkg path; otherwise --prerelease is parsed as the file argument
-          $Nupkg = "slskdn.$Version.nupkg"
-          if (-not (Test-Path $Nupkg)) { Get-ChildItem *.nupkg | ForEach-Object { $Nupkg = $_.Name }; Write-Host "Using package: $Nupkg" }
+          # Chocolatey v2 requires explicit .nupkg path as first argument; otherwise --prerelease is parsed as the file
+          $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
+          if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
+          Write-Host "Pushing: $Nupkg"
           choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
@@ -1537,8 +1538,9 @@ jobs:
           cd packaging/chocolatey
           choco pack
           # Chocolatey v2 requires explicit .nupkg path as first argument
-          $Nupkg = "slskdn.$Version.nupkg"
-          if (-not (Test-Path $Nupkg)) { Get-ChildItem *.nupkg | ForEach-Object { $Nupkg = $_.Name }; Write-Host "Using package: $Nupkg" }
+          $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
+          if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
+          Write-Host "Pushing: $Nupkg"
           choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
