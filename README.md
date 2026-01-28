@@ -609,4 +609,4 @@ If you're reading this code, you should assume that:
 </small>
 
 <p align="center"><strong>slskdN</strong> — For users who'd rather download music than learn Python.</p>
-<p align="center"><em>"slop on top"</em> 🍦🤖✨</p>
+<p align="center"><em>"built on the backs of giants"</em> 🍦🤖✨</p>

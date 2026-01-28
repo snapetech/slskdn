@@ -251,7 +251,7 @@ class Footer extends Component {
                 target="_blank"
                 title="What is slskdN?"
               >
-                <em>"slop on top"</em>
+                <em>"built on the backs of giants"</em>
               </a>{' '}
               <a
                 className="slskdn-footer-emoji-link"
