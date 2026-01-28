@@ -232,7 +232,7 @@ run: |
 
 ### 5b. Chocolatey v2: choco push requires explicit .nupkg path
 
-**The Bug**: In Chocolatey CLI v2, `choco push --source ... --api-key ... --prerelease` without a file argument causes the next option (`--prerelease`) to be interpreted as the *file* argument. Error: "File specified is either not found or not a .nupkg file. '--prerelease'".
+**The Bug**: `choco push` requires an explicit `.nupkg` file argument. Also, `--prerelease` is **not** a valid `choco push` flag (it’s for install/search flows). Passing `--prerelease` to `choco push` results in errors like: "File specified is either not found or not a .nupkg file. '<nupkg> --prerelease'".
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (chocolatey-dev, chocolatey-main)
@@ -243,35 +243,45 @@ choco pack
 choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
 ```
 
-**Correct** (explicit .nupkg path first; use `--source` and `--api-key` without `=`; do not use argument arrays — that broke push in GHA):
+**Correct** (explicit `.nupkg` path first; no `--prerelease` on push — prerelease is determined by the package version string):
 ```powershell
 choco pack
 $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
+choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
 ```
 
 **Why This Keeps Happening**: Chocolatey v2 changed push to require the .nupkg as the first positional argument; without it, the parser consumes the next token as the file path.
 
 ---
 
-### 5c. Snap workflow: pre-install core22 before snapcraft on GHA
+### 5c. Snap workflow: destructive-mode on ubuntu-latest breaks stage-packages (libicu70)
 
-**The Bug**: On GHA, `snapcraft --destructive-mode` can fail with "Error installing snap 'core22'" during its "Installing build-snaps" step. Pre-installing the base snap on the host avoids this.
+**The Bug**: On GitHub Actions `ubuntu-latest` (Ubuntu 24.04), running `snapcraft --destructive-mode` uses the host apt repositories. With `base: core22`, this can fail because `stage-packages` include `libicu70` (available on 22.04, not 24.04). Error: "Stage package not found in part 'slskdn': libicu70."
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
 
-**Correct**:
+**Correct** (build in LXD so the build environment matches `base: core22`):
 ```yaml
-sudo snap install core22
-sudo snap install snapcraft --classic
-cd packaging/snap
-snapcraft --destructive-mode
+- uses: snapcore/action-build@v1
+  with:
+    path: packaging/snap
 ```
 
 ---
 
-### 5d. PPA dev build: dev tag version must always increase
+### 5d. Snap Store: upload blocked by pending review queue
+
+**The Bug**: `snapcraft upload` can fail with: "Waiting for previous upload(s) to complete their review process." This is a Snap Store-side queue condition.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
+
+**Fix**: Retry `snapcraft upload` with backoff when this message is present (bounded retries), rather than failing immediately.
+
+---
+
+### 5e. PPA dev build: dev tag version must always increase
 
 **The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.
 

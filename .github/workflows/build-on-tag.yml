@@ -623,6 +623,7 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
+          $ErrorActionPreference = "Stop"
           # Chocolatey/NuGet requires hyphenated version
           $DottedVersion = "${{ needs.parse.outputs.version }}"
           $Version = $DottedVersion -replace '\.dev\.', '-dev-'
@@ -640,8 +641,10 @@ jobs:
           # Store API key so push does not pass secret on command line (avoids GHA masking/parsing issues)
           choco apikey add -s "https://push.chocolatey.org/" -k $env:CHOCO_API_KEY -y
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source https://push.chocolatey.org/ --prerelease --execution-timeout=300
-          Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
+          # NOTE: `--prerelease` is NOT a valid `choco push` flag; prerelease is determined by the package version (e.g. 0.24.1-dev-...).
+          choco push $Nupkg --source https://push.chocolatey.org/ --execution-timeout=300
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host "✅ Published to Chocolatey: slskdn (dev)"
         shell: pwsh
 
   nix-dev:
@@ -888,10 +891,39 @@ jobs:
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        uses: snapcore/action-publish@v1
-        with:
-          snap: ${{ steps.snap-build.outputs.snap }}
-          release: edge
+        run: |
+          set -euo pipefail
+          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
+
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+
+          # Snap Store can reject uploads while previous uploads are still in review/processing.
+          # Retry with backoff so we don't fail the whole workflow on a transient queue condition.
+          for attempt in $(seq 1 60); do
+            echo "Upload attempt $attempt/60: $SNAP_PATH"
+            set +e
+            OUT="$(snapcraft upload --release=edge "$SNAP_PATH" 2>&1)"
+            CODE=$?
+            set -e
+
+            echo "$OUT"
+            if [ $CODE -eq 0 ]; then
+              echo "✅ Published to Snap (edge channel)"
+              exit 0
+            fi
+
+            if echo "$OUT" | grep -q "Waiting for previous upload(s)"; then
+              sleep 30
+              continue
+            fi
+
+            echo "::error::snapcraft upload failed"
+            exit $CODE
+          done
+
+          echo "::error::snapcraft upload still blocked after retries"
+          exit 1
 
       - name: Skip publish if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
@@ -1531,6 +1563,7 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
+          $ErrorActionPreference = "Stop"
           $Version = "${{ needs.parse.outputs.version }}"
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
@@ -1544,6 +1577,7 @@ jobs:
           choco apikey add -s "https://push.chocolatey.org/" -k $env:CHOCO_API_KEY -y
           Write-Host "Pushing: $Nupkg"
           choco push $Nupkg --source https://push.chocolatey.org/ --execution-timeout=300
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1740,10 +1774,37 @@ jobs:
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        uses: snapcore/action-publish@v1
-        with:
-          snap: ${{ steps.snap-build.outputs.snap }}
-          release: stable
+        run: |
+          set -euo pipefail
+          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
+
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+
+          for attempt in $(seq 1 60); do
+            echo "Upload attempt $attempt/60: $SNAP_PATH"
+            set +e
+            OUT="$(snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
+            CODE=$?
+            set -e
+
+            echo "$OUT"
+            if [ $CODE -eq 0 ]; then
+              echo "✅ Published to Snap (stable channel)"
+              exit 0
+            fi
+
+            if echo "$OUT" | grep -q "Waiting for previous upload(s)"; then
+              sleep 30
+              continue
+            fi
+
+            echo "::error::snapcraft upload failed"
+            exit $CODE
+          done
+
+          echo "::error::snapcraft upload still blocked after retries"
+          exit 1
 
       - name: Skip publish if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
