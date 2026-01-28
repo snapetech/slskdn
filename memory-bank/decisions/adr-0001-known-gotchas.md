@@ -306,6 +306,30 @@ snapcraft upload --release=edge "$SNAP_PATH"   # file not found; snapcraft may b
 
 ---
 
+### 5e2. Snap (and other packaging) jobs: don't pin checkout to a branch on tag-triggered builds
+
+**The Bug**: In `build-on-tag.yml`, Snap (and Nix, Homebrew) jobs had `ref: dev/40-fixes` or `ref: master`. When the workflow is triggered by a **tag** (e.g. `build-dev-0.24.1.dev.…`), the runner checks out that branch tip, not the tag's commit. So you build with `packaging/snap` (and release zip) from different commits: zip from the tag's release, tree from branch tip. If someone reverted or changed the Snap workflow on the branch, the job uses that reverted state and Snap breaks.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main; also nix-dev, homebrew-dev if they pin ref)
+
+**Wrong**:
+```yaml
+- uses: actions/checkout@v4
+  with:
+    ref: dev/40-fixes   # tag build then gets branch tip, not tag commit
+```
+
+**Correct**:
+```yaml
+- uses: actions/checkout@v4
+  # No ref: so tag-triggered runs checkout the tag's commit (same as release assets).
+```
+
+**Why This Keeps Happening**: It's tempting to pin to a branch for "dev" or "main" packaging; for tag-triggered runs the ref that triggered the run is the tag, and checkout should match that.
+
+---
+
 ### 5f. PPA dev build: dev tag version must always increase
 
 **The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.

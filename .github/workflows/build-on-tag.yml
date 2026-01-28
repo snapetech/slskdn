@@ -861,8 +861,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: dev/40-fixes
 
       - name: Download from Release
         env:
@@ -1741,8 +1739,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: master
 
       - name: Download from Release
         env:
