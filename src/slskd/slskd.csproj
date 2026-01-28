@@ -98,6 +98,7 @@
 
   <ItemGroup>
     <!-- Exclude CodeQuality MSBuild tasks from compilation -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <Compile Remove="Common\CodeQuality\**" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="Dapper" Version="2.1.66" />
