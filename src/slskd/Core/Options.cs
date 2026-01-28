@@ -352,6 +352,12 @@ namespace slskd
         public FeatureOptions Feature { get; init; } = new FeatureOptions();
 
         /// <summary>
+        ///     Gets Solid options (WebID, Solid-OIDC, Pod metadata).
+        /// </summary>
+        [Validate]
+        public SolidOptions Solid { get; init; } = new SolidOptions();
+
+        /// <summary>
         ///     Gets options for sharing (collections, share-grants, tokens).
         /// </summary>
         [Validate]
@@ -1444,6 +1450,12 @@ namespace slskd
             /// <summary>Identity and friends (profiles, contacts, LAN discovery, invites). When false, related APIs return 404.</summary>
             public bool IdentityFriends { get; init; } = true;
 
+            /// <summary>
+            /// Enable Solid / WebID / Solid-OIDC integration. When false, Solid APIs return 404.
+            /// Default: true (enabled). Note: Even when enabled, remote fetches are blocked until AllowedHosts is configured.
+            /// </summary>
+            public bool Solid { get; init; } = true;
+
             /// <summary>Scene ↔ Pod Bridging: Unified search aggregation from Pod/Mesh and Soulseek Scene. When false, search behaves as before.</summary>
             public bool ScenePodBridge { get; init; } = true;
 
@@ -1461,6 +1473,39 @@ namespace slskd
 
             /// <summary>Export pod availability to scene (future feature, keep OFF). When false, pod content is never advertised to scene.</summary>
             public bool ExportPodAvailability { get; init; } = false;
+        }
+
+        /// <summary>
+        ///     Solid options (WebID, Solid-OIDC, Pod metadata).
+        /// </summary>
+        public class SolidOptions
+        {
+            /// <summary>
+            /// If true, allow plain http:// WebID/Pod URLs (ONLY for dev/test). Keep false in prod.
+            /// </summary>
+            public bool AllowInsecureHttp { get; init; } = false;
+
+            /// <summary>Max bytes we will read from WebID profile / Pod metadata resources.</summary>
+            public int MaxFetchBytes { get; init; } = 1_000_000;
+
+            /// <summary>HTTP timeout for WebID/Pod fetches.</summary>
+            public int TimeoutSeconds { get; init; } = 10;
+
+            /// <summary>
+            /// Allowed Pod/WebID hostnames (exact match). Empty = deny all remote fetches unless explicitly set.
+            /// </summary>
+            public string[] AllowedHosts { get; init; } = Array.Empty<string>();
+
+            /// <summary>
+            /// Where the Solid-OIDC Client ID document is served from (default: /solid/clientid.jsonld).
+            /// Leave empty to auto-derive from request base URL.
+            /// </summary>
+            public string? ClientIdUrl { get; init; }
+
+            /// <summary>
+            /// Redirect URI path used for Solid-OIDC (default: /solid/callback). (Callback wiring can come later.)
+            /// </summary>
+            public string RedirectPath { get; init; } = "/solid/callback";
         }
 
         /// <summary>

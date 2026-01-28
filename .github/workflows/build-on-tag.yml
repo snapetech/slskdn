@@ -613,9 +613,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download "${{ github.ref_name }}" `
-            --repo ${{ github.repository }} `
-            --pattern "slskdn-dev-win-x64.zip"
+          $max = 5
+          for ($i = 1; $i -le $max; $i++) {
+            gh release download "${{ github.ref_name }}" --repo ${{ github.repository }} --pattern "slskdn-dev-win-x64.zip"
+            if (Test-Path "slskdn-dev-win-x64.zip") { break }
+            Write-Host "Attempt $i/$max: asset not ready, waiting 15s..."
+            Start-Sleep -Seconds 15
+          }
+          if (-not (Test-Path "slskdn-dev-win-x64.zip")) { Write-Error "slskdn-dev-win-x64.zip not found after retries"; exit 1 }
+        shell: pwsh
 
       - name: Pack and Push
         env:

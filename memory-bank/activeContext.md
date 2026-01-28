@@ -9,7 +9,7 @@
 
 **Project root: `/home/keith/Documents/code/slskdn`**
 
-All `git`, `dotnet`, and file paths in this repo are under this directory. The `cursor` folder under `/home/keith/Code/` is a different project (LiteLLM/Cursor API switcher).
+All `git`, `dotnet`, and file paths in this repo are under this directory. Do not use the `cursor` folder under `~/Code/` for slskdn work — it is a separate project.
 
 ---
 

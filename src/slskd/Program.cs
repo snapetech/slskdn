@@ -2170,6 +2170,11 @@ using OpenTelemetry.Trace;
             services.AddSingleton<Identity.IProfileService, Identity.ProfileService>();
             services.AddSingleton<Identity.ILanDiscoveryService, Identity.LanDiscoveryService>();
 
+            // Solid / WebID / Solid-OIDC (optional; gated per-request by Feature.Solid)
+            services.AddSingleton<slskd.Solid.ISolidClientIdDocumentService, slskd.Solid.SolidClientIdDocumentService>();
+            services.AddSingleton<slskd.Solid.ISolidWebIdResolver, slskd.Solid.SolidWebIdResolver>();
+            services.AddSingleton<slskd.Solid.ISolidFetchPolicy, slskd.Solid.SolidFetchPolicy>();
+
             // Security services (zero-trust hardening)
             Log.Information("[DI] About to call AddSlskdnSecurity...");
             services.AddSlskdnSecurity(Configuration);
@@ -2804,6 +2809,20 @@ using OpenTelemetry.Trace;
                     relayHub.RequireAuthorization(AuthPolicy.Any);
 
                 endpoints.MapControllers();
+                // Solid-OIDC Client ID document (must be anonymous and return application/ld+json)
+                endpoints.MapGet("/solid/clientid.jsonld", async context =>
+                {
+                    var opts = context.RequestServices.GetRequiredService<IOptionsMonitor<slskd.Options>>();
+                    if (!opts.CurrentValue.Feature.Solid)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        return;
+                    }
+
+                    var svc = context.RequestServices.GetRequiredService<slskd.Solid.ISolidClientIdDocumentService>();
+                    context.Response.ContentType = "application/ld+json";
+                    await svc.WriteClientIdDocumentAsync(context, context.RequestAborted).ConfigureAwait(false);
+                }).AllowAnonymous();
                 // Make /health explicitly anonymous to avoid auth issues in E2E harness
                 endpoints.MapHealthChecks("/health").AllowAnonymous();
                 endpoints.MapHealthChecks("/health/mesh", new HealthCheckOptions

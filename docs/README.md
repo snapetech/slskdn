@@ -46,6 +46,11 @@ Complete guide to all slskdn documentation.
 - [Migrations](migrations.md) - Database migration guide
 - [Upstream Bug Testing](upstream-bug-testing.md) - Testing upstream issues
 
+## 📘 User Guides
+
+- [Virtual Soulfind User Guide](VIRTUAL_SOULFIND_USER_GUIDE.md) - Using Virtual Soulfind and Shadow Index
+- [Solid Integration User Guide](SOLID_USER_GUIDE.md) - Using Solid WebID and Solid-OIDC integration
+
 ---
 
 **Note**: Some design documents may be in the root `docs/` directory or subdirectories. Check the main [README.md](../README.md) for the most up-to-date feature documentation.

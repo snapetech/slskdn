@@ -222,6 +222,44 @@ Topic-based micro-communities over the mesh overlay.
 
 📖 **Design docs**: [PodCore research](docs/phase10-podcore-research.md) • [Chat bridge](docs/design/pods-soulseek-chat-bridge.md) • [Gold Star Club](docs/design/gold-star-club.md) • [API design](docs/pod-api-design.md)
 
+### 🌐 Solid Integration (WebID & Solid-OIDC)
+Optional integration with Solid for decentralized identity and Pod-backed metadata storage.
+- **WebID resolution** — Resolve WebID profiles and extract OIDC issuer information
+- **Solid-OIDC Client ID Document** — Serves compliant JSON-LD document at `/solid/clientid.jsonld` (dereferenceable per Solid-OIDC spec)
+- **SSRF hardening** — Comprehensive security controls:
+  - **Host allow-list** (`AllowedHosts`) — Empty list denies all remote fetches by default (SSRF protection)
+  - **HTTPS-only enforcement** — Configurable `AllowInsecureHttp` for dev/test only
+  - **Private IP blocking** — Automatically blocks localhost, `.local` domains, and RFC1918/link-local IPs
+  - **Response limits** — Configurable max response size (1MB default) and timeout (10s default)
+- **RDF parsing** — Uses dotNetRDF library for parsing WebID profiles (Turtle and JSON-LD formats)
+- **API endpoints** — `GET /api/v0/solid/status` and `POST /api/v0/solid/resolve-webid`
+- **Frontend UI** — New "Solid" navigation item and settings page for WebID resolution testing
+- **Security by default** — Feature enabled by default but non-functional until `AllowedHosts` is configured (SSRF safety)
+
+**Configuration**:
+```yaml
+feature:
+  Solid: true  # Enable Solid integration (default: true)
+
+solid:
+  allowedHosts: []  # Empty = deny all remote fetches (SSRF safety)
+                     # Add hostnames like ["your-solid-idp.example", "your-pod-provider.example"]
+  timeoutSeconds: 10
+  maxFetchBytes: 1000000
+  allowInsecureHttp: false  # ONLY for dev/test. Keep false in production
+  redirectPath: "/solid/callback"
+```
+
+**Future extensions** (planned):
+- Full OIDC Authorization Code + PKCE flow
+- Token storage (encrypted via Data Protection)
+- DPoP proof generation
+- Pod metadata read/write (playlists, sharelists)
+- Type Index / SAI registry discovery
+- Access control (WAC/ACP) writers
+
+📖 **Design docs**: [Solid implementation map](docs/dev/SOLID_IMPLEMENTATION_MAP.md) • [User guide](docs/SOLID_USER_GUIDE.md)
+
 ### 🎭 VirtualSoulfind & Shadow Index
 Decentralized content discovery without relying solely on the Soulseek network.
 - **Shadow Index** — Decentralized MBID→peers mapping

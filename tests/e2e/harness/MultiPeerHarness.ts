@@ -10,7 +10,15 @@ export class MultiPeerHarness {
   /**
    * Start a new test node.
    */
-  async startNode(name: string, shareDir: string, flags?: { noConnect?: boolean }): Promise<SlskdnNode> {
+  async startNode(
+    name: string, 
+    shareDir: string, 
+    options?: { 
+      flags?: { noConnect?: boolean };
+      solidEnabled?: boolean;
+      solidAllowedHosts?: string[];
+    }
+  ): Promise<SlskdnNode> {
     if (this.nodes.has(name)) {
       throw new Error(`Node ${name} already exists`);
     }
@@ -18,7 +26,9 @@ export class MultiPeerHarness {
     const node = new SlskdnNode({
       nodeName: name,
       shareDir,
-      flags
+      flags: options?.flags,
+      solidEnabled: options?.solidEnabled,
+      solidAllowedHosts: options?.solidAllowedHosts
     });
 
     await node.start();

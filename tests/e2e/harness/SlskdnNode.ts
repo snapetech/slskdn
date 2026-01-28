@@ -11,6 +11,8 @@ export interface NodeConfig {
   flags?: {
     noConnect?: boolean;
   };
+  solidEnabled?: boolean;
+  solidAllowedHosts?: string[];
 }
 
 /**
@@ -57,6 +59,19 @@ export class SlskdnNode {
 
     // Write minimal config (YAML format)
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
+    
+    // Build Solid config section if enabled
+    const solidConfig = this.config.solidEnabled !== false ? `
+feature:
+  solid: true
+solid:
+  allowedHosts:${this.config.solidAllowedHosts && this.config.solidAllowedHosts.length > 0 
+    ? '\n' + this.config.solidAllowedHosts.map(h => `    - "${h}"`).join('\n')
+    : ' []'}
+  allowInsecureHttp: true` : `
+feature:
+  solid: false`;
+
     const configYaml = `web:
   port: ${this.apiPort}
   host: 127.0.0.1
@@ -71,7 +86,7 @@ shares:
     - ${this.config.shareDir}
 feature:
   identityFriends: true
-  collectionsSharing: true
+  collectionsSharing: true${solidConfig}
 flags:
   no_connect: ${this.config.flags?.noConnect ?? (process.env.SLSKDN_TEST_NO_CONNECT === 'true')}
 `;

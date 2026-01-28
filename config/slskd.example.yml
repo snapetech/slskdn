@@ -237,6 +237,15 @@
 #   ScenePodBridgeOptions:
 #     ProxyTransfers: false     # Proxy scene downloads through pod (future feature, intentionally disabled)
 #     ExportPodAvailability: false  # Export pod availability to scene (future feature, intentionally disabled)
+#   Solid: true                  # Enable Solid (WebID, Solid-OIDC) (default: true)
+#                                # Note: Even when enabled, remote fetches are blocked until AllowedHosts is configured (SSRF safety)
+# solid:
+#   allowedHosts: []            # Empty = deny all remote fetches (SSRF safety). Add hostnames like ["your-solid-idp.example", "your-pod-provider.example"]
+#                                # IMPORTANT: Solid feature is enabled by default, but will not work until you add at least one hostname here
+#   timeoutSeconds: 10
+#   maxFetchBytes: 1000000
+#   allowInsecureHttp: false    # ONLY for dev/test. Keep false in production
+#   redirectPath: "/solid/callback"
 # security:
 #   enabled: true  # Enable security features (path traversal protection is ALWAYS enabled)
 #   profile: Standard  # Security profile: Minimal, Standard, Maximum, or Custom

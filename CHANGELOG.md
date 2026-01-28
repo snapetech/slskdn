@@ -8,6 +8,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Solid Integration: WebID and Solid-OIDC Support
+
+- **Solid Compatibility Layer**: Optional integration with Solid (WebID + Solid-OIDC) for decentralized identity and Pod-backed metadata:
+  - **WebID Resolution**: Resolve WebID profiles and extract OIDC issuer information
+  - **Solid-OIDC Client ID Document**: Serves compliant JSON-LD Client ID document at `/solid/clientid.jsonld` (dereferenceable per Solid-OIDC spec)
+  - **SSRF Hardening**: Comprehensive security controls for WebID/Pod fetches:
+    - Host allow-list (`AllowedHosts`) - empty list denies all remote fetches by default
+    - HTTPS-only enforcement (configurable `AllowInsecureHttp` for dev/test only)
+    - Private IP and localhost blocking
+    - Response size limits (`MaxFetchBytes`: 1MB default)
+    - Timeout enforcement (`TimeoutSeconds`: 10s default)
+  - **API Endpoints**: 
+    - `GET /api/v0/solid/status` - Check Solid integration status
+    - `POST /api/v0/solid/resolve-webid` - Resolve a WebID and extract OIDC issuers
+  - **Frontend UI**: New "Solid" navigation item and settings page for WebID resolution
+  - **Configuration**: New `feature.Solid` flag (default: `true`) and `solid` options block
+  - **Security by Default**: Feature enabled by default but non-functional until `AllowedHosts` is explicitly configured (SSRF safety)
+  - **RDF Parsing**: Uses dotNetRDF library for parsing WebID profiles (Turtle and JSON-LD formats)
+- **Future Extensions** (not in MVP):
+  - Full OIDC Authorization Code + PKCE flow
+  - Token storage (encrypted via Data Protection)
+  - DPoP proof generation
+  - Pod metadata read/write (playlists, sharelists)
+  - Type Index / SAI registry discovery
+  - Access control (WAC/ACP) writers
+
 ### Swarm Analytics: Advanced Metrics and Reporting
 
 - **Swarm Analytics Service**: Comprehensive analytics and reporting for swarm behavior:

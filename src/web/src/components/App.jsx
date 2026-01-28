@@ -23,6 +23,7 @@ import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
 import ShareGroups from './ShareGroups/ShareGroups';
 import SharedWithMe from './Shares/SharedWithMe';
+import SolidSettings from './Solid/SolidSettings';
 import System from './System/System';
 import Transfers from './Transfers/Transfers';
 import Users from './Users/Users';
@@ -456,6 +457,12 @@ class App extends Component {
                     Contacts
                   </Menu.Item>
                 </Link>
+                <Link to="/solid">
+                  <Menu.Item data-testid="nav-solid">
+                    <Icon name="key" />
+                    Solid
+                  </Menu.Item>
+                </Link>
                 <Link to="/collections">
                   <Menu.Item data-testid="nav-collections">
                     <Icon name="list" />
@@ -669,6 +676,17 @@ class App extends Component {
                         );
                       }
                     }}
+                  />
+                  <Route
+                    exact
+                    path="/solid"
+                    render={(props) =>
+                      this.withTokenCheck(
+                        <div className="view">
+                          <SolidSettings {...props} />
+                        </div>,
+                      )
+                    }
                   />
                   <Route
                     exact

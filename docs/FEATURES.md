@@ -329,6 +329,63 @@ Feature:
 - **Invite-Based Networking**: Share invite links or QR codes to connect with friends
 - **Contact-Based Groups**: Create share groups using contact nicknames
 
+### Solid Integration (New)
+
+Optional integration with Solid (WebID + Solid-OIDC) for decentralized identity and Pod-backed metadata.
+
+#### Features
+
+- **WebID Resolution**: Resolve WebID profiles and extract OIDC issuer information for Solid identity integration
+- **Solid-OIDC Client ID Document**: Serves compliant JSON-LD Client ID document at `/solid/clientid.jsonld` (dereferenceable per Solid-OIDC specification)
+- **SSRF Hardening**: Comprehensive security controls for WebID/Pod fetches:
+  - **Host Allow-List**: `AllowedHosts` configuration - empty list denies all remote fetches by default (SSRF protection)
+  - **HTTPS Enforcement**: HTTPS-only by default (`AllowInsecureHttp: false`), configurable for dev/test only
+  - **Private IP Blocking**: Automatically blocks localhost, `.local` domains, and RFC1918/link-local IP ranges
+  - **Response Limits**: Configurable max response size (`MaxFetchBytes`: 1MB default) and timeout (`TimeoutSeconds`: 10s default)
+- **RDF Parsing**: Uses dotNetRDF library for parsing WebID profiles in Turtle and JSON-LD formats
+- **API Endpoints**:
+  - `GET /api/v0/solid/status` - Check Solid integration status and configuration
+  - `POST /api/v0/solid/resolve-webid` - Resolve a WebID URI and extract OIDC issuer information
+- **Frontend UI**: New "Solid" navigation item and settings page (`/solid`) for WebID resolution testing
+
+#### Configuration
+```yaml
+feature:
+  Solid: true  # Enable Solid integration (default: true)
+
+solid:
+  allowedHosts: []  # Empty = deny all remote fetches (SSRF safety)
+                     # Add hostnames like ["your-solid-idp.example", "your-pod-provider.example"]
+  timeoutSeconds: 10
+  maxFetchBytes: 1000000
+  allowInsecureHttp: false  # ONLY for dev/test. Keep false in production
+  redirectPath: "/solid/callback"
+```
+
+**Default**: Enabled (`true`) but non-functional until `AllowedHosts` is configured (SSRF safety)
+
+#### Security by Default
+
+- Feature is **enabled by default** but **non-functional** until `AllowedHosts` is explicitly configured
+- This provides SSRF protection: even with the feature on, no remote fetches occur until explicitly allowed
+- HTTPS-only enforcement prevents accidental insecure connections
+- Private IP blocking prevents SSRF attacks against internal services
+
+#### Use Cases
+
+- **WebID Identity**: Resolve WebID profiles to discover OIDC issuers for authentication
+- **Solid-OIDC Integration**: Provide Client ID document for Solid-OIDC authentication flows
+- **Future Pod Integration**: Foundation for Pod-backed metadata storage (playlists, sharelists) - coming in future releases
+
+#### Future Extensions (not in MVP)
+
+- Full OIDC Authorization Code + PKCE flow
+- Token storage (encrypted via Data Protection)
+- DPoP proof generation
+- Pod metadata read/write (playlists, sharelists)
+- Type Index / SAI registry discovery
+- Access control (WAC/ACP) writers
+
 ### Streaming (New)
 
 HTTP range request support for content streaming with session limiting and authentication.
