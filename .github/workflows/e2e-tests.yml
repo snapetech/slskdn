@@ -40,7 +40,7 @@ jobs:
       - name: Build Frontend
         run: |
           cd src/web
-          npm ci
+          npm ci --legacy-peer-deps
           npm run build
           # Copy to wwwroot for serving
           rm -rf ../slskd/wwwroot/*
@@ -54,7 +54,7 @@ jobs:
       - name: Install E2E Dependencies
         run: |
           cd src/web
-          npm ci
+          npm ci --legacy-peer-deps
           npx playwright install --with-deps chromium
 
       - name: Run E2E Tests

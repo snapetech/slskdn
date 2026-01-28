@@ -37,7 +37,7 @@ jobs:
       - name: Build Frontend
         working-directory: src/web
         run: |
-          npm ci
+          npm ci --legacy-peer-deps
           npm run build
 
       - name: Build Backend

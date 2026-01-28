@@ -76,7 +76,7 @@ jobs:
       - name: Build Frontend
         working-directory: src/web
         run: |
-          npm ci
+          npm ci --legacy-peer-deps
           CI=false DISABLE_ESLINT_PLUGIN=true npm run build
           echo "✅ Frontend build complete - verifying wwwroot will be included"
           ls -lh build/static/js/main.*.js | head -1
