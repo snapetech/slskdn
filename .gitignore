@@ -13,6 +13,7 @@
 /dist/
 /logs/
 coverage.json
+/test-artifacts/
 
 # Generated key files (private keys; created at runtime)
 *.key
