@@ -80,7 +80,31 @@ if (!Array.isArray(response)) {
 
 ---
 
-### 2. `async void` Event Handlers Without Try-Catch
+### 2. Reverting Entire Workflow Files (build-on-tag.yml, CI)
+
+**The Bug**: Reverting `.github/workflows/build-on-tag.yml` (or other workflows) to an old commit wipes out months of accumulated fixes: AUR, Winget (Windows case-sensitivity), Nix/Winget branch refs, PPA version checks, Chocolatey retries, etc. Builds then fail immediately (wrong branch name, case-sensitivity errors, missing steps).
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- Any workflow that has been fixed incrementally over time
+
+**Wrong**:
+```bash
+git checkout <old-commit> -- .github/workflows/build-on-tag.yml
+```
+Do not revert the whole file to "fix" one thing.
+
+**Correct**:
+- Make minimal, targeted edits (e.g. only add `--legacy-peer-deps` or fix one job).
+- Before changing workflows: read `docs/DEV_BUILD_PROCESS.md`, then `git log --oneline -- .github/workflows/build-on-tag.yml` to see what was fixed and why.
+- Branch names in workflows must match actual repo branches: use `dev/40-fixes` (or whatever the current dev branch is), not hardcoded `experimental/multi-source-swarm` if that branch no longer exists.
+- Winget on Windows: use `fetch-depth: 1` for checkout and `git fetch origin +refs/heads/master:refs/remotes/origin/master` (not full fetch) to avoid case-insensitivity errors when refs differ only in casing.
+
+**Why This Keeps Happening**: Agent "fixes" a single symptom by reverting the file to a "known good" state, not realizing that state is old and missing many fixes.
+
+---
+
+### 3. `async void` Event Handlers Without Try-Catch
 
 **The Bug**: `async void` event handlers that throw exceptions crash the entire .NET process.
 

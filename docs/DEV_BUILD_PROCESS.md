@@ -214,10 +214,11 @@ This document maps out the complete dev build process for slskdn, including vers
 
 ## Branch Strategy
 
-- **Dev builds**: Typically from `experimental/multi-source-swarm` or `experimental/whatAmIThinking`
+- **Dev builds**: From the current dev branch (e.g. `dev/40-fixes`). **The workflow file must use the actual branch name**—if the branch was renamed from `experimental/multi-source-swarm` to `dev/40-fixes`, update all refs in `build-on-tag.yml` (nix-dev, winget-dev, snap-dev, etc.).
 - **Nix updates**: Commits to same branch (with `[skip ci]`)
 - **Winget updates**: Commits to same branch (with `[skip ci]`)
-- **README updates**: Commits to `experimental/whatAmIThinking` (dev-release.yml only)
+- **README updates**: Commits to dev branch (dev-release.yml only)
+- **Do not revert** `build-on-tag.yml` to an old commit; it wipes out accumulated fixes (see `memory-bank/decisions/adr-0001-known-gotchas.md` § Reverting entire workflow files).
 
 ## Version Iteration Example
 

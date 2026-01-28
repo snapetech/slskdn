@@ -500,7 +500,7 @@ jobs:
           cat > debian/changelog << EOF
           slskdn-dev (${DEB_VERSION}-1ppa${PPA_REV}~jammy) jammy; urgency=medium
 
-            * Development build from experimental/multi-source-swarm
+            * Development build from dev/40-fixes
             * Multi-source swarm downloads
             * DHT mesh network
             * BitTorrent DHT rendezvous
@@ -651,7 +651,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: experimental/multi-source-swarm
+          ref: dev/40-fixes
           fetch-depth: 0
 
       - name: Install Nix
@@ -704,8 +704,8 @@ jobs:
 
       - name: Update flake.nix
         run: |
-          git fetch origin experimental/multi-source-swarm
-          git reset --hard origin/experimental/multi-source-swarm
+          git fetch origin dev/40-fixes
+          git reset --hard origin/dev/40-fixes
           
           sed -i "s/devVersion = \".*\";/devVersion = \"${{ needs.parse.outputs.version }}\";/" flake.nix
           sed -i '/devSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
@@ -733,7 +733,7 @@ jobs:
             git commit -m "chore(nix): update dev flake to ${{ needs.parse.outputs.version }} [skip ci]"
             
             for i in 1 2 3; do
-              if git push origin HEAD:experimental/multi-source-swarm; then
+              if git push origin HEAD:dev/40-fixes; then
                 echo "✅ flake.nix updated and pushed"
                 break
               else
@@ -743,8 +743,8 @@ jobs:
                 fi
                 echo "Push failed, retrying in $((i*2)) seconds..."
                 sleep $((i*2))
-                git fetch origin experimental/multi-source-swarm
-                git reset --hard origin/experimental/multi-source-swarm
+                git fetch origin dev/40-fixes
+                git reset --hard origin/dev/40-fixes
                 if ! git diff --quiet flake.nix; then
                   git add flake.nix
                   git commit -m "chore(nix): update dev flake to ${{ needs.parse.outputs.version }} [skip ci]"
@@ -759,11 +759,12 @@ jobs:
     if: needs.parse.outputs.channel == 'dev'
     runs-on: windows-latest
     steps:
+      # fetch-depth: 1 avoids fetching all refs; Windows case-insensitive FS fails when repo has refs that differ only in casing
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: experimental/multi-source-swarm
-          fetch-depth: 0
+          ref: dev/40-fixes
+          fetch-depth: 1
 
       - name: Download from Release
         env:
@@ -792,8 +793,8 @@ jobs:
 
       - name: Update Winget Manifests
         run: |
-          git fetch origin experimental/multi-source-swarm
-          git reset --hard origin/experimental/multi-source-swarm
+          git fetch origin dev/40-fixes
+          git reset --hard origin/dev/40-fixes
           
           $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
@@ -815,7 +816,7 @@ jobs:
           if (-not (git diff --quiet packaging/winget/)) {
             git add packaging/winget/
             git commit -m "chore(winget): update dev manifests to ${{ needs.parse.outputs.version }} [skip ci]"
-            git push origin HEAD:experimental/multi-source-swarm
+            git push origin HEAD:dev/40-fixes
             Write-Host "✅ Winget manifests updated and pushed"
           } else {
             Write-Host "No changes to Winget manifests"
@@ -836,7 +837,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: experimental/multi-source-swarm
+          ref: dev/40-fixes
 
       - name: Download from Release
         env:
@@ -1635,8 +1636,12 @@ jobs:
 
       - name: Update Winget Manifests
         run: |
-          git fetch origin master
-          git reset --hard origin/master
+          # Fetch only master to avoid case-sensitivity conflicts on Windows (refs that differ only in casing)
+          git fetch origin +refs/heads/master:refs/remotes/origin/master
+          git checkout -f master 2>&1 | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            git checkout -b master origin/master 2>&1 | Out-Null
+          }
           
           $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
