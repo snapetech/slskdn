@@ -246,12 +246,43 @@ choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --
 **Correct**:
 ```powershell
 choco pack
-$Nupkg = "slskdn.$Version.nupkg"
-if (-not (Test-Path $Nupkg)) { Get-ChildItem *.nupkg | ForEach-Object { $Nupkg = $_.Name } }
-choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
+$Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
+choco push $Nupkg --source="https://push.chocolatey.org/" -k=$env:CHOCO_API_KEY --prerelease --execution-timeout=300
 ```
+Use `-k=` (not `--api-key `) so the API key is parsed as one token; unquoted path and `--source=` avoid GHA/pwsh merging arguments.
 
 **Why This Keeps Happening**: Chocolatey v2 changed push to require the .nupkg as the first positional argument; without it, the parser consumes the next token as the file path.
+
+---
+
+### 5c. Snap workflow: core22 install fails during snapcraft on GHA
+
+**The Bug**: On GitHub Actions, when the Snap job runs `snapcraft --destructive-mode` on the host, snapcraft's "Installing build-snaps" step can fail with "Error installing snap 'core22' from channel 'latest/stable'". This is a known issue on GHA runners (snap install reliability; see forum.snapcraft.io and canonical/snapcraft#5146).
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
+
+**Wrong**:
+```yaml
+sudo snap install snapcraft --classic
+cd packaging/snap
+snapcraft --destructive-mode
+```
+
+**Correct** (use LXD build so host snap install is not needed):
+```yaml
+- name: Prepare Snap project
+  run: |  # unzip, sed snapcraft.yaml into packaging/snap
+- uses: snapcore/action-build@v1
+  with:
+    path: packaging/snap
+- uses: snapcore/action-publish@v1
+  with:
+    snap: ${{ steps.snap-build.outputs.snap }}
+    release: edge  # or stable
+```
+
+**Why This Keeps Happening**: Snapcraft installs build-snaps (including core22) when it runs; on GHA that install can fail or hang. Using `snapcore/action-build` runs snapcraft inside LXD, avoiding host snap installs entirely.
 
 ---
 

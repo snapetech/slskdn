@@ -637,11 +637,11 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2 requires explicit .nupkg path as first argument; otherwise --prerelease is parsed as the file
+          # Chocolatey: explicit path first; -k= avoids option parsing issues in pwsh/GHA
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
+          choco push $Nupkg --source="https://push.chocolatey.org/" -k=$env:CHOCO_API_KEY --prerelease --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
@@ -854,6 +854,8 @@ jobs:
     needs: [parse, release-dev]
     if: needs.parse.outputs.channel == 'dev'
     runs-on: ubuntu-latest
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -868,10 +870,7 @@ jobs:
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
 
-      - name: Build and Push
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+      - name: Prepare Snap project
         run: |
           mkdir -p packaging/snap/slskdn_dist
           unzip slskdn-dev-linux-x64.zip -d packaging/snap/slskdn_dist
@@ -880,18 +879,22 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
 
-          sudo snap install snapcraft --classic
+      - name: Build snap (LXD)
+        id: snap-build
+        uses: snapcore/action-build@v1
+        with:
+          path: packaging/snap
 
-          cd packaging/snap
-          snapcraft --destructive-mode
-          
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
-          snapcraft login --with snap.login
-          snapcraft upload --release=edge *.snap
-          
-          echo "✅ Published to Snap (edge channel)"
+      - name: Publish to Snap Store (edge)
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        uses: snapcore/action-publish@v1
+        with:
+          snap: ${{ steps.snap-build.outputs.snap }}
+          release: edge
 
-      - name: Skip if no credentials
+      - name: Skip publish if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured, skipping Snap publish"
 
@@ -1537,11 +1540,11 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2 requires explicit .nupkg path as first argument
+          # Chocolatey: explicit path first; -k= avoids option parsing issues in pwsh/GHA
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
+          choco push $Nupkg --source="https://push.chocolatey.org/" -k=$env:CHOCO_API_KEY --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1703,6 +1706,8 @@ jobs:
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: ubuntu-latest
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -1717,10 +1722,7 @@ jobs:
             --repo ${{ github.repository }} \
             --pattern "slskdn-main-linux-x64.zip"
 
-      - name: Build and Push
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+      - name: Prepare Snap project
         run: |
           mkdir -p packaging/snap/slskdn_dist
           unzip slskdn-main-linux-x64.zip -d packaging/snap/slskdn_dist
@@ -1729,18 +1731,22 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
 
-          sudo snap install snapcraft --classic
+      - name: Build snap (LXD)
+        id: snap-build
+        uses: snapcore/action-build@v1
+        with:
+          path: packaging/snap
 
-          cd packaging/snap
-          snapcraft --destructive-mode
-          
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
-          snapcraft login --with snap.login
-          snapcraft upload --release=stable *.snap
-          
-          echo "✅ Published to Snap (stable channel)"
+      - name: Publish to Snap Store (stable)
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        uses: snapcore/action-publish@v1
+        with:
+          snap: ${{ steps.snap-build.outputs.snap }}
+          release: stable
 
-      - name: Skip if no credentials
+      - name: Skip publish if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured"
 
