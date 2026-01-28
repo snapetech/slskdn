@@ -1,4 +1,4 @@
-import { apiBaseUrl, urlBase } from '../config';
+import { apiBaseUrl } from '../config';
 import api from './api';
 
 const baseUrl = '/api/v0/mediacore/contentid';

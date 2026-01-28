@@ -6,10 +6,8 @@ import * as jobsLibrary from '../../../lib/jobs';
 import { formatBytes } from '../../../lib/util';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Card,
   Grid,
   Header,
-  Icon,
   Label,
   Loader,
   Progress,

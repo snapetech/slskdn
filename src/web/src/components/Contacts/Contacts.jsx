@@ -4,7 +4,6 @@ import LoaderSegment from '../Shared/LoaderSegment';
 import React, { Component } from 'react';
 import {
   Button,
-  Card,
   Container,
   Header,
   Icon,

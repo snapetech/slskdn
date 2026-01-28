@@ -7,9 +7,7 @@ import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 import {
   Button,
-  Card,
   Dimmer,
-  Icon,
   Input,
   List,
   Loader,

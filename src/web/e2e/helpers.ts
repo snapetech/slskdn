@@ -775,15 +775,14 @@ export async function announceShareGrant({
   }
 
   const payload = {
-    collectionDescription: collection.description,
     allowDownload: share.allowDownload,
-    collectionId: share.collectionId,
     allowReshare: share.allowReshare,
-    collectionTitle: collection.title,
     allowStream: share.allowStream,
+    collectionDescription: collection.description,
+    collectionId: share.collectionId,
+    collectionTitle: collection.title,
     collectionType: collection.type,
     expiryUtc: share.expiryUtc,
-    ownerEndpoint: owner.baseUrl,
     items: Array.isArray(items)
       ? items.map((item) => ({
           contentId: item.contentId,
@@ -791,11 +790,12 @@ export async function announceShareGrant({
           ordinal: item.ordinal,
         }))
       : [],
-    shareGrantId,
     maxBitrateKbps: share.maxBitrateKbps,
     maxConcurrentStreams: share.maxConcurrentStreams,
+    ownerEndpoint: owner.baseUrl,
     ownerUserId: owner.username,
     recipientUserId: recipient.username,
+    shareGrantId,
     token,
   };
 
