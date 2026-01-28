@@ -17,7 +17,7 @@
     "@codemirror/language": "^6.12.1",
     "@codemirror/legacy-modes": "^6.5.2",
     "@microsoft/signalr": "^7.0.7",
-    "@uiw/react-codemirror": "^4.25.4",
+    "@uiw/react-codemirror": "^4.21.21",
     "axios": "^0.30.2",
     "lz-string": "^1.4.4",
     "react": "^16.8.6",
