@@ -15,6 +15,7 @@
 coverage.json
 
 # Generated key files (private keys; created at runtime)
+*.key
 mesh-overlay.key
 
 # global.json is (at the time this was added) being used to pin the SDK to 9.0.203, which is the most recent
