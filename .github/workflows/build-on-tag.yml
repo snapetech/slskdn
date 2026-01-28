@@ -655,7 +655,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: dev/40-fixes
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Install Nix
@@ -767,7 +767,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: dev/40-fixes
+          ref: ${{ github.ref }}
           fetch-depth: 1
 
       - name: Download from Release
@@ -1584,7 +1584,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Install Nix
@@ -1670,7 +1670,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Download from Release
