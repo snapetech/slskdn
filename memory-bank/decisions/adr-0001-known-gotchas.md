@@ -283,25 +283,23 @@ choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --executi
 
 ---
 
-### 5e. Snap: action-build outputs filename only; host needs full path and snapcraft for upload
+### 5e. Snap: action-build output path; do not double packaging/snap
 
-**The Bug**: `snapcore/action-build@v1` runs the build inside LXD and sets its `snap` output to the **filename** of the resulting snap (e.g. `slskdn_0.24.1_amd64.snap`), not the full path. Using that value directly in `snapcraft upload "$SNAP_PATH"` fails (file not found). The upload step also runs on the host runner; `ubuntu-latest` does not have `snapcraft` installed, so `snapcraft upload` yields "command not found".
+**The Bug**: `snapcore/action-build@v1` sets its `snap` output to a path relative to the repo root (e.g. `packaging/snap/slskdn_0.24.1.dev.91769629519_amd64.snap`). If you set `SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"` you get `packaging/snap/packaging/snap/...` and "is not a valid file". The upload step also runs on the host runner; install snapcraft there before upload.
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
 
 **Wrong**:
 ```yaml
-SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-# ... later ...
-snapcraft upload --release=edge "$SNAP_PATH"   # file not found; snapcraft may be missing
+SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"   # duplicates packaging/snap
 ```
 
 **Correct**:
-- Set `SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"` (build path + filename).
+- Set `SNAP_PATH="${{ steps.snap-build.outputs.snap }}"` (use the output as-is; it already includes packaging/snap when path: packaging/snap).
 - Add a step before the upload step to install snapcraft on the host: `sudo apt-get install -y snapd` then `sudo snap install snapcraft --classic`.
 
-**Why This Keeps Happening**: The action’s docs say it outputs "the file name of the resulting snap"; it’s easy to assume that’s a path or that the upload runs inside the same environment as the build.
+**Why This Keeps Happening**: The action may output filename-only or path; if it outputs path, prepending packaging/snap breaks.
 
 ---
 

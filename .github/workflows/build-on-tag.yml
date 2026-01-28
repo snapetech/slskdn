@@ -640,8 +640,9 @@ jobs:
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
           Write-Host "Pushing: $Nupkg"
-          # Chocolatey v2: use = syntax for flags to avoid argument parsing issues
-          choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --prerelease --execution-timeout=300
+          # Pass as array so path and --prerelease are never glued (Chocolatey/pwsh parsing bug)
+          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', "--api-key=$key", '--prerelease', '--execution-timeout=300')
+          & choco @pushArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
@@ -897,8 +898,8 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
           set -euo pipefail
-          # action-build outputs filename only; snap lives in the build path (gotcha 5d: treat duplicate content as success)
-          SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"
+          # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
+          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
             set +e
@@ -1569,8 +1570,9 @@ jobs:
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
           Write-Host "Pushing: $Nupkg"
-          # Chocolatey v2: use = syntax for flags to avoid argument parsing issues
-          choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --execution-timeout=300
+          # Pass as array so path is never glued to next arg (Chocolatey/pwsh parsing bug)
+          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', "--api-key=$key", '--execution-timeout=300')
+          & choco @pushArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
@@ -1775,8 +1777,8 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
           set -euo pipefail
-          # action-build outputs filename only; snap lives in the build path (gotcha 5d: treat duplicate content as success)
-          SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"
+          # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
+          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
             set +e
