@@ -230,30 +230,29 @@ run: |
 
 ---
 
-### 5b. Chocolatey: use apikey add then push (explicit .nupkg path; dev uses --prerelease)
+### 5b. Chocolatey: push path and flags must not be parsed as one argument
 
-**The Bug**: `choco push` requires an explicit `.nupkg` file argument. Also, `--prerelease` is **not** a valid `choco push` flag (it’s for install/search flows). Passing `--prerelease` to `choco push` results in errors like: "File specified is either not found or not a .nupkg file. '<nupkg> --prerelease'".
+**The Bug**: In PowerShell, `choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease` can cause Chocolatey to receive the path and `--prerelease` as a single argument, so it fails with: "File specified is either not found or not a .nupkg file. '<path>.nupkg --prerelease'".
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (chocolatey-dev, chocolatey-main)
 
-**Wrong** (no .nupkg path, or only --api-key on push):
+**Wrong** (nested quotes or space-separated source/api-key; pwsh or choco can glue path and next flag):
 ```powershell
-choco push --source ... --api-key $env:CHOCO_API_KEY --prerelease
+choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
 # or
-choco push $Nupkg --source ... --api-key $env:CHOCO_API_KEY --execution-timeout=300
+choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
+choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
 ```
 
-**Correct** (store key with apikey add, then push with explicit .nupkg path; dev includes --prerelease):
+**Correct** (use `=` for flag values so path and flags stay separate; pass api-key on push):
 ```powershell
-choco pack
 $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-choco apikey add -s "https://push.chocolatey.org/" -k $env:CHOCO_API_KEY -y
-choco push $Nupkg --source https://push.chocolatey.org/ --prerelease --execution-timeout=300   # dev
-choco push $Nupkg --source https://push.chocolatey.org/ --execution-timeout=300               # main/stable
+choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --prerelease --execution-timeout=300   # dev
+choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --execution-timeout=300               # main/stable
 ```
 
-**Why This Keeps Happening**: The working pattern is apikey add first (avoids GHA masking/parsing of --api-key), then push with $Nupkg and (for dev) --prerelease. Do not remove --prerelease for dev or switch to --api-key on push without reverting to this pattern.
+**Why This Keeps Happening**: Nested quotes and space-separated `--source`/`--api-key` values can break argument parsing. Use `--source=...` and `--api-key=$key` so Chocolatey v2 gets each argument correctly.
 
 ---
 
