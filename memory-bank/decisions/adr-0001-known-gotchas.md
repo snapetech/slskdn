@@ -200,7 +200,62 @@ new Migration { Version = 17, Name = "Traffic accounting", ... },
 
 ---
 
-### 5. Library Items Empty When Share Cache Is Cold
+### 5. Snap workflow: source path is relative to snapcraft project dir
+
+**The Bug**: In `build-on-tag.yml`, the Snap job unzipped the release zip to `slskdn_dist` in repo root, then `sed` set `source: slskdn_dist` in `packaging/snap/snapcraft.yaml`. Snapcraft runs with `cd packaging/snap`, so it resolves `source: slskdn_dist` relative to that directory. The path `packaging/snap/slskdn_dist` did not exist (the unzip created `./slskdn_dist` at repo root), so snapcraft failed.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
+
+**Wrong**:
+```yaml
+run: |
+  unzip slskdn-dev-linux-x64.zip -d slskdn_dist
+  sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+  cd packaging/snap
+  snapcraft --destructive-mode
+```
+
+**Correct**:
+```yaml
+run: |
+  mkdir -p packaging/snap/slskdn_dist
+  unzip slskdn-dev-linux-x64.zip -d packaging/snap/slskdn_dist
+  sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
+  cd packaging/snap
+  snapcraft --destructive-mode
+```
+
+**Why This Keeps Happening**: Unzip target was assumed to be "any dir"; snapcraft resolves part sources relative to the snapcraft project root (the directory containing `snapcraft.yaml`).
+
+---
+
+### 5b. Chocolatey v2: choco push requires explicit .nupkg path
+
+**The Bug**: In Chocolatey CLI v2, `choco push --source ... --api-key ... --prerelease` without a file argument causes the next option (`--prerelease`) to be interpreted as the *file* argument. Error: "File specified is either not found or not a .nupkg file. '--prerelease'".
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (chocolatey-dev, chocolatey-main)
+
+**Wrong**:
+```powershell
+choco pack
+choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
+```
+
+**Correct**:
+```powershell
+choco pack
+$Nupkg = "slskdn.$Version.nupkg"
+if (-not (Test-Path $Nupkg)) { Get-ChildItem *.nupkg | ForEach-Object { $Nupkg = $_.Name } }
+choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
+```
+
+**Why This Keeps Happening**: Chocolatey v2 changed push to require the .nupkg as the first positional argument; without it, the parser consumes the next token as the file path.
+
+---
+
+### 6. Library Items Empty When Share Cache Is Cold
 
 **The Bug**: `/api/v0/library/items` returned no results when the share cache was empty or not ready, breaking E2E flows that need real content IDs.
 

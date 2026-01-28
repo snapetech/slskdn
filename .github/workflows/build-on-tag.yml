@@ -637,8 +637,10 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Push to pre-release channel for dev builds
-          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
+          # Chocolatey v2 requires explicit .nupkg path; otherwise --prerelease is parsed as the file argument
+          $Nupkg = "slskdn.$Version.nupkg"
+          if (-not (Test-Path $Nupkg)) { Get-ChildItem *.nupkg | ForEach-Object { $Nupkg = $_.Name }; Write-Host "Using package: $Nupkg" }
+          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
@@ -816,8 +818,26 @@ jobs:
           if (-not (git diff --quiet packaging/winget/)) {
             git add packaging/winget/
             git commit -m "chore(winget): update dev manifests to ${{ needs.parse.outputs.version }} [skip ci]"
-            git push origin HEAD:dev/40-fixes
-            Write-Host "✅ Winget manifests updated and pushed"
+            $maxAttempts = 3
+            for ($i = 1; $i -le $maxAttempts; $i++) {
+              if (git push origin HEAD:dev/40-fixes) {
+                Write-Host "✅ Winget manifests updated and pushed"
+                exit 0
+              }
+              if ($i -eq $maxAttempts) {
+                Write-Host "⚠️ Push failed after $maxAttempts attempts (likely race with Nix/other job updating dev/40-fixes)"
+                exit 0
+              }
+              Write-Host "Push failed, retrying in $($i*2) seconds..."
+              Start-Sleep -Seconds ($i * 2)
+              git fetch origin dev/40-fixes
+              git reset --hard origin/dev/40-fixes
+              bash packaging/scripts/update-winget-manifests.sh "${{ needs.parse.outputs.version }}" "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip" "${{ steps.sha.outputs.win_x64_sha }}"
+              if (-not (git diff --quiet packaging/winget/)) {
+                git add packaging/winget/
+                git commit -m "chore(winget): update dev manifests to ${{ needs.parse.outputs.version }} [skip ci]"
+              }
+            }
           } else {
             Write-Host "No changes to Winget manifests"
           }
@@ -852,14 +872,15 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
-          unzip slskdn-dev-linux-x64.zip -d slskdn_dist
+          mkdir -p packaging/snap/slskdn_dist
+          unzip slskdn-dev-linux-x64.zip -d packaging/snap/slskdn_dist
           sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
-          
+
           sudo snap install snapcraft --classic
-          
+
           cd packaging/snap
           snapcraft --destructive-mode
           
@@ -1515,8 +1536,10 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Push to stable channel (no --prerelease flag)
-          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          # Chocolatey v2 requires explicit .nupkg path as first argument
+          $Nupkg = "slskdn.$Version.nupkg"
+          if (-not (Test-Path $Nupkg)) { Get-ChildItem *.nupkg | ForEach-Object { $Nupkg = $_.Name }; Write-Host "Using package: $Nupkg" }
+          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1697,14 +1720,15 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
-          unzip slskdn-main-linux-x64.zip -d slskdn_dist
+          mkdir -p packaging/snap/slskdn_dist
+          unzip slskdn-main-linux-x64.zip -d packaging/snap/slskdn_dist
           sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
-          
+
           sudo snap install snapcraft --classic
-          
+
           cd packaging/snap
           snapcraft --destructive-mode
           
