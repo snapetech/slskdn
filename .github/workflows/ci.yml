@@ -1,12 +1,11 @@
 name: CI
 on:
   push:
-    # Only build on tags, not on every push to master
+    # Only build on version tags, not on every push to master
+    # build-dev-* and build-main-* tags are handled by build-on-tag.yml
     tags: 
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-slskdn.[0-9]+"
-      - "build-dev-*"
-      - "build-main-*"
   pull_request:
     branches: [ master ]
   workflow_dispatch:
