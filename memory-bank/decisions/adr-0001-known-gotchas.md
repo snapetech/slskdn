@@ -270,29 +270,18 @@ choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API
 
 ---
 
-### 5d. Snap Store: upload blocked by pending review queue
+### 5d. Snap Store: duplicate content error after block
 
-**The Bug**: `snapcraft upload` can fail with: "Waiting for previous upload(s) to complete their review process." This is a Snap Store-side queue condition.
-
-**Files Affected**:
-- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
-
-**Fix**: Retry `snapcraft upload` with backoff when this message is present (bounded retries), rather than failing immediately.
-
----
-
-### 5e. Snapcraft v8: `login --with` no longer supported in CI
-
-**The Bug**: `snapcraft login --with snap.login` fails with: "`--with` is no longer supported, export the auth to the environment variable 'SNAPCRAFT_STORE_CREDENTIALS' instead".
+**The Bug**: If a previous upload attempt succeeded in transmitting the file but failed the status check (e.g. "Waiting for previous upload"), the next retry will fail with: "binary_sha3_384: A file with this exact same content has already been uploaded".
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
 
-**Fix**: Do not call `snapcraft login --with ...`. Set `SNAPCRAFT_STORE_CREDENTIALS` in the environment and run `snapcraft upload ...` directly.
+**Fix**: Update the retry loop to treat the "exact same content has already been uploaded" message as a **SUCCESS**, as it means the version is already in the store.
 
 ---
 
-### 5f. PPA dev build: dev tag version must always increase
+### 5e. PPA dev build: dev tag version must always increase
 
 **The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.
 

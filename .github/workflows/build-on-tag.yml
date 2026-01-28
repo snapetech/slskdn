@@ -623,7 +623,6 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
-          $ErrorActionPreference = "Stop"
           # Chocolatey/NuGet requires hyphenated version
           $DottedVersion = "${{ needs.parse.outputs.version }}"
           $Version = $DottedVersion -replace '\.dev\.', '-dev-'
@@ -636,15 +635,12 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
+          # Chocolatey v2 requires explicit .nupkg path as first argument; otherwise --prerelease is parsed as the file
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          # Store API key so push does not pass secret on command line (avoids GHA masking/parsing issues)
-          choco apikey add -s "https://push.chocolatey.org/" -k $env:CHOCO_API_KEY -y
           Write-Host "Pushing: $Nupkg"
-          # NOTE: `--prerelease` is NOT a valid `choco push` flag; prerelease is determined by the package version (e.g. 0.24.1-dev-...).
-          choco push $Nupkg --source https://push.chocolatey.org/ --execution-timeout=300
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Write-Host "✅ Published to Chocolatey: slskdn (dev)"
+          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
+          Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
   nix-dev:
@@ -894,36 +890,26 @@ jobs:
         run: |
           set -euo pipefail
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          # snapcraft v8 no longer supports `login --with`; it reads auth from SNAPCRAFT_STORE_CREDENTIALS.
-
-          # Snap Store can reject uploads while previous uploads are still in review/processing.
-          # Retry with backoff so we don't fail the whole workflow on a transient queue condition.
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
             set +e
             OUT="$(snapcraft upload --release=edge "$SNAP_PATH" 2>&1)"
             CODE=$?
             set -e
-
             echo "$OUT"
-            if [ $CODE -eq 0 ]; then
+            if [ $CODE -eq 0 ] || echo "$OUT" | grep -q "exact same content has already been uploaded"; then
               echo "✅ Published to Snap (edge channel)"
               exit 0
             fi
-
-            if echo "$OUT" | grep -q "Waiting for previous upload(s)"; then
+            if echo "$OUT" | grep -q "Waiting for previous upload"; then
               sleep 30
               continue
             fi
-
-            echo "::error::snapcraft upload failed"
             exit $CODE
           done
-
-          echo "::error::snapcraft upload still blocked after retries"
           exit 1
 
-      - name: Skip publish if no credentials
+      - name: Skip if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured, skipping Snap publish"
 
@@ -1561,7 +1547,6 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
-          $ErrorActionPreference = "Stop"
           $Version = "${{ needs.parse.outputs.version }}"
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
@@ -1570,12 +1555,11 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
+          # Chocolatey v2 requires explicit .nupkg path as first argument
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          choco apikey add -s "https://push.chocolatey.org/" -k $env:CHOCO_API_KEY -y
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source https://push.chocolatey.org/ --execution-timeout=300
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1775,34 +1759,26 @@ jobs:
         run: |
           set -euo pipefail
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          # snapcraft v8 no longer supports `login --with`; it reads auth from SNAPCRAFT_STORE_CREDENTIALS.
-
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
             set +e
             OUT="$(snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
             CODE=$?
             set -e
-
             echo "$OUT"
-            if [ $CODE -eq 0 ]; then
+            if [ $CODE -eq 0 ] || echo "$OUT" | grep -q "exact same content has already been uploaded"; then
               echo "✅ Published to Snap (stable channel)"
               exit 0
             fi
-
-            if echo "$OUT" | grep -q "Waiting for previous upload(s)"; then
+            if echo "$OUT" | grep -q "Waiting for previous upload"; then
               sleep 30
               continue
             fi
-
-            echo "::error::snapcraft upload failed"
             exit $CODE
           done
-
-          echo "::error::snapcraft upload still blocked after retries"
           exit 1
 
-      - name: Skip publish if no credentials
+      - name: Skip if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured"
 
