@@ -281,7 +281,18 @@ choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API
 
 ---
 
-### 5e. PPA dev build: dev tag version must always increase
+### 5e. Snapcraft v8: `login --with` no longer supported in CI
+
+**The Bug**: `snapcraft login --with snap.login` fails with: "`--with` is no longer supported, export the auth to the environment variable 'SNAPCRAFT_STORE_CREDENTIALS' instead".
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
+
+**Fix**: Do not call `snapcraft login --with ...`. Set `SNAPCRAFT_STORE_CREDENTIALS` in the environment and run `snapcraft upload ...` directly.
+
+---
+
+### 5f. PPA dev build: dev tag version must always increase
 
 **The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.
 

@@ -894,9 +894,7 @@ jobs:
         run: |
           set -euo pipefail
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
-          snapcraft login --with snap.login
+          # snapcraft v8 no longer supports `login --with`; it reads auth from SNAPCRAFT_STORE_CREDENTIALS.
 
           # Snap Store can reject uploads while previous uploads are still in review/processing.
           # Retry with backoff so we don't fail the whole workflow on a transient queue condition.
@@ -1777,9 +1775,7 @@ jobs:
         run: |
           set -euo pipefail
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
-          snapcraft login --with snap.login
+          # snapcraft v8 no longer supports `login --with`; it reads auth from SNAPCRAFT_STORE_CREDENTIALS.
 
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
