@@ -639,10 +639,9 @@ jobs:
           choco pack
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          # Chocolatey v2: apikey add then push; path must be single argument (quoted) so --prerelease is not parsed as part of path
-          choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
           Write-Host "Pushing: $Nupkg"
-          choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
+          # Chocolatey v2: use = syntax for flags to avoid argument parsing issues
+          choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --prerelease --execution-timeout=300
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
@@ -1569,9 +1568,9 @@ jobs:
           choco pack
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
           Write-Host "Pushing: $Nupkg"
-          choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --execution-timeout=300
+          # Chocolatey v2: use = syntax for flags to avoid argument parsing issues
+          choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --execution-timeout=300
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
