@@ -1,15 +1,17 @@
 name: Build on Tag
 
 # Trigger: push tag matching build-dev-* or build-main-*
-# 
-# Dev builds:   build-dev-0.24.1.dev.91734132417 (prefixed Unix epoch)
-#               → Creates release under same tag
-# 
-# Main builds:  build-main-0.24.1-slskdn.35 (trigger)
-#               → Creates release under 0.24.1-slskdn.35 (backward compatible)
+#
+# Dev builds:   Version MUST increase for PPA/Debian (version compare).
+#               Use build-dev-0.24.1.dev.9$(date +%s) — "9" + Unix epoch so
+#               version sorts higher than any previous (e.g. 0.24.1.dev.91769609285).
+#               WRONG: build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S) — 20260128... sorts
+#               BELOW 91769609285 → PPA rejects "Version older than that in the archive".
+#
+# Main builds:  build-main-0.24.1-slskdn.35 → release 0.24.1-slskdn.35
 #
 # Examples:
-#   ./bin/tag-dev-build   # Interactive, uses prefixed epoch (9 + timestamp)
+#   git tag build-dev-0.24.1.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
 #   git tag build-main-0.24.1-slskdn.35 && git push origin $_
 
 on:
@@ -637,13 +639,11 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
+          # Chocolatey v2: explicit .nupkg path first so --prerelease is not parsed as the file
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          Write-Host "Choco: $(choco --version)"
           Write-Host "Pushing: $Nupkg"
-          # Argument array so pwsh/GHA cannot merge or mis-parse options (key as separate element)
-          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', '-k', $env:CHOCO_API_KEY, '--prerelease', '--execution-timeout=300')
-          & choco @pushArgs
+          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
@@ -872,7 +872,10 @@ jobs:
             --repo ${{ github.repository }} \
             --pattern "slskdn-dev-linux-x64.zip"
 
-      - name: Prepare Snap project
+      - name: Build and Push
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
           mkdir -p packaging/snap/slskdn_dist
           unzip slskdn-dev-linux-x64.zip -d packaging/snap/slskdn_dist
@@ -881,22 +884,20 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
 
-      - name: Build snap (LXD)
-        id: snap-build
-        uses: snapcore/action-build@v1
-        with:
-          path: packaging/snap
+          # Pre-install base so snapcraft "Installing build-snaps" does not fail on GHA
+          sudo snap install core22
+          sudo snap install snapcraft --classic
 
-      - name: Publish to Snap Store (edge)
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        uses: snapcore/action-publish@v1
-        with:
-          snap: ${{ steps.snap-build.outputs.snap }}
-          release: edge
+          cd packaging/snap
+          snapcraft --destructive-mode
 
-      - name: Skip publish if no credentials
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+          snapcraft upload --release=edge *.snap
+
+          echo "✅ Published to Snap (edge channel)"
+
+      - name: Skip if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured, skipping Snap publish"
 
@@ -1542,13 +1543,11 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
+          # Chocolatey v2: explicit .nupkg path first
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          Write-Host "Choco: $(choco --version)"
           Write-Host "Pushing: $Nupkg"
-          # Argument array so pwsh/GHA cannot merge or mis-parse options (key as separate element)
-          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', '-k', $env:CHOCO_API_KEY, '--execution-timeout=300')
-          & choco @pushArgs
+          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1726,7 +1725,10 @@ jobs:
             --repo ${{ github.repository }} \
             --pattern "slskdn-main-linux-x64.zip"
 
-      - name: Prepare Snap project
+      - name: Build and Push
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
           mkdir -p packaging/snap/slskdn_dist
           unzip slskdn-main-linux-x64.zip -d packaging/snap/slskdn_dist
@@ -1735,22 +1737,20 @@ jobs:
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
 
-      - name: Build snap (LXD)
-        id: snap-build
-        uses: snapcore/action-build@v1
-        with:
-          path: packaging/snap
+          # Pre-install base so snapcraft "Installing build-snaps" does not fail on GHA
+          sudo snap install core22
+          sudo snap install snapcraft --classic
 
-      - name: Publish to Snap Store (stable)
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        uses: snapcore/action-publish@v1
-        with:
-          snap: ${{ steps.snap-build.outputs.snap }}
-          release: stable
+          cd packaging/snap
+          snapcraft --destructive-mode
 
-      - name: Skip publish if no credentials
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
+          snapcraft login --with snap.login
+          snapcraft upload --release=stable *.snap
+
+          echo "✅ Published to Snap (stable channel)"
+
+      - name: Skip if no credentials
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
         run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured"
 

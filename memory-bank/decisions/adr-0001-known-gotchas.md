@@ -243,47 +243,55 @@ choco pack
 choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
 ```
 
-**Correct** (argument array so pwsh/GHA cannot merge or mis-parse; key as separate element after `-k`):
+**Correct** (explicit .nupkg path first; use `--source` and `--api-key` without `=`; do not use argument arrays — that broke push in GHA):
 ```powershell
 choco pack
 $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-$pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', '-k', $env:CHOCO_API_KEY, '--prerelease', '--execution-timeout=300')
-& choco @pushArgs
+choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
 ```
-Using `& choco @pushArgs` ensures each array element is passed as one argument; otherwise the key can be consumed as the file path or merged with `--prerelease`.
 
 **Why This Keeps Happening**: Chocolatey v2 changed push to require the .nupkg as the first positional argument; without it, the parser consumes the next token as the file path.
 
 ---
 
-### 5c. Snap workflow: core22 install fails during snapcraft on GHA
+### 5c. Snap workflow: pre-install core22 before snapcraft on GHA
 
-**The Bug**: On GitHub Actions, when the Snap job runs `snapcraft --destructive-mode` on the host, snapcraft's "Installing build-snaps" step can fail with "Error installing snap 'core22' from channel 'latest/stable'". This is a known issue on GHA runners (snap install reliability; see forum.snapcraft.io and canonical/snapcraft#5146).
+**The Bug**: On GHA, `snapcraft --destructive-mode` can fail with "Error installing snap 'core22'" during its "Installing build-snaps" step. Pre-installing the base snap on the host avoids this.
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
 
-**Wrong**:
+**Correct**:
 ```yaml
+sudo snap install core22
 sudo snap install snapcraft --classic
 cd packaging/snap
 snapcraft --destructive-mode
 ```
 
-**Correct** (use LXD build so host snap install is not needed):
-```yaml
-- name: Prepare Snap project
-  run: |  # unzip, sed snapcraft.yaml into packaging/snap
-- uses: snapcore/action-build@v1
-  with:
-    path: packaging/snap
-- uses: snapcore/action-publish@v1
-  with:
-    snap: ${{ steps.snap-build.outputs.snap }}
-    release: edge  # or stable
+---
+
+### 5d. PPA dev build: dev tag version must always increase
+
+**The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.
+
+**Files Affected**:
+- Tag creation (manual or script)
+- `.github/workflows/build-on-tag.yml` (version comes from tag)
+
+**Wrong**:
+```bash
+git tag build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)   # 20260128.162317 sorts LOW
 ```
 
-**Why This Keeps Happening**: Snapcraft installs build-snaps (including core22) when it runs; on GHA that install can fail or hang. Using `snapcore/action-build` runs snapcraft inside LXD, avoiding host snap installs entirely.
+**Correct**:
+```bash
+# "9" + Unix epoch so version always increases (e.g. 0.24.1.dev.91769609285)
+git tag build-dev-0.24.1.dev.9$(date +%s)
+git push origin $(git describe --tags --abbrev=0)
+```
+
+**Why This Keeps Happening**: Date format `%Y%m%d.%H%M%S` produces a string that can sort lower than a previous run's large numeric suffix. Use `9$(date +%s)` so the dev version is monotonically increasing.
 
 ---
 
