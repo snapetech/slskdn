@@ -230,29 +230,27 @@ run: |
 
 ---
 
-### 5b. Chocolatey: push path and flags must not be parsed as one argument
+### 5b. Chocolatey: do NOT pass path to choco push (match master)
 
-**The Bug**: In PowerShell, `choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease` can cause Chocolatey to receive the path and `--prerelease` as a single argument, so it fails with: "File specified is either not found or not a .nupkg file. '<path>.nupkg --prerelease'".
+**The Bug**: Passing a path to `choco push` (e.g. `choco push $Nupkg --source ...`) causes Chocolatey/pwsh to glue the path and the next flag into one argument, so it fails with: "File specified is either not found or not a .nupkg file. '<path>.nupkg --prerelease'".
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (chocolatey-dev, chocolatey-main)
 
-**Wrong** (nested quotes or space-separated source/api-key; pwsh or choco can glue path and next flag):
+**Wrong** (any path argument can glue to next flag):
 ```powershell
-choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
-# or
-choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
-choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
+choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
 ```
 
-**Correct** (use `=` for flag values so path and flags stay separate; pass api-key on push):
+**Correct** (match master): Run `choco push` from inside `packaging/chocolatey` after `choco pack`, with **no path** — choco finds the single .nupkg in the current directory:
 ```powershell
-$Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --prerelease --execution-timeout=300   # dev
-choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --execution-timeout=300               # main/stable
+cd packaging/chocolatey
+choco pack
+choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout 300   # dev
+choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout 300               # main (add retry loop for 504)
 ```
 
-**Why This Keeps Happening**: Nested quotes and space-separated `--source`/`--api-key` values can break argument parsing. Use `--source=...` and `--api-key=$key` so Chocolatey v2 gets each argument correctly.
+**Why This Keeps Happening**: Chocolatey/pwsh glues a path argument to the next token. Omitting the path (run from the pack directory) avoids the bug; master branch uses this pattern.
 
 ---
 
@@ -272,14 +270,14 @@ choco push $Nupkg --source=https://push.chocolatey.org/ --api-key=$key --executi
 
 ---
 
-### 5d. Snap Store: duplicate content error after block
+### 5d. Snap Store: duplicate content and transient "error while processing"
 
-**The Bug**: If a previous upload attempt succeeded in transmitting the file but failed the status check (e.g. "Waiting for previous upload"), the next retry will fail with: "binary_sha3_384: A file with this exact same content has already been uploaded".
+**The Bug**: (1) If a previous upload succeeded in transmitting but failed the status check (e.g. "Waiting for previous upload"), the next retry fails with: "binary_sha3_384: A file with this exact same content has already been uploaded". (2) Snap Store can return "Status: error while processing" transiently.
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
 
-**Fix**: Update the retry loop to treat the "exact same content has already been uploaded" message as a **SUCCESS**, as it means the version is already in the store.
+**Fix**: (1) Treat "exact same content has already been uploaded" as **SUCCESS**. (2) Treat "Waiting for previous upload" and "error while processing" as **retry** (sleep 30s, continue); do not exit on them.
 
 ---
 
@@ -327,27 +325,16 @@ SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"   # duplicates p
 
 ---
 
-### 5f. PPA dev build: dev tag version must always increase
+### 5f. PPA dev build: version must always increase (workflow uses epoch-based DEB_VERSION)
 
-**The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.
+**The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If the tag (or derived version) is e.g. `0.24.1.dev.20260128.162317`, it can sort **below** a previously uploaded `0.24.1.dev.91769609285`, so the PPA rejects the upload.
 
 **Files Affected**:
-- Tag creation (manual or script)
-- `.github/workflows/build-on-tag.yml` (version comes from tag)
+- `.github/workflows/build-on-tag.yml` (ppa-dev job)
 
-**Wrong**:
-```bash
-git tag build-dev-0.24.1.dev.$(date -u +%Y%m%d.%H%M%S)   # 20260128.162317 sorts LOW
-```
+**Fix (in workflow)**: The ppa-dev job now **ignores the tag version** for the package version and sets `DEB_VERSION=0.24.1.dev.9$(date +%s)` in "Prepare Source Structure", then uses that for directory name, tarball, and changelog. So PPA always gets a monotonically increasing version regardless of tag format.
 
-**Correct**:
-```bash
-# "9" + Unix epoch so version always increases (e.g. 0.24.1.dev.91769609285)
-git tag build-dev-0.24.1.dev.9$(date +%s)
-git push origin $(git describe --tags --abbrev=0)
-```
-
-**Why This Keeps Happening**: Date format `%Y%m%d.%H%M%S` produces a string that can sort lower than a previous run's large numeric suffix. Use `9$(date +%s)` so the dev version is monotonically increasing.
+**If tagging manually**: Prefer `build-dev-0.24.1.dev.9$(date +%s)` so the tag itself is increasing; the workflow no longer derives PPA version from the tag for dev.
 
 ---
 
@@ -808,25 +795,9 @@ Note: TWO spaces before `--`, specific date format.
 
 ---
 
-### 21. Chocolatey v2 push – path must be a single argument
+### 21. Chocolatey v2 push – do not pass path (see gotcha 5b)
 
-**The Bug**: `choco push $Nupkg --source ... --prerelease` can make Chocolatey v2 treat the file path as `path.nupkg --prerelease` (one argument), so it reports "File specified is either not found or not a .nupkg file".
-
-**Files Affected**:
-- `.github/workflows/build-on-tag.yml` – `chocolatey-dev` and `chocolatey-main` jobs
-
-**Wrong**:
-```powershell
-choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
-```
-
-**Correct**:
-```powershell
-choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
-choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
-```
-
-**Why This Keeps Happening**: Chocolatey v2 parses positionals strictly; unquoted `$Nupkg` plus following flags can be merged. Use apikey add then push (no `--api-key` on push), and quote the path: `"$Nupkg"`.
+**The Bug**: Passing a path to `choco push` causes path+flag gluing. **Correct** (see gotcha 5b): run `choco push` from `packaging/chocolatey` after `choco pack` with no path; use `--api-key $env:CHOCO_API_KEY`. Match master branch.
 
 ---
 

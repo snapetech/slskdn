@@ -455,36 +455,35 @@ jobs:
 
       - name: Prepare Source Structure
         run: |
-          VERSION="${{ needs.parse.outputs.version }}"
+          # PPA requires version to always increase. Use epoch-based version (do NOT use tag version or date+time — PPA rejects "older").
+          DEB_VERSION="0.24.1.dev.9$(date +%s)"
+          echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
           
           # Create proper directory structure for debian packaging
-          mkdir -p slskdn-dev-${VERSION}/usr/lib/slskd
-          mkdir -p slskdn-dev-${VERSION}/lib/systemd/system
-          mkdir -p slskdn-dev-${VERSION}/etc/slskd
-          mkdir -p slskdn-dev-${VERSION}/usr/lib/sysusers.d
+          mkdir -p slskdn-dev-${DEB_VERSION}/usr/lib/slskd
+          mkdir -p slskdn-dev-${DEB_VERSION}/lib/systemd/system
+          mkdir -p slskdn-dev-${DEB_VERSION}/etc/slskd
+          mkdir -p slskdn-dev-${DEB_VERSION}/usr/lib/sysusers.d
           
           # Copy binary files from our build
-          cp -r publish-linux-x64/* slskdn-dev-${VERSION}/usr/lib/slskd/
+          cp -r publish-linux-x64/* slskdn-dev-${DEB_VERSION}/usr/lib/slskd/
           
           # Copy service files from packaging
-          cp packaging/aur/slskd.service slskdn-dev-${VERSION}/lib/systemd/system/
-          cp packaging/aur/slskd.yml slskdn-dev-${VERSION}/etc/slskd/
-          cp packaging/aur/slskd.sysusers slskdn-dev-${VERSION}/usr/lib/sysusers.d/slskd.conf
+          cp packaging/aur/slskd.service slskdn-dev-${DEB_VERSION}/lib/systemd/system/
+          cp packaging/aur/slskd.yml slskdn-dev-${DEB_VERSION}/etc/slskd/
+          cp packaging/aur/slskd.sysusers slskdn-dev-${DEB_VERSION}/usr/lib/sysusers.d/slskd.conf
 
       - name: Prepare Source Package
         run: |
-          VERSION="${{ needs.parse.outputs.version }}"
-          # Convert version for Debian (replace ALL hyphens with dots)
-          DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')
-          
+          # DEB_VERSION set in previous step (epoch-based for PPA)
           # Create tarball for orig source
-          tar -czvf slskdn-dev_${DEB_VERSION}.orig.tar.gz slskdn-dev-${VERSION}
+          tar -czvf slskdn-dev_${DEB_VERSION}.orig.tar.gz slskdn-dev-${DEB_VERSION}
           
           # Copy and modify debian directory for -dev package
-          cp -r packaging/debian slskdn-dev-${VERSION}/
+          cp -r packaging/debian slskdn-dev-${DEB_VERSION}/
           
           # Update control file for slskdn-dev package
-          cd slskdn-dev-${VERSION}
+          cd slskdn-dev-${DEB_VERSION}
           sed -i 's/^Source: slskdn$/Source: slskdn-dev/' debian/control
           sed -i 's/^Package: slskdn$/Package: slskdn-dev/' debian/control
           sed -i 's/^Conflicts: slskd$/Conflicts: slskd, slskdn/' debian/control
@@ -512,8 +511,8 @@ jobs:
         run: |
           if [ -z "$GPG_PRIVATE_KEY" ]; then exit 0; fi
           
-          VERSION="${{ needs.parse.outputs.version }}"
-          cd slskdn-dev-${VERSION}
+          # DEB_VERSION from Prepare Source Structure
+          cd slskdn-dev-${DEB_VERSION}
           debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
 
       - name: Configure dput
@@ -624,7 +623,6 @@ jobs:
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
           $ErrorActionPreference = "Stop"
-          $key = "$env:CHOCO_API_KEY".Trim()
           # Chocolatey/NuGet requires hyphenated version
           $DottedVersion = "${{ needs.parse.outputs.version }}"
           $Version = $DottedVersion -replace '\.dev\.', '-dev-'
@@ -637,12 +635,8 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-          if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          Write-Host "Pushing: $Nupkg"
-          # Pass as array so path and --prerelease are never glued (Chocolatey/pwsh parsing bug)
-          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', "--api-key=$key", '--prerelease', '--execution-timeout=300')
-          & choco @pushArgs
+          # Match master: do NOT pass path to choco push — run from packaging/chocolatey so choco finds the .nupkg; passing path causes path+flag gluing.
+          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout 300
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
@@ -911,7 +905,8 @@ jobs:
               echo "✅ Published to Snap (edge channel)"
               exit 0
             fi
-            if echo "$OUT" | grep -q "Waiting for previous upload"; then
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing"; then
+              echo "Retrying in 30s (transient Snap Store status)..."
               sleep 30
               continue
             fi
@@ -1558,7 +1553,6 @@ jobs:
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
           $ErrorActionPreference = "Stop"
-          $key = "$env:CHOCO_API_KEY".Trim()
           $Version = "${{ needs.parse.outputs.version }}"
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
@@ -1567,14 +1561,28 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-          if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
-          Write-Host "Pushing: $Nupkg"
-          # Pass as array so path is never glued to next arg (Chocolatey/pwsh parsing bug)
-          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', "--api-key=$key", '--execution-timeout=300')
-          & choco @pushArgs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Write-Host "✅ Published to Chocolatey: slskdn (stable)"
+          # Match master: do NOT pass path; run from packaging/chocolatey. Retry on 504/timeout.
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout 300 2>&1 | Tee-Object -Variable pushOutput
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              Write-Host "✅ Published to Chocolatey: slskdn (stable)"
+            } elseif ($pushOutput -match "504|Gateway Timeout|timeout") {
+              $retryCount++
+              if ($retryCount -lt $maxRetries) {
+                Write-Host "⚠️ Chocolatey timeout (attempt $retryCount/$maxRetries), retrying in 10 seconds..."
+                Start-Sleep -Seconds 10
+              } else {
+                Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts (likely transient)"
+                exit 0
+              }
+            } else {
+              Write-Host "❌ Chocolatey push failed"; exit 1
+            }
+          }
         shell: pwsh
 
   nix-main:
@@ -1790,7 +1798,8 @@ jobs:
               echo "✅ Published to Snap (stable channel)"
               exit 0
             fi
-            if echo "$OUT" | grep -q "Waiting for previous upload"; then
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing"; then
+              echo "Retrying in 30s (transient Snap Store status)..."
               sleep 30
               continue
             fi
