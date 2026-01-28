@@ -106,6 +106,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.head_commit.id || github.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -172,6 +173,8 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: "🧪 Dev Build ${{ needs.parse.outputs.version }}"
+          draft: false
+          prerelease: true
           body: |
             ## Development Build ${{ needs.parse.outputs.version }}
             
