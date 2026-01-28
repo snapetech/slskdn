@@ -949,11 +949,11 @@ const MediaCore = () => {
       const result = await mediacore.clearRetrievalCache();
       // Reload stats to reflect changes
       await handleLoadRetrievalStats();
-      alert(
+      toast.success(
         `Cache cleared: ${result.entriesCleared} entries, ${result.bytesFreed} bytes freed`,
       );
     } catch (error_) {
-      alert(`Failed to clear cache: ${error_.message}`);
+      toast.error(`Failed to clear cache: ${error_.message}`);
     }
   };
 
@@ -1081,16 +1081,16 @@ const MediaCore = () => {
       setPerceptualHashingStats(null);
       setMetadataPortabilityStats(null);
       setContentPublishingStats(null);
-      alert('MediaCore statistics have been reset');
+      toast.success('MediaCore statistics have been reset');
     } catch (error_) {
-      alert(`Failed to reset stats: ${error_.message}`);
+      toast.error(`Failed to reset stats: ${error_.message}`);
     }
   };
 
   // PodCore handlers
   const handlePublishPod = async () => {
     if (!podToPublish.trim()) {
-      alert('Please enter pod JSON data');
+      toast.warning('Please enter pod JSON data');
       return;
     }
 
@@ -1110,7 +1110,7 @@ const MediaCore = () => {
 
   const handleRetrievePodMetadata = async () => {
     if (!podMetadataToRetrieve.trim()) {
-      alert('Please enter a pod ID');
+      toast.warning('Please enter a pod ID');
       return;
     }
 
@@ -1130,7 +1130,7 @@ const MediaCore = () => {
 
   const handleUnpublishPod = async () => {
     if (!podToUnpublish.trim()) {
-      alert('Please enter a pod ID');
+      toast.warning('Please enter a pod ID');
       return;
     }
 
@@ -1169,7 +1169,7 @@ const MediaCore = () => {
   // Pod Membership handlers
   const handlePublishMembership = async () => {
     if (!membershipRecord.trim()) {
-      alert('Please enter membership record JSON data');
+      toast.warning('Please enter membership record JSON data');
       return;
     }
 
@@ -1189,7 +1189,7 @@ const MediaCore = () => {
 
   const handleGetMembership = async () => {
     if (!membershipPodId.trim() || !membershipPeerId.trim()) {
-      alert('Please enter both Pod ID and Peer ID');
+      toast.warning('Please enter both Pod ID and Peer ID');
       return;
     }
 
@@ -1210,7 +1210,7 @@ const MediaCore = () => {
 
   const handleVerifyMembership = async () => {
     if (!membershipPodId.trim() || !membershipPeerId.trim()) {
-      alert('Please enter both Pod ID and Peer ID');
+      toast.warning('Please enter both Pod ID and Peer ID');
       return;
     }
 
@@ -1231,7 +1231,7 @@ const MediaCore = () => {
 
   const handleBanMember = async () => {
     if (!membershipPodId.trim() || !membershipPeerId.trim()) {
-      alert('Please enter both Pod ID and Peer ID');
+      toast.warning('Please enter both Pod ID and Peer ID');
       return;
     }
 
@@ -1262,7 +1262,7 @@ const MediaCore = () => {
 
   const handleChangeRole = async () => {
     if (!membershipPodId.trim() || !membershipPeerId.trim()) {
-      alert('Please enter both Pod ID and Peer ID');
+      toast.warning('Please enter both Pod ID and Peer ID');
       return;
     }
 
@@ -1304,20 +1304,20 @@ const MediaCore = () => {
 
     try {
       const result = await mediacore.cleanupExpiredMemberships();
-      alert(
+      toast.success(
         `Cleanup completed: ${result.recordsCleaned} records cleaned, ${result.errorsEncountered} errors`,
       );
       // Reload stats to reflect changes
       await handleLoadMembershipStats();
     } catch (error_) {
-      alert(`Failed to cleanup: ${error_.message}`);
+      toast.error(`Failed to cleanup: ${error_.message}`);
     }
   };
 
   // Pod Membership Verification handlers
   const handleVerifyPodMembership = async () => {
     if (!verifyPodId.trim() || !verifyPeerId.trim()) {
-      alert('Please enter both Pod ID and Peer ID');
+      toast.warning('Please enter both Pod ID and Peer ID');
       return;
     }
 
@@ -1338,7 +1338,7 @@ const MediaCore = () => {
 
   const handleVerifyMessage = async () => {
     if (!membershipMessageToVerify.trim()) {
-      alert('Please enter a message JSON');
+      toast.warning('Please enter a message JSON');
       return;
     }
 
@@ -1357,7 +1357,7 @@ const MediaCore = () => {
 
   const handleCheckRole = async () => {
     if (!roleCheckPodId.trim() || !roleCheckPeerId.trim()) {
-      alert('Please enter both Pod ID and Peer ID');
+      toast.warning('Please enter both Pod ID and Peer ID');
       return;
     }
 
@@ -1393,7 +1393,7 @@ const MediaCore = () => {
   // Pod Discovery handlers
   const handleRegisterPodForDiscovery = async () => {
     if (!podToRegister.trim()) {
-      alert('Please enter pod JSON data');
+      toast.warning('Please enter pod JSON data');
       return;
     }
 
@@ -1413,7 +1413,7 @@ const MediaCore = () => {
 
   const handleUnregisterPodFromDiscovery = async () => {
     if (!podToUnregister.trim()) {
-      alert('Please enter a pod ID');
+      toast.warning('Please enter a pod ID');
       return;
     }
 
@@ -1433,7 +1433,7 @@ const MediaCore = () => {
 
   const handleDiscoverByName = async () => {
     if (!discoverByName.trim()) {
-      alert('Please enter a pod name');
+      toast.warning('Please enter a pod name');
       return;
     }
 
@@ -1451,7 +1451,7 @@ const MediaCore = () => {
 
   const handleDiscoverByTag = async () => {
     if (!discoverByTag.trim()) {
-      alert('Please enter a tag');
+      toast.warning('Please enter a tag');
       return;
     }
 
@@ -1469,7 +1469,7 @@ const MediaCore = () => {
 
   const handleDiscoverByTags = async () => {
     if (!discoverTags.trim()) {
-      alert('Please enter tags (comma-separated)');
+      toast.warning('Please enter tags (comma-separated)');
       return;
     }
 
@@ -1504,7 +1504,7 @@ const MediaCore = () => {
 
   const handleDiscoverByContent = async () => {
     if (!discoverByContent.trim()) {
-      alert('Please enter a content ID');
+      toast.warning('Please enter a content ID');
       return;
     }
 
@@ -1536,20 +1536,20 @@ const MediaCore = () => {
   const handleRefreshDiscovery = async () => {
     try {
       const result = await mediacore.refreshPodDiscovery();
-      alert(
+      toast.success(
         `Discovery refresh completed: ${result.entriesRefreshed} refreshed, ${result.entriesExpired} expired`,
       );
       // Reload stats to reflect changes
       await handleLoadDiscoveryStats();
     } catch (error_) {
-      alert(`Failed to refresh discovery: ${error_.message}`);
+      toast.error(`Failed to refresh discovery: ${error_.message}`);
     }
   };
 
   // Pod Join/Leave handlers
   const handleRequestJoin = async () => {
     if (!joinRequestData.trim()) {
-      alert('Please enter join request JSON data');
+      toast.warning('Please enter join request JSON data');
       return;
     }
 
@@ -1569,7 +1569,7 @@ const MediaCore = () => {
 
   const handleAcceptJoin = async () => {
     if (!acceptanceData.trim()) {
-      alert('Please enter acceptance JSON data');
+      toast.warning('Please enter acceptance JSON data');
       return;
     }
 
@@ -1589,7 +1589,7 @@ const MediaCore = () => {
 
   const handleRequestLeave = async () => {
     if (!leaveRequestData.trim()) {
-      alert('Please enter leave request JSON data');
+      toast.warning('Please enter leave request JSON data');
       return;
     }
 
@@ -1609,7 +1609,7 @@ const MediaCore = () => {
 
   const handleAcceptLeave = async () => {
     if (!acceptanceData.trim()) {
-      alert('Please enter leave acceptance JSON data');
+      toast.warning('Please enter leave acceptance JSON data');
       return;
     }
 
@@ -1629,7 +1629,7 @@ const MediaCore = () => {
 
   const handleLoadPendingRequests = async () => {
     if (!pendingPodId.trim()) {
-      alert('Please enter a pod ID');
+      toast.warning('Please enter a pod ID');
       return;
     }
 
@@ -1656,7 +1656,7 @@ const MediaCore = () => {
   // Pod Message Routing handlers
   const handleRouteMessage = async () => {
     if (!routeMessageData.trim()) {
-      alert('Please enter message JSON data');
+      toast.warning('Please enter message JSON data');
       return;
     }
 
@@ -1676,7 +1676,7 @@ const MediaCore = () => {
 
   const handleRouteMessageToPeers = async () => {
     if (!routeToPeersMessage.trim() || !routeToPeersIds.trim()) {
-      alert('Please enter message JSON and target peer IDs');
+      toast.warning('Please enter message JSON and target peer IDs');
       return;
     }
 
@@ -1717,7 +1717,7 @@ const MediaCore = () => {
 
   const handleCheckMessageSeen = async () => {
     if (!checkMessageId.trim() || !checkPodId.trim()) {
-      alert('Please enter both message ID and pod ID');
+      toast.warning('Please enter both message ID and pod ID');
       return;
     }
 
@@ -1738,7 +1738,7 @@ const MediaCore = () => {
 
   const handleRegisterMessageSeen = async () => {
     if (!checkMessageId.trim() || !checkPodId.trim()) {
-      alert('Please enter both message ID and pod ID');
+      toast.warning('Please enter both message ID and pod ID');
       return;
     }
 
@@ -1747,31 +1747,31 @@ const MediaCore = () => {
         checkMessageId,
         checkPodId,
       );
-      alert(
+      toast.success(
         `Message registered as seen: ${result.wasNewlyRegistered ? 'New' : 'Already known'}`,
       );
     } catch (error_) {
-      alert(`Failed to register message: ${error_.message}`);
+      toast.error(`Failed to register message: ${error_.message}`);
     }
   };
 
   const handleCleanupSeenMessages = async () => {
     try {
       const result = await mediacore.cleanupSeenMessages();
-      alert(
+      toast.success(
         `Cleanup completed: ${result.messagesCleaned} messages cleaned, ${result.messagesRetained} retained`,
       );
       // Reload stats to reflect changes
       await handleLoadRoutingStats();
     } catch (error_) {
-      alert(`Failed to cleanup: ${error_.message}`);
+      toast.error(`Failed to cleanup: ${error_.message}`);
     }
   };
 
   // Pod Message Signing handlers
   const handleSignMessage = async () => {
     if (!messageToSign.trim() || !privateKeyForSigning.trim()) {
-      alert('Please enter message JSON and private key');
+      toast.warning('Please enter message JSON and private key');
       return;
     }
 
@@ -1794,7 +1794,7 @@ const MediaCore = () => {
 
   const handleVerifySignature = async () => {
     if (!messageToVerify.trim()) {
-      alert('Please enter message JSON to verify');
+      toast.warning('Please enter message JSON to verify');
       return;
     }
 

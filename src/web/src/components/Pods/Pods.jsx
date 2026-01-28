@@ -4,6 +4,7 @@ import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import PortForwarding from './PortForwarding';
 import VpnGatewayConfig from './VpnGatewayConfig';
 import React, { Component } from 'react';
+import { toast } from 'react-toastify';
 import { withRouter } from 'react-router-dom';
 import {
   Button,
@@ -192,7 +193,7 @@ class Pods extends Component {
       // Messages will be refreshed by interval
     } catch (error) {
       console.error('Failed to send message:', error);
-      alert(`Failed to send message: ${error.message}`);
+      toast.error(`Failed to send message: ${error.message}`);
     }
   };
 
@@ -219,7 +220,7 @@ class Pods extends Component {
       await this.selectPod(newPod.podId);
     } catch (error) {
       console.error('Failed to create pod:', error);
-      alert(`Failed to create pod: ${error.message}`);
+      toast.error(`Failed to create pod: ${error.message}`);
     }
   };
 
