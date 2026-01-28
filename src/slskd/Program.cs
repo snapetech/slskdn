@@ -1303,13 +1303,16 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
             services.AddSingleton<VirtualSoulfind.Bridge.Protocol.SoulseekProtocolParser>();
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_BRIDGE_PROXY")))
+            // BridgeProxyServer causes startup deadlock - skip for local dev
+            // TODO: Investigate why BridgeProxyServer construction blocks startup
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_BRIDGE_PROXY")) &&
+                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_ENABLE_BRIDGE_PROXY")))
             {
                 services.AddHostedService<VirtualSoulfind.Bridge.Proxy.BridgeProxyServer>();
             }
             else
             {
-                Log.Information("[DI] SLSKDN_E2E_SKIP_BRIDGE_PROXY=1; skipping BridgeProxyServer");
+                Log.Information("[DI] BridgeProxyServer disabled (set SLSKDN_ENABLE_BRIDGE_PROXY=1 to enable)");
             }
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
