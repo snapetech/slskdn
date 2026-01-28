@@ -11,7 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         version = "0.24.1-slskdn.40";
-        devVersion = "0.24.1-dev-91769029946";
+        devVersion = "0.24.1.dev.91769608643";
         
         # Helper function to build slskdn from a given version and sources
         mkSlskdn = { pname, version, sources }:
@@ -72,7 +72,7 @@
         devSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip";
-            sha256 = "1gv22fszl628bzmj1gypfr8cqi955pafz8vh9n5hybxx1g4p2frq"; # x86_64-linux
+            sha256 = "04zmb13300xwsmrh10gmpi6118shkl34qm3qpjpw0pi0rbbfxsp4"; # x86_64-linux
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-arm64.zip";
