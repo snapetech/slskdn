@@ -1,0 +1,44 @@
+web:
+  port: 38551
+  host: 127.0.0.1
+  https:
+    disabled: true
+  authentication:
+    username: nodeA
+    password: nodeA
+  rateLimiting:
+    enabled: false
+soulseek:
+  username: nodeA
+  password: nodeA
+  listenPort: 37727
+sharing:
+  tokenSigningKey: XbK9c+iN8ZEyXFo+DYScjTA/c2zQMb9SfLAiwK0skEg=
+directories:
+  downloads: /home/keith/Documents/code/slskdn/test-artifacts/e2e/A-38551/downloads
+  incomplete: /home/keith/Documents/code/slskdn/test-artifacts/e2e/A-38551/incomplete
+shares:
+  directories:
+    - /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/movie
+    - /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/book
+feature:
+  IdentityFriends: true
+  CollectionsSharing: true
+  Streaming: true
+  StreamingRelayFallback: true
+  MeshParallelSearch: true
+  MeshPublishAvailability: true
+  ScenePodBridge: true
+  Swagger: true
+overlay:
+  enable: false
+overlayData:
+  enable: false
+mesh:
+  enableDht: false
+  enableStun: false
+  stunServers: []
+  peerDescriptorRefresh:
+    enableIpChangeDetection: false
+flags:
+  no_connect: true

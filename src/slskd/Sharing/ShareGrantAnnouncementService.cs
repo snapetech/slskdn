@@ -83,7 +83,22 @@ public sealed class ShareGrantAnnouncementService
             return;
         }
 
-        if (msg == null || msg.CollectionId == Guid.Empty || msg.ShareGrantId == Guid.Empty)
+        if (msg == null)
+        {
+            return;
+        }
+
+        await IngestAsync(msg, ct).ConfigureAwait(false);
+    }
+
+    public async Task IngestAsync(ShareGrantAnnouncement msg, CancellationToken ct)
+    {
+        if (!_options.CurrentValue.Feature.CollectionsSharing)
+        {
+            return;
+        }
+
+        if (msg.CollectionId == Guid.Empty || msg.ShareGrantId == Guid.Empty)
         {
             return;
         }

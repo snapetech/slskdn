@@ -1,0 +1,57 @@
+web:
+  port: 33149
+  host: 127.0.0.1
+  https:
+    disabled: true
+  authentication:
+    username: nodeB
+    password: nodeB
+  rateLimiting:
+    enabled: false
+  cors:
+    enabled: true
+    allowCredentials: false
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+      - HEAD
+      - PATCH
+soulseek:
+  username: nodeB
+  password: nodeB
+  listenPort: 41437
+sharing:
+  tokenSigningKey: pZZ2F4zYQ3J9jf2EOZuDbrhQd00QHlyJasgaM2fcFXs=
+directories:
+  downloads: /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-33149/downloads
+  incomplete: /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-33149/incomplete
+shares:
+  directories:
+    - /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/music
+    - /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/tv
+feature:
+  IdentityFriends: true
+  CollectionsSharing: true
+  Streaming: true
+  StreamingRelayFallback: true
+  MeshParallelSearch: true
+  MeshPublishAvailability: true
+  ScenePodBridge: true
+  Swagger: true
+overlay:
+  enable: false
+overlayData:
+  enable: false
+mesh:
+  enableDht: false
+  enableStun: false
+  stunServers: []
+  peerDescriptorRefresh:
+    enableIpChangeDetection: false
+flags:
+  no_connect: true

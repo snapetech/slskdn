@@ -9,14 +9,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using slskd.Core.Security;
 using slskd.HashDb;
 using slskd.Shares;
+using slskd.VirtualSoulfind.Core;
 using Soulseek;
 
 /// <summary>
@@ -24,7 +28,8 @@ using Soulseek;
 /// Returns shared files with stable contentId (sha256-based) for deterministic testing.
 /// </summary>
 [ApiController]
-[Route("api/v0/library/items")]
+[Route("api/v{version:apiVersion}/library/items")]
+[ApiVersion("0")]
 [Produces("application/json")]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class LibraryItemsController : ControllerBase
@@ -32,15 +37,18 @@ public class LibraryItemsController : ControllerBase
     private readonly IShareService shareService;
     private readonly IHashDbService? hashDbService;
     private readonly ILogger<LibraryItemsController> logger;
+    private readonly IOptionsSnapshot<slskd.Options> options;
 
     public LibraryItemsController(
         IShareService shareService,
         IHashDbService? hashDbService = null,
-        ILogger<LibraryItemsController>? logger = null)
+        ILogger<LibraryItemsController>? logger = null,
+        IOptionsSnapshot<slskd.Options>? options = null)
     {
         this.shareService = shareService;
         this.hashDbService = hashDbService;
         this.logger = logger;
+        this.options = options;
     }
 
     /// <summary>
@@ -102,15 +110,26 @@ public class LibraryItemsController : ControllerBase
             // Limit results
             var results = filtered.Take(limit).ToList();
 
-            // Convert to library items with stable contentId
+            var codeToMasked = BuildCodeToMaskedFilenameMap();
             var items = new List<LibraryItemResponse>();
             foreach (var file in results)
             {
-                var item = await ConvertToLibraryItemAsync(file, cancellationToken);
+                var maskedFilename = GetMaskedFilename(file, codeToMasked);
+                var item = await ConvertToLibraryItemAsync(file, maskedFilename, cancellationToken);
                 if (item != null)
                 {
                     items.Add(item);
                 }
+            }
+
+            if (items.Count == 0 && options != null)
+            {
+                var fallbackItems = await SearchShareDirectoriesAsync(
+                    query,
+                    kinds,
+                    limit,
+                    cancellationToken);
+                return Ok(new { items = fallbackItems });
             }
 
             return Ok(new { items });
@@ -119,6 +138,149 @@ public class LibraryItemsController : ControllerBase
         {
             logger?.LogError(ex, "Error searching library items");
             return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+        }
+    }
+
+    private async Task<List<LibraryItemResponse>> SearchShareDirectoriesAsync(
+        string? query,
+        string? kinds,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var shareDirs = options.Value.Shares.Directories
+            .Select(raw => new Share(raw))
+            .Where(share => !share.IsExcluded)
+            .Select(share => share.LocalPath)
+            .Distinct()
+            .ToArray();
+
+        if (!shareDirs.Any())
+        {
+            return new List<LibraryItemResponse>();
+        }
+
+        var regexOptions = options.Value.Flags.CaseSensitiveRegEx
+            ? RegexOptions.None
+            : RegexOptions.IgnoreCase;
+        var filters = options.Value.Shares.Filters
+            .Select(filter => new Regex(filter, regexOptions))
+            .ToList();
+
+        var files = shareDirs.SelectMany(shareDir =>
+        {
+            try
+            {
+                return System.IO.Directory.EnumerateFiles(
+                    shareDir,
+                    "*",
+                    SearchOption.AllDirectories);
+            }
+            catch
+            {
+                return Enumerable.Empty<string>();
+            }
+        });
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var queryLower = query.ToLowerInvariant();
+            files = files.Where(file =>
+                Path.GetFileName(file).ToLowerInvariant().Contains(queryLower));
+        }
+
+        if (!string.IsNullOrWhiteSpace(kinds))
+        {
+            var kindSet = kinds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(k => k.ToLowerInvariant())
+                .ToHashSet();
+            files = files.Where(file =>
+            {
+                var ext = Path.GetExtension(file).TrimStart('.').ToLowerInvariant();
+                var kind = GetMediaKind(ext);
+                return kindSet.Contains(kind.ToLowerInvariant());
+            });
+        }
+
+        files = files.Where(file => !filters.Any(filter => filter.IsMatch(file)));
+
+        var items = new List<LibraryItemResponse>();
+        foreach (var file in files.Take(limit))
+        {
+            var item = await ConvertToLibraryItemFromPathAsync(file, cancellationToken);
+            if (item != null)
+            {
+                items.Add(item);
+            }
+        }
+
+        return items;
+    }
+
+    private async Task<LibraryItemResponse?> ConvertToLibraryItemFromPathAsync(
+        string filename,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!System.IO.File.Exists(filename))
+            {
+                return null;
+            }
+
+            var info = new FileInfo(filename);
+            var size = info.Length;
+            string? sha256 = null;
+
+            if (hashDbService != null)
+            {
+                try
+                {
+                    var flacKey = HashDb.Models.HashDbEntry.GenerateFlacKey(filename, size);
+                    var hashEntry = await hashDbService.LookupHashAsync(flacKey, cancellationToken);
+                    if (hashEntry != null && !string.IsNullOrEmpty(hashEntry.FileSha256))
+                    {
+                        sha256 = hashEntry.FileSha256;
+                    }
+                }
+                catch
+                {
+                    // HashDb lookup failed, will compute on-demand if needed
+                }
+            }
+
+            if (string.IsNullOrEmpty(sha256))
+            {
+                try
+                {
+                    sha256 = await ComputeSha256Async(filename, cancellationToken);
+                }
+                catch
+                {
+                    // File may not be accessible, skip sha256
+                }
+            }
+
+            var contentId = !string.IsNullOrEmpty(sha256)
+                ? $"sha256:{sha256}"
+                : $"path:{slskd.Compute.Sha256Hash($"{filename}|{size}")}";
+
+            var ext = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
+            var mediaKind = GetMediaKind(ext);
+            var fileName = Path.GetFileName(filename);
+
+            return new LibraryItemResponse
+            {
+                ContentId = contentId,
+                Path = filename,
+                FileName = fileName,
+                Bytes = size,
+                MediaKind = mediaKind,
+                Sha256 = sha256,
+            };
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -142,13 +304,15 @@ public class LibraryItemsController : ControllerBase
             var directories = await shareService.BrowseAsync();
             Soulseek.File? foundFile = null;
 
+            var codeToMasked = BuildCodeToMaskedFilenameMap();
             foreach (var dir in directories)
             {
                 if (dir.Files != null)
                 {
                     foreach (var file in dir.Files)
                     {
-                        var item = await ConvertToLibraryItemAsync(file, cancellationToken);
+                        var maskedFilename = GetMaskedFilename(file, codeToMasked);
+                        var item = await ConvertToLibraryItemAsync(file, maskedFilename, cancellationToken);
                         if (item != null && item.ContentId == contentId)
                         {
                             foundFile = file;
@@ -168,7 +332,10 @@ public class LibraryItemsController : ControllerBase
                 return NotFound(new { error = "Item not found", contentId });
             }
 
-            var foundItem = await ConvertToLibraryItemAsync(foundFile, cancellationToken);
+            var foundItem = await ConvertToLibraryItemAsync(
+                foundFile,
+                GetMaskedFilename(foundFile, codeToMasked),
+                cancellationToken);
             return Ok(foundItem);
         }
         catch (Exception ex)
@@ -178,14 +345,35 @@ public class LibraryItemsController : ControllerBase
         }
     }
 
+    private IReadOnlyDictionary<int, string> BuildCodeToMaskedFilenameMap()
+    {
+        var files = shareService.GetLocalRepository().ListFiles(includeFullPath: true);
+        return files
+            .GroupBy(file => file.Code)
+            .ToDictionary(group => group.Key, group => group.First().Filename);
+    }
+
+    private static string GetMaskedFilename(
+        Soulseek.File file,
+        IReadOnlyDictionary<int, string> codeToMasked)
+    {
+        if (codeToMasked.TryGetValue(file.Code, out var masked))
+        {
+            return masked;
+        }
+
+        return file.Filename;
+    }
+
     private async Task<LibraryItemResponse?> ConvertToLibraryItemAsync(
         Soulseek.File file,
+        string maskedFilename,
         CancellationToken cancellationToken)
     {
         try
         {
             // Resolve local file path
-            var (host, filename, size) = await shareService.ResolveFileAsync(file.Filename);
+            var (host, filename, size) = await shareService.ResolveFileAsync(maskedFilename);
 
             // Try to get sha256 from HashDb first
             string? sha256 = null;
@@ -224,6 +412,24 @@ public class LibraryItemsController : ControllerBase
             var contentId = !string.IsNullOrEmpty(sha256)
                 ? $"sha256:{sha256}"
                 : $"path:{filename.GetHashCode():X8}:{size}";
+
+            try
+            {
+                var checkedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var repo = shareService.GetLocalRepository();
+                repo.UpsertContentItem(
+                    contentId,
+                    ContentDomain.GenericFile.ToString(),
+                    null,
+                    maskedFilename,
+                    true,
+                    string.Empty,
+                    checkedAt);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "Failed to upsert content item for {Filename}", maskedFilename);
+            }
 
             var ext = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
             var mediaKind = GetMediaKind(ext);

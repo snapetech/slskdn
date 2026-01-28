@@ -1,0 +1,17 @@
+{
+  "PeerId": "mj4eofaoqfhuvixzercnpkecub6suaaw",
+  "PublicKey": "wXoeMWgP0Zuagz/nYkC8tqcCPNMUn\u002BmDfvhXEggfK68=",
+  "DisplayName": "nodeA",
+  "Avatar": null,
+  "Capabilities": 0,
+  "Endpoints": [
+    {
+      "Type": "Direct",
+      "Address": "http://192.168.50.148:39953",
+      "Priority": 1
+    }
+  ],
+  "CreatedAt": "2026-01-28T03:22:18.28637+00:00",
+  "ExpiresAt": "2026-02-04T03:22:18.2863816+00:00",
+  "Signature": "E0dMTwR9lveaOsKAB7\u002Bs2dXiTXZVILYJ9x5iqzW0Mv1SlnEruIRGrgH\u002Bcx5gYpIdju1JzaA1ewVWAiyQ6dyHAA=="
+}

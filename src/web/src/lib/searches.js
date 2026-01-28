@@ -130,10 +130,10 @@ const getSizeFromRegex = (string, regex) => {
 export const parseFiltersFromString = (string) => {
   const filters = {
     exclude: [],
+    extensions: [],
     include: [],
     isCBR: false,
     isLossless: false,
-    extensions: [],
     isLossy: false,
     isVBR: false,
     maxFileSize: Number.MAX_SAFE_INTEGER,
@@ -266,10 +266,10 @@ const filterFile = (file, filters) => {
 export const filterResponse = ({
   filters = {
     exclude: [],
+    extensions: [],
     include: [],
     isCBR: false,
     isLossless: false,
-    extensions: [],
     isLossy: false,
     isVBR: false,
     maxFileSize: Number.MAX_SAFE_INTEGER,

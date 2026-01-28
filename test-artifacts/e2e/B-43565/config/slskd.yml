@@ -1,0 +1,43 @@
+web:
+  port: 43565
+  host: 127.0.0.1
+  https:
+    disabled: true
+  authentication:
+    username: nodeB
+    password: nodeB
+  rateLimiting:
+    enabled: false
+soulseek:
+  username: nodeB
+  password: nodeB
+  listenPort: 41697
+sharing:
+  tokenSigningKey: SLsbkTnBTdfWsNdxJH6REo9XS/gJgSoa6qGlyfbZXCk=
+directories:
+  downloads: /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-43565/downloads
+  incomplete: /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-43565/incomplete
+shares:
+  directories:
+    - /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/book
+feature:
+  identityFriends: true
+  collectionsSharing: true
+  streaming: true
+  streamingRelayFallback: true
+  meshParallelSearch: true
+  meshPublishAvailability: true
+  scenePodBridge: true
+  swagger: true
+overlay:
+  enable: false
+overlayData:
+  enable: false
+mesh:
+  enableDht: false
+  enableStun: false
+  stunServers: []
+  peerDescriptorRefresh:
+    enableIpChangeDetection: false
+flags:
+  no_connect: true

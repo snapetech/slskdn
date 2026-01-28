@@ -2,34 +2,60 @@ import { type NodeCfg } from './env';
 import { T } from './selectors';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
+function logWithTimestamp(message: string): void {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
+}
+
 export async function waitForHealth(
   request: APIRequestContext,
   baseUrl: string,
 ) {
+  const startTime = Date.now();
   const health = `${baseUrl}/health`;
+  logWithTimestamp(`[waitForHealth] Starting health check for ${baseUrl}`);
   // Server typically starts in 2-5 seconds, so 15 seconds is plenty
   for (let index = 0; index < 30; index++) {
     const res = await request.get(health, { failOnStatusCode: false });
-    if (res.ok()) return;
-    await new Promise((r) => setTimeout(r, 500));
+    if (res.ok()) {
+      const elapsed = Date.now() - startTime;
+      logWithTimestamp(
+        `[waitForHealth] Health check passed after ${elapsed}ms`,
+      );
+      return;
+    }
+
+    await new Promise((r) => setTimeout(r, 300)); // Reduced from 500ms
   }
 
-  throw new Error(`Timed out waiting for ${health} after 15 seconds`);
+  const elapsed = Date.now() - startTime;
+  throw new Error(`Timed out waiting for ${health} after ${elapsed}ms`);
 }
 
 export async function login(page: Page, node: NodeCfg) {
+  const loginStartTime = Date.now();
+  logWithTimestamp(`[Login] Starting login for ${node.baseUrl}`);
+
   // Capture network responses to diagnose loading issues
-  const networkLog: Array<{ status: number; type: string; url: string }> = [];
+  const networkLog: Array<{
+    status: number;
+    time: number;
+    type: string;
+    url: string;
+  }> = [];
   page.on('response', (response) => {
     const url = response.url();
     if (url.includes(node.baseUrl) && !url.includes('/api/')) {
       networkLog.push({
         status: response.status(),
+        time: Date.now() - loginStartTime,
         type: response.request().resourceType(),
         url,
       });
       if (response.status() !== 200) {
-        console.log(`[Login] Non-200 response: ${response.status()} ${url}`);
+        logWithTimestamp(
+          `[Login] Non-200 response: ${response.status()} ${url}`,
+        );
       }
     }
   });
@@ -40,22 +66,24 @@ export async function login(page: Page, node: NodeCfg) {
     if (message.type() === 'error') {
       const text = message.text();
       consoleErrors.push(text);
-      console.log(`[Login] Console error: ${text}`);
+      logWithTimestamp(`[Login] Console error: ${text}`);
     }
   });
 
-  console.log(`[Login] Navigating to ${node.baseUrl}...`);
   await page.goto(node.baseUrl, { timeout: 10_000, waitUntil: 'networkidle' });
+  const navElapsed = Date.now() - loginStartTime;
+  logWithTimestamp(`[Login] Navigation completed in ${navElapsed}ms`);
 
   // Check what we actually got
   const content = await page.content();
   const title = await page.title();
   const url = page.url();
 
-  console.log(
-    `[Login] After navigation - URL: ${url}, Title: ${title}, Content length: ${content.length}`,
+  const checkElapsed = Date.now() - loginStartTime;
+  logWithTimestamp(
+    `[Login] After navigation - URL: ${url}, Title: ${title}, Content length: ${content.length} (+${checkElapsed}ms)`,
   );
-  console.log(
+  logWithTimestamp(
     `[Login] Content preview (first 500 chars): ${content.slice(0, 500)}`,
   );
 
@@ -65,11 +93,11 @@ export async function login(page: Page, node: NodeCfg) {
     .locator('#root')
     .textContent()
     .catch(() => '');
-  console.log(
+  logWithTimestamp(
     `[Login] #root count: ${rootCount}, content length: ${rootContent.length}`,
   );
   if (rootContent.length < 100) {
-    console.log(`[Login] #root content: ${rootContent}`);
+    logWithTimestamp(`[Login] #root content: ${rootContent}`);
   }
 
   // Check for React mounting
@@ -79,34 +107,39 @@ export async function login(page: Page, node: NodeCfg) {
       return root && root.children.length > 0;
     })
     .catch(() => false);
-  console.log(
+  logWithTimestamp(
     `[Login] React has mounted (root has children): ${hasReactContent}`,
   );
 
   // Check network log
-  console.log(`[Login] Network requests: ${networkLog.length} total`);
+  logWithTimestamp(`[Login] Network requests: ${networkLog.length} total`);
   const failedRequests = networkLog.filter((r) => r.status !== 200);
   if (failedRequests.length > 0) {
-    console.log(
+    logWithTimestamp(
       `[Login] Failed requests: ${JSON.stringify(failedRequests, null, 2)}`,
     );
   }
 
   // Check console errors
   if (consoleErrors.length > 0) {
-    console.log(
+    logWithTimestamp(
       `[Login] Console errors (${consoleErrors.length}): ${consoleErrors.join('; ')}`,
     );
   }
 
   // Wait for React to mount - check for root div or any React-rendered content
   // The login form should appear once React loads
-  console.log(`[Login] Waiting for #root...`);
+  logWithTimestamp(`[Login] Waiting for #root...`);
+  const rootWaitStart = Date.now();
   try {
     await page.waitForSelector('#root', { state: 'attached', timeout: 10_000 });
-    console.log(`[Login] #root found`);
+    logWithTimestamp(
+      `[Login] #root found after ${Date.now() - rootWaitStart}ms`,
+    );
   } catch (error) {
-    console.error(`[Login] #root not found: ${error}`);
+    logWithTimestamp(
+      `[Login] #root not found after ${Date.now() - rootWaitStart}ms: ${error}`,
+    );
     throw new Error(
       `React root not found. Content length: ${content.length}, Root count: ${rootCount}, Network requests: ${networkLog.length}, Console errors: ${consoleErrors.length}`,
     );
@@ -188,18 +221,24 @@ export async function login(page: Page, node: NodeCfg) {
     loginResponse = await loginResponsePromise;
     const status = loginResponse.status();
     const body = await loginResponse.json().catch(() => null);
-    console.log(`[Login] API call completed with status ${status}`);
+    const apiElapsed = Date.now() - loginStartTime;
+    logWithTimestamp(
+      `[Login] API call completed with status ${status} after ${apiElapsed}ms`,
+    );
     if (status !== 200) {
-      console.error(`[Login] Login failed with status ${status}, body:`, body);
+      logWithTimestamp(
+        `[Login] Login failed with status ${status}, body:`,
+        body,
+      );
       throw new Error(`Login API returned ${status}: ${JSON.stringify(body)}`);
     }
 
     if (!body || !body.token) {
-      console.error('[Login] Login response missing token:', body);
+      logWithTimestamp('[Login] Login response missing token:', body);
       throw new Error('Login response missing token');
     }
 
-    console.log('[Login] API call completed successfully, token received');
+    logWithTimestamp('[Login] API call completed successfully, token received');
   } catch (error) {
     console.error('[Login] Login API call failed or timed out:', error);
     throw error;
@@ -217,11 +256,14 @@ export async function login(page: Page, node: NodeCfg) {
       );
     });
     if (token) {
-      console.log('[Login] Token stored successfully');
+      const tokenElapsed = Date.now() - loginStartTime;
+      logWithTimestamp(
+        `[Login] Token stored successfully after ${tokenElapsed}ms`,
+      );
       break;
     }
 
-    await new Promise((r) => setTimeout(r, 300)); // Short poll interval
+    await new Promise((r) => setTimeout(r, 200)); // Reduced from 300ms
   }
 
   if (!token) {
@@ -269,7 +311,10 @@ export async function login(page: Page, node: NodeCfg) {
         response.request().method() === 'GET',
       { timeout: 5_000 },
     );
-    console.log('[Login] Session check API call completed');
+    const sessionElapsed = Date.now() - loginStartTime;
+    logWithTimestamp(
+      `[Login] Session check API call completed after ${sessionElapsed}ms`,
+    );
   } catch {
     console.log(
       '[Login] Session check API call timeout (may not have been called)',
@@ -287,7 +332,10 @@ export async function login(page: Page, node: NodeCfg) {
     await expect(page.getByTestId(T.navSystem)).toBeVisible({
       timeout: 20_000,
     });
-    console.log('[Login] Found nav-system using data-testid');
+    const navElapsed = Date.now() - loginStartTime;
+    logWithTimestamp(
+      `[Login] Found nav-system using data-testid after ${navElapsed}ms`,
+    );
   } catch {
     // Fallback: try finding by text content or by the Menu.Item structure
     // Semantic UI might render the menu items differently
@@ -308,7 +356,10 @@ export async function login(page: Page, node: NodeCfg) {
         .or(navByAnyText)
         .or(page.getByTestId(T.navSystem));
       await expect(found.first()).toBeVisible({ timeout: 10_000 });
-      console.log('[Login] Found nav element using fallback selector');
+      const navFallbackElapsed = Date.now() - loginStartTime;
+      logWithTimestamp(
+        `[Login] Found nav element using fallback selector after ${navFallbackElapsed}ms`,
+      );
       return; // Success with fallback
     } catch {
       // Continue to full debugging below
@@ -414,6 +465,66 @@ export async function login(page: Page, node: NodeCfg) {
   }
 }
 
+export async function waitForLibraryItem(
+  page: Page,
+  query: string,
+  timeoutMs: number = 20_000,
+) {
+  const start = Date.now();
+  logWithTimestamp(
+    `[waitForLibraryItem] Starting search for "${query}" (timeout: ${timeoutMs}ms)`,
+  );
+  let lastError = 'no response';
+
+  while (Date.now() - start < timeoutMs) {
+    const result = await page.evaluate(async (q) => {
+      const token =
+        sessionStorage.getItem('slskd-token') ||
+        localStorage.getItem('slskd-token');
+      if (!token) {
+        return { ok: false, status: 401, text: 'missing token' };
+      }
+
+      const res = await fetch(
+        `/api/v0/library/items?query=${encodeURIComponent(q)}&limit=5`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const text = await res.text();
+      return { ok: res.ok, status: res.status, text };
+    }, query);
+
+    if (result.ok) {
+      try {
+        const parsed = JSON.parse(result.text);
+        const items = parsed?.items || [];
+        if (Array.isArray(items) && items.length > 0) {
+          const elapsed = Date.now() - start;
+          logWithTimestamp(
+            `[waitForLibraryItem] Found item after ${elapsed}ms`,
+          );
+          return items[0];
+        }
+
+        lastError = 'no items returned';
+      } catch {
+        lastError = 'invalid JSON';
+      }
+    } else {
+      lastError = `status ${result.status}: ${result.text}`;
+    }
+
+    await page.waitForTimeout(500); // Reduced from 1000ms
+  }
+
+  const elapsed = Date.now() - start;
+  logWithTimestamp(
+    `[waitForLibraryItem] Timeout after ${elapsed}ms: ${lastError}`,
+  );
+  throw new Error(`Library item search failed for "${query}": ${lastError}`);
+}
+
 export async function goto(page: Page, node: NodeCfg, route: string) {
   await page.goto(`${node.baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
 }
@@ -470,7 +581,7 @@ export async function clickNav(page: Page, testId: string) {
   }
 
   // Give React Router a moment to update the DOM
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(200); // Reduced from 300ms
 }
 
 export async function verifySpaFallback(
@@ -543,4 +654,280 @@ export async function verifySpaFallback(
     clientRouteOk: clientRouteStatus === 200,
     rootOk: rootStatus === 200,
   };
+}
+
+export async function getAuthToken(page: Page): Promise<string> {
+  const token = await page.evaluate(() => {
+    return (
+      sessionStorage.getItem('slskd-token') ||
+      localStorage.getItem('slskd-token') ||
+      ''
+    );
+  });
+
+  if (!token) {
+    throw new Error('Auth token not found after login.');
+  }
+
+  return token;
+}
+
+export async function announceShareGrant({
+  request,
+  owner,
+  recipient,
+  ownerToken,
+  recipientToken,
+  shareGrantId,
+  tokenOverride,
+  expiresInSeconds = 3_600,
+  shareOverride,
+}: {
+  expiresInSeconds?: number;
+  owner: NodeCfg;
+  ownerToken: string;
+  recipient: NodeCfg;
+  recipientToken: string;
+  request: APIRequestContext;
+  shareGrantId: string;
+  shareOverride?: {
+    allowDownload?: boolean;
+    allowReshare?: boolean;
+    allowStream?: boolean;
+    collectionId?: string;
+    expiryUtc?: string;
+    maxBitrateKbps?: number | null;
+    maxConcurrentStreams?: number;
+  };
+  tokenOverride?: string;
+}): Promise<{ token: string }> {
+  const announceStartTime = Date.now();
+  logWithTimestamp(
+    `[announceShareGrant] Starting announcement for share grant ${shareGrantId}`,
+  );
+  const authOwner = { Authorization: `Bearer ${ownerToken}` };
+  const authRecipient = { Authorization: `Bearer ${recipientToken}` };
+
+  let share = shareOverride;
+  if (!share) {
+    const shareRes = await request.get(
+      `${owner.baseUrl}/api/v0/share-grants/${shareGrantId}`,
+      { headers: authOwner },
+    );
+    if (!shareRes.ok()) {
+      throw new Error(
+        `Failed to load share grant: ${shareRes.status()} ${shareRes.statusText()}`,
+      );
+    }
+
+    share = await shareRes.json();
+  }
+
+  if (!share?.collectionId) {
+    throw new Error('Share grant missing collectionId.');
+  }
+
+  const collectionRes = await request.get(
+    `${owner.baseUrl}/api/v0/collections/${share.collectionId}`,
+    { headers: authOwner },
+  );
+  if (!collectionRes.ok()) {
+    throw new Error(
+      `Failed to load collection: ${collectionRes.status()} ${collectionRes.statusText()}`,
+    );
+  }
+
+  const collection = await collectionRes.json();
+
+  const itemsRes = await request.get(
+    `${owner.baseUrl}/api/v0/collections/${share.collectionId}/items`,
+    { headers: authOwner },
+  );
+  if (!itemsRes.ok()) {
+    throw new Error(
+      `Failed to load collection items: ${itemsRes.status()} ${itemsRes.statusText()}`,
+    );
+  }
+
+  const items = await itemsRes.json();
+
+  let token = tokenOverride;
+  if (!token) {
+    const tokenRes = await request.post(
+      `${owner.baseUrl}/api/v0/share-grants/${shareGrantId}/token`,
+      {
+        data: { expiresInSeconds },
+        headers: authOwner,
+      },
+    );
+    if (!tokenRes.ok()) {
+      const body = await tokenRes.text();
+      throw new Error(
+        `Failed to create share token: ${tokenRes.status()} ${body}`,
+      );
+    }
+
+    const tokenBody = await tokenRes.json();
+    token = tokenBody?.token;
+    if (!token) {
+      throw new Error('Share token missing from response.');
+    }
+  }
+
+  const payload = {
+    collectionDescription: collection.description,
+    allowDownload: share.allowDownload,
+    collectionId: share.collectionId,
+    allowReshare: share.allowReshare,
+    collectionTitle: collection.title,
+    allowStream: share.allowStream,
+    collectionType: collection.type,
+    expiryUtc: share.expiryUtc,
+    ownerEndpoint: owner.baseUrl,
+    items: Array.isArray(items)
+      ? items.map((item) => ({
+          contentId: item.contentId,
+          mediaKind: item.mediaKind,
+          ordinal: item.ordinal,
+        }))
+      : [],
+    shareGrantId,
+    maxBitrateKbps: share.maxBitrateKbps,
+    maxConcurrentStreams: share.maxConcurrentStreams,
+    ownerUserId: owner.username,
+    recipientUserId: recipient.username,
+    token,
+  };
+
+  const announceRes = await request.post(
+    `${recipient.baseUrl}/api/v0/share-grants/announce`,
+    { data: payload, headers: authRecipient },
+  );
+  if (!announceRes.ok()) {
+    const body = await announceRes.text();
+    throw new Error(
+      `Failed to announce share grant: ${announceRes.status()} ${body}`,
+    );
+  }
+
+  const announceElapsed = Date.now() - announceStartTime;
+  logWithTimestamp(
+    `[announceShareGrant] Announcement completed in ${announceElapsed}ms`,
+  );
+  return { token };
+}
+
+export async function waitForShareGrantById({
+  request,
+  baseUrl,
+  token,
+  shareGrantId,
+  timeoutMs = 30_000,
+}: {
+  baseUrl: string;
+  request: APIRequestContext;
+  shareGrantId: string;
+  timeoutMs?: number;
+  token: string;
+}): Promise<boolean> {
+  const start = Date.now();
+  const auth = { Authorization: `Bearer ${token}` };
+  logWithTimestamp(`[waitForShareGrantById] Starting wait for ${shareGrantId}`);
+
+  while (Date.now() - start < timeoutMs) {
+    const res = await request.get(
+      `${baseUrl}/api/v0/share-grants/${shareGrantId}`,
+      {
+        failOnStatusCode: false,
+        headers: auth,
+      },
+    );
+    if (res.ok()) {
+      const elapsed = Date.now() - start;
+      logWithTimestamp(
+        `[waitForShareGrantById] Share grant found after ${elapsed}ms`,
+      );
+      return true;
+    }
+
+    if (res.status() === 404) {
+      await new Promise((resolve) => setTimeout(resolve, 250)); // Reduced from 500ms
+      continue;
+    }
+
+    const elapsed = Date.now() - start;
+    logWithTimestamp(
+      `[waitForShareGrantById] Failed with status ${res.status()} after ${elapsed}ms`,
+    );
+    return false;
+  }
+
+  const elapsed = Date.now() - start;
+  logWithTimestamp(`[waitForShareGrantById] Timeout after ${elapsed}ms`);
+  return false;
+}
+
+export async function waitForDownloadInList({
+  request,
+  baseUrl,
+  token,
+  searchTerms,
+  timeoutMs = 30_000,
+}: {
+  baseUrl: string;
+  request: APIRequestContext;
+  searchTerms: string[];
+  timeoutMs?: number;
+  token: string;
+}): Promise<boolean> {
+  const start = Date.now();
+  logWithTimestamp(
+    `[waitForDownloadInList] Starting wait for "${searchTerms.join(', ')}" (timeout: ${timeoutMs}ms)`,
+  );
+  const auth = { Authorization: `Bearer ${token}` };
+
+  while (Date.now() - start < timeoutMs) {
+    const res = await request.get(`${baseUrl}/api/v0/transfers/downloads`, {
+      failOnStatusCode: false,
+      headers: auth,
+    });
+    if (res.ok()) {
+      const payload = await res.json().catch(() => []);
+      const users = Array.isArray(payload) ? payload : [];
+      const files = users.flatMap((user) =>
+        Array.isArray(user?.directories)
+          ? user.directories.flatMap((dir) =>
+              Array.isArray(dir?.files) ? dir.files : [],
+            )
+          : [],
+      );
+
+      const match = files.find((file) => {
+        const filename =
+          file?.filename || file?.Filename || file?.name || file?.Name || '';
+        const state = file?.state || file?.State || '';
+        const lower = String(filename).toLowerCase();
+        const matches = searchTerms.some((term) =>
+          lower.includes(term.toLowerCase()),
+        );
+        if (!matches) return false;
+        if (!state) return true;
+        return String(state).toLowerCase().includes('completed');
+      });
+
+      if (match) {
+        const elapsed = Date.now() - start;
+        logWithTimestamp(
+          `[waitForDownloadInList] Download found after ${elapsed}ms`,
+        );
+        return true;
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Reduced from 1000ms
+  }
+
+  const elapsed = Date.now() - start;
+  logWithTimestamp(`[waitForDownloadInList] Timeout after ${elapsed}ms`);
+  return false;
 }

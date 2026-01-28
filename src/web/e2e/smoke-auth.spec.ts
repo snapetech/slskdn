@@ -1,8 +1,8 @@
-import { NODES, shouldLaunchNodes } from "./env";
-import { MultiPeerHarness } from "./harness/MultiPeerHarness";
-import { goto,login, waitForHealth } from "./helpers";
-import { T } from "./selectors";
-import { expect,test } from "@playwright/test";
+import { NODES, shouldLaunchNodes } from './env';
+import { MultiPeerHarness } from './harness/MultiPeerHarness';
+import { goto, login, waitForHealth } from './helpers';
+import { T } from './selectors';
+import { expect, test } from '@playwright/test';
 
 test.describe('smoke/auth', () => {
   let harness: MultiPeerHarness | null = null;
@@ -27,9 +27,9 @@ test.describe('smoke/auth', () => {
     await waitForHealth(request, nodeA.baseUrl);
 
     // Capture console logs and network errors for debugging
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        console.log(`[Browser Console Error] ${msg.text()}`);
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        console.log(`[Browser Console Error] ${message.text()}`);
       }
     });
 
@@ -47,8 +47,8 @@ test.describe('smoke/auth', () => {
 
     // Take a screenshot for debugging
     await page.screenshot({
-      path: 'test-results/login-after.png',
       fullPage: true,
+      path: 'test-results/login-after.png',
     });
 
     // Log the current URL and page content for debugging
@@ -62,16 +62,16 @@ test.describe('smoke/auth', () => {
     await waitForHealth(request, nodeA.baseUrl);
 
     // Capture console logs for debugging
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        console.log(`[Browser Console Error] ${msg.text()}`);
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        console.log(`[Browser Console Error] ${message.text()}`);
       }
     });
 
     // Ensure we're not logged in - clear any existing tokens
     await page.goto(nodeA.baseUrl, {
+      timeout: 30_000,
       waitUntil: 'networkidle',
-      timeout: 30000,
     });
     await page.evaluate(() => {
       sessionStorage.removeItem('slskd-token');
@@ -80,8 +80,8 @@ test.describe('smoke/auth', () => {
 
     // Navigate to protected route - wait for page to fully load
     await page.goto(`${nodeA.baseUrl}/system`, {
+      timeout: 30_000,
       waitUntil: 'networkidle',
-      timeout: 30000,
     });
 
     // Wait for React app to initialize and render
@@ -90,13 +90,17 @@ test.describe('smoke/auth', () => {
     // The route guard works if we don't see protected content (nav elements)
     // Check multiple times with waits to handle async rendering
     for (let index = 0; index < 3; index++) {
-      await page.waitForTimeout(2000);
-      const hasNavElements = await page.locator('[data-testid^="nav-"]').count() > 0;
-      const hasLoginForm = await page.getByTestId(T.loginUsername).count() > 0 || 
-                          await page.locator('input[placeholder*="Username" i]').count() > 0;
-      
+      await page.waitForTimeout(2_000);
+      const hasNavElements =
+        (await page.locator('[data-testid^="nav-"]').count()) > 0;
+      const hasLoginForm =
+        (await page.getByTestId(T.loginUsername).count()) > 0 ||
+        (await page.locator('input[placeholder*="Username" i]').count()) > 0;
+
       if (hasNavElements) {
-        throw new Error(`Route guard failed - nav elements visible when not authenticated (check ${index + 1})`);
+        throw new Error(
+          `Route guard failed - nav elements visible when not authenticated (check ${index + 1})`,
+        );
       }
 
       if (hasLoginForm) {
@@ -123,9 +127,9 @@ test.describe('smoke/auth', () => {
     await waitForHealth(request, nodeA.baseUrl);
 
     // Capture console logs for debugging
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        console.log(`[Browser Console Error] ${msg.text()}`);
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        console.log(`[Browser Console Error] ${message.text()}`);
       }
     });
 
@@ -159,23 +163,25 @@ test.describe('smoke/auth', () => {
       page
         .waitForURL(
           (url) => url.includes('/login') || !url.includes('/system'),
-          { timeout: 10000 },
+          { timeout: 10_000 },
         )
         .catch(() => {}),
       page
         .waitForSelector(`[data-testid="${T.loginUsername}"]`, {
-          timeout: 10000,
+          timeout: 10_000,
         })
         .catch(() => {}),
       page
-        .waitForSelector('input[placeholder*="Username" i]', { timeout: 10000 })
+        .waitForSelector('input[placeholder*="Username" i]', {
+          timeout: 10_000,
+        })
         .catch(() => {}),
     ]);
 
     // Verify we're back at login
     try {
       await expect(page.getByTestId(T.loginUsername)).toBeVisible({
-        timeout: 15000,
+        timeout: 15_000,
       });
     } catch {
       // Fallback: check for login form by placeholder

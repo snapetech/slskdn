@@ -17,6 +17,12 @@
  - Branch: `dev/40-fixes`
  - Notes: Lint errors are widespread in `src/web/src/components/` (App, Chat, Contacts, Pods, Rooms, ShareGroups, SharedWithMe, System/*), plus `src/web/src/lib/*` and several tests. Build temporarily uses `DISABLE_ESLINT_PLUGIN=true` to unblock E2E; remove it and fix lint issues across these files.
 
+- [x] **T-916**: Investigate E2E node exits during multi-peer tests
+ - Status: done
+ - Priority: P1
+ - Branch: `dev/40-fixes`
+ - Notes: Fixed `SqliteShareRepository.Keepalive()` method that was calling `Environment.Exit(1)` on transient errors. The method now properly handles FTS5 virtual tables and only exits on persistent database corruption, not transient errors like database locks during backup. See `docs/T916_NODE_EXIT_INVESTIGATION.md` for details. (2026-01-27)
+
 - [x] **T-914**: Cross-node share discovery (“Shared with Me”)
  - Status: done
  - Priority: P0

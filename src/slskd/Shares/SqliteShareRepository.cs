@@ -893,16 +893,42 @@ namespace slskd.Shares
 
         private void Keepalive()
         {
-            using var cmd = new SqliteCommand("SELECT COUNT(*) FROM pragma_table_info(\"filenames\");", KeepaliveConnection);
-
-            var reader = cmd.ExecuteReader();
-
-            if (!reader.Read() || reader.GetInt32(0) != 1)
+            try
             {
+                // Check if the filenames table exists and is accessible
+                // filenames is an FTS5 virtual table, so we check it differently than regular tables
+                using var cmd = new SqliteCommand(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='filenames';",
+                    KeepaliveConnection);
+
+                var reader = cmd.ExecuteReader();
+
+                if (!reader.Read() || reader.GetInt32(0) != 1)
+                {
+                    var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/slskd/slskd/issues";
+                    Log.Fatal(msg);
+                    Environment.Exit(1);
+                    throw new DataMisalignedException(msg);
+                }
+
+                // Additional check: verify we can query the filenames table (FTS5 virtual tables require special handling)
+                // This ensures the table is not just present but also functional
+                using var verifyCmd = new SqliteCommand("SELECT COUNT(*) FROM filenames LIMIT 1;", KeepaliveConnection);
+                verifyCmd.ExecuteScalar(); // If this throws, the table is corrupted
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 1) // SQLITE_ERROR
+            {
+                // Table doesn't exist or is corrupted
                 var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/slskd/slskd/issues";
-                Log.Fatal(msg);
+                Log.Fatal(ex, msg);
                 Environment.Exit(1);
-                throw new DataMisalignedException(msg);
+                throw new DataMisalignedException(msg, ex);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't exit on transient errors (e.g., database locked during backup)
+                // Only exit on persistent corruption
+                Log.Warning(ex, "Keepalive check encountered an error (may be transient): {Message}", ex.Message);
             }
         }
     }

@@ -1,0 +1,56 @@
+web:
+  port: 46475
+  host: 127.0.0.1
+  https:
+    disabled: true
+  authentication:
+    username: nodeA
+    password: nodeA
+  rateLimiting:
+    enabled: false
+  cors:
+    enabled: true
+    allowCredentials: false
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+      - HEAD
+      - PATCH
+soulseek:
+  username: nodeA
+  password: nodeA
+  listenPort: 34689
+sharing:
+  tokenSigningKey: L2GNL75jxtCmR+t+jHV0p6FOTBluVm129dNiJFLCCBg=
+directories:
+  downloads: /home/keith/Documents/code/slskdn/test-artifacts/e2e/A-46475/downloads
+  incomplete: /home/keith/Documents/code/slskdn/test-artifacts/e2e/A-46475/incomplete
+shares:
+  directories:
+    - /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/music
+feature:
+  IdentityFriends: true
+  CollectionsSharing: true
+  Streaming: true
+  StreamingRelayFallback: true
+  MeshParallelSearch: true
+  MeshPublishAvailability: true
+  ScenePodBridge: true
+  Swagger: true
+overlay:
+  enable: false
+overlayData:
+  enable: false
+mesh:
+  enableDht: false
+  enableStun: false
+  stunServers: []
+  peerDescriptorRefresh:
+    enableIpChangeDetection: false
+flags:
+  no_connect: true

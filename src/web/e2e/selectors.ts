@@ -5,136 +5,152 @@
  * Update this file when adding new test IDs to components.
  */
 export const T = {
-  loginPassword: 'login-password',
-
-  loginSubmit: 'login-submit',
-  // Auth
-  loginUsername: 'login-username',
-  logout: 'logout',
-
-  navChat: 'nav-chat',
-
-  navCollections: 'nav-collections',
-
-  navContacts: 'nav-contacts',
-
-  navDownloads: 'nav-downloads',
-
-  navBrowse: 'nav-browse',
-
-  navGroups: 'nav-groups',
-
   // Contacts / Invites
 contactsCreateInvite: 'contacts-create-invite',
 
   
-  navSearch: 'nav-search',
+loginPassword: 'login-password',
+
+  loginSubmit: 'login-submit',
 
   
   contactsInviteFriendCode: 'contacts-invite-friend-code',
 
-  // Nav
-navSystem: 'nav-system',
+  // Auth
+loginUsername: 'login-username',
 
   contactsAddFriend: 'contacts-add-friend',
 
-  navUploads: 'nav-uploads',
+  logout: 'logout',
 
   contactsAddInviteInput: 'contacts-add-invite-input',
 
-  navUsers: 'nav-users',
+  navBrowse: 'nav-browse',
 
   contactsAddInviteSubmit: 'contacts-add-invite-submit',
 
-  navRooms: 'nav-rooms',
+  navChat: 'nav-chat',
 
   contactsContactNickname: 'contacts-contact-nickname',
 
-  navSharedWithMe: 'nav-shared-with-me',
+  navCollections: 'nav-collections',
 
   contactsInviteOutput: 'contacts-invite-output',
 
-  navShares: 'nav-shares',
+  navContacts: 'nav-contacts',
 
   contactsRow: (peerLabel: string) => `contact-row-${peerLabel}`,
-  
-// Collections / Shares
+
+  navDownloads: 'nav-downloads',
+
+  // Collections / Shares
 collectionsCreate: 'collections-create',
 
   
+navGroups: 'nav-groups',
+
+  navSearch: 'nav-search',
+
+  collectionRow: (title: string) => `collection-row-${title}`,
+
+  
+collectionAddItem: 'collection-add-item',
+
+  // Nav
+navSystem: 'nav-system',
+
+  collectionAddItemSubmit: 'collection-add-item-submit',
+
+  navUploads: 'nav-uploads',
+
+  collectionItemPicker: 'collection-item-search-input',
+
+  navUsers: 'nav-users',
+
+  collectionItemResults: 'collection-item-results',
+
+  navRooms: 'nav-rooms',
+
+  collectionsCreateSubmit: 'collections-create-submit',
+
+  navSharedWithMe: 'nav-shared-with-me',
+
+  collectionsTitleInput: 'collections-title-input',
+
+  navShares: 'nav-shares',
+
+  collectionsTypeSelect: 'collections-type-select',
+
+  
+downloadRow: (fileName: string) => `download-row-${fileName}`,
+
   // System tabs (if needed)
 systemTabShares: 'system-tab-shares',
 
-  collectionRow: (title: string) => `collection-row-${title}`,
   groupAddMember: 'group-add-member',
+
+  downloadsRoot: 'downloads-root',
 
   groupMemberAddSubmit: 'group-member-add-submit',
 
-  collectionAddItem: 'collection-add-item',
+  groupMemberPicker: 'group-member-picker',
 
+  connectionStatus: 'connection-status',
   
-collectionAddItemSubmit: 'collection-add-item-submit',
+groupRow: (groupName: string) => `group-row-${groupName}`,
 
   // Groups
 groupsCreate: 'groups-create',
 
-  collectionItemPicker: 'collection-item-picker',
-  groupsCreateSubmit: 'groups-create-submit',
-  collectionsCreateSubmit: 'collections-create-submit',
-  groupsNameInput: 'groups-name-input',
-  collectionsTitleInput: 'collections-title-input',
-  groupRow: (groupName: string) => `group-row-${groupName}`,
-  collectionsTypeSelect: 'collections-type-select',
-  groupMemberPicker: 'group-member-picker',
-
-  downloadRow: (fileName: string) => `download-row-${fileName}`,
-
-  
-incomingBackfillButton: 'incoming-backfill',
-
-  
-downloadsRoot: 'downloads-root',
-
-  // Recipient
-incomingShareRow: (title: string) => `incoming-share-row-${title}`,
-
-  incomingShareOpen: 'incoming-share-open',
-
-  shareAudiencePicker: 'share-audience-picker',
-  connectionStatus: 'connection-status',
-  shareCreate: 'share-create',
   collectionItems: 'collection-items',
-  sharePolicyDownload: 'share-policy-download',
 
   groupMembers: 'group-members',
 
-  sharePolicyStream: 'share-policy-stream',
+  groupsCreateSubmit: 'groups-create-submit',
+
+  browseContent: 'browse-content',
+
+  groupsNameInput: 'groups-name-input',
+
+  incomingBackfillButton: 'incoming-backfill',
+
+  incomingShareOpen: 'incoming-share-open',
+  
+  browseItem: 'browse-item',
+  // Recipient
+incomingShareRow: (title: string) => `incoming-share-row-${title}`,
 
   incomingStreamButton: 'incoming-stream',
 
-  shareCreateSubmit: 'share-create-submit',
-
-  
-  browseContent: 'browse-content',
-
-  
   // Library/Browse
-libraryContent: 'library-content',
-  
-browseItem: 'browse-item',
-  // Page roots (for existence checks)
-pageRoot: 'page-root',
-  sharedManifest: 'shared-manifest',
+  libraryContent: 'library-content',
 
-  systemSharesTable: 'system-shares-table',
+  shareAudiencePicker: 'share-audience-picker',
 
   libraryItem: 'library-item',
 
-  uploadsRoot: 'uploads-root',
+  shareCreate: 'share-create',
+
+  // Page roots (for existence checks)
+pageRoot: 'page-root',
+
+  
+shareCreateSubmit: 'share-create-submit',
 
   // Search
-  searchInput: 'search-input',
+searchInput: 'search-input',
+
+  
+  sharePolicyDownload: 'share-policy-download',
 
   searchResult: 'search-result',
+
+  sharedManifest: 'shared-manifest',
+
+  sharePolicyStream: 'share-policy-stream',
+
   sharesList: 'shares-list',
+
+  systemSharesTable: 'system-shares-table',
+  uploadsRoot: 'uploads-root',
 } as const;

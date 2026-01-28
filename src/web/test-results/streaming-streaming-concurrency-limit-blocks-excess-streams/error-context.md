@@ -1,0 +1,207 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic:
+    - generic [ref=e2]:
+      - generic [ref=e3]:
+        - link "Search" [ref=e4] [cursor=pointer]:
+          - /url: /searches
+          - generic [ref=e5]:
+            - generic [ref=e6]: 
+            - text: Search
+        - link "Wishlist" [ref=e7] [cursor=pointer]:
+          - /url: /wishlist
+          - generic [ref=e8]:
+            - generic [ref=e9]: 
+            - text: Wishlist
+        - link "Downloads" [ref=e10] [cursor=pointer]:
+          - /url: /downloads
+          - generic [ref=e11]:
+            - generic [ref=e12]: 
+            - text: Downloads
+        - link "Uploads" [ref=e13] [cursor=pointer]:
+          - /url: /uploads
+          - generic [ref=e14]:
+            - generic [ref=e15]: 
+            - text: Uploads
+        - link "Rooms" [ref=e16] [cursor=pointer]:
+          - /url: /rooms
+          - generic [ref=e17]:
+            - generic [ref=e18]: 
+            - text: Rooms
+        - link "Chat" [ref=e19] [cursor=pointer]:
+          - /url: /chat
+          - generic [ref=e20]:
+            - generic [ref=e21]: 
+            - text: Chat
+        - link "Users" [ref=e22] [cursor=pointer]:
+          - /url: /users
+          - generic [ref=e23]:
+            - generic [ref=e24]: 
+            - text: Users
+        - link "Contacts" [ref=e25] [cursor=pointer]:
+          - /url: /contacts
+          - generic [ref=e26]:
+            - generic [ref=e27]: 
+            - text: Contacts
+        - link "Collections" [ref=e28] [cursor=pointer]:
+          - /url: /collections
+          - generic [ref=e29]:
+            - generic [ref=e30]: 
+            - text: Collections
+        - link "Share Groups" [ref=e31] [cursor=pointer]:
+          - /url: /sharegroups
+          - generic [ref=e32]:
+            - generic [ref=e33]: 
+            - text: Share Groups
+        - link "Shared with Me" [ref=e34] [cursor=pointer]:
+          - /url: /shared
+          - generic [ref=e35]:
+            - generic [ref=e36]: 
+            - text: Shared with Me
+        - link "Browse" [ref=e37] [cursor=pointer]:
+          - /url: /browse
+          - generic [ref=e38]:
+            - generic [ref=e39]: 
+            - text: Browse
+        - generic [ref=e40]:
+          - generic "Hide slskdn status bar" [ref=e41]:
+            - generic [ref=e42]: 
+          - generic [ref=e43]:
+            - generic [ref=e44]: 
+            - text: Theme
+          - generic [ref=e45]:
+            - generic [ref=e47]: 
+            - text: Connected
+          - link "System" [ref=e48] [cursor=pointer]:
+            - /url: /system
+            - generic [ref=e49]:
+              - generic [ref=e50]: 
+              - text: System
+          - generic [ref=e51]:
+            - generic [ref=e52]: 
+            - text: Log Out
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - link "8 dht" [ref=e56] [cursor=pointer]:
+              - /url: /system/network
+              - generic [ref=e57]: 
+              - generic [ref=e58]: 8 dht
+            - generic [ref=e59]: │
+            - link "0 mesh" [ref=e60] [cursor=pointer]:
+              - /url: /system/network
+              - generic [ref=e61]: 
+              - generic [ref=e62]: 0 mesh
+            - generic [ref=e63]: │
+            - link "0 hashes" [ref=e64] [cursor=pointer]:
+              - /url: /system/network
+              - generic [ref=e65]: 
+              - generic [ref=e66]: 0 hashes
+            - generic [ref=e67]: │
+            - link "seq:0" [ref=e68] [cursor=pointer]:
+              - /url: /system/network
+              - generic [ref=e69]: 
+              - generic [ref=e70]: seq:0
+            - generic [ref=e71]: │
+            - generic "Your karma on the Soulseek network" [ref=e72]:
+              - generic [ref=e73]: 
+              - generic [ref=e74]: "0"
+            - generic [ref=e75]: │
+            - 'generic "Karma: 0 - New Member" [ref=e76]':
+              - generic [ref=e77]: 
+              - generic [ref=e78]: "0"
+          - generic [ref=e79]:
+            - link "slskdn network →" [ref=e80] [cursor=pointer]:
+              - /url: /system/network
+            - button "×" [ref=e81] [cursor=pointer]
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e85]: 
+            - generic [ref=e86]:
+              - searchbox "Search phrase" [active] [ref=e87]
+              - button [ref=e88] [cursor=pointer]:
+                - generic [ref=e89]: 
+              - button [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]: 
+            - generic [ref=e93]:
+              - generic [ref=e94]: "Search Sources:"
+              - generic [ref=e95]:
+                - checkbox [checked] [ref=e96] [cursor=pointer]
+                - generic [ref=e97] [cursor=pointer]:
+                  - generic [ref=e98]: 
+                  - text: Pod/Mesh
+              - generic [ref=e99]:
+                - checkbox [checked] [ref=e100] [cursor=pointer]
+                - generic [ref=e101] [cursor=pointer]:
+                  - generic [ref=e102]: 
+                  - text: Soulseek Scene
+          - generic [ref=e103]:
+            - heading "MusicBrainz / Discogs Lookup" [level=4] [ref=e104]
+            - generic [ref=e105]:
+              - generic [ref=e107]:
+                - generic [ref=e108]: MusicBrainz Release ID
+                - textbox "e.g. 1c3b3668-..." [ref=e109]
+              - generic [ref=e111]:
+                - generic [ref=e112]: MusicBrainz Recording ID
+                - textbox "e.g. 8af4c1b9-..." [ref=e113]
+              - generic [ref=e115]:
+                - generic [ref=e116]: Discogs Release/Master ID
+                - textbox "e.g. 123456" [ref=e117]
+              - button "Resolve target" [ref=e118] [cursor=pointer]
+          - generic [ref=e119]:
+            - heading "Album completion status Refresh" [level=4] [ref=e120]:
+              - text: Album completion status
+              - button "Refresh" [ref=e121] [cursor=pointer]
+            - paragraph [ref=e122]: No album targets yet. Resolve a MusicBrainz release or recording to start tracking completion.
+          - generic [ref=e124]:
+            - generic [ref=e125]: 
+            - text: No searches to display
+    - contentinfo:
+      - generic [ref=e126]:
+        - link "Sponsor" [ref=e128] [cursor=pointer]:
+          - /url: https://github.com/sponsors/snapetech
+          - generic [ref=e129]: 
+          - text: Sponsor
+        - generic [ref=e130]:
+          - generic "Total transfer speed (upload + download)" [ref=e131]:
+            - strong [ref=e132]: "T:"
+            - generic [ref=e133]: "0"
+            - generic [ref=e134]: B
+          - generic [ref=e135]: •
+          - generic "Soulseek network speed" [ref=e136]:
+            - strong [ref=e137]: "S:"
+            - generic [ref=e138]: "0"
+            - generic [ref=e139]: B
+          - generic [ref=e140]: •
+          - generic "Mesh network speed" [ref=e141]:
+            - strong [ref=e142]: "M:"
+            - generic [ref=e143]: "0"
+            - generic [ref=e144]: B
+        - generic [ref=e146]:
+          - text: © 2026
+          - link "slskdN" [ref=e147] [cursor=pointer]:
+            - /url: https://github.com/snapetech/slskdn
+          - text: · built on the most excellent
+          - link "slskd" [ref=e148] [cursor=pointer]:
+            - /url: https://github.com/slskd/slskd
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: 
+            - generic [ref=e152]: "|"
+            - generic [ref=e153]: 
+            - generic [ref=e154]: "|"
+            - generic [ref=e155]: 
+          - generic [ref=e156]: •
+          - generic [ref=e157]:
+            - link "\"slop on top\"" [ref=e158] [cursor=pointer]:
+              - /url: https://github.com/snapetech/slskdn#what-is-slskdn
+              - emphasis [ref=e159]: "\"slop on top\""
+            - link "🍦" [ref=e160] [cursor=pointer]:
+              - /url: https://github.com/snapetech/slskdn#what-is-slskdn
+            - link "🤖" [ref=e161] [cursor=pointer]:
+              - /url: https://github.com/snapetech/slskdn#use-of-ai-in-this-project
+            - link "✨" [ref=e162] [cursor=pointer]:
+              - /url: https://github.com/snapetech/slskdn#features
+```

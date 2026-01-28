@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as net from 'node:net';
@@ -37,12 +37,16 @@ async function findFreePort(): Promise<number> {
  * Wait for TCP port to be listening (socket-level check, before HTTP health).
  * This proves Kestrel actually bound to the port, regardless of routing/auth.
  */
-async function waitForTcpListen(host: string, port: number, timeoutMs: number): Promise<void> {
+async function waitForTcpListen(
+  host: string,
+  port: number,
+  timeoutMs: number,
+): Promise<void> {
   const start = Date.now();
   for (;;) {
     const ok = await new Promise<boolean>((resolve) => {
       const sock = new net.Socket();
-      sock.setTimeout(750);
+      sock.setTimeout(500); // Reduced from 750ms
       sock.once('connect', () => {
         sock.destroy();
         resolve(true);
@@ -59,8 +63,11 @@ async function waitForTcpListen(host: string, port: number, timeoutMs: number): 
 
     if (ok) return;
     if (Date.now() - start > timeoutMs) {
-      throw new Error(`TCP port not listening: ${host}:${port} after ${timeoutMs}ms`);
+      throw new Error(
+        `TCP port not listening: ${host}:${port} after ${timeoutMs}ms`,
+      );
     }
+
     await new Promise((r) => setTimeout(r, 250));
   }
 }
@@ -94,6 +101,46 @@ async function runCommand(
           new Error(`${command} ${args.join(' ')} exited with code ${code}`),
         );
       }
+    });
+  });
+}
+
+async function getListenSummary(port: number): Promise<string> {
+  return new Promise((resolve) => {
+    execFile('ss', ['-ltnp'], (error, stdout, stderr) => {
+      if (error) {
+        resolve(`ss failed: ${stderr || error.message}`);
+        return;
+      }
+
+      const lines = stdout.split('\n');
+      const matches = lines.filter((line) => line.includes(`:${port} `));
+      if (matches.length === 0) {
+        resolve(`No ss entries for :${port}`);
+        return;
+      }
+
+      resolve(matches.join('\n'));
+    });
+  });
+}
+
+async function getListenSummaryForPid(pid: number): Promise<string> {
+  return new Promise((resolve) => {
+    execFile('ss', ['-ltnp'], (error, stdout, stderr) => {
+      if (error) {
+        resolve(`ss failed: ${stderr || error.message}`);
+        return;
+      }
+
+      const lines = stdout.split('\n');
+      const matches = lines.filter((line) => line.includes(`pid=${pid}`));
+      if (matches.length === 0) {
+        resolve(`No ss entries for pid=${pid}`);
+        return;
+      }
+
+      resolve(matches.join('\n'));
     });
   });
 }
@@ -200,56 +247,77 @@ export class SlskdnNode {
     // Enforce test fixtures exist and validate checksums (fail fast if missing/corrupt)
     // The shareDir is like 'test-data/slskdn-test-fixtures/music'
     // We need to check the parent directory 'test-data/slskdn-test-fixtures'
-    const shareDirPath = path.isAbsolute(this.config.shareDir)
+    const shareDirectoriesForValidation = Array.isArray(this.config.shareDir)
       ? this.config.shareDir
-      : path.join(repoRoot, this.config.shareDir);
-    const fixturesRoot = path.dirname(shareDirPath); // Parent of 'music' or 'book'
+      : [this.config.shareDir];
+    const shareDirectoriesNonEmpty =
+      shareDirectoriesForValidation.filter(Boolean);
+    const shareDirectoriesAbsoluteForValidation = shareDirectoriesNonEmpty.map(
+      (dir) => (path.isAbsolute(dir) ? dir : path.join(repoRoot, dir)),
+    );
+    const fixturesRoot =
+      shareDirectoriesAbsoluteForValidation.length > 0
+        ? path.dirname(shareDirectoriesAbsoluteForValidation[0])
+        : null;
 
-    // Fail fast if fixtures root doesn't exist
-    try {
-      await fs.access(fixturesRoot);
-    } catch (error) {
-      throw new Error(
-        `E2E fixtures directory not found: ${fixturesRoot}\n` +
-          'Run: ./scripts/fetch-test-fixtures.sh\n' +
-          'Or: cd test-data/slskdn-test-fixtures/meta && node generate-manifest.js',
-      );
+    if (fixturesRoot) {
+      // Fail fast if fixtures root doesn't exist
+      try {
+        await fs.access(fixturesRoot);
+      } catch {
+        throw new Error(
+          `E2E fixtures directory not found: ${fixturesRoot}\n` +
+            'Run: ./scripts/fetch-test-fixtures.sh\n' +
+            'Or: cd test-data/slskdn-test-fixtures/meta && node generate-manifest.js',
+        );
+      }
     }
 
     // Fail fast if manifest doesn't exist
-    const manifestPath = path.join(fixturesRoot, 'meta', 'manifest.json');
+    const manifestPath = fixturesRoot
+      ? path.join(fixturesRoot, 'meta', 'manifest.json')
+      : null;
     let manifest: {
+      files: Array<{ bytes: number; path: string; sha256: string }>;
       version: number;
-      files: Array<{ path: string; sha256: string; bytes: number }>;
-    };
-    try {
-      const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-      manifest = JSON.parse(manifestContent);
-    } catch (error) {
-      throw new Error(
-        `E2E fixtures manifest not found or invalid: ${manifestPath}\n` +
-          'Run: cd test-data/slskdn-test-fixtures/meta && node generate-manifest.js',
-      );
+    } | null = null;
+    if (manifestPath) {
+      try {
+        const manifestContent = await fs.readFile(manifestPath);
+        manifest = JSON.parse(manifestContent);
+      } catch {
+        throw new Error(
+          `E2E fixtures manifest not found or invalid: ${manifestPath}\n` +
+            'Run: cd test-data/slskdn-test-fixtures/meta && node generate-manifest.js',
+        );
+      }
     }
 
     // Validate required files exist and checksums match
     const validationErrors: string[] = [];
-    for (const fileEntry of manifest.files) {
-      const filePath = path.join(fixturesRoot, fileEntry.path);
-      try {
-        await fs.access(filePath);
-        // Optionally validate checksum (can be slow for large files, so make it optional via env var)
-        if (process.env.SLSKDN_VALIDATE_FIXTURE_CHECKSUMS === '1') {
-          const fileContent = await fs.readFile(filePath);
-          const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
-          if (hash !== fileEntry.sha256) {
-            validationErrors.push(
-              `Checksum mismatch for ${fileEntry.path}: expected ${fileEntry.sha256}, got ${hash}`,
-            );
+    if (fixturesRoot && manifest) {
+      for (const fileEntry of manifest.files) {
+        const filePath = path.join(fixturesRoot, fileEntry.path);
+        try {
+          await fs.access(filePath);
+          // Optionally validate checksum (can be slow for large files, so make it optional via env var)
+          if (process.env.SLSKDN_VALIDATE_FIXTURE_CHECKSUMS === '1') {
+            const fileContent = await fs.readFile(filePath);
+            const hash = crypto
+              .createHash('sha256')
+              .update(fileContent)
+              .digest('hex');
+            if (hash !== fileEntry.sha256) {
+              validationErrors.push(
+                `Checksum mismatch for ${fileEntry.path}: expected ${fileEntry.sha256}, got ${hash}`,
+              );
+            }
           }
+        } catch {
+          validationErrors.push(
+            `Required fixture file missing: ${fileEntry.path}`,
+          );
         }
-      } catch {
-        validationErrors.push(`Required fixture file missing: ${fileEntry.path}`);
       }
     }
 
@@ -275,7 +343,18 @@ export class SlskdnNode {
 
     // Create isolated app directory
     if (!this.config.appDir) {
-      this.appDir = await fs.mkdtemp(path.join('/tmp', 'slskdn-test-'));
+      if (process.env.SLSKDN_TEST_KEEP_ARTIFACTS === '1') {
+        const baseDir =
+          process.env.SLSKDN_TEST_ARTIFACTS_DIR ||
+          path.join(repoRoot, 'test-artifacts', 'e2e');
+        this.appDir = path.join(
+          baseDir,
+          `${this.config.nodeName}-${this.apiPort}`,
+        );
+        await fs.mkdir(this.appDir, { recursive: true });
+      } else {
+        this.appDir = await fs.mkdtemp(path.join('/tmp', 'slskdn-test-'));
+      }
     } else {
       this.appDir = this.config.appDir;
       await fs.mkdir(this.appDir, { recursive: true });
@@ -288,31 +367,34 @@ export class SlskdnNode {
 
     // Write minimal config (YAML format)
     // Convert shareDir(s) to absolute paths (slskdn requires absolute paths)
-    const shareDirs = Array.isArray(this.config.shareDir)
+    const shareDirectories = Array.isArray(this.config.shareDir)
       ? this.config.shareDir
       : [this.config.shareDir];
-    const shareDirsAbsolute = shareDirs.map((dir) =>
+    const shareDirectoriesAbsolute = shareDirectories.map((dir) =>
       path.isAbsolute(dir) ? dir : path.join(repoRoot, dir),
     );
 
     // Get node credentials
     const nodeCreds = {
-      A: { username: 'nodeA', password: 'nodeA' },
-      B: { username: 'nodeB', password: 'nodeB' },
-      C: { username: 'nodeC', password: 'nodeC' },
-    }[this.config.nodeName] || { username: this.config.nodeName, password: this.config.nodeName };
+      A: { password: 'nodeA', username: 'nodeA' },
+      B: { password: 'nodeB', username: 'nodeB' },
+      C: { password: 'nodeC', username: 'nodeC' },
+    }[this.config.nodeName] || {
+      password: this.config.nodeName,
+      username: this.config.nodeName,
+    };
 
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
     // Note: YAML provider automatically prefixes with "slskd:" namespace, so DON'T wrap under slskd: here
     // If we wrap it, we'd get slskd:slskd:web:port instead of slskd:web:port
     const sharesYaml =
-      shareDirsAbsolute.length > 0
+      shareDirectoriesAbsolute.length > 0
         ? `shares:
   directories:
-${shareDirsAbsolute.map((dir) => `    - ${dir}`).join('\n')}`
+${shareDirectoriesAbsolute.map((dir) => `    - ${dir}`).join('\n')}`
         : `shares:
   directories: []`;
-const configYaml = `web:
+    const configYaml = `web:
   port: ${this.apiPort}
   host: 127.0.0.1
   https:
@@ -320,6 +402,21 @@ const configYaml = `web:
   authentication:
     username: ${nodeCreds.username}
     password: ${nodeCreds.password}
+  rateLimiting:
+    enabled: false
+  cors:
+    enabled: true
+    allowCredentials: false
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+      - HEAD
+      - PATCH
 soulseek:
   username: ${nodeCreds.username}
   password: ${nodeCreds.password}
@@ -331,8 +428,14 @@ directories:
   incomplete: ${path.join(this.appDir, 'incomplete')}
 ${sharesYaml}
 feature:
-  identityFriends: true
-  collectionsSharing: true
+  IdentityFriends: true
+  CollectionsSharing: true
+  Streaming: true
+  StreamingRelayFallback: true
+  MeshParallelSearch: true
+  MeshPublishAvailability: true
+  ScenePodBridge: true
+  Swagger: true
 overlay:
   enable: false
 overlayData:
@@ -390,6 +493,9 @@ flags:
         ASPNETCORE_ENVIRONMENT: 'Development',
         ASPNETCORE_URLS: `http://127.0.0.1:${this.apiPort}`,
         SLSKDN_E2E_CONCURRENT_START: '1',
+        SLSKDN_E2E_SERVER_PROBE: '1',
+        SLSKDN_E2E_SHARE_ANNOUNCE: '1',
+        SLSKDN_E2E_SKIP_BRIDGE_PROXY: '1',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -398,12 +504,21 @@ flags:
     let stdout = '';
     let stderr = '';
 
+    const nodeStartTime = Date.now();
+    const logWithTimestamp = (message: string) => {
+      const elapsed = Date.now() - nodeStartTime;
+      const timestamp = new Date().toISOString();
+      console.log(
+        `[${timestamp}] [${this.config.nodeName}] [+${elapsed}ms] ${message}`,
+      );
+    };
+
     this.process.stdout?.on('data', async (data) => {
       const text = data.toString();
       stdout += text;
       await stdoutFd.write(data);
       if (process.env.DEBUG) {
-        console.log(`[${this.config.nodeName}] ${text}`);
+        logWithTimestamp(text.trim());
       }
     });
 
@@ -412,7 +527,7 @@ flags:
       await stderrFd.write(data);
       stderr += text;
       if (process.env.DEBUG) {
-        console.error(`[${this.config.nodeName}] ${text}`);
+        logWithTimestamp(`STDERR: ${text.trim()}`);
       }
     });
 
@@ -423,10 +538,27 @@ flags:
 
     // Check if process exits early
     this.process.on('exit', (code, signal) => {
+      const elapsed = Date.now() - nodeStartTime;
+      const timestamp = new Date().toISOString();
       if (code !== null && code !== 0) {
-        const errorMessage = `slskdn process exited with code ${code}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`;
+        const errorMessage = `slskdn process exited with code ${code}${signal ? ` (signal: ${signal})` : ''} after ${elapsed}ms.\nSTDOUT (last 500 chars):\n${stdout.slice(-500)}\nSTDERR (last 500 chars):\n${stderr.slice(-500)}`;
         // Always log process exit errors
-        console.error(`[${this.config.nodeName}] ${errorMessage}`);
+        console.error(
+          `[${timestamp}] [${this.config.nodeName}] [+${elapsed}ms] ${errorMessage}`,
+        );
+        // Write full logs to artifacts for debugging
+        if (this.appDir) {
+          const exitLogPath = path.join(this.appDir, 'artifacts', 'exit.log');
+          fs.writeFile(
+            exitLogPath,
+            `Exit code: ${code}\nSignal: ${signal || 'none'}\nUptime: ${elapsed}ms\nTimestamp: ${timestamp}\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}\n`,
+            'utf8',
+          ).catch(() => {});
+        }
+      } else if (code === 0 && signal) {
+        console.log(
+          `[${timestamp}] [${this.config.nodeName}] [+${elapsed}ms] Process exited normally (signal: ${signal})`,
+        );
       }
     });
 
@@ -448,17 +580,30 @@ flags:
 
     // Step 1: Wait for TCP port to be listening (socket-level check)
     // This proves Kestrel actually bound to the port, regardless of routing/auth
+    const tcpStartTime = Date.now();
+    logWithTimestamp(`[start] Waiting for TCP port ${this.apiPort} to listen`);
     try {
       await waitForTcpListen('127.0.0.1', this.apiPort, 30_000);
-    } catch (tcpError) {
+      const tcpElapsed = Date.now() - tcpStartTime;
+      logWithTimestamp(
+        `[start] TCP port ${this.apiPort} listening after ${tcpElapsed}ms`,
+      );
+    } catch {
       // TCP never opened - true startup/bind problem
       const stdoutTail = tail(stdout, 200);
       const stderrTail = tail(stderr, 200);
+      const ssSummary = await getListenSummary(this.apiPort);
+      const pidSummary =
+        this.process?.pid !== undefined
+          ? await getListenSummaryForPid(this.process.pid)
+          : 'No process pid available';
       await stdoutFd.close();
       await stderrFd.close();
       throw new Error(
         `TCP port ${this.apiPort} never started listening.\n` +
           `This indicates a true startup/bind problem.\n\n` +
+          `---- ss -ltnp matches for :${this.apiPort} ----\n${ssSummary}\n\n` +
+          `---- ss -ltnp matches for pid ----\n${pidSummary}\n\n` +
           `---- stdout (last 200 lines) ----\n${stdoutTail}\n\n` +
           `---- stderr (last 200 lines) ----\n${stderrTail}\n\n` +
           `Log files: ${stdoutPath}, ${stderrPath}`,
@@ -470,10 +615,11 @@ flags:
     // Falls back to /health if /health/ready doesn't exist (backward compatibility)
     const readinessUrl = `${this.apiUrl}/health/ready`;
     const healthUrl = `${this.apiUrl}/health`;
-    const startTime = Date.now();
+    const healthStartTime = Date.now();
     const timeout = 60_000;
+    logWithTimestamp(`[start] Starting health check (timeout: ${timeout}ms)`);
 
-    while (Date.now() - startTime < timeout) {
+    while (Date.now() - healthStartTime < timeout) {
       // Check if process died
       if (this.process.exitCode !== null) {
         if (this.process.exitCode !== 0) {
@@ -489,24 +635,50 @@ flags:
         // Try simpler readiness endpoint first (faster, no complex checks)
         // Use AbortController for timeout (AbortSignal.timeout may not be available in all Node versions)
         const readinessController = new AbortController();
-        const readinessTimeout = setTimeout(() => readinessController.abort(), 2000);
+        const readinessTimeout = setTimeout(
+          () => readinessController.abort(),
+          1_000,
+        ); // Reduced from 2000ms
         try {
-          const readinessResponse = await fetch(readinessUrl, { signal: readinessController.signal });
+          const readinessResponse = await fetch(readinessUrl, {
+            signal: readinessController.signal,
+          });
           clearTimeout(readinessTimeout);
           // Treat 200/401/403 as "server is reachable" - distinguishes connection failure from auth issues
-          if (readinessResponse.status === 200 || readinessResponse.status === 401 || readinessResponse.status === 403) {
+          if (
+            readinessResponse.status === 200 ||
+            readinessResponse.status === 401 ||
+            readinessResponse.status === 403
+          ) {
+            const healthElapsed = Date.now() - healthStartTime;
+            logWithTimestamp(
+              `[start] Health check passed after ${healthElapsed}ms (status: ${readinessResponse.status})`,
+            );
             return;
           }
         } catch {
           clearTimeout(readinessTimeout);
           // Readiness endpoint might not exist or failed, try full health check
           const healthController = new AbortController();
-          const healthTimeout = setTimeout(() => healthController.abort(), 2000);
+          const healthTimeout = setTimeout(
+            () => healthController.abort(),
+            1_000,
+          ); // Reduced from 2000ms
           try {
-            const response = await fetch(healthUrl, { signal: healthController.signal });
+            const response = await fetch(healthUrl, {
+              signal: healthController.signal,
+            });
             clearTimeout(healthTimeout);
             // Treat 200/401/403 as "server is reachable" - distinguishes connection failure from auth issues
-            if (response.status === 200 || response.status === 401 || response.status === 403) {
+            if (
+              response.status === 200 ||
+              response.status === 401 ||
+              response.status === 403
+            ) {
+              const healthElapsed = Date.now() - healthStartTime;
+              logWithTimestamp(
+                `[start] Health check passed after ${healthElapsed}ms (status: ${response.status})`,
+              );
               return;
             }
           } catch {
@@ -518,7 +690,7 @@ flags:
         // Ignore errors, keep polling
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 300)); // Reduced from 500ms
     }
 
     // If we timeout, include tail of captured output
@@ -526,7 +698,8 @@ flags:
     await stderrFd.close();
     const stdoutTail = tail(stdout, 200);
     const stderrTail = tail(stderr, 200);
-    const errorMessage = `Health check timeout for ${healthUrl} after ${timeout}ms\n` +
+    const errorMessage =
+      `Health check timeout for ${healthUrl} after ${timeout}ms\n` +
       `TCP port ${this.apiPort} IS listening, but HTTP endpoint is unreachable.\n` +
       `This indicates a routing/auth/base URL problem.\n\n` +
       `---- stdout (last 200 lines) ----\n${stdoutTail}\n\n` +
@@ -547,12 +720,12 @@ flags:
    */
   get nodeCfg() {
     const nodeCreds = {
-      A: { username: 'nodeA', password: 'nodeA' },
-      B: { username: 'nodeB', password: 'nodeB' },
-      C: { username: 'nodeC', password: 'nodeC' },
+      A: { password: 'nodeA', username: 'nodeA' },
+      B: { password: 'nodeB', username: 'nodeB' },
+      C: { password: 'nodeC', username: 'nodeC' },
     }[this.config.nodeName] || {
-      username: this.config.nodeName,
       password: this.config.nodeName,
+      username: this.config.nodeName,
     };
     return {
       baseUrl: this.apiUrl,
@@ -574,7 +747,7 @@ flags:
    * Works for both local E2E and CI environments.
    */
   async getDownloadedFiles(): Promise<
-    Array<{ name: string; size: number; path: string; modified: Date }>
+    Array<{ modified: Date; name: string; path: string; size: number }>
   > {
     if (!this.appDir) {
       throw new Error(
@@ -584,10 +757,10 @@ flags:
 
     const downloadsDir = path.join(this.appDir, 'downloads');
     const files: Array<{
-      name: string;
-      size: number;
-      path: string;
       modified: Date;
+      name: string;
+      path: string;
+      size: number;
     }> = [];
 
     try {
@@ -606,10 +779,10 @@ flags:
           try {
             const stats = await fs.stat(filePath);
             files.push({
-              name: entry.name,
-              size: stats.size,
-              path: filePath,
               modified: stats.mtime,
+              name: entry.name,
+              path: filePath,
+              size: stats.size,
             });
           } catch (error) {
             // File might have been deleted between readdir and stat
@@ -620,11 +793,11 @@ flags:
         }
       }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException;
+      const error_ = error as NodeJS.ErrnoException;
       // Downloads directory might not exist yet (ENOENT) - that's OK
-      if (err.code !== 'ENOENT') {
+      if (error_.code !== 'ENOENT') {
         console.error(
-          `[SlskdnNode] Error reading downloads directory ${downloadsDir}: ${err.message}`,
+          `[SlskdnNode] Error reading downloads directory ${downloadsDir}: ${error_.message}`,
         );
         throw error;
       }
@@ -639,13 +812,11 @@ flags:
    * @param searchTerm - Filename to match, or sha256 prefix (first 8 chars)
    * @returns File metadata if found, null otherwise
    */
-  async findDownloadedFile(
-    searchTerm: string,
-  ): Promise<{
-    name: string;
-    size: number;
-    path: string;
+  async findDownloadedFile(searchTerm: string): Promise<{
     modified: Date;
+    name: string;
+    path: string;
+    size: number;
   } | null> {
     if (!this.appDir) {
       throw new Error(
@@ -666,8 +837,8 @@ flags:
 
     // Try filename without extension match
     found = files.find((f) => {
-      const nameWithoutExt = path.parse(f.name).name.toLowerCase();
-      return nameWithoutExt.includes(searchLower);
+      const nameWithoutExtension = path.parse(f.name).name.toLowerCase();
+      return nameWithoutExtension.includes(searchLower);
     });
     if (found) return found;
 
@@ -691,10 +862,10 @@ flags:
     timeoutMs: number = 30_000,
     pollIntervalMs: number = 1_000,
   ): Promise<{
-    name: string;
-    size: number;
-    path: string;
     modified: Date;
+    name: string;
+    path: string;
+    size: number;
   } | null> {
     const startTime = Date.now();
 
@@ -703,6 +874,7 @@ flags:
       if (file && file.size > 0) {
         return file;
       }
+
       await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
     }
 

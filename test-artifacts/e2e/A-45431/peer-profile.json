@@ -1,0 +1,17 @@
+{
+  "PeerId": "nynersp5omjdd7wfnfe26fyjxkxcj2vi",
+  "PublicKey": "oeP1sky1kR8pMhNGKh32kAhZaLbGs/w6OQXjwNixHGs=",
+  "DisplayName": "nodeA",
+  "Avatar": null,
+  "Capabilities": 0,
+  "Endpoints": [
+    {
+      "Type": "Direct",
+      "Address": "http://192.168.50.148:45431",
+      "Priority": 1
+    }
+  ],
+  "CreatedAt": "2026-01-28T03:28:34.2067769+00:00",
+  "ExpiresAt": "2026-02-04T03:28:34.2067887+00:00",
+  "Signature": "OwfTqkkjUycfp\u002BgHKrjXr72rq3MKZkDGzOj7HkBHTFAP4Idl9rsIaSgZiOHVjowXYpMXAhq5nXf2pfSWnL2kAw=="
+}

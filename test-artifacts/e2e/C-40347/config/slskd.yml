@@ -1,0 +1,55 @@
+web:
+  port: 40347
+  host: 127.0.0.1
+  https:
+    disabled: true
+  authentication:
+    username: nodeC
+    password: nodeC
+  rateLimiting:
+    enabled: false
+  cors:
+    enabled: true
+    allowCredentials: false
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+      - HEAD
+      - PATCH
+soulseek:
+  username: nodeC
+  password: nodeC
+  listenPort: 46729
+sharing:
+  tokenSigningKey: k5vlZX8HxhMzq5Ls5aYXtMWl7EXOeX8KNRzDzGy9SW4=
+directories:
+  downloads: /home/keith/Documents/code/slskdn/test-artifacts/e2e/C-40347/downloads
+  incomplete: /home/keith/Documents/code/slskdn/test-artifacts/e2e/C-40347/incomplete
+shares:
+  directories: []
+feature:
+  IdentityFriends: true
+  CollectionsSharing: true
+  Streaming: true
+  StreamingRelayFallback: true
+  MeshParallelSearch: true
+  MeshPublishAvailability: true
+  ScenePodBridge: true
+  Swagger: true
+overlay:
+  enable: false
+overlayData:
+  enable: false
+mesh:
+  enableDht: false
+  enableStun: false
+  stunServers: []
+  peerDescriptorRefresh:
+    enableIpChangeDetection: false
+flags:
+  no_connect: true

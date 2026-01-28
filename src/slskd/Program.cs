@@ -15,9 +15,13 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using slskd.AudioCore;
+using slskd.Core.Diagnostics;
 using slskd.Mesh.Realm;
 using slskd.Mesh.Realm.Bridge;
 using slskd.Mesh.Governance;
@@ -563,20 +567,18 @@ using OpenTelemetry.Trace;
                 builder.Host
                     .UseSerilog();
 
+                var webPortSection = builder.Configuration.GetSection($"{AppName}:Web:Port");
+                var webPort = webPortSection.Exists() && int.TryParse(webPortSection.Value, out var port)
+                    ? port
+                    : OptionsAtStartup.Web.Port; // Fallback to OptionsAtStartup if not in config
+
                 builder.WebHost
-                    .UseUrls()
+                    .UseUrls($"http://127.0.0.1:{webPort}")
                     .UseKestrel(options =>
                     {
                         // PR-09: Global body size cap; configurable via Web.MaxRequestBodySize (default 10 MB). MeshGateway and others may enforce lower per-route.
                         options.Limits.MaxRequestBodySize = OptionsAtStartup.Web.MaxRequestBodySize;
-                        
-                        // Read port directly from builder.Configuration to ensure YAML config is applied
-                        // (OptionsAtStartup.Web.Port is init-only and can't be overwritten after initial binding)
-                        var webPortSection = builder.Configuration.GetSection($"{AppName}:Web:Port");
-                        var webPort = webPortSection.Exists() && int.TryParse(webPortSection.Value, out var port) 
-                            ? port 
-                            : OptionsAtStartup.Web.Port; // Fallback to OptionsAtStartup if not in config
-                        
+
                         // Sanity check: log what we found in config
                         Log.Information("[ConfigProbe] slskd:web:port={A} slskd:slskd:web:port={B} using={C}",
                             builder.Configuration.GetValue<string>($"{AppName}:Web:Port") ?? "null",
@@ -612,12 +614,50 @@ using OpenTelemetry.Trace;
                                 }
                             });
                         }
+
                     });
 
                 Log.Information("[MAIN] About to configure ASP.NET services...");
                 builder.Services
                     .ConfigureAspDotNetServices()
                     .ConfigureDependencyInjectionContainer();
+
+                if (Environment.GetEnvironmentVariable("SLSKDN_E2E_TRACE_HOSTED") == "1")
+                {
+                    Console.Error.WriteLine("[HostedServiceTracer] Enabled (SLSKDN_E2E_TRACE_HOSTED=1)");
+                    // Replace hosted services with a tracer to pinpoint startup blockers
+                    var hostedDescriptors = builder.Services
+                        .Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService))
+                        .ToList();
+
+                    foreach (var descriptor in hostedDescriptors)
+                    {
+                        builder.Services.Remove(descriptor);
+                    }
+
+                    builder.Services.AddSingleton<IEnumerable<Microsoft.Extensions.Hosting.IHostedService>>(sp =>
+                    {
+                        var list = new List<Microsoft.Extensions.Hosting.IHostedService>();
+                        foreach (var descriptor in hostedDescriptors)
+                        {
+                            var svcName = descriptor.ImplementationType?.FullName
+                                          ?? descriptor.ImplementationInstance?.GetType().FullName
+                                          ?? "factory";
+                            Console.Error.WriteLine($"[HostedServiceTracer] create {svcName} begin");
+
+                            var svc = descriptor.ImplementationInstance as Microsoft.Extensions.Hosting.IHostedService
+                                      ?? (descriptor.ImplementationFactory?.Invoke(sp) as Microsoft.Extensions.Hosting.IHostedService)
+                                      ?? (Microsoft.Extensions.Hosting.IHostedService)ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType!);
+                            list.Add(svc);
+
+                            Console.Error.WriteLine($"[HostedServiceTracer] create {svcName} end");
+                        }
+
+                        return list;
+                    });
+
+                    builder.Services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, HostedServiceTracer>();
+                }
 
                 // Add startup timeout for fail-fast in E2E tests (prevents infinite hangs)
                 builder.Services.Configure<Microsoft.Extensions.Hosting.HostOptions>(options =>
@@ -699,6 +739,30 @@ using OpenTelemetry.Trace;
                 {
                     var addresses = app.Urls;
                     Log.Information("✓ Host started and bound to: {Addresses}", string.Join(", ", addresses));
+
+                    if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SERVER_PROBE") == "1")
+                    {
+                        try
+                        {
+                            var server = app.Services.GetService<IServer>();
+                            Console.Error.WriteLine($"[ServerProbe] IServer={server?.GetType().FullName ?? "<null>"}");
+
+                            var serverFeatures = server?.Features.Get<IServerAddressesFeature>();
+                            if (serverFeatures == null)
+                            {
+                                Console.Error.WriteLine("[ServerProbe] IServerAddressesFeature=<null>");
+                            }
+                            else
+                            {
+                                Console.Error.WriteLine($"[ServerProbe] PreferHostingUrls={serverFeatures.PreferHostingUrls}");
+                                Console.Error.WriteLine($"[ServerProbe] Addresses={string.Join(" | ", serverFeatures.Addresses)}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"[ServerProbe] EX={ex}");
+                        }
+                    }
                 });
                 
                 lifetime.ApplicationStopping.Register(() =>
@@ -706,6 +770,19 @@ using OpenTelemetry.Trace;
                     Log.Information("Application is stopping...");
                 });
                 
+                if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SERVER_PROBE") == "1")
+                {
+                    var hostedServices = app.Services.GetServices<IHostedService>()
+                        .Select(s => s.GetType().FullName)
+                        .OrderBy(s => s)
+                        .ToArray();
+                    Console.Error.WriteLine($"[HostedList] count={hostedServices.Length}");
+                    foreach (var hosted in hostedServices)
+                    {
+                        Console.Error.WriteLine($"[HostedList] {hosted}");
+                    }
+                }
+
                 Log.Information("[Program] About to call app.Run()...");
                 Log.Information("[Program] app.Run() will start the web server and all hosted services...");
                 
@@ -896,17 +973,24 @@ using OpenTelemetry.Trace;
                 return app;
             });
             // Use a wrapper to avoid factory function blocking
-            services.AddHostedService(p =>
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_APP_HOSTED")))
             {
-                Log.Information("[DI] Constructing ApplicationHostedServiceWrapper hosted service...");
-                Log.Information("[DI] About to resolve IApplication from DI...");
-                var app = p.GetRequiredService<IApplication>();
-                Log.Information("[DI] IApplication resolved successfully");
-                Log.Information("[DI] About to create ApplicationHostedServiceWrapper instance...");
-                var service = new ApplicationHostedServiceWrapper(app, p.GetService<Microsoft.Extensions.Logging.ILogger<ApplicationHostedServiceWrapper>>());
-                Log.Information("[DI] ApplicationHostedServiceWrapper constructed");
-                return service;
-            });
+                services.AddHostedService(p =>
+                {
+                    Log.Information("[DI] Constructing ApplicationHostedServiceWrapper hosted service...");
+                    Log.Information("[DI] About to resolve IApplication from DI...");
+                    var app = p.GetRequiredService<IApplication>();
+                    Log.Information("[DI] IApplication resolved successfully");
+                    Log.Information("[DI] About to create ApplicationHostedServiceWrapper instance...");
+                    var service = new ApplicationHostedServiceWrapper(app, p.GetService<Microsoft.Extensions.Logging.ILogger<ApplicationHostedServiceWrapper>>());
+                    Log.Information("[DI] ApplicationHostedServiceWrapper constructed");
+                    return service;
+                });
+            }
+            else
+            {
+                Log.Information("[DI] SLSKDN_E2E_SKIP_APP_HOSTED=1; skipping ApplicationHostedServiceWrapper registration");
+            }
 
             services.AddSingleton<IWaiter, Waiter>();
             services.AddSingleton<ConnectionWatchdog, ConnectionWatchdog>();
@@ -1214,7 +1298,14 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VirtualSoulfind.Bridge.ISoulfindBridgeService, VirtualSoulfind.Bridge.SoulfindBridgeService>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
             services.AddSingleton<VirtualSoulfind.Bridge.Protocol.SoulseekProtocolParser>();
-            services.AddHostedService<VirtualSoulfind.Bridge.Proxy.BridgeProxyServer>();
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_BRIDGE_PROXY")))
+            {
+                services.AddHostedService<VirtualSoulfind.Bridge.Proxy.BridgeProxyServer>();
+            }
+            else
+            {
+                Log.Information("[DI] SLSKDN_E2E_SKIP_BRIDGE_PROXY=1; skipping BridgeProxyServer");
+            }
             services.AddSingleton<VirtualSoulfind.Bridge.IPeerIdAnonymizer, VirtualSoulfind.Bridge.PeerIdAnonymizer>();
             services.AddSingleton<VirtualSoulfind.Bridge.IFilenameGenerator, VirtualSoulfind.Bridge.FilenameGenerator>();
             services.AddSingleton<VirtualSoulfind.Bridge.IRoomSceneMapper, VirtualSoulfind.Bridge.RoomSceneMapper>();
@@ -2119,11 +2210,21 @@ using OpenTelemetry.Trace;
                 {
                     options.AddPolicy("ConfiguredCors", b =>
                     {
-                        b.WithOrigins(c.AllowedOrigins)
-                            .WithExposedHeaders("X-URL-Base", "X-Total-Count")
+                        // Handle wildcard origin for E2E tests (when credentials are disabled)
+                        var hasWildcard = c.AllowedOrigins.Contains("*") || c.AllowedOrigins.Contains("/*");
+                        if (hasWildcard && !c.AllowCredentials)
+                        {
+                            // E2E tests: allow any origin (no credentials)
+                            b.AllowAnyOrigin();
+                        }
+                        else
+                        {
+                            b.WithOrigins(c.AllowedOrigins);
+                            if (c.AllowCredentials)
+                                b.AllowCredentials();
+                        }
+                        b.WithExposedHeaders("X-URL-Base", "X-Total-Count")
                             .SetPreflightMaxAge(TimeSpan.FromHours(1));
-                        if (c.AllowCredentials)
-                            b.AllowCredentials();
                         if (c.AllowedHeaders != null && c.AllowedHeaders.Length > 0)
                             b.WithHeaders(c.AllowedHeaders);
                         else
@@ -2712,6 +2813,22 @@ using OpenTelemetry.Trace;
                     context.Response.StatusCode = 200;
                     await context.Response.WriteAsync("ready");
                 });
+                // Test-only route listing endpoint for E2E diagnostics
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SHARE_ANNOUNCE")))
+                {
+                    endpoints.MapGet("/__routes", async context =>
+                    {
+                        var sources = context.RequestServices.GetRequiredService<IEnumerable<Microsoft.AspNetCore.Routing.EndpointDataSource>>();
+                        var routes = sources
+                            .SelectMany(s => s.Endpoints)
+                            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+                            .Select(e => new { Pattern = e.RoutePattern.RawText ?? e.RoutePattern.ToString(), e.DisplayName })
+                            .OrderBy(r => r.Pattern)
+                            .ToList();
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsJsonAsync(routes);
+                    }).AllowAnonymous();
+                }
 
                 if (OptionsAtStartup.Metrics.Enabled)
                 {

@@ -240,19 +240,17 @@ export default class Collections extends Component {
     const contentId = selectedResult
       ? selectedResult.contentId
       : this.state.itemSearchQuery;
-    const mediaKind = selectedResult
-      ? selectedResult.mediaKind
-      : 'File'; // Default fallback
+    const mediaKind = selectedResult ? selectedResult.mediaKind : 'File'; // Default fallback
 
     if (!contentId) return;
 
     try {
       await collectionsAPI.addCollectionItem(this.state.selectedCollection.id, {
+        bytes: selectedResult?.bytes,
         contentId,
+        fileName: selectedResult?.fileName,
         mediaKind,
         sha256: selectedResult?.sha256,
-        bytes: selectedResult?.bytes,
-        fileName: selectedResult?.fileName,
       });
       this.setState({
         addItemModalOpen: false,
@@ -712,7 +710,9 @@ export default class Collections extends Component {
             <Modal.Content>
               <Form>
                 <Form.Field>
-                  <label htmlFor="collection-item-search">Search for item</label>
+                  <label htmlFor="collection-item-search">
+                    Search for item
+                  </label>
                   <Form.Input
                     data-testid="collection-item-search-input"
                     id="collection-item-search"
@@ -729,7 +729,9 @@ export default class Collections extends Component {
                 </Form.Field>
                 {itemSearchResults.length > 0 && (
                   <Form.Field>
-                    <label htmlFor="collection-item-results">Search Results</label>
+                    <label htmlFor="collection-item-results">
+                      Search Results
+                    </label>
                     <Dropdown
                       data-testid="collection-item-results"
                       fluid

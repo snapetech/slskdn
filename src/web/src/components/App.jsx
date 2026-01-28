@@ -1,18 +1,5 @@
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
-import React, { Component } from 'react';
-import { Link, Redirect, Route, Switch } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import {
-  Button,
-  Header,
-  Icon,
-  Loader,
-  Menu,
-  Modal,
-  Segment,
-  Sidebar,
-} from 'semantic-ui-react';
 import { createApplicationHubConnection } from '../lib/hubFactory';
 import * as relayAPI from '../lib/relay';
 import { connect, disconnect } from '../lib/server';
@@ -27,19 +14,32 @@ import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
-import ErrorSegment from './Shared/ErrorSegment';
-import Footer from './Shared/Footer';
 import {
   isStatusBarVisible,
   SlskdnStatusBar,
   toggleStatusBarVisibility,
 } from './Shared';
+import ErrorSegment from './Shared/ErrorSegment';
+import Footer from './Shared/Footer';
 import ShareGroups from './ShareGroups/ShareGroups';
 import SharedWithMe from './Shares/SharedWithMe';
 import System from './System/System';
 import Transfers from './Transfers/Transfers';
 import Users from './Users/Users';
 import Wishlist from './Wishlist/Wishlist';
+import React, { Component } from 'react';
+import { Link, Redirect, Route, Switch } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import {
+  Button,
+  Header,
+  Icon,
+  Loader,
+  Menu,
+  Modal,
+  Segment,
+  Sidebar,
+} from 'semantic-ui-react';
 
 const initialState = {
   applicationOptions: {},

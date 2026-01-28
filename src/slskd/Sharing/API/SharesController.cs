@@ -42,8 +42,9 @@ public class SharesController : ControllerBase
     private readonly ISoulseekClient? _soulseekClient;
     private readonly slskd.Shares.IShareService? _shareService;
     private readonly slskd.Transfers.Downloads.IDownloadService? _downloadService;
+    private readonly ShareGrantAnnouncementService? _announcementService;
 
-    public SharesController(ISharingService sharing, IShareTokenService tokens, ILogger<SharesController> log, IOptionsMonitor<slskd.Options> options, IServiceProvider serviceProvider, ISoulseekClient? soulseekClient = null, slskd.Shares.IShareService? shareService = null, slskd.Transfers.Downloads.IDownloadService? downloadService = null)
+    public SharesController(ISharingService sharing, IShareTokenService tokens, ILogger<SharesController> log, IOptionsMonitor<slskd.Options> options, IServiceProvider serviceProvider, ISoulseekClient? soulseekClient = null, slskd.Shares.IShareService? shareService = null, slskd.Transfers.Downloads.IDownloadService? downloadService = null, ShareGrantAnnouncementService? announcementService = null)
     {
         _sharing = sharing;
         _tokens = tokens;
@@ -53,6 +54,7 @@ public class SharesController : ControllerBase
         _soulseekClient = soulseekClient;
         _shareService = shareService;
         _downloadService = downloadService;
+        _announcementService = announcementService;
     }
 
     private async Task<string> GetCurrentUserIdAsync(CancellationToken ct = default)
@@ -298,6 +300,25 @@ public class SharesController : ControllerBase
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         await _sharing.DeleteShareGrantAsync(id, ct);
         return NoContent();
+    }
+
+    /// <summary>Ingest a share-grant announcement directly (E2E only).</summary>
+    [HttpPost("announce")]
+    [Authorize(Policy = AuthPolicy.Any)]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> Announce([FromBody] ShareGrantAnnouncement req, CancellationToken ct)
+    {
+        if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SHARE_ANNOUNCE") != "1")
+        {
+            return NotFound();
+        }
+
+        if (!CollectionsEnabled) return NotFound();
+        if (_announcementService == null) return StatusCode(500, "Announcement service not available.");
+
+        await _announcementService.IngestAsync(req, ct).ConfigureAwait(false);
+        return Ok();
     }
 
     /// <summary>Create a share token for this grant. Caller must own the collection. Requires Sharing:TokenSigningKey.</summary>

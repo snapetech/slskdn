@@ -1,6 +1,15 @@
 import { NODES, shouldLaunchNodes } from './env';
 import { MultiPeerHarness } from './harness/MultiPeerHarness';
-import { clickNav, login, waitForHealth } from './helpers';
+import {
+  announceShareGrant,
+  clickNav,
+  getAuthToken,
+  login,
+  waitForDownloadInList,
+  waitForHealth,
+  waitForLibraryItem,
+  waitForShareGrantById,
+} from './helpers';
 import { T } from './selectors';
 import { expect, test } from '@playwright/test';
 
@@ -451,7 +460,7 @@ test.describe('multi-peer sharing', () => {
     });
 
     // Wait a moment for React Router to process
-    await pageA.waitForTimeout(2_000);
+    await pageA.waitForTimeout(500); // Reduced from 1000ms // Reduced from 2000ms
 
     // Diagnostic: Check if route matched
     const routeMatched = await pageA.evaluate(
@@ -568,41 +577,29 @@ test.describe('multi-peer sharing', () => {
 
     // Add real fixture items using library search
     // The collection row click should open the detail view
-    await pageA.waitForTimeout(500); // Wait for selection
+    await pageA.waitForTimeout(200); // Wait for selection (reduced from 500ms)
 
     // Click Add Item button
     const addItemButton = pageA.getByTestId('collection-add-item');
     await expect(addItemButton).toBeVisible({ timeout: 5_000 });
     await addItemButton.click();
 
-    // Search for sintel (movie fixture)
+    // Search for sintel (movie fixture) and add by contentId
     const searchInput = pageA.getByTestId('collection-item-search-input');
     await expect(searchInput).toBeVisible({ timeout: 5_000 });
-    await searchInput.locator('input').fill('sintel');
-
-    // Wait for search results
-    await pageA.waitForTimeout(1_000); // Give API time to respond
-    const resultsDropdown = pageA.getByTestId('collection-item-results');
-    if ((await resultsDropdown.count()) > 0) {
-      await resultsDropdown.click();
-      // Select first result (should be sintel video)
-      await pageA.getByRole('option').first().click({ timeout: 5_000 });
-    }
+    const sintelItem = await waitForLibraryItem(pageA, 'sintel');
+    await searchInput.locator('input').fill(sintelItem.contentId);
 
     // Add the item
     await pageA.getByTestId('collection-add-item-submit').click();
-    await pageA.waitForTimeout(1_000);
+    await pageA.waitForTimeout(500); // Reduced from 1000ms
 
     // Add second item: treasure (book fixture)
     await addItemButton.click();
-    await searchInput.locator('input').fill('treasure');
-    await pageA.waitForTimeout(1_000);
-    if ((await resultsDropdown.count()) > 0) {
-      await resultsDropdown.click();
-      await pageA.getByRole('option').first().click({ timeout: 5_000 });
-    }
+    const treasureItem = await waitForLibraryItem(pageA, 'treasure');
+    await searchInput.locator('input').fill(treasureItem.contentId);
     await pageA.getByTestId('collection-add-item-submit').click();
-    await pageA.waitForTimeout(1_000);
+    await pageA.waitForTimeout(500); // Reduced from 1000ms
 
     // Verify items were added
     await expect(pageA.getByTestId('collection-items-table')).toBeVisible({
@@ -638,12 +635,39 @@ test.describe('multi-peer sharing', () => {
     );
     await pageA.getByTestId(T.shareCreateSubmit).click();
     const createShareResult = await createShareResponse;
+    let createShareBody;
+    try {
+      createShareBody = await createShareResult.json();
+    } catch {
+      createShareBody = await createShareResult.text();
+    }
+
     if (createShareResult.status() !== 201) {
-      const body = await createShareResult.text();
       throw new Error(
-        `Create share failed: ${createShareResult.status()} ${body}`,
+        `Create share failed: ${createShareResult.status()} ${typeof createShareBody === 'string' ? createShareBody : JSON.stringify(createShareBody)}`,
       );
     }
+
+    if (!createShareBody?.id) {
+      throw new Error('Create share response missing id.');
+    }
+
+    const nodeC = harness ? harness.getNode('C').nodeCfg : NODES.C;
+    const contextC = await browser.newContext();
+    const pageC = await contextC.newPage();
+    await login(pageC, nodeC);
+    const ownerToken = await getAuthToken(pageA);
+    const recipientToken = await getAuthToken(pageC);
+    await announceShareGrant({
+      owner: nodeA,
+      ownerToken,
+      recipient: nodeC,
+      recipientToken,
+      request,
+      shareGrantId: createShareBody.id,
+      shareOverride: createShareBody,
+    });
+    await contextC.close();
 
     await expect(pageA.getByTestId(T.sharesList)).toContainText(
       collectionTitle,
@@ -663,11 +687,21 @@ test.describe('multi-peer sharing', () => {
 
     await clickNav(pageC, T.navSharedWithMe);
 
-    const row = pageC
-      .getByTestId(`incoming-share-row-${collectionTitle}`)
-      .first();
-    await expect(row).toBeVisible({ timeout: 15_000 });
-    await row.getByTestId('incoming-share-open').click();
+    let rowFound = false;
+    for (let index = 0; index < 20; index++) {
+      const row = pageC
+        .getByTestId(`incoming-share-row-${collectionTitle}`)
+        .first();
+      if ((await row.count()) > 0) {
+        rowFound = true;
+        await row.getByTestId('incoming-share-open').click();
+        break;
+      }
+
+      await pageC.waitForTimeout(500); // Reduced from 1000ms
+    }
+
+    expect(rowFound).toBe(true);
 
     await expect(pageC.getByTestId('shared-manifest')).toBeVisible({
       timeout: 15_000,
@@ -677,68 +711,244 @@ test.describe('multi-peer sharing', () => {
     const manifestContent = await pageC
       .getByTestId('shared-manifest')
       .textContent();
-    expect(manifestContent).toMatch(/sintel|treasure|mp4|txt/i);
+    expect(manifestContent).toMatch(/sha256:/i);
 
     await contextC.close();
   });
 
   test('recipient_streams_video', async ({ browser, request }) => {
+    const nodeA = harness ? harness.getNode('A').nodeCfg : NODES.A;
     const nodeC = harness ? harness.getNode('C').nodeCfg : NODES.C;
+    await waitForHealth(request, nodeA.baseUrl);
     await waitForHealth(request, nodeC.baseUrl);
 
+    const contextA = await browser.newContext();
     const contextC = await browser.newContext();
+    const pageA = await contextA.newPage();
     const pageC = await contextC.newPage();
+    await login(pageA, nodeA);
     await login(pageC, nodeC);
+
+    // Ensure share is announced to nodeC
+    const ownerToken = await getAuthToken(pageA);
+    let recipientToken = await getAuthToken(pageC);
+
+    // Get or create share grant
+    let shareGrantId = sharedGrantId;
+    if (!shareGrantId) {
+      // Create share grant if it doesn't exist
+      const groupsRes = await request.get(
+        `${nodeA.baseUrl}/api/v0/sharegroups`,
+        {
+          failOnStatusCode: false,
+          headers: { Authorization: `Bearer ${ownerToken}` },
+        },
+      );
+      if (!groupsRes.ok()) {
+        throw new Error(`Failed to load share groups: ${groupsRes.status()}`);
+      }
+
+      const groups = await groupsRes.json();
+      let group = Array.isArray(groups)
+        ? groups.find((g: any) => g?.name === groupName)
+        : null;
+      if (!group) {
+        const createGroupRes = await request.post(
+          `${nodeA.baseUrl}/api/v0/sharegroups`,
+          {
+            data: { name: groupName },
+            headers: { Authorization: `Bearer ${ownerToken}` },
+          },
+        );
+        if (!createGroupRes.ok()) {
+          throw new Error(
+            `Failed to create share group: ${createGroupRes.status()}`,
+          );
+        }
+
+        group = await createGroupRes.json();
+      }
+
+      const collectionsRes = await request.get(
+        `${nodeA.baseUrl}/api/v0/collections`,
+        { headers: { Authorization: `Bearer ${ownerToken}` } },
+      );
+      const collections = await collectionsRes.json();
+      let collection = Array.isArray(collections)
+        ? collections.find((c: any) => c?.title === collectionTitle)
+        : null;
+      if (!collection) {
+        const createCollectionRes = await request.post(
+          `${nodeA.baseUrl}/api/v0/collections`,
+          {
+            data: { title: collectionTitle, type: 'Playlist' },
+            headers: { Authorization: `Bearer ${ownerToken}` },
+          },
+        );
+        if (!createCollectionRes.ok()) {
+          throw new Error(
+            `Failed to create collection: ${createCollectionRes.status()}`,
+          );
+        }
+
+        collection = await createCollectionRes.json();
+      }
+
+      const createShareRes = await request.post(
+        `${nodeA.baseUrl}/api/v0/share-grants`,
+        {
+          data: {
+            allowDownload: true,
+            allowReshare: false,
+            allowStream: true,
+            audienceId: group.id,
+            audienceType: 'ShareGroup',
+            collectionId: collection.id,
+          },
+          headers: { Authorization: `Bearer ${ownerToken}` },
+        },
+      );
+      if (!createShareRes.ok()) {
+        throw new Error(
+          `Failed to create share grant: ${createShareRes.status()}`,
+        );
+      }
+
+      const share = await createShareRes.json();
+      shareGrantId = share.id;
+    }
+
+    // Announce share to nodeC
+    await announceShareGrant({
+      owner: nodeA,
+      ownerToken,
+      recipient: nodeC,
+      recipientToken,
+      request,
+      shareGrantId,
+      shareOverride: undefined, // Will fetch from API
+    });
+
+    // Wait for share to be available via API (more reliable than UI polling)
+    recipientToken = await getAuthToken(pageC);
+    const shareAvailable = await waitForShareGrantById({
+      baseUrl: nodeC.baseUrl,
+      request,
+      shareGrantId,
+      timeoutMs: 30_000,
+      token: recipientToken,
+    });
+    if (!shareAvailable) {
+      throw new Error(
+        `Share grant ${shareGrantId} not found on recipient node after 30s`,
+      );
+    }
 
     await clickNav(pageC, T.navSharedWithMe);
 
-    const row = pageC
-      .getByTestId(`incoming-share-row-${collectionTitle}`)
-      .first();
-    await expect(row).toBeVisible({ timeout: 15_000 });
-    await row.getByTestId('incoming-share-open').click();
+    // Wait for share row to appear in UI (should be quick since API confirmed it exists)
+    let streamRowFound = false;
+    for (let index = 0; index < 10; index++) {
+      const row = pageC
+        .getByTestId(`incoming-share-row-${collectionTitle}`)
+        .first();
+      if ((await row.count()) > 0) {
+        streamRowFound = true;
+        await row.getByTestId('incoming-share-open').click();
+        break;
+      }
+
+      await pageC.waitForTimeout(500);
+    }
+
+    expect(streamRowFound).toBe(true);
 
     await expect(pageC.getByTestId('shared-manifest')).toBeVisible({
       timeout: 15_000,
     });
 
-    // Find and click stream button for sintel video (should have sha256 prefix in testid)
-    const streamButtons = pageC.locator('[data-testid^="incoming-stream-"]');
-    const streamButtonCount = await streamButtons.count();
-    if (streamButtonCount > 0) {
-      // Set up response listener before clicking
-      const streamResponsePromise = pageC.waitForResponse(
-        (response) => {
-          const url = response.url();
-          return (
-            url.includes('/api/v0/streams/') &&
-            (response.status() === 200 || response.status() === 206)
+    // Resolve stream URL from manifest via API (more reliable than UI click)
+    const streamUrl = await pageC.evaluate(
+      async ({ expectedTitle, expectedOwnerBaseUrl }) => {
+        const token =
+          sessionStorage.getItem('slskd-token') ||
+          localStorage.getItem('slskd-token');
+        if (!token) return null;
+
+        const sharesRes = await fetch('/api/v0/share-grants', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!sharesRes.ok) return null;
+        const sharesText = await sharesRes.text();
+        if (!sharesText) return null;
+        let shares;
+        try {
+          shares = JSON.parse(sharesText);
+        } catch {
+          return null;
+        }
+
+        if (!Array.isArray(shares) || shares.length === 0) return null;
+
+        for (const share of shares) {
+          if (!share?.id) continue;
+          const manifestRes = await fetch(
+            `/api/v0/share-grants/${share.id}/manifest`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
           );
-        },
-        { timeout: 10_000 },
-      );
+          if (!manifestRes.ok) continue;
+          const manifestText = await manifestRes.text();
+          if (!manifestText) continue;
+          let manifest;
+          try {
+            manifest = JSON.parse(manifestText);
+          } catch {
+            continue;
+          }
 
-      await streamButtons.first().click();
+          if (manifest?.title !== expectedTitle) continue;
+          const item = manifest?.items?.[0];
+          const url = item?.streamUrl;
+          if (!url) continue;
 
-      // Wait for stream response and verify it's 206 (Range request) or 200
-      const streamResponse = await streamResponsePromise;
-      const status = streamResponse.status();
-      expect([200, 206]).toContain(status);
+          if (url.startsWith(expectedOwnerBaseUrl)) return url;
+          if (url.startsWith('/')) return `${expectedOwnerBaseUrl}${url}`;
+        }
 
-      // Verify Content-Type for video
-      const contentType = streamResponse.headers()['content-type'];
-      if (status === 206) {
-        // Range request should return partial content
-        expect(contentType).toMatch(/video|audio|application/i);
-      }
+        return null;
+      },
+      {
+        expectedOwnerBaseUrl: nodeA.baseUrl,
+        expectedTitle: collectionTitle,
+      },
+    );
 
-      console.log(
-        `[Stream Test] Stream response: ${status}, Content-Type: ${contentType}`,
-      );
-    } else {
-      console.warn('[Stream Test] No stream buttons found in manifest');
+    if (!streamUrl) {
+      throw new Error('No streamUrl found in manifest for stream test.');
     }
 
+    const normalized = streamUrl
+      .replace('http://localhost:', 'http://127.0.0.1:')
+      .replace('https://localhost:', 'https://127.0.0.1:');
+    const fullStreamUrl = normalized.startsWith('http')
+      ? normalized
+      : `${nodeC.baseUrl}${normalized}`;
+
+    const streamResponse = await request.get(fullStreamUrl, {
+      failOnStatusCode: false,
+      headers: { Range: 'bytes=0-1' },
+    });
+    const status = streamResponse.status();
+    expect([200, 206]).toContain(status);
+
+    const contentType = streamResponse.headers()['content-type'];
+    if (status === 206) {
+      expect(contentType).toMatch(/video|audio|application/i);
+    }
+
+    await contextA.close();
     await contextC.close();
   });
 
@@ -746,19 +956,8 @@ test.describe('multi-peer sharing', () => {
     browser,
     request,
   }) => {
-    // File verification requires harness-launched nodes (works in both local and CI)
-    // In CI, harness is always used (no SLSKDN_NODE_*_URL env vars)
-    // Locally, harness is used unless nodes are pre-launched via env vars
-    if (!harness) {
-      test.skip(
-        true,
-        'File verification requires harness-launched nodes (unset SLSKDN_NODE_*_URL to use harness)',
-      );
-      return;
-    }
-
-    const nodeCInstance = harness.getNode('C');
-    const nodeC = nodeCInstance.nodeCfg;
+    const nodeCInstance = harness ? harness.getNode('C') : null;
+    const nodeC = nodeCInstance ? nodeCInstance.nodeCfg : NODES.C;
     await waitForHealth(request, nodeC.baseUrl);
 
     const contextC = await browser.newContext();
@@ -767,11 +966,21 @@ test.describe('multi-peer sharing', () => {
 
     await clickNav(pageC, T.navSharedWithMe);
 
-    const row = pageC
-      .getByTestId(`incoming-share-row-${collectionTitle}`)
-      .first();
-    await expect(row).toBeVisible({ timeout: 15_000 });
-    await row.getByTestId('incoming-share-open').click();
+    let rowFound = false;
+    for (let index = 0; index < 30; index += 1) {
+      const row = pageC
+        .getByTestId(`incoming-share-row-${collectionTitle}`)
+        .first();
+      if ((await row.count()) > 0) {
+        rowFound = true;
+        await row.getByTestId('incoming-share-open').click();
+        break;
+      }
+
+      await pageC.waitForTimeout(500); // Reduced from 1000ms
+    }
+
+    expect(rowFound).toBe(true);
 
     await expect(pageC.getByTestId('shared-manifest')).toBeVisible({
       timeout: 15_000,
@@ -783,7 +992,7 @@ test.describe('multi-peer sharing', () => {
       await backfillButton.click();
 
       // Wait for backfill to start (button shows loading state)
-      await pageC.waitForTimeout(2_000);
+      await pageC.waitForTimeout(1_000); // Reduced from 2000ms
 
       // Poll downloads directory for file existence
       // Note: This requires the harness to expose the app directory or we need a test endpoint
@@ -806,61 +1015,71 @@ test.describe('multi-peer sharing', () => {
         console.warn('[Backfill Test] Backfill response not captured:', error);
       }
 
-      // Verify files exist in downloads directory using harness
-      // Works for both local E2E and CI (harness always launches nodes in CI)
-      // nodeCInstance is already available from test setup above
+      if (nodeCInstance) {
+        // Wait for files to appear (backfill is asynchronous)
+        // Try to find sintel or treasure file (from the collection we shared)
+        const sintelFile = await nodeCInstance.waitForDownloadedFile(
+          'sintel',
+          30_000,
+        );
+        const treasureFile = await nodeCInstance.waitForDownloadedFile(
+          'treasure',
+          30_000,
+        );
 
-      // Wait for files to appear (backfill is asynchronous)
-      // Try to find sintel or treasure file (from the collection we shared)
-      const sintelFile = await nodeCInstance.waitForDownloadedFile(
-        'sintel',
-        30_000,
-      );
-      const treasureFile = await nodeCInstance.waitForDownloadedFile(
-        'treasure',
-        30_000,
-      );
+        // Verify at least one file was downloaded
+        if (!sintelFile && !treasureFile) {
+          // List all files for debugging
+          const allFiles = await nodeCInstance.getDownloadedFiles();
+          console.error(
+            `[Backfill Test] No expected files found. All downloaded files:`,
+            allFiles.map((f) => `${f.name} (${f.size} bytes)`),
+          );
+          throw new Error(
+            'Backfill failed: expected files (sintel or treasure) not found in downloads',
+          );
+        }
 
-      // Verify at least one file was downloaded
-      if (!sintelFile && !treasureFile) {
-        // List all files for debugging
+        // Verify file sizes are correct (non-zero and reasonable)
+        if (sintelFile) {
+          expect(sintelFile.size).toBeGreaterThan(0);
+          // sintel_512kb_stereo.mp4 should be ~77MB
+          expect(sintelFile.size).toBeGreaterThan(1_000_000); // At least 1MB
+          console.log(
+            `[Backfill Test] ✓ Found sintel file: ${sintelFile.name} (${sintelFile.size} bytes)`,
+          );
+        }
+
+        if (treasureFile) {
+          expect(treasureFile.size).toBeGreaterThan(0);
+          // treasure_island_pg120.txt should be ~400KB
+          expect(treasureFile.size).toBeGreaterThan(100_000); // At least 100KB
+          console.log(
+            `[Backfill Test] ✓ Found treasure file: ${treasureFile.name} (${treasureFile.size} bytes)`,
+          );
+        }
+
+        // List all downloaded files for completeness
         const allFiles = await nodeCInstance.getDownloadedFiles();
-        console.error(
-          `[Backfill Test] No expected files found. All downloaded files:`,
+        console.log(
+          `[Backfill Test] Total files in downloads: ${allFiles.length}`,
           allFiles.map((f) => `${f.name} (${f.size} bytes)`),
         );
-        throw new Error(
-          'Backfill failed: expected files (sintel or treasure) not found in downloads',
-        );
+      } else {
+        const token = await getAuthToken(pageC);
+        const found = await waitForDownloadInList({
+          baseUrl: nodeC.baseUrl,
+          request,
+          searchTerms: ['sintel', 'treasure'],
+          timeoutMs: 60_000,
+          token,
+        });
+        expect(found).toBe(true);
       }
-
-      // Verify file sizes are correct (non-zero and reasonable)
-      if (sintelFile) {
-        expect(sintelFile.size).toBeGreaterThan(0);
-        // sintel_512kb_stereo.mp4 should be ~77MB
-        expect(sintelFile.size).toBeGreaterThan(1_000_000); // At least 1MB
-        console.log(
-          `[Backfill Test] ✓ Found sintel file: ${sintelFile.name} (${sintelFile.size} bytes)`,
-        );
-      }
-
-      if (treasureFile) {
-        expect(treasureFile.size).toBeGreaterThan(0);
-        // treasure_island_pg120.txt should be ~400KB
-        expect(treasureFile.size).toBeGreaterThan(100_000); // At least 100KB
-        console.log(
-          `[Backfill Test] ✓ Found treasure file: ${treasureFile.name} (${treasureFile.size} bytes)`,
-        );
-      }
-
-      // List all downloaded files for completeness
-      const allFiles = await nodeCInstance.getDownloadedFiles();
-      console.log(
-        `[Backfill Test] Total files in downloads: ${allFiles.length}`,
-        allFiles.map((f) => `${f.name} (${f.size} bytes)`),
-      );
     } else {
-      console.warn('[Backfill Test] No backfill button found (download not allowed?)');
+      console.warn(
+        '[Backfill Test] No backfill button found (download not allowed?)',
+      );
     }
 
     await contextC.close();

@@ -174,6 +174,61 @@ new Migration { Version = 17, Name = "Traffic accounting", ... },
 
 **Why This Keeps Happening**: Migrations were appended without re-checking version uniqueness, and the list order wasn’t kept strictly ascending.
 
+---
+
+### 5. Library Items Empty When Share Cache Is Cold
+
+**The Bug**: `/api/v0/library/items` returned no results when the share cache was empty or not ready, breaking E2E flows that need real content IDs.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `src/web/e2e/policy.spec.ts`
+- `src/web/e2e/streaming.spec.ts`
+
+**Wrong**:
+```csharp
+var directories = await shareService.BrowseAsync();
+var allFiles = directories.SelectMany(d => d.Files ?? Enumerable.Empty<File>());
+// allFiles can be empty if the share cache is cold
+```
+
+**Correct**:
+```csharp
+var directories = await shareService.BrowseAsync();
+var allFiles = directories.SelectMany(d => d.Files ?? Enumerable.Empty<File>());
+if (!allFiles.Any())
+{
+    // Fallback: scan configured share directories directly
+    var items = await SearchShareDirectoriesAsync(query, kinds, limit, cancellationToken);
+    return Ok(new { items });
+}
+```
+
+**Why This Keeps Happening**: The library search assumes the share cache is always populated, but E2E nodes can query before scans finish or when caches are empty.
+
+---
+
+### 6. Library Item ContentIds Not Streamable
+
+**The Bug**: Library item searches returned `contentId` values that were not registered in the share repository, so `/api/v0/streams/{contentId}` returned 404 even though the item existed on disk.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `src/slskd/Streaming/ContentLocator.cs`
+
+**Wrong**:
+```csharp
+// contentId returned but never registered with share repository
+return new LibraryItemResponse { ContentId = contentId, /* ... */ };
+```
+
+**Correct**:
+```csharp
+repo.UpsertContentItem(contentId, "GenericFile", null, maskedFilename, true, string.Empty, checkedAt);
+```
+
+**Why This Keeps Happening**: Content streaming resolves via the share repository’s `content_items` table, so ad-hoc content IDs must be registered with a masked filename to resolve to a file path.
+
 ## ⚠️ HIGH: Common Mistakes
 
 ### 4. Copyright Headers - Wrong Company Attribution
@@ -1743,6 +1798,71 @@ var ownerEndpoint = $"{scheme}://127.0.0.1:{web.Port}"; // Explicit IPv4
 ---
 
 #### E2E-11: Backfill requires OwnerEndpoint for HTTP downloads (cross-node)
+
+#### E2E-12: SqliteShareRepository Keepalive Causes Process Exit During E2E Tests
+
+**The Bug**: The `Keepalive()` method in `SqliteShareRepository` calls `Environment.Exit(1)` if the database check fails, causing nodes to exit unexpectedly during E2E tests. The original check used `pragma_table_info("filenames")` which may fail for FTS5 virtual tables or during transient database locks.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs` - `Keepalive()` method
+
+**Wrong**:
+```csharp
+private void Keepalive()
+{
+    using var cmd = new SqliteCommand("SELECT COUNT(*) FROM pragma_table_info(\"filenames\");", KeepaliveConnection);
+    var reader = cmd.ExecuteReader();
+    if (!reader.Read() || reader.GetInt32(0) != 1)
+    {
+        var msg = "The internal share database has been corrupted...";
+        Log.Fatal(msg);
+        Environment.Exit(1);  // 💀 Kills process immediately, no recovery
+        throw new DataMisalignedException(msg);
+    }
+}
+```
+
+**Correct**:
+```csharp
+private void Keepalive()
+{
+    try
+    {
+        // Check if table exists first
+        using var cmd = new SqliteCommand(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='filenames';",
+            KeepaliveConnection);
+        var reader = cmd.ExecuteReader();
+        if (!reader.Read() || reader.GetInt32(0) != 1)
+        {
+            var msg = "The internal share database has been corrupted...";
+            Log.Fatal(msg);
+            Environment.Exit(1);
+            throw new DataMisalignedException(msg);
+        }
+        // Verify table is queryable (handles FTS5 virtual tables correctly)
+        using var verifyCmd = new SqliteCommand("SELECT COUNT(*) FROM filenames LIMIT 1;", KeepaliveConnection);
+        verifyCmd.ExecuteScalar();
+    }
+    catch (SqliteException ex) when (ex.SqliteErrorCode == 1)
+    {
+        // Table doesn't exist or is corrupted - exit
+        var msg = "The internal share database has been corrupted...";
+        Log.Fatal(ex, msg);
+        Environment.Exit(1);
+        throw new DataMisalignedException(msg, ex);
+    }
+    catch (Exception ex)
+    {
+        // Log but don't exit on transient errors (e.g., database locked during backup)
+        Log.Warning(ex, "Keepalive check encountered an error (may be transient): {Message}", ex.Message);
+    }
+}
+```
+
+**Why This Keeps Happening**: The keepalive check runs every 1 second and calls `Environment.Exit(1)` on any failure, including transient database locks or race conditions during startup. The original `pragma_table_info` check may not work correctly for FTS5 virtual tables, and there's no handling for transient errors like database locks during backups or concurrent access.
+
+**Impact**: Causes 56+ ProcessExit events during E2E test runs, leading to `ERR_CONNECTION_REFUSED` errors and test failures.
 
 **The Bug**: Backfill endpoint requires either `OwnerEndpoint` + `ShareToken` (for HTTP downloads) or owner username + `IDownloadService` (for Soulseek downloads). If neither is available, backfill fails with a generic error.
 

@@ -335,10 +335,11 @@ export default class SharedWithMe extends Component {
                     <Table.Body>
                       {manifest.items.map((item, index) => {
                         // Extract sha256 prefix from contentId (format: "sha256:...")
-                        const sha256Prefix =
-                          item.contentId?.startsWith('sha256:')
-                            ? item.contentId.slice(7, 15) // First 8 chars of hash
-                            : item.contentId?.slice(0, 8) || `item-${index}`;
+                        const sha256Prefix = item.contentId?.startsWith(
+                          'sha256:',
+                        )
+                          ? item.contentId.slice(7, 15) // First 8 chars of hash
+                          : item.contentId?.slice(0, 8) || `item-${index}`;
                         return (
                           <Table.Row
                             data-testid={`incoming-item-row-${sha256Prefix}`}
@@ -351,13 +352,17 @@ export default class SharedWithMe extends Component {
                                   'Unknown'}
                               </code>
                             </Table.Cell>
-                            <Table.Cell>{item.mediaKind || 'Unknown'}</Table.Cell>
+                            <Table.Cell>
+                              {item.mediaKind || 'Unknown'}
+                            </Table.Cell>
                             <Table.Cell>
                               {item.streamUrl && (
                                 <Button
                                   data-testid={`incoming-stream-${sha256Prefix}`}
                                   onClick={() => {
-                                    const url = item.streamUrl.startsWith('http')
+                                    const url = item.streamUrl.startsWith(
+                                      'http',
+                                    )
                                       ? item.streamUrl
                                       : `${window.location.origin}${item.streamUrl}`;
                                     window.open(url, '_blank');

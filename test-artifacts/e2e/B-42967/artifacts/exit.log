@@ -1,0 +1,444 @@
+Exit code: 1
+Signal: none
+
+STDOUT:
+/home/keith/Documents/code/slskdn/src/slskd/slskd.csproj : warning NU1903: Package 'Microsoft.Build.Utilities.Core' 17.8.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-w3q9-fxm7-j8fq
+/home/keith/Documents/code/slskdn/src/slskd/slskd.csproj : warning NU1903: Package 'Microsoft.Build.Utilities.Core' 17.8.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-w3q9-fxm7-j8fq
+[Config] Loading configuration from "/home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/config/slskd.yml"
+[Config] Configuration providers added, YAML file: "/home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/config/slskd.yml"
+[Config] After binding OptionsAtStartup.Security.Enabled = True, Profile = "Standard"
+[Config] Raw config sections - security.Exists=False, slskd:security.Exists=True
+[Config] Raw slskd:security section enabled value: "True"
+
+
+                    ▄▄▄▄     ▄▄▄▄     ▄▄▄▄
+              ▄▄▄▄▄▄█  █▄▄▄▄▄█  █▄▄▄▄▄█  █
+              █__ --█  █__ --█    ◄█  -  █
+              █▄▄▄▄▄█▄▄█▄▄▄▄▄█▄▄█▄▄█▄▄▄▄▄█
+╒════════════════════════════════════════════════════════╕
+│           GNU AFFERO GENERAL PUBLIC LICENSE            │
+│                   https://slskd.org                    │
+│                                                        │
+│                     0.0.0 (0.0.0)                      │
+│■■■■■■■■■■■■■■■■■■■■► DEVELOPMENT ◄■■■■■■■■■■■■■■■■■■■■■│
+└────────────────────────────────────────────────────────┘
+[21:19:31 INF] Version: 0.0.0 (0.0.0)
+[21:19:31 WRN] This is a Development build; YMMV
+[21:19:31 INF] System: .NET 8.0.22, Unix 6.12.67.1, 64 bit, 32 processors
+[21:19:31 INF] Process ID: 772966 (64 bit)
+[21:19:31 INF] Invocation ID: 5d163a60-21da-45ef-95ea-f9aba55807b9
+[21:19:31 INF] Instance Name: default
+[21:19:31 INF] Configuring application...
+[21:19:31 INF] Using application directory /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967
+[21:19:31 INF] Using configuration file /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/config/slskd.yml
+[21:19:31 INF] Storing application data in /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/data
+[21:19:31 INF] [Config] Loading configuration from /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/config/slskd.yml
+[21:19:31 INF] [Config] Configuration providers added, YAML file: /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/config/slskd.yml
+[21:19:31 INF] [MAIN] About to configure ASP.NET services...
+[21:19:31 INF] [ASP] Starting ConfigureAspDotNetServices...
+[21:19:31 INF] [DI] Starting ConfigureDependencyInjectionContainer...
+[21:19:32 INF] [DI] SLSKDN_E2E_SKIP_BRIDGE_PROXY=1; skipping BridgeProxyServer
+[21:19:32 INF] Pod database created at /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/pods.db - ensure file permissions are secure (chmod 600)
+[21:19:32 INF] [DI] Configuring Realm services...
+[21:19:32 INF] [DI] Configuring Social Federation services...
+[21:19:32 INF] [DI] Configuring Governance and Gossip services...
+[21:19:32 INF] [DI] Configuring MeshCore services...
+[21:19:32 INF] [DI] About to call AddSlskdnSecurity...
+[21:19:32 INF] [AddSlskdnSecurity] STEP 1: Checking configuration sections...
+[21:19:32 INF] [AddSlskdnSecurity] STEP 1a: slskd:security.Exists() = True, enabled = True
+[21:19:32 INF] [AddSlskdnSecurity] STEP 1b: Security.Exists() = False, enabled = N/A
+[21:19:32 INF] [AddSlskdnSecurity] STEP 1c: security.Exists() = False, enabled = N/A
+[21:19:32 INF] [AddSlskdnSecurity] STEP 2: Using slskd:security section
+[21:19:32 INF] [AddSlskdnSecurity] STEP 3: Configuring SecurityOptions from section...
+[21:19:32 INF] [AddSlskdnSecurity] STEP 4: Binding slskd section to Options...
+[21:19:32 INF] [AddSlskdnSecurity] STEP 4a: boundOptions.Security is null: False
+[21:19:32 INF] [AddSlskdnSecurity] STEP 4b: boundOptions.Security.Enabled = True, Profile = Standard
+[21:19:32 INF] [AddSlskdnSecurity] STEP 5: Getting SecurityOptions from section...
+[21:19:32 INF] [AddSlskdnSecurity] STEP 5a: sectionToUse.Get result: Enabled = True, Profile = Standard
+[21:19:32 INF] [AddSlskdnSecurity] STEP 6: Final options selected - Enabled = True, Profile = Standard (source: boundOptions.Security)
+[21:19:32 INF] [DI] AddSlskdnSecurity completed
+[21:19:32 INF] [MAIN] Services configured, building DI container...
+[21:19:32 INF] Building DI container...
+[21:19:32 INF] [DI] About to call builder.Build() - this will construct all singleton services...
+[21:19:32 INF] [ConfigProbe] slskd:web:port=42967 slskd:slskd:web:port=null using=42967
+[21:19:32 INF] [Kestrel] Configuring HTTP listener at http://0.0.0.0:42967/ (from config: True)
+[21:19:32 INF] [Kestrel] HTTP listener configured
+[21:19:32 INF] DI container built successfully!
+[21:19:32 INF] Databases are up to date!
+[21:19:32 INF] [DI] Forcing construction of ScriptService, WebhookService, and TrafficObserverIntegrationService...
+[21:19:32 INF] Set default script executable to '/bin/bash'
+[21:19:32 INF] [DI] ScriptService, WebhookService, and TrafficObserverIntegrationService constructed
+[21:19:32 INF] [DI] About to configure ASP.NET pipeline...
+[21:19:32 INF] [Pipeline] Starting ConfigureAspDotNetPipeline...
+[21:19:32 INF] [Pipeline] About to call UseSlskdnSecurity (FIRST in pipeline)...
+[21:19:32 INF] [UseSlskdnSecurity] STEP 1: Checking configuration sections...
+[21:19:32 INF] [UseSlskdnSecurity] STEP 1a: slskd:security.Exists() = True, enabled = True
+[21:19:32 INF] [UseSlskdnSecurity] STEP 1b: Security.Exists() = False, enabled = N/A
+[21:19:32 INF] [UseSlskdnSecurity] STEP 1c: security.Exists() = False, enabled = N/A
+[21:19:32 INF] [UseSlskdnSecurity] STEP 2: Using slskd:security section
+[21:19:32 INF] [UseSlskdnSecurity] STEP 3: Getting SecurityOptions from section...
+[21:19:32 INF] [UseSlskdnSecurity] STEP 3a: sectionToUse.Get result: Enabled = True, Profile = Standard
+[21:19:32 INF] [UseSlskdnSecurity] Security is enabled (Enabled=True), REGISTERING middleware
+[21:19:32 INF] [UseSlskdnSecurity] Options: Enabled=True, Profile=Standard
+[21:19:32 INF] [UseSlskdnSecurity] About to call UseSecurityMiddleware...
+[21:19:32 INF] [UseSlskdnSecurity] Security middleware registered successfully
+[21:19:32 INF] [Pipeline] UseSlskdnSecurity completed
+[21:19:32 INF] Using base url /
+[21:19:32 INF] Publishing Swagger documentation to /swagger
+[21:19:32 INF] Serving static content from /home/keith/Documents/code/slskdn/src/slskd/bin/Debug/net8.0/wwwroot
+[21:19:32 INF] [SPA] Registered fallback to index.html for client-side routing (after file server)
+[21:19:32 INF] [DI] ASP.NET pipeline configured
+[21:19:32 INF] Configuration complete.  Starting application...
+[21:19:32 INF] [DI] Constructing ApplicationHostedServiceWrapper hosted service...
+[21:19:32 INF] [DI] About to resolve IApplication from DI...
+[21:19:32 INF] [DI] Factory function called to construct Application singleton...
+[21:19:32 INF] [DI] Resolving OptionsAtStartup...
+[21:19:32 INF] [DI] Resolving IOptionsMonitor<Options>...
+[21:19:32 INF] [DI] Resolving IManagedState<State>...
+[21:19:32 INF] [DI] Resolving ISoulseekClient...
+[21:19:32 INF] [DI] Resolving FileService...
+[21:19:32 INF] [DI] Resolving ConnectionWatchdog...
+[21:19:32 INF] [DI] Resolving ITransferService...
+[21:19:32 INF] [DI] Constructing TransferService...
+[21:19:32 INF] [DI] Constructing UploadService...
+[21:19:32 INF] [DI] Resolving FileService for UploadService...
+[21:19:32 INF] [DI] Resolving IUserService for UploadService...
+[21:19:32 INF] Blacklist disabled
+[21:19:32 INF] [DI] Resolving ISoulseekClient for UploadService...
+[21:19:32 INF] [DI] Resolving IOptionsMonitor<Options> for UploadService...
+[21:19:32 INF] [DI] Resolving IShareService for UploadService...
+[21:19:32 INF] [DI] Constructing ShareService...
+[21:19:32 INF] [DI] Resolving FileService for ShareService...
+[21:19:32 INF] [DI] Resolving IShareRepositoryFactory for ShareService...
+[21:19:32 INF] [DI] Resolving IOptionsMonitor<Options> for ShareService...
+[21:19:32 INF] [DI] Resolving IModerationProvider for ShareService...
+[21:19:32 INF] [DI] Resolving IShareScanner for ShareService (optional)...
+[21:19:32 INF] [DI] Resolving IContentPeerHintService for ShareService (optional)...
+[21:19:32 INF] [DI] Constructing ContentPeerHintService...
+[21:19:32 INF] [DI] Constructing ContentPeerPublisher...
+[21:19:32 INF] [DI] Resolving ILogger<ContentPeerPublisher>...
+[21:19:32 INF] [DI] Resolving IMeshDhtClient for ContentPeerPublisher...
+[21:19:32 INF] [DI] Constructing MeshDhtClient...
+[21:19:32 INF] [DI] Resolving ILogger<MeshDhtClient>...
+[21:19:32 INF] [DI] Resolving IDhtClient for MeshDhtClient...
+[21:19:32 INF] [DI] Constructing InMemoryDhtClient...
+[21:19:32 INF] [DI] Resolving ILogger<InMemoryDhtClient>...
+[21:19:32 INF] [DI] Resolving IOptions<MeshOptions> for InMemoryDhtClient...
+[21:19:32 INF] [DI] Resolving MeshStatsCollector for InMemoryDhtClient (optional)...
+[21:19:32 INF] [DI] Constructing MeshStatsCollector...
+[21:19:32 INF] [MeshStatsCollector] Constructor called
+[21:19:32 INF] [MeshStatsCollector] Creating lazy service resolvers...
+[21:19:32 INF] [MeshStatsCollector] Constructor completed
+[21:19:32 INF] [DI] MeshStatsCollector constructed
+[21:19:32 INF] [DI] All InMemoryDhtClient dependencies resolved, creating instance...
+[21:19:32 INF] [InMemoryDhtClient] Constructor called
+[21:19:32 INF] [InMemoryDhtClient] Generating random node ID...
+[21:19:32 INF] [InMemoryDhtClient] Creating KademliaRoutingTable...
+[21:19:32 INF] [InMemoryDhtClient] KademliaRoutingTable created
+[21:19:32 INF] [InMemoryDhtClient] Constructor completed
+[21:19:32 INF] [DI] InMemoryDhtClient constructed
+[21:19:32 INF] [DI] All MeshDhtClient dependencies resolved, creating instance (DhtService will be resolved lazily to break circular dependency)...
+[21:19:32 INF] [DI] MeshDhtClient constructed
+[21:19:32 INF] [DI] Resolving IOptions<MeshOptions> for ContentPeerPublisher...
+[21:19:32 INF] [DI] All ContentPeerPublisher dependencies resolved, creating instance...
+[21:19:32 INF] [DI] ContentPeerPublisher constructed
+[21:19:32 INF] [ContentPeerHintService] Constructor called
+[21:19:32 INF] [ContentPeerHintService] Constructor completed
+[21:19:32 INF] [DI] ContentPeerHintService constructed
+[21:19:32 INF] [DI] All ShareService dependencies resolved, creating instance...
+[21:19:32 INF] [DI] ShareService constructed
+[21:19:32 INF] [DI] Resolving IRelayService for UploadService...
+[21:19:32 INF] [DI] Resolving IDbContextFactory<TransfersDbContext> for UploadService...
+[21:19:32 INF] [DI] Resolving EventBus for UploadService...
+[21:19:32 INF] [DI] Resolving IScheduledRateLimitService for UploadService (optional)...
+[21:19:32 INF] [DI] All UploadService dependencies resolved, creating instance...
+[21:19:32 INF] [UploadService] Constructor called
+[21:19:32 INF] [UploadService] Creating UploadGovernor...
+[21:19:32 INF] [UploadService] Creating UploadQueue...
+[21:19:32 INF] [UploadService] Constructor completed
+[21:19:32 INF] [DI] UploadService constructed
+[21:19:32 INF] [DI] Constructing DownloadService...
+[21:19:32 INF] [HashDb] Current schema version: 0, target: 17
+[21:19:32 INF] [HashDb] Applying migration 1: Initial schema
+[21:19:32 INF] [HashDb] Migration 1 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 2: Extended schema for multi-source and probing
+[21:19:32 INF] [HashDb] Migration 2 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 3: MusicBrainz Album Targets
+[21:19:32 INF] [HashDb] Migration 3 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 4: Canonical scoring variant metadata
+[21:19:32 INF] [HashDb] Migration 4 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 5: Canonical stats table
+[21:19:32 INF] [HashDb] Migration 5 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 6: Library Health tables
+[21:19:32 INF] [HashDb] Migration 6 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 7: Codec-specific fingerprints and analyzer version
+[21:19:32 INF] [HashDb] Migration 7 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 8: Artist release graph cache
+[21:19:32 INF] [HashDb] Migration 8 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 9: Discography job cache
+[21:19:32 INF] [HashDb] Migration 9 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 10: Database optimization indexes
+[21:19:32 INF] [HashDb] Migration 10 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 12: Label crate job cache
+[21:19:32 INF] [HashDb] Migration 12 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 13: Peer metrics storage
+[21:19:32 INF] [HashDb] Migration 13 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 14: Warm cache popularity
+[21:19:32 INF] [HashDb] Migration 14 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 15: Warm cache entries
+[21:19:32 INF] [HashDb] Migration 15 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 16: Virtual Soulfind pseudonyms
+[21:19:32 INF] [HashDb] Migration 16 applied successfully
+[21:19:32 INF] [HashDb] Applying migration 17: Traffic accounting
+[21:19:32 INF] [HashDb] Migration 17 applied successfully
+[21:19:32 INF] [HashDb] Applied 16 migrations
+[21:19:32 INF] [HashDb] Initialized at /home/keith/Documents/code/slskdn/test-artifacts/e2e/B-42967/hashdb.db, current seq_id: 0
+[21:19:32 INF] [HashDb] Subscribed to download, search, and peer interaction events for hash discovery
+[21:19:32 INF] [DI] DownloadService constructed
+[21:19:32 INF] [DI] TransferService constructed
+[21:19:32 INF] [DI] Resolving IBrowseTracker...
+[21:19:32 INF] [DI] Resolving IRoomService...
+[21:19:32 INF] [DI] Resolving IUserService...
+[21:19:32 INF] [DI] Resolving IMessagingService...
+[21:19:32 INF] [DI] Constructing ConversationService...
+[21:19:32 INF] [DI] Resolving ISoulseekClient for ConversationService...
+[21:19:32 INF] [DI] Resolving EventBus for ConversationService...
+[21:19:32 INF] [DI] Resolving IDbContextFactory<MessagingDbContext> for ConversationService...
+[21:19:32 INF] [DI] Resolving IPodService for ConversationService...
+[21:19:32 INF] [DI] Constructing SqlitePodService...
+[21:19:32 INF] [DI] Resolving IDbContextFactory<PodDbContext> for SqlitePodService...
+[21:19:32 INF] [DI] Resolving IPodPublisher for SqlitePodService (optional)...
+[21:19:32 INF] [DI] Constructing PodPublisher...
+[21:19:32 INF] [DI] Resolving IMeshDhtClient for PodPublisher...
+[21:19:32 INF] [DI] Resolving IServiceScopeFactory for PodPublisher...
+[21:19:32 INF] [DI] Resolving ILogger<PodPublisher> for PodPublisher...
+[21:19:32 INF] [DI] All PodPublisher dependencies resolved, creating instance...
+[21:19:32 INF] [DI] PodPublisher constructed
+[21:19:32 INF] [DI] Resolving IPodMembershipSigner for SqlitePodService (optional)...
+[21:19:32 INF] [Overlay] Rotated keypair at mesh-overlay.key
+[21:19:32 INF] [DI] Resolving ILogger<SqlitePodService> for SqlitePodService...
+[21:19:32 INF] [DI] Resolving IServiceScopeFactory for SqlitePodService (for lazy IContentLinkService resolution)...
+[21:19:32 INF] [DI] All SqlitePodService dependencies resolved, creating instance (IContentLinkService will be resolved lazily via scope)...
+[21:19:32 INF] [DI] SqlitePodService constructed
+[21:19:32 INF] [DI] All ConversationService dependencies resolved, creating instance...
+[21:19:32 INF] [DI] ConversationService constructed
+[21:19:32 INF] [DI] Resolving IShareService...
+[21:19:32 INF] [DI] Resolving ISearchService...
+[21:19:32 INF] [DI] Resolving INotificationService...
+[21:19:32 INF] [DI] Resolving IRelayService...
+[21:19:32 INF] [DI] Resolving IHubContext<ApplicationHub>...
+[21:19:32 INF] [DI] Resolving IHubContext<LogsHub>...
+[21:19:32 INF] [DI] Resolving IHubContext<TransfersHub>...
+[21:19:32 INF] [DI] Resolving EventBus...
+[21:19:32 INF] [DI] Resolving ShareGrantAnnouncementService (best-effort)...
+[21:19:32 INF] [DI] All dependencies resolved, constructing Application...
+[21:19:32 INF] [Application] Constructor called
+[21:19:32 INF] [Application] Setting up event handlers...
+[21:19:32 INF] [Application] Registering clock events...
+[21:19:32 INF] [Application] Constructor completed
+[21:19:32 INF] [DI] Application singleton constructed successfully
+[21:19:32 INF] [DI] IApplication resolved successfully
+[21:19:32 INF] [DI] About to create ApplicationHostedServiceWrapper instance...
+[21:19:32 INF] [ApplicationHostedServiceWrapper] Constructor called - Application already resolved
+[21:19:32 INF] [ApplicationHostedServiceWrapper] Constructor completed
+[21:19:32 INF] [DI] ApplicationHostedServiceWrapper constructed
+[21:19:32 INF] [DI] Constructing PodPublisherBackgroundService hosted service...
+[21:19:32 INF] [DI] PodPublisherBackgroundService constructed
+[21:19:32 INF] [DI] Resolving MeshBootstrapService hosted service...
+[21:19:32 INF] [DI] Constructing PeerDescriptorPublisher...
+[21:19:32 INF] [DI] PeerDescriptorPublisher constructed
+[21:19:32 INF] [MeshBootstrapService] Constructor called
+[21:19:32 INF] [MeshBootstrapService] Constructor completed
+[21:19:32 INF] [DI] MeshBootstrapService hosted service resolved
+[21:19:32 INF] [DI] Resolving PeerDescriptorRefreshService hosted service...
+[21:19:32 INF] [PeerDescriptorRefreshService] Constructor called
+[21:19:32 INF] [PeerDescriptorRefreshService] Getting current endpoints...
+[21:19:32 INF] [PeerDescriptorRefreshService] Got 2 endpoints
+[21:19:32 INF] [PeerDescriptorRefreshService] Constructor completed
+[21:19:32 INF] [DI] PeerDescriptorRefreshService hosted service resolved
+[21:19:32 INF] [DI] Constructing CircuitMaintenanceService hosted service...
+[21:19:32 INF] Initialized 1 transports: Tor
+[21:19:32 INF] [CircuitMaintenanceService] Constructor called
+[21:19:32 INF] [CircuitMaintenanceService] Constructor completed
+[21:19:32 INF] [DI] CircuitMaintenanceService constructed
+[21:19:32 INF] [DI] Constructing UdpOverlayServer hosted service...
+[21:19:32 INF] PrivacyLayer initialized with options: Enabled=False
+[21:19:32 INF] [UdpOverlayServer] Constructor called
+[21:19:32 INF] [UdpOverlayServer] Constructor completed
+[21:19:32 INF] [DI] UdpOverlayServer constructed
+[21:19:32 INF] [DI] Constructing QuicOverlayServer hosted service...
+[21:19:32 INF] [QuicOverlayServer] Constructor called
+[21:19:32 INF] [QuicOverlayServer] Constructor completed
+[21:19:32 INF] [DI] QuicOverlayServer constructed
+[21:19:32 INF] [DI] Constructing QuicDataServer hosted service...
+[21:19:32 INF] [QuicDataServer] Constructor called
+[21:19:32 INF] [QuicDataServer] Constructor completed
+[21:19:32 INF] [DI] QuicDataServer constructed
+[21:19:32 INF] [DI] Constructing ContentPublisherService hosted service...
+[21:19:32 INF] [DI] ContentPublisherService constructed
+[21:19:32 INF] [DI] Resolving DhtRendezvousService hosted service...
+[21:19:32 INF] [DI] DhtRendezvousService hosted service resolved
+[21:19:32 INF] Auto-replace state file not found, defaulting to enabled
+[21:19:32 INF] [Program] About to call app.Run()...
+[21:19:32 INF] [Program] app.Run() will start the web server and all hosted services...
+[21:19:32 INF] [Program] Calling app.Run() - this will block until shutdown...
+[21:19:32 INF] [Program] If you see this but not 'Host started and bound', the web server is hanging
+[21:19:33 INF] [ApplicationHostedServiceWrapper] StartAsync called - about to call Application.StartAsync
+[21:19:33 INF] [Application] StartAsync called - beginning startup sequence
+[21:19:33 INF] Application started
+[21:19:33 INF] [ApplicationHostedServiceWrapper] Application.StartAsync returned (non-blocking)
+[21:19:33 INF] [VSF-PUBLISH] Shadow index publishing disabled
+[21:19:33 INF] [VSF-HEALTH] Health monitoring started
+[21:19:33 INF] [PodPublisher] Starting background refresh service (interval: 30 minutes)
+[21:19:33 INF] [MultiRealmHostedService] Initializing multi-realm service with 1 realms
+[21:19:33 INF] [MeshBootstrapService] ExecuteAsync called
+[21:19:33 INF] [MeshBootstrap] Starting service (refresh interval: 30 minutes, bootstrap nodes: 0)
+[21:19:33 INF] [MeshBootstrap] Publishing self descriptor to DHT
+[21:19:33 INF] [PeerDescriptorRefreshService] ExecuteAsync called
+[21:19:33 INF] [MeshDHT] Starting peer descriptor refresh service
+[21:19:33 INF] [MultiRealm] Initializing 1 realms with bridging disabled
+[21:19:33 INF] [ContentPeerHintService] ExecuteAsync called
+[21:19:33 INF] [MultiRealm] Initialized realm 'default-realm-v1' with 1 governance roots
+[21:19:33 INF] [MultiRealm] Successfully initialized 1 realms
+[21:19:33 INF] [MultiRealmHostedService] Multi-realm initialization complete.
+[21:19:33 INF] [CircuitMaintenanceService] ExecuteAsync called
+[21:19:33 INF] Circuit maintenance service started
+[21:19:33 INF] [UdpOverlayServer] ExecuteAsync called
+[21:19:33 INF] [QuicOverlayServer] ExecuteAsync called
+[21:19:33 INF] [QuicDataServer] ExecuteAsync called
+[21:19:33 INF] Starting DHT rendezvous service with MonoTorrent DHT
+[21:19:33 INF] Waiting for DHT initialization to complete...
+[21:19:33 INF] [MediaCore] Published descriptors batch count=0
+[21:19:33 INF] Circuit maintenance: 0 circuits, 0 total peers, 0 active, 0 onion-capable
+[21:19:33 WRN] [Overlay] UDP overlay port 50400 is already in use. Continuing without UDP overlay server. Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, but direct inbound UDP connections will be unavailable.
+[21:19:33 INF] [RESCUE] Underperformance detector started
+[21:19:33 INF] [BACKFILL] Background service started (interval: 600s, max concurrent: 2)
+[21:19:33 INF] Wishlist background service started
+[21:19:33 INF] Auto-replace background service started (enabled: True)
+[21:19:33 WRN] [Overlay-QUIC] QUIC overlay port 50400 is already in use. Continuing without QUIC overlay server. Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, but direct inbound QUIC connections will be unavailable.
+[21:19:33 INF] [Overlay-QUIC-DATA] Listening on port 50401
+[21:19:33 INF] DHT state changed to: Initialising, nodes: 0
+[21:19:33 INF] [Program] ✓ ApplicationStarted event fired - all hosted services have completed StartAsync
+[21:19:33 INF] ✓ Host started and bound to: http://0.0.0.0:42967
+[21:19:33 INF] DHT engine started on port 6913, state: Initialising
+[21:19:33 INF] This client is not beacon-capable (behind NAT), will connect to beacons
+[21:19:33 INF] DHT rendezvous service initialization complete
+[21:19:33 INF] [ProfileService] Generated new Ed25519 keypair
+[21:19:33 INF] [MdnsAdvertiser] Started advertising nodeB._slskdn._tcp.local on kspld0.local:42967
+[21:19:33 INF] [LanDiscovery] Started advertising as nodeB (RW4EG-NOFQ-UHII-D3P) on port 42967
+[21:19:33 INF] Options reconfigured successfully
+[21:19:33 INF] Listening for incoming connections on 0.0.0.0:40755
+[21:19:33 INF] Skipping version check for Development build
+[21:19:33 INF] [MeshDHT] No configured endpoints, detected 4 network interfaces
+[21:19:33 INF] [MeshDHT] No configured endpoints, detected 4 network interfaces
+[21:19:33 INF] Initializing shares
+[21:19:33 WRN] Performing a forced re-scan of shares
+[21:19:33 INF] Share scan started
+[21:19:33 INF] Adding isBlocked, isQuarantined, and moderationReason columns to files table (migration)
+[21:19:33 WRN] Shared file cache missing or invalid. Re-creating prior to scan.
+[21:19:33 INF] Shared file cache re-created and ready for scan.
+[21:19:33 INF] Starting shared file scan
+[21:19:33 INF] Sharing /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/music as music
+[21:19:33 INF] Sharing /home/keith/Documents/code/slskdn/test-data/slskdn-test-fixtures/tv as tv
+[21:19:33 INF] Enumerating shared directories
+[21:19:33 INF] Found 3 shared directories (and 0 were excluded) in 1ms.  Starting file scan.
+[21:19:33 INF] Scanned 33% of shared directories. Found 0 files so far.
+[21:19:33 INF] Scan found 0 files (and 0 were filtered) in 6ms
+[21:19:33 INF] Removed or renamed 0 files and 0 directories in 0ms
+[21:19:33 INF] Rebuilding filename index...
+[21:19:33 INF] Filename index rebuild complete
+[21:19:33 INF] [MeshDHT] Published self descriptor peer:mesh:self seq=1 endpoints=4 transports=4 privacy=disabled
+[21:19:33 INF] [MeshDHT] Published self descriptor peer:mesh:self seq=1 endpoints=4 transports=4 privacy=disabled
+[21:19:33 INF] Shares scanned successfully. Found 3 directories and 0 files in 43.8609ms
+[21:19:33 INF] Scanned 67% of shared directories. Found 5 files so far.
+[21:19:33 INF] Scanned 100% of shared directories. Found 9 files so far.
+[21:19:33 INF] Share cache loaded from disk successfully. Sharing 1 directories and 9 files
+[21:19:33 INF] Warming browse response cache...
+[21:19:33 INF] Browse response cached successfully in 8ms
+[21:19:33 INF] Warming browse response cache...
+[21:19:33 INF] Starting system clock...
+[21:19:33 INF] Browse response cached successfully in 1ms
+[21:19:33 INF] System clock started
+[21:19:33 WRN] Not connecting to the Soulseek server; 'no-connect' option is enabled
+[21:19:33 INF] [Application] Initialization complete
+[21:19:33 INF] DHT state changed to: Ready, nodes: 32
+[21:19:34 INF] Waiting for DHT to bootstrap...
+[21:19:34 INF] DHT bootstrapped successfully with 73 nodes
+[21:19:34 INF] Running DHT peer discovery (get_peers) - DHT state: Ready, nodes: 73
+[21:19:34 INF] Querying DHT for rendezvous infohash 1: MonoTorrent.InfoHash
+[21:19:34 INF] Querying DHT for rendezvous infohash 2: MonoTorrent.InfoHash
+[21:19:34 INF] Querying DHT for rendezvous infohash 3: MonoTorrent.InfoHash
+[21:19:35 WRN] [VSF-HEALTH] Soulseek health changed: Healthy → Unavailable
+[21:19:39 INF] DHT discovery found 11 new peers (total: 11)
+[21:19:39 FTL] Received SIGTERM
+[21:19:39 FTL] [FATAL] ProcessExit event fired - process terminating
+
+
+STDERR:
+[ConfigProbe] slskd:web:port=42967
+[ConfigProbe] slskd:web:port=42967
+[HostedList] count=24
+[HostedList] Microsoft.AspNetCore.DataProtection.Internal.DataProtectionHostedService
+[HostedList] Microsoft.AspNetCore.Hosting.GenericWebHostService
+[HostedList] Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckPublisherHostedService
+[HostedList] Prometheus.SystemMetrics.SystemMetricsHostedService
+[HostedList] slskd.ApplicationHostedServiceWrapper
+[HostedList] slskd.Backfill.BackfillSchedulerService
+[HostedList] slskd.DhtRendezvous.DhtRendezvousService
+[HostedList] slskd.HashDb.Optimization.HashDbOptimizationHostedService
+[HostedList] slskd.MediaCore.ContentPublisherService
+[HostedList] slskd.Mesh.Bootstrap.MeshBootstrapService
+[HostedList] slskd.Mesh.CircuitMaintenanceService
+[HostedList] slskd.Mesh.Dht.ContentPeerHintService
+[HostedList] slskd.Mesh.Dht.PeerDescriptorRefreshService
+[HostedList] slskd.Mesh.Overlay.QuicDataServer
+[HostedList] slskd.Mesh.Overlay.QuicOverlayServer
+[HostedList] slskd.Mesh.Overlay.UdpOverlayServer
+[HostedList] slskd.Mesh.Realm.MultiRealmHostedService
+[HostedList] slskd.Mesh.Realm.RealmHostedService
+[HostedList] slskd.PodCore.PodPublisherBackgroundService
+[HostedList] slskd.Transfers.AutoReplace.AutoReplaceBackgroundService
+[HostedList] slskd.Transfers.Rescue.UnderperformanceDetectorHostedService
+[HostedList] slskd.VirtualSoulfind.DisasterMode.SoulseekHealthMonitor
+[HostedList] slskd.VirtualSoulfind.ShadowIndex.ShardPublisher
+[HostedList] slskd.Wishlist.WishlistService
+[HostedList] count=24
+[HostedList] Microsoft.AspNetCore.DataProtection.Internal.DataProtectionHostedService
+[HostedList] Microsoft.AspNetCore.Hosting.GenericWebHostService
+[HostedList] Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckPublisherHostedService
+[HostedList] Prometheus.SystemMetrics.SystemMetricsHostedService
+[HostedList] slskd.ApplicationHostedServiceWrapper
+[HostedList] slskd.Backfill.BackfillSchedulerService
+[HostedList] slskd.DhtRendezvous.DhtRendezvousService
+[HostedList] slskd.HashDb.Optimization.HashDbOptimizationHostedService
+[HostedList] slskd.MediaCore.ContentPublisherService
+[HostedList] slskd.Mesh.Bootstrap.MeshBootstrapService
+[HostedList] slskd.Mesh.CircuitMaintenanceService
+[HostedList] slskd.Mesh.Dht.ContentPeerHintService
+[HostedList] slskd.Mesh.Dht.PeerDescriptorRefreshService
+[HostedList] slskd.Mesh.Overlay.QuicDataServer
+[HostedList] slskd.Mesh.Overlay.QuicOverlayServer
+[HostedList] slskd.Mesh.Overlay.UdpOverlayServer
+[HostedList] slskd.Mesh.Realm.MultiRealmHostedService
+[HostedList] slskd.Mesh.Realm.RealmHostedService
+[HostedList] slskd.PodCore.PodPublisherBackgroundService
+[HostedList] slskd.Transfers.AutoReplace.AutoReplaceBackgroundService
+[HostedList] slskd.Transfers.Rescue.UnderperformanceDetectorHostedService
+[HostedList] slskd.VirtualSoulfind.DisasterMode.SoulseekHealthMonitor
+[HostedList] slskd.VirtualSoulfind.ShadowIndex.ShardPublisher
+[HostedList] slskd.Wishlist.WishlistService
+[KestrelProbe] URLs=
+[KestrelProbe] URLs=
+[ApplicationHostedServiceWrapper] StartAsync called
+[ApplicationHostedServiceWrapper] StartAsync called
+[ApplicationHostedServiceWrapper] Application.StartAsync returned
+[ApplicationHostedServiceWrapper] Application.StartAsync returned
+[ServerProbe] IServer=Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl
+[ServerProbe] PreferHostingUrls=False
+[ServerProbe] Addresses=http://0.0.0.0:42967
+[ServerProbe] IServer=Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl
+[ServerProbe] PreferHostingUrls=False
+[ServerProbe] Addresses=http://0.0.0.0:42967
+[FATAL] ProcessExit event fired - process terminating
+[FATAL] ProcessExit event fired - process terminating
+

@@ -395,11 +395,16 @@ test.describe('core pages', () => {
       });
 
       // Verify page loaded (no crash)
-      await expect(page.locator('body')).toBeVisible({ timeout: 3_000 });
+      await page.waitForSelector('body', {
+        state: 'attached',
+        timeout: 10_000,
+      });
 
       // Verify React mounted
-      const rootCount = await page.locator('#root').count();
-      expect(rootCount).toBeGreaterThan(0);
+      await page.waitForSelector('#root', {
+        state: 'attached',
+        timeout: 10_000,
+      });
     }
   });
 });

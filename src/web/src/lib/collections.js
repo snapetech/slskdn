@@ -55,11 +55,11 @@ export const backfillShare = (id) => api.post(`/share-grants/${id}/backfill`);
 // Library Items (for Collections picker)
 // Note: api baseURL already includes /api/v0, so use relative path
 export const searchLibraryItems = (query, kinds, limit = 100) => {
-  const params = new URLSearchParams();
-  if (query) params.append('query', query);
-  if (kinds) params.append('kinds', kinds);
-  params.append('limit', limit.toString());
-  return api.get(`library/items?${params.toString()}`);
+  const parameters = new URLSearchParams();
+  if (query) parameters.append('query', query);
+  if (kinds) parameters.append('kinds', kinds);
+  parameters.append('limit', limit.toString());
+  return api.get(`library/items?${parameters.toString()}`);
 };
 
 export const getLibraryItem = (contentId) =>
