@@ -71,6 +71,9 @@ public class ShardPublisher : BackgroundService, IShardPublisher
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         var options = optionsMonitor.CurrentValue;
         if (options.VirtualSoulfind?.ShadowIndex?.Enabled != true)
         {

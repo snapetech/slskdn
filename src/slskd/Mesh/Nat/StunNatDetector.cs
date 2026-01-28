@@ -2,6 +2,8 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -17,6 +19,7 @@ public class StunNatDetector : INatDetector
 {
     private const ushort StunBindingRequest = 0x0001;
     private const uint StunMagicCookie = 0x2112A442;
+    private static readonly TimeSpan DnsResolveTimeout = TimeSpan.FromSeconds(1);
     private readonly ILogger<StunNatDetector> logger;
     private readonly MeshOptions options;
     private NatType lastDetectedType = NatType.Unknown;
@@ -146,7 +149,14 @@ public class StunNatDetector : INatDetector
         udp.Client.ReceiveTimeout = 2000;
         udp.Client.SendTimeout = 2000;
 
-        var endpoint = new IPEndPoint(Dns.GetHostAddresses(parts[0])[0], port);
+        var resolvedAddress = await ResolveHostAsync(parts[0], ct);
+        if (resolvedAddress == null)
+        {
+            logger.LogDebug("[NAT] DNS resolve timed out for {Host}", parts[0]);
+            return null;
+        }
+
+        var endpoint = new IPEndPoint(resolvedAddress, port);
         var txn = RandomNumberGenerator.GetBytes(12);
         var request = BuildBindingRequest(txn);
 
@@ -169,6 +179,31 @@ public class StunNatDetector : INatDetector
         var isDirect = mapped.Address.Equals(localEp.Address) && mapped.Port == localEp.Port;
 
         return new MappingResult(mapped, localEp, isDirect);
+    }
+
+    private async Task<IPAddress?> ResolveHostAsync(string host, CancellationToken ct)
+    {
+        try
+        {
+            var resolveTask = Dns.GetHostAddressesAsync(host);
+            var completed = await Task.WhenAny(resolveTask, Task.Delay(DnsResolveTimeout, ct));
+            if (completed != resolveTask)
+            {
+                return null;
+            }
+
+            var addresses = await resolveTask;
+            return addresses.FirstOrDefault();
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "[NAT] DNS resolve failed for {Host}", host);
+            return null;
+        }
     }
 
     private static byte[] BuildBindingRequest(byte[] txn)

@@ -38,6 +38,9 @@ public class ContentPeerHintService : BackgroundService, IContentPeerHintService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         logger.LogInformation("[ContentPeerHintService] ExecuteAsync called");
         await foreach (var contentId in queue.Reader.ReadAllAsync(stoppingToken))
         {

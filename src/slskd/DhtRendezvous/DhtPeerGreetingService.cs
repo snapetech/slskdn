@@ -61,14 +61,15 @@ public sealed class DhtPeerGreetingService : BackgroundService
         _soulseekClient = soulseekClient;
     }
     
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         _neighborRegistry.NeighborAdded += OnNeighborAdded;
         _neighborRegistry.FirstNeighborConnected += OnFirstNeighborConnected;
-        
+
         _logger.LogInformation("DHT Peer Greeting Service started (max greetings: {Max})", MaxAutoGreetings);
-        
-        return Task.CompletedTask;
     }
     
     public override Task StopAsync(CancellationToken cancellationToken)

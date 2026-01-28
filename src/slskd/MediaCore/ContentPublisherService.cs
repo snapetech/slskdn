@@ -64,6 +64,9 @@ public class ContentPublisherService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         await PublishOnce(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)

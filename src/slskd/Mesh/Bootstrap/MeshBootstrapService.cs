@@ -33,6 +33,15 @@ public class MeshBootstrapService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
+        if (!options.EnableDht)
+        {
+            logger.LogInformation("[MeshBootstrap] DHT disabled; skipping bootstrap publish loop");
+            return;
+        }
+
         logger.LogInformation("[MeshBootstrapService] ExecuteAsync called");
         logger.LogInformation("[MeshBootstrap] Starting service (refresh interval: {Minutes} minutes, bootstrap nodes: {Count})", 
             refreshInterval.TotalMinutes, options.BootstrapNodes.Count);

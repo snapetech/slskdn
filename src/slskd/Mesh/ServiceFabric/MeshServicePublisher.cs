@@ -64,6 +64,9 @@ public class MeshServicePublisher : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         _logger.LogInformation("[ServicePublisher] Starting service publisher background service");
 
         // Wait a bit before first publish to allow services to register

@@ -48,6 +48,15 @@ public class PeerDescriptorRefreshService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
+        if (!options.EnableDht)
+        {
+            logger.LogInformation("[MeshDHT] DHT disabled; skipping peer descriptor refresh");
+            return;
+        }
+
         logger.LogInformation("[PeerDescriptorRefreshService] ExecuteAsync called");
         logger.LogInformation("[MeshDHT] Starting peer descriptor refresh service");
 

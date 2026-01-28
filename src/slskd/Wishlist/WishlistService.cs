@@ -181,6 +181,9 @@ namespace slskd.Wishlist
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+            await Task.Yield();
+
             Log.Information("Wishlist background service started");
 
             while (!stoppingToken.IsCancellationRequested)

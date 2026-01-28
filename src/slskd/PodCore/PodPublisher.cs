@@ -239,6 +239,9 @@ public class PodPublisherBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         logger.LogInformation("[PodPublisher] Starting background refresh service (interval: {Interval} minutes)", RefreshIntervalMinutes);
 
         while (!stoppingToken.IsCancellationRequested)

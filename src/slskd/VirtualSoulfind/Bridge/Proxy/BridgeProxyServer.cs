@@ -49,6 +49,10 @@ public class BridgeProxyServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        // This yields immediately so Kestrel can start binding while bridge proxy initializes
+        await Task.Yield();
+
         var options = optionsMonitor.CurrentValue;
         if (options.VirtualSoulfind?.Bridge?.Enabled != true)
         {

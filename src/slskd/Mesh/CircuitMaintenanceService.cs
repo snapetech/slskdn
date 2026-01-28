@@ -39,6 +39,9 @@ public class CircuitMaintenanceService : BackgroundService
     /// <returns>A task representing the background operation.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         _logger.LogInformation("[CircuitMaintenanceService] ExecuteAsync called");
         _logger.LogInformation("Circuit maintenance service started");
 

@@ -54,6 +54,9 @@ namespace slskd.VirtualSoulfind.v2.Processing
         /// <inheritdoc/>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+            await Task.Yield();
+
             var opts = _options.CurrentValue;
 
             if (!opts.Enabled)

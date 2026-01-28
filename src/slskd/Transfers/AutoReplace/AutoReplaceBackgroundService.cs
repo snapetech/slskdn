@@ -117,6 +117,9 @@ namespace slskd.Transfers.AutoReplace
         /// <inheritdoc/>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+            await Task.Yield();
+
             Log.Information("Auto-replace background service started (enabled: {Enabled})", IsEnabled);
 
             while (!stoppingToken.IsCancellationRequested)

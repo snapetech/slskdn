@@ -177,6 +177,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         // Wait for DHT initialization to complete (it's running in background from StartAsync)
         _logger.LogInformation("Waiting for DHT initialization to complete...");
         var initTimeout = TimeSpan.FromSeconds(60);

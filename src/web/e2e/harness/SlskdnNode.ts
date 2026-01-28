@@ -312,7 +312,7 @@ export class SlskdnNode {
 ${shareDirsAbsolute.map((dir) => `    - ${dir}`).join('\n')}`
         : `shares:
   directories: []`;
-    const configYaml = `web:
+const configYaml = `web:
   port: ${this.apiPort}
   host: 127.0.0.1
   https:
@@ -333,11 +333,16 @@ ${sharesYaml}
 feature:
   identityFriends: true
   collectionsSharing: true
+overlay:
+  enable: false
+overlayData:
+  enable: false
 mesh:
-  overlay:
-    enable: false
-  dataOverlay:
-    enable: false
+  enableDht: false
+  enableStun: false
+  stunServers: []
+  peerDescriptorRefresh:
+    enableIpChangeDetection: false
 flags:
   no_connect: ${this.config.flags?.noConnect ?? process.env.SLSKDN_TEST_NO_CONNECT === 'true'}
 `;

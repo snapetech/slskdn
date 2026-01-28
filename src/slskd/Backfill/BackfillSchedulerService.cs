@@ -349,6 +349,9 @@ namespace slskd.Backfill
         /// <inheritdoc/>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+            await Task.Yield();
+
             logger.LogInformation("[BACKFILL] Background service started (interval: {Interval}s, max concurrent: {Max})",
                 config.RunIntervalSeconds, config.MaxGlobalConnections);
 

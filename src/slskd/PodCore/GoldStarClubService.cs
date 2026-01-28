@@ -230,6 +230,9 @@ public class GoldStarClubService : BackgroundService, IGoldStarClubService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         // Wait for Soulseek client to be connected
         await WaitForConnectionAsync(stoppingToken);
 

@@ -54,6 +54,9 @@ public class SwarmDownloadOrchestrator : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
+        await Task.Yield();
+
         await foreach (var job in jobs.Reader.ReadAllAsync(stoppingToken))
         {
             try
