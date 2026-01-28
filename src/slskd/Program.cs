@@ -623,6 +623,11 @@ using OpenTelemetry.Trace;
                 builder.Services.Configure<Microsoft.Extensions.Hosting.HostOptions>(options =>
                 {
                     options.StartupTimeout = TimeSpan.FromSeconds(30);
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_CONCURRENT_START")))
+                    {
+                        options.ServicesStartConcurrently = true;
+                        options.ServicesStopConcurrently = true;
+                    }
                 });
 
                 // Enable detailed logging for host lifetime and Kestrel in test/dev environments

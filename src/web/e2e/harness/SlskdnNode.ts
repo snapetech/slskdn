@@ -389,6 +389,7 @@ flags:
         ...process.env,
         ASPNETCORE_ENVIRONMENT: 'Development',
         ASPNETCORE_URLS: `http://127.0.0.1:${this.apiPort}`,
+        SLSKDN_E2E_CONCURRENT_START: '1',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
