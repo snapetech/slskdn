@@ -230,27 +230,30 @@ run: |
 
 ---
 
-### 5b. Chocolatey v2: choco push requires explicit .nupkg path
+### 5b. Chocolatey: use apikey add then push (explicit .nupkg path; dev uses --prerelease)
 
 **The Bug**: `choco push` requires an explicit `.nupkg` file argument. Also, `--prerelease` is **not** a valid `choco push` flag (it’s for install/search flows). Passing `--prerelease` to `choco push` results in errors like: "File specified is either not found or not a .nupkg file. '<nupkg> --prerelease'".
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml` (chocolatey-dev, chocolatey-main)
 
-**Wrong**:
+**Wrong** (no .nupkg path, or only --api-key on push):
 ```powershell
-choco pack
-choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
+choco push --source ... --api-key $env:CHOCO_API_KEY --prerelease
+# or
+choco push $Nupkg --source ... --api-key $env:CHOCO_API_KEY --execution-timeout=300
 ```
 
-**Correct** (explicit `.nupkg` path first; no `--prerelease` on push — prerelease is determined by the package version string):
+**Correct** (store key with apikey add, then push with explicit .nupkg path; dev includes --prerelease):
 ```powershell
 choco pack
 $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
+choco apikey add -s "https://push.chocolatey.org/" -k $env:CHOCO_API_KEY -y
+choco push $Nupkg --source https://push.chocolatey.org/ --prerelease --execution-timeout=300   # dev
+choco push $Nupkg --source https://push.chocolatey.org/ --execution-timeout=300               # main/stable
 ```
 
-**Why This Keeps Happening**: Chocolatey v2 changed push to require the .nupkg as the first positional argument; without it, the parser consumes the next token as the file path.
+**Why This Keeps Happening**: The working pattern is apikey add first (avoids GHA masking/parsing of --api-key), then push with $Nupkg and (for dev) --prerelease. Do not remove --prerelease for dev or switch to --api-key on push without reverting to this pattern.
 
 ---
 
@@ -281,7 +284,29 @@ choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API
 
 ---
 
-### 5e. PPA dev build: dev tag version must always increase
+### 5e. Snap: action-build outputs filename only; host needs full path and snapcraft for upload
+
+**The Bug**: `snapcore/action-build@v1` runs the build inside LXD and sets its `snap` output to the **filename** of the resulting snap (e.g. `slskdn_0.24.1_amd64.snap`), not the full path. Using that value directly in `snapcraft upload "$SNAP_PATH"` fails (file not found). The upload step also runs on the host runner; `ubuntu-latest` does not have `snapcraft` installed, so `snapcraft upload` yields "command not found".
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` (snap-dev, snap-main)
+
+**Wrong**:
+```yaml
+SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
+# ... later ...
+snapcraft upload --release=edge "$SNAP_PATH"   # file not found; snapcraft may be missing
+```
+
+**Correct**:
+- Set `SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"` (build path + filename).
+- Add a step before the upload step to install snapcraft on the host: `sudo apt-get install -y snapd` then `sudo snap install snapcraft --classic`.
+
+**Why This Keeps Happening**: The action’s docs say it outputs "the file name of the resulting snap"; it’s easy to assume that’s a path or that the upload runs inside the same environment as the build.
+
+---
+
+### 5f. PPA dev build: dev tag version must always increase
 
 **The Bug**: PPA rejects uploads with "Version older than that in the archive". Debian version comparison treats the suffix after `dev.` as the ordering key. If you tag with `build-dev-0.24.1.dev.$(date +%Y%m%d.%H%M%S)` you get e.g. `0.24.1.dev.20260128.162317`, which sorts **below** a previously uploaded `0.24.1.dev.91769609285` (e.g. `"2026..."` < `"9176..."`), so the PPA rejects the upload.
 
@@ -759,6 +784,28 @@ Note: TWO spaces before `--`, specific date format.
 **Self-hosted**: `/home/github/actions-runner/_work/...`
 
 **Don't**: Hardcode paths. Use `$GITHUB_WORKSPACE`.
+
+---
+
+### 21. Chocolatey v2 push – path must be a single argument
+
+**The Bug**: `choco push $Nupkg --source ... --prerelease` can make Chocolatey v2 treat the file path as `path.nupkg --prerelease` (one argument), so it reports "File specified is either not found or not a .nupkg file".
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml` – `chocolatey-dev` and `chocolatey-main` jobs
+
+**Wrong**:
+```powershell
+choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
+```
+
+**Correct**:
+```powershell
+choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
+choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
+```
+
+**Why This Keeps Happening**: Chocolatey v2 parses positionals strictly; unquoted `$Nupkg` plus following flags can be merged. Use apikey add then push (no `--api-key` on push), and quote the path: `"$Nupkg"`.
 
 ---
 

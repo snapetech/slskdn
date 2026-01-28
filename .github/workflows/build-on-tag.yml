@@ -623,6 +623,8 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
+          $ErrorActionPreference = "Stop"
+          $key = "$env:CHOCO_API_KEY".Trim()
           # Chocolatey/NuGet requires hyphenated version
           $DottedVersion = "${{ needs.parse.outputs.version }}"
           $Version = $DottedVersion -replace '\.dev\.', '-dev-'
@@ -635,11 +637,13 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2 requires explicit .nupkg path as first argument; otherwise --prerelease is parsed as the file
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
+          # Chocolatey v2: apikey add then push; path must be single argument (quoted) so --prerelease is not parsed as part of path
+          choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout=300
+          choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --prerelease --execution-timeout=300
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
@@ -883,13 +887,21 @@ jobs:
         with:
           path: packaging/snap
 
+      - name: Install snapcraft for upload
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y snapd
+          sudo snap install snapcraft --classic
+
       - name: Publish to Snap Store (edge)
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
           set -euo pipefail
-          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
+          # action-build outputs filename only; snap lives in the build path (gotcha 5d: treat duplicate content as success)
+          SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
             set +e
@@ -1547,6 +1559,8 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
+          $ErrorActionPreference = "Stop"
+          $key = "$env:CHOCO_API_KEY".Trim()
           $Version = "${{ needs.parse.outputs.version }}"
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
@@ -1555,11 +1569,12 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey v2 requires explicit .nupkg path as first argument
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
+          choco apikey add -s "'https://push.chocolatey.org/'" -k $key -y
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout=300
+          choco push "$Nupkg" --source "'https://push.chocolatey.org/'" --execution-timeout=300
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1752,13 +1767,21 @@ jobs:
         with:
           path: packaging/snap
 
+      - name: Install snapcraft for upload
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y snapd
+          sudo snap install snapcraft --classic
+
       - name: Publish to Snap Store (stable)
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
           set -euo pipefail
-          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
+          # action-build outputs filename only; snap lives in the build path (gotcha 5d: treat duplicate content as success)
+          SNAP_PATH="packaging/snap/${{ steps.snap-build.outputs.snap }}"
           for attempt in $(seq 1 60); do
             echo "Upload attempt $attempt/60: $SNAP_PATH"
             set +e
