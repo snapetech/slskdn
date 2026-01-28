@@ -1,5 +1,8 @@
 # Dependabot configuration for slskdn
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+#
+# Ignore major updates for packages we keep aligned with upstream slskd
+# (see docs/dev/PR-upstream-alignment-evaluation.md). Patch/minor PRs still allowed.
 
 version: 2
 updates:
@@ -15,6 +18,20 @@ updates:
       - "npm"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # Keep aligned with upstream slskd (react 16, router 5, axios 0.30, etc.)
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-router-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "axios"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "uuid"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   # NuGet (.NET backend)
   - package-ecosystem: "nuget"
@@ -28,6 +45,18 @@ updates:
       - "nuget"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # Keep aligned with upstream slskd (net8.0, 8.0.x Microsoft.*, etc.)
+      - dependency-name: "Microsoft.Data.Sqlite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.AspNetCore.SignalR.Client"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "FluentFTP"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "MessagePack"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
