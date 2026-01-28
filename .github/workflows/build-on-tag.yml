@@ -61,7 +61,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -106,7 +105,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -173,8 +171,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: "🧪 Dev Build ${{ needs.parse.outputs.version }}"
-          draft: false
-          prerelease: true
           body: |
             ## Development Build ${{ needs.parse.outputs.version }}
             
@@ -967,44 +963,6 @@ jobs:
 
       # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
       # Build was triggered by build-main-VERSION tag, but release uses traditional format
-      # Note: The release tag must exist - create it if it doesn't
-      - name: Ensure Release Tag Exists
-        run: |
-          RELEASE_TAG="${{ needs.parse.outputs.version }}"
-          
-          # Check if tag exists locally
-          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release tag $RELEASE_TAG already exists locally"
-          else
-            # Check if tag exists remotely
-            git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" 2>&1 || FETCH_FAILED=1
-            
-            if [ -z "$FETCH_FAILED" ] && git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
-              echo "Release tag $RELEASE_TAG exists remotely, fetched locally"
-            else
-              # Tag doesn't exist, create it
-              echo "Creating release tag: $RELEASE_TAG"
-              git tag "$RELEASE_TAG"
-              
-              # Try to push, but don't fail if it already exists remotely
-              if git push origin "$RELEASE_TAG" 2>&1; then
-                echo "✅ Pushed release tag $RELEASE_TAG"
-              else
-                # Tag might have been created by another process, that's okay
-                echo "⚠️ Push failed (tag may already exist remotely), continuing..."
-                git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" 2>&1 || true
-              fi
-            fi
-          fi
-          
-          # Verify tag exists now
-          if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "❌ Failed to ensure release tag $RELEASE_TAG exists"
-            exit 1
-          fi
-          
-          echo "✅ Release tag $RELEASE_TAG is ready"
-
       - name: Create Main Release
         uses: softprops/action-gh-release@v2
         with:
@@ -1029,18 +987,6 @@ jobs:
             - ✅ **User History Badges** — Know who's been reliable
             - ✅ **Max File Size Filter** — Skip the bloated ones
             - ✅ **Delete Files on Remove** — Tidy up properly
-            
-            ### Advanced Networking & Downloads
-            - ✅ **Multi-Source Swarm Downloads** — Download from multiple peers simultaneously for faster transfers
-            - ✅ **DHT Mesh Networking** — Decentralized peer discovery and mesh overlay network
-            - ✅ **BitTorrent DHT Rendezvous** — Find peers across the network using DHT
-            - ✅ **TLS-Secured Mesh Connections** — Encrypted peer-to-peer mesh communication
-            
-            ### Security Hardening
-            - ✅ **CSRF Protection** — Full CSRF token validation for web UI
-            - ✅ **NetworkGuard** — Advanced network security and threat detection
-            - ✅ **Fingerprint Detection** — Reconnaissance and port scanning detection
-            - ✅ **Security Profiles** — Standard, Maximum, and Paranoid security modes
             
             ### UI Enhancements  
             - ✅ **Tabbed User Browsing** — Multiple users, proper tabs
@@ -1159,21 +1105,12 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          # Try to clone, if it fails create new repo
-          if git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg-source 2>&1; then
-            cd aur-pkg-source
-            # Ensure we're on master branch
-            git checkout master 2>/dev/null || git checkout -b master
-          else
-            # Clone failed, create new repo
+          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg-source || {
             mkdir -p aur-pkg-source
             cd aur-pkg-source
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn.git
-            # Create initial commit on master branch
-            git commit --allow-empty -m "Initial commit"
-            git branch -M master
-          fi
+          }
 
       - name: Update PKGBUILD (Source)
         env:
@@ -1218,21 +1155,9 @@ jobs:
           cd aur-pkg-source
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
-          
-          # Ensure we're on master branch
-          git checkout master 2>/dev/null || git checkout -b master
-          
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
-          
-          # Push to master (AUR always uses master)
-          git push origin master 2>&1 || {
-            # If push fails, try set-upstream
-            git push --set-upstream origin master 2>&1 || {
-              echo "⚠️ Push failed, but continuing..."
-              exit 0
-            }
-          }
+          git push origin master || git push --set-upstream origin master
           
           echo "✅ Pushed to AUR: slskdn (source)"
 
@@ -1243,21 +1168,12 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
-          # Try to clone, if it fails create new repo
-          if git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin 2>&1; then
-            cd aur-pkg-bin
-            # Ensure we're on master branch
-            git checkout master 2>/dev/null || git checkout -b master
-          else
-            # Clone failed, create new repo
+          git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin || {
             mkdir -p aur-pkg-bin
             cd aur-pkg-bin
             git init
             git remote add origin ssh://aur@aur.archlinux.org/slskdn-bin.git
-            # Create initial commit on master branch
-            git commit --allow-empty -m "Initial commit"
-            git branch -M master
-          fi
+          }
 
       - name: Update PKGBUILD (Binary)
         env:
@@ -1276,16 +1192,9 @@ jobs:
           
           # Version for main
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
-          RELEASE_VERSION="${{ needs.parse.outputs.version }}"
           
           # Update version
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
-          
-          # Update source URL to use actual release asset name (slskdn-main-linux-x64.zip)
-          # The template has: slskdn-${pkgver//.slskdn/-slskdn}-linux-x64.zip
-          # But actual asset is: slskdn-main-linux-x64.zip
-          sed -i "s|slskdn-\${pkgver//\\.slskdn/-slskdn}-linux-x64.zip|slskdn-main-linux-x64.zip|g" PKGBUILD
-          sed -i "s|\${pkgver//\\.slskdn/-slskdn}|${RELEASE_VERSION}|g" PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
@@ -1309,21 +1218,9 @@ jobs:
           cd aur-pkg-bin
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
-          
-          # Ensure we're on master branch
-          git checkout master 2>/dev/null || git checkout -b master
-          
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
           git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
-          
-          # Push to master (AUR always uses master)
-          git push origin master 2>&1 || {
-            # If push fails, try set-upstream
-            git push --set-upstream origin master 2>&1 || {
-              echo "⚠️ Push failed, but continuing..."
-              exit 0
-            }
-          }
+          git push origin master || git push --set-upstream origin master
           
           echo "✅ Pushed to AUR: slskdn-bin (binary)"
 
@@ -1371,9 +1268,6 @@ jobs:
           
           # Update version
           sed -i "s/^Version:.*/Version:        ${RPM_VERSION}/" ~/rpmbuild/SPECS/slskdn.spec
-          
-          # Update Source0 to use the actual release asset name (slskdn-main-linux-x64.zip)
-          sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-linux-x64.zip|" ~/rpmbuild/SPECS/slskdn.spec
           
           cat ~/rpmbuild/SPECS/slskdn.spec | head -30
 
@@ -1532,33 +1426,11 @@ jobs:
             echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
             exit 0
           fi
-          
-          # Check if a newer version already exists in PPA
-          # Extract version from changelog
-          VERSION="${{ needs.parse.outputs.version }}"
-          DEB_VERSION=$(echo "$VERSION" | sed 's/-/./g')
+          ls -la *.changes || true
           CHANGES_FILE=$(find . -name "slskdn_*.changes" -type f | head -1)
-          
-          if [ -z "$CHANGES_FILE" ]; then
-            echo "⚠️ No changes file found, skipping PPA upload"
-            exit 0
-          fi
-          
           echo "Found changes file: $CHANGES_FILE"
-          echo "Attempting to upload version: ${DEB_VERSION}"
-          
-          # Try to upload - if it fails due to version being older, that's expected
-          if dput slskdn-ppa "$CHANGES_FILE" 2>&1 | tee /tmp/dput_output.log; then
-            echo "✅ Uploaded to PPA: slskdn"
-          else
-            if grep -q "Version older than that in the archive" /tmp/dput_output.log; then
-              echo "⚠️ Version ${DEB_VERSION} is older than what's already in PPA - skipping upload (this is expected if a newer version was already published)"
-              exit 0
-            else
-              echo "❌ PPA upload failed with unexpected error"
-              exit 1
-            fi
-          fi
+          dput slskdn-ppa "$CHANGES_FILE"
+          echo "✅ Uploaded to PPA: slskdn"
 
   docker-main:
     name: Build and Push Docker (Main)
@@ -1634,71 +1506,16 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         if: "${{ env.CHOCO_API_KEY != '' }}"
         run: |
-          # Verify files exist
-          if (-not (Test-Path "packaging/chocolatey/slskdn.nuspec")) {
-            Write-Host "❌ packaging/chocolatey/slskdn.nuspec not found!"
-            exit 1
-          }
-          if (-not (Test-Path "packaging/chocolatey/tools/chocolateyinstall.ps1")) {
-            Write-Host "❌ packaging/chocolatey/tools/chocolateyinstall.ps1 not found!"
-            exit 1
-          }
-          if (-not (Test-Path "slskdn-main-win-x64.zip")) {
-            Write-Host "❌ slskdn-main-win-x64.zip not found!"
-            exit 1
-          }
-          
           $Version = "${{ needs.parse.outputs.version }}"
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
-          
           (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
-          
           cd packaging/chocolatey
-          
-          # Verify we're in the right directory
-          if (-not (Test-Path "slskdn.nuspec")) {
-            Write-Host "❌ slskdn.nuspec not found in packaging/chocolatey/"
-            exit 1
-          }
-          
           choco pack
-          
           # Push to stable channel (no --prerelease flag)
-          # Retry on timeout (Chocolatey sometimes has 504 errors)
-          $maxRetries = 3
-          $retryCount = 0
-          $success = $false
-          
-          while ($retryCount -lt $maxRetries -and -not $success) {
-            try {
-              choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY 2>&1 | Tee-Object -Variable pushOutput
-              if ($LASTEXITCODE -eq 0) {
-                $success = $true
-                Write-Host "✅ Published to Chocolatey (stable channel)"
-              } elseif ($pushOutput -match "504|Gateway Timeout|timeout") {
-                $retryCount++
-                if ($retryCount -lt $maxRetries) {
-                  Write-Host "⚠️ Chocolatey timeout (attempt $retryCount/$maxRetries), retrying in 10 seconds..."
-                  Start-Sleep -Seconds 10
-                } else {
-                  Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts (likely transient), but package was built successfully"
-                  exit 0  # Don't fail the build for transient Chocolatey issues
-                }
-              } else {
-                Write-Host "❌ Chocolatey push failed with error"
-                exit 1
-              }
-            } catch {
-              $retryCount++
-              if ($retryCount -ge $maxRetries) {
-                Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts"
-                exit 0  # Don't fail the build for transient Chocolatey issues
-              }
-            }
-          }
+          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
@@ -1711,7 +1528,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: master
           fetch-depth: 0
 
       - name: Install Nix
@@ -1757,13 +1574,11 @@ jobs:
           echo "macos_x64_sha=$MACOS_X64_SHA" >> $GITHUB_OUTPUT
           echo "macos_arm64_sha=$MACOS_ARM64_SHA" >> $GITHUB_OUTPUT
 
-      - name: Checkout Master for Nix
-        run: |
-          git fetch origin master
-          git checkout master
-
       - name: Update flake.nix
         run: |
+          git fetch origin master
+          git reset --hard origin/master
+          
           sed -i "s/version = \".*\";/version = \"${{ needs.parse.outputs.version }}\";/" flake.nix
           sed -i '/sources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
           sed -i '/sources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
@@ -1799,7 +1614,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: master
           fetch-depth: 0
 
       - name: Download from Release
@@ -1818,20 +1633,11 @@ jobs:
           "win_x64_sha=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         shell: pwsh
 
-      - name: Checkout Master for Winget
-        run: |
-          # Handle case-insensitive filesystem on Windows
-          # Fetch only master branch to avoid case-sensitivity conflicts
-          git fetch origin +refs/heads/master:refs/remotes/origin/master
-          git checkout -f master 2>&1 | Out-Null
-          if ($LASTEXITCODE -ne 0) {
-            # Try creating branch from remote
-            git checkout -b master origin/master 2>&1 | Out-Null
-          }
-        shell: pwsh
-
       - name: Update Winget Manifests
         run: |
+          git fetch origin master
+          git reset --hard origin/master
+          
           $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
           $VERSION = "${{ needs.parse.outputs.version }}"
@@ -1871,7 +1677,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: master
 
       - name: Download from Release
         env:
@@ -1886,19 +1692,8 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
-          # Verify snapcraft.yaml exists
-          if [ ! -f "packaging/snap/snapcraft.yaml" ]; then
-            echo "❌ packaging/snap/snapcraft.yaml not found!"
-            exit 1
-          fi
-          
           unzip slskdn-main-linux-x64.zip -d slskdn_dist
-          
-          # Get absolute path for snapcraft source
-          ABS_DIST_PATH=$(realpath slskdn_dist)
-          
-          # Update snapcraft.yaml - use absolute path for source
-          sed -i "s|source: .*|source: $ABS_DIST_PATH|" packaging/snap/snapcraft.yaml
+          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
           sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
@@ -1906,19 +1701,6 @@ jobs:
           sudo snap install snapcraft --classic
           
           cd packaging/snap
-          
-          # Verify we're in the right directory and file exists
-          if [ ! -f "snapcraft.yaml" ]; then
-            echo "❌ snapcraft.yaml not found in packaging/snap/"
-            exit 1
-          fi
-          
-          # Verify source path exists
-          if [ ! -d "$ABS_DIST_PATH" ]; then
-            echo "❌ Source directory $ABS_DIST_PATH not found!"
-            exit 1
-          fi
-          
           snapcraft --destructive-mode
           
           echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
