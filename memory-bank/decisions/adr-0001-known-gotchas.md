@@ -243,13 +243,14 @@ choco pack
 choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease
 ```
 
-**Correct**:
+**Correct** (argument array so pwsh/GHA cannot merge or mis-parse; key as separate element after `-k`):
 ```powershell
 choco pack
 $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
-choco push $Nupkg --source="https://push.chocolatey.org/" -k=$env:CHOCO_API_KEY --prerelease --execution-timeout=300
+$pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', '-k', $env:CHOCO_API_KEY, '--prerelease', '--execution-timeout=300')
+& choco @pushArgs
 ```
-Use `-k=` (not `--api-key `) so the API key is parsed as one token; unquoted path and `--source=` avoid GHA/pwsh merging arguments.
+Using `& choco @pushArgs` ensures each array element is passed as one argument; otherwise the key can be consumed as the file path or merged with `--prerelease`.
 
 **Why This Keeps Happening**: Chocolatey v2 changed push to require the .nupkg as the first positional argument; without it, the parser consumes the next token as the file path.
 

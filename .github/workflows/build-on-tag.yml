@@ -637,11 +637,13 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey: explicit path first; -k= avoids option parsing issues in pwsh/GHA
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
+          Write-Host "Choco: $(choco --version)"
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source="https://push.chocolatey.org/" -k=$env:CHOCO_API_KEY --prerelease --execution-timeout=300
+          # Argument array so pwsh/GHA cannot merge or mis-parse options (key as separate element)
+          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', '-k', $env:CHOCO_API_KEY, '--prerelease', '--execution-timeout=300')
+          & choco @pushArgs
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
@@ -1540,11 +1542,13 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Chocolatey: explicit path first; -k= avoids option parsing issues in pwsh/GHA
           $Nupkg = (Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1).FullName
           if (-not $Nupkg) { Write-Error "No .nupkg found after choco pack"; exit 1 }
+          Write-Host "Choco: $(choco --version)"
           Write-Host "Pushing: $Nupkg"
-          choco push $Nupkg --source="https://push.chocolatey.org/" -k=$env:CHOCO_API_KEY --execution-timeout=300
+          # Argument array so pwsh/GHA cannot merge or mis-parse options (key as separate element)
+          $pushArgs = @('push', $Nupkg, '--source=https://push.chocolatey.org/', '-k', $env:CHOCO_API_KEY, '--execution-timeout=300')
+          & choco @pushArgs
           Write-Host "✅ Published to Chocolatey: slskdn (stable)"
         shell: pwsh
 
