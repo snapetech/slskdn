@@ -34,17 +34,9 @@ check_prerequisites() {
 # Validate manifest
 validate_manifest() {
     echo "🔍 Validating manifest..."
-
-    # Check for placeholder values
-    if grep -q "PLACEHOLDER_SHA256" "$MANIFEST_FILE"; then
-        echo "⚠️ Warning: Manifest contains placeholder SHA256 values"
-        echo "   Update these before Flathub submission"
-    fi
-
-    # Check for placeholder slskd (upstream) URLs; we use snapetech/slskdn
-    if grep -q "https://github.com/slskd/slskd/releases/download" "$MANIFEST_FILE"; then
-        echo "⚠️ Warning: Manifest contains slskd/slskd placeholder URL"
-        echo "   Use https://github.com/snapetech/slskdn/releases/..."
+    # When cutting a new release, update version, url, and sha256 in io.github.slskd.slskdn.yml
+    if ! grep -q "https://github.com/snapetech/slskdn/releases/download" "$MANIFEST_FILE"; then
+        echo "⚠️ Warning: Manifest source URL should point to https://github.com/snapetech/slskdn/releases/..."
     fi
 }
 

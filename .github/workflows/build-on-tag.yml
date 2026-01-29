@@ -162,7 +162,10 @@ jobs:
         run: |
           mkdir -p release
           find artifacts -name "*.zip" -exec cp {} release/ \;
+          cd release && sha256sum *.zip > SHA256SUMS.txt && cd ..
           ls -lh release/
+          echo "=== SHA256SUMS.txt ==="
+          cat release/SHA256SUMS.txt
 
       - name: Create/Update Dev Release
         uses: softprops/action-gh-release@v2
@@ -174,6 +177,12 @@ jobs:
             
             **Commit:** ${{ github.sha }}
             **Built:** ${{ github.event.head_commit.timestamp }}
+            
+            ### New since 0.24.1-slskdn.40
+            - **Solid Integration**: WebID resolution, Solid-OIDC Client ID document, SSRF-hardened fetches, `/api/v0/solid/*` and Solid settings UI
+            - **Swarm Analytics**: Performance metrics, peer rankings, efficiency metrics, historical trends, recommendations engine, Swarm Analytics dashboard in System UI
+            - **Distributed Tracing**: OpenTelemetry support (console/Jaeger/OTLP), swarm/mesh/hashdb/search tracing
+            - **CI/CD**: Performance benchmarks in CI, k6 load testing, CodeQL/Trivy/dependency scanning, release SHA256SUMS and AUR dev URL fix
             
             ### ⚠️ Experimental Features
             - 🔀 Multi-source swarm downloads
@@ -292,8 +301,9 @@ jobs:
           # Convert version for Arch (replace ALL hyphens with dots)
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
           
-          # Update version and commit
+          # Update version, release tag URL, and commit
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          sed -i "s/RELEASE_TAG_PLACEHOLDER/${{ github.ref_name }}/g" PKGBUILD
           sed -i "s/^_commit=.*/_commit=${{ steps.info.outputs.short_sha }}/" PKGBUILD
           
           # Generate .SRCINFO
@@ -1011,7 +1021,10 @@ jobs:
         run: |
           mkdir -p release
           find artifacts -name "*.zip" -exec cp {} release/ \;
+          cd release && sha256sum *.zip > SHA256SUMS.txt && cd ..
           ls -lh release/
+          echo "=== SHA256SUMS.txt ==="
+          cat release/SHA256SUMS.txt
 
       # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
       # Build was triggered by build-main-VERSION tag, but release uses traditional format

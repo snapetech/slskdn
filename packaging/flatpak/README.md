@@ -254,8 +254,7 @@ When new releases are available:
 
 Before submitting to Flathub:
 
-- [ ] Update all `PLACEHOLDER_SHA256` values with real hashes
-- [ ] Update download URLs to point to actual GitHub releases
+- [ ] Update version, download URL, and sha256 in `io.github.slskd.slskdn.yml` for the new release
 - [ ] Test on multiple Linux distributions (Ubuntu, Fedora, Arch)
 - [ ] Ensure all permissions are minimal and justified
 - [ ] Verify sandbox escape is not possible

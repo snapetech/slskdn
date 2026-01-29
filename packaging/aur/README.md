@@ -93,6 +93,11 @@ shares:
     - /path/to/your/music
 ```
 
+## CI / Release
+
+- **slskdn-dev**: `PKGBUILD-dev` uses `RELEASE_TAG_PLACEHOLDER` in the zip source URL. The workflow (`.github/workflows/build-on-tag.yml` AUR dev job) replaces it with the actual release tag (e.g. `build-dev-0.24.1.dev.91769637539`) before pushing to AUR. Do not remove this placeholder; CI must substitute it so the package points at the correct GitHub release.
+- **Checksums**: Dev zip uses `sha256sums=('SKIP' ...)` (binary changes each build). Static files (slskd.service, slskd.yml, slskd.sysusers) use real hashes.
+
 ## Building Manually
 
 ```bash

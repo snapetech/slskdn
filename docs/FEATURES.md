@@ -26,7 +26,6 @@
 - Rescue mode for failed downloads
 - Source fallback and retry logic
 - **Chunk Reassignment**: Automatic reassignment of chunks from degraded peers to better-performing peers. When a peer's performance degrades (high error rate, slow throughput), the system automatically identifies all chunks assigned to that peer and re-queues them for reassignment to better peers. Integrated with cost-based and content-aware scheduling for optimal download performance.
-- **Chunk Reassignment**: Automatic reassignment of chunks from degraded peers to better-performing peers. When a peer's performance degrades (high error rate, slow throughput), the system automatically identifies all chunks assigned to that peer and re-queues them for reassignment to better peers. Integrated with cost-based and content-aware scheduling for optimal download performance.
 
 ### Security & Privacy
 - Network guard and reputation system
@@ -640,25 +639,24 @@ See LICENSE file for details.
 
 ## Status
 
-**Current Version**: 0.x.x (experimental)  
+**Current Version**: 0.24.1 (main: 0.24.1-slskdn.40; dev: timestamped builds)  
 **Branch**: master  
 **Status**: Active development  
-**Production Ready**: No (experimental features)
+**Production Ready**: Main channel suitable for production; dev channel is experimental.
 
 **Implemented**:
-- ✅ Service fabric core
-- ✅ HTTP gateway with auth
-- ✅ Service wrappers (pods, VirtualSoulfind, introspection)
+- ✅ Service fabric core, HTTP gateway, service wrappers (pods, VirtualSoulfind, introspection)
+- ✅ Security hardening, work budget, Soulseek caps
+- ✅ Multi-domain VirtualSoulfind, proxy/relay services
+- ✅ Identity & friends, Solid integration, streaming API, Scene ↔ Pod bridging
+- ✅ Swarm analytics, distributed tracing (OpenTelemetry), CI/CD enhancements
+- ✅ E2E tests (tests/e2e), dev build pipeline (AUR, COPR, PPA, Chocolatey, Homebrew, Snap, Nix, Winget)
 
 **In Progress**:
-- 🚧 Security review and hardening
-- 🚧 Work budget implementation
-- 🚧 Soulseek caps implementation
+- 🚧 Further hardening and performance tuning
 
 **Planned**:
-- 📋 Multi-domain VirtualSoulfind
-- 📋 Proxy/relay services
-- 📋 Comprehensive testing
+- 📋 Full Solid OIDC flow, Pod metadata read/write
 
 ---
 

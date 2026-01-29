@@ -44,10 +44,19 @@ while test $# -gt 0; do
   esac
 done
 
-if [ -z "$version" ]; then 
+if [ -z "$version" ]; then
   tag=$(git describe --tags --abbrev=0)
   sha=$(git rev-parse --short HEAD)
-  version=$tag+$sha
+  # .NET/NuGet version: no "build-*" prefix, use hyphen prerelease (e.g. 0.24.1-dev-123), no "+" metadata
+  if [[ "$tag" == build-dev-* ]]; then
+    version="${tag#build-dev-}"
+    version="${version//.dev./-dev-}"
+  elif [[ "$tag" == build-main-* ]]; then
+    version="${tag#build-main-}"
+  else
+    version="${tag}"
+    [[ "$version" == *"+"* ]] && version="${version//+/.}"
+  fi
 fi
 
 if [ "$dotnet_only" == true ]; then
