@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 
 PackageIdentifier: snapetech.slskdn-dev
-PackageVersion: 0.24.1.dev.91769727654
+PackageVersion: 0.24.1.dev.91769728760
 PackageLocale: en-US
 Publisher: slskdN Team
 PublisherUrl: https://github.com/snapetech
@@ -34,7 +34,7 @@ Tags:
   - music
   - experimental
 ReleaseNotes: |-
-  Development Build 0.24.1.dev.91769727654
+  Development Build 0.24.1.dev.91769728760
   
   This build includes experimental features from the multi-source-swarm branch.
   See https://github.com/snapetech/slskdn/releases/tag/dev for details.
