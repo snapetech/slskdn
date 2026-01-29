@@ -2,6 +2,18 @@
 
 This directory contains Playwright-based end-to-end tests for slskdn.
 
+## Prerequisites
+
+**Before running E2E tests**, ensure the web UI and backend are built so the node serves the latest UI:
+
+```bash
+# From repo root: build web, copy to wwwroot, build backend
+./bin/build --skip-tests
+# Or: (cd src/web && npm run build) && cp -r src/web/build/* src/slskd/wwwroot/ && dotnet build src/slskd/slskd.csproj
+```
+
+Without this, the node may serve a stale wwwroot and UI-dependent tests (e.g. Solid page) can fail.
+
 ## Quick Start
 
 ```bash

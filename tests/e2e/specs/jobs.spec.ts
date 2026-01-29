@@ -16,6 +16,11 @@ test.describe('Jobs', () => {
 
   test.beforeAll(async () => {
     harness = new MultiPeerHarness();
+  });
+
+  test.beforeEach(async () => {
+    // Avoid accumulating SignalR connections across tests.
+    await harness.stopAll();
     await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
   });
 

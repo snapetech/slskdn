@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Form, Message, Segment } from 'semantic-ui-react';
-import { apiBaseUrl } from '../../config';
+import api from '../../lib/api';
 
 export default function SolidSettings() {
   const [status, setStatus] = useState(null);
@@ -8,20 +8,33 @@ export default function SolidSettings() {
   const [resolved, setResolved] = useState(null);
   const [err, setErr] = useState('');
 
+  const formatError = (e) => {
+    const data = e?.response?.data;
+    if (typeof data === 'string' && data.trim().length > 0) return data;
+    if (data != null && typeof data !== 'string') {
+      try {
+        return JSON.stringify(data);
+      } catch {
+        return String(data);
+      }
+    }
+    return e?.message ?? String(e);
+  };
+
   useEffect(() => {
     (async () => {
       setErr('');
       try {
-        const r = await fetch(`${apiBaseUrl}/solid/status`, {
-          credentials: 'include',
-        });
-        if (!r.ok) {
+        const res = await api.get('/solid/status');
+        setStatus(res.data);
+      } catch (e) {
+        const statusCode = e?.response?.status;
+        if (statusCode === 404) {
           setStatus({ enabled: false });
           return;
         }
-        setStatus(await r.json());
-      } catch (e) {
-        setErr(String(e));
+
+        setErr(formatError(e));
       }
     })();
   }, []);
@@ -30,19 +43,10 @@ export default function SolidSettings() {
     setErr('');
     setResolved(null);
     try {
-      const r = await fetch(`${apiBaseUrl}/solid/resolve-webid`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ webId }),
-      });
-      if (!r.ok) {
-        const t = await r.text();
-        throw new Error(t || `HTTP ${r.status}`);
-      }
-      setResolved(await r.json());
+      const res = await api.post('/solid/resolve-webid', { webId });
+      setResolved(res.data);
     } catch (e) {
-      setErr(String(e));
+      setErr(formatError(e));
     }
   };
 

@@ -189,15 +189,6 @@ export class SlskdnNode {
 
   private async syncWebUi(repoRoot: string): Promise<void> {
     const webBuildPath = path.join(repoRoot, 'src', 'web', 'build');
-    const wwwrootPath = path.join(
-      repoRoot,
-      'src',
-      'slskd',
-      'bin',
-      'Debug',
-      'net8.0',
-      'wwwroot',
-    );
 
     try {
       await fs.access(webBuildPath);
@@ -212,25 +203,27 @@ export class SlskdnNode {
         'Web build not found at src/web/build. Run `npm run build` first.',
       );
     }
-
-    await fs.rm(wwwrootPath, { force: true, recursive: true });
-    await fs.mkdir(wwwrootPath, { recursive: true });
-    await fs.cp(webBuildPath, wwwrootPath, { recursive: true });
   }
 
   private async ensureWebBuild(repoRoot: string): Promise<void> {
     if (!SlskdnNode.webBuildPromise) {
       SlskdnNode.webBuildPromise = (async () => {
-        const webRoot = path.join(repoRoot, 'src', 'web');
-        const nodeModulesPath = path.join(webRoot, 'node_modules');
-
         try {
-          await fs.access(nodeModulesPath);
-        } catch {
-          await runCommand('npm', ['ci'], webRoot);
-        }
+          const webRoot = path.join(repoRoot, 'src', 'web');
+          const nodeModulesPath = path.join(webRoot, 'node_modules');
 
-        await runCommand('npm', ['run', 'build'], webRoot);
+          try {
+            await fs.access(nodeModulesPath);
+          } catch {
+            await runCommand('npm', ['ci', '--legacy-peer-deps'], webRoot);
+          }
+
+          await runCommand('npm', ['run', 'build'], webRoot);
+        } catch (error) {
+          // Allow a retry if the first attempt fails.
+          SlskdnNode.webBuildPromise = null;
+          throw error;
+        }
       })();
     }
 
@@ -385,6 +378,20 @@ export class SlskdnNode {
     };
 
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
+
+    const webBuildPath = path.join(repoRoot, 'src', 'web', 'build');
+    const expectedAppBaseDir = path.join(
+      repoRoot,
+      'src',
+      'slskd',
+      'bin',
+      'Debug',
+      'net8.0',
+    );
+    const webContentPath = path
+      .relative(expectedAppBaseDir, webBuildPath)
+      .replace(/\\/g, '/');
+
     // Note: YAML provider automatically prefixes with "slskd:" namespace, so DON'T wrap under slskd: here
     // If we wrap it, we'd get slskd:slskd:web:port instead of slskd:web:port
     const sharesYaml =
@@ -397,6 +404,7 @@ ${shareDirectoriesAbsolute.map((dir) => `    - ${dir}`).join('\n')}`
     const configYaml = `web:
   port: ${this.apiPort}
   host: 127.0.0.1
+  contentPath: ${webContentPath}
   https:
     disabled: true
   authentication:

@@ -22,7 +22,6 @@ using slskd.Sharing;
 [ApiVersion("0")]
 [AllowAnonymous]
 [ValidateCsrfForCookiesOnly]
-[Produces("application/octet-stream")]
 public class StreamsController : ControllerBase
 {
     /// <summary>Max concurrent streams per normal (non-token) user when using normal auth.</summary>

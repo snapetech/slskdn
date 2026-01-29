@@ -12,11 +12,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // One worker to avoid port conflicts
-  reporter: [
-    ['html'],
-    ['list'],
-    process.env.CI ? ['github'] : ['list']
-  ],
+  reporter: process.env.CI
+    ? [['github'], ['list']]
+    : [['html'], ['list']],
   use: {
     baseURL: undefined, // Each test uses node-specific URLs
     trace: 'on-first-retry',

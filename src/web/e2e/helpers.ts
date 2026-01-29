@@ -723,12 +723,26 @@ export async function announceShareGrant({
     share = await shareRes.json();
   }
 
-  if (!share?.collectionId) {
+  // Responses from APIRequestContext can be snake_case depending on endpoint.
+  const shareCollectionId = share?.collectionId || (share as any)?.collection_id;
+  const shareAllowDownload =
+    share?.allowDownload ?? (share as any)?.allow_download ?? (share as any)?.allowdownload;
+  const shareAllowReshare =
+    share?.allowReshare ?? (share as any)?.allow_reshare ?? (share as any)?.allowreshare;
+  const shareAllowStream =
+    share?.allowStream ?? (share as any)?.allow_stream ?? (share as any)?.allowstream;
+  const shareExpiryUtc = share?.expiryUtc || (share as any)?.expiry_utc;
+  const shareMaxConcurrentStreams =
+    share?.maxConcurrentStreams || (share as any)?.max_concurrent_streams;
+  const shareMaxBitrateKbps =
+    share?.maxBitrateKbps ?? (share as any)?.max_bitrate_kbps;
+
+  if (!shareCollectionId) {
     throw new Error('Share grant missing collectionId.');
   }
 
   const collectionRes = await request.get(
-    `${owner.baseUrl}/api/v0/collections/${share.collectionId}`,
+    `${owner.baseUrl}/api/v0/collections/${shareCollectionId}`,
     { headers: authOwner },
   );
   if (!collectionRes.ok()) {
@@ -740,7 +754,7 @@ export async function announceShareGrant({
   const collection = await collectionRes.json();
 
   const itemsRes = await request.get(
-    `${owner.baseUrl}/api/v0/collections/${share.collectionId}/items`,
+    `${owner.baseUrl}/api/v0/collections/${shareCollectionId}/items`,
     { headers: authOwner },
   );
   if (!itemsRes.ok()) {
@@ -775,23 +789,24 @@ export async function announceShareGrant({
   }
 
   const payload = {
-    allowDownload: share.allowDownload,
-    allowReshare: share.allowReshare,
-    allowStream: share.allowStream,
-    collectionDescription: collection.description,
-    collectionId: share.collectionId,
-    collectionTitle: collection.title,
-    collectionType: collection.type,
-    expiryUtc: share.expiryUtc,
+    allowDownload: Boolean(shareAllowDownload),
+    allowReshare: Boolean(shareAllowReshare),
+    allowStream: Boolean(shareAllowStream),
+    collectionDescription:
+      collection?.description || (collection as any)?.collection_description || null,
+    collectionId: shareCollectionId,
+    collectionTitle: collection?.title || (collection as any)?.collection_title || null,
+    collectionType: collection?.type || (collection as any)?.collection_type || null,
+    expiryUtc: shareExpiryUtc,
     items: Array.isArray(items)
       ? items.map((item) => ({
-          contentId: item.contentId,
-          mediaKind: item.mediaKind,
+          contentId: item?.contentId || (item as any)?.content_id,
+          mediaKind: item?.mediaKind || (item as any)?.media_kind,
           ordinal: item.ordinal,
         }))
       : [],
-    maxBitrateKbps: share.maxBitrateKbps,
-    maxConcurrentStreams: share.maxConcurrentStreams,
+    maxBitrateKbps: shareMaxBitrateKbps,
+    maxConcurrentStreams: shareMaxConcurrentStreams,
     ownerEndpoint: owner.baseUrl,
     ownerUserId: owner.username,
     recipientUserId: recipient.username,

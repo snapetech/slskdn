@@ -15,8 +15,8 @@ export const selectors = {
   
   // Login
   login: {
-    username: '[data-testid="login-username"]',
-    password: '[data-testid="login-password"]',
+    username: '[data-testid="login-username"] input',
+    password: '[data-testid="login-password"] input',
     submit: '[data-testid="login-submit"]'
   },
   
@@ -24,19 +24,19 @@ export const selectors = {
   contacts: {
     createInvite: '[data-testid="contacts-create-invite"]',
     addFriend: '[data-testid="contacts-add-friend"]',
-    inviteLink: '[data-testid="invite-link"]',
-    inviteFriendCode: '[data-testid="invite-friend-code"]',
-    inviteLinkInput: '[data-testid="invite-link-input"]',
-    contactNickname: '[data-testid="contact-nickname"]',
-    addFriendSubmit: '[data-testid="add-friend-submit"]'
+    inviteLink: '[data-testid="contacts-invite-output"]',
+    inviteFriendCode: '[data-testid="contacts-invite-friend-code"]',
+    inviteLinkInput: '[data-testid="contacts-add-invite-input"]',
+    contactNickname: '[data-testid="contacts-contact-nickname"]',
+    addFriendSubmit: '[data-testid="contacts-add-invite-submit"]'
   },
   
   // Share Groups
   shareGroups: {
-    createGroup: '[data-testid="sharegroups-create-group"]',
-    groupNameInput: '[data-testid="group-name-input"]',
-    createGroupSubmit: '[data-testid="create-group-submit"]',
-    groupRow: '[data-testid="sharegroup-row"]'
+    createGroup: '[data-testid="groups-create"]',
+    groupNameInput: '[data-testid="groups-name-input"] input',
+    createGroupSubmit: '[data-testid="groups-create-submit"]',
+    groupRow: 'tr[data-testid^="group-row-"]'
   },
   
   // Collections

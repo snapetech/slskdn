@@ -6,11 +6,12 @@ declare const fetch: typeof globalThis.fetch;
 
 /**
  * Find a free port on localhost.
+ * Uses reuseAddress so the port can be rebound immediately after we close the probe server (avoids TIME_WAIT).
  */
 export async function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
-    server.listen(0, () => {
+    server.listen({ port: 0, host: '127.0.0.1', reuseAddress: true }, () => {
       const addr = server.address();
       if (addr && typeof addr === 'object') {
         const port = addr.port;
@@ -46,32 +47,74 @@ export async function waitForHealth(apiUrl: string, timeout = 30000): Promise<vo
  * Login to a slskdn instance via the web UI.
  */
 export async function login(page: Page, apiUrl: string, username: string, password: string): Promise<void> {
-  await page.goto(`${apiUrl}/`);
-  
-  // Wait for login form (or redirect if already logged in)
-  try {
-    await page.waitForSelector('[data-testid="login-username"], [data-testid="nav-contacts"]', { timeout: 5000 });
-    
-    // Check if already logged in
-    if (await page.locator('[data-testid="nav-contacts"]').isVisible()) {
+  const navContacts = '[data-testid="nav-contacts"]';
+  const usernameSelector =
+    '[data-testid="login-username"] input, input[placeholder="Username"], input[name="username"]';
+  const passwordSelector =
+    '[data-testid="login-password"] input, input[placeholder="Password"], input[name="password"], input[type="password"]';
+  const submitSelector = '[data-testid="login-submit"], button:has-text("Login")';
+  const lostConnectionSelector = 'text=Lost connection to slskd';
+
+  // Sometimes the app can boot into a transient "Lost connection" state while SignalR is negotiating.
+  // For E2E, auto-retry once by reloading.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto(`${apiUrl}/`);
+
+    if (await page.locator(lostConnectionSelector).isVisible().catch(() => false)) {
+      await page.reload();
+    }
+
+    // Wait for either an already-logged-in state or a login form.
+    await page.waitForSelector(`${navContacts}, ${usernameSelector}`, { timeout: 30000 });
+
+    // Already logged in.
+    if (await page.locator(navContacts).isVisible().catch(() => false)) {
       return;
     }
-    
-    // Fill login form
-    await page.fill('[data-testid="login-username"]', username);
-    await page.fill('[data-testid="login-password"]', password);
-    await page.click('[data-testid="login-submit"]');
-    
-    // Wait for navigation to main app
-    await page.waitForURL(`${apiUrl}/*`, { timeout: 10000 });
-  } catch (err) {
-    // If login form not found, might already be logged in or different UI
-    // Check if we're on a protected page
-    const currentUrl = page.url();
-    if (currentUrl.includes(apiUrl) && !currentUrl.includes('/login')) {
-      return; // Assume already logged in
+
+    // Fill login form.
+    await page.fill(usernameSelector, username);
+    await page.fill(passwordSelector, password);
+    await page.click(submitSelector);
+
+    try {
+      // Wait for the app chrome to appear.
+      // Startup can be a bit slow on cold runs (SignalR hub + initial state fetch).
+      await page.waitForSelector(navContacts, { timeout: 30000 });
+      return;
+    } catch (error) {
+      const lostConnection = await page
+        .locator(lostConnectionSelector)
+        .isVisible()
+        .catch(() => false);
+      if (lostConnection && attempt === 0) {
+        await page.reload();
+        continue;
+      }
+      throw error;
     }
-    throw err;
+  }
+}
+
+/**
+ * Wait for the main app to be ready after login.
+ * Waits for either the nav to be visible or the initial Loader to disappear
+ * (app may show Loader until hub connects; if hub never connects we wait for Loader to be hidden).
+ */
+export async function waitForAppReady(page: Page, _apiUrl: string, timeout = 20000): Promise<void> {
+  try {
+    await page.waitForSelector(
+      '[data-testid="nav-contacts"], [data-testid="nav-search"], [data-testid="nav-solid"]',
+      { timeout }
+    );
+    return;
+  } catch {
+    // Nav never appeared; wait for the big initial Loader to disappear (init finished or failed)
+    await page
+      .locator('.ui.active.loader')
+      .first()
+      .waitFor({ state: 'hidden', timeout: 10000 })
+      .catch(() => {});
   }
 }
 
@@ -79,8 +122,8 @@ export async function login(page: Page, apiUrl: string, username: string, passwo
  * Extract invite link from the create invite modal.
  */
 export async function getInviteLink(page: Page): Promise<string> {
-  await page.waitForSelector('[data-testid="invite-link"]', { timeout: 5000 });
-  const link = await page.textContent('[data-testid="invite-link"]');
+  await page.waitForSelector('[data-testid="contacts-invite-output"]', { timeout: 5000 });
+  const link = await page.getAttribute('[data-testid="contacts-invite-output"]', 'value');
   if (!link) {
     throw new Error('Invite link not found');
   }

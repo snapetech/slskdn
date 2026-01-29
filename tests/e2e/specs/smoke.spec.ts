@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { MultiPeerHarness } from '../harness/MultiPeerHarness';
-import { login, waitForHealth } from '../fixtures/helpers';
+import { login, waitForAppReady, waitForHealth } from '../fixtures/helpers';
 import { selectors } from '../fixtures/selectors';
 
 /**
@@ -14,9 +14,16 @@ import { selectors } from '../fixtures/selectors';
  */
 test.describe('Smoke Tests', () => {
   let harness: MultiPeerHarness;
+  let nodeApiUrl: string;
 
   test.beforeAll(async () => {
     harness = new MultiPeerHarness();
+
+    // One node for the whole suite.
+    // Starting/stopping a node per test is slow and can mask shared-state issues.
+    const node = await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
+    nodeApiUrl = node.apiUrl;
+    await waitForHealth(nodeApiUrl);
   });
 
   test.afterAll(async () => {
@@ -24,51 +31,39 @@ test.describe('Smoke Tests', () => {
   });
 
   test('should start node and serve web UI', async () => {
-    const node = await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
-    
     // Verify health endpoint
-    const healthResponse = await fetch(`${node.apiUrl}/health`);
+    const healthResponse = await fetch(`${nodeApiUrl}/health`);
     expect(healthResponse.ok).toBe(true);
     
     // Verify web UI is served
-    const pageResponse = await fetch(`${node.apiUrl}/`);
+    const pageResponse = await fetch(`${nodeApiUrl}/`);
     expect(pageResponse.ok).toBe(true);
     expect(pageResponse.headers.get('content-type')).toContain('text/html');
   });
 
   test('should login successfully', async ({ page }) => {
-    const node = await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
-    
-    await page.goto(`${node.apiUrl}/`);
-    await login(page, node.apiUrl, 'admin', 'admin');
-    
-    // Verify we're logged in (check for navigation elements)
-    // Note: This assumes the UI has nav elements visible after login
-    // Adjust selectors based on actual UI
-    await page.waitForLoadState('networkidle');
-    
-    // Should be able to navigate (if nav is present)
+    await login(page, nodeApiUrl, 'admin', 'admin');
+    await waitForAppReady(page, nodeApiUrl);
+
+    await expect(page.locator(selectors.nav.contacts)).toBeVisible();
+
     const url = page.url();
-    expect(url).toContain(node.apiUrl);
+    expect(url).toContain(nodeApiUrl);
   });
 
   test('should load contacts page', async ({ page }) => {
-    const node = await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
-    
-    await page.goto(`${node.apiUrl}/contacts`);
-    await login(page, node.apiUrl, 'admin', 'admin');
-    
-    // Verify contacts page loaded
-    await expect(page.locator('h1:has-text("Contacts")')).toBeVisible({ timeout: 10000 });
+    await login(page, nodeApiUrl, 'admin', 'admin');
+    await waitForAppReady(page, nodeApiUrl);
+
+    await page.goto(`${nodeApiUrl}/contacts`);
+    await expect(page.locator(selectors.contacts.createInvite)).toBeVisible();
   });
 
   test('should load share groups page', async ({ page }) => {
-    const node = await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
-    
-    await page.goto(`${node.apiUrl}/sharegroups`);
-    await login(page, node.apiUrl, 'admin', 'admin');
-    
-    // Verify share groups page loaded
-    await expect(page.locator('h1:has-text("Share Groups")')).toBeVisible({ timeout: 10000 });
+    await login(page, nodeApiUrl, 'admin', 'admin');
+    await waitForAppReady(page, nodeApiUrl);
+
+    await page.goto(`${nodeApiUrl}/sharegroups`);
+    await expect(page.locator(selectors.shareGroups.createGroup)).toBeVisible();
   });
 });

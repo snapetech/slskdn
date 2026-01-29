@@ -24,7 +24,7 @@ test.describe('streaming', () => {
   test.beforeAll(async () => {
     if (shouldLaunchNodes()) {
       harness = new MultiPeerHarness();
-      await harness.startNode('A', 'test-data/slskdn-test-fixtures/music', {
+      await harness.startNode('A', 'test-data/slskdn-test-fixtures/movie', {
         noConnect: process.env.SLSKDN_TEST_NO_CONNECT === 'true',
       });
       await harness.startNode('B', 'test-data/slskdn-test-fixtures/book', {
@@ -120,7 +120,7 @@ test.describe('streaming', () => {
     const addItemButton = pageA.getByTestId(T.collectionAddItem);
     if ((await addItemButton.count()) > 0) {
       await addItemButton.click();
-      const item = await waitForLibraryItem(pageA, 'cover');
+      const item = await waitForLibraryItem(pageA, 'sintel');
       await pageA
         .getByTestId(T.collectionItemPicker)
         .locator('input')
@@ -676,7 +676,7 @@ test.describe('streaming', () => {
       const existingItems = await itemsRes.json();
       if (!Array.isArray(existingItems) || existingItems.length === 0) {
         const libraryRes = await request.get(
-          `${nodeA.baseUrl}/api/v0/library/items?query=cover&limit=1`,
+          `${nodeA.baseUrl}/api/v0/library/items?query=sintel&limit=1`,
           { headers: authOwner },
         );
         if (!libraryRes.ok()) {
@@ -817,7 +817,9 @@ test.describe('streaming', () => {
     const streamUrl = `${nodeA.baseUrl}/api/v0/streams/${encodeURIComponent(contentId)}?token=${encodeURIComponent(token)}`;
 
     // Start first request and wait for it to establish connection (acquire limiter)
-    const firstRequestPromise = pageB.evaluate(async (url) => {
+    // Run the stream requests from a page on the owner origin (nodeA) to avoid
+    // cross-origin + Range preflight/CORS variability in the browser.
+    const firstRequestPromise = pageA.evaluate(async (url) => {
       const controller = new AbortController();
       (window as any).__e2eStreamAbort = controller;
 
@@ -885,7 +887,7 @@ test.describe('streaming', () => {
     // Poll for the acquisition signal
     let firstAcquired = false;
     for (let index = 0; index < 50; index++) {
-      firstAcquired = await pageB.evaluate(
+      firstAcquired = await pageA.evaluate(
         () => (window as any).__e2eFirstStreamAcquired === true,
       );
       if (firstAcquired) break;
@@ -898,7 +900,7 @@ test.describe('streaming', () => {
 
     // Now make second request immediately while first is still active
     // The limiter should block this (429)
-    const secondResult = await pageB.evaluate(async (url) => {
+    const secondResult = await pageA.evaluate(async (url) => {
       try {
         const response = await fetch(url, {
           headers: { Range: 'bytes=0-1' },
@@ -920,7 +922,7 @@ test.describe('streaming', () => {
     expect(secondResult.status).toBe(429);
 
     // Clean up first stream
-    await pageB.evaluate(() => {
+    await pageA.evaluate(() => {
       (window as any).__e2eStreamAbort?.abort();
       (window as any).__e2eStreamReader?.cancel().catch(() => {});
     });

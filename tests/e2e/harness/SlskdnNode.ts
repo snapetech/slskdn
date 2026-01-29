@@ -59,22 +59,28 @@ export class SlskdnNode {
 
     // Write minimal config (YAML format)
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
-    
-    // Build Solid config section if enabled
-    const solidConfig = this.config.solidEnabled !== false ? `
-feature:
-  solid: true
+    const solidEnabled = this.config.solidEnabled !== false;
+    const allowedHostsYaml = this.config.solidAllowedHosts && this.config.solidAllowedHosts.length > 0
+      ? '\n' + this.config.solidAllowedHosts.map(h => `    - "${h}"`).join('\n')
+      : ' []';
+    const solidBlock = solidEnabled
+      ? `
 solid:
-  allowedHosts:${this.config.solidAllowedHosts && this.config.solidAllowedHosts.length > 0 
-    ? '\n' + this.config.solidAllowedHosts.map(h => `    - "${h}"`).join('\n')
-    : ' []'}
-  allowInsecureHttp: true` : `
-feature:
-  solid: false`;
+  allowedHosts:${allowedHostsYaml}
+  allowInsecureHttp: true`
+      : '';
+
+    // slskdn requires absolute paths for shares; repo root when running from tests/e2e is ../..
+    const repoRoot = path.resolve(process.cwd(), '..', '..');
+    const shareDirAbsolute = path.isAbsolute(this.config.shareDir)
+      ? this.config.shareDir
+      : path.join(repoRoot, this.config.shareDir);
 
     const configYaml = `web:
   port: ${this.apiPort}
   host: 127.0.0.1
+  https:
+    disabled: true
   authentication:
     username: admin
     password: admin
@@ -83,66 +89,88 @@ directories:
   incomplete: ${path.join(this.appDir, 'incomplete')}
 shares:
   directories:
-    - ${this.config.shareDir}
+    - ${shareDirAbsolute}
 feature:
   identityFriends: true
-  collectionsSharing: true${solidConfig}
+  collectionsSharing: true
+  solid: ${solidEnabled}
+${solidBlock}
 flags:
   no_connect: ${this.config.flags?.noConnect ?? (process.env.SLSKDN_TEST_NO_CONNECT === 'true')}
 `;
 
     await fs.writeFile(configPath, configYaml, 'utf8');
 
-    // Build if needed (first run)
-    // In CI, assume already built
-    const buildNeeded = !process.env.CI;
-    if (buildNeeded) {
-      // Could run dotnet build here, but assume it's done
-    }
+    const projectPath = path.join(repoRoot, 'src', 'slskd', 'slskd.csproj');
 
-    // Launch slskdn process
-    const projectPath = path.join(process.cwd(), '..', '..', 'src', 'slskd', 'slskd.csproj');
-    const args = ['run', '--project', projectPath, '--no-build', '--', '--config', configPath];
+    // Do NOT build here: building takes several seconds and another process can grab findFreePort() in the meantime (AddressAlreadyInUse).
+    // Caller must run `dotnet build src/slskd/slskd.csproj` (or bin/build) before starting nodes.
+    const args = ['run', '--project', projectPath, '--no-build', '--', '--config', configPath, '--app-dir', this.appDir];
 
-    this.process = spawn('dotnet', args, {
-      cwd: path.join(process.cwd(), '..', '..'),
-      stdio: ['ignore', 'pipe', 'pipe'],
+    // stdin must be a pipe kept open: when stdin is /dev/null (ignore), the child can see EOF and exit (e.g. dotnet run)
+    const child = spawn('dotnet', args, {
+      cwd: repoRoot,
+      stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
-        ASPNETCORE_ENVIRONMENT: 'Development'
+        ASPNETCORE_ENVIRONMENT: 'Development',
+        DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      }
+    });
+    this.process = child;
+    // Keep stdin write end open so child never sees EOF (do not call child.stdin.end())
+
+    const stderrChunks: Buffer[] = [];
+    const stdoutChunks: Buffer[] = [];
+    this.process.stderr?.on('data', (data: Buffer) => {
+      stderrChunks.push(data);
+      if (process.env.DEBUG) {
+        process.stderr.write(`[${this.config.nodeName}] ${data}`);
+      }
+    });
+    this.process.stdout?.on('data', (data: Buffer) => {
+      stdoutChunks.push(data);
+      if (process.env.DEBUG) {
+        process.stdout.write(`[${this.config.nodeName}] ${data}`);
       }
     });
 
-    // Log output for debugging
-    this.process.stdout?.on('data', (data) => {
-      if (process.env.DEBUG) {
-        console.log(`[${this.config.nodeName}] ${data}`);
-      }
-    });
-    this.process.stderr?.on('data', (data) => {
-      if (process.env.DEBUG) {
-        console.error(`[${this.config.nodeName}] ${data}`);
-      }
-    });
-
-    // Wait for health endpoint
     const healthUrl = `${this.apiUrl}/health`;
     const startTime = Date.now();
-    const timeout = 30000;
-    
-    while (Date.now() - startTime < timeout) {
-      try {
-        const response = await fetch(healthUrl);
-        if (response.ok) {
-          return;
+    const timeout = 90000;
+
+    const healthPromise = (async (): Promise<void> => {
+      while (Date.now() - startTime < timeout) {
+        try {
+          const response = await fetch(healthUrl);
+          if (response.ok) {
+            return;
+          }
+        } catch {
+          // Keep polling
         }
-      } catch (err) {
-        // Ignore errors, keep polling
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const stderr = Buffer.concat(stderrChunks).toString('utf8').trim();
+      throw new Error(
+        `Health check timeout for ${healthUrl} after ${timeout}ms${stderr ? `\nProcess stderr:\n${stderr}` : ''}`
+      );
+    })();
+
+    const exitPromise = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
+      this.process?.on('exit', (code, signal) => {
+        resolve({ code: code ?? null, signal: signal ?? null });
+      });
+    });
+
+    const result = await Promise.race([healthPromise, exitPromise]);
+    if (result && 'code' in result) {
+      const stderr = Buffer.concat(stderrChunks).toString('utf8').trim();
+      const stdout = Buffer.concat(stdoutChunks).toString('utf8').trim();
+      throw new Error(
+        `SlskdnNode process exited before health (code=${result.code}, signal=${result.signal})${stderr ? `\nStderr:\n${stderr}` : ''}${stdout ? `\nStdout:\n${stdout}` : ''}`
+      );
     }
-    
-    throw new Error(`Health check timeout for ${healthUrl} after ${timeout}ms`);
   }
 
   /**
@@ -164,21 +192,34 @@ flags:
    */
   async stop(): Promise<void> {
     if (this.process) {
-      this.process.kill('SIGTERM');
-      await new Promise<void>((resolve) => {
-        if (this.process) {
-          this.process.on('exit', () => resolve());
-          // Force kill after 5s
-          setTimeout(() => {
-            if (this.process) {
-              this.process.kill('SIGKILL');
-              resolve();
-            }
-          }, 5000);
-        } else {
-          resolve();
-        }
-      });
+      const proc = this.process;
+
+      const waitForExit = () =>
+        new Promise<void>((resolve) => {
+          proc.once('exit', () => resolve());
+        });
+
+      const delay = (ms: number) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        });
+
+      const exitPromise = waitForExit();
+
+      // Graceful shutdown first.
+      proc.kill('SIGTERM');
+
+      const exitedGracefully = await Promise.race([
+        exitPromise.then(() => true),
+        delay(5000).then(() => false),
+      ]);
+
+      if (!exitedGracefully) {
+        // Force kill, then wait for actual exit.
+        proc.kill('SIGKILL');
+        await Promise.race([exitPromise, delay(5000)]);
+      }
+
       this.process = null;
     }
 

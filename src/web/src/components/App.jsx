@@ -201,50 +201,104 @@ class App extends Component {
 
   init = async () => {
     this.setState({ initialized: false }, async () => {
+      const HUB_START_TIMEOUT_MS = 30000;
+      const INIT_TOTAL_TIMEOUT_MS = 30000;
+
+      let initTimedOut = false;
+      let initTimeoutId;
       try {
-        const securityEnabled = await session.getSecurityEnabled();
+        const initTask = (async () => {
+          const securityEnabled = await session.getSecurityEnabled();
 
-        if (!securityEnabled) {
-          console.debug('application security is not enabled, per api call');
-          session.enablePassthrough();
-        }
+          if (!securityEnabled) {
+            console.debug('application security is not enabled, per api call');
+            session.enablePassthrough();
+          }
 
-        if (await session.check()) {
-          const appHub = createApplicationHubConnection();
+          if (await session.check()) {
+            const appHub = createApplicationHubConnection();
 
-          appHub.on('state', (state) => {
-            this.setState({ applicationState: state });
+            appHub.on('state', (state) => {
+              this.setState({ applicationState: state });
+            });
+
+            appHub.on('options', (options) => {
+              this.setState({ applicationOptions: options });
+            });
+
+            appHub.onreconnecting(() =>
+              this.setState({ error: true, retriesExhausted: false }),
+            );
+            appHub.onclose(() =>
+              this.setState({ error: true, retriesExhausted: true }),
+            );
+            appHub.onreconnected(() =>
+              this.setState({ error: false, retriesExhausted: false }),
+            );
+
+            const hubStart = appHub.start();
+            let hubTimeoutId;
+            const hubTimeout = new Promise((_, reject) => {
+              hubTimeoutId = setTimeout(
+                () => reject(new Error('HubConnectionTimeout')),
+                HUB_START_TIMEOUT_MS,
+              );
+            });
+
+            try {
+              await Promise.race([hubStart, hubTimeout]);
+            } finally {
+              if (hubTimeoutId) {
+                clearTimeout(hubTimeoutId);
+              }
+              // Prevent unhandled rejections if the timeout wins and the start later faults.
+              hubStart.catch(() => {});
+            }
+          }
+
+          const savedTheme = this.getSavedTheme();
+          if (savedTheme != null) {
+            this.setState({ theme: savedTheme });
+          }
+
+          this.setState({
+            error: false,
           });
+        })();
 
-          appHub.on('options', (options) => {
-            this.setState({ applicationOptions: options });
-          });
-
-          appHub.onreconnecting(() =>
-            this.setState({ error: true, retriesExhausted: false }),
-          );
-          appHub.onclose(() =>
-            this.setState({ error: true, retriesExhausted: true }),
-          );
-          appHub.onreconnected(() =>
-            this.setState({ error: false, retriesExhausted: false }),
-          );
-
-          await appHub.start();
-        }
-
-        const savedTheme = this.getSavedTheme();
-        if (savedTheme != null) {
-          this.setState({ theme: savedTheme });
-        }
-
-        this.setState({
-          error: false,
+        // Safety timeout so a stalled init doesn't keep the UI on the big loader forever.
+        const initTimeout = new Promise((resolve) => {
+          initTimeoutId = setTimeout(() => {
+            initTimedOut = true;
+            resolve();
+          }, INIT_TOTAL_TIMEOUT_MS);
         });
+
+        await Promise.race([initTask, initTimeout]);
+
+        // Prevent unhandled rejections if the timeout wins.
+        initTask.catch((error) => {
+          if (initTimedOut) {
+            console.warn('Init completed after timeout.', error);
+          }
+        });
+
+        if (initTimedOut) {
+          console.warn('Init timed out; showing UI (hub/state may reconnect later).');
+        }
       } catch (error) {
-        console.error(error);
-        this.setState({ error: true, retriesExhausted: true });
+        if (error?.message === 'HubConnectionTimeout') {
+          console.warn(
+            'Hub connection timed out; showing UI (automatic reconnect will retry).',
+          );
+        } else if (!initTimedOut) {
+          console.error(error);
+          this.setState({ error: true, retriesExhausted: true });
+        }
       } finally {
+        if (initTimeoutId) {
+          clearTimeout(initTimeoutId);
+        }
         this.setState({ initialized: true });
       }
     });
@@ -339,25 +393,25 @@ class App extends Component {
       );
     }
 
-    if (error) {
-      return (
-        <ErrorSegment
-          caption={
-            <>
-              <span>Lost connection to slskd</span>
-              <br />
-              <span>
-                {retriesExhausted ? 'Refresh to reconnect' : 'Retrying...'}
-              </span>
-            </>
-          }
-          icon="attention"
-          suppressPrefix
-        />
-      );
-    }
-
     if (!session.isLoggedIn() && !isPassthroughEnabled()) {
+      if (error) {
+        return (
+          <ErrorSegment
+            caption={
+              <>
+                <span>Lost connection to slskd</span>
+                <br />
+                <span>
+                  {retriesExhausted ? 'Refresh to reconnect' : 'Retrying...'}
+                </span>
+              </>
+            }
+            icon="attention"
+            suppressPrefix
+          />
+        );
+      }
+
       return (
         <LoginForm
           error={login.error}
@@ -378,6 +432,20 @@ class App extends Component {
 
     return (
       <>
+        {error && (
+          <Segment
+            color="red"
+            inverted
+            style={{
+              borderRadius: 0,
+              margin: 0,
+              padding: '0.75rem 1rem',
+            }}
+          >
+            <Icon name="attention" />
+            Lost connection to slskd. {retriesExhausted ? 'Refresh to reconnect.' : 'Retrying...'}
+          </Segment>
+        )}
         <Sidebar.Pushable
           as={Segment}
           className="app"
