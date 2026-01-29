@@ -701,7 +701,7 @@ jobs:
           for ($i = 1; $i -le $max; $i++) {
             gh release download "${{ github.ref_name }}" --repo ${{ github.repository }} --pattern "slskdn-dev-win-x64.zip"
             if (Test-Path "slskdn-dev-win-x64.zip") { break }
-            Write-Host "Attempt $i/$max: asset not ready, waiting 15s..."
+            Write-Host "Attempt $i/${max}: asset not ready, waiting 15s..."
             Start-Sleep -Seconds 15
           }
           if (-not (Test-Path "slskdn-dev-win-x64.zip")) { Write-Error "slskdn-dev-win-x64.zip not found after retries"; exit 1 }
@@ -1010,8 +1010,8 @@ jobs:
               echo "✅ Published to Snap (edge channel)"
               exit 0
             fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing"; then
-              echo "Retrying in 30s (transient Snap Store status)..."
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection"; then
+              echo "Retrying in 30s (transient Snap Store error)..."
               sleep 30
               continue
             fi
@@ -1920,8 +1920,8 @@ jobs:
               echo "✅ Published to Snap (stable channel)"
               exit 0
             fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing"; then
-              echo "Retrying in 30s (transient Snap Store status)..."
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection"; then
+              echo "Retrying in 30s (transient Snap Store error)..."
               sleep 30
               continue
             fi
