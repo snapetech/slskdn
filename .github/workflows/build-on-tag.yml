@@ -415,6 +415,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Download from Release
         env:
@@ -723,9 +725,24 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Match master: do NOT pass path to choco push — run from packaging/chocolatey so choco finds the .nupkg; passing path causes path+flag gluing.
-          choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --prerelease --execution-timeout 300
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          
+          # Find the exact nupkg file
+          $nupkg = Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1
+          if (-not $nupkg) { Write-Error "No .nupkg file found"; exit 1 }
+          Write-Host "Pushing: $($nupkg.FullName)"
+          
+          # Use call operator with array splatting - bypasses all PowerShell parsing issues
+          # Each element becomes a separate argument, avoiding the --prerelease-as-filename bug
+          $chocoArgs = @(
+            "push",
+            $nupkg.FullName,
+            "--source", "https://push.chocolatey.org/",
+            "--api-key", $env:CHOCO_API_KEY,
+            "--prerelease",
+            "--execution-timeout", "300"
+          )
+          & choco @chocoArgs
+          if ($LASTEXITCODE -ne 0) { Write-Error "choco push failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
 
@@ -1652,12 +1669,26 @@ jobs:
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey
           choco pack
-          # Match master: do NOT pass path; run from packaging/chocolatey. Retry on 504/timeout.
+          
+          # Find the exact nupkg file
+          $nupkg = Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1
+          if (-not $nupkg) { Write-Error "No .nupkg file found"; exit 1 }
+          Write-Host "Pushing: $($nupkg.FullName)"
+          
+          # Use call operator with array splatting - bypasses all PowerShell parsing issues
+          # Retry on 504/timeout
           $maxRetries = 3
           $retryCount = 0
           $success = $false
           while ($retryCount -lt $maxRetries -and -not $success) {
-            choco push --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout 300 2>&1 | Tee-Object -Variable pushOutput
+            $chocoArgs = @(
+              "push",
+              $nupkg.FullName,
+              "--source", "https://push.chocolatey.org/",
+              "--api-key", $env:CHOCO_API_KEY,
+              "--execution-timeout", "300"
+            )
+            & choco @chocoArgs 2>&1 | Tee-Object -Variable pushOutput
             if ($LASTEXITCODE -eq 0) {
               $success = $true
               Write-Host "✅ Published to Chocolatey: slskdn (stable)"
@@ -1671,7 +1702,7 @@ jobs:
                 exit 0
               }
             } else {
-              Write-Host "❌ Chocolatey push failed"; exit 1
+              Write-Host "❌ Chocolatey push failed with exit code $LASTEXITCODE"; exit 1
             }
           }
         shell: pwsh
