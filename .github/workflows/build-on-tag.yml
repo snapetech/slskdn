@@ -731,17 +731,11 @@ jobs:
           if (-not $nupkg) { Write-Error "No .nupkg file found"; exit 1 }
           Write-Host "Pushing: $($nupkg.FullName)"
           
-          # Use call operator with array splatting - bypasses all PowerShell parsing issues
-          # Each element becomes a separate argument, avoiding the --prerelease-as-filename bug
-          $chocoArgs = @(
-            "push",
-            $nupkg.FullName,
-            "--source", "https://push.chocolatey.org/",
-            "--api-key", $env:CHOCO_API_KEY,
-            "--prerelease",
-            "--execution-timeout", "300"
-          )
-          & choco @chocoArgs
+          # Use cmd /c to completely bypass PowerShell argument parsing
+          # PowerShell's splatting still has issues with external commands
+          $nupkgPath = $nupkg.FullName
+          $apiKey = $env:CHOCO_API_KEY
+          cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $apiKey --prerelease --execution-timeout 300"
           if ($LASTEXITCODE -ne 0) { Write-Error "choco push failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
@@ -1675,27 +1669,23 @@ jobs:
           if (-not $nupkg) { Write-Error "No .nupkg file found"; exit 1 }
           Write-Host "Pushing: $($nupkg.FullName)"
           
-          # Use call operator with array splatting - bypasses all PowerShell parsing issues
+          # Use cmd /c to completely bypass PowerShell argument parsing
           # Retry on 504/timeout
+          $nupkgPath = $nupkg.FullName
+          $apiKey = $env:CHOCO_API_KEY
           $maxRetries = 3
           $retryCount = 0
           $success = $false
           while ($retryCount -lt $maxRetries -and -not $success) {
-            $chocoArgs = @(
-              "push",
-              $nupkg.FullName,
-              "--source", "https://push.chocolatey.org/",
-              "--api-key", $env:CHOCO_API_KEY,
-              "--execution-timeout", "300"
-            )
-            & choco @chocoArgs 2>&1 | Tee-Object -Variable pushOutput
+            $pushOutput = cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $apiKey --execution-timeout 300 2>&1"
+            Write-Host $pushOutput
             if ($LASTEXITCODE -eq 0) {
               $success = $true
               Write-Host "✅ Published to Chocolatey: slskdn (stable)"
             } elseif ($pushOutput -match "504|Gateway Timeout|timeout") {
               $retryCount++
               if ($retryCount -lt $maxRetries) {
-                Write-Host "⚠️ Chocolatey timeout (attempt $retryCount/$maxRetries), retrying in 10 seconds..."
+                Write-Host "⚠️ Chocolatey timeout (attempt $retryCount/${maxRetries}), retrying in 10 seconds..."
                 Start-Sleep -Seconds 10
               } else {
                 Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts (likely transient)"
