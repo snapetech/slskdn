@@ -53,24 +53,20 @@ test.describe('library ingest', () => {
     await waitForHealth(request, nodeA.baseUrl);
     await login(page, nodeA);
 
-    // Try to navigate to browse/library view if it exists
-    // This feature may not be fully implemented, so make test lenient
+    // Wait for browse nav to appear (sidebar loads after login)
     const browseNav = page.getByTestId(T.navBrowse);
-    if ((await browseNav.count()) > 0) {
-      await browseNav.click({ timeout: 5_000 }).catch(() => {});
-      await page.waitForLoadState('domcontentloaded', { timeout: 5_000 });
+    await expect(browseNav).toBeVisible({ timeout: 15_000 });
 
-      // Verify page loads without crashing
-      await expect(page.locator('body')).toBeVisible({ timeout: 3_000 });
+    await clickNav(page, T.navBrowse);
+    await page.waitForLoadState('domcontentloaded', { timeout: 5_000 });
 
-      // If browse content exists, verify it's visible
-      const browseContent = page.getByTestId(T.browseContent);
-      if ((await browseContent.count()) > 0) {
-        await expect(browseContent).toBeVisible({ timeout: 5_000 });
-      }
-    } else {
-      // Browse nav doesn't exist - skip this test for now
-      test.skip(true, 'Browse navigation not available');
+    // Verify page loads without crashing
+    await expect(page.locator('body')).toBeVisible({ timeout: 3_000 });
+
+    // If browse content exists, verify it's visible
+    const browseContent = page.getByTestId(T.browseContent);
+    if ((await browseContent.count()) > 0) {
+      await expect(browseContent).toBeVisible({ timeout: 5_000 });
     }
   });
 });

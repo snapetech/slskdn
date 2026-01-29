@@ -16,6 +16,7 @@ test.describe('Smoke Tests', () => {
   let harness: MultiPeerHarness;
   let nodeApiUrl: string;
 
+  // Node startup can take 60–90s (port allocation, dotnet cold start, health check). Use 2m so we don't flake.
   test.beforeAll(async () => {
     harness = new MultiPeerHarness();
 
@@ -24,7 +25,7 @@ test.describe('Smoke Tests', () => {
     const node = await harness.startNode('alice', 'test-data/slskdn-test-fixtures/music');
     nodeApiUrl = node.apiUrl;
     await waitForHealth(nodeApiUrl);
-  });
+  }, { timeout: 120000 });
 
   test.afterAll(async () => {
     await harness.stopAll();

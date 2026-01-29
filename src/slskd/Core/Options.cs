@@ -1485,6 +1485,11 @@ namespace slskd
             /// </summary>
             public bool AllowInsecureHttp { get; init; } = false;
 
+            /// <summary>
+            /// When true, allow localhost and loopback for WebID fetches (E2E/testing only). Keep false in prod.
+            /// </summary>
+            public bool AllowLocalhostForWebId { get; init; } = false;
+
             /// <summary>Max bytes we will read from WebID profile / Pod metadata resources.</summary>
             public int MaxFetchBytes { get; init; } = 1_000_000;
 

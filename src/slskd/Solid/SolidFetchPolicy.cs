@@ -55,6 +55,12 @@ public sealed class SolidFetchPolicy : ISolidFetchPolicy
             throw new InvalidOperationException($"Solid fetch blocked: host '{uri.Host}' not in AllowedHosts.");
         }
 
+        // E2E/testing: allow localhost and loopback when explicitly enabled
+        if (opts.AllowLocalhostForWebId)
+        {
+            return Task.CompletedTask;
+        }
+
         // Block obvious local targets
         if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
         {

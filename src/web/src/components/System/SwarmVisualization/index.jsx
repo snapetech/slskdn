@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Grid,
   Header,
+  Icon,
   Label,
   Loader,
   Progress,

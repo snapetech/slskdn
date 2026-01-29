@@ -15,9 +15,8 @@ import { login } from '../fixtures/helpers';
  * - Client ID document is served correctly
  *
  * All Solid E2E tests start a real slskdn node (each with --app-dir for isolated mutex/data).
- * UI tests (load Solid page, resolve WebID, block WebID) are skipped in CI. Run: npx playwright test specs/solid.spec.ts
+ * UI tests run in CI; only the external WebID resolution test is skipped (requires HTTPS host).
  */
-const skipUiTests = !!process.env.CI;
 
 test.describe('Solid Integration', () => {
   test.setTimeout(120000); // Node cold start + health can take 60s; leave time for test steps
@@ -66,7 +65,6 @@ test.describe('Solid Integration', () => {
   });
 
   test('should load Solid settings page when feature is enabled', async ({ page }) => {
-    test.skip(skipUiTests, 'UI tests skipped in CI');
     const node = await harness.startNode('alice-solid-page', 'test-data/slskdn-test-fixtures/music', {
       solidEnabled: true,
       solidAllowedHosts: [fakeSolid.getHostname()]
@@ -79,12 +77,7 @@ test.describe('Solid Integration', () => {
   });
 
   test('should resolve WebID and display OIDC issuers', async ({ page }) => {
-    test.skip(skipUiTests, 'UI tests skipped in CI');
-
-    // SolidFetchPolicy intentionally blocks localhost/private IPs even if allow-listed.
-    // A positive resolution test needs an external HTTPS WebID host.
-    test.skip(true, 'Requires external HTTPS WebID host (localhost is blocked by SSRF policy)');
-
+    // E2E node config sets allowLocalhostForWebId so FakeSolidServer (HTTP localhost) is allowed.
     const node = await harness.startNode('alice-solid-resolve', 'test-data/slskdn-test-fixtures/music', {
       solidEnabled: true,
       solidAllowedHosts: [fakeSolid.getHostname()]
@@ -133,7 +126,6 @@ test.describe('Solid Integration', () => {
   });
 
   test('should block WebID resolution when host not in AllowedHosts', async ({ page }) => {
-    test.skip(skipUiTests, 'UI tests skipped in CI');
     const node = await harness.startNode('alice-solid-blocked', 'test-data/slskdn-test-fixtures/music', {
       solidEnabled: true,
       solidAllowedHosts: [] // Empty = deny all

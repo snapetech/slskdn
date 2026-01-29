@@ -67,7 +67,8 @@ export class SlskdnNode {
       ? `
 solid:
   allowedHosts:${allowedHostsYaml}
-  allowInsecureHttp: true`
+  allowInsecureHttp: true
+  allowLocalhostForWebId: true`
       : '';
 
     // slskdn requires absolute paths for shares; repo root when running from tests/e2e is ../..
@@ -76,7 +77,10 @@ solid:
       ? this.config.shareDir
       : path.join(repoRoot, this.config.shareDir);
 
-    const configYaml = `web:
+    const configYaml = `soulseek:
+  username: admin
+  password: admin
+web:
   port: ${this.apiPort}
   host: 127.0.0.1
   https:
@@ -95,6 +99,8 @@ feature:
   collectionsSharing: true
   solid: ${solidEnabled}
 ${solidBlock}
+sharing:
+  tokenSigningKey: "${Buffer.alloc(32).fill(0).toString('base64')}"
 flags:
   no_connect: ${this.config.flags?.noConnect ?? (process.env.SLSKDN_TEST_NO_CONNECT === 'true')}
 `;
@@ -108,14 +114,22 @@ flags:
     const args = ['run', '--project', projectPath, '--no-build', '--', '--config', configPath, '--app-dir', this.appDir];
 
     // stdin must be a pipe kept open: when stdin is /dev/null (ignore), the child can see EOF and exit (e.g. dotnet run)
+    const baseEnv = {
+      ...process.env,
+      ASPNETCORE_ENVIRONMENT: 'Development',
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1',
+      // Share-grant ingest uses Soulseek.Username as current user; E2E nodes use admin/admin (config prefix is SLSKD_)
+      SLSKD_SLSK_USERNAME: 'admin',
+      SLSKD_SLSK_PASSWORD: 'admin'
+    };
+    // E2E announce endpoint: ensure server sees SLSKDN_E2E_SHARE_ANNOUNCE when test sets it
+    if (process.env.SLSKDN_E2E_SHARE_ANNOUNCE === '1') {
+      baseEnv.SLSKDN_E2E_SHARE_ANNOUNCE = '1';
+    }
     const child = spawn('dotnet', args, {
       cwd: repoRoot,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        ASPNETCORE_ENVIRONMENT: 'Development',
-        DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-      }
+      env: baseEnv
     });
     this.process = child;
     // Keep stdin write end open so child never sees EOF (do not call child.stdin.end())
@@ -185,6 +199,96 @@ flags:
    */
   getAppDir(): string {
     return this.appDir;
+  }
+
+  /**
+   * List files in the downloads directory.
+   */
+  async getDownloadedFiles(): Promise<
+    Array<{ modified: Date; name: string; path: string; size: number }>
+  > {
+    if (!this.appDir) {
+      throw new Error('Cannot get downloaded files: app directory not set (node not started?)');
+    }
+    const downloadsDir = path.join(this.appDir, 'downloads');
+    const files: Array<{ modified: Date; name: string; path: string; size: number }> = [];
+    try {
+      try {
+        await fs.access(downloadsDir);
+      } catch {
+        return files;
+      }
+      const entries = await fs.readdir(downloadsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          const filePath = path.join(downloadsDir, entry.name);
+          try {
+            const stats = await fs.stat(filePath);
+            files.push({
+              modified: stats.mtime,
+              name: entry.name,
+              path: filePath,
+              size: stats.size,
+            });
+          } catch {
+            // File might have been deleted between readdir and stat
+          }
+        }
+      }
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT') {
+        throw err;
+      }
+    }
+    return files;
+  }
+
+  /**
+   * Find a file in downloads by name or partial match (e.g. sha256 prefix or "sintel").
+   */
+  async findDownloadedFile(searchTerm: string): Promise<{
+    modified: Date;
+    name: string;
+    path: string;
+    size: number;
+  } | null> {
+    if (!this.appDir) {
+      throw new Error('Cannot find downloaded file: app directory not set (node not started?)');
+    }
+    const files = await this.getDownloadedFiles();
+    const searchLower = searchTerm.toLowerCase();
+    let found = files.find((f) => f.name.toLowerCase() === searchLower);
+    if (found) return found;
+    found = files.find((f) => f.name.toLowerCase().includes(searchLower));
+    if (found) return found;
+    found = files.find((f) => {
+      const nameWithoutExt = path.parse(f.name).name.toLowerCase();
+      return nameWithoutExt.includes(searchLower);
+    });
+    return found ?? null;
+  }
+
+  /**
+   * Wait for a file to appear in downloads (e.g. after backfill).
+   */
+  async waitForDownloadedFile(
+    searchTerm: string,
+    timeoutMs: number = 30_000,
+    pollIntervalMs: number = 1_000
+  ): Promise<{
+    modified: Date;
+    name: string;
+    path: string;
+    size: number;
+  } | null> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const file = await this.findDownloadedFile(searchTerm);
+      if (file && file.size > 0) return file;
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
+    }
+    return null;
   }
 
   /**

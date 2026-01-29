@@ -1121,12 +1121,24 @@ test.describe('multi-peer sharing', () => {
       }
 
       if (nodeCInstance) {
-        // Wait for files to appear (backfill is asynchronous)
-        // Backfill currently writes files named by contentId (sha256_...); match by the known treasure sha.
-        const treasureFile = await nodeCInstance.waitForDownloadedFile(
-          'sha256_2e93caf3f954e8e8457d9846ad7756f74ccf192dab77b7247d48ba134a8e2c1b',
-          30_000,
+        // Allow time for HTTP backfill to finish writing (controller is sync but fs may lag)
+        await pageC.waitForTimeout(2_000);
+
+        // Wait for files to appear. Backend writes contentId with ":"→"_" + extension (e.g. .bin).
+        // Match by full contentId-style name or by hash substring.
+        const fullId =
+          'sha256_2e93caf3f954e8e8457d9846ad7756f74ccf192dab77b7247d48ba134a8e2c1b';
+        const hashPart = '2e93caf3f954e8e8457d9846ad7756f74ccf192dab77b7247d48ba134a8e2c1b';
+        let treasureFile = await nodeCInstance.waitForDownloadedFile(
+          fullId,
+          35_000,
         );
+        if (!treasureFile) {
+          treasureFile = await nodeCInstance.waitForDownloadedFile(
+            hashPart,
+            10_000,
+          );
+        }
 
         // Verify the file was downloaded
         if (!treasureFile) {

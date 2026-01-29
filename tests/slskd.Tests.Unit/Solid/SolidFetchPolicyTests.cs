@@ -128,6 +128,42 @@ public class SolidFetchPolicyTests
     }
 
     [Fact]
+    public async Task ValidateAsync_Localhost_WhenAllowLocalhostForWebIdTrue_Succeeds()
+    {
+        _options = new TestOptionsMonitor(new slskd.Options
+        {
+            Solid = new slskd.Options.SolidOptions
+            {
+                AllowedHosts = new[] { "localhost" },
+                AllowLocalhostForWebId = true,
+                AllowInsecureHttp = true
+            }
+        });
+        var policy = CreatePolicy();
+        var uri = new Uri("http://localhost/profile");
+
+        await policy.ValidateAsync(uri, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_LoopbackIP_WhenAllowLocalhostForWebIdTrue_Succeeds()
+    {
+        _options = new TestOptionsMonitor(new slskd.Options
+        {
+            Solid = new slskd.Options.SolidOptions
+            {
+                AllowedHosts = new[] { "127.0.0.1" },
+                AllowLocalhostForWebId = true,
+                AllowInsecureHttp = true
+            }
+        });
+        var policy = CreatePolicy();
+        var uri = new Uri("http://127.0.0.1/profile");
+
+        await policy.ValidateAsync(uri, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task ValidateAsync_LocalDomain_Throws()
     {
         _options = new TestOptionsMonitor(new slskd.Options

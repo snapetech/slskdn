@@ -280,12 +280,77 @@ jobs:
             **Commit:** ${{ needs.build.outputs.short_sha }}
             **Built:** ${{ github.event.head_commit.timestamp }}
             
-            ### ⚠️ Experimental Features
-            - 🔀 Multi-source swarm downloads
-            - 🌐 DHT mesh network with content verification
-            - 🔗 BitTorrent DHT rendezvous for peer discovery
-            - 🔒 TLS-secured mesh connections
-            - 📊 Distributed hash database with mesh sync
+            ---
+            
+            ## New since 0.24.1-slskdn.40
+            
+            ### Solid Integration (WebID & Solid-OIDC)
+            - WebID resolution and OIDC issuer extraction; Solid-OIDC Client ID document at `/solid/clientid.jsonld`
+            - SSRF hardening: host allow-list, HTTPS-only, private IP blocking, size/timeout limits
+            - API: `GET /api/v0/solid/status`, `POST /api/v0/solid/resolve-webid`; Solid settings UI in nav
+            
+            ### Swarm Analytics & Metrics
+            - Swarm Analytics Service: performance metrics, peer rankings, efficiency metrics, historical trends, recommendations engine
+            - New **Swarm Analytics** tab in System UI with dashboard and visualizations
+            - Advanced Discovery: content-aware matching, fuzzy matching, multi-factor peer ranking
+            - Adaptive scheduling: learning from feedback, factor correlation, performance-based adaptation
+            - Cross-domain swarming: Movies, TV, Books, GenericFile (domain-specific backends)
+            - Real-time Swarm Visualization: job overview, peer contributions table, chunk heatmap, performance metrics; "View Details" on swarm jobs
+            
+            ### OpenTelemetry Distributed Tracing
+            - Config: `telemetry.tracing` (enabled, exporter: console/jaeger/otlp)
+            - Activity sources: Transfers.MultiSource, Mesh, HashDb, Search
+            - Swarm/mesh/hashdb/search tracing with tags; ASP.NET Core and HTTP client instrumentation
+            
+            ### CI/CD & Quality
+            - Performance regression: BenchmarkDotNet in CI, baseline comparison, >10% degradation reported
+            - Load testing: k6, up to 100 concurrent users, thresholds (95% <500ms, 99% <1s)
+            - Security: CodeQL, Trivy container scan, NuGet/npm dependency scanning
+            - Release: SHA256SUMS.txt on releases; AUR dev PKGBUILD uses correct release tag URL
+            
+            ### Performance & Benchmarking
+            - Adaptive chunk size optimization; chunk size optimizer service
+            - BenchmarkDotNet suite: HashDb, Swarm, API, Transport benchmarks in `slskd.Tests.Performance`
+            
+            ### Documentation
+            - Developer: contributing guide, code style, testing, debugging, project structure, API discovery
+            - User: getting started, troubleshooting, advanced features walkthrough
+            - API documentation guide: full endpoint reference, auth, patterns, examples
+            
+            ### Search & Job UI
+            - Advanced Search: quality presets (High Quality, Lossless Only), sample rate filter, format/codec (ext:) filter; enhanced Scene ↔ Pod provider selection UI
+            - Jobs dashboard: analytics overview, active swarm downloads with progress/speed/ETA, filterable/sortable job list, pagination
+            
+            ### Scene ↔ Pod Bridging
+            - Unified search (Pod + Scene), provenance badges (POD/SCENE/POD+SCENE), action routing (download/stream by source)
+            - Remote pod downloads when not local; provider selection checkboxes; privacy (Pod IDs never to Scene)
+            
+            ### Identity & Friends
+            - Peer profiles (signed), contacts, friend codes, invite links (`slskdn://invite/`), mDNS LAN discovery
+            - ShareGroups + Contacts; WebUI: Contacts, ShareGroups, Shared with me; full sharing API
+            
+            ### Collections & Sharing
+            - ShareGroups, Collections, Share Grants, share tokens, manifest API; content resolution and streaming integration
+            
+            ### Streaming
+            - `GET /api/v0/streams/{contentId}` with Range support; token and user auth; stream session limiting
+            - Mesh search improvements (query limits, deduplication, media kind); relay streaming fallback by ContentId
+            
+            ### Mesh & Resilience
+            - Fault-tolerant UDP overlay: graceful degradation when port bind fails (mesh continues via DHT/relay)
+            
+            ### UI & Security
+            - Logs: CSRF noise reduced (safe methods → Verbose), log level filter, count display
+            - Security/hardening (40-fixes): EnforceSecurity, CORS, rate limits, metrics constant-time, and related fixes
+            
+            ### Testing
+            - Bridge protocol and performance tests; protocol contract tests; Bridge E2E with full instance runner
+            - E2E: main suite (tests/e2e) with search fixture hits and sharing/backfill tests; SlskdnNode download helpers
+            
+            ---
+            
+            ### ⚠️ Experimental (existing)
+            - Multi-source swarm downloads, DHT mesh, BitTorrent DHT rendezvous, TLS mesh, hash DB with mesh sync
             
             ### Changes in this build
             See commit ${{ needs.build.outputs.short_sha }} for details.
@@ -305,7 +370,7 @@ jobs:
             - macOS: `brew install snapetech/slskdn/slskdn-dev`
             
             **Direct Download**: Extract the zip for your platform and run the binary
-          prerelease: false
+          prerelease: true
           files: slskdn-dev-*.zip
 
 

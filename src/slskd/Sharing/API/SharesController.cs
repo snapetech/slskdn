@@ -80,6 +80,14 @@ public class SharesController : ControllerBase
             }
         }
 
+        // E2E: when announce endpoint is enabled, use authenticated web user so share-grants list matches ingested recipient
+        if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SHARE_ANNOUNCE") == "1")
+        {
+            var name = User?.Identity?.Name;
+            if (!string.IsNullOrWhiteSpace(name))
+                return name;
+        }
+
         return string.Empty;
     }
     private bool CollectionsEnabled => _options.CurrentValue.Feature.CollectionsSharing;
