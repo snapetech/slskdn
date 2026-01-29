@@ -104,7 +104,69 @@ Do not revert the whole file to "fix" one thing.
 
 ---
 
-### 3. `async void` Event Handlers Without Try-Catch
+### 3. E2E SlskdnNode: HTTPS Port Conflict and Missing --app-dir
+
+**The Bug**: E2E tests that start real slskdn nodes fail with "Hosting failed to start" / "Address already in use" or "An instance of slskd is already running" because (1) every node tries to bind to the same HTTPS port (5031) and (2) nodes share the default app dir (mutex conflict).
+
+**Files Affected**:
+- `tests/e2e/harness/SlskdnNode.ts`
+- `tests/e2e/fixtures/helpers.ts` (findFreePort)
+
+**Wrong**:
+- Test config without `web.https.disabled: true` → all nodes bind to 5031, second node fails.
+- Spawn args without `--app-dir <per-node dir>` → all nodes use default app dir, mutex prevents multiple instances.
+- Building inside `SlskdnNode.start()` after `findFreePort()` → long delay lets another process grab the port (or port in TIME_WAIT).
+
+**Correct**:
+- In test config YAML: `web: https: disabled: true` so each node only binds to its unique HTTP port.
+- Spawn with `--app-dir`, `this.appDir` (isolated temp dir per node).
+- Build once in spec `beforeAll`, not per node; use `findFreePort()` with `reuseAddress: true` so the probe port can be rebound immediately.
+- Keep stdin as pipe (do not use `ignore`) so the child does not see EOF and exit.
+
+**Why This Keeps Happening**: Default slskd config enables HTTPS on a fixed port; E2E runs multiple nodes and did not disable HTTPS or isolate app dirs.
+
+---
+
+### 3b. E2E SlskdnNode.stop(): Must Wait for Child Exit (Port Leaks)
+
+**The Bug**: E2E nodes intermittently fail to start with `Address already in use` because the harness stop logic resolves before the `dotnet` child process has actually exited. The old process can keep Kestrel bound to its port for a short window, and the next node hits a bind failure.
+
+**Files Affected**:
+- `tests/e2e/harness/SlskdnNode.ts`
+
+**Wrong** (resolves early after SIGKILL without waiting for `exit`):
+```ts
+this.process.kill('SIGTERM');
+await new Promise<void>((resolve) => {
+  this.process.on('exit', () => resolve());
+  setTimeout(() => {
+    this.process.kill('SIGKILL');
+    resolve();
+  }, 5000);
+});
+```
+
+**Correct** (escalate SIGTERM -> SIGKILL, but always await the `exit` event):
+```ts
+const exitPromise = new Promise<void>((resolve) => proc.once('exit', () => resolve()));
+
+proc.kill('SIGTERM');
+const exitedGracefully = await Promise.race([
+  exitPromise.then(() => true),
+  delay(5000).then(() => false),
+]);
+
+if (!exitedGracefully) {
+  proc.kill('SIGKILL');
+  await Promise.race([exitPromise, delay(5000)]);
+}
+```
+
+**Why This Keeps Happening**: It's easy to write a timeout path that resolves the stop Promise without verifying the child actually exited.
+
+---
+
+### 4. `async void` Event Handlers Without Try-Catch
 
 **The Bug**: `async void` event handlers that throw exceptions crash the entire .NET process.
 
@@ -135,6 +197,38 @@ private async void Client_LoggedIn(object sender, EventArgs e)
 ```
 
 **Why This Keeps Happening**: `async void` is required for event handlers, but models forget it can't propagate exceptions.
+
+---
+
+### 5. Streaming Controller `[Produces]` Causing 406 Instead of 429
+
+**The Bug**: Adding `[Produces("application/octet-stream")]` to the streams endpoint can cause ASP.NET Core to return `406 Not Acceptable` for non-file error responses (notably the concurrency limiter `429`), breaking E2E expectations.
+
+**Files Affected**:
+- `src/slskd/Streaming/StreamsController.cs`
+
+**Wrong**:
+```csharp
+[Produces("application/octet-stream")]
+public class StreamsController : ControllerBase
+{
+    // ...
+    if (!_limiter.TryAcquire(limiterKey, maxConcurrent))
+        return StatusCode(429, "Too many concurrent streams.");
+}
+```
+
+**Correct**:
+```csharp
+public class StreamsController : ControllerBase
+{
+    // ...
+    if (!_limiter.TryAcquire(limiterKey, maxConcurrent))
+        return StatusCode(429, "Too many concurrent streams.");
+}
+```
+
+**Why This Keeps Happening**: `[Produces]` is tempting for a file endpoint, but the action also returns non-file errors (401/404/429). Constraining the produced content types can make these errors fail content negotiation and surface as `406`.
 
 ---
 
@@ -2062,4 +2156,3 @@ if (useHttpDownload) {
 ---
 
 *Last updated: 2026-01-27*
-
