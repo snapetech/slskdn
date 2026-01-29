@@ -1120,32 +1120,79 @@ jobs:
             ## 🔋 slskdN ${{ needs.parse.outputs.version }} - The Batteries-Included Fork
             
             **Based on**: slskd 0.24.1  
-            **Status**: Stable Production Release
+            **Note**: This is an experimental fork with many new features. Use at your own risk.
             
             ---
             
-            ## 🆚 Features vs Upstream slskd
+            ## Features
             
-            ### Core Improvements
-            - ✅ **Auto-Replace Stuck Downloads** — Downloads timing out? We'll find you another, automatically
-            - ✅ **Wishlist / Background Search** — Save searches that run whilst you're having tea  
-            - ✅ **Multiple Download Destinations** — Route files to the proper folders
-            - ✅ **Clear All Searches** — One click, sorted
-            - ✅ **Smart Search Ranking** — Best sources float to the top
-            - ✅ **User History Badges** — Know who's been reliable
-            - ✅ **Max File Size Filter** — Skip the bloated ones
-            - ✅ **Delete Files on Remove** — Tidy up properly
+            ### Core Download Features
+            - **Auto-Replace Stuck Downloads** — Automatically finds alternative sources when downloads time out
+            - **Multi-Source Swarm Downloads** — Download from multiple peers simultaneously for faster transfers
+            - **Wishlist / Background Search** — Save searches that run automatically in the background
+            - **Multiple Download Destinations** — Route files to different folders based on rules
+            - **Smart Search Ranking** — Best sources automatically float to the top
+            - **Max File Size Filter** — Skip oversized files automatically
+            - **Delete Files on Remove** — Clean up incomplete files when cancelling
             
-            ### UI Enhancements  
-            - ✅ **Tabbed User Browsing** — Multiple users, proper tabs
-            - ✅ **Folder Checkboxes** — Select what you want, sensibly
-            - ✅ **Configurable Search Results** — 25, 50, 100 per page
-            - ✅ **PWA Support** — Runs on your phone, like an app
+            ### Swarm Analytics & Metrics
+            - **Swarm Analytics Service** — Performance metrics, peer rankings, efficiency metrics, historical trends
+            - **Swarm Analytics Dashboard** — Real-time visualization of swarm jobs, peer contributions, chunk heatmaps
+            - **Adaptive Scheduling** — Learning from feedback, performance-based adaptation
+            - **Cross-Domain Swarming** — Movies, TV, Books, GenericFile domain-specific backends
+            
+            ### Identity & Social
+            - **Peer Profiles** — Signed profiles, contacts, friend codes
+            - **Invite Links** — Share `slskdn://invite/` links to connect with friends
+            - **User History Badges** — Know who's been reliable
+            - **User Notes** — Remember details about users
+            - **ShareGroups & Collections** — Organize and share content with specific groups
+            - **mDNS LAN Discovery** — Automatically find other slskdN users on your network
+            
+            ### Solid Integration (WebID & Solid-OIDC)
+            - **WebID Resolution** — OIDC issuer extraction with SSRF hardening
+            - **Solid-OIDC Client ID** — Document at `/solid/clientid.jsonld`
+            - **API Endpoints** — `GET /api/v0/solid/status`, `POST /api/v0/solid/resolve-webid`
+            
+            ### Scene ↔ Pod Bridging
+            - **Unified Search** — Search Pod + Scene simultaneously
+            - **Provenance Badges** — POD/SCENE/POD+SCENE indicators
+            - **Privacy Protection** — Pod IDs never exposed to Scene network
+            
+            ### Streaming
+            - **Stream API** — `GET /api/v0/streams/{contentId}` with Range support
+            - **Token & User Auth** — Secure streaming with session limiting
+            - **Relay Fallback** — Stream via relay when direct connection unavailable
+            
+            ### Mesh & DHT Networking
+            - **DHT Mesh Network** — Decentralized peer discovery
+            - **BitTorrent DHT Rendezvous** — Find peers via BT DHT
+            - **TLS Mesh** — Encrypted mesh connections
+            - **Hash DB with Mesh Sync** — Distributed content database
+            - **Fault-Tolerant UDP Overlay** — Graceful degradation when port bind fails
+            
+            ### OpenTelemetry Tracing
+            - **Distributed Tracing** — Console/Jaeger/OTLP exporters
+            - **Activity Sources** — Transfers.MultiSource, Mesh, HashDb, Search tracing
+            
+            ### UI Enhancements
+            - **Tabbed User Browsing** — Multiple users in proper tabs
+            - **Folder Checkboxes** — Bulk selection made easy
+            - **Configurable Search Results** — 25, 50, 100 per page
+            - **Advanced Search Filters** — Quality presets, sample rate, format/codec filters
+            - **Jobs Dashboard** — Analytics overview, active swarms, progress/speed/ETA
+            - **Clear All Searches** — One click cleanup
+            - **PWA Support** — Install as app on phone/desktop
             
             ### Notifications & Integration
-            - ✅ **Push Notifications** — Pushbullet, Ntfy, Pushover support
-            - ✅ **Download Complete Alerts** — Know when it's done
-            - ✅ **User Notes** — Remember why you blocked them
+            - **Push Notifications** — Pushbullet, Ntfy, Pushover support
+            - **Download Complete Alerts** — Get notified when downloads finish
+            - **Webhooks** — Integrate with external services
+            
+            ### Security & Quality
+            - **CORS & Rate Limiting** — Hardened API security
+            - **CSRF Protection** — Safe method noise reduced
+            - **Metrics Constant-Time** — Timing-safe metrics endpoints
             
             ---
             
@@ -1182,12 +1229,12 @@ jobs:
             
             ## 📥 Downloads
             
-            - **Linux x64**: `slskdN-${{ needs.parse.outputs.version }}-linux-x64.zip`
-            - **Linux ARM64**: `slskdN-${{ needs.parse.outputs.version }}-linux-arm64.zip`
-            - **Linux musl x64**: `slskdN-${{ needs.parse.outputs.version }}-linux-musl-x64.zip`
-            - **Windows x64**: `slskdN-${{ needs.parse.outputs.version }}-win-x64.zip`
-            - **macOS x64** (Intel): `slskdN-${{ needs.parse.outputs.version }}-osx-x64.zip`
-            - **macOS ARM64** (Apple Silicon): `slskdN-${{ needs.parse.outputs.version }}-osx-arm64.zip`
+            - **Linux x64**: `slskdn-main-linux-x64.zip`
+            - **Linux ARM64**: `slskdn-main-linux-arm64.zip`
+            - **Linux musl x64**: `slskdn-main-linux-musl-x64.zip`
+            - **Windows x64**: `slskdn-main-win-x64.zip`
+            - **macOS x64** (Intel): `slskdn-main-osx-x64.zip`
+            - **macOS ARM64** (Apple Silicon): `slskdn-main-osx-arm64.zip`
           prerelease: false
           files: release/*
 
@@ -1209,6 +1256,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Get commit info
         id: info
@@ -1380,6 +1429,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Download from Release
         env:
@@ -1469,6 +1520,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Download from Release
         env:
