@@ -15,6 +15,19 @@
 coverage.json
 /test-artifacts/
 
+# Local E2E artifacts (Playwright)
+/src/web/test-results/
+/src/web/contacts-debug.png
+/tests/e2e/test-results/
+/tests/e2e/playwright-report/
+
+# Local patch/backups
+/.github/workflows/*.orig
+/*.patch
+
+# Local key backups
+/src/slskd/mesh-overlay.key.prev
+
 # Generated key files (private keys; created at runtime)
 *.key
 mesh-overlay.key
