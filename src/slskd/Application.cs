@@ -90,6 +90,12 @@ namespace slskd
 
         private static readonly string ApplicationShutdownTransferExceptionMessage = "Application shut down";
 
+#pragma warning disable SA1306 // Field names should begin with lower-case letter
+        private static int EnqueueQueueDepth = 0;
+        private static double CurrentEnqueueLatency = 0;
+        private static int IncomingSearchRequestQueueDepth = 0;
+#pragma warning restore SA1306 // Field names should begin with lower-case letter
+
         public Application(
             OptionsAtStartup optionsAtStartup,
             IOptionsMonitor<Options> optionsMonitor,
@@ -137,6 +143,10 @@ namespace slskd
 
             OptionsMonitor = optionsMonitor;
             OptionsMonitor.OnChange(async options => await OptionsMonitor_OnChange(options));
+
+            IncomingSearchRequestSemaphore = new SemaphoreSlim(
+                initialCount: OptionsAtStartup.Throttling.Search.Incoming.Concurrency,
+                maxCount: OptionsAtStartup.Throttling.Search.Incoming.Concurrency);
 
             PreviousOptions = OptionsMonitor.CurrentValue;
 
@@ -215,6 +225,7 @@ namespace slskd
 
             Log.Information("[Application] Registering clock events...");
             Clock.EveryMinute += Clock_EveryMinute;
+            Clock.EveryThirtySeconds += Clock_EveryThirtySeconds;
             Clock.EveryFiveMinutes += Clock_EveryFiveMinutes;
             Clock.EveryThirtyMinutes += Clock_EveryThirtyMinutes;
             Clock.EveryHour += Clock_EveryHour;
@@ -240,7 +251,9 @@ namespace slskd
         private OptionsAtStartup OptionsAtStartup { get; set; }
         private IOptionsMonitor<Options> OptionsMonitor { get; set; }
         private SemaphoreSlim OptionsSyncRoot { get; } = new SemaphoreSlim(1, 1);
-        private SemaphoreSlim EnqueueRequestRateLimiter { get; } = new SemaphoreSlim(20, 20);
+        private SemaphoreSlim GlobalEnqueueSemaphore { get; } = new SemaphoreSlim(10, 10);
+        private SemaphoreSlim UserEnqueueSemaphoreSyncRoot { get; } = new SemaphoreSlim(1, 1);
+        private ConcurrentDictionary<string, SemaphoreSlim> UserEnqueueSemaphores { get; } = new ConcurrentDictionary<string, SemaphoreSlim>();
         private Options PreviousOptions { get; set; }
         private Integrations.Notifications.INotificationService Notifications { get; }
         private DateTime SharesRefreshStarted { get; set; }
@@ -259,6 +272,7 @@ namespace slskd
         private IReadOnlyList<Guid> ActiveDownloadIdsAtPreviousShutdown { get; set; } = [];
         private Options.FlagsOptions Flags { get; set; }
         private IReadOnlyList<string> ExcludedSearchPhrases { get; set; } = [];
+        private SemaphoreSlim IncomingSearchRequestSemaphore { get; set; }
         private IServiceProvider ServiceProvider { get; set; }
         private IServiceScopeFactory ServiceScopeFactory { get; set; }
 
@@ -676,20 +690,82 @@ namespace slskd
         // todo: consider moving this somewhere else; it's pretty long and complicated
         private async Task EnqueueDownload(string username, IPEndPoint endpoint, string filename)
         {
+            Metrics.Enqueue.RequestsReceived.Inc(1);
+
+            /*
+                circuit breaker/failsafe:
+
+                if it would take longer than three minutes to process this request based on the number of waiting requests
+                and the average processing latency, reject the request automatically to alleviate pressure on the system.
+
+                the requesting client will almost certainly consider any file for which it hasn't gotten confirmation
+                in over a minute to be failed, over 3 minutes is a safety buffer.
+            */
+            if (EnqueueQueueDepth * CurrentEnqueueLatency > 180_000)
+            {
+                Metrics.Enqueue.RequestsDropped.Inc(1);
+                throw new DownloadEnqueueException("Overwhelmed with requests; try again later.");
+            }
+
             var stopwatch = new Stopwatch();
             var decisionStopwatch = new Stopwatch();
 
-            await EnqueueRequestRateLimiter.WaitAsync();
+            SemaphoreSlim userSemaphore = null;
+            Task userSemaphoreWaitTask;
+            bool userSemaphoreAcquired = false;
+
+            bool enqueueRequestsSemaphoreAcquired = false;
 
             try
             {
-                stopwatch.Start();
-
                 if (Users.IsBlacklisted(username, endpoint.Address))
                 {
                     Log.Information("Rejected enqueue request for blacklisted user {Username} ({IP})", username, endpoint.Address);
                     throw new DownloadEnqueueException("File not shared.");
                 }
+
+                /*
+                    for limits to work properly (and to help alleviate strain from the db, make incoming requests 'fair' among competing users),
+                    we need to ensure that we process only one request per user at a time.
+
+                    it's important that we obtain the user semaphore FIRST (before the global semaphore) to prevent one user
+                    from monopolizing the request queue; users must 'go to the back of the line' for each request
+
+                    hopefully this process takes < 10ms on most systems, but on low-spec systems with high traffic, this
+                    round-robin approach helps guarantee the best QoS for peers
+                */
+                Interlocked.Increment(ref EnqueueQueueDepth); // any request waiting on any semaphore counts
+
+                try
+                {
+                    // obtain exclusive access over the user dictionary. if this blocks it'll only be for a few ns
+                    // we should also only be holding it for a few ns per request
+                    await UserEnqueueSemaphoreSyncRoot.WaitAsync();
+
+                    try
+                    {
+                        // get the user's semaphore and START waiting; if we wait we'll tie up the sync root
+                        userSemaphore = UserEnqueueSemaphores.GetOrAdd(username, new SemaphoreSlim(initialCount: 1, maxCount: 1));
+                        userSemaphoreWaitTask = userSemaphore.WaitAsync();
+                    }
+                    finally
+                    {
+                        UserEnqueueSemaphoreSyncRoot.Release();
+                    }
+
+                    await userSemaphoreWaitTask;
+                    userSemaphoreAcquired = true;
+
+                    await GlobalEnqueueSemaphore.WaitAsync();
+                    enqueueRequestsSemaphoreAcquired = true;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref EnqueueQueueDepth);
+                    Metrics.Enqueue.CurrentQueueDepth.Set(EnqueueQueueDepth);
+                }
+
+                stopwatch.Start();
 
                 // in order to properly determine if the requested file would exceed any limits, we need to know the size of the file
                 // it helps, too, that this will tell us whether the file is even shared.
@@ -755,14 +831,14 @@ namespace slskd
                     Options.LimitsOptions.Limits defaults,
                     long size)
                 {
-                    var files = false;
-                    var megabytes = false;
+                    var filesOver = false;
+                    var megabytesOver = false;
                     var byteLimitInMegabytes = options?.Megabytes ?? defaults?.Megabytes;
 
                     if (byteLimitInMegabytes is not null && (stats.Bytes + size) > (byteLimitInMegabytes * 1000L * 1000L))
                     {
                         Log.Debug("Projected bytes {Bytes} exceeds limit {Limit}", stats.Bytes + size, byteLimitInMegabytes * 1000L * 1000L);
-                        megabytes = true;
+                        megabytesOver = true;
                     }
 
                     var fileLimit = options?.Files ?? defaults?.Files;
@@ -770,10 +846,10 @@ namespace slskd
                     if (fileLimit is not null && (stats.Files + 1) > fileLimit)
                     {
                         Log.Debug("Projected file count {Files} exceeds limit {Limit}", stats.Files + 1, fileLimit);
-                        files = true;
+                        filesOver = true;
                     }
 
-                    return (files, megabytes);
+                    return (filesOver, megabytesOver);
                 }
 
                 decisionStopwatch.Start();
@@ -885,7 +961,9 @@ namespace slskd
                     }
                 }
 
-                // Raise event for passive FLAC discovery - this user is downloading from us
+                decisionStopwatch.Stop();
+
+                // Raise event for passive FLAC discovery - this user is downloading from us (slskdn-specific)
                 EventBus.Raise(new Events.PeerDownloadedFromUsEvent
                 {
                     Username = username,
@@ -893,15 +971,44 @@ namespace slskd
                 });
 
                 await Transfers.Uploads.EnqueueAsync(username, filename);
+
+                stopwatch.Stop();
+
+                // we only report metrics for successes so that each value is guaranteed to include the enqueue latency
+                Metrics.Enqueue.RequestsAccepted.Inc(1);
+                Metrics.Enqueue.Latency.Observe(stopwatch.ElapsedMilliseconds);
+                Metrics.Enqueue.CurrentLatency.Update(stopwatch.ElapsedMilliseconds);
+
+                Interlocked.Exchange(ref CurrentEnqueueLatency, Metrics.Enqueue.CurrentLatency.Value);
+
+                Log.Information("Enqueue of {Filename} to {Username} completed in {ElapsedOverall}ms, decision made in {ElapsedDecision}ms", filename, username, stopwatch.ElapsedMilliseconds, decisionStopwatch.ElapsedMilliseconds);
+            }
+            catch (DownloadEnqueueException)
+            {
+                Metrics.Enqueue.RequestsRejected.Inc(1);
+                throw;
             }
             finally
             {
-                decisionStopwatch.Stop();
-                stopwatch.Stop();
+                if (decisionStopwatch.IsRunning)
+                {
+                    decisionStopwatch.Stop();
+                }
 
-                EnqueueRequestRateLimiter.Release();
+                // decision latency is reported here so that we can track both successes and failures; they do the same
+                // work so lumping them together gives us the clearest picture
+                Metrics.Enqueue.DecisionLatency.Observe(decisionStopwatch.ElapsedMilliseconds);
+                Metrics.Enqueue.CurrentDecisionLatency.Update(decisionStopwatch.ElapsedMilliseconds);
 
-                Log.Debug("EnqueueDownload for {Username}/{Filename} completed in {ElapsedOverall}ms, decision made in {ElapsedDecision}ms", username, filename, stopwatch.ElapsedMilliseconds, decisionStopwatch.ElapsedMilliseconds);
+                if (userSemaphoreAcquired)
+                {
+                    userSemaphore.Release();
+                }
+
+                if (enqueueRequestsSemaphoreAcquired)
+                {
+                    GlobalEnqueueSemaphore.Release();
+                }
             }
         }
 
@@ -1291,6 +1398,25 @@ namespace slskd
             Metrics.DistributedNetwork.BranchLevel.Set(e.BranchLevel);
             Metrics.DistributedNetwork.ChildLimit.Set(e.ChildLimit);
             Metrics.DistributedNetwork.Children.Set(e.Children.Count);
+        }
+
+        private void Clock_EveryThirtySeconds(object sender, ClockEventArgs e)
+        {
+            State.SetValue(state => state with
+            {
+                Health = state.Health with
+                {
+                    Search = state.Health.Search with
+                    {
+                        Incoming = state.Health.Search.Incoming with
+                        {
+                            Latency = Metrics.Search.Incoming.CurrentResponseLatency.Value,
+                            QueueDepth = IncomingSearchRequestQueueDepth,
+                            DropRate = Metrics.Search.Incoming.CurrentRequestDropRate.Count,
+                        },
+                    },
+                },
+            });
         }
 
         private void Clock_EveryMinute(object sender, ClockEventArgs e)
@@ -1734,8 +1860,8 @@ namespace slskd
         /// <returns>A Task resolving a SearchResponse, or null.</returns>
         private async Task<SearchResponse> SearchResponseResolver(string username, int token, SearchQuery query)
         {
-            Metrics.Search.RequestsReceived.Inc(1);
-            Metrics.Search.CurrentRequestReceiveRate.CountUp(1);
+            Metrics.Search.Incoming.RequestsReceived.Inc(1);
+            Metrics.Search.Incoming.CurrentRequestReceiveRate.CountUp(1);
 
             if (Users.IsBlacklisted(username))
             {
@@ -1767,8 +1893,8 @@ namespace slskd
 
                 sw.Stop();
 
-                Metrics.Search.ResponseLatency.Observe(sw.ElapsedMilliseconds);
-                Metrics.Search.CurrentResponseLatency.Update(sw.ElapsedMilliseconds);
+                Metrics.Search.Incoming.ResponseLatency.Observe(sw.ElapsedMilliseconds);
+                Metrics.Search.Incoming.CurrentResponseLatency.Update(sw.ElapsedMilliseconds);
 
                 if (results.Any())
                 {
@@ -1794,7 +1920,7 @@ namespace slskd
 
                     Log.Debug("Sending search response with {Count} files to {Username} for query '{Query}'", results.Count(), username, query.SearchText);
 
-                    Metrics.Search.ResponsesSent.Inc(1);
+                    Metrics.Search.Incoming.ResponsesSent.Inc(1);
 
                     // Raise event for passive FLAC discovery - this user searched us and we had results
                     EventBus.Raise(new Events.PeerSearchedUsEvent

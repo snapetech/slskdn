@@ -32,11 +32,17 @@ namespace slskd
     {
         static Clock()
         {
+            EveryThirtySecondsTimer.Elapsed += (_, _) => Fire(EveryThirtySeconds);
             EveryMinuteTimer.Elapsed += (_, _) => Fire(EveryMinute);
             EveryFiveMinutesTimer.Elapsed += (_, _) => Fire(EveryFiveMinutes);
             EveryThirtyMinutesTimer.Elapsed += (_, _) => Fire(EveryThirtyMinutes);
             EveryHourTimer.Elapsed += (_, _) => Fire(EveryHour);
         }
+
+        /// <summary>
+        ///     Fires every 30 seconds.
+        /// </summary>
+        public static event EventHandler<ClockEventArgs> EveryThirtySeconds;
 
         /// <summary>
         ///     Fires every 5 minutes.
@@ -58,6 +64,7 @@ namespace slskd
         /// </summary>
         public static event EventHandler<ClockEventArgs> EveryThirtyMinutes;
 
+        private static Timer EveryThirtySecondsTimer { get; } = CreateTimer(interval: 1000 * 30);
         private static Timer EveryFiveMinutesTimer { get; } = CreateTimer(interval: 1000 * 60 * 5);
         private static Timer EveryHourTimer { get; } = CreateTimer(interval: 1000 * 60 * 60);
         private static Timer EveryMinuteTimer { get; } = CreateTimer(interval: 1000 * 60);
@@ -69,6 +76,7 @@ namespace slskd
         /// <returns>A Task that completes when all startup events have finished processing.</returns>
         public static Task StartAsync()
         {
+            EveryThirtySecondsTimer.Enabled = true;
             EveryMinuteTimer.Enabled = true;
             EveryFiveMinutesTimer.Enabled = true;
             EveryThirtyMinutesTimer.Enabled = true;
@@ -77,6 +85,7 @@ namespace slskd
             var firstRunArgs = new ClockEventArgs(firstRun: true);
 
             return Task.WhenAll(
+                Task.Run(() => Fire(EveryThirtySeconds, firstRunArgs)),
                 Task.Run(() => Fire(EveryMinute, firstRunArgs)),
                 Task.Run(() => Fire(EveryFiveMinutes, firstRunArgs)),
                 Task.Run(() => Fire(EveryThirtyMinutes, firstRunArgs)),
@@ -88,6 +97,7 @@ namespace slskd
         /// </summary>
         public static void Stop()
         {
+            EveryThirtySecondsTimer.Stop();
             EveryMinuteTimer.Stop();
             EveryFiveMinutesTimer.Stop();
             EveryThirtyMinutesTimer.Stop();
