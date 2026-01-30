@@ -112,7 +112,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.23" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.621003" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.6" />
