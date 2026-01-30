@@ -147,7 +147,7 @@
     <PackageReference Include="YamlDotNet" Version="15.3.0" />
     <PackageReference Include="NSec.Cryptography" Version="24.4.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.400" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.18.1" />
     <PackageReference Include="Zeroconf" Version="3.0.30" />
     <PackageReference Include="OpenTelemetry" Version="1.9.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.9.0" />
