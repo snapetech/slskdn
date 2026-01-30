@@ -2,13 +2,14 @@ name: Build on Tag
 
 # Trigger: push tag matching build-dev-* or build-main-*
 #
-# Dev builds:   Version must increase for PPA. Use build-dev-0.24.1.dev.9$(date +%s)
+# Dev builds:   Version must increase for PPA. Use build-dev-0.24.3.dev.9$(date +%s)
 #               (9 + Unix epoch). Do NOT use date +%Y%m%d — PPA rejects "older" version.
-# Main builds:  build-main-0.24.1-slskdn.35
+#               Push ONLY the tag (do not push master in the same go), so only Build on Tag runs.
+# Main builds:  build-main-0.24.3-slskdn.42
 #
 # Examples:
-#   git tag build-dev-0.24.1.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
-#   git tag build-main-0.24.1-slskdn.35 && git push origin $_
+#   git tag build-dev-0.24.3.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
+#   git tag build-main-0.24.3-slskdn.42 && git push origin $_
 
 on:
   push:
@@ -693,6 +694,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Download from Release
         env:
@@ -732,11 +735,12 @@ jobs:
           if (-not $nupkg) { Write-Error "No .nupkg file found"; exit 1 }
           Write-Host "Pushing: $($nupkg.FullName)"
           
-          # Use cmd /c to completely bypass PowerShell argument parsing
-          # PowerShell's splatting still has issues with external commands
+          # Use cmd /c to completely bypass PowerShell argument parsing (Opus fix)
+          # Do NOT use & choco or splatting - PowerShell mangles args to choco.exe
           $nupkgPath = $nupkg.FullName
           $apiKey = $env:CHOCO_API_KEY
-          cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $apiKey --prerelease --execution-timeout 300"
+          $pushOutput = cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $apiKey --prerelease --execution-timeout 300 2>&1"
+          Write-Host $pushOutput
           if ($LASTEXITCODE -ne 0) { Write-Error "choco push failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
           Write-Host "✅ Published to Chocolatey: slskdn (pre-release)"
         shell: pwsh
@@ -1120,7 +1124,7 @@ jobs:
           body: |
             ## 🔋 slskdN ${{ needs.parse.outputs.version }} - The Batteries-Included Fork
             
-            **Based on**: slskd 0.24.1  
+            **Based on**: slskd 0.24.3  
             **Note**: This is an experimental fork with many new features. Use at your own risk.
             
             ---
