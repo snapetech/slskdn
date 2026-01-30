@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.24.1-slskdn.41";
+        version = "0.24.3-slskdn.42";
         devVersion = "0.24.1.dev.91769727133";
         
         # Helper function to build slskdn from a given version and sources
