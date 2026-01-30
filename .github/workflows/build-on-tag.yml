@@ -5,11 +5,11 @@ name: Build on Tag
 # Dev builds:   Version must increase for PPA. Use build-dev-0.24.3.dev.9$(date +%s)
 #               (9 + Unix epoch). Do NOT use date +%Y%m%d — PPA rejects "older" version.
 #               Push ONLY the tag (do not push master in the same go), so only Build on Tag runs.
-# Main builds:  build-main-0.24.3-slskdn.42
+# Main builds:  build-main-0.24.3-slskdn.43
 #
 # Examples:
 #   git tag build-dev-0.24.3.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
-#   git tag build-main-0.24.3-slskdn.42 && git push origin $_
+#   git tag build-main-0.24.3-slskdn.43 && git push origin $_
 
 on:
   push:
