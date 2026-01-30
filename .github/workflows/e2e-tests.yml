@@ -42,7 +42,8 @@ jobs:
           cd src/web
           npm ci --legacy-peer-deps
           npm run build
-          # Copy to wwwroot for serving
+          # Copy to wwwroot for serving (wwwroot is gitignored, create if missing)
+          mkdir -p ../slskd/wwwroot
           rm -rf ../slskd/wwwroot/*
           cp -r build/* ../slskd/wwwroot/
 
