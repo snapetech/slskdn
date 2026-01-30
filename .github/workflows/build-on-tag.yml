@@ -128,8 +128,7 @@ jobs:
             -r ${{ matrix.runtime }} \
             /p:Version="$DOTNET_VERSION" \
             /p:InformationalVersion="$DOTNET_VERSION" \
-            /p:PackageVersion="$DOTNET_VERSION" \
-            --no-incremental
+            /p:PackageVersion="$DOTNET_VERSION"
 
       - name: Create Archive
         run: |
