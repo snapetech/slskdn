@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
 
 PackageIdentifier: snapetech.slskdn-dev
-PackageVersion: 0.24.1.dev.91769729568
+PackageVersion: 0.24.3.dev.91769732165
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0
