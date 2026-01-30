@@ -16,7 +16,7 @@
   "dependencies": {
     "@codemirror/language": "^6.12.1",
     "@codemirror/legacy-modes": "^6.5.2",
-    "@microsoft/signalr": "^7.0.7",
+    "@microsoft/signalr": "^10.0.0",
     "@uiw/react-codemirror": "^4.21.21",
     "axios": "^0.30.2",
     "lz-string": "^1.4.4",
