@@ -295,8 +295,8 @@ Getting started is simple.
 ### Arch Linux (AUR)
 **Drop-in replacement for slskd** — preserves your existing config at `/var/lib/slskd/`.
 ```bash
-yay -S slskdn-bin          # Binary package (recommended)
-yay -S slskdn              # Or build from source
+yay -S slskdn              # build from source (recommended)
+yay -S slskdn-bin          # Binary package
 sudo systemctl enable --now slskd
 ```
 Access at http://localhost:5030
