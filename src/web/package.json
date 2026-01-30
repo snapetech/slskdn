@@ -41,7 +41,7 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^12.1.5",
     "@testing-library/user-event": "^13.5.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^25.1.0",
     "eslint": "^8.56.0",
     "eslint-config-canonical": "^42.8.1",
     "react-scripts": "^5.0.0",
