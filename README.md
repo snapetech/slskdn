@@ -216,7 +216,7 @@ Topic-based micro-communities over the mesh overlay.
 - **DHT-based pod discovery** — Find pods by name, focus, or tags
 - **Decentralized chat** — Pod messaging over mesh overlay
 - **Soulseek chat bridge** — Bridge legacy Soulseek rooms to pods
-- **Gold Star Club** — Auto-join pod for first 1000 users
+- **Gold Star Club** — Auto-join pod for first 1000 users (intended to be tied to realm governance at a later stage, as well as early stage testing and feedback).
 - **Pod APIs** — Full REST API for pod operations
 
 
