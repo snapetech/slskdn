@@ -141,6 +141,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
     <PackageReference Include="Utility.CommandLine.Arguments" Version="6.0.0" />
     <PackageReference Include="Utility.EnvironmentVariables" Version="1.0.5" />
