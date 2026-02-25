@@ -277,4 +277,5 @@ See `memory-bank/decisions/adr-0005-tagging-system.md` for detailed tag format a
 | `docs/archive/FORK_VISION.md` | Feature roadmap |
 | `docs/archive/DEVELOPMENT_HISTORY.md` | Release history |
 | `TODO.md` | Human-maintained todo list |
+| **`from-lack-workspace/`** | **Reference-only artifacts** (plans, code review, spec docs from lack workspace). Do not merge into main tree; use when the task relates to those plans. See `from-lack-workspace/README.md`. |
 
