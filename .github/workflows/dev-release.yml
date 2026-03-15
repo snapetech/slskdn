@@ -1080,6 +1080,51 @@ jobs:
           git commit -m "Update slskdn-dev to $VERSION" || echo "No changes"
           git push
 
+      - name: Update formula in main repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA_MAC_X64=$(sha256sum slskdn-dev-osx-x64.zip | cut -d' ' -f1)
+          SHA_MAC_ARM=$(sha256sum slskdn-dev-osx-arm64.zip | cut -d' ' -f1)
+          SHA_LINUX=$(sha256sum slskdn-dev-linux-x64.zip | cut -d' ' -f1)
+          VERSION="${{ needs.build.outputs.dev_version }}"
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git main-repo
+          cd main-repo
+          mkdir -p Formula
+          cat > Formula/slskdn-dev.rb <<FORMULA
+          class SlskdnDev < Formula
+            desc "Batteries-included Soulseek web client (Development Build)"
+            homepage "https://github.com/snapetech/slskdn"
+            license "AGPL-3.0-or-later"
+            version "${VERSION}"
+            on_macos do
+              on_arm do
+                url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-osx-arm64.zip"
+                sha256 "${SHA_MAC_ARM}"
+              end
+              on_intel do
+                url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-osx-x64.zip"
+                sha256 "${SHA_MAC_X64}"
+              end
+            end
+            on_linux do
+              url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-linux-x64.zip"
+              sha256 "${SHA_LINUX}"
+            end
+            conflicts_with "slskdn", because: "both install slskdn binary"
+            def install
+              libexec.install Dir["*"]
+              (bin/"slskdn").write_exec_script libexec/"slskd"
+            end
+          end
+          FORMULA
+          git config user.name "slskdn CI"
+          git config user.email "slskdn@proton.me"
+          git add Formula/slskdn-dev.rb
+          git commit -m "chore(homebrew): update slskdn-dev formula to ${VERSION} [skip ci]" || echo "No changes"
+          git push
+          echo "✅ Updated dev formula in main repo"
+
   notify:
     name: Notify
     runs-on: ubuntu-latest
