@@ -48,7 +48,8 @@ jobs:
             -c Release \
             -o publish-linux-${{ matrix.arch }} \
             --self-contained true \
-            -r linux-${{ matrix.arch }}
+            -r linux-${{ matrix.arch }} \
+            -p:PublishReadyToRun=false
 
       - name: Copy Web Assets
         run: |
