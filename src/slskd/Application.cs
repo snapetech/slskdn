@@ -801,12 +801,14 @@ namespace slskd
                 // we'll fall back to global limits for any limit that isn't set at the group level
                 var global = Options.Global.Limits;
 
-                // resolve the limits for this user's group.
+                // resolve the limits and upload options for this user's group.
                 Options.LimitsOptions limits;
+                Options.GroupsOptions.UploadOptions groupUploadOptions;
 
                 if (Options.Groups.UserDefined.TryGetValue(group, out var userDefinedOptions))
                 {
                     limits = userDefinedOptions.Limits;
+                    groupUploadOptions = userDefinedOptions.Upload;
                 }
                 else
                 {
@@ -816,6 +818,24 @@ namespace slskd
                         LeecherGroup => Options.Groups.Leechers.Limits,
                         _ => Options.Groups.Default.Limits, // that's weird! we'll just go with defaults..
                     };
+                    groupUploadOptions = group switch
+                    {
+                        DefaultGroup => Options.Groups.Default.Upload,
+                        LeecherGroup => Options.Groups.Leechers.Upload,
+                        _ => Options.Groups.Default.Upload,
+                    };
+                }
+
+                // enforce file type restrictions for the group (#56)
+                var allowedTypes = groupUploadOptions?.AllowedFileTypes;
+                if (allowedTypes != null && allowedTypes.Length > 0)
+                {
+                    var ext = Path.GetExtension(resolved.Filename);
+                    if (!allowedTypes.Any(t => string.Equals(t, ext, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Log.Information("Rejected enqueue request for user {Username}: file type {Extension} not allowed for group {Group}", username, ext, group);
+                        throw new DownloadEnqueueException($"File type {ext} is not permitted.");
+                    }
                 }
 
                 bool IsNull(Options.LimitsOptions.Limits lim, Options.LimitsOptions.Limits global)
@@ -1776,6 +1796,25 @@ namespace slskd
                 {
                     Log.Information("Room configuration changed.  Joining any newly added rooms.");
                     _ = RoomService.TryJoinAsync(newOptions.Rooms);
+                }
+
+                // cancel active transfers for users newly added to the blacklist (#21)
+                var previousBlacklist = PreviousOptions.Groups?.Blacklisted?.Members ?? Array.Empty<string>();
+                var newBlacklist = newOptions.Groups?.Blacklisted?.Members ?? Array.Empty<string>();
+                var newlyBlacklisted = newBlacklist.Except(previousBlacklist, StringComparer.OrdinalIgnoreCase).ToList();
+
+                if (newlyBlacklisted.Count > 0)
+                {
+                    Log.Information("Cancelling active transfers for {Count} newly blacklisted user(s): {Users}", newlyBlacklisted.Count, newlyBlacklisted);
+
+                    foreach (var username in newlyBlacklisted)
+                    {
+                        foreach (var download in Transfers.Downloads.List(t => string.Equals(t.Username, username, StringComparison.OrdinalIgnoreCase) && !t.State.HasFlag(TransferStates.Completed)))
+                            Transfers.Downloads.TryCancel(download.Id);
+
+                        foreach (var upload in Transfers.Uploads.List(t => string.Equals(t.Username, username, StringComparison.OrdinalIgnoreCase) && !t.State.HasFlag(TransferStates.Completed), includeRemoved: false))
+                            Transfers.Uploads.TryCancel(upload.Id);
+                    }
                 }
 
                 // determine whether any Soulseek options changed. if so, we need to construct a patch and invoke ReconfigureOptionsAsync().

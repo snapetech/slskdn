@@ -1432,6 +1432,13 @@ namespace slskd
                 /// </summary>
                 [Range(1, int.MaxValue)]
                 public int SpeedLimit { get; init; } = int.MaxValue;
+
+                /// <summary>
+                ///     Gets the list of allowed file extensions for this group (e.g. ".mp3", ".flac").
+                ///     When non-empty, only files matching one of these extensions will be uploaded.
+                ///     Empty means no restriction.
+                /// </summary>
+                public string[] AllowedFileTypes { get; init; } = Array.Empty<string>();
             }
         }
 

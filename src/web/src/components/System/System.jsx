@@ -10,6 +10,7 @@ import LibraryHealth from './LibraryHealth';
 import Logs from './Logs';
 import MediaCore from './MediaCore';
 import Mesh from './Mesh';
+import Metrics from './Metrics';
 import Network from './Network';
 import Options from './Options';
 import Security from './Security';
@@ -262,6 +263,19 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'logs',
+    },
+    {
+      menuItem: {
+        content: 'Metrics',
+        icon: 'chart bar',
+        key: 'metrics',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <Metrics />
+        </Tab.Pane>
+      ),
+      route: 'metrics',
     },
   ];
 

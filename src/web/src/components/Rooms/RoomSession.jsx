@@ -1,5 +1,6 @@
 import * as rooms from '../../lib/rooms';
 import React, { Component, createRef } from 'react';
+import UserCard from '../Shared/UserCard';
 import {
   Button,
   Card,
@@ -263,7 +264,7 @@ class RoomSession extends Component {
                                   {this.formatTimestamp(message.timestamp)}
                                 </span>
                                 <span className="room-message-name">
-                                  {message.username}:{' '}
+                                  <UserCard username={message.username}>{message.username}</UserCard>:{' '}
                                 </span>
                                 <span className="room-message-message">
                                   {message.message}
@@ -319,7 +320,7 @@ class RoomSession extends Component {
                       {room.users.map((user) => (
                         <List.Item key={user.username}>
                           <List.Content>
-                            <List.Header>{user.username}</List.Header>
+                            <List.Header><UserCard username={user.username}>{user.username}</UserCard></List.Header>
                             <List.Description>
                               {user.status === 1 ? 'Away' : 'Online'}
                             </List.Description>
