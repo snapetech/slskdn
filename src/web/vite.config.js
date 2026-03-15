@@ -77,6 +77,10 @@ export default defineConfig({
   build: {
     outDir: 'build',
     emptyOutDir: true,
+    // Vite 8 defaults to lightningcss for CSS minification, which rejects some
+    // valid-but-unusual CSS emitted by semantic-ui-less (e.g. 0.0px dimensions).
+    // Use esbuild CSS minifier instead, which is tolerant of this output.
+    cssMinify: 'esbuild',
   },
 
   define: {
