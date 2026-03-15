@@ -199,7 +199,14 @@ namespace slskd.SocialFederation.API
                 return StatusCode(413, "Payload too large");
             }
 
-            if (opts.VerifySignatures && !await VerifyHttpSignatureAsync(bodyBytes, cancellationToken))
+            if (!opts.VerifySignatures)
+            {
+                // MED-03: signature verification is disabled via configuration — all incoming ActivityPub
+                // messages are accepted without cryptographic validation. Only disable in controlled environments.
+                _logger.LogWarning("[ActivityPub] MED-03: HTTP signature verification is DISABLED " +
+                    "(federation.verify_signatures=false). Accepting unauthenticated inbox message.");
+            }
+            else if (!await VerifyHttpSignatureAsync(bodyBytes, cancellationToken))
             {
                 _logger.LogWarning("[ActivityPub] HTTP signature verification failed");
                 return Unauthorized();

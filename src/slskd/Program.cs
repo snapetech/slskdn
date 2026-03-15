@@ -2267,7 +2267,10 @@ using OpenTelemetry.Trace;
             services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(DataDirectory, "misc", ".DataProtection-Keys")));
 
-            var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(OptionsAtStartup.Web.Authentication.Jwt.Key));
+            // LOW-02: SHA256-hash the configured key so the signing key is always 32 raw bytes of key material
+            // regardless of the string's encoding width, avoiding weak keys from short UTF-8 strings.
+            var jwtSigningKey = new SymmetricSecurityKey(
+                System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(OptionsAtStartup.Web.Authentication.Jwt.Key)));
 
             Log.Warning("JWT signing key is ephemeral (auto-generated per-process start). All sessions will be invalidated on restart. Set web.authentication.jwt.key in configuration to persist sessions.");
 
@@ -2353,6 +2356,20 @@ using OpenTelemetry.Trace;
 
                         options.Events = new JwtBearerEvents
                         {
+                            OnTokenValidated = context =>
+                            {
+                                // HIGH-04: check jti deny-list to support token revocation (e.g. logout)
+                                var jti = context.Principal?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
+                                if (!string.IsNullOrEmpty(jti))
+                                {
+                                    var security = context.HttpContext.RequestServices.GetService<ISecurityService>();
+                                    if (security?.IsTokenRevoked(jti) == true)
+                                    {
+                                        context.Fail("Token has been revoked");
+                                    }
+                                }
+                                return Task.CompletedTask;
+                            },
                             OnMessageReceived = context =>
                             {
                                 // signalr authentication is stupid
@@ -2897,6 +2914,11 @@ using OpenTelemetry.Trace;
                     {
                         Log.Warning("Authentication for the metrics endpoint is DISABLED");
                     }
+                    else if (string.IsNullOrWhiteSpace(options.Authentication.Password))
+                    {
+                        Log.Warning("[LOW-05] Prometheus metrics endpoint password is empty. " +
+                            "Set metrics.authentication.password to a strong value, or set metrics.authentication.disabled=true to opt out of auth explicitly.");
+                    }
 
                     endpoints.MapGet(url, async context =>
                     {
@@ -2910,6 +2932,14 @@ using OpenTelemetry.Trace;
                             {
                                 ctx.Response.Headers.Append("WWW-Authenticate", "Basic realm=\"metrics\"");
                                 ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                            }
+
+                            // LOW-05: refuse to authenticate when password is empty — forces explicit configuration
+                            if (string.IsNullOrWhiteSpace(options.Authentication.Password))
+                            {
+                                context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                                await context.Response.WriteAsync("Metrics endpoint unavailable: authentication password is not configured.");
+                                return;
                             }
 
                             var auth = context.Request.Headers["Authorization"].FirstOrDefault();

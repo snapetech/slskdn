@@ -40,8 +40,10 @@ public class ControlEnvelopeValidator : IControlEnvelopeValidator
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
 
-        // Initialize replay cache with 5-minute TTL
-        _replayCache = new ReplayCache(TimeSpan.FromMinutes(5));
+        // LOW-07: TTL must be at least 2 × maxSkewSeconds so that a message at the edge of the skew
+        // window cannot be replayed after the cache entry expires. 2 × 120s = 240s.
+        const int MaxSkewSeconds = 120;
+        _replayCache = new ReplayCache(TimeSpan.FromSeconds(2 * MaxSkewSeconds));
     }
 
     /// <summary>
@@ -145,6 +147,9 @@ public class ControlEnvelopeValidator : IControlEnvelopeValidator
 
                 if (verifier.Verify(envelope.GetLegacySignableData(), signatureBytes, publicKey))
                 {
+                    // LOW-03: legacy signature format accepted for backward compatibility; deprecate and remove in future version
+                    _logger.LogWarning("[ControlEnvelopeValidator] Accepted legacy signature format from peer {PeerId}. " +
+                        "Peer should upgrade to current signature format.", peerDescriptor.PeerId);
                     return true;
                 }
             }

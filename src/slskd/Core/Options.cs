@@ -2005,7 +2005,7 @@ namespace slskd
                 [StringLength(255, MinimumLength = 1)]
                 [Secret]
                 [RequiresRestart]
-                public string Password { get; init; } = Program.AppName;
+                public string Password { get; init; } = string.Empty; // must be set explicitly; empty default forces configuration
             }
         }
 
@@ -2629,7 +2629,7 @@ namespace slskd
                     [Description("TTL for JWTs")]
                     [Range(3600, int.MaxValue)]
                     [RequiresRestart]
-                    public int Ttl { get; init; } = 604800000;
+                    public int Ttl { get; init; } = 3600000; // default 1 hour (was 7 days)
                 }
 
                 /// <summary>

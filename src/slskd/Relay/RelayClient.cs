@@ -260,6 +260,13 @@ namespace slskd.Relay
                 // we need the retry loop around connection to stop.
                 StartCancellationTokenSource?.Cancel();
 
+                if (options.Relay.Controller.IgnoreCertificateErrors)
+                {
+                    Log.Warning("[RelayClient] MED-08: relay.controller.ignore_certificate_errors is enabled — " +
+                        "TLS certificate validation is DISABLED for the relay controller connection. " +
+                        "This is insecure and should only be used in controlled lab environments.");
+                }
+
                 HubConnection = new HubConnectionBuilder()
                     .WithUrl($"{options.Relay.Controller.Address}/hub/relay", builder =>
                     {

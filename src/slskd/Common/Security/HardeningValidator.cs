@@ -42,6 +42,11 @@ namespace slskd.Common.Security
         public const string RuleHashFromAudioFileEnabled = "HashFromAudioFileEnabled";
 
         /// <summary>
+        ///     Rule name for weak/empty Prometheus metrics password.
+        /// </summary>
+        public const string RuleWeakMetricsPassword = "WeakMetricsPassword";
+
+        /// <summary>
         ///     Validates options and throws <see cref="HardeningValidationException"/> when EnforceSecurity is on
         ///     and a dangerous configuration is detected.
         /// </summary>
@@ -93,7 +98,21 @@ namespace slskd.Common.Security
                     Log.Warning("[{Rule}] {Message}", RuleMemoryDumpWithAuthDisabled, msg);
             }
 
-            // 4. §11: HashFromAudioFileEnabled — feature not implemented (PCM extraction requires FFmpeg/NAudio)
+            // 4. LOW-05: Prometheus/metrics endpoint has a weak or empty password
+            var metricsAuth = options.Metrics?.Authentication;
+            if (metricsAuth != null && !metricsAuth.Disabled &&
+                string.IsNullOrWhiteSpace(metricsAuth.Password))
+            {
+                const string msg = "Web.Authentication.Metrics.Password is empty. " +
+                    "The Prometheus metrics endpoint will be protected with no password. " +
+                    "Set a strong password via web.authentication.metrics.password or disable the metrics endpoint.";
+                if (enforce)
+                    throw new HardeningValidationException(RuleWeakMetricsPassword, msg);
+                else
+                    Log.Warning("[{Rule}] {Message}", RuleWeakMetricsPassword, msg);
+            }
+
+            // 5. §11: HashFromAudioFileEnabled — feature not implemented (PCM extraction requires FFmpeg/NAudio)
             if (options.Flags?.HashFromAudioFileEnabled == true)
             {
                 const string msg = "Flags.HashFromAudioFileEnabled is true but audio hash from file is not implemented. PCM extraction requires FFmpeg/NAudio integration. Set to false or implement the feature.";

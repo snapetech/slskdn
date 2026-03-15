@@ -93,6 +93,25 @@ namespace slskd.Core.API
         }
 
         /// <summary>
+        ///     Logs out, revoking the current JWT.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="204">Logout successful.</response>
+        [HttpDelete]
+        [Route("")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(204)]
+        public IActionResult Logout()
+        {
+            var jti = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
+            if (!string.IsNullOrEmpty(jti))
+            {
+                Security.RevokeToken(jti);
+            }
+            return NoContent();
+        }
+
+        /// <summary>
         ///     Logs in.
         /// </summary>
         /// <param name="login"></param>

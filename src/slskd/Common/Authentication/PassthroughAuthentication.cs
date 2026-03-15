@@ -87,6 +87,15 @@ namespace slskd.Authentication
             else
                 return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback"));
 
+            if (Options.AllowRemoteNoAuth)
+            {
+                // MED-09: remote no-auth is active; any non-loopback client gets Administrator without credentials
+                Logger.LogWarning("[Passthrough] MED-09: AllowRemoteNoAuth is enabled — " +
+                    "granting {Role} to unauthenticated remote request from {RemoteIp}. " +
+                    "Disable web.allow_remote_no_auth to require credentials from non-loopback clients.",
+                    Options.Role, remote);
+            }
+
             var identity = new GenericIdentity(Options.Username);
             var principal = new GenericPrincipal(identity, new[] { Options.Role.ToString() });
             var ticket = new AuthenticationTicket(principal, new AuthenticationProperties(), PassthroughAuthentication.AuthenticationScheme);
