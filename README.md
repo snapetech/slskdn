@@ -430,7 +430,7 @@ dotnet run --project src/slskd/slskd.csproj
 | **Service fabric** | ❌ | ✅ 🧪 |
 | Open to community feedback | ✅ | ✅ |
 
-🧪 = Experimental feature (available in dev builds)
+🧪 = Experimental feature, in main build.
 
 ---
 
