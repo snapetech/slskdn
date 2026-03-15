@@ -94,7 +94,19 @@ namespace slskd.Common.CodeQuality
                 AnalysisTimestamp = DateTimeOffset.UtcNow
             };
 
-            var types = assembly.GetTypes()
+            Type[] rawTypes;
+            try
+            {
+                rawTypes = assembly.GetTypes();
+            }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                // Some types may fail to load (e.g. MSBuild task types when MSBuild assemblies
+                // are not present in the probe path). Use the partial type list instead.
+                rawTypes = ex.Types.Where(t => t != null).ToArray();
+            }
+
+            var types = rawTypes
                 .Where(t => t.IsPublic && !t.IsAbstract && !t.IsInterface &&
                            !t.Namespace?.Contains("Test", StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();

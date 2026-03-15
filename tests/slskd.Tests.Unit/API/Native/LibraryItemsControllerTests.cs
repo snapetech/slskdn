@@ -31,6 +31,7 @@ public class LibraryItemsControllerTests
     private readonly Mock<IShareService> shareServiceMock;
     private readonly Mock<IHashDbService> hashDbServiceMock;
     private readonly Mock<ILogger<LibraryItemsController>> loggerMock;
+    private readonly Mock<IShareRepository> shareRepositoryMock;
     private readonly LibraryItemsController controller;
 
     public LibraryItemsControllerTests()
@@ -38,6 +39,15 @@ public class LibraryItemsControllerTests
         shareServiceMock = new Mock<IShareService>();
         hashDbServiceMock = new Mock<IHashDbService>();
         loggerMock = new Mock<ILogger<LibraryItemsController>>();
+        shareRepositoryMock = new Mock<IShareRepository>();
+
+        // GetLocalRepository() is called by BuildCodeToMaskedFilenameMap() on every action
+        shareRepositoryMock
+            .Setup(x => x.ListFiles(It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns(Enumerable.Empty<Soulseek.File>());
+        shareServiceMock
+            .Setup(x => x.GetLocalRepository())
+            .Returns(shareRepositoryMock.Object);
 
         controller = new LibraryItemsController(
             shareServiceMock.Object,
