@@ -2320,6 +2320,17 @@ namespace slskd
                 public int MaxDownloadSlotsUsed { get; init; } = 50;
 
                 /// <summary>
+                ///     Gets the maximum number of concurrent swarm (multi-source) connections per download.
+                ///     Each swarm source opens a Soulseek peer connection; uncapped this can exhaust router
+                ///     connection tables on high-source-count downloads. Default 10. Set 0 to disable.
+                /// </summary>
+                [Argument(default, "slsk-safety-max-swarm-connections")]
+                [EnvironmentVariable("SLSK_SAFETY_MAX_SWARM_CONNECTIONS")]
+                [Description("maximum concurrent swarm connections per download (0 = unlimited)")]
+                [Range(0, 500)]
+                public int MaxConcurrentSwarmConnections { get; init; } = 10;
+
+                /// <summary>
                 ///     Gets a value indicating whether safety caps are enabled.
                 /// </summary>
                 [Argument(default, "slsk-safety-enabled")]

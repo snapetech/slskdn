@@ -468,26 +468,40 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 var sourceStats = new ConcurrentDictionary<string, int>(); // username -> chunks completed
                 var failedUsers = new ConcurrentDictionary<string, bool>(); // username -> failed hard
 
-                // Spawn worker for EACH source - they all grab from the shared queue
+                // Spawn worker for EACH source - they all grab from the shared queue.
+                // Limit concurrency to avoid opening unbounded Soulseek peer connections when
+                // a download has many sources (exhausts router connection tables).
                 var workerTasks = new List<Task>();
+                var maxSwarm = optionsMonitor.CurrentValue.Soulseek.Safety.MaxConcurrentSwarmConnections;
+                using var swarmSemaphore = maxSwarm > 0 ? new SemaphoreSlim(maxSwarm, maxSwarm) : null;
 
                 foreach (var source in request.Sources)
                 {
+                    var capturedSource = source;
                     workerTasks.Add(Task.Run(async () =>
                     {
-                        await RunSourceWorkerAsync(
-                            source,
-                            request.Filename,
-                            request.FileSize,
-                            chunkQueue,
-                            chunks,
-                            completedChunks,
-                            sourceStats,
-                            failedUsers,
-                            tempDir,
-                            status,
-                            request.Id,
-                            cancellationToken);
+                        if (swarmSemaphore != null)
+                            await swarmSemaphore.WaitAsync(cancellationToken);
+                        try
+                        {
+                            await RunSourceWorkerAsync(
+                                capturedSource,
+                                request.Filename,
+                                request.FileSize,
+                                chunkQueue,
+                                chunks,
+                                completedChunks,
+                                sourceStats,
+                                failedUsers,
+                                tempDir,
+                                status,
+                                request.Id,
+                                cancellationToken);
+                        }
+                        finally
+                        {
+                            swarmSemaphore?.Release();
+                        }
                     }, cancellationToken));
                 }
 
