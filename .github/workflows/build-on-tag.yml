@@ -1319,21 +1319,28 @@ jobs:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
-          
+
+          # Compute sha256 for static files; tarball (index 0) is always SKIP
+          SVC_SUM=$(sha256sum packaging/aur/slskd.service  | awk '{print $1}')
+          YML_SUM=$(sha256sum packaging/aur/slskd.yml      | awk '{print $1}')
+          SYS_SUM=$(sha256sum packaging/aur/slskd.sysusers | awk '{print $1}')
+
           cd aur-pkg-source
-          
+
           # Copy the main source PKGBUILD template
           cp ../packaging/aur/PKGBUILD PKGBUILD
           cp ../packaging/aur/slskd.install slskd.install
           cp ../packaging/aur/slskd.service slskd.service
           cp ../packaging/aur/slskd.yml slskd.yml
           cp ../packaging/aur/slskd.sysusers slskd.sysusers
-          
+
           # Version for main (convert dots if needed, e.g. 0.25.0)
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
-          
-          # Update version
+
+          # Update version and static file hashes (tarball stays SKIP)
+          # source=() order: tarball slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
@@ -1382,21 +1389,33 @@ jobs:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
-          
+
+          # Compute sha256 of the downloaded zip (used as index 0 in sha256sums)
+          ZIP_SUM=$(sha256sum slskdn-main-linux-x64.zip | awk '{print $1}')
+          SVC_SUM=$(sha256sum packaging/aur/slskd.service  | awk '{print $1}')
+          YML_SUM=$(sha256sum packaging/aur/slskd.yml      | awk '{print $1}')
+          SYS_SUM=$(sha256sum packaging/aur/slskd.sysusers | awk '{print $1}')
+          echo "zip         : $ZIP_SUM"
+          echo "slskd.service: $SVC_SUM"
+          echo "slskd.yml    : $YML_SUM"
+          echo "slskd.sysusers: $SYS_SUM"
+
           cd aur-pkg-bin
-          
+
           # Copy the binary PKGBUILD template
           cp ../packaging/aur/PKGBUILD-bin PKGBUILD
           cp ../packaging/aur/slskd.install slskd.install
           cp ../packaging/aur/slskd.service slskd.service
           cp ../packaging/aur/slskd.yml slskd.yml
           cp ../packaging/aur/slskd.sysusers slskd.sysusers
-          
+
           # Version for main
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
-          
-          # Update version
+
+          # Update version and all sha256sums
+          # source=() order: zip slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${ZIP_SUM}' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "

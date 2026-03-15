@@ -1,7 +1,8 @@
 # Dependabot configuration for slskdn
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
 #
-# Ignore major updates for packages we keep aligned with upstream slskd
+# Ignore major updates for packages we keep aligned with upstream slskd,
+# or where a major bump requires deliberate evaluation.
 # (see docs/dev/PR-upstream-alignment-evaluation.md). Patch/minor PRs still allowed.
 
 version: 2
@@ -19,19 +20,22 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     ignore:
-      # Keep aligned with upstream slskd (react 16, router 5, axios 0.30, etc.)
+      # Keep aligned with upstream slskd (react 16, router 5, etc.)
       - dependency-name: "react"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-dom"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-router-dom"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "axios"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "uuid"
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      # react-scripts is EOL and can't be bumped without breaking the build;
+      # remaining npm vulns are locked inside its transitive dep tree.
+      # Long-term fix: migrate to Vite.
+      - dependency-name: "react-scripts"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
 
   # NuGet (.NET backend)
   - package-ecosystem: "nuget"
@@ -51,11 +55,28 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.AspNetCore.SignalR.Client"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.AspNetCore.Authentication.JwtBearer"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.EntityFrameworkCore"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.EntityFrameworkCore.Sqlite.Core"
         update-types: ["version-update:semver-major"]
       - dependency-name: "FluentFTP"
         update-types: ["version-update:semver-major"]
       - dependency-name: "MessagePack"
+        update-types: ["version-update:semver-major"]
+      # Soulseek client: keep aligned with upstream slskd to avoid API drift
+      - dependency-name: "Soulseek"
+        update-types: ["version-update:semver-major"]
+      # Serilog major bumps need evaluation (API changes across sinks)
+      - dependency-name: "Serilog"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Serilog.AspNetCore"
+        update-types: ["version-update:semver-major"]
+      # AWSSDK major bump (3→4) has breaking changes, evaluate separately
+      - dependency-name: "AWSSDK.S3"
         update-types: ["version-update:semver-major"]
 
   # GitHub Actions

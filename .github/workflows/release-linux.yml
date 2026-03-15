@@ -124,11 +124,22 @@ jobs:
       - name: Update PKGBUILDs
         run: |
           cd packaging/aur
+          # Compute hashes for static files (these never change between releases)
+          SVC_SUM=$(sha256sum slskd.service | awk '{print $1}')
+          YML_SUM=$(sha256sum slskd.yml     | awk '{print $1}')
+          SYS_SUM=$(sha256sum slskd.sysusers | awk '{print $1}')
+          echo "slskd.service : $SVC_SUM"
+          echo "slskd.yml     : $YML_SUM"
+          echo "slskd.sysusers: $SYS_SUM"
+
           # Update binary package PKGBUILD
+          # source=() order: zip slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD-bin
-          sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' 'SKIP' 'SKIP' 'SKIP')/" PKGBUILD-bin
-          # Update source package PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
+
+          # Update source package PKGBUILD (tarball is SKIP, static file hashes are the same)
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD
 
       - name: Setup and Push to AUR
         env:

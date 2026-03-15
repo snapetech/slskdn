@@ -59,7 +59,7 @@ namespace slskd.Core.API
         private IOptionsSnapshot<Options> OptionsSnapshot { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private IStateMutator<State> StateMutator { get; }
-        private ILogger Logger { get; } = Log.ForContext(typeof(OptionsController));
+        private ILogger Log { get; } = Serilog.Log.ForContext<OptionsController>();
 
         /// <summary>
         ///     Gets the current application options.
@@ -77,6 +77,45 @@ namespace slskd.Core.API
         ///     Gets the application options provided at startup.
         /// </summary>
         /// <returns></returns>
+        /// <summary>
+        ///     Overlay the application options with new values.
+        /// </summary>
+        /// <param name="overlay">The overlay to apply.</param>
+        /// <returns></returns>
+        [HttpPatch]
+        [Authorize(Policy = AuthPolicy.Any, Roles = AuthRole.AdministratorOnly)]
+        [ProducesResponseType(typeof(OptionsOverlay), 200)]
+        public IActionResult ApplyOverlay([FromBody] OptionsOverlay overlay)
+        {
+            if (!OptionsSnapshot.Value.RemoteConfiguration)
+            {
+                Log.Warning("Blocked options overlay application; remote configuration is disabled");
+                return Forbid();
+            }
+
+            if (overlay is null)
+            {
+                return NoContent();
+            }
+
+            if (!overlay.TryValidate(out var result))
+            {
+                Log.Warning("Options patch validation failed: {Message}", result.GetResultString());
+                return BadRequest(result.GetResultString());
+            }
+
+            try
+            {
+                Program.ApplyConfigurationOverlay(overlay);
+                return Ok(Program.ConfigurationOverlay?.Redact());
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to apply options patch: {Message}", ex.Message);
+                return StatusCode(500, $"Failed to apply options patch: {ex.Message}");
+            }
+        }
+
         [HttpGet]
         [Route("startup")]
         [Authorize(Policy = AuthPolicy.Any)]
@@ -136,7 +175,7 @@ namespace slskd.Core.API
             return Ok(yaml);
         }
 
-        [HttpPost]
+        [HttpPut]
         [Authorize(Policy = AuthPolicy.JwtOnly, Roles = AuthRole.AdministratorOnly)]
         [Route("yaml")]
         public IActionResult UpdateYamlFile([FromBody] string yaml)
@@ -148,17 +187,19 @@ namespace slskd.Core.API
 
             if (!TryValidateYaml(yaml, out var error))
             {
-                Logger.Error(error, "Failed to validate YAML configuration");
+                Log.Error(error, "Failed to validate YAML configuration");
                 return BadRequest(error);
             }
 
             try
             {
+                IOFile.Copy(Program.ConfigurationFile, $"{Program.ConfigurationFile}.bak", overwrite: true);
+
                 IOFile.WriteAllText(Program.ConfigurationFile, yaml);
 
                 if (OptionsSnapshot.Value.Flags.NoConfigWatch)
                 {
-                    Logger.Information("Configuration watch is disabled; restart required for changes to take effect");
+                    Log.Information("Configuration watch is disabled; restart required for changes to take effect");
                     StateMutator.SetValue(state => state with { PendingRestart = true });
                 }
 
@@ -209,7 +250,7 @@ namespace slskd.Core.API
             }
             catch (Exception ex)
             {
-                Logger.Warning(ex, "Configuration validation failed");
+                Log.Warning(ex, "Configuration validation failed");
 
                 error = ex.Message;
 

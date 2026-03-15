@@ -35,8 +35,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Build.Framework" Version="17.8.3" />
-    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.8.3" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="18.4.0" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.4.0" />
     <PackageReference Include="System.Reactive" Version="6.0.0" />
     <PackageReference Include="MessagePack" Version="2.5.187" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
@@ -61,11 +61,7 @@
 
   <!-- Static analysis (H-CODE02) -->
   <Target Name="RunStaticAnalysis" AfterTargets="Build" Condition="'$(RunStaticAnalysis)' == 'true'">
-    <CodeAnalysisBuildTask
-        ProjectDirectory="$(MSBuildProjectDirectory)"
-        AssemblyPath="$(TargetPath)"
-        TreatWarningsAsErrors="$(TreatWarningsAsErrors)"
-        MaxViolations="100">
+    <CodeAnalysisBuildTask ProjectDirectory="$(MSBuildProjectDirectory)" AssemblyPath="$(TargetPath)" TreatWarningsAsErrors="$(TreatWarningsAsErrors)" MaxViolations="100">
       <Output TaskParameter="ExitCode" PropertyName="StaticAnalysisExitCode" />
     </CodeAnalysisBuildTask>
     <Error Condition="'$(StaticAnalysisExitCode)' != '0'" Text="Static analysis failed. Fix violations before proceeding." />
@@ -73,14 +69,7 @@
 
   <!-- Test coverage analysis (H-CODE03) -->
   <Target Name="RunTestCoverageAnalysis" AfterTargets="Build" Condition="'$(RunTestCoverage)' == 'true'">
-    <TestCoverageBuildTask
-        ProjectDirectory="$(MSBuildProjectDirectory)"
-        TestAssemblyPaths="@(TestAssemblyPaths)"
-        SourceAssemblyPaths="$(TargetPath)"
-        OutputDirectory="$(ArtifactsPath)coverage-reports"
-        MinimumCoverage="0.75"
-        FailOnLowCoverage="$(FailBuildOnLowCoverage)"
-        MaxUncoveredMethods="50">
+    <TestCoverageBuildTask ProjectDirectory="$(MSBuildProjectDirectory)" TestAssemblyPaths="@(TestAssemblyPaths)" SourceAssemblyPaths="$(TargetPath)" OutputDirectory="$(ArtifactsPath)coverage-reports" MinimumCoverage="0.75" FailOnLowCoverage="$(FailBuildOnLowCoverage)" MaxUncoveredMethods="50">
       <Output TaskParameter="ExitCode" PropertyName="CoverageAnalysisExitCode" />
     </TestCoverageBuildTask>
     <Error Condition="'$(CoverageAnalysisExitCode)' != '0'" Text="Test coverage analysis failed. Address coverage gaps before proceeding." />
@@ -88,11 +77,7 @@
 
   <!-- Regression testing (H-CODE03) -->
   <Target Name="RunRegressionTests" AfterTargets="Build" Condition="'$(RunRegressionTests)' == 'true'">
-    <RegressionBuildTask
-        TestAssemblyPaths="@(TestAssemblyPaths)"
-        OutputDirectory="$(ArtifactsPath)regression-reports"
-        RunBenchmarks="$(RunPerformanceBenchmarks)"
-        BenchmarkIterations="$(BenchmarkIterations)">
+    <RegressionBuildTask TestAssemblyPaths="@(TestAssemblyPaths)" OutputDirectory="$(ArtifactsPath)regression-reports" RunBenchmarks="$(RunPerformanceBenchmarks)" BenchmarkIterations="$(BenchmarkIterations)">
       <Output TaskParameter="ExitCode" PropertyName="RegressionTestExitCode" />
     </RegressionBuildTask>
     <Error Condition="'$(RegressionTestExitCode)' != '0'" Text="Regression testing failed. Fix critical issues before proceeding." />
@@ -117,9 +102,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.6" />
     <!-- Pin to 9.x so framework-dependent publish includes these; dotNetRdf 3.4.1 requires 9.0.9 -->
+    <!-- Also pins vuln-patched versions of transitive deps (GHSA-qj66, GHSA-hh2w, GHSA-8g4q) -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.9" />
+    <PackageReference Include="System.Text.Json" Version="9.0.9" />
     <PackageReference Include="Mono.Nat" Version="3.0.0" />
     <PackageReference Include="MonoTorrent" Version="3.0.2" />
     <PackageReference Include="OneOf" Version="3.0.271" />

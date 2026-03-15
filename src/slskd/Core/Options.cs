@@ -826,6 +826,11 @@ namespace slskd
                     {
                         try
                         {
+                            if (cidr.StartsWith("::ffff", StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new Exception("IPv4 mapped IPv6 addresses are not allowed");
+                            }
+
                             _ = IPAddressRange.Parse(cidr);
                         }
                         catch (Exception ex)
@@ -1341,6 +1346,11 @@ namespace slskd
                     {
                         try
                         {
+                            if (cidr.StartsWith("::ffff", StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new Exception("IPv4 mapped IPv6 addresses are not allowed");
+                            }
+
                             _ = IPAddressRange.Parse(cidr);
                         }
                         catch (Exception ex)
@@ -2644,6 +2654,11 @@ namespace slskd
                         {
                             try
                             {
+                                if (cidr.StartsWith("::ffff", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    throw new Exception("IPv4 mapped IPv6 addresses are not allowed");
+                                }
+
                                 _ = IPAddressRange.Parse(cidr);
                             }
                             catch (Exception ex)
@@ -2742,6 +2757,12 @@ namespace slskd
         public class IntegrationOptions
         {
             /// <summary>
+            ///     Gets VPN options.
+            /// </summary>
+            [Validate]
+            public VpnOptions Vpn { get; init; } = new();
+
+            /// <summary>
             ///     Gets webhook configuration.
             /// </summary>
             [Validate]
@@ -2794,6 +2815,118 @@ namespace slskd
             /// </summary>
             [Validate]
             public MusicBrainzOptions MusicBrainz { get; init; } = new MusicBrainzOptions();
+
+            /// <summary>
+            ///     VPN options.
+            /// </summary>
+            public class VpnOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether the VPN integration is enabled.
+                /// </summary>
+                [Argument(default, "vpn")]
+                [EnvironmentVariable("VPN")]
+                [Description("enable VPN integration")]
+                [RequiresRestart]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets a value indicating whether the configured VPN supports dynamic port forwarding.
+                /// </summary>
+                [Argument(default, "vpn-port-forwarding")]
+                [EnvironmentVariable("VPN_PORT_FORWARDING")]
+                [Description("VPN supports dynamic port forwarding")]
+                public bool PortForwarding { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the rate at which to poll the configured VPN client for status updates, in milliseconds.
+                /// </summary>
+                [Argument(default, "vpn-polling-interval")]
+                [EnvironmentVariable("VPN_POLLING_INTERVAL")]
+                [Description("VPN client status polling interval")]
+                [Range(500, int.MaxValue)]
+                [RequiresRestart]
+                public int PollingInterval { get; init; } = 2500;
+
+                /// <summary>
+                ///     Gets Gluetun options.
+                /// </summary>
+                [Validate]
+                public GluetunVpnOptions Gluetun { get; init; } = new GluetunVpnOptions();
+
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (Enabled)
+                    {
+                        // as/if more VPN clients are added, update this logic to ensure that exactly one is configured
+                        if (string.IsNullOrWhiteSpace(Gluetun?.Url))
+                        {
+                            yield return new ValidationResult("VPN is enabled but no client is configured");
+                            yield break;
+                        }
+
+                        if (!Uri.TryCreate(Gluetun.Url, UriKind.Absolute, out _))
+                        {
+                            yield return new ValidationResult("The gluetun URL must be absolute, e.g. 'http://127.0.0.1:8000'");
+                        }
+                    }
+                }
+
+                /// <summary>
+                ///     Gluetun options.
+                /// </summary>
+                public class GluetunVpnOptions
+                {
+                    /// <summary>
+                    ///     Gets the Gluetun integration version.
+                    /// </summary>
+                    [Range(1, 1)]
+                    public int Version { get; init; } = 1;
+
+                    /// <summary>
+                    ///     Gets the fully qualified root URL for the Gluetun control server.
+                    /// </summary>
+                    [Argument(default, "vpn-gluetun-url")]
+                    [EnvironmentVariable("VPN_GLUETUN_URL")]
+                    [Description("URL for gluetun control server")]
+                    public string Url { get; init; }
+
+                    /// <summary>
+                    ///     Gets the timeout for HTTP requests to the Gluetun control server, in milliseconds.
+                    /// </summary>
+                    [Argument(default, "vpn-gluetun-timeout")]
+                    [EnvironmentVariable("VPN_GLUETUN_TIMEOUT")]
+                    [Description("timeout for HTTP requests to gluetun control server")]
+                    [Range(500, 10_000)]
+                    public int Timeout { get; init; } = 1000;
+
+                    /// <summary>
+                    ///     Gets the username used for basic auth.
+                    /// </summary>
+                    [Argument(default, "vpn-gluetun-username")]
+                    [EnvironmentVariable("VPN_GLUETUN_USERNAME")]
+                    [Description("username for gluetun control server")]
+                    public string Username { get; init; }
+
+                    /// <summary>
+                    ///     Gets the password used for basic auth.
+                    /// </summary>
+                    [Argument(default, "vpn-gluetun-password")]
+                    [EnvironmentVariable("VPN_GLUETUN_PASSWORD")]
+                    [Description("password for gluetun control server")]
+                    [Secret]
+                    public string Password { get; init; }
+
+                    /// <summary>
+                    ///     Gets the API key used for API key auth.
+                    /// </summary>
+                    [Argument(default, "vpn-gluetun-api-key")]
+                    [EnvironmentVariable("VPN_GLUETUN_API_KEY")]
+                    [Description("API key for gluetun control server")]
+                    [Secret]
+                    public string ApiKey { get; init; }
+                }
+            }
 
             /// <summary>
             ///     Webhook configuration.

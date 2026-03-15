@@ -119,8 +119,9 @@ namespace slskd.Shares
         ///     Searches the cache for the specified <paramref name="query"/> and returns the matching files.
         /// </summary>
         /// <param name="query">The query for which to search.</param>
+        /// <param name="limit">An optional row limit.</param>
         /// <returns>The matching files.</returns>
-        Task<IEnumerable<File>> SearchAsync(SearchQuery query);
+        Task<IEnumerable<File>> SearchAsync(SearchQuery query, int? limit = null);
 
         /// <summary>
         ///     Searches only the local share repository for the specified <paramref name="query"/>.

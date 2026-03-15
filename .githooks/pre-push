@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Shared pre-push secret scanner
+# Scans commit blobs in the push range and blocks on high-confidence secrets.
+# Bypass once with: SKIP_SECRET_SCAN=1 git push ...
+
+if [[ "${SKIP_SECRET_SCAN:-}" == "1" ]]; then
+  exit 0
+fi
+
+if ! command -v rg >/dev/null 2>&1; then
+  echo "pre-push secret scan: ripgrep (rg) not found; skipping" >&2
+  exit 0
+fi
+
+remote_name="${1:-origin}"
+
+PAT='github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-(proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z_-]+|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----|X-Plex-Token=[A-Za-z0-9._-]{20,}'
+ALLOW='REDACTED|EXAMPLE|example|xxxxxxxx|your[_ -]?token|<token>|sk-\.\.\.|ghp_\.\.\.'
+SUSP_PATH='(^|/)(\.env(\.|$)|sessionstore(\.jsonlz4)?|cookies?\.(sqlite|txt|json)|cookiejar|auth\.json|credentials\.json|id_(rsa|ed25519)|.*\.pem$|.*\.p12$|.*\.kdbx$|token(s)?\.(txt|json)$|\.codex/|\.claude/|\.cursor/)'
+
+redact_line() {
+  sed -E \
+    -e 's#(github_pat_)[A-Za-z0-9_]+#\1[REDACTED]#g' \
+    -e 's#(gh[pousr]_)[A-Za-z0-9]+#\1[REDACTED]#g' \
+    -e 's#(glpat-)[A-Za-z0-9_-]+#\1[REDACTED]#g' \
+    -e 's#(sk-ant-)[A-Za-z0-9_-]+#\1[REDACTED]#g' \
+    -e 's#(sk-(proj-)?)[A-Za-z0-9_-]+#\1[REDACTED]#g' \
+    -e 's#(AKIA|ASIA)[0-9A-Z]{16}#\1[REDACTED]#g' \
+    -e 's#(AIza)[0-9A-Za-z_-]{35}#\1[REDACTED]#g' \
+    -e 's#(ya29\.)[A-Za-z0-9_-]+#\1[REDACTED]#g' \
+    -e 's#(xox[baprs]-)[A-Za-z0-9-]+#\1[REDACTED]#g' \
+    -e 's#(X-Plex-Token=)[A-Za-z0-9._-]+#\1[REDACTED]#g'
+}
+
+zero40='0000000000000000000000000000000000000000'
+blocked=0
+warned=0
+report_file=$(mktemp)
+trap 'rm -f "$report_file"' EXIT
+
+declare -A seen_blob=()
+declare -A seen_warn_path=()
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ -z "${local_ref:-}" ]] && continue
+
+  # Deleting a remote ref.
+  if [[ "$local_sha" == "$zero40" ]]; then
+    continue
+  fi
+
+  commits=()
+  if [[ "$remote_sha" != "$zero40" ]]; then
+    while IFS= read -r c; do
+      [[ -n "$c" ]] && commits+=("$c")
+    done < <(git rev-list "${remote_sha}..${local_sha}")
+  else
+    # New branch/tag push: best effort set of commits not already on this remote.
+    while IFS= read -r c; do
+      [[ -n "$c" ]] && commits+=("$c")
+    done < <(git rev-list "$local_sha" --not --remotes="$remote_name")
+    if [[ ${#commits[@]} -eq 0 ]]; then
+      commits+=("$local_sha")
+    fi
+  fi
+
+  for commit in "${commits[@]}"; do
+    while IFS= read -r path; do
+      [[ -z "$path" ]] && continue
+
+      if printf '%s\n' "$path" | rg -qi "$SUSP_PATH"; then
+        if ! printf '%s\n' "$path" | rg -qi '(\.example$|example|sample|template)'; then
+          if [[ -z "${seen_warn_path[$path]:-}" ]]; then
+            seen_warn_path["$path"]=1
+            printf 'warn:path:%s\n' "$path" >> "$report_file"
+            warned=1
+          fi
+        fi
+      fi
+
+      key="${commit}:${path}"
+      if [[ -n "${seen_blob[$key]:-}" ]]; then
+        continue
+      fi
+      seen_blob["$key"]=1
+
+      if ! blob=$(git show "${commit}:${path}" 2>/dev/null); then
+        continue
+      fi
+      if ! printf '%s' "$blob" | grep -Iq .; then
+        continue
+      fi
+
+      hits=$(printf '%s' "$blob" | rg -n --no-heading -e "$PAT" 2>/dev/null || true)
+      [[ -z "$hits" ]] && continue
+      filtered=$(printf '%s\n' "$hits" | rg -vn "$ALLOW" || true)
+      [[ -z "$filtered" ]] && continue
+
+      blocked=1
+      printf 'hit:file:%s\n' "$path" >> "$report_file"
+      printf '  commit:%s\n' "$commit" >> "$report_file"
+      printf '%s\n' "$filtered" | head -n 5 | redact_line | sed 's/^/  /' >> "$report_file"
+    done < <(git diff-tree --no-commit-id --name-only -r --diff-filter=ACMR "$commit")
+  done
+done
+
+if [[ "$blocked" -eq 1 ]]; then
+  echo "Push blocked: potential secret/token detected in commits being pushed." >&2
+  echo "" >&2
+  awk '
+    /^hit:file:/ { sub(/^hit:file:/, "", $0); printf("- %s\n", $0); next }
+    /^warn:path:/ { next }
+    { print }
+  ' "$report_file" >&2
+  echo "" >&2
+  echo "If this is an intentional fake/example value, replace it with a placeholder like REDACTED/EXAMPLE." >&2
+  echo "One-time bypass: SKIP_SECRET_SCAN=1 git push ..." >&2
+  exit 1
+fi
+
+if [[ "$warned" -eq 1 ]]; then
+  echo "pre-push secret scan: warning, suspicious paths in pushed commits (no secret pattern match):" >&2
+  awk '/^warn:path:/ { sub(/^warn:path:/, "", $0); printf("- %s\n", $0) }' "$report_file" >&2
+fi
+
+exit 0

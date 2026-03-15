@@ -20,6 +20,8 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using slskd.AudioCore;
 using slskd.Core.Diagnostics;
 using slskd.Mesh.Realm;
@@ -88,6 +90,7 @@ namespace slskd
     using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
+    using slskd.Integrations.VPN;
     using slskd.Integrations.Webhooks;
     using slskd.Mesh;
     using slskd.Messaging;
@@ -229,6 +232,11 @@ using OpenTelemetry.Trace;
         public static string ConfigurationFile { get; private set; } = null;
 
         /// <summary>
+        ///     Gets the current configuration overlay, if one has been applied.
+        /// </summary>
+        public static OptionsOverlay ConfigurationOverlay => VolatileOverlayConfigurationSource?.CurrentValue;
+
+        /// <summary>
         ///     Gets the path where persistent data is saved.
         /// </summary>
         public static string DataDirectory { get; private set; } = null;
@@ -296,6 +304,7 @@ using OpenTelemetry.Trace;
             return $"{AppName}_{Compute.Sha256Hash(dir)}";
         }
         private static IDisposable DotNetRuntimeStats { get; set; }
+        private static VolatileOverlayConfigurationSource<OptionsOverlay> VolatileOverlayConfigurationSource { get; set; } = new VolatileOverlayConfigurationSource<OptionsOverlay>();
 
         [Argument('g', "generate-cert", "generate X509 certificate and password for HTTPs")]
         private static bool GenerateCertificate { get; set; }
@@ -320,6 +329,12 @@ using OpenTelemetry.Trace;
         /// </summary>
         /// <param name="code">An optional exit code.</param>
         public static void Exit(int code = 1) => Environment.Exit(code);
+
+        /// <summary>
+        ///     Apply an instance of <see cref="OptionsOverlay"/> on top of the existing application configuration.
+        /// </summary>
+        /// <param name="overlay">The overlay containing the property values to be overlaid.</param>
+        public static void ApplyConfigurationOverlay(OptionsOverlay overlay) => VolatileOverlayConfigurationSource.Apply(overlay);
 
         /// <summary>
         ///     Entrypoint.
@@ -707,11 +722,12 @@ using OpenTelemetry.Trace;
 
                 // hack: services that exist only to subscribe to the event bus are not referenced by anything else
                 //       and are thus never instantiated.  force a reference here so they are created.
-                Log.Information("[DI] Forcing construction of ScriptService, WebhookService, and TrafficObserverIntegrationService...");
+                Log.Information("[DI] Forcing construction of ScriptService, WebhookService, VPNService, and TrafficObserverIntegrationService...");
                 _ = app.Services.GetService<ScriptService>();
                 _ = app.Services.GetService<WebhookService>();
+                _ = app.Services.GetService<VPNService>();
                 _ = app.Services.GetService<VirtualSoulfind.Capture.TrafficObserverIntegrationService>();
-                Log.Information("[DI] ScriptService, WebhookService, and TrafficObserverIntegrationService constructed");
+                Log.Information("[DI] ScriptService, WebhookService, VPNService, and TrafficObserverIntegrationService constructed");
 
                 Log.Information("[DI] About to configure ASP.NET pipeline...");
                 try
@@ -1033,6 +1049,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<ReportsService>();
             services.AddSingleton<TelemetryService>();
 
+            services.AddSingleton<VPNService>();
             services.AddSingleton<ScriptService>();
             services.AddSingleton<WebhookService>();
 
@@ -2449,6 +2466,18 @@ using OpenTelemetry.Trace;
                 {
                     options.Filters.Add(new AuthorizeFilter(AuthPolicy.Any));
                 })
+                .ConfigureApplicationPartManager(manager =>
+                {
+                    // Replace the default ControllerFeatureProvider with a resilient one that
+                    // handles Assembly.GetTypes() failures for build-time-only dependencies.
+                    // Needed because MSBuild task classes in this assembly inherit from
+                    // Microsoft.Build.Utilities.Task, and patched Microsoft.Build.Utilities.Core
+                    // (18.x+) targets net9.0+ so its runtime DLL is absent from a net8.0 output.
+                    var existing = manager.FeatureProviders
+                        .OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList();
+                    foreach (var p in existing) manager.FeatureProviders.Remove(p);
+                    manager.FeatureProviders.Add(new slskd.Common.CodeQuality.SafeControllerFeatureProvider());
+                })
                 .ConfigureApiBehaviorOptions(options =>
                 {
                     options.SuppressInferBindingSourcesForParameters = true; // explicit [FromRoute], etc
@@ -3177,8 +3206,9 @@ using OpenTelemetry.Trace;
                 .AddCommandLine(
                     targetType: typeof(Options),
                     multiValuedArguments,
-                    commandLine: Environment.CommandLine);
-            
+                    commandLine: Environment.CommandLine)
+                .Add(VolatileOverlayConfigurationSource); // this must come last in order to supersede all other sources
+
             Log.Information("[Config] Configuration providers added, YAML file: {ConfigFile}", configurationFile);
             return result;
         }

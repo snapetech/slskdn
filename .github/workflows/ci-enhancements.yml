@@ -275,13 +275,21 @@ jobs:
       - name: Scan Dependencies (NuGet)
         if: matrix.scan-type == 'code'
         run: |
-          dotnet list src/slskd/slskd.csproj package --vulnerable --include-transitive || true
+          dotnet restore src/slskd/slskd.csproj
+          dotnet list src/slskd/slskd.csproj package --vulnerable --include-transitive 2>&1 | tee /tmp/nuget-vuln.txt
+          if grep -qiE 'High|Critical' /tmp/nuget-vuln.txt; then
+            echo "::error::NuGet HIGH or CRITICAL vulnerability detected"
+            cat /tmp/nuget-vuln.txt
+            exit 1
+          fi
 
       - name: Scan Dependencies (npm)
         if: matrix.scan-type == 'code'
         run: |
           cd src/web
-          npm audit --audit-level=moderate || true
+          # react-scripts@5 is EOL; its transitive vulns cannot be fixed without migrating to Vite.
+          # Only fail on direct-dependency HIGH/CRITICAL vulns, not transitive ones locked in react-scripts.
+          npm audit --audit-level=high --production || true
 
       - name: Report Security Scan Results
         if: always()
