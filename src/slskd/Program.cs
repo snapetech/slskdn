@@ -2571,6 +2571,11 @@ using OpenTelemetry.Trace;
                 services.AddSwaggerGen(options =>
                 {
                     options.DescribeAllParametersInCamelCase();
+
+                    // Use fully-qualified type name as schema ID to prevent conflicts between
+                    // types with the same short name in different namespaces (e.g. slskd.Search.File
+                    // vs Soulseek.File both map to "File" by default, crashing Swagger generation).
+                    options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
                     options.SwaggerDoc("v0", new OpenApiInfo
                     {
                         Version = "v0",
