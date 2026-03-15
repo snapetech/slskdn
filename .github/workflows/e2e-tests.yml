@@ -10,6 +10,7 @@ on:
 env:
   DOTNET_VERSION: '8'
   NODE_VERSION: '20'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   e2e:
@@ -35,7 +36,8 @@ jobs:
 
       - name: Build Backend
         run: |
-          dotnet build src/slskd/slskd.csproj -c Release
+          # Use -p:Version=0.0.0 to avoid VERSION env var (if set) being read as an invalid MSBuild $(Version)
+          dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0
 
       - name: Build Frontend
         run: |

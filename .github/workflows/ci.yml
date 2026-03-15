@@ -12,6 +12,7 @@ on:
 
 env:
   DOTNET_VERSION: '8'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   build:
@@ -49,13 +50,23 @@ jobs:
       - name: Set Environment Variables
         id: version
         run: |
-          VERSION="$(git describe --tags --abbrev=0).$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)+$(git rev-parse --short HEAD)"
+          # Get the latest slskdn release tag only (not build-trigger tags like build-main-*)
+          LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' | head -n1)
+          LATEST_TAG=${LATEST_TAG:-0.24.5-slskdn.1}
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            PATCH=0
+          else
+            PATCH=65534
+          fi
+          VERSION="${LATEST_TAG}.${PATCH}+$(git rev-parse --short HEAD)"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: NuGet Vulnerability Scan
         run: |
-          dotnet restore src/slskd/slskd.csproj
+          # Use -p:Version=0.0.0 to prevent the VERSION env var from being read as an MSBuild property,
+          # which would cause NuGet to reject build-main-* prefixed strings as invalid semver.
+          dotnet restore src/slskd/slskd.csproj -p:Version=0.0.0
           # List vulnerable packages (--vulnerable flag requires .NET 8+ SDK)
           dotnet list src/slskd/slskd.csproj package --vulnerable --include-transitive 2>&1 | tee /tmp/nuget-vuln.txt
           # Fail if any HIGH or CRITICAL severity found
