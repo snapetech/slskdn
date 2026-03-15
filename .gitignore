@@ -43,3 +43,4 @@ opencode.json
 .claude/
 .cursor/
 target/
+SECURITY-AUDIT*.md
