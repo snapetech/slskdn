@@ -2080,8 +2080,8 @@ jobs:
 
           git clone https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git main-repo
           cd main-repo
-          mkdir -p packaging/homebrew/Formula
-          cat > packaging/homebrew/Formula/slskdn.rb <<FORMULA
+          mkdir -p Formula
+          cat > Formula/slskdn.rb <<FORMULA
           class Slskdn < Formula
             desc "Batteries-included Soulseek web client"
             homepage "https://github.com/snapetech/slskdn"
@@ -2109,7 +2109,7 @@ jobs:
           FORMULA
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
-          git add packaging/homebrew/Formula/slskdn.rb
+          git add Formula/slskdn.rb
           git commit -m "chore(homebrew): update formula to ${VERSION} [skip ci]" || echo "No changes"
           git push
           echo "✅ Updated formula in main repo"
