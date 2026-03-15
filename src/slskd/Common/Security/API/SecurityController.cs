@@ -431,6 +431,7 @@ public class SecurityController : ControllerBase
     }
 
     [HttpPut("adversarial")]
+    [Authorize(Roles = "Administrator")]
     public ActionResult UpdateAdversarialSettings([FromBody] AdversarialOptions settings)
     {
         if (settings == null)

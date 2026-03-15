@@ -55,6 +55,18 @@ if [[ "$_aur_hash_fail" -eq 1 ]]; then
 fi
 # ── end AUR check ─────────────────────────────────────────────────────────────
 
+# ── Block .key file commits ────────────────────────────────────────────────────
+mapfile -d '' _key_staged < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -z '\.key$' || true)
+for _kf in "${_key_staged[@]}"; do
+  [[ -z "$_kf" ]] && continue
+  if [[ "$_kf" != tests/* && "$_kf" != test/* ]]; then
+    echo "Commit blocked: .key file staged: $_kf" >&2
+    echo "Key files must be gitignored. Add to .gitignore if intentional: SKIP_SECRET_SCAN=1 git commit" >&2
+    exit 1
+  fi
+done
+# ── end .key check ────────────────────────────────────────────────────────────
+
 if ! command -v rg >/dev/null 2>&1; then
   echo "pre-commit secret scan: ripgrep (rg) not found; skipping" >&2
   exit 0
@@ -66,7 +78,7 @@ if [[ -z "$repo_root" ]]; then
 fi
 
 # High-confidence patterns only (kept narrow to reduce false positives).
-PAT='github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-(proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z_-]+|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----|X-Plex-Token=[A-Za-z0-9._-]{20,}'
+PAT='github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-(proj-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z_-]+|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----|X-Plex-Token=[A-Za-z0-9._-]{20,}|"PrivateKey"\s*:\s*"[A-Za-z0-9+/]{40,}={0,2}"'
 
 # Common placeholders/examples to ignore.
 ALLOW='REDACTED|EXAMPLE|example|xxxxxxxx|your[_ -]?token|<token>|sk-\.\.\.|ghp_\.\.\.'

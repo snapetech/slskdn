@@ -2656,7 +2656,7 @@ namespace slskd
                     ///     Gets the comma separated list of CIDRs that are authorized to use the key.
                     /// </summary>
                     [Description("optional; comma separated list of CIDRs that are authorized to use the key")]
-                    public string Cidr { get; init; } = "0.0.0.0/0,::/0";
+                    public string Cidr { get; init; } = "127.0.0.1/32,::1/128";
 
                     /// <summary>
                     ///     Extended validation.

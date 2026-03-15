@@ -229,7 +229,7 @@ namespace slskd.Relay
             var key = Pbkdf2.GetKey(options.Relay.Controller.Secret, options.InstanceName, 48);
             var tokenBytes = System.Text.Encoding.UTF8.GetBytes(token);
 
-            return Aes.Encrypt(tokenBytes, key).ToBase62();
+            return Convert.ToBase64String(System.Security.Cryptography.HMACSHA256.HashData(key, tokenBytes));
         }
 
         private string ComputeCredential(Guid token) => ComputeCredential(token.ToString());

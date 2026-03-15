@@ -225,6 +225,43 @@ public class ReplayCache
     }
 
     /// <summary>
+    /// Atomically checks and records a message ID. Returns true if the message is a replay (already seen).
+    /// Uses TryAdd to prevent TOCTOU race conditions.
+    /// </summary>
+    /// <param name="messageId">The message ID to check and record.</param>
+    /// <returns>True if this is a replay (was already recorded); false if it was newly recorded.</returns>
+    public bool CheckAndRecord(string messageId)
+    {
+        if (string.IsNullOrWhiteSpace(messageId))
+        {
+            return false;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+
+        // Clean up expired entries if cache is getting large
+        if (_seenMessages.Count > _maxCacheSize * 0.9)
+        {
+            CleanupExpiredEntries(now);
+        }
+
+        // Atomically try to add; if it already exists and is within the window, it's a replay
+        if (!_seenMessages.TryAdd(messageId, now))
+        {
+            // Entry exists — check if it's still within the cache window
+            if (_seenMessages.TryGetValue(messageId, out var seenAt) && now - seenAt < _cacheDuration)
+            {
+                return true; // This is a replay
+            }
+
+            // Expired entry — overwrite and allow
+            _seenMessages[messageId] = now;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Gets the current cache size.
     /// </summary>
     public int CacheSize => _seenMessages.Count;

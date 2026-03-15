@@ -57,8 +57,18 @@ namespace slskd
 
         public (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress)
         {
+            var inputKeyBytes = System.Text.Encoding.UTF8.GetBytes(key ?? string.Empty);
             var record = OptionsMonitor.CurrentValue.Web.Authentication.ApiKeys
-                .FirstOrDefault(k => k.Value.Key == key);
+                .FirstOrDefault(k =>
+                {
+                    var storedKeyBytes = System.Text.Encoding.UTF8.GetBytes(k.Value.Key ?? string.Empty);
+                    var padLen = Math.Max(inputKeyBytes.Length, storedKeyBytes.Length);
+                    var aPad = new byte[padLen];
+                    var bPad = new byte[padLen];
+                    inputKeyBytes.CopyTo(aPad, 0);
+                    storedKeyBytes.CopyTo(bPad, 0);
+                    return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(aPad, bPad);
+                });
 
             if (record.Key == null)
             {
@@ -93,6 +103,7 @@ namespace slskd
 
             var token = new JwtSecurityToken(
                 issuer: Program.AppName,
+                audience: Program.AppName,
                 claims: claims,
                 notBefore: issuedUtc,
                 expires: expiresUtc,

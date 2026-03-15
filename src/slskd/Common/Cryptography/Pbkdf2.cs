@@ -38,7 +38,7 @@ namespace slskd.Cryptography
         public static byte[] GetKey(string password)
         {
             byte[] salt = new byte[16];
-            int iterations = 1000;
+            int iterations = 600_000;
 
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(salt);
@@ -54,7 +54,7 @@ namespace slskd.Cryptography
         /// <returns>The derived key.</returns>
         public static byte[] GetKey(string password, string salt, int length)
         {
-            int iterations = 1000;
+            int iterations = 600_000;
 
             return KeyDerivation.Pbkdf2(password, Encoding.UTF8.GetBytes(salt), KeyDerivationPrf.HMACSHA256, iterations, length);
         }

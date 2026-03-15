@@ -88,6 +88,8 @@ public class FileKeyStore : IKeyStore
     {
         var json = JsonSerializer.Serialize(pair);
         File.WriteAllText(path, json);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
     }
 
     private static Ed25519KeyPair ReadFromFile(string path)

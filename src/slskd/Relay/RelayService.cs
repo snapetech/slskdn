@@ -764,7 +764,7 @@ namespace slskd.Relay
 
             var key = Pbkdf2.GetKey(password: agentOptions.Secret, salt: agentName, length: 48);
             var tokenBytes = System.Text.Encoding.UTF8.GetBytes((string)challengeToken);
-            var expectedCredential = Aes.Encrypt(tokenBytes, key).ToBase62();
+            var expectedCredential = Convert.ToBase64String(System.Security.Cryptography.HMACSHA256.HashData(key, tokenBytes));
 
             if (expectedCredential != credential)
             {
@@ -912,7 +912,7 @@ namespace slskd.Relay
 
                 var key = Pbkdf2.GetKey(password: agentOptions.Secret, salt: agentName, length: 48);
                 var tokenBytes = System.Text.Encoding.UTF8.GetBytes(token);
-                var expectedCredential = Aes.Encrypt(tokenBytes, key).ToBase62();
+                var expectedCredential = Convert.ToBase64String(System.Security.Cryptography.HMACSHA256.HashData(key, tokenBytes));
 
                 if (expectedCredential != credential)
                 {

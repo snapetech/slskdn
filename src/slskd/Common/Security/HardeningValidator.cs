@@ -6,6 +6,7 @@ namespace slskd.Common.Security
 {
     using System;
     using System.Linq;
+    using Serilog;
     using slskd;
 
     /// <summary>
@@ -50,15 +51,19 @@ namespace slskd.Common.Security
         /// <exception cref="HardeningValidationException">Thrown when EnforceSecurity is on and a rule fails.</exception>
         public static void Validate(OptionsAtStartup options, string environment, bool isBindingNonLoopback)
         {
-            if (options?.Web == null || !options.Web.EnforceSecurity)
+            if (options?.Web == null)
                 return;
+
+            var enforce = options.Web.EnforceSecurity;
 
             // 1. Auth disabled + non-loopback + !AllowRemoteNoAuth
             if (options.Web.Authentication.Disabled && isBindingNonLoopback && !options.Web.AllowRemoteNoAuth)
             {
-                throw new HardeningValidationException(
-                    RuleAuthDisabledNonLoopback,
-                    "Authentication is disabled and the application binds to a non-loopback address. Set Web.AllowRemoteNoAuth=true to allow, or bind to loopback only.");
+                const string msg = "Authentication is disabled and the application binds to a non-loopback address. Set Web.AllowRemoteNoAuth=true to allow, or bind to loopback only.";
+                if (enforce)
+                    throw new HardeningValidationException(RuleAuthDisabledNonLoopback, msg);
+                else
+                    Log.Warning("[{Rule}] {Message}", RuleAuthDisabledNonLoopback, msg);
             }
 
             // 2. CORS: when Enabled, forbid AllowCredentials with wildcard/any origin. When !Enabled, no CORS middleware (PR-04) so skip.
@@ -70,26 +75,32 @@ namespace slskd.Common.Security
                     origins.Any(o => string.Equals(o, "*", StringComparison.OrdinalIgnoreCase));
                 if (cred && anyOrigin)
                 {
-                    throw new HardeningValidationException(
-                        RuleCorsCredentialsWithWildcard,
-                        "CORS is configured with AllowCredentials and wildcard/any origin, which is unsafe. Use an explicit AllowedOrigins list and no wildcard.");
+                    const string msg = "CORS is configured with AllowCredentials and wildcard/any origin, which is unsafe. Use an explicit AllowedOrigins list and no wildcard.";
+                    if (enforce)
+                        throw new HardeningValidationException(RuleCorsCredentialsWithWildcard, msg);
+                    else
+                        Log.Warning("[{Rule}] {Message}", RuleCorsCredentialsWithWildcard, msg);
                 }
             }
 
             // 3. Memory dump allowed while auth disabled
             if ((options.Diagnostics?.AllowMemoryDump ?? false) && options.Web.Authentication.Disabled)
             {
-                throw new HardeningValidationException(
-                    RuleMemoryDumpWithAuthDisabled,
-                    "Diagnostics.AllowMemoryDump is true while authentication is disabled. Enable authentication or set AllowMemoryDump=false.");
+                const string msg = "Diagnostics.AllowMemoryDump is true while authentication is disabled. Enable authentication or set AllowMemoryDump=false.";
+                if (enforce)
+                    throw new HardeningValidationException(RuleMemoryDumpWithAuthDisabled, msg);
+                else
+                    Log.Warning("[{Rule}] {Message}", RuleMemoryDumpWithAuthDisabled, msg);
             }
 
             // 4. §11: HashFromAudioFileEnabled — feature not implemented (PCM extraction requires FFmpeg/NAudio)
             if (options.Flags?.HashFromAudioFileEnabled == true)
             {
-                throw new HardeningValidationException(
-                    RuleHashFromAudioFileEnabled,
-                    "Flags.HashFromAudioFileEnabled is true but audio hash from file is not implemented. PCM extraction requires FFmpeg/NAudio integration. Set to false or implement the feature.");
+                const string msg = "Flags.HashFromAudioFileEnabled is true but audio hash from file is not implemented. PCM extraction requires FFmpeg/NAudio integration. Set to false or implement the feature.";
+                if (enforce)
+                    throw new HardeningValidationException(RuleHashFromAudioFileEnabled, msg);
+                else
+                    Log.Warning("[{Rule}] {Message}", RuleHashFromAudioFileEnabled, msg);
             }
         }
     }

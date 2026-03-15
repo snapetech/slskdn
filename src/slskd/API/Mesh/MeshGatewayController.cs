@@ -38,7 +38,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("mesh/http")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public mesh HTTP gateway
+[Authorize]
 [Produces("application/json")]
 [Consumes("application/json")]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

@@ -49,10 +49,12 @@ namespace slskd.Cryptography
             aes.KeySize = KeySizeInBits;
             aes.BlockSize = BlockSizeInBits;
 
-            var (k, iv) = DecodeKey(key);
+            var (k, _) = DecodeKey(key);
+            var iv = encryptedBytes[..BlockSizeInBytes];
+            var ciphertext = encryptedBytes[BlockSizeInBytes..];
 
             using var decryptor = aes.CreateDecryptor(k, iv);
-            using var inputStream = new MemoryStream(encryptedBytes);
+            using var inputStream = new MemoryStream(ciphertext);
             using var cryptoStream = new CryptoStream(inputStream, decryptor, CryptoStreamMode.Read);
             using var outputStream = new MemoryStream();
 
@@ -74,15 +76,17 @@ namespace slskd.Cryptography
             aes.KeySize = KeySizeInBits;
             aes.BlockSize = BlockSizeInBits;
 
-            var (k, iv) = DecodeKey(key);
+            var (k, _) = DecodeKey(key);
+            var iv = new byte[BlockSizeInBytes];
+            System.Security.Cryptography.RandomNumberGenerator.Fill(iv);
 
             using var encryptor = aes.CreateEncryptor(k, iv);
             using var outputStream = new MemoryStream();
+            outputStream.Write(iv, 0, iv.Length); // prepend IV
             using var cryptoStream = new CryptoStream(outputStream, encryptor, CryptoStreamMode.Write);
 
             cryptoStream.Write(plainBytes, 0, plainBytes.Length);
-            cryptoStream.Flush();
-            cryptoStream.Close();
+            cryptoStream.FlushFinalBlock();
 
             return outputStream.ToArray();
         }
@@ -107,10 +111,8 @@ namespace slskd.Cryptography
         private static (byte[] Key, byte[] IV) DecodeKey(byte[] bytes)
         {
             var mem = new Memory<byte>(bytes);
-            var key = mem.Slice(0, KeySizeInBytes);
-            var iv = mem.Slice(KeySizeInBytes, BlockSizeInBytes);
-
-            return (key.ToArray(), iv.ToArray());
+            var key = mem.Slice(0, KeySizeInBytes).ToArray();
+            return (key, Array.Empty<byte>()); // IV is now generated per-call in Encrypt
         }
     }
 }

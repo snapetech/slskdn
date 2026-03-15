@@ -477,11 +477,6 @@ using OpenTelemetry.Trace;
                     Log.Information("[Config] Raw slskd:security section enabled value: {Enabled}", slskdSecuritySection["enabled"]);
                 }
 
-                if (OptionsAtStartup.Debug)
-                {
-                    Log.Information($"Configuration:\n{Configuration.GetDebugView()}");
-                }
-
                 if (!OptionsAtStartup.TryValidate(out var result))
                 {
                     Log.Information(result.GetResultView());
@@ -2274,6 +2269,8 @@ using OpenTelemetry.Trace;
 
             var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(OptionsAtStartup.Web.Authentication.Jwt.Key));
 
+            Log.Warning("JWT signing key is ephemeral (auto-generated per-process start). All sessions will be invalidated on restart. Set web.authentication.jwt.key in configuration to persist sessions.");
+
             services.AddSingleton(jwtSigningKey);
             services.AddSingleton<ISecurityService, SecurityService>();
             services.AddSingleton<Common.Security.ISoulseekSafetyLimiter, Common.Security.SoulseekSafetyLimiter>();
@@ -2348,7 +2345,8 @@ using OpenTelemetry.Trace;
                             ValidateLifetime = true,
                             ValidIssuer = AppName,
                             ValidateIssuer = true,
-                            ValidateAudience = false,
+                            ValidateAudience = true,
+                            ValidAudiences = new[] { AppName },
                             IssuerSigningKey = jwtSigningKey,
                             ValidateIssuerSigningKey = true,
                         };
@@ -2484,7 +2482,7 @@ using OpenTelemetry.Trace;
                     options.SuppressInferBindingSourcesForParameters = true; // explicit [FromRoute], etc
                     options.SuppressMapClientErrors = true; // disables automatic ProblemDetails for 4xx
                     // PR-07: when EnforceSecurity, enable automatic 400 for invalid model (ValidationProblemDetails)
-                    options.SuppressModelStateInvalidFilter = !OptionsAtStartup.Web.EnforceSecurity;
+                    options.SuppressModelStateInvalidFilter = false;
                     options.DisableImplicitFromServicesParameters = true; // explicit [FromServices]
                     // PR-05, PR-07: custom ValidationProblemDetails; in Production do not leak internal property paths or structure.
                     options.InvalidModelStateResponseFactory = actionContext =>
@@ -2880,7 +2878,7 @@ using OpenTelemetry.Trace;
                             .ToList();
                         context.Response.ContentType = "application/json";
                         await context.Response.WriteAsJsonAsync(routes);
-                    }).AllowAnonymous();
+                    }).RequireAuthorization();
                 }
 
                 if (OptionsAtStartup.Metrics.Enabled)

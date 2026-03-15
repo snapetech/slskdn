@@ -41,6 +41,11 @@ namespace slskd.Core.API
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class SessionController : ControllerBase
     {
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int Failures, DateTimeOffset LastFailure, DateTimeOffset? LockoutUntil)> _loginAttempts = new();
+        private const int MaxFailures = 10;
+        private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+        private static readonly TimeSpan WindowDuration = TimeSpan.FromMinutes(5);
+
         public SessionController(
             ISecurityService securityService,
             IOptionsSnapshot<Options> optionsSnapshot,
@@ -120,11 +125,50 @@ namespace slskd.Core.API
                 return BadRequest("Username and/or Password missing or invalid");
             }
 
-            // only admin login for now
-            if (OptionsSnapshot.Value.Web.Authentication.Username == login.Username && OptionsSnapshot.Value.Web.Authentication.Password == login.Password)
+            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+            // Check for active lockout
+            if (_loginAttempts.TryGetValue(remoteIp, out var existing) && existing.LockoutUntil.HasValue && existing.LockoutUntil.Value > DateTimeOffset.UtcNow)
             {
+                Log.Warning("Login from {RemoteIp} rejected; IP is locked out until {LockoutUntil}", remoteIp, existing.LockoutUntil.Value);
+                return StatusCode(429, "Too many failed login attempts. Try again later.");
+            }
+
+            // only admin login for now
+            var storedUser = System.Text.Encoding.UTF8.GetBytes(OptionsSnapshot.Value.Web.Authentication.Username ?? string.Empty);
+            var storedPass = System.Text.Encoding.UTF8.GetBytes(OptionsSnapshot.Value.Web.Authentication.Password ?? string.Empty);
+            var inputUser = System.Text.Encoding.UTF8.GetBytes(login.Username ?? string.Empty);
+            var inputPass = System.Text.Encoding.UTF8.GetBytes(login.Password ?? string.Empty);
+
+            // Pad to same length to prevent length oracle (always compare full buffers)
+            static bool ConstantTimeEqual(byte[] a, byte[] b)
+            {
+                var padLen = Math.Max(a.Length, b.Length);
+                var aPad = new byte[padLen];
+                var bPad = new byte[padLen];
+                a.CopyTo(aPad, 0);
+                b.CopyTo(bPad, 0);
+                return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(aPad, bPad);
+            }
+
+            if (ConstantTimeEqual(storedUser, inputUser) && ConstantTimeEqual(storedPass, inputPass))
+            {
+                // Successful login: clear failed attempt counter
+                _loginAttempts.TryRemove(remoteIp, out _);
                 return Ok(new TokenResponse(Security.GenerateJwt(login.Username, Role.Administrator)));
             }
+
+            // Failed login: increment counter and potentially lock out
+            _loginAttempts.AddOrUpdate(
+                remoteIp,
+                _ => (1, DateTimeOffset.UtcNow, null),
+                (_, prev) =>
+                {
+                    // Reset window if last failure was outside the window
+                    var failures = (DateTimeOffset.UtcNow - prev.LastFailure) > WindowDuration ? 1 : prev.Failures + 1;
+                    DateTimeOffset? lockout = failures >= MaxFailures ? DateTimeOffset.UtcNow.Add(LockoutDuration) : null;
+                    return (failures, DateTimeOffset.UtcNow, lockout);
+                });
 
             return Unauthorized();
         }

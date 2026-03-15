@@ -116,6 +116,14 @@ public class ScriptService
 
                     if (!string.IsNullOrEmpty(run.Command))
                     {
+                        // Validate command doesn't contain shell metacharacters that bypass double-quote wrapping
+                        if (!run.Command.StartsWith(DefaultCommandPrefix))
+                        {
+                            var dangerous = new[] { '&', '|', ';', '`', '$', '(', ')', '<', '>', '\n', '\r' };
+                            if (run.Command.Any(c => dangerous.Contains(c)))
+                                throw new ArgumentException($"Command contains disallowed shell metacharacters: {run.Command}");
+                        }
+
                         // 'command' mode takes precedence over 'executable' mode
                         // run the system shell and ensure the specified command is prefixed with the correct flag
                         // this is designed to be the 'pit of success' for this feature that will work for most users,

@@ -86,22 +86,19 @@ public class ControlEnvelopeValidator : IControlEnvelopeValidator
             return EnvelopeValidationResult.Failure("Envelope timestamp is outside acceptable skew window (±120s)");
         }
 
-        // 3. Check replay cache
-        var cacheKey = $"{peerId}:{envelope.MessageId}";
-        if (_replayCache.IsReplay(cacheKey))
-        {
-            return EnvelopeValidationResult.Failure($"Envelope MessageId {envelope.MessageId} is a replay");
-        }
-
-        // 4. Validate signature against allowed keys from descriptor
+        // 3. Validate signature against allowed keys from descriptor (before recording in replay cache)
         var signatureValid = ValidateEnvelopeSignature(envelope, peerDescriptor);
         if (!signatureValid)
         {
             return EnvelopeValidationResult.Failure("Envelope signature verification failed");
         }
 
-        // 5. Accept the message (add to replay cache)
-        _replayCache.IsReplay(cacheKey); // This adds it to cache
+        // 4. Atomically check and record in replay cache to prevent TOCTOU races
+        var cacheKey = $"{peerId}:{envelope.MessageId}";
+        if (_replayCache.CheckAndRecord(cacheKey))
+        {
+            return EnvelopeValidationResult.Failure($"Envelope MessageId {envelope.MessageId} is a replay");
+        }
 
         _logger.LogDebug("Envelope validation successful for peer {PeerId}, message {MessageId}", peerId, envelope.MessageId);
         return EnvelopeValidationResult.Success();
