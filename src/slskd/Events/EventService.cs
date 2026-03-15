@@ -100,6 +100,35 @@ public class EventService
     }
 
     /// <summary>
+    ///     Deletes events older than the specified <paramref name="age"/> in days.
+    /// </summary>
+    /// <param name="age">The maximum age of events to retain, in days.</param>
+    /// <returns>The number of pruned records.</returns>
+    public virtual int PruneAsync(int age)
+    {
+        try
+        {
+            using var context = ContextFactory.CreateDbContext();
+            var cutoff = DateTime.UtcNow.AddDays(-age);
+            var expired = context.Events.Where(e => e.Timestamp < cutoff).ToList();
+
+            if (expired.Count > 0)
+            {
+                context.Events.RemoveRange(expired);
+                context.SaveChanges();
+                Log.Debug("Pruned {Count} event records older than {Age} days", expired.Count, age);
+            }
+
+            return expired.Count;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to prune event records: {Message}", ex.Message);
+            throw;
+        }
+    }
+
+    /// <summary>
     ///     Adds the specified event <paramref name="eventRecord"/>.
     /// </summary>
     /// <remarks>

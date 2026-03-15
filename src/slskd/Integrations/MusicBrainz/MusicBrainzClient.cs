@@ -65,7 +65,7 @@ namespace slskd.Integrations.MusicBrainz
                 throw new ArgumentException("Release ID must be supplied", nameof(releaseId));
             }
 
-            var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/release/{releaseId}?fmt=json&inc=recordings+artists+labels+discids+isrcs+relations";
+            var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/release/{releaseId}?fmt=json&inc=recordings+artists+labels+discids+isrcs";
             var response = await GetAsync<ReleaseResponse>(requestUrl, cancellationToken).ConfigureAwait(false);
             return response is null ? null : MapToAlbumTarget(response);
         }

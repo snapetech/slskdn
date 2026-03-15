@@ -116,6 +116,7 @@ namespace slskd
             IHubContext<LogsHub> logHub,
             IHubContext<Transfers.API.TransfersHub> transfersHub,
             Events.EventBus eventBus,
+            Events.EventService eventService,
             IServiceProvider serviceProvider,
             IServiceScopeFactory serviceScopeFactory)
         {
@@ -191,6 +192,7 @@ namespace slskd
             Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
 
             EventBus = eventBus;
+            EventService = eventService;
             ServiceProvider = serviceProvider;
             ServiceScopeFactory = serviceScopeFactory;
 
@@ -263,6 +265,7 @@ namespace slskd
         private IHubContext<LogsHub> LogHub { get; set; }
         private IHubContext<Transfers.API.TransfersHub> TransfersHub { get; set; }
         private Events.EventBus EventBus { get; set; }
+        private Events.EventService EventService { get; set; }
         private IUserService Users { get; set; }
         private IShareService Shares { get; set; }
         private ISearchService Search { get; set; }
@@ -1442,6 +1445,7 @@ namespace slskd
         {
             _ = Task.Run(() => PruneSearches());
             _ = Task.Run(() => PruneTransfers());
+            _ = Task.Run(() => PruneEvents());
         }
 
         private void Clock_EveryThirtyMinutes(object sender, ClockEventArgs e)
@@ -1594,6 +1598,20 @@ namespace slskd
                 {
                     Log.Error("Encountered one or more errors while pruning searches");
                 }
+            }
+        }
+
+        private void PruneEvents()
+        {
+            var age = OptionsMonitor.CurrentValue.Retention.Events;
+
+            try
+            {
+                EventService.PruneAsync(age);
+            }
+            catch
+            {
+                Log.Error("Encountered one or more errors while pruning events");
             }
         }
 

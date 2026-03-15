@@ -975,6 +975,7 @@ using OpenTelemetry.Trace;
                 var transfersHub = sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<Transfers.API.TransfersHub>>();
                 Log.Information("[DI] Resolving EventBus...");
                 var eventBus = sp.GetRequiredService<Events.EventBus>();
+                var eventService = sp.GetRequiredService<Events.EventService>();
                 Log.Information("[DI] Resolving ShareGrantAnnouncementService (best-effort)...");
                 _ = sp.GetService<Sharing.ShareGrantAnnouncementService>();
                 Log.Information("[DI] All dependencies resolved, constructing Application...");
@@ -984,7 +985,7 @@ using OpenTelemetry.Trace;
                     connectionWatchdog, transferService, browseTracker, roomService,
                     userService, messagingService, shareService, searchService,
                     notificationService, relayService, applicationHub, logHub, transfersHub,
-                    eventBus, sp, scopeFactory);
+                    eventBus, eventService, sp, scopeFactory);
                 Log.Information("[DI] Application singleton constructed successfully");
                 return app;
             });
