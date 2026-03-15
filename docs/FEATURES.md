@@ -14,6 +14,35 @@
 - Chat rooms and private messages
 - Shares management and indexing
 
+### Now Playing / Scrobble Integration
+- **Webhook receiver** at `POST /api/v0/nowplaying/webhook` — auto-detects Plex, Jellyfin/Emby, and generic JSON payloads
+- **REST API** `GET/PUT/DELETE /api/v0/nowplaying` for programmatic control
+- **User description update** — when playing, appends `🎵 Listening to: Artist – Title` to the Soulseek peer description
+- Supported sources: Plex Media Server (multipart), Jellyfin/Emby (NotificationType JSON), Tautulli / generic JSON
+
+### Cancel Transfers on Blacklist
+- Users added to `groups.blacklisted.members` at runtime have all active uploads and downloads immediately cancelled
+- Detected automatically via options monitor — no restart required
+
+### Per-Group File Type Restrictions
+- `groups.<name>.upload.allowed_file_types` — whitelist of extensions (e.g. `[".mp3", ".flac"]`)
+- Applied at enqueue time; rejects disallowed file types with an appropriate Soulseek error response
+- Applies to user-defined groups, Default, and Leechers groups
+- Empty list (default) = no restriction
+
+### Prometheus Metrics UI
+- **System → Metrics** tab in web UI
+- Displays KPI stats (Transfers, Search, Process, Network) fetched from `/api/v0/telemetry/metrics/kpi`
+- Full `slskd_*` metrics table with name, type, value, and description
+- Refresh button with last-updated timestamp
+
+### UserCard Score Badges
+- Reputation/stats badges shown next to usernames in:
+  - Private chat message history (ChatSession)
+  - Room message history (RoomSession)
+  - Room user list sidebar (RoomSession)
+  - Search results, Browse view, Transfers (existing)
+
 ### Mesh Overlay Network
 - DHT-based peer discovery
 - QUIC/UDP with TLS encryption

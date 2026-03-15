@@ -6,7 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [0.24.5-slskdn.52] - 2026-03-15
+
+### Now Playing / Scrobble Integration (#39)
+
+- **NowPlayingService**: Tracks current playing track (artist, title, album) in-process.
+- **REST API** at `GET/PUT/DELETE /api/v0/nowplaying`:
+  - `PUT` accepts `{ "artist": "...", "title": "...", "album": "..." }` to set current track
+  - `DELETE` clears current track (pause/stop)
+  - `GET` returns current track or null
+- **Webhook receiver** at `POST /api/v0/nowplaying/webhook`:
+  - **Plex**: Auto-detects multipart/form-data payload, handles `media.play`, `media.resume`, `media.scrobble` (set), `media.pause`, `media.stop` (clear)
+  - **Jellyfin / Emby**: Auto-detects `NotificationType` JSON field, handles `PlaybackStart`, `PlaybackProgress`, `PlaybackStop`
+  - **Generic JSON**: Fallback for Tautulli and other senders; `event: "play"|"stop"|"pause"` with `artist`, `title`, `album` fields
+- **User description**: When a track is playing, the Soulseek user description shown to peers automatically appends `🎵 Listening to: Artist – Title`
+- **Frontend lib**: `src/web/src/lib/nowPlaying.js` helper functions for calling the API
+
+### Cancel Transfers on Blacklist (#21)
+
+- When a user is added to the blacklist via config update, `OptionsMonitor_OnChange` now detects newly-blacklisted usernames by diffing old and new `Groups.Blacklisted.Members`.
+- All active (non-completed) uploads and downloads belonging to those users are immediately cancelled via `TryCancel()`.
+- Logged at Information level: `"Cancelling active transfers for N newly blacklisted user(s): [...]"`
+
+### Per-Group File Type Restrictions (#56)
+
+- Added `AllowedFileTypes string[]` to `Options.GroupsOptions.UploadOptions` (the upload config shared by all user groups including user-defined groups, Default, and Leechers).
+- When `AllowedFileTypes` is non-empty for a group, the upload handler checks the requested file's extension against the list before enqueuing.
+- Rejects with `DownloadEnqueueException("File type .ext is not permitted.")` if not matched (case-insensitive).
+- Empty list (default) means no restriction — fully backwards-compatible.
+
+### Prometheus Metrics UI (#59)
+
+- New **Metrics** tab in System section (`/system/metrics`).
+- Fetches KPI data from `GET /api/v0/telemetry/metrics/kpi` (existing endpoint).
+- Renders four grouped statistic panels: **Transfers**, **Search**, **Process**, **Network**.
+- Full `slskd_*` metrics table showing name, type, value, and help text.
+- Refresh button with last-updated timestamp.
+- Added `src/web/src/lib/telemetry.js` with `getMetrics()` and `getKpiMetrics()` helpers.
+
+### UserCard Score Badges Everywhere (#62)
+
+- Private chat message sender names (`ChatSession.jsx`) now wrapped in `<UserCard>` showing reputation badge and stats.
+- Room message sender names (`RoomSession.jsx`) now wrapped in `<UserCard>`.
+- Room user list entries (`RoomSession.jsx` inline panel) now wrapped in `<UserCard>`.
+- Added `UserCard` import to `RoomSession.jsx`.
 
 ### Solid Integration: WebID and Solid-OIDC Support
 

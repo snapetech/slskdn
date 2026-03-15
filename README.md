@@ -140,6 +140,34 @@ All automatic downloads use intelligent source selection based on your history.
 - Tracks success/failure rates per user, used by auto-replace and wishlist
 - API endpoint at `/api/v0/ranking`
 
+### 🎵 Now Playing / Scrobble Integration
+Show what you're listening to in your Soulseek profile — automatically updated from Plex, Jellyfin, or any media player.
+- Webhook at `POST /api/v0/nowplaying/webhook` accepts Plex, Jellyfin/Emby, Tautulli, and generic JSON
+- Auto-updates your Soulseek user description: `🎵 Listening to: Artist – Title`
+- REST API (`GET/PUT/DELETE /api/v0/nowplaying`) for manual or scripted control
+
+### 🚫 Cancel Transfers on Ban
+When you add a user to the blacklist, their active downloads and uploads are cancelled immediately — no restart required.
+
+### 📁 File Type Restrictions per Group
+Control which file types each upload group can request.
+```yaml
+groups:
+  user_defined:
+    FriendsOnly:
+      upload:
+        allowed_file_types: [".flac", ".mp3", ".opus"]
+```
+
+### 📊 Prometheus Metrics Dashboard
+Built-in metrics UI in the System section. View transfer counts, search rates, memory usage, and all `slskd_*` metrics — no external Grafana required.
+- **System → Metrics** tab
+- KPI panels: Transfers, Search, Process, Network
+- Full raw metrics table with descriptions
+
+### 🏅 User Score Badges Everywhere
+Reputation and stats badges (upload speed, queue length, free slot) appear next to usernames in chat messages, room user lists, search results, browse view, and transfers.
+
 ### 📱 PWA & Mobile Support
 Install slskdN as an app on your phone.
 - Add to Home Screen on iOS/Android, standalone mode
@@ -420,6 +448,11 @@ dotnet run --project src/slskd/slskd.csproj
 | Smart source ranking | ❌ | ✅ |
 | User notes & ratings | ❌ | ✅ |
 | PWA support | ❌ | ✅ |
+| Now Playing / Scrobble | ❌ | ✅ |
+| Cancel transfers on ban | ❌ | ✅ |
+| File type restrictions per group | ❌ | ✅ |
+| Prometheus metrics UI | ❌ | ✅ |
+| User score badges everywhere | ❌ | ✅ |
 | **Multi-source downloads** | ❌ | ✅ |
 | **DHT mesh networking** | ❌ | ✅ |
 | **Security hardening** | ❌ | ✅ |
@@ -525,6 +558,11 @@ Features in the `master` branch:
 | **Smart Ranking** | ✅ Stable | Production-ready |
 | **User Notes** | ✅ Stable | Production-ready |
 | **UI Enhancements** | ✅ Stable | Status bars, network monitoring |
+| **Now Playing / Scrobble** | ✅ Stable | Plex, Jellyfin, generic JSON |
+| **Cancel on Ban** | ✅ Stable | Runtime blacklist enforcement |
+| **File Type Restrictions** | ✅ Stable | Per-group upload filtering |
+| **Prometheus Metrics UI** | ✅ Stable | Built-in KPI dashboard |
+| **User Score Badges** | ✅ Stable | Chat, rooms, transfers |
 | **Multi-Source Downloads** | ✅ Stable | Concurrency limits, network-friendly |
 | **DHT Peer Discovery** | ✅ Stable | Fully functional mesh overlay |
 | **Security Hardening** | ✅ Stable | Comprehensive framework, tested |
@@ -637,7 +675,7 @@ If you're reading this code, you should assume that:
 
 - **Commits ahead**: 4,473+ commits
 - **New systems**: 7 major subsystems (Mesh, Swarm, Security, Pods, MediaCore, VirtualSoulfind, Service Fabric)
-- **New features**: 127+ individual features
+- **New features**: 132+ individual features
 - **Test coverage**: ~2,678 total tests (~2,671 passing, 2-3 skipped)
 - **Documentation**: 100+ markdown files
 - **Files changed**: 450+ files
