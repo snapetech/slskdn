@@ -361,8 +361,7 @@ docker pull ghcr.io/snapetech/slskdn:dev
 ### Homebrew (macOS/Linux)
 Install the pre-built binary:
 ```bash
-brew tap snapetech/slskdn
-brew install slskdn
+brew install --formula https://raw.githubusercontent.com/snapetech/slskdn/master/packaging/homebrew/Formula/slskdn.rb
 ```
 
 ### Nix (Flake)
