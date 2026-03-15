@@ -975,12 +975,13 @@ using OpenTelemetry.Trace;
                 _ = sp.GetService<Sharing.ShareGrantAnnouncementService>();
                 Log.Information("[DI] All dependencies resolved, constructing Application...");
                 var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                var nowPlayingService = sp.GetRequiredService<NowPlaying.NowPlayingService>();
                 var app = new Application(
                     optionsAtStartup, optionsMonitor, state, soulseekClient, fileService,
                     connectionWatchdog, transferService, browseTracker, roomService,
                     userService, messagingService, shareService, searchService,
                     notificationService, relayService, applicationHub, logHub, transfersHub,
-                    eventBus, eventService, sp, scopeFactory);
+                    eventBus, eventService, sp, scopeFactory, nowPlayingService);
                 Log.Information("[DI] Application singleton constructed successfully");
                 return app;
             });
@@ -1048,6 +1049,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VPNService>();
             services.AddSingleton<ScriptService>();
             services.AddSingleton<WebhookService>();
+            services.AddSingleton<NowPlaying.NowPlayingService>();
 
             services.AddSingleton<IBrowseTracker, BrowseTracker>();
             services.AddSingleton<IRoomTracker, RoomTracker>(_ => new RoomTracker(messageLimit: 250));

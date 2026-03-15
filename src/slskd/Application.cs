@@ -118,7 +118,8 @@ namespace slskd
             Events.EventBus eventBus,
             Events.EventService eventService,
             IServiceProvider serviceProvider,
-            IServiceScopeFactory serviceScopeFactory)
+            IServiceScopeFactory serviceScopeFactory,
+            NowPlaying.NowPlayingService nowPlayingService)
         {
             Log.Information("[Application] Constructor called");
             Log.Information("[Application] Setting up event handlers...");
@@ -195,6 +196,7 @@ namespace slskd
             EventService = eventService;
             ServiceProvider = serviceProvider;
             ServiceScopeFactory = serviceScopeFactory;
+            NowPlayingService = nowPlayingService;
 
             Client = soulseekClient;
 
@@ -278,6 +280,7 @@ namespace slskd
         private SemaphoreSlim IncomingSearchRequestSemaphore { get; set; }
         private IServiceProvider ServiceProvider { get; set; }
         private IServiceScopeFactory ServiceScopeFactory { get; set; }
+        private NowPlaying.NowPlayingService NowPlayingService { get; set; }
 
         public void CollectGarbage()
         {
@@ -2232,10 +2235,17 @@ namespace slskd
                 }
             }
 
+            // build the base description, optionally appending now-playing info (#39)
+            var baseDescription = Options.Soulseek.Description;
+            var nowPlayingSuffix = NowPlayingService?.GetDescriptionSuffix();
+            var description = string.IsNullOrEmpty(nowPlayingSuffix)
+                ? baseDescription
+                : baseDescription + nowPlayingSuffix;
+
             if (Users.IsBlacklisted(username, endpoint.Address))
             {
                 return new UserInfo(
-                    description: Options.Soulseek.Description,
+                    description: description,
                     uploadSlots: 0,
                     queueLength: int.MaxValue,
                     hasFreeUploadSlot: false,
@@ -2261,7 +2271,7 @@ namespace slskd
                 // wait until my first download starts.
                 // revisited 3 years later: why was it important to leave this comment??
                 var info = new UserInfo(
-                    description: Options.Soulseek.Description,
+                    description: description,
                     uploadSlots: group.Slots,
                     queueLength: forecastedPosition,
                     hasFreeUploadSlot: forecastedPosition == 0,
