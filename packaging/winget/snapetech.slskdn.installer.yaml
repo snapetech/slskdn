@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 
 PackageIdentifier: snapetech.slskdn-dev
-PackageVersion: 0.24.5-slskdn.48
+PackageVersion: 0.24.5-slskdn.49
 InstallerType: zip
 InstallerSwitches:
   Silent: ""
@@ -10,8 +10,8 @@ UpgradeBehavior: install
 ReleaseDate: 2025-12-09
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.48/slskdn-main-win-x64.zip
-    InstallerSha256: C8910A9AFE26252164BF148F8A1CF031E062E54A1CEB93CE3B79D558229CA167
+    InstallerUrl: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.49/slskdn-main-win-x64.zip
+    InstallerSha256: E3A2B574569ADB7F640F83CEACAB8B0586666D3E4CF681ED881FFCE1F9342D94
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: slskd.exe
