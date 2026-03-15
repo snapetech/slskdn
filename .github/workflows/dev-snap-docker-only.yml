@@ -7,6 +7,9 @@ env:
   DOTNET_VERSION: '8'
   BASE_VERSION: '0.24.1'
 
+permissions:
+  contents: read
+  packages: write
 jobs:
   get-version:
     name: Get Latest Dev Version

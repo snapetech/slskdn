@@ -9,6 +9,8 @@ on:
         description: 'Release tag to build'
         required: true
 
+permissions:
+  contents: write
 jobs:
   build-linux:
     runs-on: ubuntu-latest

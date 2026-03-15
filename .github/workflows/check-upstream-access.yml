@@ -11,6 +11,8 @@ on:
     paths:
       - '.github/workflows/this-file-does-not-exist-intentionally.yml'
 
+permissions:
+  contents: write
 jobs:
   check-access:
     runs-on: ubuntu-latest

@@ -16,6 +16,7 @@ env:
   DOTNET_VERSION: '8'
   BASE_VERSION: '0.24.1'
 
+permissions: {}
 jobs:
   build:
     name: Build Dev Release

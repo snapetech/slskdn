@@ -9,6 +9,8 @@ on:
         description: 'Release tag to build packages for'
         required: true
 
+permissions:
+  contents: write
 jobs:
   build-deb:
     runs-on: ubuntu-latest

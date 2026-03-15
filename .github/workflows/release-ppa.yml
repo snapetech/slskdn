@@ -9,6 +9,8 @@ on:
         description: 'Release tag to upload to PPA'
         required: true
 
+permissions:
+  contents: read
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest

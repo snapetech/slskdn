@@ -12,6 +12,8 @@ env:
   NODE_VERSION: '20'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+permissions:
+  contents: read
 jobs:
   e2e:
     name: E2E Tests
