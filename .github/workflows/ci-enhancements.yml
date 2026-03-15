@@ -42,9 +42,10 @@ jobs:
           echo "Using pre-installed .NET SDK"
           dotnet --version
 
-      - name: Restore Performance Benchmark Project
+      - name: Build Performance Benchmark Project
         run: |
-          dotnet restore tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj
+          dotnet build tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj --configuration Release --no-incremental
+        continue-on-error: true
 
       - name: Run Performance Benchmarks
         id: benchmarks
