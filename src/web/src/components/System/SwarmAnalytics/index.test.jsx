@@ -15,10 +15,10 @@ import React from 'react';
 import { toast } from 'react-toastify';
 
 // Mock dependencies
-jest.mock('../../../lib/swarmAnalytics');
-jest.mock('react-toastify', () => ({
+vi.mock('../../../lib/swarmAnalytics');
+vi.mock('react-toastify', () => ({
   toast: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
 

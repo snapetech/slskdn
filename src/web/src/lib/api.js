@@ -16,7 +16,7 @@ const api = axios.create({
  */
 export function buildApiUrl(path) {
   // Guard against double-prefixing in development
-  if (process.env.NODE_ENV !== 'production') {
+  if (import.meta.env.DEV) {
     if (path.startsWith('/api/') || path.startsWith('api/')) {
       throw new Error(
         `[api.js] Do not include /api prefix in paths. Got: ${path}`,

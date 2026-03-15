@@ -6,10 +6,10 @@ import api from './api';
 import * as swarmAnalytics from './swarmAnalytics';
 
 // Mock the api module
-jest.mock('./api', () => ({
+vi.mock('./api', () => ({
   __esModule: true,
   default: {
-    get: jest.fn(),
+    get: vi.fn(),
   },
 }));
 

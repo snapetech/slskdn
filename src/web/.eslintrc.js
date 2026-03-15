@@ -36,7 +36,7 @@ module.exports = {
       },
     },
     {
-      extends: ['canonical/jest'],
+      extends: ['canonical/vitest'],
       files: '*.test.{js,jsx}',
     },
   ],

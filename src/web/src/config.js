@@ -1,10 +1,8 @@
 const urlBase = (window.urlBase === '/' ? '' : window.urlBase) || '';
 const developmentPort =
-  // eslint-disable-next-line n/no-process-env
-  window.port ?? (process.env.REACT_APP_SLSKD_PORT || 5_030);
+  window.port ?? (import.meta.env.VITE_SLSKD_PORT || 5_030);
 const rootUrl =
-  // eslint-disable-next-line n/no-process-env
-  process.env.NODE_ENV === 'production'
+  import.meta.env.PROD
     ? urlBase
     : `http://localhost:${developmentPort}${urlBase}`;
 const apiBaseUrl = `${rootUrl}/api/v0`;

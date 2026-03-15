@@ -15,17 +15,19 @@ import React from 'react';
 import { toast } from 'react-toastify';
 
 // Mock dependencies
-jest.mock('../../../lib/jobs');
-jest.mock('react-toastify', () => ({
+vi.mock('../../../lib/jobs');
+vi.mock('react-toastify', () => ({
   toast: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
-jest.mock('../SwarmVisualization', () => {
-  return function SwarmVisualization({ jobId }) {
-    return (
-      <div data-testid="swarm-visualization">Swarm Visualization: {jobId}</div>
-    );
+vi.mock('../SwarmVisualization', () => {
+  return {
+    default: function SwarmVisualization({ jobId }) {
+      return (
+        <div data-testid="swarm-visualization">Swarm Visualization: {jobId}</div>
+      );
+    },
   };
 });
 
