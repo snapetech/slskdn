@@ -752,6 +752,8 @@ jobs:
     needs: [parse, release-dev]
     if: needs.parse.outputs.channel == 'dev'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -863,6 +865,8 @@ jobs:
     needs: [parse, release-dev]
     if: needs.parse.outputs.channel == 'dev'
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       # fetch-depth: 1 avoids fetching all refs; Windows case-insensitive FS fails when repo has refs that differ only in casing
       - name: Checkout
@@ -1031,6 +1035,8 @@ jobs:
     needs: [parse, release-dev]
     if: needs.parse.outputs.channel == 'dev'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download from Release
         env:
@@ -1832,6 +1838,8 @@ jobs:
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -1918,6 +1926,8 @@ jobs:
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -2054,6 +2064,8 @@ jobs:
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download from Release
         env:
