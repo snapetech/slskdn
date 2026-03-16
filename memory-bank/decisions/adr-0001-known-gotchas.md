@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0. MusicBrainz Release IDs Are Not Artist IDs
+
+**The Bug**: A single-release SongID or jobs path passed an MB release ID into `DiscographyJobRequest.ArtistId`, which silently created the wrong planning context and broke album download handoff.
+
+**Files Affected**:
+- `src/slskd/API/Native/JobsController.cs`
+- `src/slskd/Jobs/DiscographyJobService.cs`
+- `src/slskd/Integrations/MusicBrainz/MusicBrainzClient.cs`
+
+**Wrong**:
+```csharp
+var jobId = await discographyJobService.CreateJobAsync(
+    new DiscographyJobRequest
+    {
+        ArtistId = request.MbReleaseId,
+        Profile = DiscographyProfile.AllReleases,
+    },
+    cancellationToken);
+```
+
+**Correct**:
+```csharp
+var release = await musicBrainzClient.GetReleaseAsync(request.MbReleaseId, cancellationToken);
+var jobId = await discographyJobService.CreateJobAsync(
+    new DiscographyJobRequest
+    {
+        ArtistId = release.MusicBrainzArtistId,
+        ReleaseIds = new List<string> { request.MbReleaseId },
+        Profile = DiscographyProfile.AllReleases,
+    },
+    cancellationToken);
+```
+
+**Why This Keeps Happening**: MusicBrainz uses different MBIDs for releases, recordings, and artists. It is easy to treat “some MBID” as interchangeable unless the code explicitly carries the identifier type through the model.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
