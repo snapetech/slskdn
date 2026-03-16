@@ -211,6 +211,35 @@ Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
 
 **Why This Keeps Happening**: Async timing tests are easy to write like benchmark assertions, but `Task.Delay` is scheduler-dependent and CI hosts can stall for hundreds of milliseconds. Use monotonic timing (`Stopwatch`) and treat the upper bound as a broad sanity check, not a precision guarantee.
 
+### 0f. Fix Every Release Workflow and Checked-In Package Template When Asset Names Change
+
+**The Bug**: The main tag workflow was corrected to publish `slskdn-main-*.zip`, but `release-packages.yml` still waited for the old `slskdn-<tag>-linux-x64.zip` pattern and the checked-in Chocolatey templates were still pinned to `0.24.1-slskdn.40`, leaving stable-package automation and manual package publishing stale.
+
+**Files Affected**:
+- `.github/workflows/release-packages.yml`
+- `packaging/chocolatey/slskdn.nuspec`
+- `packaging/chocolatey/tools/chocolateyinstall.ps1`
+
+**Wrong**:
+```yaml
+ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+```
+
+```powershell
+$url = "https://github.com/snapetech/slskdn/releases/download/0.24.1-slskdn.40/slskdn-main-win-x64.zip"
+```
+
+**Correct**:
+```yaml
+ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-main-linux-x64.zip"
+```
+
+```powershell
+$url = "https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.52/slskdn-main-win-x64.zip"
+```
+
+**Why This Keeps Happening**: It is easy to fix only the primary build workflow and forget the secondary packaging workflows and checked-in templates that still encode old asset names or versions. Any release-format change must be audited across tag workflows, auxiliary release workflows, validation scripts, and package templates together.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
