@@ -14,7 +14,7 @@
     ]
   },
   "dependencies": {
-    "@codemirror/language": "^6.12.1",
+    "@codemirror/language": "^6.12.2",
     "@codemirror/legacy-modes": "^6.5.2",
     "@microsoft/signalr": "^7.0.7",
     "@uiw/react-codemirror": "^4.21.21",
