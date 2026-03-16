@@ -20,6 +20,45 @@
 - **User description update** — when playing, appends `🎵 Listening to: Artist – Title` to the Soulseek peer description
 - Supported sources: Plex Media Server (multipart), Jellyfin/Emby (NotificationType JSON), Tautulli / generic JSON
 
+### SongID
+- Native source-identification workflow beside MusicBrainz in Search
+- Accepts YouTube URLs, Spotify URLs, direct text queries, and server-side local file paths
+- Fuses recognizers and context signals:
+  - MusicBrainz / AcoustID / SongRec
+  - transcript excerpts, OCR, comments, chapter clues
+  - provenance and synthetic-signal heuristics
+  - Panako, Audfprint, Demucs-backed evidence where available
+- **Forensic + identity context** — lane-level forensic matrix, split identity/synthetic assessments, `topEvidenceFor`/`topEvidenceAgainst`, `knownFamilyScore`, `perturbationStability`, and C2PA provenance hints keep the evidence transparent without blocking catalog matches
+- Runs in a durable background queue with fixed concurrent workers and live progress updates
+- **Infinite queue + configurable workers** — SongID accepts unlimited queued runs, persists queue position/worker slot in SQLite, recovers after restarts, and honors `--songid-max-concurrent-runs` / `SONGID_MAX_CONCURRENT_RUNS` so exactly `X` slots process work at a time
+- Produces ranked actions for song search, album preparation, album jobs, and artist discography planning
+- **Ranked acquisition & mix planning** — track/album/discography plans rely on identity-first scoring, mix decomposition generates `Split Into Track Plans`, and `Search Top Candidates` fan-outs handle ambiguous segments while ranking by quality/Byzantine consensus
+- Keeps synthetic / AI-origin signals informational rather than letting them override strong identity matches
+
+### Discovery Graph / Constellation
+- Navigable similarity topology rather than flat related-artist lists
+- Typed, weighted, explainable edges with provenance and score components
+- Current summon points:
+  - SongID run mini-map and modal
+  - MusicBrainz lookup
+  - Search list rows and search detail headers
+  - search result cards
+  - persistent in-page atlas panel
+  - dedicated Discovery Graph route
+- Current actions:
+  - recenter
+  - queue nearby
+  - pin
+  - compare
+  - save branch
+- Current graph seed types:
+  - SongID runs
+  - tracks
+  - albums
+  - artists
+  - fallback metadata seeds from search and MusicBrainz context
+- Semantic zoom stack (mini-map, drawer modal, atlas) lets SongID/MusicBrainz/search seeds share state while provenance/score-component overlays keep closeness explainable and actionable
+
 ### Cancel Transfers on Blacklist
 - Users added to `groups.blacklisted.members` at runtime have all active uploads and downloads immediately cancelled
 - Detected automatically via options monitor — no restart required
@@ -692,4 +731,3 @@ See LICENSE file for details.
 *slskdn - Soulseek with mesh networking, done right.*
 
 *No hype. Just engineering.*
-

@@ -1,5 +1,12 @@
 # slskdn TODO
 
+## SongID & Discovery Graph Parity
+- [ ] Improve mix detection heuristics so longer gaps, overlapping chapters, and comments still form actionable mix clusters with segment plans and ranked acquisition options.
+- [ ] Expand the SongID panel so queue/perturbation progress, synthetic lane context, and mix/candidate fan-out flows are visible without leaving the panel.
+- [ ] Verify that SongID download actions (track, album, discography) are ordered by identity → quality → Byzantine consensus while surface-level forensic badges stay unobtrusive.
+- [ ] Enrich the Discovery Graph atlas and drawer with deeper provenance/evidence breakdowns, more seed types, and the semantic zoom stack so every graph action can spawn downloads or queue-nearby work.
+- [ ] Harden the SongID queue: unlimited enqueues, persisted queue position/worker slot, restart recovery, and `songid-max-concurrent-runs` throttling remain reliable in production.
+
 ## ✅ Persistent Tabbed Interface for Rooms and Chat - COMPLETED
 
 **Status**: ✅ **COMPLETED** (2026-01-27)

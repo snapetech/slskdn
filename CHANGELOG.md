@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### SongID
+
+- Added a native `SongID` feature in the Search page beside MusicBrainz.
+- `SongID` accepts YouTube URLs, Spotify URLs, direct text queries, and server-side local file paths.
+- Added a durable background queue with configurable concurrent workers, persisted runs, restart recovery, and live SignalR progress updates.
+- Added richer evidence fusion across MusicBrainz, AcoustID, SongRec, transcripts, OCR, comments, chapters, provenance, perturbation probes, Panako, Audfprint, and Demucs-backed artifact generation.
+- Added ranked handoff actions for song search, album preparation, direct album jobs, discography jobs, and multi-candidate fan-out.
+- Added split identity vs synthetic assessments and unobtrusive forensic / synthetic UI surfacing so strong identity still drives acquisition decisions.
+- **Forensic context** — lane-level forensic matrix (identity, provenance, spectral, descriptor, lyrics, structural, generator family, confidence), `topEvidenceFor`/`topEvidenceAgainst`, `perturbationStability`, `qualityClass`, `knownFamilyScore`, and C2PA provenance hints now arrive with every run.
+- **Infinite queue & configurable workers** — the queue now keeps queue position/worker slot in SQLite, recovers on restart, accepts unlimited submissions, and obeys `songid-max-concurrent-runs` / `SONGID_MAX_CONCURRENT_RUNS` so `X` workers process runs at a time.
+- **Ranked acquisition & mix planning** — track/album/discography options rely on identity-first scoring, mix decomposition yields `Split Into Track Plans`, and candidate fan-outs (`Search Top Candidates`) preserve Byzantine/quality ordering for actionable downloads.
+
+### Discovery Graph / Constellation
+
+- Added the first native `Discovery Graph` / `Constellation` substrate.
+- Added backend graph API/service for typed, weighted, explainable neighborhoods seeded from SongID runs, tracks, albums, artists, and fallback metadata seeds.
+- Added graph launch surfaces in SongID, MusicBrainz lookup, and search-result cards.
+- Added inline mini-map and modal graph UI with edge filtering, recentering, queue-nearby actions, pinning, comparison overlays, and saved branch snapshots.
+- Added MusicBrainz artist release-group expansion and richer edge provenance / score-component / evidence payloads for graph explanations.
+- Added broader search summon points plus an in-page atlas panel with semantic zoom controls and saved-branch restore.
+- Added a dedicated `/discovery-graph` route plus modal handoff into that full atlas workspace.
+- Enabled semantic zoom lockstep across mini-map, drawer modal, and atlas so provenance/score-component detail follows any neighborhood while graph actions (`queue nearby`, downloads, compare) reuse that same substrate.
+
 ## [0.24.5-slskdn.52] - 2026-03-15
 
 ### Now Playing / Scrobble Integration (#39)

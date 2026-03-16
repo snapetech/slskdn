@@ -40,6 +40,24 @@ If you've ever seen a feature request closed with *"this can be done via the API
 
 ## Features
 
+### 🌌 Discovery Graph / Constellation
+A live, navigable similarity topology for music discovery and identity context.
+- **Typed graph neighborhoods** for SongID, MusicBrainz targets, and search-result seeds
+- **Near means meaningfully near** — nodes are connected with weighted, explainable edges
+- **Actions, not wallpaper** — recenter, queue nearby, pin, compare, save branch
+- **Current surfaces** — SongID mini-map and modal, MusicBrainz graph launcher, search-result graph glyphs, search-list/detail launchers, an in-page atlas panel, and a dedicated `/discovery-graph` route
+
+### 🎧 SongID
+Native identification pipeline that turns messy sources into ranked acquisition paths.
+- **Input sources** — YouTube URLs, Spotify URLs, direct text queries, and server-side local files
+- **Evidence fusion** — MusicBrainz, AcoustID, SongRec, transcripts, OCR, comments, chapters, provenance, perturbation probes, Panako, Audfprint, Demucs stems
+- **Forensic + identity context** — lane-level forensic matrix (identity, provenance, spectral, descriptor, lyrics, structural, generator family, confidence), synthetic vs identity assessments, `topEvidenceFor`/`topEvidenceAgainst`, `qualityClass`, `knownFamilyScore`, `perturbationStability`, and C2PA provenance hints keep the UI explainable even when the source is suspicious
+- **Queue-native execution** — durable background queue, fixed worker concurrency, persisted runs, live progress over SignalR
+- **Infinite queue + configurable workers** — the SongID queue accepts unbounded submissions, stores queue position/worker slot in SQLite, recovers runs after restart, and respects `--songid-max-concurrent-runs` / `SONGID_MAX_CONCURRENT_RUNS` so exactly `X` workers process runs at a time
+- **Result actions** — search song, prepare album, download album, plan discography, batch top-candidate fan-out
+- **Ranked acquisition & mix planning** — track/album/discography options leverage `SongIdScoring.ComputeIdentityFirstOverallScore`, `Split Into Track Plans` handles mixes, and candidate fan-outs (`Search Top Candidates`) keep identity/quality/Byzantine ordering front and center
+- **Identity-first planning** — synthetic / AI-origin heuristics are surfaced as context, not used to override strong catalog identity
+
 ### 🔄 Auto-Replace Stuck Downloads
 Downloads get stuck. Users go offline. Transfers time out. Instead of manually searching for alternatives, slskdN does it automatically.
 - Toggle switch in Downloads header ("Auto-Replace")
@@ -567,6 +585,8 @@ Features in the `master` branch:
 | **Security Hardening** | ✅ Stable | Comprehensive framework, tested |
 | **MusicBrainz Integration** | ✅ Stable | Fingerprinting, auto-tagging |
 | **Library Health Scanner** | ✅ Stable | Quality detection and remediation |
+| **SongID** | 🟡 Experimental | Native source identification, ranked song/album/discography handoff |
+| **Discovery Graph / Constellation** | 🟡 Experimental | Navigable similarity topology across SongID, MusicBrainz, and search |
 | **PodCore** | 🟡 Experimental | Functional, API may evolve |
 | **VirtualSoulfind v2** | 🟡 Experimental | Shadow index, disaster mode |
 | **Service Fabric** | 🟡 Experimental | Generic service layer |
