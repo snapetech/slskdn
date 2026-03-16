@@ -162,6 +162,28 @@ var jobId = await discographyJobService.CreateJobAsync(
 
 **Why This Keeps Happening**: MusicBrainz uses different MBIDs for releases, recordings, and artists. It is easy to treat “some MBID” as interchangeable unless the code explicitly carries the identifier type through the model.
 
+### 0d. Do Not Store Recovery-Only State in `Summary` When Queue Refresh Also Owns `Summary`
+
+**The Bug**: SongID restart recovery marked runs as "Recovered after restart..." in `Summary`, but the next queue-position refresh immediately overwrote that text with the normal queued summary, erasing the only visible recovery signal.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+run.Summary = "Recovered after restart and re-queued for SongID analysis.";
+await EnqueueRunAsync(run, broadcastCreate: false).ConfigureAwait(false);
+```
+
+**Correct**:
+```csharp
+run.Evidence.Add("Recovered after restart and re-queued for SongID analysis.");
+run.Summary = "Queued for SongID analysis.";
+await EnqueueRunAsync(run, broadcastCreate: false).ConfigureAwait(false);
+```
+
+**Why This Keeps Happening**: `Summary` looks like a convenient general-purpose status field, but the queue layer also treats it as derived UI text. If two parts of the pipeline both own the same display field, one silently erases the other.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
