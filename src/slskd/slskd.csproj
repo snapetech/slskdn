@@ -104,9 +104,9 @@
     <!-- Pin to 9.x so framework-dependent publish includes these; dotNetRdf 3.4.1 requires 9.0.9 -->
     <!-- Also pins vuln-patched versions of transitive deps (GHSA-qj66, GHSA-hh2w, GHSA-8g4q) -->
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.5" />
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
     <PackageReference Include="Mono.Nat" Version="3.0.0" />
     <PackageReference Include="MonoTorrent" Version="3.0.2" />
