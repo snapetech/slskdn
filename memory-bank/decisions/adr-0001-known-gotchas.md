@@ -234,6 +234,40 @@ Do not revert the whole file to "fix" one thing.
 
 **Why This Keeps Happening**: Agent "fixes" a single symptom by reverting the file to a "known good" state, not realizing that state is old and missing many fixes.
 
+### 2a. Package Channel Metadata Must Match the Runtime Binary Name and Package Identity
+
+**The Bug**: The Nix flake exported only a `slskdn` wrapper even though NixOS `services.slskd` expects `bin/slskd`, and the stable Winget manifests were copied from dev without replacing the `snapetech.slskdn-dev` identifier or `slskdn-dev` alias.
+
+**Files Affected**:
+- `flake.nix`
+- `packaging/winget/snapetech.slskdn.yaml`
+- `packaging/winget/snapetech.slskdn.installer.yaml`
+- `packaging/winget/snapetech.slskdn.locale.en-US.yaml`
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```nix
+makeWrapper $out/libexec/${pname}/slskd $out/bin/${pname}
+```
+
+```yaml
+PackageIdentifier: snapetech.slskdn-dev
+PortableCommandAlias: slskdn-dev
+```
+
+**Correct**:
+```nix
+makeWrapper $out/libexec/${pname}/slskd $out/bin/slskd
+ln -s $out/bin/slskd $out/bin/${pname}
+```
+
+```yaml
+PackageIdentifier: snapetech.slskdn
+PortableCommandAlias: slskdn
+```
+
+**Why This Keeps Happening**: Packaging work tends to treat channel names, package names, and executable names as interchangeable. They are not. Each channel must preserve the runtime contract expected by downstream tools (`slskd` for service modules) while also publishing the correct channel identity (`slskdn` vs `slskdn-dev`). Add an explicit validation step whenever manifests or wrappers are generated.
+
 ---
 
 ### 3. E2E SlskdnNode: HTTPS Port Conflict and Missing --app-dir
