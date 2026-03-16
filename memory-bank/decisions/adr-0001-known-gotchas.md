@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
+
+**The Bug**: `SongIdService` treated `TrackTarget` like `AlbumTarget` and tried to read `MusicBrainzArtistId` from it, which broke the build because `TrackTarget` does not expose that property.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+run.Tracks.Insert(0, new SongIdTrackCandidate
+{
+    MusicBrainzArtistId = track.MusicBrainzArtistId,
+});
+```
+
+**Correct**:
+```csharp
+run.Tracks.Insert(0, new SongIdTrackCandidate
+{
+    RecordingId = track.MusicBrainzRecordingId,
+    Title = track.Title,
+    Artist = track.Artist,
+});
+```
+
+**Why This Keeps Happening**: The MusicBrainz integration models look similar at a glance, but they are not interchangeable. Check the actual target type before assuming it carries artist, release, or recording IDs in the same shape.
+
 ### 0. MusicBrainz Release IDs Are Not Artist IDs
 
 **The Bug**: A single-release SongID or jobs path passed an MB release ID into `DiscographyJobRequest.ArtistId`, which silently created the wrong planning context and broke album download handoff.
