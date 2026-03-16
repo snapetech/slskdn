@@ -905,9 +905,11 @@ jobs:
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
           
           bash packaging/scripts/update-winget-manifests.sh `
+            "dev" `
             "${{ needs.parse.outputs.version }}" `
             "$WIN_URL" `
-            "$WIN_SHA"
+            "$WIN_SHA" `
+            "${{ github.ref_name }}"
           
           Write-Host "📝 Updated Winget manifests:"
           Get-Content packaging/winget/snapetech.slskdn-dev.installer.yaml
@@ -935,7 +937,7 @@ jobs:
               Start-Sleep -Seconds ($i * 2)
               git fetch origin dev/40-fixes
               git reset --hard origin/dev/40-fixes
-              bash packaging/scripts/update-winget-manifests.sh "${{ needs.parse.outputs.version }}" "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip" "${{ steps.sha.outputs.win_x64_sha }}"
+              bash packaging/scripts/update-winget-manifests.sh "dev" "${{ needs.parse.outputs.version }}" "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip" "${{ steps.sha.outputs.win_x64_sha }}" "${{ github.ref_name }}"
               if (-not (git diff --quiet packaging/winget/)) {
                 git add packaging/winget/
                 git commit -m "chore(winget): update dev manifests to ${{ needs.parse.outputs.version }} [skip ci]"
@@ -1073,9 +1075,10 @@ jobs:
               url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-dev-linux-x64.zip"
               sha256 "${SHA_LINUX}"
             end
-            conflicts_with "slskdn", because: "both install slskdn binary"
+            conflicts_with "slskdn", because: "both install slskd binaries"
             def install
               libexec.install Dir["*"]
+              (bin/"slskd").write_exec_script libexec/"slskd"
               (bin/"slskdn-dev").write_exec_script libexec/"slskd"
             end
           end
@@ -1123,10 +1126,11 @@ jobs:
               url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-dev-linux-x64.zip"
               sha256 "${SHA_LINUX}"
             end
-            conflicts_with "slskdn", because: "both install slskdn binary"
+            conflicts_with "slskdn", because: "both install slskd binaries"
             def install
               libexec.install Dir["*"]
-              (bin/"slskdn").write_exec_script libexec/"slskd"
+              (bin/"slskd").write_exec_script libexec/"slskd"
+              (bin/"slskdn-dev").write_exec_script libexec/"slskd"
             end
           end
           FORMULA
@@ -1948,17 +1952,13 @@ jobs:
           
           $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
-          $VERSION = "${{ needs.parse.outputs.version }}"
-          
-          # Update or create main manifests
-          if (-not (Test-Path "packaging/winget/snapetech.slskdn.installer.yaml")) {
-            Copy-Item "packaging/winget/snapetech.slskdn-dev.installer.yaml" "packaging/winget/snapetech.slskdn.installer.yaml"
-            Copy-Item "packaging/winget/snapetech.slskdn-dev.yaml" "packaging/winget/snapetech.slskdn.yaml"
-            Copy-Item "packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml" "packaging/winget/snapetech.slskdn.locale.en-US.yaml"
-          }
-          
-          (Get-Content "packaging/winget/snapetech.slskdn.installer.yaml") -replace 'PackageVersion:.*', "PackageVersion: $VERSION" -replace 'InstallerUrl:.*', "InstallerUrl: $WIN_URL" -replace 'InstallerSha256:.*', "InstallerSha256: $WIN_SHA" | Set-Content "packaging/winget/snapetech.slskdn.installer.yaml"
-          (Get-Content "packaging/winget/snapetech.slskdn.yaml") -replace 'PackageVersion:.*', "PackageVersion: $VERSION" | Set-Content "packaging/winget/snapetech.slskdn.yaml"
+
+          bash packaging/scripts/update-winget-manifests.sh `
+            "stable" `
+            "${{ needs.parse.outputs.version }}" `
+            "$WIN_URL" `
+            "$WIN_SHA" `
+            "${{ needs.parse.outputs.version }}"
           
           Write-Host "📝 Updated Winget manifests"
         shell: pwsh
@@ -2098,9 +2098,10 @@ jobs:
               url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-linux-x64.zip"
               sha256 "${SHA_LINUX}"
             end
-            conflicts_with "slskdn-dev", because: "both install slskdn binary"
+            conflicts_with "slskdn-dev", because: "both install slskd binaries"
             def install
               libexec.install Dir["*"]
+              (bin/"slskd").write_exec_script libexec/"slskd"
               (bin/"slskdn").write_exec_script libexec/"slskd"
             end
           end
@@ -2150,6 +2151,7 @@ jobs:
             end
             def install
               libexec.install Dir["*"]
+              (bin/"slskd").write_exec_script libexec/"slskd"
               (bin/"slskdn").write_exec_script libexec/"slskd"
             end
           end
@@ -2160,4 +2162,3 @@ jobs:
           git commit -m "chore(homebrew): update formula to ${VERSION} [skip ci]" || echo "No changes"
           git push
           echo "✅ Updated formula in main repo"
-

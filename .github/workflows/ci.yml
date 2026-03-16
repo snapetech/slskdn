@@ -112,6 +112,9 @@ jobs:
           fi
           echo "AUR sha256sums OK"
 
+      - name: Packaging Metadata Consistency Check
+        run: bash packaging/scripts/validate-packaging-metadata.sh
+
       - name: Web
         run: ./bin/build --web-only
 

@@ -634,11 +634,11 @@ jobs:
           # Download Windows x64 build from timestamped release
           gh release download ${{ github.ref_name }} `
             --repo ${{ github.repository }} `
-            --pattern "slskdn-dev-windows-x64.zip"
+            --pattern "slskdn-dev-win-x64.zip"
           
-          if (Test-Path "slskdn-dev-windows-x64.zip") {
-            Write-Host "✅ Downloaded slskdn-dev-windows-x64.zip"
-            Get-Item slskdn-dev-windows-x64.zip | Select-Object Name, Length
+          if (Test-Path "slskdn-dev-win-x64.zip") {
+            Write-Host "✅ Downloaded slskdn-dev-win-x64.zip"
+            Get-Item slskdn-dev-win-x64.zip | Select-Object Name, Length
           } else {
             Write-Host "❌ Windows x64 build not found in dev release"
             Write-Host "This is expected if Windows builds aren't published yet"
@@ -649,8 +649,8 @@ jobs:
       - name: Calculate SHA256
         id: sha
         run: |
-          if (Test-Path "slskdn-dev-windows-x64.zip") {
-            $hash = (Get-FileHash -Algorithm SHA256 "slskdn-dev-windows-x64.zip").Hash
+          if (Test-Path "slskdn-dev-win-x64.zip") {
+            $hash = (Get-FileHash -Algorithm SHA256 "slskdn-dev-win-x64.zip").Hash
             Write-Host "SHA256: $hash"
             "win_x64_sha=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             "has_windows=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -666,15 +666,15 @@ jobs:
           git fetch origin experimental/whatAmIThinking
           git reset --hard origin/experimental/whatAmIThinking
           
-          # Convert version for Winget (dots only)
-          $WINGET_VERSION = "${{ needs.build.outputs.dev_version }}" -replace '-','.'
-          $WIN_URL = "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-windows-x64.zip"
+          $WIN_URL = "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip"
           $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
           
           bash packaging/scripts/update-winget-manifests.sh `
+            "dev" `
             "${{ needs.build.outputs.dev_version }}" `
             "$WIN_URL" `
-            "$WIN_SHA"
+            "$WIN_SHA" `
+            "${{ github.ref_name }}"
           
           Write-Host "📝 Updated Winget manifests:"
           Get-Content packaging/winget/snapetech.slskdn-dev.installer.yaml
@@ -708,7 +708,7 @@ jobs:
           Write-Host "   snapetech.slskdn-dev version ${{ needs.build.outputs.dev_version }}"
           Write-Host ""
           Write-Host "Or use WingetCreate CLI:"
-          Write-Host "wingetcreate update snapetech.slskdn-dev -u https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-windows-x64.zip -v ${{ needs.build.outputs.dev_version }}"
+          Write-Host "wingetcreate update snapetech.slskdn-dev -u https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-win-x64.zip -v ${{ needs.build.outputs.dev_version }}"
         shell: pwsh
 
   copr:
@@ -1068,9 +1068,10 @@ jobs:
               url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-linux-x64.zip"
               sha256 "${SHA_LINUX}"
             end
-            conflicts_with "slskdn", because: "both install slskdn binary"
+            conflicts_with "slskdn", because: "both install slskd binaries"
             def install
               libexec.install Dir["*"]
+              (bin/"slskd").write_exec_script libexec/"slskd"
               (bin/"slskdn-dev").write_exec_script libexec/"slskd"
             end
           end
@@ -1111,10 +1112,11 @@ jobs:
               url "https://github.com/snapetech/slskdn/releases/download/${{ github.ref_name }}/slskdn-dev-linux-x64.zip"
               sha256 "${SHA_LINUX}"
             end
-            conflicts_with "slskdn", because: "both install slskdn binary"
+            conflicts_with "slskdn", because: "both install slskd binaries"
             def install
               libexec.install Dir["*"]
-              (bin/"slskdn").write_exec_script libexec/"slskd"
+              (bin/"slskd").write_exec_script libexec/"slskd"
+              (bin/"slskdn-dev").write_exec_script libexec/"slskd"
             end
           end
           FORMULA
@@ -1166,4 +1168,3 @@ jobs:
           echo "sudo apt update" >> $GITHUB_STEP_SUMMARY
           echo "sudo apt install slskdn-dev" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-

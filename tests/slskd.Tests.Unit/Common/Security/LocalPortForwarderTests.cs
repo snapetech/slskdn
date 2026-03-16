@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,10 +52,18 @@ public class LocalPortForwarderTests : IDisposable
         _portForwarder.Dispose();
     }
 
+    private static int GetFreeLocalPort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
     [Fact]
     public async Task StartForwardingAsync_ValidParameters_Succeeds()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var tunnelId = "tunnel-123";
         var response = new ServiceReply
         {
@@ -71,12 +80,12 @@ public class LocalPortForwarderTests : IDisposable
             .ReturnsAsync(response);
 
         // Act
-        await _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80);
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
 
         // Assert
-        var status = _portForwarder.GetForwardingStatus(8080);
+        var status = _portForwarder.GetForwardingStatus(localPort);
         Assert.NotNull(status);
-        Assert.Equal(8080, status.LocalPort);
+        Assert.Equal(localPort, status.LocalPort);
         Assert.Equal("pod-123", status.PodId);
         Assert.Equal("example.com", status.DestinationHost);
         Assert.Equal(80, status.DestinationPort);
@@ -87,6 +96,7 @@ public class LocalPortForwarderTests : IDisposable
     public async Task StartForwardingAsync_PortAlreadyInUse_ThrowsException()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var response = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -101,11 +111,11 @@ public class LocalPortForwarderTests : IDisposable
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
-        await _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80);
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _portForwarder.StartForwardingAsync(8080, "pod-456", "different.com", 443));
+            () => _portForwarder.StartForwardingAsync(localPort, "pod-456", "different.com", 443)).ConfigureAwait(true);
         Assert.Contains("already being forwarded", exception.Message);
     }
 
@@ -116,6 +126,7 @@ public class LocalPortForwarderTests : IDisposable
     public async Task StopForwardingAsync_ValidPort_Succeeds()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var response = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -130,14 +141,14 @@ public class LocalPortForwarderTests : IDisposable
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
-        await _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80);
-        Assert.NotNull(_portForwarder.GetForwardingStatus(8080));
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
+        Assert.NotNull(_portForwarder.GetForwardingStatus(localPort));
 
         // Act
-        await _portForwarder.StopForwardingAsync(8080);
+        await _portForwarder.StopForwardingAsync(localPort).ConfigureAwait(true);
 
         // Assert
-        var status = _portForwarder.GetForwardingStatus(8080);
+        var status = _portForwarder.GetForwardingStatus(localPort);
         Assert.Null(status);
     }
 
@@ -155,6 +166,8 @@ public class LocalPortForwarderTests : IDisposable
     public async Task GetForwardingStatus_MultipleForwarders_ReturnsAll()
     {
         // Arrange
+        var localPort1 = GetFreeLocalPort();
+        var localPort2 = GetFreeLocalPort();
         var response1 = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -177,15 +190,15 @@ public class LocalPortForwarderTests : IDisposable
             .ReturnsAsync(response1)
             .ReturnsAsync(response2);
 
-        await _portForwarder.StartForwardingAsync(8080, "pod-1", "example.com", 80);
-        await _portForwarder.StartForwardingAsync(8081, "pod-2", "test.com", 443);
+        await _portForwarder.StartForwardingAsync(localPort1, "pod-1", "example.com", 80).ConfigureAwait(true);
+        await _portForwarder.StartForwardingAsync(localPort2, "pod-2", "test.com", 443).ConfigureAwait(true);
 
         // Act
         var status = _portForwarder.GetForwardingStatus();
 
         // Assert
         Assert.Equal(2, status.Count());
-        var ports = new HashSet<int> { 8080, 8081 };
+        var ports = new HashSet<int> { localPort1, localPort2 };
         Assert.All(status, s => Assert.Contains(s.LocalPort, ports));
     }
 
@@ -193,6 +206,7 @@ public class LocalPortForwarderTests : IDisposable
     public async Task GetForwardingStatus_SpecificPort_ReturnsCorrectStatus()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var response = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -207,14 +221,14 @@ public class LocalPortForwarderTests : IDisposable
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
-        await _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80);
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
 
         // Act
-        var status = _portForwarder.GetForwardingStatus(8080);
+        var status = _portForwarder.GetForwardingStatus(localPort);
 
         // Assert
         Assert.NotNull(status);
-        Assert.Equal(8080, status.LocalPort);
+        Assert.Equal(localPort, status.LocalPort);
         Assert.Equal("pod-123", status.PodId);
         Assert.Equal("example.com", status.DestinationHost);
         Assert.Equal(80, status.DestinationPort);
@@ -234,7 +248,7 @@ public class LocalPortForwarderTests : IDisposable
     }
 
     [Fact]
-    public void CreateTunnelConnectionAsync_TunnelAccepted_ReturnsConnection()
+    public async Task CreateTunnelConnectionAsync_TunnelAccepted_ReturnsConnection()
     {
         var client = new RecordingMeshServiceClient
         {
@@ -247,14 +261,14 @@ public class LocalPortForwarderTests : IDisposable
         };
         using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        var connection = forwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).Result;
+        var connection = await forwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).ConfigureAwait(true);
 
         Assert.NotNull(connection);
         Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "OpenTunnel");
     }
 
     [Fact]
-    public void CreateTunnelConnectionAsync_TunnelRejected_ReturnsNull()
+    public async Task CreateTunnelConnectionAsync_TunnelRejected_ReturnsNull()
     {
         // Arrange
         var response = new ServiceReply
@@ -272,14 +286,14 @@ public class LocalPortForwarderTests : IDisposable
             .ReturnsAsync(response);
 
         // Act
-        var connection = _portForwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).Result;
+        var connection = await _portForwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).ConfigureAwait(true);
 
         // Assert
         Assert.Null(connection);
     }
 
     [Fact]
-    public void CreateTunnelConnectionAsync_ServiceCallFails_ReturnsNull()
+    public async Task CreateTunnelConnectionAsync_ServiceCallFails_ReturnsNull()
     {
         // Arrange
         _meshClientMock.Setup(x => x.CallServiceAsync(
@@ -290,26 +304,26 @@ public class LocalPortForwarderTests : IDisposable
             .ThrowsAsync(new Exception("Service unavailable"));
 
         // Act
-        var connection = _portForwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).Result;
+        var connection = await _portForwarder.CreateTunnelConnectionAsync("pod-123", "example.com", 80, null).ConfigureAwait(true);
 
         // Assert
         Assert.Null(connection);
     }
 
     [Fact]
-    public void SendTunnelDataAsync_ValidData_CallsService()
+    public async Task SendTunnelDataAsync_ValidData_CallsService()
     {
         var client = new RecordingMeshServiceClient { Response = new ServiceReply { StatusCode = ServiceStatusCodes.OK } };
         using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
         var data = new byte[] { 1, 2, 3, 4 };
 
-        forwarder.SendTunnelDataAsync("tunnel-123", data).Wait();
+        await forwarder.SendTunnelDataAsync("tunnel-123", data).ConfigureAwait(true);
 
         Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "TunnelData");
     }
 
     [Fact]
-    public void ReceiveTunnelDataAsync_ValidResponse_ReturnsData()
+    public async Task ReceiveTunnelDataAsync_ValidResponse_ReturnsData()
     {
         var testData = new byte[] { 5, 6, 7, 8 };
         var client = new RecordingMeshServiceClient
@@ -322,7 +336,7 @@ public class LocalPortForwarderTests : IDisposable
         };
         using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        var result = forwarder.ReceiveTunnelDataAsync("tunnel-123").Result;
+        var result = await forwarder.ReceiveTunnelDataAsync("tunnel-123").ConfigureAwait(true);
 
         Assert.NotNull(result);
         Assert.Equal(testData, result);
@@ -330,7 +344,7 @@ public class LocalPortForwarderTests : IDisposable
     }
 
     [Fact]
-    public void ReceiveTunnelDataAsync_NoData_ReturnsEmptyArray()
+    public async Task ReceiveTunnelDataAsync_NoData_ReturnsEmptyArray()
     {
         var client = new RecordingMeshServiceClient
         {
@@ -342,7 +356,7 @@ public class LocalPortForwarderTests : IDisposable
         };
         using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        var result = forwarder.ReceiveTunnelDataAsync("tunnel-123").Result;
+        var result = await forwarder.ReceiveTunnelDataAsync("tunnel-123").ConfigureAwait(true);
 
         Assert.NotNull(result);
         Assert.Empty(result);
@@ -350,20 +364,21 @@ public class LocalPortForwarderTests : IDisposable
     }
 
     [Fact]
-    public void CloseTunnelAsync_ValidTunnel_CallsService()
+    public async Task CloseTunnelAsync_ValidTunnel_CallsService()
     {
         var client = new RecordingMeshServiceClient { Response = new ServiceReply { StatusCode = ServiceStatusCodes.OK } };
         using var forwarder = new LocalPortForwarder(_loggerMock.Object, client);
 
-        forwarder.CloseTunnelAsync("tunnel-123").Wait();
+        await forwarder.CloseTunnelAsync("tunnel-123").ConfigureAwait(true);
 
         Assert.Contains(client.Invocations, i => i.ServiceName == "private-gateway" && i.Method == "CloseTunnel");
     }
 
     [Fact]
-    public void Dispose_CleansUpAllResources()
+    public async Task Dispose_CleansUpAllResources()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var response = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -378,7 +393,7 @@ public class LocalPortForwarderTests : IDisposable
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
-        _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80).Wait();
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
 
         // Act
         _portForwarder.Dispose();
@@ -389,9 +404,10 @@ public class LocalPortForwarderTests : IDisposable
     }
 
     [Fact]
-    public void PortForwardingStatus_IncludesStreamMappingInfo()
+    public async Task PortForwardingStatus_IncludesStreamMappingInfo()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var response = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -406,7 +422,7 @@ public class LocalPortForwarderTests : IDisposable
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
-        _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80).Wait();
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
 
         // Act
         var status = _portForwarder.GetForwardingStatus().First();
@@ -414,16 +430,17 @@ public class LocalPortForwarderTests : IDisposable
         // Assert
         Assert.True(status.StreamMappingEnabled);
         Assert.NotNull(status.Performance);
-        Assert.Equal(8080, status.LocalPort);
+        Assert.Equal(localPort, status.LocalPort);
         Assert.Equal("pod-123", status.PodId);
         Assert.Equal("example.com", status.DestinationHost);
         Assert.Equal(80, status.DestinationPort);
     }
 
     [Fact]
-    public void PortForwardingPerformance_CalculatesMetricsCorrectly()
+    public async Task PortForwardingPerformance_CalculatesMetricsCorrectly()
     {
         // Arrange
+        var localPort = GetFreeLocalPort();
         var response = new ServiceReply
         {
             CorrelationId = Guid.NewGuid().ToString(),
@@ -438,7 +455,7 @@ public class LocalPortForwarderTests : IDisposable
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
-        _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80).Wait();
+        await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80).ConfigureAwait(true);
 
         // Act
         var status = _portForwarder.GetForwardingStatus().First();

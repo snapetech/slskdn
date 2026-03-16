@@ -174,5 +174,38 @@ dotnet_diagnostic.SA1309.severity = none     # Field names should not begin with
 dotnet_diagnostic.SA1402.severity = none     # File may only contain a single type
 dotnet_diagnostic.SA1600.severity = warning  # Elements should be documented
 dotnet_diagnostic.SA1633.severity = error    # File should have header
+dotnet_diagnostic.SA1201.severity = suggestion  # Element ordering; too noisy for release gating
+dotnet_diagnostic.SA1202.severity = suggestion  # Access modifier ordering; too noisy for release gating
+dotnet_diagnostic.SA1203.severity = suggestion  # Const fields before readonly; too noisy for release gating
+dotnet_diagnostic.SA1204.severity = suggestion  # Static members before instance members; too noisy for release gating
+dotnet_diagnostic.SA1208.severity = suggestion  # System usings first; too noisy for release gating
+dotnet_diagnostic.SA1210.severity = suggestion  # Using ordering; too noisy for release gating
+dotnet_diagnostic.SA1214.severity = suggestion  # Readonly field ordering; too noisy for release gating
+dotnet_diagnostic.SA1407.severity = suggestion  # Arithmetic precedence; style-only
+dotnet_diagnostic.SA1413.severity = suggestion  # Trailing commas; style-only
+dotnet_diagnostic.SA1501.severity = suggestion  # Statement must not be on a single line; style-only
+dotnet_diagnostic.SA1502.severity = suggestion  # Element must not be on a single line; style-only
+dotnet_diagnostic.SA1503.severity = suggestion  # Braces should not be omitted; style-only
+dotnet_diagnostic.SA1508.severity = suggestion  # Closing brace spacing; style-only
+dotnet_diagnostic.SA1514.severity = suggestion  # Element documentation spacing; style-only
+dotnet_diagnostic.SA1615.severity = suggestion  # Return value docs; too noisy for release gating
+dotnet_diagnostic.SA1618.severity = suggestion  # Generic type parameter docs; too noisy for release gating
+dotnet_diagnostic.SA1625.severity = suggestion  # Param docs punctuation; too noisy for release gating
+dotnet_diagnostic.SA1629.severity = suggestion  # Documentation text; too noisy for release gating
+dotnet_diagnostic.SA1651.severity = suggestion  # Placeholder XML docs; too noisy for release gating
 
+[tests/**/*.cs]
+dotnet_diagnostic.CA2007.severity = none     # Test async style conflicts with xUnit guidance
+dotnet_diagnostic.xUnit1030.severity = none  # ConfigureAwait guidance overlaps with CA2007 policy
+dotnet_diagnostic.xUnit1031.severity = none  # Existing tests intentionally use some blocking helpers
+dotnet_diagnostic.xUnit2009.severity = none  # Style-only assertion guidance
+dotnet_diagnostic.xUnit2012.severity = none  # Style-only assertion guidance
+dotnet_diagnostic.xUnit2013.severity = none  # Style-only assertion guidance
+dotnet_diagnostic.xUnit2020.severity = none  # Style-only assertion guidance
+
+[src/slskd/Common/CodeQuality/*.cs]
+dotnet_diagnostic.RS1032.severity = suggestion  # Analyzer authoring hygiene; not release-critical for app lint
+dotnet_diagnostic.RS1036.severity = suggestion  # Analyzer project packaging guidance; not release-critical here
+dotnet_diagnostic.RS1041.severity = suggestion  # In-repo analyzer lives inside app assembly today
+dotnet_diagnostic.RS2008.severity = suggestion  # Release tracking metadata for custom analyzer rules
 

@@ -23,15 +23,26 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: E2E test optimization and concurrency test fix
+- **Current Task**: SongID native implementation toward ytdlpchop parity
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Optimized E2E test delays (reduced wait times by 40-60%)
-  - Added comprehensive timestamp logging to all test helpers and node harness
-  - Updated T-916 status to done (SqliteShareRepository.Keepalive() fix)
-  - Fixed `concurrency_limit_blocks_excess_streams` test to ensure proper limiter acquisition timing
-  - Ready to run E2E tests to verify optimizations
+  - Inspected current MusicBrainz lookup/UI, MetadataFacade, AcoustID/Chromaprint, release-graph/discography services, search stack, and multi-source ranking/download flow
+  - Inspected `../ytdlpchop` feature surface and mapped its identification suite onto `slskdn` extension points
+  - Wrote `docs/dev/SONGID_INTEGRATION_MAP.md`
+  - Implemented the first `SongID` backend + UI slice, then extended it with ranked acquisition options, direct album job handoff, a fixed MB release job path, a first native `chop`-style evidence pipeline, a heavier engine pass with persistent run artifacts, Demucs stems, Panako, Audfprint, provenance, AI-audio heuristics, durable SQLite-backed run storage, SignalR-backed live progress updates, corpus-driven reranking, stage/percentage progress payloads, native canonical-quality boosts from slskdn audio stats, and initial SQLite/scoring SongID tests
+  - Re-read `../ytdlpchopid` after the rename / feature expansion and refreshed the SongID parity map and task backlog around the newer split identity-vs-synthetic model and forensic-matrix outputs
+  - Implemented the first native `ytdlpchopid` parity slice: split identity/synthetic outputs, forensic matrix payloads, chapter-aware clues, scorecard delta fields, C2PA/content-credentials-aware provenance hints, unobtrusive synthetic UI surfacing, targeted suppression/cap SongID scoring tests, segment-derived track plans, and top-candidate search fan-out for ambiguous identity results
+  - Replaced SongID fire-and-forget execution with a durable queue + fixed worker pool, persisted queue position / worker slot, recovered queued runs on restart, added recent-run queue UI, expanded forensic payloads with descriptor-priors and generator-family lanes, and added perturbation probes that drive the native `perturbationStability`/confidence outputs
+  - Added explicit SongID segment decomposition payloads with grouped segment candidates, segment-specific plans/options, segment batch-search fan-out, focused queue/service tests, and fixed a recovery-state bug so restart provenance survives queue-summary refresh in run evidence
+  - Added the first Discovery Graph / Constellation slice: native graph service/API, SongID-seeded typed nodes/edges, MusicBrainz release-group expansion for artist neighborhoods, reusable graph canvas, inline SongID mini-map, modal graph filtering/recenter/queue-nearby actions, and initial backend graph tests
+  - Widened Discovery Graph into the MusicBrainz lookup surface, added graph comparison overlays plus richer edge provenance/evidence payloads, and implemented pinned comparison and saved-branch behaviors in the graph UI
+  - Updated README / FEATURES / CHANGELOG so SongID and Discovery Graph are reflected as visible product features
+  - Widened Discovery Graph across the broader Search UI (search list rows, search detail headers, MusicBrainz, SongID, and search-response cards), added shared queue-nearby batch search handling, and introduced atlas-mode semantic zoom controls plus proper saved-branch restore in the graph modal
+  - Added a persistent Discovery Graph Atlas panel on the Search page with manual seeds, saved-branch restore, semantic zoom controls, and queue-nearby handoff
+  - Added a dedicated `/discovery-graph` route with modal handoff into that atlas workspace, plus SongID controller unit tests covering run creation, validation, list, and get flows
+  - Propagated identity-first acquisition scoring into the remaining SongID segment option paths, reused corpus family hints in scoring, and expanded the dedicated Discovery Graph atlas with inline explainability (edge-family counts, why-near rows, provenance/score breakdowns, recenter actions, and hover context)
+  - Fixed the 2026-03-16 packaging regressions for Nix/Winget/Homebrew/dev release metadata, disabled the broken dev flake output, repaired the flaky port-binding/Tor transport tests, and cleaned the touched unit tests up for current async analyzer expectations
 
 ---
 
@@ -75,10 +86,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. **slskd.Tests.Unit Re-enablement** — Continue Phase 2–6 per `docs/dev/40-fixes-plan.md` and **live status** `docs/dev/slskd-tests-unit-completion-plan.md` (§ Completed, § Status and What Remains): Phase 2 (Common Moderation/Security/Files), Phase 3 (PodCore), Phase 4 (Mesh), Phase 5 (SocialFederation, MediaCore, etc.), Phase 6 (VirtualSoulfind). Un-skip or fix LocalPortForwarderTests’ 6 skipped tests when internal API/JSON alignment is done.
-2. **Phase 14 COMPLETED** — Pod-Scoped Private Service Network (T-1400–T-1440) done per TASK_STATUS_DASHBOARD (20/20). No further Phase 14 implementation needed.
-
-3. **Packaging**: T-010–T-013 Done. **New product / other**: T-003, T-004, Phase 6/6X, Phase 7, or as prioritized.
+1. **T-918 SongID parity pass** — Continue the remaining `../ytdlpchopid` delta from `docs/dev/SONGID_INTEGRATION_MAP.md#remaining-todo`: deeper multi-track / mix decomposition beyond chapter/comment inference, richer lane metrics/details, and broader SongID UI coverage for long-running queue and fan-out flows.
+2. **T-917 SongID continue** — Push the current `SongID` slice from feature-rich parity toward production parity: larger-scale corpus persistence and evidence reuse, deeper reranking with downstream transfer-quality and peer/source-ranking signals where the data model genuinely fits, and broader backend/frontend tests.
+3. **T-919 Discovery Graph continue** — Push from the dedicated atlas route into denser seed types and richer decomposed explanation lanes now that the first inline atlas explainability layer is present.
+4. **slskd.Tests.Unit Re-enablement** — Historical note: plan documents still mention remaining work, but the active product priority is now new product work unless explicitly redirected.
+5. **Packaging / other product work** — T-010–T-013 done; continue only as prioritized.
+6. **Packaging audit follow-up** — Stable Nix/Winget compatibility fix done on 2026-03-16; `slskdn-dev` flake output is now intentionally disabled until a real `build-dev-<version>` release is published and its hashes are populated.
+7. **Repo-wide analyzer/lint debt** — `bash ./bin/lint` now passes with error-only gating in `bin/lint`, but the solution still carries a broad non-blocking warning backlog. Keep that cleanup as separate work unless release policy changes.
+8. **Release prep** — Packaging/test verification is green locally; if the next step is `.53`, update any remaining release-version metadata deliberately and create the release tag only when explicitly requested.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
@@ -130,4 +145,3 @@ dotnet test
 # Build release
 ./bin/build
 ```
-

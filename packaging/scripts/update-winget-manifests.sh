@@ -1,41 +1,99 @@
 #!/usr/bin/env bash
-# Update Winget manifests for dev builds
 
-set -e
+set -euo pipefail
 
-VERSION="$1"
-WIN_X64_URL="$2"
-WIN_X64_SHA="$3"
-WIN_ARM64_URL="$4"
-WIN_ARM64_SHA="$5"
+CHANNEL="${1:-}"
+VERSION="${2:-}"
+WIN_X64_URL="${3:-}"
+WIN_X64_SHA="${4:-}"
+RELEASE_TAG="${5:-$VERSION}"
 
-if [ -z "$VERSION" ] || [ -z "$WIN_X64_URL" ] || [ -z "$WIN_X64_SHA" ]; then
-    echo "Usage: $0 <version> <win-x64-url> <win-x64-sha> [win-arm64-url] [win-arm64-sha]"
+if [ -z "$CHANNEL" ] || [ -z "$VERSION" ] || [ -z "$WIN_X64_URL" ] || [ -z "$WIN_X64_SHA" ]; then
+    echo "Usage: $0 <stable|dev> <version> <win-x64-url> <win-x64-sha> [release-tag]"
     exit 1
 fi
 
-# Convert version for Winget (dots only, no hyphens)
-WINGET_VERSION=$(echo "$VERSION" | sed 's/-/./g')
+case "$CHANNEL" in
+    stable)
+        PACKAGE_IDENTIFIER="snapetech.slskdn"
+        FILE_BASENAME="snapetech.slskdn"
+        PACKAGE_NAME="slskdN"
+        MONIKER="slskdn"
+        COMMAND_ALIAS="slskdn"
+        SHORT_DESCRIPTION="Batteries-included Soulseek web client"
+        DESCRIPTION=$(cat <<'EOF'
+slskdN is a batteries-included fork of slskd with advanced download features,
+automation, and network enhancements for Soulseek.
 
+Stable features include:
+- Multi-source swarm downloads
+- DHT mesh networking
+- MusicBrainz integration
+- Wishlist and background search
+- Security hardening
+EOF
+)
+        RELEASE_NOTES=$(cat <<EOF
+Stable Release $VERSION
+
+See https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG for details.
+EOF
+)
+        RELEASE_NOTES_URL="https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG"
+        ;;
+    dev)
+        PACKAGE_IDENTIFIER="snapetech.slskdn-dev"
+        FILE_BASENAME="snapetech.slskdn-dev"
+        PACKAGE_NAME="slskdN (Development)"
+        MONIKER="slskdn-dev"
+        COMMAND_ALIAS="slskdn-dev"
+        SHORT_DESCRIPTION="Batteries-included Soulseek web client (Development Build)"
+        DESCRIPTION=$(cat <<'EOF'
+slskdN is an experimental fork of slskd exploring advanced download features,
+protocol extensions, and network enhancements for Soulseek.
+
+WARNING: This is an unstable development build.
+
+Features in development builds:
+- Multi-source swarm downloads
+- DHT mesh network with content verification
+- BitTorrent DHT rendezvous for peer discovery
+- TLS-secured mesh connections
+- Distributed hash database with mesh sync
+EOF
+)
+        RELEASE_NOTES=$(cat <<EOF
+Development Build $VERSION
+
+See https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG for details.
+EOF
+)
+        RELEASE_NOTES_URL="https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG"
+        ;;
+    *)
+        echo "Unknown channel: $CHANNEL"
+        exit 1
+        ;;
+esac
+
+WINGET_VERSION="$(echo "$VERSION" | sed 's/-/./g')"
 MANIFEST_DIR="packaging/winget"
-INSTALLER_FILE="$MANIFEST_DIR/snapetech.slskdn-dev.installer.yaml"
-LOCALE_FILE="$MANIFEST_DIR/snapetech.slskdn-dev.locale.en-US.yaml"
-VERSION_FILE="$MANIFEST_DIR/snapetech.slskdn-dev.yaml"
+INSTALLER_FILE="$MANIFEST_DIR/${FILE_BASENAME}.installer.yaml"
+LOCALE_FILE="$MANIFEST_DIR/${FILE_BASENAME}.locale.en-US.yaml"
+VERSION_FILE="$MANIFEST_DIR/${FILE_BASENAME}.yaml"
+RELEASE_DATE="$(date -u +%Y-%m-%d)"
 
-echo "Updating Winget manifests to version $WINGET_VERSION"
-
-# Update installer manifest
-cat > "$INSTALLER_FILE" << EOF
+cat > "$INSTALLER_FILE" <<EOF
 # yaml-language-server: \$schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 
-PackageIdentifier: snapetech.slskdn-dev
+PackageIdentifier: $PACKAGE_IDENTIFIER
 PackageVersion: $WINGET_VERSION
 InstallerType: zip
 InstallerSwitches:
   Silent: ""
   SilentWithProgress: ""
 UpgradeBehavior: install
-ReleaseDate: $(date -u +%Y-%m-%d)
+ReleaseDate: $RELEASE_DATE
 Installers:
   - Architecture: x64
     InstallerUrl: $WIN_X64_URL
@@ -43,71 +101,51 @@ Installers:
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: slskd.exe
-        PortableCommandAlias: slskdn-dev
+        PortableCommandAlias: $COMMAND_ALIAS
 ManifestType: installer
 ManifestVersion: 1.6.0
 EOF
 
-# Update locale manifest
-cat > "$LOCALE_FILE" << EOF
+cat > "$LOCALE_FILE" <<EOF
 # yaml-language-server: \$schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 
-PackageIdentifier: snapetech.slskdn-dev
+PackageIdentifier: $PACKAGE_IDENTIFIER
 PackageVersion: $WINGET_VERSION
 PackageLocale: en-US
 Publisher: slskdN Team
 PublisherUrl: https://github.com/snapetech
 PublisherSupportUrl: https://github.com/snapetech/slskdn/issues
-PackageName: slskdN (Development)
+PackageName: $PACKAGE_NAME
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Batteries-included Soulseek web client (Development Build)
+ShortDescription: $SHORT_DESCRIPTION
 Description: |-
-  slskdN is an experimental fork of slskd exploring advanced download features,
-  protocol extensions, and network enhancements for Soulseek.
-  
-  ⚠️ WARNING: This is an unstable development build from the experimental branch.
-  It includes cutting-edge features that may contain bugs.
-  
-  Features in development builds:
-  - Multi-source swarm downloads
-  - DHT mesh network with content verification
-  - BitTorrent DHT rendezvous for peer discovery
-  - TLS-secured mesh connections
-  - Distributed hash database with mesh sync
-  
-  For stable releases, install 'snapetech.slskdn' instead.
-Moniker: slskdn-dev
+$(printf '%s\n' "$DESCRIPTION" | sed 's/^/  /')
+Moniker: $MONIKER
 Tags:
   - soulseek
   - p2p
-  - filesharing
   - music
-  - experimental
+  - filesharing
 ReleaseNotes: |-
-  Development Build $VERSION
-  
-  This build includes experimental features from the multi-source-swarm branch.
-  See https://github.com/snapetech/slskdn/releases/tag/dev for details.
-ReleaseNotesUrl: https://github.com/snapetech/slskdn/releases/tag/dev
+$(printf '%s\n' "$RELEASE_NOTES" | sed 's/^/  /')
+ReleaseNotesUrl: $RELEASE_NOTES_URL
 ManifestType: defaultLocale
 ManifestVersion: 1.6.0
 EOF
 
-# Update version manifest
-cat > "$VERSION_FILE" << EOF
+cat > "$VERSION_FILE" <<EOF
 # yaml-language-server: \$schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
 
-PackageIdentifier: snapetech.slskdn-dev
+PackageIdentifier: $PACKAGE_IDENTIFIER
 PackageVersion: $WINGET_VERSION
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0
 EOF
 
-echo "✅ Winget manifests updated:"
+echo "Updated Winget manifests for $CHANNEL:"
 echo "  - $INSTALLER_FILE"
 echo "  - $LOCALE_FILE"
 echo "  - $VERSION_FILE"
-

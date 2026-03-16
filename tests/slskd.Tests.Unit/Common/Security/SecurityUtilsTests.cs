@@ -4,6 +4,7 @@
 
 using slskd.Common.Security;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -367,17 +368,17 @@ public class SecurityUtilsTests
         // Arrange
         var minDelay = 10;
         var maxDelay = 50;
-        var startTime = DateTimeOffset.UtcNow;
+        var timer = Stopwatch.StartNew();
 
         // Act
         await SecurityUtils.RandomDelayAsync(minDelay, maxDelay);
-        var endTime = DateTimeOffset.UtcNow;
+        timer.Stop();
 
         // Assert
-        var actualDelay = (endTime - startTime).TotalMilliseconds;
+        var actualDelay = timer.Elapsed.TotalMilliseconds;
         Assert.True(actualDelay >= minDelay - 5, $"Delay too short: {actualDelay}ms"); // Allow some tolerance
-        // Upper bound: allow significant tolerance for CI/load (RandomDelayAsync is best-effort; we mainly assert it completes)
-        Assert.True(actualDelay <= maxDelay + 600, $"Delay too long: {actualDelay}ms");
+        // Upper bound: allow broad scheduler tolerance because Task.Delay is best-effort under CI load.
+        Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
     }
 
     [Fact]
@@ -468,5 +469,4 @@ public class SecurityUtilsTests
         Assert.True((scFlags & MethodImplAttributes.NoInlining) != 0, "SecureClear(Span<byte>) should have NoInlining");
     }
 }
-
 

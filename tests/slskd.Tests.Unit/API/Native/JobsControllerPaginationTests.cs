@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.API.Native;
+using slskd.Integrations.MusicBrainz;
 using slskd.Jobs;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,6 +31,7 @@ public class JobsControllerPaginationTests
     private readonly Mock<IDiscographyJobService> discographyService;
     private readonly Mock<ILabelCrateJobService> labelCrateService;
     private readonly Mock<IJobServiceWithList> jobServiceList;
+    private readonly Mock<IMusicBrainzClient> musicBrainzClient;
     private readonly Mock<ILogger<JobsController>> logger;
     private readonly JobsController controller;
 
@@ -39,11 +41,13 @@ public class JobsControllerPaginationTests
         discographyService = new Mock<IDiscographyJobService>();
         labelCrateService = new Mock<ILabelCrateJobService>();
         jobServiceList = new Mock<IJobServiceWithList>();
+        musicBrainzClient = new Mock<IMusicBrainzClient>();
         logger = new Mock<ILogger<JobsController>>();
 
         controller = new JobsController(
             discographyService.Object,
             labelCrateService.Object,
+            musicBrainzClient.Object,
             logger.Object,
             jobServiceList.Object);
 
@@ -82,12 +86,12 @@ public class JobsControllerPaginationTests
             offset: 0,
             sortBy: null,
             sortOrder: null,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.NotNull(okResult.Value);
-        
+
         // Use reflection to access anonymous object properties
         var responseType = okResult.Value.GetType();
         var totalProp = responseType.GetProperty("total");
@@ -95,18 +99,18 @@ public class JobsControllerPaginationTests
         var offsetProp = responseType.GetProperty("offset");
         var hasMoreProp = responseType.GetProperty("has_more");
         var jobsProp = responseType.GetProperty("jobs");
-        
+
         Assert.NotNull(totalProp);
         Assert.NotNull(limitProp);
         Assert.NotNull(offsetProp);
         Assert.NotNull(hasMoreProp);
         Assert.NotNull(jobsProp);
-        
+
         Assert.Equal(10, (int)totalProp.GetValue(okResult.Value));
         Assert.Equal(3, (int)limitProp.GetValue(okResult.Value));
         Assert.Equal(0, (int)offsetProp.GetValue(okResult.Value));
         Assert.True((bool)hasMoreProp.GetValue(okResult.Value));
-        
+
         var jobsList = jobsProp.GetValue(okResult.Value) as System.Collections.IEnumerable;
         Assert.NotNull(jobsList);
         var jobsCount = jobsList.Cast<object>().Count();
@@ -135,7 +139,7 @@ public class JobsControllerPaginationTests
             offset: 5,
             sortBy: null,
             sortOrder: null,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -169,14 +173,14 @@ public class JobsControllerPaginationTests
             offset: null,
             sortBy: null,
             sortOrder: null,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         var responseType = okResult.Value.GetType();
         var jobsProp = responseType.GetProperty("jobs");
         var jobsList = (jobsProp.GetValue(okResult.Value) as IEnumerable).Cast<object>().ToList();
-        
+
         // Should be sorted newest first - use reflection to get id property
         var job1Type = jobsList[0].GetType();
         var id1Prop = job1Type.GetProperty("id");
@@ -184,7 +188,7 @@ public class JobsControllerPaginationTests
         var id2Prop = job2Type.GetProperty("id");
         var job3Type = jobsList[2].GetType();
         var id3Prop = job3Type.GetProperty("id");
-        
+
         Assert.Equal("new", id1Prop.GetValue(jobsList[0]) as string);
         Assert.Equal("mid", id2Prop.GetValue(jobsList[1]) as string);
         Assert.Equal("old", id3Prop.GetValue(jobsList[2]) as string);
@@ -212,14 +216,14 @@ public class JobsControllerPaginationTests
             offset: null,
             sortBy: "status",
             sortOrder: "asc",
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         var responseType = okResult.Value.GetType();
         var jobsProp = responseType.GetProperty("jobs");
         var jobsList = (jobsProp.GetValue(okResult.Value) as IEnumerable).Cast<object>().ToList();
-        
+
         // Status order: completed, pending, running (alphabetical)
         var jobType = jobsList[0].GetType();
         var statusProp = jobType.GetProperty("status");
@@ -244,7 +248,7 @@ public class JobsControllerPaginationTests
             offset: 0,
             sortBy: null,
             sortOrder: null,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -252,10 +256,10 @@ public class JobsControllerPaginationTests
         var totalProp = responseType.GetProperty("total");
         var hasMoreProp = responseType.GetProperty("has_more");
         var jobsProp = responseType.GetProperty("jobs");
-        
+
         Assert.Equal(0, (int)totalProp.GetValue(okResult.Value));
         Assert.False((bool)hasMoreProp.GetValue(okResult.Value));
-        
+
         var jobsList = (jobsProp.GetValue(okResult.Value) as IEnumerable).Cast<object>().ToList();
         Assert.Empty(jobsList);
     }
@@ -285,7 +289,7 @@ public class JobsControllerPaginationTests
             offset: null,
             sortBy: null,
             sortOrder: null,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -293,20 +297,20 @@ public class JobsControllerPaginationTests
         var jobsProp = responseType.GetProperty("jobs");
         var jobsList = (jobsProp.GetValue(okResult.Value) as IEnumerable).Cast<object>().ToList();
         var firstJob = jobsList.First();
-        
+
         var jobType = firstJob.GetType();
         var createdAtProp = jobType.GetProperty("created_at");
         var progressProp = jobType.GetProperty("progress");
-        
+
         Assert.NotNull(createdAtProp.GetValue(firstJob));
         var progress = progressProp.GetValue(firstJob);
         Assert.NotNull(progress);
-        
+
         var progressType = progress.GetType();
         var totalProp = progressType.GetProperty("releases_total");
         var doneProp = progressType.GetProperty("releases_done");
         var failedProp = progressType.GetProperty("releases_failed");
-        
+
         Assert.Equal(10, (int)totalProp.GetValue(progress));
         Assert.Equal(5, (int)doneProp.GetValue(progress));
         Assert.Equal(1, (int)failedProp.GetValue(progress));
@@ -334,7 +338,7 @@ public class JobsControllerPaginationTests
             offset: 100,
             sortBy: null,
             sortOrder: null,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -343,11 +347,11 @@ public class JobsControllerPaginationTests
         var offsetProp = responseType.GetProperty("offset");
         var hasMoreProp = responseType.GetProperty("has_more");
         var jobsProp = responseType.GetProperty("jobs");
-        
+
         Assert.Equal(5, (int)totalProp.GetValue(okResult.Value));
         Assert.Equal(100, (int)offsetProp.GetValue(okResult.Value));
         Assert.False((bool)hasMoreProp.GetValue(okResult.Value));
-        
+
         var jobsList = (jobsProp.GetValue(okResult.Value) as IEnumerable).Cast<object>().ToList();
         Assert.Empty(jobsList);
     }

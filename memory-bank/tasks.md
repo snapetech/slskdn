@@ -11,6 +11,44 @@
 
 *No high priority tasks currently active
 
+### Fastest Release Path
+
+- 1. Close the last SongID backend output gaps that materially change ranking or evidence reuse.
+- 2. Cover those outputs with direct API/service tests before spending more time on UI polish.
+- 3. Limit Discovery Graph work to release-visible wins: dedicated atlas, stronger explanations, and seed/navigation coherence.
+- 4. Treat repo-wide lint debt as separate from the SongID / Discovery Graph release path unless explicitly pulled in.
+
+- [ ] **T-919**: Discovery Graph / Constellation substrate
+ - Status: in progress
+ - Priority: P1
+ - Branch: `dev/40-fixes`
+ - Notes: Build a first-class graph substrate for navigable similarity topology, not just related-artist lists. Product name: `Discovery Graph` (`Constellation` as the stylistic alias). Start with a native backend graph service over normal storage/models, typed/weighted/explainable edges, and a UI graph summon point near SongID / MusicBrainz. Initial node families: artist, album, track, genre/tag, playlist, user/peer/pod, fingerprint/unknown cluster, canonical identity. Initial edge families: metadata similarity, co-occurrence, taste overlap, acoustic similarity, identity linkage, social/network linkage, and confidence/ambiguity edges. Phase toward semantic zoom (`mini-map`, `drawer graph`, `atlas view`) and make graph actions first-class (`recenter`, `expand`, `pin`, `compare`, `filter edge types`, `show why`, `queue nearby`, `save branch`). The first implementation slice should start in SongID and Search because those already carry rich candidate/evidence context.
+ - Progress (2026-03-16): Added the first native Discovery Graph slice: backend graph API/service (`/api/v0/discovery-graph`) seeded from SongID runs, track/album/artist scopes, typed graph nodes/edges, MusicBrainz artist release-group expansion, reusable frontend graph canvas, inline SongID mini-map, graph modal with edge-type filtering, recenter actions, queue-nearby actions, and initial backend service tests.
+ - Progress (2026-03-16): Widened Discovery Graph into the MusicBrainz lookup surface, added comparison overlays (`compareNodeId`), richer edge provenance / score-component / evidence payloads, graph pinning, pinned comparison actions, and browser-saved branch snapshots in the graph UI.
+ - Progress (2026-03-16): Added broader Search summon points plus the first atlas-style semantic zoom layer: search list rows, search detail headers, MusicBrainz, SongID, and search-response cards can all launch graph neighborhoods; graph modals now support semantic filtering (`maxDepth`, `minNodeWeight`), queue-nearby actions from those broader surfaces, and proper saved-branch restore.
+ - Progress (2026-03-16): Added a persistent in-page `DiscoveryGraphAtlasPanel` on the Search page so graph exploration is no longer modal-only; it supports manual seeds, saved-branch restore, semantic zoom controls, and nearby-search queueing.
+ - Progress (2026-03-16): Added a dedicated `/discovery-graph` route and modal handoff into that atlas workspace, so graph neighborhoods are now addressable and restorable outside the Search page flow.
+ - Progress (2026-03-16): Added inline atlas explainability so the dedicated graph workspace now shows visible edge-family counts, “why these nodes are near” evidence rows, score-component breakdowns, provenance, and recenter actions without falling back to the modal.
+ - Remaining: deepen graph evidence toward decomposed similarity lanes and provenance explanations, enrich the dedicated atlas experience beyond the current panel-style implementation, and extend graph seeds beyond the current SongID / MusicBrainz / search metadata contexts.
+
+- [ ] **T-917**: Implement SongID native intake and identification pipeline
+ - Status: in progress
+ - Priority: P1
+ - Branch: `dev/40-fixes`
+ - Notes: Build the `SongID` feature described in `docs/dev/SONGID_INTEGRATION_MAP.md`. Current slice now includes native SQLite-backed run persistence, Search-page UI placement near MusicBrainz lookup, text/YouTube/Spotify/local-file intake, MetadataFacade + MusicBrainz candidate generation, ranked download options, direct `Download Album` MB-release jobs, a deeper native `chop`-style evidence pipeline, persistent per-run artifact directories, full-source fingerprint capture, Demucs stem extraction, Panako source-store/query, Audfprint run-local DB matching, focused clip scheduling from comment timestamps, clip-level AcoustID + SongRec + AI-artifact heuristics, YouTube comment/timestamp harvesting, Whisper transcript excerpts, OCR frame scans, provenance signal detection, scorecard, assessment, queued background execution, SignalR live updates, corpus-based reranking, stage/percentage progress payloads, canonical-quality boosts from slskdn's native audio/canonical stats, and initial SongID backend tests covering the SQLite run store and scoring helper. The parity target is now `../ytdlpchopid`, not the older `../ytdlpchop`, and remaining work is explicitly mapped in `docs/dev/SONGID_INTEGRATION_MAP.md#remaining-todo`.
+
+- [ ] **T-918**: SongID parity pass for `../ytdlpchopid`
+ - Status: in progress
+ - Priority: P1
+ - Branch: `dev/40-fixes`
+ - Notes: Implement the newly added `ytdlpchopid` parity surface inside native SongID: split `identity_assessment` vs `synthetic_assessment`; forensic-matrix fields (`top_evidence_for`, `top_evidence_against`, `quality_class`, `perturbation_stability`, `confidence_score`, `known_family_score`, `family_label`, lane scores/confidences, family hints, confidence penalty notes); chapter-aware clueing; C2PA/content-credentials detection; scorecard deltas (`songrec_distinct_match_count`, `raw_acoustid_hit_count`, `playlist_request_count`, `ai_comment_mentions`); mix decomposition into multiple track plans; candidate-fanout actions; expandable detailed forensic lanes (`confidence_lane`, `spectral_artifact_lane`, `lyrics_speech_lane`, `structural_lane`); unobtrusive synthetic/AI display that never overrides strong identity-based download planning. Add explicit tests for single-lane confidence caps and strong-identity suppression of synthetic overclaiming. Use the `Remaining TODO` section in `docs/dev/SONGID_INTEGRATION_MAP.md` as the source checklist.
+ - Progress (2026-03-16): Implemented the first parity slice: native split `identityAssessment` / `syntheticAssessment`, legacy `assessment` compatibility alias, `forensicMatrix` payload, chapter parsing from yt-dlp metadata, chapter-aware focus timestamps, C2PA/content-credentials-aware provenance fields, scorecard deltas (`songRecDistinctMatchCount`, `rawAcoustIdHitCount`, `chapterHintCount`, `playlistRequestCount`, `aiCommentMentionCount`), unobtrusive synthetic UI with Popup-based detail, forensic lane summaries, targeted SongID scoring tests for single-lane caps and strong-identity suppression, segment-derived track plans from chapters/comments, and a `Search Top Candidates` batch action for non-singular identity results.
+ - Progress (2026-03-16): Implemented the next parity slice: durable unbounded SongID queue intake with fixed concurrent workers, recovered queued/running runs after restart, persisted queue position and worker slot in the run model, added recent-run queue UI, added richer forensic parity fields (`syntheticScore`, `confidenceScore`, `knownFamilyScore`, `familyLabel`, `qualityClass`, `perturbationStability`, `topEvidenceFor`, `topEvidenceAgainst`, `notes`), added descriptor-priors and generator-family lanes, added real perturbation probes (low-pass, resample, pitch-shift) to drive stability/confidence instead of relying only on static artifact heuristics, and exposed `song_id.max_concurrent_runs` in native app config so the SongID worker pool is now user-configurable.
+ - Progress (2026-03-16): Added explicit segment decomposition payloads to SongID runs, with grouped segment candidates, segment-specific plans and acquisition options, segment batch-search fan-out, and new queue/service tests covering requeue-on-restart and queue-position ordering. Also fixed a recovery-state bug so restart provenance is preserved in run evidence instead of being overwritten by queue-summary refresh.
+ - Progress (2026-03-16): Added SongID controller tests covering queued run creation, bad-request validation, list responses, and run retrieval, so API behavior now has direct unit coverage in addition to the service/store/scoring layers.
+ - Progress (2026-03-16): Propagated identity-first ranking into segment-derived acquisition options as well, persisted/reused corpus family hints in scoring, and added service/scoring tests so segment fan-out no longer uses the older quality/byzantine-heavy ordering path.
+ - Remaining: deeper multi-track / mix decomposition beyond chapter/comment segment inference, broader SongID UI coverage, and stronger backend/frontend coverage around live queue updates, configurable worker behavior, and perturbation-backed forensic outputs.
+
 - [ ] **T-915**: Fix web lint errors + re-enable eslint on build
  - Status: pending
  - Priority: P0
@@ -88,6 +126,8 @@
 ### Packaging (TODO.md)
 
 - [x] **Proxmox LXC templates**: `packaging/proxmox-lxc/` — README, `slskdn.conf.example`, `setup-inside-ct.sh` (Debian 12/Ubuntu 22.04: .NET 8, slskdn zip to /opt/slskdn, systemd, /etc/slskd, /var/lib/slskd). Done.
+- [ ] **Packaging follow-up: re-enable dev flake only with a real published build-dev release**: On 2026-03-16 the broken `slskdn-dev` flake output was disabled and the fake `releases/download/dev/...` alias was removed. Re-enable `slskdn-dev` only after a real `build-dev-<version>` GitHub release is confirmed for the intended platforms and the dev hashes are populated from those published assets.
+- [ ] **Repo-wide C# analyzer cleanup**: As of 2026-03-16 the packaging/test follow-up cleaned the touched files, but `bash ./bin/lint` / full-solution `dotnet format --verify-no-changes` still report broad existing analyzer/style debt across unrelated C# files. Triage and fix that separately from packaging work.
 
 ### 40-fixes Out of Scope (docs)
 
@@ -217,6 +257,8 @@
 - [x] **T-101**: Wishlist/Background Search
   - Status: Done (Release .2)
   - Notes: Save searches, auto-run, auto-download
+
+- [x] **chore (2026-03-15):** SongID integration map written in `docs/dev/SONGID_INTEGRATION_MAP.md`. Defines native `SongID` architecture, feature-parity assessment against `../ytdlpchop`, Search-page placement near MusicBrainz lookup, byzantine scoring model, and phased implementation plan for song / album / discography download actions.
 
 - [x] **T-102**: Smart Result Ranking
   - Status: Done (Release .4)
@@ -672,4 +714,3 @@
 - **Future domains** and **polish** as user feedback indicates need
 
 **Current State**: Codebase is in excellent shape. All critical features complete. Future work is optional enhancements and quality improvements.
-

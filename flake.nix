@@ -10,8 +10,9 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.24.5-slskdn.50";
+        version = "0.24.5-slskdn.52";
         devVersion = "0.24.1.dev.91769727133";
+        devTag = "build-dev-${devVersion}";
         
         # Helper function to build slskdn from a given version and sources
         mkSlskdn = { pname, version, sources }:
@@ -35,8 +36,9 @@
                 cp -r * $out/libexec/${pname}/
                 chmod +x $out/libexec/${pname}/slskd
                 
-                makeWrapper $out/libexec/${pname}/slskd $out/bin/${pname} \
+                makeWrapper $out/libexec/${pname}/slskd $out/bin/slskd \
                   --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath [ pkgs.icu pkgs.openssl ]}
+                ln -s slskd $out/bin/${pname}
               '';
 
               meta = with pkgs.lib; {
@@ -53,37 +55,37 @@
         stableSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-x64.zip";
-            sha256 = "0iaawm7giwvhv2ssphvn50hcihh587jrj202qb5ky9g2hfdkhp6c"; # x86_64-linux
+            sha256 = "1gljb5zj7h0g7mhi8d9s5hjkqvn8v6dmrb812gfwggayl91ksj7y"; # x86_64-linux
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-arm64.zip";
-            sha256 = "sha256-wVaQ5hP4JsHNTGs1B8G6bfnGAfZG3znr/oE9nPcXY+M="; # aarch64-linux
+            sha256 = "0j7a9ds5hmx4cqbypqpm548cx2gr6a46pj393plsmapddi1scma8"; # aarch64-linux
           };
           "x86_64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-x64.zip";
-            sha256 = "sha256-L77YD7jhkbkBikLB6zF8WYMVvG+gHLsjWAPUM2SyoXQ="; # x86_64-darwin
+            sha256 = "0ancf404qspjf6kqki8jfs0nhh88hxpyi94v0hwnnk7mr650myy0"; # x86_64-darwin
           };
           "aarch64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-arm64.zip";
-            sha256 = "sha256-5tcGFdJiEsVNPj5/FUmJMH2Ve3gbOGMiwOs122W/ciI="; # aarch64-darwin
+            sha256 = "1r1frvcjcck92gaiqdm35yhi7gw9i5yb4khb79cnhr708wz8hzmr"; # aarch64-darwin
           };
         };
 
         devSources = {
           "x86_64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-x64.zip";
+            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-linux-x64.zip";
             sha256 = "1bz25gy9p0h3jin4zfhp5msvy8aqxbniq4m50q2xikp6p7bhw1km"; # x86_64-linux
           };
           "aarch64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-linux-arm64.zip";
+            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-linux-arm64.zip";
             sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # aarch64-linux
           };
           "x86_64-darwin" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-osx-x64.zip";
+            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-osx-x64.zip";
             sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # x86_64-darwin
           };
           "aarch64-darwin" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/dev/slskdn-dev-osx-arm64.zip";
+            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-osx-arm64.zip";
             sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # aarch64-darwin
           };
         };
@@ -96,17 +98,11 @@
             sources = stableSources;
           };
 
-          slskdn-dev = mkSlskdn {
-            pname = "slskdn-dev";
-            version = devVersion;
-            sources = devSources;
-          };
+          slskdn-dev = throw "slskdn-dev flake output is temporarily unavailable because no matching build-dev release is currently published. Use a stable package or publish a build-dev release first.";
         };
       }
     );
 }
-
-
 
 
 
