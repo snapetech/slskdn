@@ -98,6 +98,35 @@ private readonly object _gate = new();
 
 **Why This Keeps Happening**: It is easy to mentally map “modern C#” to every recent BCL convenience type. This repo still needs compatibility with the actual APIs available in its current toolchain and package graph, so prefer the already-common locking patterns unless you have confirmed the newer type is already in use here.
 
+### 0c. When You Extend a Controller Constructor, Update Direct Instantiation Tests Immediately
+
+**The Bug**: `JobsController` gained an `IMusicBrainzClient` dependency for release-to-artist resolution, but `JobsControllerPaginationTests` still instantiated the old constructor shape, breaking unit test compilation before the new SongID tests could even run.
+
+**Files Affected**:
+- `src/slskd/API/Native/JobsController.cs`
+- `tests/slskd.Tests.Unit/API/Native/JobsControllerPaginationTests.cs`
+
+**Wrong**:
+```csharp
+controller = new JobsController(
+    discographyService.Object,
+    labelCrateService.Object,
+    logger.Object,
+    jobServiceList.Object);
+```
+
+**Correct**:
+```csharp
+controller = new JobsController(
+    discographyService.Object,
+    labelCrateService.Object,
+    musicBrainzClient.Object,
+    logger.Object,
+    jobServiceList.Object);
+```
+
+**Why This Keeps Happening**: Controllers are often instantiated through ASP.NET DI in production, so constructor changes compile there but any unit test that manually news up the controller will silently drift until the next test build.
+
 ### 0. MusicBrainz Release IDs Are Not Artist IDs
 
 **The Bug**: A single-release SongID or jobs path passed an MB release ID into `DiscographyJobRequest.ArtistId`, which silently created the wrong planning context and broke album download handoff.
