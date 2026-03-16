@@ -268,6 +268,29 @@ PortableCommandAlias: slskdn
 
 **Why This Keeps Happening**: Packaging work tends to treat channel names, package names, and executable names as interchangeable. They are not. Each channel must preserve the runtime contract expected by downstream tools (`slskd` for service modules) while also publishing the correct channel identity (`slskdn` vs `slskdn-dev`). Add an explicit validation step whenever manifests or wrappers are generated.
 
+### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
+
+**The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Common/Security/LocalPortForwarderTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/Transport/TorSocksTransportTests.cs`
+
+**Wrong**:
+```csharp
+await _portForwarder.StartForwardingAsync(8080, "pod-123", "example.com", 80);
+Assert.Contains("connect", status.LastError.ToLower());
+```
+
+**Correct**:
+```csharp
+var localPort = GetFreeLocalPort();
+await _portForwarder.StartForwardingAsync(localPort, "pod-123", "example.com", 80);
+Assert.NotEmpty(status.LastError);
+```
+
+**Why This Keeps Happening**: Test code often assumes "common dev ports" are free and that low-level socket failures have stable message text. Neither assumption holds across busy developer machines, CI runners, or different runtime timing paths.
+
 ---
 
 ### 3. E2E SlskdnNode: HTTPS Port Conflict and Missing --app-dir
