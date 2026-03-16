@@ -79,6 +79,25 @@ run.Tracks.Insert(0, new SongIdTrackCandidate
 
 **Why This Keeps Happening**: The MusicBrainz integration models look similar at a glance, but they are not interchangeable. Check the actual target type before assuming it carries artist, release, or recording IDs in the same shape.
 
+### 0b. Do Not Introduce `System.Threading.Lock` Unless the Project Explicitly Uses That API Surface
+
+**The Bug**: A new SongID SQLite store used `Lock` instead of a plain object gate, which failed to compile in this project even though the code targets modern .NET.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdRunStore.cs`
+
+**Wrong**:
+```csharp
+private readonly Lock _gate = new();
+```
+
+**Correct**:
+```csharp
+private readonly object _gate = new();
+```
+
+**Why This Keeps Happening**: It is easy to mentally map “modern C#” to every recent BCL convenience type. This repo still needs compatibility with the actual APIs available in its current toolchain and package graph, so prefer the already-common locking patterns unless you have confirmed the newer type is already in use here.
+
 ### 0. MusicBrainz Release IDs Are Not Artist IDs
 
 **The Bug**: A single-release SongID or jobs path passed an MB release ID into `DiscographyJobRequest.ArtistId`, which silently created the wrong planning context and broke album download handoff.
