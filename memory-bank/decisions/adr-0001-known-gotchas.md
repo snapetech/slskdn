@@ -184,6 +184,33 @@ await EnqueueRunAsync(run, broadcastCreate: false).ConfigureAwait(false);
 
 **Why This Keeps Happening**: `Summary` looks like a convenient general-purpose status field, but the queue layer also treats it as derived UI text. If two parts of the pipeline both own the same display field, one silently erases the other.
 
+### 0e. Do Not Use Wall-Clock Time or Tight Upper Bounds for Async Delay Tests
+
+**The Bug**: `SecurityUtilsTests.RandomDelayAsync_ValidRange_CompletesWithinExpectedTime` measured `Task.Delay` with `DateTimeOffset.UtcNow` and a narrow upper bound, so the test failed intermittently on loaded CI runners even though the code was behaving correctly.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Common/Security/SecurityUtilsTests.cs`
+
+**Wrong**:
+```csharp
+var startTime = DateTimeOffset.UtcNow;
+await SecurityUtils.RandomDelayAsync(minDelay, maxDelay);
+var endTime = DateTimeOffset.UtcNow;
+var actualDelay = (endTime - startTime).TotalMilliseconds;
+Assert.True(actualDelay <= maxDelay + 600, $"Delay too long: {actualDelay}ms");
+```
+
+**Correct**:
+```csharp
+var timer = Stopwatch.StartNew();
+await SecurityUtils.RandomDelayAsync(minDelay, maxDelay);
+timer.Stop();
+var actualDelay = timer.Elapsed.TotalMilliseconds;
+Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
+```
+
+**Why This Keeps Happening**: Async timing tests are easy to write like benchmark assertions, but `Task.Delay` is scheduler-dependent and CI hosts can stall for hundreds of milliseconds. Use monotonic timing (`Stopwatch`) and treat the upper bound as a broad sanity check, not a precision guarantee.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
