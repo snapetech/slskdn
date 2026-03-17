@@ -4938,3 +4938,22 @@ Code quality improvements were completed as part of Option A:
 ### Verification
 - `bash packaging/scripts/validate-packaging-metadata.sh`
 - `rg -n "0\\.24\\.1-slskdn\\.40|slskdn-\\$\\{\\{ steps\\.version\\.outputs\\.tag \\}\\}-linux-x64|releases/download/dev/|slskdn-dev-windows-x64\\.zip" .github/workflows packaging flake.nix`
+
+---
+
+## 2026-03-17 11:45
+
+### Completed
+- Fixed metrics configuration validation so an empty `metrics.authentication.password` no longer blocks startup when metrics are disabled or metrics auth is explicitly disabled.
+- Moved metrics auth required-field checks out of unconditional DataAnnotations on the nested auth object and into conditional validation on `Options.MetricsOptions`.
+- Added focused unit coverage in `tests/slskd.Tests.Unit/MetricsOptionsValidationTests.cs` for the three important cases: metrics disabled, metrics enabled with auth required, and metrics enabled with auth disabled.
+- Updated the sample config and config docs to reflect that metrics auth password must now be set explicitly before enabling authenticated metrics.
+- Documented the bug in ADR-0001 and committed that gotcha immediately as `docs: Add gotcha for metrics auth conditional validation`.
+
+### Issues
+- Full `dotnet test` still fails in unrelated existing test projects (`tests/slskd.Tests` and `tests/slskd.Tests.Integration`) because local stubs are behind current interfaces (`ISecurityService`, `IShareService`, `IShareRepository`) and one bridge integration test defines a duplicate helper method. Those failures predate this metrics fix.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter FullyQualifiedName~MetricsOptionsValidationTests`
+- `bash ./bin/lint`
+- `dotnet test` (fails in unrelated pre-existing test projects noted above)

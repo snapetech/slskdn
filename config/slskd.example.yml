@@ -154,7 +154,7 @@
 #   authentication:
 #     disabled: false
 #     username: slskd
-#     password: slskd
+#     password: ""   # set a non-empty password before enabling metrics auth
 #     passthrough:              # PR-03: when no-auth, AllowedCidrs can allow non-loopback in addition to loopback
 #       allowed_cidrs: ~        # optional; e.g. 127.0.0.1/32,::1/128
 #     jwt:
