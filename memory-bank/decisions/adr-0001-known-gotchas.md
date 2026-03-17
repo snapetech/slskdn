@@ -658,6 +658,32 @@ pkgs.stdenv.mkDerivation {
 
 **Why This Keeps Happening**: Nix’s normal strip phase is reasonable for ordinary native packages, but bundled .NET distributions mix ELF binaries with managed/runtime payloads that are not safe to treat like a conventional C/C++ install tree. If CoreCLR starts failing with format/load errors after packaging, remove stripping from the equation before chasing more loader theories.
 
+### 2p. The NixOS `services.slskd` Module Requires `services.slskd.domain` Even for Local Validation
+
+**The Bug**: A local NixOS validation module enabled `services.slskd` and provided a custom package, but `nixos-rebuild test` failed before creating the service because the module accessed `services.slskd.domain` and no value was set.
+
+**Files Affected**:
+- `/etc/nixos/slskdn-local.nix` in the validation VM
+
+**Wrong**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.package = slskdn.packages.${pkgs.system}.default;
+}
+```
+
+**Correct**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.domain = "localhost";
+  services.slskd.package = slskdn.packages.${pkgs.system}.default;
+}
+```
+
+**Why This Keeps Happening**: It is easy to treat the NixOS module like a thin wrapper around the binary and only override `package`, but module assertions/options can still require unrelated application settings. For service validation, read the module’s required options instead of assuming `enable + package` is enough.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
