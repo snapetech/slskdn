@@ -611,6 +611,29 @@ buildInputs = [
 
 **Why This Keeps Happening**: It is easy to assume a package attribute points at the runtime library output, but multi-output Nix packages often default to `bin` or `dev`. When `autoPatchelfHook` still cannot find a `.so`, inspect the package outputs and reference the one that actually contains the needed library.
 
+### 2n. Bundled Runtime SONAMEs Can Lag Behind nixpkgs; Patch `NEEDED` Entries Before `autoPatchelfHook` Runs
+
+**The Bug**: Even after adding the correct `lttng-ust` library output, the NixOS VM still failed because the bundled `.NET` trace provider asked for `liblttng-ust.so.0` while current nixpkgs only ships `liblttng-ust.so.1`.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+buildInputs = [
+  pkgs.lttng-ust.out
+];
+```
+
+**Correct**:
+```nix
+patchelf \
+  --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 \
+  $out/libexec/${pname}/libcoreclrtraceptprovider.so
+```
+
+**Why This Keeps Happening**: Upstream self-contained runtimes can be built against an older SONAME than the one available in current nixpkgs. Adding more packages will not help when the exact requested SONAME no longer exists; inspect the bundled binary and patch the `NEEDED` entry to the compatible library that nixpkgs actually provides before running `autoPatchelfHook`.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
