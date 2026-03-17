@@ -310,6 +310,32 @@ if (metrics?.Enabled == true && metricsAuth != null && !metricsAuth.Disabled &&
 
 **Why This Keeps Happening**: Nested auth options default to “auth enabled” semantics even when the parent feature is disabled. Any startup validation that checks nested credentials must first gate on the top-level feature flag, or harmless defaults become fatal.
 
+### 0i. Do Not Use Anonymous Objects for JSON-LD Keys That Need Literal `@` Names
+
+**The Bug**: `SolidClientIdDocumentService` built the Solid client-id document with an anonymous object using `@context`, which serialized to `context` instead of the required JSON-LD key `@context`.
+
+**Files Affected**:
+- `src/slskd/Solid/SolidClientIdDocumentService.cs`
+- `tests/slskd.Tests.Unit/Solid/SolidClientIdDocumentServiceTests.cs`
+
+**Wrong**:
+```csharp
+var doc = new
+{
+    @context = "https://www.w3.org/ns/solid/oidc-context.jsonld",
+};
+```
+
+**Correct**:
+```csharp
+var doc = new Dictionary<string, object?>
+{
+    ["@context"] = "https://www.w3.org/ns/solid/oidc-context.jsonld",
+};
+```
+
+**Why This Keeps Happening**: In C#, the `@` prefix only escapes the identifier for the compiler; it is not part of the serialized property name. For wire formats that require literal keys like `@context`, use explicit string keys or a concrete model with `JsonPropertyName`.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
