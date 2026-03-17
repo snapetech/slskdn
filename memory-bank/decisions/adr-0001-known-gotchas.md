@@ -510,6 +510,25 @@ nix build 'path:/mnt/hostrepo#default'
 
 **Why This Keeps Happening**: It is easy to assume live or minimal troubleshooting images carry the same helper tools as a normal dev box. For ad hoc VM validation, use the simplest source form that avoids extra dependencies; `path:` flake URIs sidestep both Git ownership checks and the need for Git itself.
 
+### 2j. Read-Only Shared Flake Mounts Need `--no-write-lock-file`
+
+**The Bug**: After switching to a `path:` flake URI for a read-only 9p mount, `nix build` still failed because it tried to create `flake.lock` in the mounted repo and the filesystem was intentionally read-only.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-slskdn.sh`
+
+**Wrong**:
+```bash
+nix build 'path:/mnt/hostrepo#default'
+```
+
+**Correct**:
+```bash
+nix build --no-write-lock-file 'path:/mnt/hostrepo#default'
+```
+
+**Why This Keeps Happening**: Read-only source mounts are ideal for preserving the host checkout during guest validation, but flake evaluation still wants to persist lock updates by default. When validating from a read-only mount, always disable lock-file writes explicitly or copy the flake into a writable path first.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
