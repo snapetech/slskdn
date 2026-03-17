@@ -4986,3 +4986,9 @@ Code quality improvements were completed as part of Option A:
 - Updated checked-in [Formula/slskdn.rb](/home/keith/Documents/code/slskdn/Formula/slskdn.rb) from `0.24.5-slskdn.56` to `0.24.5-slskdn.57` using the published `SHA256SUMS.txt` from the `.57` release assets.
 - Hardened the `homebrew-main`, `nix-main`, and `winget-main` write-back steps in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) so they exit cleanly on no-op changes and fetch/rebase/retry before pushing back into `master`.
 - Verified the red `.57` release email was caused by a post-release push race in `Update formula in main repo`, not by a product build failure. Also confirmed the separate CodeQL red check is a GitHub settings conflict (`default setup` enabled alongside the checked-in advanced workflow).
+
+## 2026-03-17 23:05 - Release .58 flake follow-up
+
+- Verified the `.58` release workflow fixed the Homebrew and Winget write-back failures, but `Update Nix Flake (Main)` still lost the branch race while those commits were landing.
+- Manually updated [flake.nix](/home/keith/Documents/code/slskdn/flake.nix) to `0.24.5-slskdn.58` with the published release hashes.
+- Strengthened the shared write-back pattern in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) again: explicit fetch refspec for `origin/master` plus a 10-attempt retry window for Nix, Homebrew, and Winget.
