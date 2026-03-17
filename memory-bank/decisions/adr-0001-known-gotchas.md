@@ -2825,6 +2825,17 @@ if (useHttpDownload) {
 
 **Why This Keeps Happening**: Backfill needs to work for both cross-node shares (HTTP) and same-network shares (Soulseek). The implementation must check for both methods and provide clear error messages when neither is available.
 
+### 2w. Metrics Auth DataAnnotations Must Not Reject the Default Config When Metrics Are Disabled
+
+**The Bug**: `Options.MetricsOptions.MetricsAuthenticationOptions.Password` had a `[StringLength(MinimumLength = 1)]` attribute even though metrics are disabled by default and the default password is intentionally empty. Full options validation ran before startup, so a fresh config could fail with `Metrics.Authentication.Password` length validation even when `metrics.enabled = false` or `metrics.authentication.disabled = true`.
+
+**What Went Wrong**: The validation lived on the nested property instead of the feature gate. DataAnnotations treated the empty default password as invalid unconditionally, which broke NixOS service validation and any other startup path that bound defaults before metrics was actually enabled.
+
+**How to Prevent It**:
+- Put required-field validation for optional features on the parent options object where you can check `Enabled` and related flags.
+- Do not use unconditional `[StringLength(MinimumLength = 1)]` on values that are allowed to remain empty while the feature is disabled.
+- Add tests for all three cases: feature disabled, feature enabled with auth disabled, and feature enabled with auth required.
+
 ---
 
 *Last updated: 2026-01-27*
