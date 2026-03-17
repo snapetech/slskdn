@@ -1705,33 +1705,46 @@ jobs:
 
       - name: Verify Flake
         run: |
-          nix flake check --no-build || echo "⚠️ Flake check failed (non-fatal)"
+          nix flake check --no-build --no-write-lock-file || echo "⚠️ Flake check failed (non-fatal)"
 
       - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          if git diff --quiet flake.nix; then
-            echo "No changes to flake.nix"
-          else
+
+          update_flake() {
+            sed -i "s/version = \".*\";/version = \"${{ needs.parse.outputs.version }}\";/" flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
+          }
+
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            git fetch origin +refs/heads/master:refs/remotes/origin/master
+            git reset --hard origin/master
+            git clean -fd
+
+            update_flake
             git add flake.nix
+
+            if git diff --cached --quiet; then
+              echo "No changes to flake.nix"
+              exit 0
+            fi
+
             git commit -m "chore(nix): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
 
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
-              git fetch origin +refs/heads/master:refs/remotes/origin/master
-              if git rebase origin/master && git push origin HEAD:master; then
-                echo "✅ flake.nix updated"
-                exit 0
-              fi
+            if git push origin HEAD:master; then
+              echo "✅ flake.nix updated"
+              exit 0
+            fi
 
-              git rebase --abort || true
-              sleep $((attempt * 5))
-            done
+            sleep $((attempt * 5))
+          done
 
-            echo "::error::Failed to push flake.nix update after 10 attempts"
-            exit 1
-          fi
+          echo "::error::Failed to push flake.nix update after 10 attempts"
+          exit 1
 
   winget-main:
     name: Update Winget Manifests (Main)

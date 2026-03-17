@@ -4999,3 +4999,9 @@ Code quality improvements were completed as part of Option A:
 - Repositioned the release copy around the real first-class features: SongID, Discovery Graph / Constellation, queue-native acquisition, and the built-in download stack.
 - Updated the stable and dev Winget locale descriptions to match that positioning.
 - Added [render-release-notes.sh](/home/keith/Documents/code/slskdn/packaging/scripts/render-release-notes.sh), [validate-release-copy.sh](/home/keith/Documents/code/slskdn/packaging/scripts/validate-release-copy.sh), and [release-copy.md](/home/keith/Documents/code/slskdn/docs/dev/release-copy.md) so future drift is caught automatically.
+
+## 2026-03-17 23:45 - .59 Nix flake postmortem and repair
+
+- Pulled the completed `.59` `Update Nix Flake (Main)` log and confirmed the real failure was not "not enough retries"; the job was trying to `git rebase` with a dirty checkout after `nix flake check`, so every retry failed immediately with `cannot rebase: You have unstaged changes`.
+- Updated [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) so the Nix verification step uses `--no-write-lock-file` and the push loop now rebuilds `flake.nix` from a freshly fetched `origin/master` each attempt instead of rebasing a generated commit.
+- Manually moved [flake.nix](/home/keith/Documents/code/slskdn/flake.nix) to stable release `0.24.5-slskdn.59` with the published `.59` hashes so the repo state catches up with the release even though the workflow failed.
