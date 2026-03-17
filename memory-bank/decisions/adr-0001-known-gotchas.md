@@ -732,6 +732,25 @@ expect_line flake.nix '--replace-needed liblttng-ust\.so\.0 liblttng-ust\.so\.1'
 
 **Why This Keeps Happening**: Packaging validation tends to get treated as a one-time guardrail, but it is really part of the packaging implementation. If the flake or package templates change and the validator does not, the repo ends up failing on stale assertions instead of catching real regressions.
 
+### 2s. Validator Helpers That Pass Regexes to `grep` Must Use `grep --` for Patterns Beginning With `-`
+
+**The Bug**: After adding a validation pattern for `--replace-needed ...`, the packaging validator failed inside `grep` because the pattern itself started with `-` and was parsed as an option rather than a regex.
+
+**Files Affected**:
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+grep -Eq "$pattern" "$file"
+```
+
+**Correct**:
+```bash
+grep -Eq -- "$pattern" "$file"
+```
+
+**Why This Keeps Happening**: Validation helpers often assume patterns are data, but command-line tools still parse them as arguments first. Any generic wrapper that forwards arbitrary regexes to `grep` should include `--` up front or it will break as soon as a pattern begins with `-`.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
