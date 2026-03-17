@@ -358,6 +358,28 @@ buildInputs = [
 
 **Why This Keeps Happening**: It is easy to treat Nix like any other Linux packaging target and assume a wrapper plus `LD_LIBRARY_PATH` solves native dependency issues. On NixOS, generic upstream ELF binaries also need their interpreter and linked libraries patched into the Nix store path, so use `autoPatchelfHook` or explicit `patchelf` instead of only wrapping the executable.
 
+### 2c. Do Not Assume Fresh Filesystem Labels Are Immediately Available Under `/dev/disk/by-label`
+
+**The Bug**: A QEMU/NixOS install helper formatted `/dev/vda1` with `mkfs.ext4 -L nixos` and immediately mounted `/dev/disk/by-label/nixos`, but the installer environment had not populated that symlink yet, so the mount failed even though the partition existed.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```bash
+mkfs.ext4 -F -L nixos /dev/vda1
+mount /dev/disk/by-label/nixos /mnt
+```
+
+**Correct**:
+```bash
+mkfs.ext4 -F -L nixos /dev/vda1
+udevadm settle
+mount /dev/vda1 /mnt
+```
+
+**Why This Keeps Happening**: It is tempting to use the friendlier `/dev/disk/by-label/...` path immediately after formatting, but installer/live environments can lag on udev updates. For fresh partitions, either wait for udev explicitly or mount the block device path you already know exists.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
