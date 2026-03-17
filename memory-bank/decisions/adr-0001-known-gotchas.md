@@ -447,6 +447,29 @@ sed -i '/\.\/hardware-configuration\.nix/a\ \ \ \ \ \./slskdn-vm.nix' /mnt/etc/n
 
 **Why This Keeps Happening**: Generated config files look predictable, but their whitespace and line breaks are not stable enough to target with a guessed pattern. Match a concrete line that is actually present in the generated file, or rewrite the whole block explicitly instead of assuming a one-line `imports = [`.
 
+### 2g. `expect` Patterns for SSH Password Prompts Must Handle OpenSSH's Actual Prompt Casing
+
+**The Bug**: A local-VM validation helper waited for `password:` in lowercase, but OpenSSH prompted with `(root@127.0.0.1) Password:`. The automation stalled at the login prompt even though the VM was ready.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-vm.expect`
+
+**Wrong**:
+```tcl
+expect {
+  "password:" { send "root\r" }
+}
+```
+
+**Correct**:
+```tcl
+expect {
+  -re {[Pp]assword:} { send "root\r" }
+}
+```
+
+**Why This Keeps Happening**: Interactive prompt matching is brittle when it relies on exact casing or full literal text. SSH clients vary their password prompt prefix, so use a case-tolerant regex for the stable suffix instead of matching the whole prompt literally.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
