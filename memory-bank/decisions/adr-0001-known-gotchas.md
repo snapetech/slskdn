@@ -529,6 +529,27 @@ nix build --no-write-lock-file 'path:/mnt/hostrepo#default'
 
 **Why This Keeps Happening**: Read-only source mounts are ideal for preserving the host checkout during guest validation, but flake evaluation still wants to persist lock updates by default. When validating from a read-only mount, always disable lock-file writes explicitly or copy the flake into a writable path first.
 
+### 2k. Nix Flake Stable Pins Must Move With the Latest Published Stable Release
+
+**The Bug**: The flake still pointed at stable release `0.24.5-slskdn.52` and its old hashes even though GitHub’s latest stable release had moved to `0.24.5-slskdn.54`, so `nix build` failed immediately with a fixed-output hash mismatch before the runtime patching fix could even be exercised.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+version = "0.24.5-slskdn.52";
+sha256 = "1gljb5zj7h0g7mhi8d9s5hjkqvn8v6dmrb812gfwggayl91ksj7y";
+```
+
+**Correct**:
+```nix
+version = "0.24.5-slskdn.54";
+sha256 = "sha256-M1gUyVXt1iPUjjh9eFheDBRWv/kixAgIxlvIRMbckoo=";
+```
+
+**Why This Keeps Happening**: Packaging work can fix wrapper logic or runtime behavior while leaving the stable source pin behind on an older release. For fixed-output fetches, a stale release pin is just as fatal as a stale hash, so treat version and hashes as one atomic update sourced from the actual latest published release metadata.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
