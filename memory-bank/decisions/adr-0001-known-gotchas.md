@@ -710,6 +710,28 @@ pkgs.stdenv.mkDerivation {
 
 **Why This Keeps Happening**: “No shares configured” feels like it should mean “unset,” but this module dereferences the list unconditionally when generating systemd hardening paths. For local validation, explicitly set it to an empty list.
 
+### 2r. Whenever `flake.nix` Packaging Logic Changes, Update the Metadata Validator in the Same Edit
+
+**The Bug**: After changing the Nix flake to add `patchelf`, `dontStrip`, `lttng-ust.out`, and the SONAME rewrite, `packaging/scripts/validate-packaging-metadata.sh` still enforced the old `nativeBuildInputs` line and failed immediately.
+
+**Files Affected**:
+- `flake.nix`
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+expect_line flake.nix 'nativeBuildInputs = \[ pkgs\.unzip pkgs\.makeWrapper pkgs\.autoPatchelfHook \];'
+```
+
+**Correct**:
+```bash
+expect_line flake.nix 'nativeBuildInputs = \[ pkgs\.unzip pkgs\.makeWrapper pkgs\.autoPatchelfHook pkgs\.patchelf \];'
+expect_line flake.nix 'dontStrip = true;'
+expect_line flake.nix '--replace-needed liblttng-ust\.so\.0 liblttng-ust\.so\.1'
+```
+
+**Why This Keeps Happening**: Packaging validation tends to get treated as a one-time guardrail, but it is really part of the packaging implementation. If the flake or package templates change and the validator does not, the repo ends up failing on stale assertions instead of catching real regressions.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
