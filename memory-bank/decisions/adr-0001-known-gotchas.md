@@ -684,6 +684,32 @@ pkgs.stdenv.mkDerivation {
 
 **Why This Keeps Happening**: It is easy to treat the NixOS module like a thin wrapper around the binary and only override `package`, but module assertions/options can still require unrelated application settings. For service validation, read the module’s required options instead of assuming `enable + package` is enough.
 
+### 2q. The NixOS `services.slskd` Module Also Requires `settings.shares.directories`, Even If You Want No Shares
+
+**The Bug**: After adding `domain` and `environmentFile`, `nixos-rebuild test` still failed because the module always maps over `cfg.settings.shares.directories` to build `ReadOnlyPaths`, so leaving it unset crashes evaluation.
+
+**Files Affected**:
+- `/etc/nixos/slskdn-local.nix` in the validation VM
+
+**Wrong**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.environmentFile = "/etc/slskd.env";
+}
+```
+
+**Correct**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.environmentFile = "/etc/slskd.env";
+  services.slskd.settings.shares.directories = [ ];
+}
+```
+
+**Why This Keeps Happening**: “No shares configured” feels like it should mean “unset,” but this module dereferences the list unconditionally when generating systemd hardening paths. For local validation, explicitly set it to an empty list.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
