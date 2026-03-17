@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.24.5-slskdn.52";
+        version = "0.24.5-slskdn.54";
         devVersion = "0.24.1.dev.91769727133";
         devTag = "build-dev-${devVersion}";
         
@@ -27,7 +27,19 @@
                 inherit (srcConfig) url sha256;
               };
 
-              nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper ];
+              nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook pkgs.patchelf ];
+              dontStrip = true;
+              buildInputs = [
+                pkgs.curl
+                pkgs.icu
+                pkgs.krb5
+                pkgs.lttng-ust.out
+                pkgs.libunwind
+                pkgs.openssl
+                pkgs.stdenv.cc.cc
+                pkgs.util-linux
+                pkgs.zlib
+              ];
 
               unpackPhase = "unzip $src";
 
@@ -35,9 +47,24 @@
                 mkdir -p $out/libexec/${pname} $out/bin
                 cp -r * $out/libexec/${pname}/
                 chmod +x $out/libexec/${pname}/slskd
+
+                # .NET's trace provider still references the old SONAME on current nixpkgs.
+                patchelf \
+                  --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 \
+                  $out/libexec/${pname}/libcoreclrtraceptprovider.so
                 
                 makeWrapper $out/libexec/${pname}/slskd $out/bin/slskd \
-                  --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath [ pkgs.icu pkgs.openssl ]}
+                  --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath [
+                    pkgs.curl
+                    pkgs.icu
+                    pkgs.krb5
+                    pkgs.lttng-ust.out
+                    pkgs.libunwind
+                    pkgs.openssl
+                    pkgs.stdenv.cc.cc
+                    pkgs.util-linux
+                    pkgs.zlib
+                  ]}
                 ln -s slskd $out/bin/${pname}
               '';
 
@@ -55,19 +82,19 @@
         stableSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-x64.zip";
-            sha256 = "1gljb5zj7h0g7mhi8d9s5hjkqvn8v6dmrb812gfwggayl91ksj7y"; # x86_64-linux
+            sha256 = "sha256-M1gUyVXt1iPUjjh9eFheDBRWv/kixAgIxlvIRMbckoo="; # x86_64-linux
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-arm64.zip";
-            sha256 = "0j7a9ds5hmx4cqbypqpm548cx2gr6a46pj393plsmapddi1scma8"; # aarch64-linux
+            sha256 = "sha256-K1bk+LDeXcR/PulpjYDypD5b39P0iu0d+KRfWon8bwI="; # aarch64-linux
           };
           "x86_64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-x64.zip";
-            sha256 = "0ancf404qspjf6kqki8jfs0nhh88hxpyi94v0hwnnk7mr650myy0"; # x86_64-darwin
+            sha256 = "sha256-/y2L9oGQYMhO7frgpyWiKUXRnhm9RMqjoKOm7e9TOPE="; # x86_64-darwin
           };
           "aarch64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-arm64.zip";
-            sha256 = "1r1frvcjcck92gaiqdm35yhi7gw9i5yb4khb79cnhr708wz8hzmr"; # aarch64-darwin
+            sha256 = "sha256-UwDtL5a/SrCmq7nKaR33wlmb/tZQlcaxv/xS5dSkV7A="; # aarch64-darwin
           };
         };
 
@@ -103,6 +130,3 @@
       }
     );
 }
-
-
-

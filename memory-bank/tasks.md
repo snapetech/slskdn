@@ -127,6 +127,7 @@
 
 - [x] **Proxmox LXC templates**: `packaging/proxmox-lxc/` — README, `slskdn.conf.example`, `setup-inside-ct.sh` (Debian 12/Ubuntu 22.04: .NET 8, slskdn zip to /opt/slskdn, systemd, /etc/slskd, /var/lib/slskd). Done.
 - [ ] **Packaging follow-up: re-enable dev flake only with a real published build-dev release**: On 2026-03-16 the broken `slskdn-dev` flake output was disabled and the fake `releases/download/dev/...` alias was removed. Re-enable `slskdn-dev` only after a real `build-dev-<version>` GitHub release is confirmed for the intended platforms and the dev hashes are populated from those published assets.
+- [ ] **Packaging follow-up: automate the NixOS VM smoke test**: The 2026-03-17 QEMU/KVM NixOS validation proved the stable flake now builds and the packaged `slskd` binary starts on real NixOS, but the flow is manual and the upstream NixOS module still needs explicit `domain`, `environmentFile`, and `settings.shares.directories` values for local validation. Script a reusable smoke test or CI-friendly VM harness so future Nix packaging changes are validated without hand-driving the guest.
 - [ ] **Repo-wide C# analyzer cleanup**: As of 2026-03-16 the packaging/test follow-up cleaned the touched files, but `bash ./bin/lint` / full-solution `dotnet format --verify-no-changes` still report broad existing analyzer/style debt across unrelated C# files. Triage and fix that separately from packaging work.
 
 ### 40-fixes Out of Scope (docs)

@@ -4834,6 +4834,50 @@ Code quality improvements were completed as part of Option A:
 
 ### Next
 - Keep the packaging/dev-flake follow-up as-is.
+
+## 2026-03-17 07:55
+
+### Completed
+- Fixed the stable Nix flake packaging so the extracted release binary is prepared for NixOS execution instead of only being wrapped.
+- Added `pkgs.autoPatchelfHook` plus the runtime libraries needed by the bundled Linux apphost/runtime in `flake.nix`.
+- Extended `packaging/scripts/validate-packaging-metadata.sh` so CI/local validation now asserts the Nix flake includes the patching hook and key runtime dependencies.
+- Documented the new NixOS dynamic-linker gotcha in ADR-0001 and committed that docs-only record immediately per repo policy.
+
+### Verification
+- `bash packaging/scripts/validate-packaging-metadata.sh`
+- `bash ./bin/lint`
+- `dotnet test`
+
+### Notes
+- The original NixOS `bin/slskd` naming bug was already fixed; the remaining failure reported in GitHub issue #117 was the generic Linux ELF loader mismatch (`stub-ld` / status 127).
+- I did not run an actual `nix build` or NixOS service boot inside this environment, so the remaining gap is real end-to-end verification on NixOS after the next package build publishes.
+
+## 2026-03-17 16:45
+
+### Completed
+- Built and booted a disposable local NixOS 25.11 VM under QEMU/KVM to validate the flake on a real NixOS userspace instead of guessing from host-side logs.
+- Updated `flake.nix` stable pins from `0.24.5-slskdn.52` to the actual latest stable GitHub release `0.24.5-slskdn.54`, using the published asset digests from GitHub release metadata.
+- Fixed the Nix package so the bundled Linux app now survives real NixOS validation: added `autoPatchelfHook`, `patchelf`, `dontStrip`, the needed runtime inputs, and a `liblttng-ust.so.0` -> `liblttng-ust.so.1` SONAME rewrite for the bundled .NET trace provider.
+- Updated `packaging/scripts/validate-packaging-metadata.sh` to match the new flake contract and hardened it with `grep --` so leading-dash regexes do not break the validator itself.
+- Verified inside the NixOS VM that `nix build --no-write-lock-file 'path:/mnt/hostrepo#default'` now succeeds and that the packaged `/nix/store/.../bin/slskd --help` runs successfully on NixOS.
+- Verified the NixOS `services.slskd` systemd unit now reaches the packaged binary launch path on NixOS. The unit no longer fails on missing executable / stub-ld; it exits only because the dummy validation credentials trigger an application-level config error (`Metrics.Authentication.Password`), which is outside the flake loader/runtime bug.
+- Added and committed the packaging/validation gotchas discovered during this VM pass in ADR-0001 as they occurred.
+
+### Verification
+- `gh release list --repo snapetech/slskdn --limit 20`
+- `gh release view 0.24.5-slskdn.54 --repo snapetech/slskdn --json tagName,assets`
+- `bash packaging/scripts/validate-packaging-metadata.sh`
+- `bash ./bin/lint`
+- QEMU/KVM NixOS VM:
+  - `nix build --no-write-lock-file 'path:/mnt/hostrepo#default'`
+  - `./result/bin/slskd --help`
+  - `nixos-rebuild test --impure` with a local `services.slskd.package` override
+  - `systemctl status slskd --no-pager`
+  - `journalctl -u slskd --no-pager -n 120`
+
+### Notes
+- The original GitHub issue symptom is resolved at the packaging/runtime layer: on real NixOS the package now builds, the wrapper executable exists, and the packaged binary starts instead of failing with `203/EXEC`, `127`, or `stub-ld`.
+- The remaining systemd stop in the VM is not a Nix loader issue. It is application configuration validation caused by the minimal fake env file used for the VM smoke test.
 - Treat repo-wide analyzer/lint cleanup as a separate task from this packaging fix; there is still broad existing debt outside the touched files.
 
 ---
