@@ -380,6 +380,35 @@ mount /dev/vda1 /mnt
 
 **Why This Keeps Happening**: It is tempting to use the friendlier `/dev/disk/by-label/...` path immediately after formatting, but installer/live environments can lag on udev updates. For fresh partitions, either wait for udev explicitly or mount the block device path you already know exists.
 
+### 2d. Do Not Append a Bare Attrset to `configuration.nix`; Add a Module or Edit Inside the Existing One
+
+**The Bug**: A NixOS install helper appended a second top-level `{ ... }` block to the generated `/etc/nixos/configuration.nix`, but that file already defines a module function (`{ config, pkgs, ... }:`). The next `nixos-install` failed with “attempt to call something which is not a function but a set”.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```bash
+cat >> /mnt/etc/nixos/configuration.nix <<'EOF'
+{
+  services.openssh.enable = true;
+}
+EOF
+```
+
+**Correct**:
+```bash
+cat > /mnt/etc/nixos/slskdn-vm.nix <<'EOF'
+{ ... }:
+{
+  services.openssh.enable = true;
+}
+EOF
+printf '\n  ./slskdn-vm.nix\n' >> /mnt/etc/nixos/configuration.nix
+```
+
+**Why This Keeps Happening**: Generated NixOS config files look like plain attribute sets at a glance, but they are module functions. If you need to inject extra settings from a script, either edit inside the existing attrset carefully or create a separate module file and import it.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
