@@ -428,6 +428,25 @@ boot.loader.grub.devices = [ "/dev/vda" ];
 
 **Why This Keeps Happening**: Older examples and muscle memory still use the singular `grub.device` form, but the current module assertions in this install path expect the list form. Check the generated module assertions on current NixOS releases instead of reusing older snippets blindly.
 
+### 2f. Generated NixOS `imports` Blocks May Span Multiple Lines; Match the Real Shape Before Using `sed`
+
+**The Bug**: A helper tried to inject `./slskdn-vm.nix` with `sed '/imports = \[/a ...'`, but `nixos-generate-config` emitted `imports =` and `[` on separate lines, so the expression never matched and the custom module was not imported at all.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```bash
+sed -i '/imports = \[/a\ \ \ \ ./slskdn-vm.nix' /mnt/etc/nixos/configuration.nix
+```
+
+**Correct**:
+```bash
+sed -i '/\.\/hardware-configuration\.nix/a\ \ \ \ \ \./slskdn-vm.nix' /mnt/etc/nixos/configuration.nix
+```
+
+**Why This Keeps Happening**: Generated config files look predictable, but their whitespace and line breaks are not stable enough to target with a guessed pattern. Match a concrete line that is actually present in the generated file, or rewrite the whole block explicitly instead of assuming a one-line `imports = [`.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
