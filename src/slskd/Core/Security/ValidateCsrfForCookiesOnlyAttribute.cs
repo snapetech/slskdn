@@ -27,7 +27,7 @@ using Serilog;
 public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizationFilter
 {
     private static readonly ILogger Log = Serilog.Log.ForContext<ValidateCsrfForCookiesOnlyAttribute>();
-    
+
     /// <summary>
     /// Filter order - set to run early in the authorization pipeline.
     /// </summary>
@@ -44,7 +44,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var request = context.HttpContext.Request;
-        
+
         // 2. Exempt safe HTTP methods (GET, HEAD, OPTIONS, TRACE) - CHECK FIRST
         // NOTE: This check must happen BEFORE any other checks to ensure GET requests are never validated
         if (SafeMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
@@ -53,9 +53,9 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             Log.Verbose("[CSRF] Skipping validation for safe method: {Method} {Path}", request.Method, request.Path);
             return; // Safe method - no CSRF needed
         }
-        
+
         Log.Verbose("[CSRF] Processing non-safe method: {Method} {Path}", request.Method, request.Path);
-        
+
         // 1. Exempt endpoints with [AllowAnonymous] attribute (like login)
         var endpoint = context.HttpContext.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() != null)
@@ -73,6 +73,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
                 Log.Verbose("[CSRF] Skipping validation for JWT Bearer token");
                 return; // JWT auth - no CSRF needed
             }
+
             if (authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
             {
                 Log.Verbose("[CSRF] Skipping validation for Basic Auth");
@@ -103,11 +104,11 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
         }
 
         // 7. This is a cookie-based request (web UI) - validate CSRF token
-        Log.Verbose("[CSRF] Validating CSRF token for cookie-based request: {Method} {Path}", 
+        Log.Verbose("[CSRF] Validating CSRF token for cookie-based request: {Method} {Path}",
             request.Method, request.Path);
 
         var antiforgery = context.HttpContext.RequestServices.GetRequiredService<IAntiforgery>();
-        
+
         try
         {
             await antiforgery.ValidateRequestAsync(context.HttpContext);
@@ -115,9 +116,9 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
         }
         catch (AntiforgeryValidationException ex)
         {
-            Log.Warning("[CSRF] Token validation failed for {Method} {Path}: {Message}", 
+            Log.Warning("[CSRF] Token validation failed for {Method} {Path}: {Message}",
                 request.Method, request.Path, ex.Message);
-            
+
             // Ensure response hasn't started before writing error
             if (!context.HttpContext.Response.HasStarted)
             {
@@ -128,7 +129,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
                     Detail = "This request requires a valid CSRF token. If you're using the web UI, please try refreshing the page. If you're using the API, use JWT or API key authentication instead of cookies."
                 };
                 problem.Extensions["hint"] = "Web UI: Refresh page | API: Use Authorization header with Bearer token or X-API-Key header";
-                
+
                 // Set result - framework will execute it
                 var result = new BadRequestObjectResult(problem);
                 result.ContentTypes.Clear();
@@ -143,9 +144,9 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
         catch (Exception ex)
         {
             // Catch any other exceptions from ValidateRequestAsync
-            Log.Error(ex, "[CSRF] Unexpected error during token validation for {Method} {Path}", 
+            Log.Error(ex, "[CSRF] Unexpected error during token validation for {Method} {Path}",
                 request.Method, request.Path);
-            
+
             // Ensure response hasn't started before writing error
             if (!context.HttpContext.Response.HasStarted)
             {

@@ -251,6 +251,7 @@ namespace slskd.Common.CodeQuality
                 {
                     Log.LogError($"Critical scenario failed: {failure.ScenarioName}");
                 }
+
                 return true;
             }
 
@@ -265,6 +266,7 @@ namespace slskd.Common.CodeQuality
                 {
                     Log.LogError($"Major performance regression: {regression.ScenarioName} ({regression.RegressionFactor:F1}x slower)");
                 }
+
                 return true;
             }
 
@@ -348,5 +350,3 @@ namespace slskd.Common.CodeQuality
         }
     }
 }
-
-

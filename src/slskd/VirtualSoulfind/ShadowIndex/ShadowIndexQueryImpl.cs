@@ -15,7 +15,7 @@ public interface IShadowIndexQuery
     /// Resolve MBID to peer hints and canonical variants.
     /// </summary>
     Task<ShadowIndexQueryResult?> QueryAsync(string mbid, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Resolve multiple MBIDs at once.
     /// </summary>

@@ -139,4 +139,3 @@ public record PublishingStats(
     IReadOnlyDictionary<string, int> PublicationsByDomain,
     long TotalStorageBytes,
     double AverageTtlHours);
-

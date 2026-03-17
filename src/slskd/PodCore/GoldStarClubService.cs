@@ -91,7 +91,7 @@ public class GoldStarClubService : BackgroundService, IGoldStarClubService
         // Check current membership count
         var count = await GetMembershipCountAsync(ct);
         var accepting = count < MaxMembership;
-        
+
         // Cache the result
         isAcceptingMembers = accepting;
 
@@ -154,12 +154,12 @@ public class GoldStarClubService : BackgroundService, IGoldStarClubService
         };
 
         var joined = await podService.JoinAsync(GoldStarClubPodId, member, ct);
-        
+
         if (joined)
         {
             var newCount = await GetMembershipCountAsync(ct);
             logger.LogInformation("[GoldStarClub] ✓ Auto-joined {PeerId} to Gold Star Club ({Count}/{Max})", peerId, newCount, MaxMembership);
-            
+
             // If we just hit the limit, update cache
             if (newCount >= MaxMembership)
             {
@@ -219,7 +219,7 @@ public class GoldStarClubService : BackgroundService, IGoldStarClubService
 
             await podService.CreateAsync(pod, ct);
             logger.LogInformation("[GoldStarClub] Created Gold Star Club pod (max {Max} members)", MaxMembership);
-            
+
             podInitialized = true;
         }
         finally

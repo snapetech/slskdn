@@ -90,6 +90,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 var domain = pod.FocusContentId.Split(':').Skip(1).FirstOrDefault() ?? "unknown";
                 _publicationsByDomain.AddOrUpdate(domain, 1, (_, count) => count + 1);
             }
+
             _publicationsByVisibility.AddOrUpdate(pod.Visibility, 1, (_, count) => count + 1);
 
             _logger.LogInformation(
@@ -106,7 +107,7 @@ public class PodDhtPublisher : IPodDhtPublisher
         catch (Exception ex)
         {
             Interlocked.Increment(ref _failedPublications);
-                _logger.LogError(ex, "[PodDhtPublisher] Error publishing pod {PodId}", pod.PodId);
+            _logger.LogError(ex, "[PodDhtPublisher] Error publishing pod {PodId}", pod.PodId);
             return new PodPublishResult(
                 Success: false,
                 PodId: pod.PodId,
@@ -254,7 +255,6 @@ public class PodDhtPublisher : IPodDhtPublisher
             // Get current pod metadata (would need to be provided or retrieved from storage)
             // For now, return success without actual republishing
             // In a real implementation, this would fetch the current pod and republish it
-
             _logger.LogInformation("[PodDhtPublisher] Pod {PodId} refreshed (placeholder implementation)", podId);
 
             return new PodRefreshResult(

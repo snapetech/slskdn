@@ -132,4 +132,3 @@ namespace slskd.VirtualSoulfind.Core
         public override string ToString() => Value.ToString();
     }
 }
-

@@ -116,7 +116,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
         private static bool IsAllowedLanPath(string path, LanBackendOptions opts)
         {
             // UNC path format: \\hostname\share\path or smb://hostname/share/path
-            if (path.StartsWith("\\\\", StringComparison.Ordinal) || 
+            if (path.StartsWith("\\\\", StringComparison.Ordinal) ||
                 path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
             {

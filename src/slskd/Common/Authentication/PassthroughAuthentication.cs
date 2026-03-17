@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="PassthroughAuthentication.cs" company="slskd Team">
+// <copyright file="PassthroughAuthentication.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 namespace slskd.Authentication
 {
     using System.Net;
@@ -81,6 +80,7 @@ namespace slskd.Authentication
                         break;
                     }
                 }
+
                 if (!allowed)
                     return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback, AllowRemoteNoAuth, or AllowedCidrs"));
             }

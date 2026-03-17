@@ -323,6 +323,7 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
                     {
                         circuit.Dispose();
                     }
+
                     _activeCircuits.Clear();
                 }
             }

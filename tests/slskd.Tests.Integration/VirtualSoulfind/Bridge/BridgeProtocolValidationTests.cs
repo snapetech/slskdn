@@ -421,19 +421,6 @@ public class BridgeProtocolValidationTests
         Assert.True(response.Length > 0);
     }
 
-    private byte[] BuildLoginPayload(string username, string password)
-    {
-        using var stream = new MemoryStream();
-        using var writer = new BinaryWriter(stream);
-        var usernameBytes = Encoding.UTF8.GetBytes(username);
-        writer.Write(usernameBytes.Length);
-        writer.Write(usernameBytes);
-        var passwordBytes = Encoding.UTF8.GetBytes(password);
-        writer.Write(passwordBytes.Length);
-        writer.Write(passwordBytes);
-        return stream.ToArray();
-    }
-
     private byte[] BuildSearchPayload(string query, int token)
     {
         using var stream = new MemoryStream();

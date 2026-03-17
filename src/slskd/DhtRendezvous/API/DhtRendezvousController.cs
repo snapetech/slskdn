@@ -24,7 +24,7 @@ using slskd.DhtRendezvous.Security;
 [ApiVersion("0")]
 [Route("api/v{version:apiVersion}")]
 [Authorize]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class DhtRendezvousController : ControllerBase
 {
     private readonly IDhtRendezvousService _dhtService;
@@ -33,7 +33,7 @@ public class DhtRendezvousController : ControllerBase
     private readonly MeshNeighborRegistry _neighborRegistry;
     private readonly OverlayRateLimiter _rateLimiter;
     private readonly OverlayBlocklist _blocklist;
-    
+
     public DhtRendezvousController(
         IDhtRendezvousService dhtService,
         IMeshOverlayServer overlayServer,
@@ -49,7 +49,7 @@ public class DhtRendezvousController : ControllerBase
         _rateLimiter = rateLimiter;
         _blocklist = blocklist;
     }
-    
+
     /// <summary>
     /// Get DHT rendezvous service status.
     /// </summary>
@@ -57,7 +57,7 @@ public class DhtRendezvousController : ControllerBase
     public ActionResult<DhtStatusResponse> GetDhtStatus()
     {
         var stats = _dhtService.GetStats();
-        
+
         return Ok(new DhtStatusResponse
         {
             IsEnabled = stats.IsDhtRunning,
@@ -79,7 +79,7 @@ public class DhtRendezvousController : ControllerBase
             RendezvousInfohashes = stats.RendezvousInfohashes,
         });
     }
-    
+
     /// <summary>
     /// Get discovered peer endpoints.
     /// </summary>
@@ -92,10 +92,10 @@ public class DhtRendezvousController : ControllerBase
                 Address = ep.Address.ToString(),
                 Port = ep.Port,
             });
-        
+
         return Ok(peers);
     }
-    
+
     /// <summary>
     /// Force a DHT announcement (beacon mode only).
     /// </summary>
@@ -106,11 +106,11 @@ public class DhtRendezvousController : ControllerBase
         {
             return BadRequest(new { error = "Not beacon capable" });
         }
-        
+
         await _dhtService.AnnounceAsync(cancellationToken);
         return Ok(new { message = "Announced" });
     }
-    
+
     /// <summary>
     /// Force a DHT discovery cycle.
     /// </summary>
@@ -118,14 +118,14 @@ public class DhtRendezvousController : ControllerBase
     public async Task<ActionResult<DiscoveryResultResponse>> Discover(CancellationToken cancellationToken)
     {
         var newConnections = await _dhtService.DiscoverPeersAsync(cancellationToken);
-        
+
         return Ok(new DiscoveryResultResponse
         {
             NewConnectionsMade = newConnections,
             TotalMeshConnections = _dhtService.ActiveMeshConnections,
         });
     }
-    
+
     /// <summary>
     /// Get active overlay connections.
     /// </summary>
@@ -144,10 +144,10 @@ public class DhtRendezvousController : ControllerBase
                 CertificateThumbprint = p.CertificateThumbprint?[..16] + "...", // Truncate for display
                 Version = p.PeerVersion,
             });
-        
+
         return Ok(peers);
     }
-    
+
     /// <summary>
     /// Get overlay network statistics.
     /// </summary>
@@ -158,12 +158,12 @@ public class DhtRendezvousController : ControllerBase
         var connectorStats = _overlayConnector.GetStats();
         var rateLimiterStats = _rateLimiter.GetStats();
         var blocklistStats = _blocklist.GetStats();
-        
+
         // Get version stats from connected peers
         var connectedPeers = _dhtService.GetMeshPeers();
         var slskdnPeersWithVersion = connectedPeers.Count(p => p.PeerVersion.HasValue);
         var slskdnPeersWithoutVersion = connectedPeers.Count(p => !p.PeerVersion.HasValue);
-        
+
         return Ok(new OverlayStatsResponse
         {
             Server = new ServerStatsResponse
@@ -202,7 +202,7 @@ public class DhtRendezvousController : ControllerBase
             },
         });
     }
-    
+
     /// <summary>
     /// Get blocked IPs and usernames.
     /// </summary>
@@ -219,7 +219,7 @@ public class DhtRendezvousController : ControllerBase
                 ExpiresAt = kvp.Value.ExpiresAt,
                 IsPermanent = kvp.Value.IsPermanent,
             });
-        
+
         var blockedUsernames = _blocklist.GetBlockedUsernames()
             .Select(kvp => new BlockedEntryResponse
             {
@@ -230,13 +230,13 @@ public class DhtRendezvousController : ControllerBase
                 ExpiresAt = kvp.Value.ExpiresAt,
                 IsPermanent = kvp.Value.IsPermanent,
             });
-        
+
         return Ok(new BlocklistResponse
         {
             Entries = blockedIps.Concat(blockedUsernames).ToList(),
         });
     }
-    
+
     /// <summary>
     /// Add an IP to the blocklist.
     /// </summary>
@@ -247,16 +247,16 @@ public class DhtRendezvousController : ControllerBase
         {
             return BadRequest(new { error = "Invalid IP address" });
         }
-        
+
         var duration = request.DurationMinutes.HasValue
             ? TimeSpan.FromMinutes(request.DurationMinutes.Value)
             : (TimeSpan?)null;
-        
+
         _blocklist.BlockIp(ip, request.Reason ?? "Manual block", duration, request.Permanent);
-        
+
         return Ok(new { message = $"Blocked IP {request.Ip}" });
     }
-    
+
     /// <summary>
     /// Add a username to the blocklist.
     /// </summary>
@@ -267,16 +267,16 @@ public class DhtRendezvousController : ControllerBase
         {
             return BadRequest(new { error = "Username required" });
         }
-        
+
         var duration = request.DurationMinutes.HasValue
             ? TimeSpan.FromMinutes(request.DurationMinutes.Value)
             : (TimeSpan?)null;
-        
+
         _blocklist.BlockUsername(request.Username, request.Reason ?? "Manual block", duration, request.Permanent);
-        
+
         return Ok(new { message = $"Blocked username {request.Username}" });
     }
-    
+
     /// <summary>
     /// Remove an entry from the blocklist.
     /// </summary>
@@ -284,14 +284,14 @@ public class DhtRendezvousController : ControllerBase
     public ActionResult Unblock(string type, string target)
     {
         bool removed;
-        
+
         if (type.Equals("ip", StringComparison.OrdinalIgnoreCase))
         {
             if (!System.Net.IPAddress.TryParse(target, out var ip))
             {
                 return BadRequest(new { error = "Invalid IP address" });
             }
-            
+
             removed = _blocklist.UnblockIp(ip);
         }
         else if (type.Equals("username", StringComparison.OrdinalIgnoreCase))
@@ -302,12 +302,12 @@ public class DhtRendezvousController : ControllerBase
         {
             return BadRequest(new { error = "Type must be 'ip' or 'username'" });
         }
-        
+
         if (!removed)
         {
             return NotFound(new { error = $"{type} {target} not found in blocklist" });
         }
-        
+
         return Ok(new { message = $"Unblocked {type} {target}" });
     }
 }
@@ -433,4 +433,3 @@ public sealed class BlockUsernameRequest
     public int? DurationMinutes { get; init; }
     public bool Permanent { get; init; }
 }
-

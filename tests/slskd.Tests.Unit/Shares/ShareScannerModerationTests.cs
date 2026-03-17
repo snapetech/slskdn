@@ -46,12 +46,12 @@ public class ShareScannerModerationTests
     {
         // This test verifies that when MCP returns Blocked, the file is marked with isBlocked=true
         // in the database, and it won't appear in shares.
-        
+
         // Note: Full integration test would require setting up temp directories and database.
         // This is a design verification test - the actual integration is tested in the real scanner.
-        
+
         var decision = ModerationDecision.Block("hash_blocklist", "evidence:1");
-        
+
         Assert.True(decision.IsBlocking());
         Assert.Equal(ModerationVerdict.Blocked, decision.Verdict);
     }
@@ -60,7 +60,7 @@ public class ShareScannerModerationTests
     public async Task ModerationProvider_QuarantinedVerdict_SetsIsQuarantinedFlag()
     {
         var decision = ModerationDecision.Quarantine("legal_hold");
-        
+
         Assert.True(decision.IsBlocking());
         Assert.Equal(ModerationVerdict.Quarantined, decision.Verdict);
     }
@@ -69,7 +69,7 @@ public class ShareScannerModerationTests
     public async Task ModerationProvider_AllowedVerdict_AllowsFileToBeShared()
     {
         var decision = ModerationDecision.Allow();
-        
+
         Assert.False(decision.IsBlocking());
         Assert.True(decision.IsAllowed());
         Assert.Equal(ModerationVerdict.Allowed, decision.Verdict);
@@ -97,7 +97,7 @@ public class ShareScannerModerationTests
         // This verifies the hash computation returns a valid hex string
         // Real test would need a temp file
         var hashExample = "A1B2C3D4E5F6";
-        
+
         Assert.True(hashExample.Length > 0);
         Assert.All(hashExample, c => Assert.True(char.IsLetterOrDigit(c)));
     }
@@ -273,10 +273,10 @@ public class McpSecurityComplianceTests
     {
         // 🔒 SECURITY: Verify that scanner logs only sanitized information
         // Per docs/MCP-HARDENING.md Section 1.2: No full filesystem paths in logs
-        
+
         var fullPath = "/home/user/Music/Artist/Album/track.mp3";
         var sanitized = Path.GetFileName(fullPath);
-        
+
         Assert.Equal("track.mp3", sanitized);
         Assert.DoesNotContain("/", sanitized);
         Assert.DoesNotContain("\\", sanitized);
@@ -287,10 +287,10 @@ public class McpSecurityComplianceTests
     {
         // 🔒 SECURITY: Per docs/MCP-HARDENING.md Section 1.1: No raw hashes in logs
         // Logs should only include first 8 chars max for debugging
-        
+
         var fullHash = "A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6";
         var sanitized = fullHash.Substring(0, Math.Min(8, fullHash.Length));
-        
+
         Assert.Equal("A1B2C3D4", sanitized);
         Assert.True(sanitized.Length <= 8);
     }
@@ -300,12 +300,12 @@ public class McpSecurityComplianceTests
     {
         // 🔒 SECURITY: Evidence keys must be opaque identifiers
         // Per docs/MCP-HARDENING.md Section 1.4: No raw data in evidence
-        
+
         var decision = ModerationDecision.Block(
             "hash_blocklist",
             "provider:blocklist",  // Opaque ✅
             "internal:guid-123");   // Opaque ✅
-        
+
         foreach (var key in decision.EvidenceKeys)
         {
             // Evidence keys should be short identifiers, not raw hashes/paths

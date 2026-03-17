@@ -30,6 +30,7 @@ public class ApplicationHostedServiceWrapper : IHostedService
         // Critical: log to stderr so we can see this even if Serilog isn't ready
         System.Console.Error.WriteLine("[ApplicationHostedServiceWrapper] StartAsync called");
         _logger?.LogInformation("[ApplicationHostedServiceWrapper] StartAsync called - about to call Application.StartAsync");
+
         // Application.StartAsync returns immediately (runs initialization in background)
         // This should not block the web server from starting
         var result = _application.StartAsync(cancellationToken);

@@ -42,9 +42,9 @@ public static class ContentSafety
         },
         [".aac"] = new[] { new FileSignature(new byte[] { 0xFF, 0xF1 }, 0) }, // ADTS
         [".wma"] = new[] { new FileSignature(new byte[] { 0x30, 0x26, 0xB2, 0x75, 0x8E, 0x66, 0xCF, 0x11 }, 0) }, // ASF
-        [".ape"] = new[] { new FileSignature(new byte[] { 0x4D, 0x41, 0x43, 0x20 }, 0) }, // MAC 
+        [".ape"] = new[] { new FileSignature(new byte[] { 0x4D, 0x41, 0x43, 0x20 }, 0) }, // MAC
         [".wv"] = new[] { new FileSignature(new byte[] { 0x77, 0x76, 0x70, 0x6B }, 0) }, // wvpk
-        
+
         // Dangerous executable formats (for detection)
         [".exe"] = new[]
         {
@@ -58,13 +58,13 @@ public static class ContentSafety
         {
             new FileSignature(new byte[] { 0x4D, 0x5A }, 0), // Some COM files are actually PE
         },
-        
+
         // Scripts (text-based, harder to detect but check for shebang)
         [".sh"] = new[]
         {
             new FileSignature(new byte[] { 0x23, 0x21 }, 0), // #!
         },
-        
+
         // Archives (could contain executables)
         [".zip"] = new[]
         {
@@ -79,14 +79,14 @@ public static class ContentSafety
         {
             new FileSignature(new byte[] { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C }, 0), // 7z
         },
-        
+
         // ELF binaries (Linux executables)
         [".elf"] = new[]
         {
             new FileSignature(new byte[] { 0x7F, 0x45, 0x4C, 0x46 }, 0), // .ELF
         },
     };
-    
+
     /// <summary>
     /// Magic bytes that indicate dangerous content regardless of extension.
     /// </summary>
@@ -100,7 +100,7 @@ public static class ContentSafety
         new FileSignature(new byte[] { 0xFE, 0xED, 0xFA, 0xCE }, 0, "Mach-O 32-bit (BE)"),
         new FileSignature(new byte[] { 0xFE, 0xED, 0xFA, 0xCF }, 0, "Mach-O 64-bit (BE)"),
     };
-    
+
     /// <summary>
     /// Verifies that a file's content matches its extension.
     /// </summary>
@@ -115,13 +115,13 @@ public static class ContentSafety
         {
             return ContentVerificationResult.Fail("File not found", ContentThreatLevel.Unknown);
         }
-        
+
         var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
         if (string.IsNullOrEmpty(extension))
         {
             return ContentVerificationResult.Fail("No file extension", ContentThreatLevel.Suspicious);
         }
-        
+
         // Read header bytes
         byte[] header;
         try
@@ -134,7 +134,7 @@ public static class ContentSafety
         {
             return ContentVerificationResult.Fail($"Could not read file: {ex.Message}", ContentThreatLevel.Unknown);
         }
-        
+
         // Check for dangerous content first
         foreach (var sig in DangerousSignatures)
         {
@@ -147,14 +147,14 @@ public static class ContentSafety
                         $"Executable file: {sig.Description}",
                         ContentThreatLevel.Executable);
                 }
-                
+
                 // Extension mismatch with executable content!
                 return ContentVerificationResult.Fail(
                     $"DANGEROUS: File claims to be {extension} but contains {sig.Description}",
                     ContentThreatLevel.Dangerous);
             }
         }
-        
+
         // Check if file matches expected signature for its extension
         if (Signatures.TryGetValue(extension, out var expectedSigs))
         {
@@ -167,7 +167,7 @@ public static class ContentSafety
                     break;
                 }
             }
-            
+
             if (!matches)
             {
                 return ContentVerificationResult.Warn(
@@ -175,10 +175,10 @@ public static class ContentSafety
                     ContentThreatLevel.Mismatch);
             }
         }
-        
+
         return ContentVerificationResult.Success(extension);
     }
-    
+
     /// <summary>
     /// Verifies content from a byte array (for streaming verification).
     /// </summary>
@@ -191,13 +191,13 @@ public static class ContentSafety
         {
             return ContentVerificationResult.Fail("Header too short", ContentThreatLevel.Unknown);
         }
-        
+
         var extension = expectedExtension?.ToLowerInvariant();
         if (string.IsNullOrEmpty(extension))
         {
             return ContentVerificationResult.Fail("No expected extension", ContentThreatLevel.Unknown);
         }
-        
+
         // Check for dangerous content
         foreach (var sig in DangerousSignatures)
         {
@@ -209,13 +209,13 @@ public static class ContentSafety
                         $"Executable file: {sig.Description}",
                         ContentThreatLevel.Executable);
                 }
-                
+
                 return ContentVerificationResult.Fail(
                     $"DANGEROUS: Content claims to be {extension} but is {sig.Description}",
                     ContentThreatLevel.Dangerous);
             }
         }
-        
+
         // Check extension match
         if (Signatures.TryGetValue(extension, out var expectedSigs))
         {
@@ -228,7 +228,7 @@ public static class ContentSafety
                     break;
                 }
             }
-            
+
             if (!matches)
             {
                 return ContentVerificationResult.Warn(
@@ -236,10 +236,10 @@ public static class ContentSafety
                     ContentThreatLevel.Mismatch);
             }
         }
-        
+
         return ContentVerificationResult.Success(extension);
     }
-    
+
     /// <summary>
     /// Quick check if header bytes indicate an executable.
     /// </summary>
@@ -249,7 +249,7 @@ public static class ContentSafety
         {
             return false;
         }
-        
+
         foreach (var sig in DangerousSignatures)
         {
             if (MatchesSignature(header, sig))
@@ -257,17 +257,17 @@ public static class ContentSafety
                 return true;
             }
         }
-        
+
         return false;
     }
-    
+
     private static bool MatchesSignature(byte[] data, FileSignature signature)
     {
         if (data.Length < signature.Offset + signature.Magic.Length)
         {
             return false;
         }
-        
+
         for (int i = 0; i < signature.Magic.Length; i++)
         {
             if (data[signature.Offset + i] != signature.Magic[i])
@@ -275,10 +275,10 @@ public static class ContentSafety
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     /// <summary>
     /// File signature definition.
     /// </summary>
@@ -287,7 +287,7 @@ public static class ContentSafety
         public byte[] Magic { get; }
         public int Offset { get; }
         public string Description { get; }
-        
+
         public FileSignature(byte[] magic, int offset, string description = "")
         {
             Magic = magic;
@@ -307,7 +307,7 @@ public readonly struct ContentVerificationResult
     public string? Message { get; init; }
     public string? DetectedType { get; init; }
     public ContentThreatLevel ThreatLevel { get; init; }
-    
+
     public static ContentVerificationResult Success(string detectedType) => new()
     {
         IsValid = true,
@@ -315,7 +315,7 @@ public readonly struct ContentVerificationResult
         DetectedType = detectedType,
         ThreatLevel = ContentThreatLevel.Safe,
     };
-    
+
     public static ContentVerificationResult Warn(string message, ContentThreatLevel level) => new()
     {
         IsValid = true,
@@ -323,7 +323,7 @@ public readonly struct ContentVerificationResult
         Message = message,
         ThreatLevel = level,
     };
-    
+
     public static ContentVerificationResult Fail(string message, ContentThreatLevel level) => new()
     {
         IsValid = false,
@@ -340,20 +340,19 @@ public enum ContentThreatLevel
 {
     /// <summary>Content is safe.</summary>
     Safe,
-    
+
     /// <summary>Content type is unknown.</summary>
     Unknown,
-    
+
     /// <summary>Content is suspicious but not necessarily dangerous.</summary>
     Suspicious,
-    
+
     /// <summary>Content type doesn't match extension.</summary>
     Mismatch,
-    
+
     /// <summary>Content is an executable (may be intentional).</summary>
     Executable,
-    
+
     /// <summary>Content is dangerous (executable disguised as media).</summary>
     Dangerous,
 }
-

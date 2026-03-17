@@ -47,7 +47,7 @@ public class GoldStarClubServiceTests
 
         // Assert
         mockPodService.Verify(s => s.CreateAsync(
-            It.Is<Pod>(p => 
+            It.Is<Pod>(p =>
                 p.PodId == GoldStarClubService.GoldStarClubPodId &&
                 p.Name == "Gold Star Club ⭐" &&
                 p.Visibility == PodVisibility.Listed &&
@@ -80,7 +80,7 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = new List<PodMember>
         {
             new PodMember { PeerId = "user1" },
@@ -104,7 +104,7 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = Enumerable.Range(1, 500)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
@@ -125,7 +125,7 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = Enumerable.Range(1, 1000)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
@@ -146,7 +146,7 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = Enumerable.Range(1, 1001)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
@@ -167,13 +167,13 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = Enumerable.Range(1, 500)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
         mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(members);
-        
+
         mockPodService.Setup(s => s.JoinAsync(
             GoldStarClubService.GoldStarClubPodId,
             It.Is<PodMember>(m => m.PeerId == "new-user" && m.Role == "member"),
@@ -199,7 +199,7 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = Enumerable.Range(1, 1000)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
@@ -225,7 +225,7 @@ public class GoldStarClubServiceTests
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
-        
+
         var members = new List<PodMember>
         {
             new PodMember { PeerId = "existing-user" }

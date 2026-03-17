@@ -31,6 +31,8 @@ using Asp.Versioning.ApiExplorer;
 using global::slskd.API.Compatibility;
 using global::slskd.API.Native;
 using global::slskd.Jobs;
+using global::slskd.Integrations.MusicBrainz;
+using global::slskd.Integrations.MusicBrainz.Models;
 using global::slskd.LibraryHealth;
 using global::slskd.Search;
 using global::slskd.Transfers;
@@ -49,7 +51,6 @@ using slskd.Streaming;
 using slskd.Mesh;
 using slskd.Search.Providers;
 using System.Linq;
-using System.Linq.Expressions;
 using Moq;
 using OptionsModel = global::slskd.Options;
 
@@ -66,7 +67,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
         var solutionRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", ".."));
         var testContentRoot = Path.Combine(solutionRoot, "slskd.Tests.Integration");
         System.IO.Directory.CreateDirectory(testContentRoot);
-        
+
         // Manually create host builder to avoid default path inference issues
         return new HostBuilder()
             .UseContentRoot(testContentRoot)
@@ -83,7 +84,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
             {
                 webBuilder.UseTestServer();
                 webBuilder.UseContentRoot(testContentRoot);
-                
+
                 webBuilder.ConfigureAppConfiguration(config =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -91,7 +92,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         ["Logging:LogLevel:Default"] = "Warning"
                     });
                 });
-                
+
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
@@ -103,20 +104,20 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         options.DefaultPolicy = new AuthorizationPolicyBuilder("Test")
                             .RequireAuthenticatedUser()
                             .Build();
-                        
+
                         // Register AuthPolicy.Any for controllers that use it
                         options.AddPolicy(slskd.AuthPolicy.Any, policy =>
                         {
                             policy.AuthenticationSchemes.Add("Test");
                             policy.RequireAuthenticatedUser();
                         });
-                        
+
                         options.AddPolicy(slskd.AuthPolicy.JwtOnly, policy =>
                         {
                             policy.AuthenticationSchemes.Add("Test");
                             policy.RequireAuthenticatedUser();
                         });
-                        
+
                         options.AddPolicy(slskd.AuthPolicy.ApiKeyOnly, policy =>
                         {
                             policy.AuthenticationSchemes.Add("Test");
@@ -174,7 +175,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
 
                     var discographyService = new StubDiscographyJobService();
                     var labelCrateService = new StubLabelCrateJobService();
-                    
+
                     services.AddSingleton<IOptionsMonitor<OptionsModel>>(_ => new StaticOptionsMonitor<OptionsModel>(new OptionsModel
                     {
                         WarmCache = new global::slskd.WarmCacheOptions
@@ -193,6 +194,15 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                     }))
                         .AddSingleton<IDiscographyJobService>(discographyService)
                         .AddSingleton<ILabelCrateJobService>(labelCrateService)
+                        .AddSingleton<IMusicBrainzClient>(_ => Mock.Of<IMusicBrainzClient>(client =>
+                            client.GetReleaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) ==
+                                Task.FromResult<AlbumTarget?>(new AlbumTarget
+                                {
+                                    MusicBrainzReleaseId = "test-release",
+                                    MusicBrainzArtistId = "test-artist",
+                                    Artist = "Test Artist",
+                                    Title = "Test Release",
+                                })))
                         .AddSingleton<IJobServiceWithList>(new JobServiceListAdapter(discographyService, labelCrateService))
                         .AddSingleton<ILibraryHealthService, StubLibraryHealthService>()
                         .AddSingleton<IDownloadService, StubDownloadService>()
@@ -234,7 +244,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                     services.AddSingleton<IBridgeDashboard, BridgeDashboard>();
                     services.AddSingleton<ITransferProgressProxy>(_ => NullProxy<ITransferProgressProxy>.Create());
                 });
-                
+
                 webBuilder.Configure(app =>
                 {
                     app.UseRouting();
@@ -383,13 +393,61 @@ internal class StubLabelCrateJobService : ILabelCrateJobService
     public IReadOnlyList<LabelCrateJob> GetAllJobs() => jobs.Values.ToList();
 }
 
-internal class ExcludeControllerFeatureProvider : ControllerFeatureProvider
+internal class ExcludeControllerFeatureProvider : ControllerFeatureProvider, IApplicationFeatureProvider<ControllerFeature>
 {
     private readonly HashSet<Type> excludeTypes;
 
     public ExcludeControllerFeatureProvider(params Type[] excludeTypes)
     {
         this.excludeTypes = new HashSet<Type>(excludeTypes);
+    }
+
+    void IApplicationFeatureProvider<ControllerFeature>.PopulateFeature(
+        IEnumerable<ApplicationPart> parts, ControllerFeature feature)
+    {
+        foreach (var part in parts.OfType<IApplicationPartTypeProvider>())
+        {
+            IEnumerable<TypeInfo> types;
+            try
+            {
+                types = part.Types.ToList();
+            }
+            catch
+            {
+                if (part is not AssemblyPart assemblyPart)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    types = assemblyPart.Assembly.GetTypes().Select(t => t.GetTypeInfo());
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    types = ex.Types.Where(t => t != null).Select(t => t!.GetTypeInfo());
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            foreach (var type in types)
+            {
+                try
+                {
+                    if (IsController(type) && !feature.Controllers.Contains(type))
+                    {
+                        feature.Controllers.Add(type);
+                    }
+                }
+                catch
+                {
+                    // Skip types whose base classes or attributes can't be resolved.
+                }
+            }
+        }
     }
 
     protected override bool IsController(TypeInfo typeInfo)
@@ -602,7 +660,7 @@ internal class StubShareService : IShareService
     public slskd.Shares.Host LocalHost => _localHost;
     public slskd.IStateMonitor<slskd.ShareState> StateMonitor => NullProxy<slskd.IStateMonitor<slskd.ShareState>>.Create();
     public bool IsScanning => false;
-    
+
     public void AddOrUpdateHost(slskd.Shares.Host host) { }
     public Task<IEnumerable<Soulseek.Directory>> BrowseAsync(slskd.Shares.Share share = null) => Task.FromResult(Enumerable.Empty<Soulseek.Directory>());
     public Task DumpAsync(string filename) => Task.CompletedTask;
@@ -612,7 +670,7 @@ internal class StubShareService : IShareService
     public void RequestScan() { }
     public Task<(string Host, string Filename, long Size)> ResolveFileAsync(string remoteFilename) => Task.FromResult(("local", remoteFilename, 0L));
     public Task ScanAsync() => Task.CompletedTask;
-    public Task<IEnumerable<Soulseek.File>> SearchAsync(Soulseek.SearchQuery query) => Task.FromResult(Enumerable.Empty<Soulseek.File>());
+    public Task<IEnumerable<Soulseek.File>> SearchAsync(Soulseek.SearchQuery query, int? limit = null) => Task.FromResult(Enumerable.Empty<Soulseek.File>());
     public Task<IEnumerable<Soulseek.File>> SearchLocalAsync(Soulseek.SearchQuery query) => Task.FromResult(Enumerable.Empty<Soulseek.File>());
     public bool TryCancelScan() => false;
     public bool TryGetHost(string name, out slskd.Shares.Host host) { host = _localHost; return name == "local"; }
@@ -772,12 +830,12 @@ internal class StubSearchService : ISearchService
         var searches = expression != null
             ? _searches.Values.Where(expression.Compile()).ToList()
             : _searches.Values.ToList();
-        
+
         if (offset > 0)
             searches = searches.Skip(offset).ToList();
         if (limit > 0)
             searches = searches.Take(limit).ToList();
-        
+
         return Task.FromResult(searches);
     }
 
@@ -814,4 +872,3 @@ internal class StubSearchService : ISearchService
     public Task<int> PruneAsync(int age) => Task.FromResult(0);
     public Task<int> DeleteAllAsync() => Task.FromResult(0);
 }
-

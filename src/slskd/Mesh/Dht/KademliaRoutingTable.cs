@@ -104,6 +104,7 @@ public class KademliaRoutingTable
             if (CanSplitBucket(bucketIndex))
             {
                 SplitBucket(bucketIndex);
+
                 // After splitting, retry the insertion
                 bucketIndex = GetBucketIndex(nodeId);
                 EnsureBucketExists(bucketIndex);
@@ -247,6 +248,7 @@ public class KademliaRoutingTable
                 // This node goes to bucket1 (more specific)
                 bucket1.AddNode(node);
             }
+
             // Nodes that would go to even higher buckets stay in bucket0 for now
             else
             {
@@ -344,6 +346,7 @@ public class KademliaRoutingTable
                     list.Remove(node);
                     return true;
                 }
+
                 return false;
             }
         }

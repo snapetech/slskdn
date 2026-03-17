@@ -45,7 +45,7 @@ public sealed class SecurityMiddleware
         _fingerprintDetection = fingerprintDetection;
         _paranoidMode = paranoidMode;
         _eventSink = eventSink;
-        
+
         // Don't log constructor - it's called once per request and creates too much noise
         // Only log at TRACE level if needed for debugging
     }
@@ -60,11 +60,11 @@ public sealed class SecurityMiddleware
         var pathBase = context.Request.PathBase.Value ?? string.Empty;
         var path = context.Request.Path.Value ?? string.Empty;
         var normalizedPath = pathBase + path;
-        
+
         // Get raw target from HTTP feature
         var httpRequestFeature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpRequestFeature>();
         var rawTarget = httpRequestFeature?.RawTarget ?? string.Empty;
-        
+
         // Only log at DEBUG level for non-private IPs to reduce noise from localhost
         var isPrivateIp = remoteIp != null && IsPrivateOrLocalIp(remoteIp);
         if (!isPrivateIp)
@@ -73,19 +73,19 @@ public sealed class SecurityMiddleware
                 "[SecurityMiddleware] Request from {Ip}: Path='{Path}', RawTarget='{RawTarget}'",
                 remoteIp, path, rawTarget);
         }
-        
+
         // CRITICAL: Path traversal protection should ALWAYS be enabled, even when security is disabled
         // This is a basic security requirement that should never be bypassed
         // Check for path traversal FIRST, before any other checks
-        
+
         // Check raw target first (before normalization) - this catches plain traversal
         // PathGuard.ContainsTraversal checks for both plain and URL-encoded traversal
         if (!string.IsNullOrEmpty(rawTarget) && PathGuard.ContainsTraversal(rawTarget))
         {
-            _logger.LogWarning("Path traversal attempt from {SanitizedIp}: {SanitizedPath}", 
-                LoggingSanitizer.SanitizeIpAddress(remoteIp), 
+            _logger.LogWarning("Path traversal attempt from {SanitizedIp}: {SanitizedPath}",
+                LoggingSanitizer.SanitizeIpAddress(remoteIp),
                 LoggingSanitizer.SanitizeSensitiveData(rawTarget));
-            
+
             // Record violation if ViolationTracker is available
             if (remoteIp != null)
             {
@@ -102,15 +102,15 @@ public sealed class SecurityMiddleware
             await context.Response.WriteAsync("Bad Request");
             return;
         }
-        
+
         // Also check normalized path (after routing) as a secondary check
         // This catches cases where routing doesn't fully normalize or where the normalized path is still suspicious
         if (!string.IsNullOrEmpty(normalizedPath) && PathGuard.ContainsTraversal(normalizedPath))
         {
-            _logger.LogWarning("Path traversal attempt from {SanitizedIp}: {SanitizedPath}", 
-                LoggingSanitizer.SanitizeIpAddress(remoteIp), 
+            _logger.LogWarning("Path traversal attempt from {SanitizedIp}: {SanitizedPath}",
+                LoggingSanitizer.SanitizeIpAddress(remoteIp),
                 LoggingSanitizer.SanitizeSensitiveData(normalizedPath));
-            
+
             // Record violation if ViolationTracker is available
             if (remoteIp != null)
             {
@@ -127,17 +127,17 @@ public sealed class SecurityMiddleware
             await context.Response.WriteAsync("Bad Request");
             return;
         }
-        
+
         // Check for suspicious paths even after normalization
         // These are paths that look like they're trying to access system files or directories
         // even though they don't contain explicit traversal sequences
         var isSuspicious = !string.IsNullOrEmpty(normalizedPath) && IsSuspiciousPath(normalizedPath);
         if (isSuspicious)
         {
-            _logger.LogWarning("Suspicious path access attempt from {SanitizedIp}: {SanitizedPath}", 
-                LoggingSanitizer.SanitizeIpAddress(remoteIp), 
+            _logger.LogWarning("Suspicious path access attempt from {SanitizedIp}: {SanitizedPath}",
+                LoggingSanitizer.SanitizeIpAddress(remoteIp),
                 LoggingSanitizer.SanitizeSensitiveData(normalizedPath));
-            
+
             // Record violation if ViolationTracker is available
             if (remoteIp != null)
             {
@@ -164,7 +164,7 @@ public sealed class SecurityMiddleware
             await _next(context);
             return;
         }
-        
+
         if (remoteIp == null)
         {
             await _next(context);
@@ -352,7 +352,7 @@ public sealed class SecurityMiddleware
 
         return false;
     }
-    
+
     /// <summary>
     /// Check if a normalized path looks suspicious even without explicit traversal sequences.
     /// This catches cases where the path was normalized but still points to system directories.
@@ -363,12 +363,12 @@ public sealed class SecurityMiddleware
         {
             return false;
         }
-        
+
         // Normalize the path for comparison (remove leading/trailing slashes, convert to lowercase)
         // Keep the leading slash for absolute path detection
         var normalized = path.TrimEnd('/').ToLowerInvariant();
         var normalizedWithoutSlash = normalized.TrimStart('/');
-        
+
         // CRITICAL: Skip checking known safe routes entirely - they're handled by routing
         // This prevents unnecessary checks and logging for API endpoints, hubs, etc.
         if (normalized.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) ||
@@ -383,7 +383,7 @@ public sealed class SecurityMiddleware
             // Known safe route - skip suspicious path check entirely
             return false;
         }
-        
+
         // List of suspicious system paths that should never be accessible
         var suspiciousPaths = new[]
         {
@@ -396,7 +396,7 @@ public sealed class SecurityMiddleware
             "etc/fstab",
             "etc/group",
             "etc/sudoers",
-            
+
             // System directories
             "etc/",
             "root/",
@@ -416,7 +416,7 @@ public sealed class SecurityMiddleware
             "usr/local/bin/",
             "sbin/",
             "bin/",
-            
+
             // Windows system paths (for cross-platform protection)
             "windows/system32",
             "windows/syswow64",
@@ -426,7 +426,7 @@ public sealed class SecurityMiddleware
             "programdata",
             "users/administrator",
             "users/admin",
-            
+
             // Common sensitive files
             ".ssh/id_rsa",
             ".ssh/id_dsa",
@@ -437,7 +437,7 @@ public sealed class SecurityMiddleware
             ".aws/credentials",
             ".docker/config.json",
         };
-        
+
         // Check if path starts with any suspicious path (without leading slash)
         foreach (var suspicious in suspiciousPaths)
         {
@@ -447,13 +447,13 @@ public sealed class SecurityMiddleware
                 return true;
             }
         }
-        
+
         // Check for paths that are absolute (start with /) and look like system paths
         // This catches paths like /etc/passwd, /root/.ssh, etc. that weren't caught above
         if (normalized.StartsWith("/", StringComparison.Ordinal))
         {
-            if (normalizedWithoutSlash.StartsWith("etc/") || 
-                normalizedWithoutSlash.StartsWith("root/") || 
+            if (normalizedWithoutSlash.StartsWith("etc/") ||
+                normalizedWithoutSlash.StartsWith("root/") ||
                 normalizedWithoutSlash.StartsWith("proc/") ||
                 normalizedWithoutSlash.StartsWith("sys/") ||
                 normalizedWithoutSlash.StartsWith("dev/") ||
@@ -469,7 +469,7 @@ public sealed class SecurityMiddleware
                 return true;
             }
         }
-        
+
         return false;
     }
 }
@@ -493,7 +493,7 @@ public static class SecurityMiddlewareExtensions
         var fingerprintDetection = serviceProvider.GetService<FingerprintDetection>();
         var paranoidMode = serviceProvider.GetService<ParanoidMode>();
         var eventSink = serviceProvider.GetService<ISecurityEventSink>();
-        
+
         // Create middleware instance directly - this ensures it's constructed and we can catch any exceptions
         // Use a factory pattern to create middleware per request
         return app.Use(async (context, next) =>
@@ -508,7 +508,7 @@ public static class SecurityMiddlewareExtensions
                     fingerprintDetection,
                     paranoidMode,
                     eventSink);
-                
+
                 await middleware.InvokeAsync(context);
             }
             catch (Exception ex)
@@ -519,4 +519,3 @@ public static class SecurityMiddlewareExtensions
         });
     }
 }
-

@@ -119,7 +119,7 @@ internal sealed class StubShareRepository : IShareRepository
     public long PruneFiles(long olderThanTimestamp) => 0L;
     public void RebuildFilenameIndex() { }
     public void RestoreFrom(IShareRepository repository) { }
-    public IEnumerable<File> Search(SearchQuery query) => Array.Empty<File>();
+    public IEnumerable<File> Search(SearchQuery query, int? limit = null) => Array.Empty<File>();
     public bool TryValidate() => true;
     public bool TryValidate(out IEnumerable<string> problems) { problems = Array.Empty<string>(); return true; }
     public void UpdateScan(long timestamp, long end) { }

@@ -237,6 +237,7 @@ public class SoulseekProtocolParser
             writer.Write(file.Code);
             WriteString(writer, file.Extension ?? string.Empty);
         }
+
         return stream.ToArray();
     }
 
@@ -254,6 +255,7 @@ public class SoulseekProtocolParser
             WriteString(writer, room.Name);
             writer.Write(room.UserCount);
         }
+
         return stream.ToArray();
     }
 
@@ -264,6 +266,7 @@ public class SoulseekProtocolParser
         {
             throw new InvalidOperationException($"Invalid string length: {length}");
         }
+
         var bytes = reader.ReadBytes(length);
         return Encoding.UTF8.GetString(bytes);
     }

@@ -81,6 +81,7 @@ public class DhtService
         {
             activity?.SetTag("mesh.dht.find_value.found", true);
             activity?.SetTag("mesh.dht.find_value.value_size", result.Value?.Length ?? 0);
+
             // Cache the found value locally for future lookups
             await _dhtClient.PutAsync(key, result.Value!, 3600, cancellationToken);
             _logger.LogDebug("[DHT] Found and cached value for key {KeyHex}", Convert.ToHexString(key));
@@ -138,6 +139,7 @@ public class DhtService
         {
             return inMemoryClient.GetStoreStats();
         }
+
         return (0, 0);
     }
 }
@@ -151,4 +153,3 @@ public record DhtLookupResult
     public byte[]? Value { get; init; }
     public IReadOnlyList<KNode> ClosestNodes { get; init; } = Array.Empty<KNode>();
 }
-

@@ -93,5 +93,3 @@ public interface IPrivacyLayer
     /// <param name="options">The new privacy layer options.</param>
     void UpdateConfiguration(PrivacyLayerOptions options);
 }
-
-

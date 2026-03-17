@@ -4,13 +4,13 @@
 
 namespace slskd.API.Native;
 
-using slskd.Core.Security;
-
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using slskd.Jobs;
+using slskd.Core.Security;
 using slskd.Integrations.MusicBrainz;
+using slskd.Jobs;
 
 /// <summary>
 /// Provides slskdn-native job management API.
@@ -18,22 +18,25 @@ using slskd.Integrations.MusicBrainz;
 [ApiController]
 [Route("api/jobs")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class JobsController : ControllerBase
 {
     private readonly IDiscographyJobService discographyJobService;
     private readonly ILabelCrateJobService labelCrateJobService;
+    private readonly IMusicBrainzClient musicBrainzClient;
     private readonly IJobServiceWithList? jobServiceList;
     private readonly ILogger<JobsController> logger;
 
     public JobsController(
         IDiscographyJobService discographyJobService,
         ILabelCrateJobService labelCrateJobService,
+        IMusicBrainzClient musicBrainzClient,
         ILogger<JobsController> logger,
         IJobServiceWithList? jobServiceList = null)
     {
         this.discographyJobService = discographyJobService;
         this.labelCrateJobService = labelCrateJobService;
+        this.musicBrainzClient = musicBrainzClient;
         this.jobServiceList = jobServiceList;
         this.logger = logger;
     }
@@ -41,39 +44,47 @@ public class JobsController : ControllerBase
     /// <summary>
     /// Create a MusicBrainz release download job.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [HttpPost("mb-release")]
     [Authorize]
     public async Task<IActionResult> CreateMbReleaseJob(
-        [FromBody] MbReleaseJobRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] MbReleaseJobRequest request,
+            CancellationToken cancellationToken)
     {
         logger.LogInformation("Creating MB release job for {ReleaseId}", request.MbReleaseId);
 
-        // For now, create as a discography job with single release
+        var release = await musicBrainzClient.GetReleaseAsync(request.MbReleaseId, cancellationToken);
+        if (release == null || string.IsNullOrWhiteSpace(release.MusicBrainzArtistId))
+        {
+            return NotFound($"Unable to resolve release {request.MbReleaseId} into a SongID-ready MusicBrainz target.");
+        }
+
         var jobId = await discographyJobService.CreateJobAsync(
             new DiscographyJobRequest
             {
-                ArtistId = request.MbReleaseId, // treated as artist ID placeholder
+                ArtistId = release.MusicBrainzArtistId,
                 Profile = DiscographyProfile.AllReleases,
-                TargetDirectory = request.TargetDir
+                TargetDirectory = request.TargetDir,
+                ReleaseIds = new List<string> { request.MbReleaseId },
             },
             cancellationToken);
 
         return Ok(new
         {
             job_id = jobId,
-            status = "pending"
+            status = "pending",
         });
     }
 
     /// <summary>
     /// Create a discography download job.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [HttpPost("discography")]
     [Authorize]
     public async Task<IActionResult> CreateDiscographyJob(
-        [FromBody] DiscographyJobRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] DiscographyJobRequest request,
+            CancellationToken cancellationToken)
     {
         logger.LogInformation("Creating discography job for {ArtistId}", request.ArtistId);
 
@@ -82,18 +93,19 @@ public class JobsController : ControllerBase
         return Ok(new
         {
             job_id = jobId,
-            status = "pending"
+            status = "pending",
         });
     }
 
     /// <summary>
     /// Create a label crate download job.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [HttpPost("label-crate")]
     [Authorize]
     public async Task<IActionResult> CreateLabelCrateJob(
-        [FromBody] LabelCrateJobRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] LabelCrateJobRequest request,
+            CancellationToken cancellationToken)
     {
         logger.LogInformation("Creating label crate job for {Label}", request.LabelName);
 
@@ -102,23 +114,24 @@ public class JobsController : ControllerBase
         return Ok(new
         {
             job_id = jobId,
-            status = "pending"
+            status = "pending",
         });
     }
 
     /// <summary>
     /// Get all jobs with optional filtering, pagination, and sorting (T-1410).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> GetJobs(
-        [FromQuery] string? type,
-        [FromQuery] string? status,
-        [FromQuery] int? limit,
-        [FromQuery] int? offset,
-        [FromQuery] string? sortBy,
-        [FromQuery] string? sortOrder,
-        CancellationToken cancellationToken)
+    [FromQuery] string? type,
+    [FromQuery] string? status,
+    [FromQuery] int? limit,
+    [FromQuery] int? offset,
+    [FromQuery] string? sortBy,
+    [FromQuery] string? sortOrder,
+            CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting jobs with filters: type={Type}, status={Status}, limit={Limit}, offset={Offset}, sortBy={SortBy}, sortOrder={SortOrder}",
             type, status, limit, offset, sortBy, sortOrder);
@@ -148,7 +161,7 @@ public class JobsController : ControllerBase
                                     releases_total = job.TotalReleases,
                                     releases_done = job.CompletedReleases,
                                     releases_failed = job.FailedReleases
-                                }
+                                },
                             });
                         }
                     }
@@ -179,7 +192,7 @@ public class JobsController : ControllerBase
                                     releases_total = job.TotalReleases,
                                     releases_done = job.CompletedReleases,
                                     releases_failed = job.FailedReleases
-                                }
+                                },
                             });
                         }
                     }
@@ -204,7 +217,7 @@ public class JobsController : ControllerBase
                 "id" => descending
                     ? allJobs.OrderByDescending(j => ((dynamic)j).id).ToList()
                     : allJobs.OrderBy(j => ((dynamic)j).id).ToList(),
-                _ => allJobs // Unknown sort field, return unsorted
+                _ => allJobs, // Unknown sort field, return unsorted
             };
         }
         else
@@ -230,18 +243,19 @@ public class JobsController : ControllerBase
             total = totalCount,
             limit = effectiveLimit,
             offset = effectiveOffset,
-            has_more = (effectiveOffset + effectiveLimit) < totalCount
+            has_more = (effectiveOffset + effectiveLimit) < totalCount,
         });
     }
 
     /// <summary>
     /// Get a single job by ID.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [HttpGet("{id}")]
     [Authorize]
     public async Task<IActionResult> GetJob(
-        string id,
-        CancellationToken cancellationToken)
+            string id,
+            CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting job: {JobId}", id);
 
@@ -258,15 +272,15 @@ public class JobsController : ControllerBase
                 {
                     artist_id = discographyJob.ArtistId,
                     profile = discographyJob.Profile.ToString(),
-                    target_dir = discographyJob.TargetDirectory
+                    target_dir = discographyJob.TargetDirectory,
                 },
                 progress = new
                 {
                     releases_total = discographyJob.TotalReleases,
                     releases_done = discographyJob.CompletedReleases,
-                    releases_failed = discographyJob.FailedReleases
+                    releases_failed = discographyJob.FailedReleases,
                 },
-                created_at = discographyJob.CreatedAt
+                created_at = discographyJob.CreatedAt,
             });
         }
 
@@ -281,15 +295,15 @@ public class JobsController : ControllerBase
                 status = MapStatus(labelCrateJob.Status),
                 spec = new
                 {
-                    label_name = labelCrateJob.LabelName
+                    label_name = labelCrateJob.LabelName,
                 },
                 progress = new
                 {
                     releases_total = labelCrateJob.TotalReleases,
                     releases_done = labelCrateJob.CompletedReleases,
-                    releases_failed = labelCrateJob.FailedReleases
+                    releases_failed = labelCrateJob.FailedReleases,
                 },
-                created_at = labelCrateJob.CreatedAt
+                created_at = labelCrateJob.CreatedAt,
             });
         }
 
@@ -304,7 +318,7 @@ public class JobsController : ControllerBase
             JobStatus.Running => "running",
             JobStatus.Completed => "completed",
             JobStatus.Failed => "failed",
-            _ => "unknown"
+            _ => "unknown",
         };
     }
 }

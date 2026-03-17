@@ -255,5 +255,3 @@ public class TimedBatcher : IMessageBatcher
             => new(logger, 10.0, 50);
     }
 }
-
-

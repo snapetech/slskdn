@@ -59,6 +59,7 @@ public class ContentPeerPublisher : IContentPeerPublisher
         {
             existing.Add(contentId);
         }
+
         await dht.PutAsync(peerKey, existing, ttlSeconds: 1800, ct: ct);
     }
 }

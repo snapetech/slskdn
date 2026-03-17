@@ -36,18 +36,18 @@ public class BridgeProxyServerIntegrationTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        
+
         // Try to start full instance for bridge tests
         try
         {
             var fullInstance = new SlskdnFullInstanceRunner(
                 loggerFactory.CreateLogger<SlskdnFullInstanceRunner>(),
                 "bridge-test");
-            
+
             await fullInstance.StartAsync(enableBridge: true);
             bridgePort = fullInstance.BridgePort ?? AllocateEphemeralPort();
             slskdn = fullInstance;
-            
+
             output.WriteLine($"Bridge proxy server started on port {bridgePort}");
         }
         catch (Exception ex)
@@ -144,7 +144,7 @@ public class BridgeProxyServerIntegrationTests : IAsyncLifetime
             // Assert
             Assert.NotNull(response);
             Assert.Equal(SoulseekProtocolParser.MessageType.LoginResponse, response.Type);
-            
+
             // Parse response
             var loginResponse = parser.ParseLoginRequest(response.Payload);
             // Response format: [success: bool] [message: string]

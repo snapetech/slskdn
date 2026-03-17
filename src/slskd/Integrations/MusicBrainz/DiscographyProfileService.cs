@@ -34,9 +34,9 @@ namespace slskd.Integrations.MusicBrainz
 
         public async Task<List<string>> GetReleaseIdsForProfileAsync(string artistId, DiscographyProfile profile, CancellationToken ct = default)
         {
-            logger.LogInformation("[MusicBrainz] Fetching releases for artist {ArtistId} with profile {Profile}", 
+            logger.LogInformation("[MusicBrainz] Fetching releases for artist {ArtistId} with profile {Profile}",
                 artistId, profile.ToString());
-            
+
             var graph = await releaseGraphService.GetArtistReleaseGraphAsync(artistId, forceRefresh: false, ct).ConfigureAwait(false);
             if (graph == null)
             {
@@ -46,10 +46,10 @@ namespace slskd.Integrations.MusicBrainz
 
             var filter = DiscographyProfileFilter.FromProfile(profile);
             var releases = ApplyProfile(graph, filter);
-            
-            logger.LogInformation("[MusicBrainz] Found {Count} releases for artist {ArtistId} matching profile", 
+
+            logger.LogInformation("[MusicBrainz] Found {Count} releases for artist {ArtistId} matching profile",
                 releases.Count, artistId);
-            
+
             return releases;
         }
 
@@ -60,7 +60,7 @@ namespace slskd.Integrations.MusicBrainz
                 return new List<string>();
             }
 
-            logger.LogDebug("[MusicBrainz] Applying profile filter to {Count} release groups", 
+            logger.LogDebug("[MusicBrainz] Applying profile filter to {Count} release groups",
                 graph.ReleaseGroups.Count);
 
             var allowedTypes = new HashSet<ReleaseGroupType>();

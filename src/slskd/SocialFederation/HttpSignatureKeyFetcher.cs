@@ -89,6 +89,7 @@ namespace slskd.SocialFederation
             {
                 total += n;
             }
+
             if (total >= MaxResponseBytes)
             {
                 _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
@@ -162,6 +163,7 @@ namespace slskd.SocialFederation
                 if (line.Contains("-----END", StringComparison.Ordinal)) break;
                 if (inKey) b64.Add(line.Trim());
             }
+
             return Convert.FromBase64String(string.Concat(b64));
         }
     }

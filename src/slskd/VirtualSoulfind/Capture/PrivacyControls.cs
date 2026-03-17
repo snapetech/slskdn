@@ -18,12 +18,12 @@ public class PrivacyControls
         /// No anonymization, store raw usernames (NOT RECOMMENDED).
         /// </summary>
         None = 0,
-        
+
         /// <summary>
         /// Pseudonymize usernames with local salt.
         /// </summary>
         Pseudonymized = 1,
-        
+
         /// <summary>
         /// No username storage, only aggregate statistics.
         /// </summary>
@@ -39,12 +39,12 @@ public class PrivacyControls
         /// Maximum age for raw observations (for debugging).
         /// </summary>
         public TimeSpan RawObservationRetention { get; set; } = TimeSpan.FromDays(7);
-        
+
         /// <summary>
         /// Maximum age for normalized variants in local cache.
         /// </summary>
         public TimeSpan VariantCacheRetention { get; set; } = TimeSpan.FromDays(30);
-        
+
         /// <summary>
         /// Whether to persist raw observations to disk.
         /// </summary>

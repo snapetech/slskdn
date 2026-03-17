@@ -23,8 +23,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: SongID native implementation toward ytdlpchop parity
-- **Branch**: `dev/40-fixes`
+- **Current Task**: Ship the local SongID + Discovery Graph feature tree in a tagged build
+- **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
   - Booted a disposable local NixOS 25.11 QEMU/KVM VM, validated the current `flake.nix` against a real NixOS userspace, and drove the package/service path far enough to distinguish packaging/runtime failures from ordinary application-config failures.
@@ -92,16 +92,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. **T-918 SongID parity pass** — Continue the remaining `../ytdlpchopid` delta from `docs/dev/SONGID_INTEGRATION_MAP.md#remaining-todo`: deeper multi-track / mix decomposition beyond chapter/comment inference, richer lane metrics/details, and broader SongID UI coverage for long-running queue and fan-out flows.
-2. **T-917 SongID continue** — Push the current `SongID` slice from feature-rich parity toward production parity: larger-scale corpus persistence and evidence reuse, deeper reranking with downstream transfer-quality and peer/source-ranking signals where the data model genuinely fits, and broader backend/frontend tests.
-3. **T-919 Discovery Graph continue** — Push from the dedicated atlas route into denser seed types and richer decomposed explanation lanes now that the first inline atlas explainability layer is present.
-4. **slskd.Tests.Unit Re-enablement** — Historical note: plan documents still mention remaining work, but the active product priority is now new product work unless explicitly redirected.
-5. **Packaging / other product work** — T-010–T-013 done; continue only as prioritized.
-6. **Packaging audit follow-up** — Stable Nix/Winget compatibility fix done on 2026-03-16; `slskdn-dev` flake output is now intentionally disabled until a real `build-dev-<version>` release is published and its hashes are populated.
-7. **NixOS packaging verification** — Local QEMU/KVM NixOS verification is now done: the flake builds on NixOS, the packaged `slskd` binary starts, and the module reaches the process launch path. The remaining follow-up is only whether to add an automated VM smoke test or simplify the upstream NixOS module requirements for local testing.
-8. **Metrics config follow-up** — The false-positive metrics password validation is fixed locally and validated with focused unit coverage; if it needs to ship, commit only the metrics-specific hunks and avoid bundling unrelated `Options.cs` work.
-9. **Repo-wide analyzer/lint debt** — `bash ./bin/lint` now passes with error-only gating in `bin/lint`, but the solution still carries a broad non-blocking warning backlog. Keep that cleanup as separate work unless release policy changes.
-10. **Release prep** — Packaging/test verification is green locally and the local NixOS VM now confirms the package/runtime path. If the next step is a new release after the Nix fix, update any remaining release-version metadata deliberately and create the release tag only when explicitly requested.
+1. Commit the current feature tree on `master` now that the previously failing smoke/unit/frontend checks and the repaired integration groups are green.
+2. Push `master` and create the next `build-main-*` tag so SongID + Discovery Graph finally ship in a real build.
+3. After the release is out, decide whether to spend separate cleanup time on the slow opaque blanket integration pass and the remaining warning backlog.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

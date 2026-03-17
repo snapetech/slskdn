@@ -111,6 +111,7 @@ namespace slskd.Common.Moderation
                         _logger.LogWarning("[SECURITY] Failsafe mode 'block' activated");
                         return ModerationDecision.Block("failsafe_block_on_error");
                     }
+
                     // Otherwise: Continue to next provider
                 }
             }
@@ -190,6 +191,7 @@ namespace slskd.Common.Moderation
                         _logger.LogWarning("[SECURITY] LLM failsafe mode 'block' activated for file | Id={Id}", file.Id);
                         return ModerationDecision.Block("llm_provider_failed_failsafe_block");
                     }
+
                     // For "allow" or "pass_to_next_provider", continue to default
                 }
             }
@@ -214,7 +216,6 @@ namespace slskd.Common.Moderation
             // 2. If found and already checked, return cached decision
             // 3. If found but stale or new, look up associated file and run CheckLocalFileAsync
             // 4. If not found, return Unknown (content not yet mapped)
-
             if (_shareRepository == null)
             {
                 _logger.LogDebug("[MCP] CheckContentIdAsync called but no share repository available");
@@ -448,4 +449,3 @@ namespace slskd.Common.Moderation
         }
     }
 }
-

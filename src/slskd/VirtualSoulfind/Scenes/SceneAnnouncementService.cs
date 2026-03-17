@@ -15,12 +15,12 @@ public interface ISceneAnnouncementService
     /// Announce joining a scene to DHT.
     /// </summary>
     Task AnnounceJoinAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Announce leaving a scene to DHT.
     /// </summary>
     Task AnnounceLeaveAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Refresh scene announcements (periodic heartbeat).
     /// </summary>

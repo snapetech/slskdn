@@ -19,17 +19,17 @@ public interface ISoulfindBridgeService
     /// Is the bridge service running?
     /// </summary>
     bool IsRunning { get; }
-    
+
     /// <summary>
     /// Start the Soulfind bridge.
     /// </summary>
     Task StartAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Stop the Soulfind bridge.
     /// </summary>
     Task StopAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get bridge health status.
     /// </summary>
@@ -184,27 +184,27 @@ public class BridgeOptions
     /// Enable legacy client bridge.
     /// </summary>
     public bool Enabled { get; set; } = false;
-    
+
     /// <summary>
     /// Path to Soulfind binary.
     /// </summary>
     public string? SoulfindPath { get; set; }
-    
+
     /// <summary>
     /// Bridge listening port (Soulseek protocol).
     /// </summary>
     public int Port { get; set; } = 2242;
-    
+
     /// <summary>
     /// Maximum concurrent legacy clients.
     /// </summary>
     public int MaxClients { get; set; } = 10;
-    
+
     /// <summary>
     /// Require authentication for bridge connections.
     /// </summary>
     public bool RequireAuth { get; set; } = false;
-    
+
     /// <summary>
     /// Bridge authentication password (required if RequireAuth is true).
     /// </summary>

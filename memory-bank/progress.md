@@ -4952,8 +4952,32 @@ Code quality improvements were completed as part of Option A:
 
 ### Issues
 - Full `dotnet test` still fails in unrelated existing test projects (`tests/slskd.Tests` and `tests/slskd.Tests.Integration`) because local stubs are behind current interfaces (`ISecurityService`, `IShareService`, `IShareRepository`) and one bridge integration test defines a duplicate helper method. Those failures predate this metrics fix.
+- `src/slskd/Core/Options.cs` already contains unrelated in-flight work in this checkout, so the metrics code change was validated locally but not bundled into a clean code commit yet.
 
 ### Verification
 - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter FullyQualifiedName~MetricsOptionsValidationTests`
 - `bash ./bin/lint`
 - `dotnet test` (fails in unrelated pre-existing test projects noted above)
+
+---
+
+## 2026-03-17 12:35
+
+### Completed
+- Validated and repaired the local SongID / Discovery Graph feature tree so it is releasable instead of remaining as unshipped workspace-only changes.
+- Fixed multiple stale test harness issues that blocked broad validation: interface drift in test stubs, safe controller discovery for integration hosts, missing `IMusicBrainzClient` registration in integration factories, stale Solid test host auth policies, and outdated obfuscated transport expectations.
+- Fixed a real Solid JSON-LD bug in `SolidClientIdDocumentService`: the client-id document now emits literal `@context` instead of the incorrect `context` field, and documented that gotcha immediately in ADR-0001.
+- Ignored accidental root npm spillover (`/node_modules`, `/package.json`, `/package-lock.json`) so only repo-intended frontend assets remain visible in status.
+
+### Verification
+- `dotnet test tests/slskd.Tests/slskd.Tests.csproj`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~SoulbeetAdvancedModeTests|FullyQualifiedName~ProtocolContractTests|FullyQualifiedName~BridgeIntegrationTests|FullyQualifiedName~MultiClientIntegrationTests|FullyQualifiedName~LibraryHealthTests"`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter FullyQualifiedName~SolidIntegrationTests`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter FullyQualifiedName~ObfuscatedTransportIntegrationTests`
+- `bash ./bin/lint`
+- `cd src/web && npm test`
+- `cd src/web && npm run build`
+
+### Notes
+- A clean blanket `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj` run remains very slow and produced no incremental console output for several minutes, so release validation relied on the previously failing groups plus the known green smoke/unit suites rather than waiting indefinitely on that one opaque run.

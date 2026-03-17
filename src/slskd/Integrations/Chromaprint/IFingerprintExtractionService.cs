@@ -21,6 +21,3 @@ namespace slskd.Integrations.Chromaprint
         Task<string?> ExtractFingerprintAsync(string filePath, CancellationToken cancellationToken = default);
     }
 }
-
-
-

@@ -18,7 +18,7 @@ namespace slskd.VirtualSoulfind.v2
         public PlanningException(string message) : base(message) { }
     }
 
-    public sealed class MatchException : V2Exception  
+    public sealed class MatchException : V2Exception
     {
         public MatchException(string message) : base(message) { }
     }

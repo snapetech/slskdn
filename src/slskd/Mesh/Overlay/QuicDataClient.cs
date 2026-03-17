@@ -60,14 +60,15 @@ public class QuicDataClient : IOverlayDataPlane
                 {
                     return false;
                 }
+
                 connections.TryAdd(endpoint, connection);
             }
 
             // Open stream and send payload
             await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
             await stream.WriteAsync(payload, ct);
-            // Stream will be closed when disposed
 
+            // Stream will be closed when disposed
             logger.LogDebug("[Overlay-QUIC-DATA] Sent {Size} bytes to {Endpoint}", payload.Length, endpoint);
             return true;
         }
@@ -89,6 +90,7 @@ public class QuicDataClient : IOverlayDataPlane
             logger.LogDebug("[Overlay-QUIC-DATA] QUIC not supported, cannot open stream to {Endpoint}", endpoint);
             return null;
         }
+
         try
         {
             if (!connections.TryGetValue(endpoint, out var connection) || connection == null)
@@ -98,6 +100,7 @@ public class QuicDataClient : IOverlayDataPlane
                     return null;
                 connections.TryAdd(endpoint, connection);
             }
+
             var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
             logger.LogDebug("[Overlay-QUIC-DATA] Opened bidirectional stream to {Endpoint}", endpoint);
             return stream;

@@ -38,7 +38,7 @@ using slskd.Transfers;
 [ApiVersion("0")]
 [Produces("application/json")]
 [Consumes("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class EventsController : ControllerBase
 {
     public EventsController(

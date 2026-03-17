@@ -15,7 +15,7 @@ public interface IDisasterRescueIntegration
     /// Check if a transfer should use rescue mode (mesh-only).
     /// </summary>
     bool ShouldUseRescueMode();
-    
+
     /// <summary>
     /// Get rescue mode reason.
     /// </summary>

@@ -287,7 +287,6 @@ public class MetadataPortability : IMetadataPortability
     {
         // In a real implementation, we'd compare the existing descriptor with the new one
         // For now, we'll simulate a basic conflict analysis
-
         var resolutions = new List<MetadataConflictResolution>
         {
             new MetadataConflictResolution(
@@ -360,14 +359,19 @@ public class MetadataPortability : IMetadataPortability
         var combined = new ContentDescriptor
         {
             ContentId = descriptors.First().ContentId,
+
             // Combine hashes from all sources
             Hashes = descriptors.SelectMany(d => d.Hashes ?? Enumerable.Empty<ContentHash>()).Distinct().ToList(),
+
             // Combine perceptual hashes
             PerceptualHashes = descriptors.SelectMany(d => d.PerceptualHashes ?? Enumerable.Empty<PerceptualHash>()).Distinct().ToList(),
+
             // Use the largest size if available
             SizeBytes = descriptors.Max(d => d.SizeBytes),
+
             // Prefer non-null codec
             Codec = descriptors.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.Codec))?.Codec,
+
             // Average confidence
             Confidence = descriptors.Where(d => d.Confidence.HasValue).Average(d => d.Confidence)
         };
@@ -384,4 +388,3 @@ public class MetadataPortability : IMetadataPortability
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
-

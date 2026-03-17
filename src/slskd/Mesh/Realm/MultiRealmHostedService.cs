@@ -62,7 +62,7 @@ namespace slskd.Mesh.Realm
                     _logger.LogError(ex, "[MultiRealmHostedService] FAILED to initialize multi-realm service");
                 }
             }, cancellationToken);
-            
+
             return Task.CompletedTask;
         }
 
@@ -74,5 +74,3 @@ namespace slskd.Mesh.Realm
         }
     }
 }
-
-

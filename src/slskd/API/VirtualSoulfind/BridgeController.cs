@@ -15,7 +15,7 @@ using slskd.VirtualSoulfind.Bridge;
 [Route("api/bridge")]
 [ApiController]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class BridgeController : ControllerBase
 {
     private readonly ILogger<BridgeController> logger;
@@ -180,7 +180,7 @@ public class BridgeController : ControllerBase
             // Try to find proxy ID from transfer ID
             // In practice, we'd maintain a mapping, but for now we'll use transfer ID as proxy ID
             var progress = await progressProxy.GetLegacyProgressAsync(transferId, ct);
-            
+
             if (progress == null)
             {
                 return NotFound(new { error = "Transfer not found" });

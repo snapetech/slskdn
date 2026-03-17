@@ -10,6 +10,7 @@ vi.mock('./api', () => ({
   __esModule: true,
   default: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -201,6 +202,44 @@ describe('jobs', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('createDiscographyJob', () => {
+    it('posts artist profile and target directory', async () => {
+      api.post.mockResolvedValue({ data: { job_id: 'disc-1', status: 'pending' } });
+
+      const result = await jobs.createDiscographyJob({
+        artistId: 'artist-123',
+        profile: 'ExtendedDiscography',
+        targetDirectory: '/music/Artist',
+      });
+
+      expect(api.post).toHaveBeenCalledWith('/api/jobs/discography', {
+        artistId: 'artist-123',
+        profile: 'ExtendedDiscography',
+        targetDirectory: '/music/Artist',
+      });
+      expect(result).toEqual({ job_id: 'disc-1', status: 'pending' });
+    });
+  });
+
+  describe('createMbReleaseJob', () => {
+    it('posts a single-release job request', async () => {
+      api.post.mockResolvedValue({ data: { job_id: 'album-1', status: 'pending' } });
+
+      const result = await jobs.createMbReleaseJob({
+        mbReleaseId: 'release-123',
+        targetDir: '/music/Artist/Album',
+      });
+
+      expect(api.post).toHaveBeenCalledWith('/api/jobs/mb-release', {
+        mbReleaseId: 'release-123',
+        targetDir: '/music/Artist/Album',
+        tracks: 'all',
+        constraints: null,
+      });
+      expect(result).toEqual({ job_id: 'album-1', status: 'pending' });
     });
   });
 

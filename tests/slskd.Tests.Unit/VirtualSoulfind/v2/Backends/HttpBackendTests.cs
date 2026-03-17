@@ -29,9 +29,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var options = new HttpBackendOptions { DomainAllowlist = new List<string>() };
             var backend = CreateBackend(options);
             var itemId = ContentItemId.NewId();
-            
+
             var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
-            
+
             Assert.Empty(candidates);
         }
 
@@ -48,9 +48,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.7f,
                 ExpectedQuality = 0.8f,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.False(result.IsValid);
             Assert.Contains("Not an HTTP", result.InvalidityReason);
         }
@@ -68,9 +68,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.7f,
                 ExpectedQuality = 0.8f,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.False(result.IsValid);
             Assert.Contains("Invalid URL", result.InvalidityReason);
         }
@@ -92,9 +92,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.7f,
                 ExpectedQuality = 0.8f,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.False(result.IsValid);
             Assert.Contains("not in allowlist", result.InvalidityReason);
         }

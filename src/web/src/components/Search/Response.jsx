@@ -1,7 +1,9 @@
+import * as discoveryGraph from '../../lib/discoveryGraph';
 import api from '../../lib/api';
 import * as transfers from '../../lib/transfers';
 import { getDirectoryContents, getGroup } from '../../lib/users';
-import { formatBytes, getDirectoryName } from '../../lib/util';
+import { formatBytes, getDirectoryName, getFileName } from '../../lib/util';
+import DiscoveryGraphModal from './DiscoveryGraphModal';
 import FileList from '../Shared/FileList';
 import UserCard from '../Shared/UserCard';
 import UserNoteModal from '../Users/UserNoteModal';
@@ -73,6 +75,10 @@ class Response extends Component {
       downloadError: '',
       downloadRequest: undefined,
       fetchingDirectoryContents: false,
+      graphData: null,
+      graphLoading: false,
+      graphOpen: false,
+      graphRequest: null,
       isFolded: this.props.isInitiallyFolded,
       tree: buildTree(this.props.response),
       userGroup: null,
@@ -231,6 +237,105 @@ class Response extends Component {
     this.setState((previousState) => ({ isFolded: !previousState.isFolded }));
   };
 
+  buildFallbackGraphRequest = () => {
+    const { response } = this.props;
+    const firstFile = response.files?.[0] || response.lockedFiles?.[0];
+    const title = firstFile ? getFileName(firstFile.filename).replace(/\.[^.]+$/u, '') : response.username;
+
+    return {
+      scope: 'songid_run',
+      artist: response.username,
+      title,
+    };
+  };
+
+  openDiscoveryGraph = async (request) => {
+    this.setState({
+      graphLoading: true,
+      graphOpen: true,
+      graphRequest: request,
+    });
+
+    try {
+      const graph = await discoveryGraph.buildDiscoveryGraph(request);
+      this.setState({
+        graphData: graph,
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error?.response?.data ?? error?.message ?? 'Failed to build discovery graph',
+      );
+      this.setState({
+        graphOpen: false,
+      });
+    } finally {
+      this.setState({
+        graphLoading: false,
+      });
+    }
+  };
+
+  handleGraphCompare = async (nodeId, label) => {
+    const { graphRequest } = this.state;
+    if (!graphRequest || !nodeId) {
+      return;
+    }
+
+    await this.openDiscoveryGraph({
+      ...graphRequest,
+      compareLabel: label,
+      compareNodeId: nodeId,
+    });
+  };
+
+  handleGraphRecenter = async (nodeId) => {
+    if (!nodeId) {
+      return;
+    }
+
+    const [nodeType, rawId] = nodeId.split(':');
+    if (nodeType === 'artist') {
+      await this.openDiscoveryGraph({ scope: 'artist', artistId: rawId });
+      return;
+    }
+
+    if (nodeType === 'album' || nodeType === 'release-group') {
+      await this.openDiscoveryGraph({ scope: 'album', releaseId: rawId });
+      return;
+    }
+
+    if (nodeType === 'track') {
+      await this.openDiscoveryGraph({ scope: 'track', recordingId: rawId });
+      return;
+    }
+
+    await this.openDiscoveryGraph(this.buildFallbackGraphRequest());
+  };
+
+  handleQueueNearbyFromGraph = async (graph) => {
+    const queries = (graph?.nodes || [])
+      .filter((node) => node.nodeType === 'track')
+      .map((node) => node.label || '')
+      .filter(Boolean)
+      .slice(0, 8);
+
+    if (queries.length === 0) {
+      toast.error('No nearby track nodes were available to queue');
+      return;
+    }
+
+    try {
+      const count = await library.createBatch({ queries });
+      toast.success(`Started ${count} nearby graph searches`);
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error?.response?.data ?? error?.message ?? 'Failed to queue nearby graph searches',
+      );
+    }
+  };
+
   renderDownloadAction = (
     selectedFiles,
     selectedSize,
@@ -380,6 +485,9 @@ class Response extends Component {
       tree,
       userGroup,
       userGroupLoading,
+      graphData,
+      graphLoading,
+      graphOpen,
     } = this.state;
 
     const selectedFiles = getSelectedFiles(tree);
@@ -387,11 +495,12 @@ class Response extends Component {
     const badgeColor = getBadgeColor(downloadStats);
 
     return (
-      <Card
-        className="result-card"
-        raised
-      >
-        <Card.Content>
+      <>
+        <Card
+          className="result-card"
+          raised
+        >
+          <Card.Content>
           <Card.Header>
             <Icon
               link
@@ -548,6 +657,32 @@ class Response extends Component {
             />
             <span style={{ float: 'right' }}>
               <Popup
+                content="Open a Discovery Graph centered on this result so you can branch into adjacent identity and context instead of treating search as a flat list."
+                position="top center"
+                trigger={
+                  <Icon
+                    color="blue"
+                    link
+                    name="share alternate"
+                    onClick={() => this.openDiscoveryGraph(this.buildFallbackGraphRequest())}
+                    style={{ marginRight: '8px' }}
+                  />
+                }
+              />
+              <Popup
+                content="Open the same result in atlas mode and browse a wider neighborhood with semantic zoom controls."
+                position="top center"
+                trigger={
+                  <Icon
+                    color="teal"
+                    link
+                    name="crosshairs"
+                    onClick={() => this.openDiscoveryGraph(this.buildFallbackGraphRequest())}
+                    style={{ marginRight: '8px' }}
+                  />
+                }
+              />
+              <Popup
                 content={
                   isBlocked
                     ? 'Unblock this user'
@@ -610,14 +745,27 @@ class Response extends Component {
               onSelectionChange={this.handleFileSelectionChange}
             />
           ))}
-        </Card.Content>
-        {this.renderDownloadAction(
-          selectedFiles,
-          selectedSize,
-          downloadRequest,
-          downloadError,
-        )}
-      </Card>
+          </Card.Content>
+          {this.renderDownloadAction(
+            selectedFiles,
+            selectedSize,
+            downloadRequest,
+            downloadError,
+          )}
+        </Card>
+        <DiscoveryGraphModal
+          graph={graphData}
+          loading={graphLoading}
+          onClose={() => this.setState({ graphOpen: false })}
+          onCompare={this.handleGraphCompare}
+          onQueueNearby={this.handleQueueNearbyFromGraph}
+          onRecenter={this.handleGraphRecenter}
+          onRestoreBranch={(branch) =>
+            branch?.request && this.openDiscoveryGraph(branch.request)
+          }
+          open={graphOpen}
+        />
+      </>
     );
   }
 }

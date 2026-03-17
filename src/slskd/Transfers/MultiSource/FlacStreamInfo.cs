@@ -137,7 +137,6 @@ namespace slskd.Transfers.MultiSource
             // Bytes 7-9: Maximum frame size (24 bits)
             // Bytes 10-13 + bits: Sample rate (20 bits), channels (3 bits), bps (5 bits), total samples (36 bits)
             // Bytes 18-33: MD5 signature (128 bits / 16 bytes)
-
             var offset = 8;
 
             streamInfo = new FlacStreamInfo
@@ -153,7 +152,6 @@ namespace slskd.Transfers.MultiSource
             // Channels: 3 bits (bits 3-1 of byte 12) + 1
             // Bits per sample: 5 bits (bit 0 of byte 12 + upper 4 bits of byte 13) + 1
             // Total samples: 36 bits (lower 4 bits of byte 13 + bytes 14-17)
-
             streamInfo.SampleRate = (data[offset + 10] << 12) | (data[offset + 11] << 4) | (data[offset + 12] >> 4);
             streamInfo.Channels = ((data[offset + 12] >> 1) & 0x07) + 1;
             streamInfo.BitsPerSample = (((data[offset + 12] & 0x01) << 4) | (data[offset + 13] >> 4)) + 1;

@@ -104,7 +104,7 @@ public sealed record MeshServiceDescriptor
         sb.Append('|');
         sb.Append(Endpoint.ToString());
         sb.Append('|');
-        
+
         // Metadata in sorted order for deterministic output
         if (Metadata != null && Metadata.Count > 0)
         {
@@ -117,7 +117,7 @@ public sealed record MeshServiceDescriptor
                 sb.Append(';');
             }
         }
-        
+
         sb.Append('|');
         sb.Append(CreatedAt.ToUnixTimeSeconds());
         sb.Append('|');

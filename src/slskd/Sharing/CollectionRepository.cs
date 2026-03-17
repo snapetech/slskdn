@@ -103,6 +103,7 @@ public sealed class CollectionRepository : ICollectionRepository
             if (byId.TryGetValue(itemIdsInOrder[i], out var it))
                 it.Ordinal = i;
         }
+
         await db.SaveChangesAsync(cancellationToken);
     }
 }

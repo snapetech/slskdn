@@ -62,6 +62,7 @@ public class Obfs4Transport : IAnonymityTransport
                     _status.IsAvailable = false;
                     _status.LastError = $"obfs4proxy binary not found at {_options.Obfs4ProxyPath}";
                 }
+
                 return false;
             }
 
@@ -88,6 +89,7 @@ public class Obfs4Transport : IAnonymityTransport
                 _status.IsAvailable = false;
                 _status.LastError = ex.Message;
             }
+
             _logger.LogWarning(ex, "Obfs4 transport not available");
             return false;
         }
@@ -158,6 +160,7 @@ public class Obfs4Transport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish obfs4 connection to {Host}:{Port}", host, port);
             throw;
         }
@@ -254,10 +257,10 @@ public class Obfs4Transport : IAnonymityTransport
                 CreateNoWindow = true,
                 Environment =
                 {
-                    ["TOR_PT_CLIENT_TRANSPORTS"] = "obfs4",
-                    ["TOR_PT_MANAGED_TRANSPORT_VER"] = "1",
-                    ["TOR_PT_STATE_LOCATION"] = Path.GetTempPath(),
-                    ["TOR_PT_EXIT_ON_STDIN_CLOSE"] = "0"
+["TOR_PT_CLIENT_TRANSPORTS"] = "obfs4",
+["TOR_PT_MANAGED_TRANSPORT_VER"] = "1",
+["TOR_PT_STATE_LOCATION"] = Path.GetTempPath(),
+["TOR_PT_EXIT_ON_STDIN_CLOSE"] = "0"
                 }
             }
         };
@@ -386,6 +389,7 @@ public class Obfs4Transport : IAnonymityTransport
                         _process.Process.Kill();
                         _process.Process.WaitForExit(1000);
                     }
+
                     _process.Process.Dispose();
                 }
                 catch

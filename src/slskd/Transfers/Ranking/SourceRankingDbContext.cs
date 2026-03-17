@@ -67,7 +67,3 @@ namespace slskd.Transfers.Ranking
         public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     }
 }
-
-
-
-

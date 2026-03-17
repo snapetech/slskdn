@@ -141,6 +141,7 @@ public class PrivacyLayer : IPrivacyLayer
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to unpad message, returning as-is");
+
                 // Return original message if unpadding fails
                 return message;
             }

@@ -30,7 +30,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
     ///     - Browsing artists/releases/tracks without network calls
     ///     - Planning acquisitions based on canonical metadata
     ///     - Matching local files to catalogue entries
-    ///     
+    ///
     ///     This is separate from:
     ///     - Source registry (where to get content)
     ///     - Intent queue (what we want to fetch)

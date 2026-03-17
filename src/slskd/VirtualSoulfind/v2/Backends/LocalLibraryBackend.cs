@@ -34,7 +34,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     ///     - Instant access (no network)
     ///     - Zero cost (no bandwidth, no work budget)
     ///     - Highest trust (we scanned these files ourselves)
-    ///     
+    ///
     ///     This backend queries the share repository (SQLite) to find local files
     ///     that might match the requested content.
     /// </remarks>

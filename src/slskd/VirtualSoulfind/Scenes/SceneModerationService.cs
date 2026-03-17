@@ -20,32 +20,32 @@ public interface ISceneModerationService
     /// Mute a peer in a scene (local only, no network effect).
     /// </summary>
     Task MutePeerAsync(string sceneId, string peerId, string? reason = null, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Unmute a peer in a scene.
     /// </summary>
     Task UnmutePeerAsync(string sceneId, string peerId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Block a peer in a scene (local only, hides all their content).
     /// </summary>
     Task BlockPeerAsync(string sceneId, string peerId, string? reason = null, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Unblock a peer in a scene.
     /// </summary>
     Task UnblockPeerAsync(string sceneId, string peerId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Check if a peer is muted in a scene.
     /// </summary>
     Task<bool> IsPeerMutedAsync(string sceneId, string peerId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Check if a peer is blocked in a scene.
     /// </summary>
     Task<bool> IsPeerBlockedAsync(string sceneId, string peerId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get moderation actions for a scene.
     /// </summary>

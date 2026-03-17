@@ -146,12 +146,14 @@ namespace slskd.VirtualSoulfind.Core.Music
         {
             // Swap bytes for Data1 (first 4 bytes)
             Array.Reverse(bytes, 0, 4);
+
             // Swap bytes for Data2 (next 2 bytes)
             Array.Reverse(bytes, 4, 2);
+
             // Swap bytes for Data3 (next 2 bytes)
             Array.Reverse(bytes, 6, 2);
+
             // Data4 (last 8 bytes) stay in network byte order
         }
     }
 }
-

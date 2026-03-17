@@ -48,7 +48,7 @@ public class MeshGatewayConfigValidator
 
         // Check for security-relevant configurations
         var isLocalhost = IsLocalhost(_options.BindAddress);
-        
+
         if (!isLocalhost)
         {
             _logger.LogWarning(
@@ -79,10 +79,10 @@ public class MeshGatewayConfigValidator
                 "[GatewayConfig] ⚠️  CsrfToken is not set. Auto-generating a random token for this session.");
             _logger.LogWarning(
                 "[GatewayConfig] ⚠️  Set MeshGateway:CsrfToken in config to persist across restarts.");
-            
+
             // Auto-generate CSRF token for this session
             _options.CsrfToken = GenerateSecureToken();
-            
+
             _logger.LogInformation(
                 "[GatewayConfig] Generated CSRF token: {Token}", _options.CsrfToken);
             _logger.LogInformation(
@@ -134,6 +134,7 @@ public class MeshGatewayConfigValidator
         {
             rng.GetBytes(bytes);
         }
+
         return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 

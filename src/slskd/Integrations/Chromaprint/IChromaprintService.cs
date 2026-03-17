@@ -21,6 +21,3 @@ namespace slskd.Integrations.Chromaprint
         string GenerateFingerprint(ReadOnlySpan<short> samples, int sampleRate, int channels);
     }
 }
-
-
-

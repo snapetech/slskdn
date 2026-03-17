@@ -89,6 +89,7 @@ public class IpldMapper : IIpldMapper
                 list = new List<IpldLink>();
                 _outgoingLinks[contentId] = list;
             }
+
             list.AddRange(linksList);
         }
 
@@ -187,6 +188,7 @@ public class IpldMapper : IIpldMapper
                 foreach (var contentId in contentIds)
                 {
                     totalValidated++;
+
                     // Basic validation logic would go here
                 }
             }
@@ -338,6 +340,7 @@ public class IpldMapper : IIpldMapper
                     links.Add(new IpldLink(IpldLinkNames.Artist, artistId));
                     links.Add(new IpldLink(IpldLinkNames.Tracks, $"{parsed.Id}-tracks"));
                 }
+
                 break;
 
             case "video":
@@ -346,6 +349,7 @@ public class IpldMapper : IIpldMapper
                     var artworkId = ContentIdParser.Create("image", "artwork", $"{parsed.Id}-poster");
                     links.Add(new IpldLink(IpldLinkNames.Artwork, artworkId));
                 }
+
                 break;
         }
 
@@ -373,4 +377,3 @@ public class IpldMapper : IIpldMapper
         return false;
     }
 }
-

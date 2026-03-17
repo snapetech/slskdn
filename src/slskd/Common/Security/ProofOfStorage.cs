@@ -377,4 +377,3 @@ public sealed class ChallengeStats
     /// <summary>Gets expired challenges.</summary>
     public int ExpiredChallenges { get; init; }
 }
-

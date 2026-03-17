@@ -46,7 +46,7 @@ public class NetworkGuardTests : IDisposable
         {
             _guard.RegisterConnection(_testIp);
         }
-        
+
         var allowed = _guard.AllowConnection(_testIp);
         Assert.True(allowed);
     }
@@ -58,7 +58,7 @@ public class NetworkGuardTests : IDisposable
         {
             _guard.RegisterConnection(_testIp);
         }
-        
+
         var allowed = _guard.AllowConnection(_testIp);
         Assert.False(allowed);
     }
@@ -76,15 +76,15 @@ public class NetworkGuardTests : IDisposable
     {
         var id1 = _guard.RegisterConnection(_testIp);
         _guard.RegisterConnection(_testIp);
-        
+
         _guard.UnregisterConnection(_testIp, id1);
-        
+
         // Should now be able to register more
         for (int i = 0; i < 3; i++)
         {
             _guard.RegisterConnection(_testIp);
         }
-        
+
         Assert.True(_guard.AllowConnection(_testIp));
     }
 
@@ -107,9 +107,9 @@ public class NetworkGuardTests : IDisposable
     {
         _guard.RegisterConnection(_testIp);
         _guard.RegisterConnection(_testIp);
-        
+
         var info = _guard.GetConnectionInfo(_testIp);
-        
+
         Assert.NotNull(info);
         Assert.Equal(2, info.ActiveConnections);
     }
@@ -126,9 +126,9 @@ public class NetworkGuardTests : IDisposable
     {
         _guard.RegisterConnection(_testIp);
         _guard.RegisterConnection(_testIp);
-        
+
         var stats = _guard.GetStats();
-        
+
         Assert.Equal(2, stats.TotalConnections);
         Assert.Equal(1, stats.TrackedIps);
     }
@@ -141,11 +141,11 @@ public class NetworkGuardTests : IDisposable
             MaxGlobalConnections = 3,
             MaxConnectionsPerIp = 100,
         };
-        
+
         guard.RegisterConnection(IPAddress.Parse("10.0.0.1"));
         guard.RegisterConnection(IPAddress.Parse("10.0.0.2"));
         guard.RegisterConnection(IPAddress.Parse("10.0.0.3"));
-        
+
         var allowed = guard.AllowConnection(IPAddress.Parse("10.0.0.4"));
         Assert.False(allowed);
     }
@@ -164,10 +164,10 @@ public class NetworkGuardTests : IDisposable
         {
             MaxPendingRequestsPerIp = 2,
         };
-        
+
         guard.AllowRequest(_testIp);
         guard.AllowRequest(_testIp);
-        
+
         var allowed = guard.AllowRequest(_testIp);
         Assert.False(allowed);
     }
@@ -179,16 +179,16 @@ public class NetworkGuardTests : IDisposable
         {
             MaxPendingRequestsPerIp = 2,
         };
-        
+
         guard.AllowRequest(_testIp);
         guard.AllowRequest(_testIp);
-        
+
         // At limit
         Assert.False(guard.AllowRequest(_testIp));
-        
+
         // Complete one
         guard.CompleteRequest(_testIp);
-        
+
         // Should allow again
         Assert.True(guard.AllowRequest(_testIp));
     }
@@ -201,12 +201,12 @@ public class NetworkGuardTests : IDisposable
         {
             _guard.RegisterConnection(_testIp);
         }
-        
+
         var otherIp = IPAddress.Parse("10.0.0.1");
         _guard.RegisterConnection(otherIp);
-        
+
         var top = _guard.GetTopConnectors(10);
-        
+
         Assert.NotEmpty(top);
         Assert.Equal(_testIp, top[0].Ip);
         Assert.Equal(3, top[0].ActiveConnections);
@@ -219,13 +219,13 @@ public class NetworkGuardTests : IDisposable
         {
             MaxMessagesPerMinute = 5,
         };
-        
+
         // Send 5 messages (at limit)
         for (int i = 0; i < 5; i++)
         {
             Assert.True(guard.AllowMessage(_testIp, 100));
         }
-        
+
         // 6th should be blocked
         Assert.False(guard.AllowMessage(_testIp, 100));
     }

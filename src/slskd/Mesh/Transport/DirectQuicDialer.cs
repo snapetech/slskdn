@@ -152,6 +152,7 @@ public class DirectQuicDialer : ITransportDialer
 
         return await QuicConnection.ConnectAsync(clientOptions, cancellationToken);
     }
+
     /// <summary>
     /// Checks if direct QUIC connectivity is available.
     /// </summary>
@@ -260,11 +261,13 @@ public class DirectQuicDialer : ITransportDialer
                 if (disposing)
                 {
                     _stream.Dispose();
+
                     // QuicConnection uses async disposal
                     _ = _connection.DisposeAsync();
                     _onDispose?.Invoke();
                 }
             }
+
             base.Dispose(disposing);
         }
     }

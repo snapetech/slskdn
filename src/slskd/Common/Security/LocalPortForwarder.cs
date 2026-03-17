@@ -311,12 +311,14 @@ public class LocalPortForwarder : IDisposable
         {
             forwarder.Dispose();
         }
+
         _activeForwarders.Clear();
 
         foreach (var connection in _activeConnections.Values)
         {
             connection.Dispose();
         }
+
         _activeConnections.Clear();
     }
 }
@@ -393,9 +395,9 @@ internal class ForwarderInstance : IDisposable
     {
         // Aggregate stream stats from all active connections
         var streamStats = new List<StreamMappingStats>();
+
         // Note: In a real implementation, we'd track individual connection stats
         // For now, provide aggregate statistics
-
         var totalBytesTransferred = Interlocked.Read(ref _bytesForwarded);
 
         return new PortForwardingStatus
@@ -633,6 +635,7 @@ internal class ForwarderConnection : IDisposable
             Interlocked.Add(ref _bytesReceived, data.Length);
             _lastActivity = DateTimeOffset.UtcNow;
         }
+
         return data;
     }
 

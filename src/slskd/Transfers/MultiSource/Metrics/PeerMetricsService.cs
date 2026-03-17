@@ -17,16 +17,16 @@
 
 namespace slskd.Transfers.MultiSource.Metrics
 {
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using slskd.HashDb;
-using slskd.Telemetry;
-using static slskd.Telemetry.PeerMetrics;
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using slskd.HashDb;
+    using slskd.Telemetry;
+    using static slskd.Telemetry.PeerMetrics;
 
     /// <summary>
     ///     Service for tracking per-peer performance metrics with exponential moving averages.

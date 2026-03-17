@@ -326,5 +326,3 @@ public static class LoggingUtils
             SafePeerId(peerId), SafeCertificate(certificate), isValid ? "valid" : "invalid");
     }
 }
-
-

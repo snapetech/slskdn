@@ -158,7 +158,7 @@ namespace slskd.Common.Moderation
                 if (bytes.Length == 4) // IPv4
                 {
                     return (bytes[0] == 192 && bytes[1] == 168) || // 192.168.x.x
-                           (bytes[0] == 10) ||                      // 10.x.x.x
+                           (bytes[0] == 10) || // 10.x.x.x
                            (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31); // 172.16-31.x.x
                 }
             }

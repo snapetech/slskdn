@@ -81,24 +81,24 @@ public class MeshIntrospectionService : IMeshService
     private ServiceReply HandleGetStatus(ServiceCall call, MeshServiceContext context)
     {
         var stats = _router.GetStats();
-        
+
         // Get discovery metrics if directory supports it
         DiscoveryMetrics? discoveryMetrics = null;
         if (_serviceDirectory is DhtMeshServiceDirectory dhtDirectory)
         {
             discoveryMetrics = dhtDirectory.GetDiscoveryMetrics();
         }
-        
+
         var status = new
         {
             Status = "healthy",
             UptimeSeconds = (int)(DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime()).TotalSeconds,
-            
+
             // Service stats
             RegisteredServices = stats.RegisteredServiceCount,
             TrackedPeers = stats.TrackedPeerCount,
             ActivePeersLastMinute = stats.ActivePeersLastMinute,
-            
+
             // Circuit breaker stats
             CircuitBreakers = new
             {
@@ -115,7 +115,7 @@ public class MeshIntrospectionService : IMeshService
                     })
                     .ToList()
             },
-            
+
             // Work budget stats
             WorkBudget = new
             {
@@ -124,7 +124,7 @@ public class MeshIntrospectionService : IMeshService
                 TotalWorkConsumed = stats.WorkBudgetMetrics?.TotalWorkUnitsConsumedLastMinute ?? 0,
                 PeersNearQuota = stats.WorkBudgetMetrics?.PeersNearQuota?.Count ?? 0
             },
-            
+
             // Discovery abuse stats (if available)
             Discovery = discoveryMetrics != null ? new
             {
@@ -132,12 +132,12 @@ public class MeshIntrospectionService : IMeshService
                 TotalQueries = discoveryMetrics.TotalQueriesLastMinute,
                 SuspiciousPeers = discoveryMetrics.SuspiciousPeers.Count
             } : null,
-            
+
             // DO NOT expose: hostname, OS username, filesystem paths, public IP
         };
 
         var response = JsonSerializer.Serialize(status);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -156,7 +156,7 @@ public class MeshIntrospectionService : IMeshService
         };
 
         var response = JsonSerializer.Serialize(capabilities);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -172,9 +172,8 @@ public class MeshIntrospectionService : IMeshService
     {
         // Return list of services available on this node
         // This is safe to expose as it only reveals service names, not content
-        
         var serviceNames = new[] { "pods", "mesh-introspect" }; // TODO: Get from router
-        
+
         var services = new System.Collections.Generic.List<object>();
         foreach (var serviceName in serviceNames)
         {
@@ -187,7 +186,7 @@ public class MeshIntrospectionService : IMeshService
         }
 
         var response = JsonSerializer.Serialize(services);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,

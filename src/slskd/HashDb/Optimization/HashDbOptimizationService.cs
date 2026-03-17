@@ -170,6 +170,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
             {
                 rowCount++;
             }
+
             stopwatch.Stop();
 
             return new QueryProfileResult
@@ -205,7 +206,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
                     (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=m.name) as table_exists
                 FROM sqlite_master m
                 WHERE type='table' AND name IN ('HashDb', 'FlacInventory', 'Peers')";
-            
+
             var tableStats = new Dictionary<string, long>();
             await using var sizeReader = await sizeCmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await sizeReader.ReadAsync(cancellationToken).ConfigureAwait(false))
@@ -307,7 +308,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
         {
             // Normalize query for grouping (remove parameter values)
             var normalizedQuery = NormalizeQuery(query);
-            
+
             _queryMetrics.Add(new QueryMetric
             {
                 Query = normalizedQuery,
@@ -396,7 +397,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
         var indexes = new HashSet<string>();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'";
-        
+
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {

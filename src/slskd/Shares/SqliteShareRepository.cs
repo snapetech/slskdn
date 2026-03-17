@@ -681,7 +681,7 @@ namespace slskd.Shares
             try
             {
                 Log.Debug("Validating shares database with connection string {String}", ConnectionString);
-                
+
                 // Check if isBlocked and isQuarantined columns exist, add them if missing (migration)
                 using var migrationConn = GetConnection();
                 try

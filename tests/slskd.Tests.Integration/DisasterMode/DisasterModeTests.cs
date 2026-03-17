@@ -18,7 +18,7 @@ public class DisasterModeTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        
+
         soulfind = new SoulfindRunner(loggerFactory.CreateLogger<SoulfindRunner>());
         await soulfind.StartAsync();
 
@@ -65,7 +65,7 @@ public class DisasterModeTests : IAsyncLifetime
         // Arrange: Populate shadow index while Soulfind running
         var testFile = AudioFixtures.GetTestFile("flac-lossless");
         await bob!.AddSharedFileAsync(testFile.Filename, testFile.Content);
-        
+
         // Wait for capture and shadow index population
         await Task.Delay(TimeSpan.FromSeconds(3));
 

@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="SearchRequest.cs" company="slskd Team">
+// <copyright file="SearchRequest.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 namespace slskd.Search.API
 {
     using System;
@@ -71,16 +70,16 @@ namespace slskd.Search.API
         [Range(0, int.MaxValue)]
         public int? ResponseLimit { get; set; }
 
-    /// <summary>
-    ///     Gets or sets the search text.
-    /// </summary>
-    public string SearchText { get; set; }
+        /// <summary>
+        ///     Gets or sets the search text.
+        /// </summary>
+        public string SearchText { get; set; }
 
-    /// <summary>
-    ///     Gets or sets the search providers for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"], or ["pod", "scene"]).
-    ///     If null or empty, uses default behavior (Scene only unless feature flag enables bridging).
-    /// </summary>
-    public List<string>? Providers { get; set; }
+        /// <summary>
+        ///     Gets or sets the search providers for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"], or ["pod", "scene"]).
+        ///     If null or empty, uses default behavior (Scene only unless feature flag enables bridging).
+        /// </summary>
+        public List<string>? Providers { get; set; }
 
         /// <summary>
         ///     Gets or sets the search timeout value, in seconds, used to determine when the search is complete. (Default = 15).

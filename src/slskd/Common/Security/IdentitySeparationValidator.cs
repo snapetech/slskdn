@@ -190,5 +190,3 @@ namespace slskd.Common.Security
         public IReadOnlyDictionary<string, int> ViolationStats { get; init; } = new Dictionary<string, int>();
     }
 }
-
-

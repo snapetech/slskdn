@@ -457,5 +457,3 @@ public sealed class DownloadVerification
         QuarantinePath = path,
     };
 }
-
-

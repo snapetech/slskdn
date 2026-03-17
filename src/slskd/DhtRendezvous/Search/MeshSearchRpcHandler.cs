@@ -98,6 +98,7 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
                             {
                                 item = contentItems.FirstOrDefault();
                             }
+
                             contentId = item.ContentId;
                         }
                     }
@@ -116,6 +117,7 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
                         Codec = DeriveCodec(f.Extension),
                         MediaKinds = DeriveMediaKinds(f.Extension),
                         ContentId = contentId,
+
                         // Hash lookup deferred: requires HashDb integration or on-demand computation
                         // See memory-bank/triage-todo-fixme.md for details
                         Hash = null,

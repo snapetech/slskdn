@@ -9,11 +9,14 @@ using System.IO;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using System.Linq;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,6 +80,17 @@ public class TestHostFactory : WebApplicationFactory<ProgramStub>
                         o.AddPolicy(AuthPolicy.Any, p => p.RequireAuthenticatedUser()));
                     services.AddControllers(o =>
                         o.Filters.Add(new AuthorizeFilter(AuthPolicy.Any)))
+                        .ConfigureApplicationPartManager(manager =>
+                        {
+                            var existing = manager.FeatureProviders
+                                .OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList();
+                            foreach (var provider in existing)
+                            {
+                                manager.FeatureProviders.Remove(provider);
+                            }
+
+                            manager.FeatureProviders.Add(new slskd.Common.CodeQuality.SafeControllerFeatureProvider());
+                        })
                         .AddApplicationPart(typeof(SessionController).Assembly);
                 });
                 web.Configure(app =>
@@ -119,4 +133,10 @@ internal class StubSecurityService : ISecurityService
 
     public (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress) =>
         ("test", Role.Administrator);
+
+    public void RevokeToken(string jti)
+    {
+    }
+
+    public bool IsTokenRevoked(string jti) => false;
 }

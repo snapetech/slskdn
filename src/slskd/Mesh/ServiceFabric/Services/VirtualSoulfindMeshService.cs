@@ -111,7 +111,7 @@ public class VirtualSoulfindMeshService : IMeshService
         }
 
         var result = await _shadowIndexQuery.QueryAsync(request.MBID, cancellationToken);
-        
+
         if (result == null)
         {
             return new ServiceReply
@@ -130,11 +130,12 @@ public class VirtualSoulfindMeshService : IMeshService
             PeerCount = result.TotalPeerCount,
             CanonicalVariants = result.CanonicalVariants?.Take(10).Select(v => (object)v).ToList() ?? new List<object>(),
             LastUpdated = result.LastUpdated
+
             // Explicitly NOT including: result.PeerIds (PII)
         };
 
         var response = JsonSerializer.Serialize(safeResult);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -184,7 +185,7 @@ public class VirtualSoulfindMeshService : IMeshService
         }
 
         var results = await _shadowIndexQuery.QueryBatchAsync(request.MBIDs, cancellationToken);
-        
+
         // Privacy: Strip PII from all results
         var safeResults = results.ToDictionary(
             kvp => kvp.Key,
@@ -194,11 +195,12 @@ public class VirtualSoulfindMeshService : IMeshService
                 PeerCount = kvp.Value.TotalPeerCount,
                 CanonicalVariants = kvp.Value.CanonicalVariants?.Take(10).Select(v => (object)v).ToList() ?? new List<object>(),
                 LastUpdated = kvp.Value.LastUpdated
+
                 // Explicitly NOT including: PeerIds (PII)
             });
 
         var response = JsonSerializer.Serialize(safeResults);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,

@@ -22,27 +22,27 @@ public interface ISceneService
     /// Get all scenes the local peer has joined.
     /// </summary>
     Task<List<Scene>> GetJoinedScenesAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Join a scene (announce to DHT).
     /// </summary>
     Task JoinSceneAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Leave a scene (remove DHT announcement).
     /// </summary>
     Task LeaveSceneAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get scene metadata from DHT.
     /// </summary>
     Task<SceneMetadata?> GetSceneMetadataAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get members of a scene.
     /// </summary>
     Task<List<SceneMember>> GetSceneMembersAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Search for scenes by name or tag.
     /// </summary>

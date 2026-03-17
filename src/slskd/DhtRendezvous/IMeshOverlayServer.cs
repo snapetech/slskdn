@@ -52,4 +52,3 @@ public interface IMeshOverlayServer
     /// <returns>Server statistics.</returns>
     MeshOverlayServerStats GetStats();
 }
-

@@ -104,11 +104,13 @@ public sealed class ShareGrantAnnouncementService
         }
 
         var currentUserId = _options.CurrentValue.Soulseek.Username ?? string.Empty;
+
         // E2E: when Soulseek.Username is not set, use recipient from message so announce still ingests (API uses web auth user via GetCurrentUserIdAsync fallback)
         if (string.IsNullOrWhiteSpace(currentUserId) && Environment.GetEnvironmentVariable("SLSKDN_E2E_SHARE_ANNOUNCE") == "1" && !string.IsNullOrWhiteSpace(msg.RecipientUserId))
         {
             currentUserId = msg.RecipientUserId;
         }
+
         if (string.IsNullOrWhiteSpace(currentUserId))
         {
             return;
@@ -240,4 +242,3 @@ public sealed class ShareGrantAnnouncementItem
     public string? ContentId { get; set; }
     public string? MediaKind { get; set; }
 }
-

@@ -261,6 +261,7 @@ namespace slskd.Common.CodeQuality
             {
                 return days;
             }
+
             return 1.0; // Default
         }
     }
@@ -409,5 +410,3 @@ namespace slskd.Common.CodeQuality
         Critical
     }
 }
-
-

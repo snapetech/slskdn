@@ -114,6 +114,7 @@ namespace slskd.SocialFederation
                     Owner = ActorId,
                     PublicKeyPem = publicKeyPem
                 },
+
                 // Add domain-specific context
                 Context = new[]
                 {
@@ -336,5 +337,3 @@ namespace slskd.SocialFederation
         public object To { get; set; } = new();
     }
 }
-
-

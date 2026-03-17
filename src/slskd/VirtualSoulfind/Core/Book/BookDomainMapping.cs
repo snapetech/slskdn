@@ -113,6 +113,7 @@ public static class BookDomainMapping
         Array.Reverse(bytes, 0, 4);  // Data1
         Array.Reverse(bytes, 4, 2);  // Data2
         Array.Reverse(bytes, 6, 2);  // Data3
+
         // Data4 (last 8 bytes) stay in network byte order
     }
 }

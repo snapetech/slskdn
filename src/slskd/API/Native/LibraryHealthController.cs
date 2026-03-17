@@ -19,7 +19,7 @@ using slskd.LibraryHealth;
 [ApiController]
 [Route("api/slskdn/library")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class LibraryHealthController : ControllerBase
 {
     private readonly ILibraryHealthService healthService;
@@ -42,9 +42,9 @@ public class LibraryHealthController : ControllerBase
     [HttpGet("health")]
     [Authorize]
     public async Task<IActionResult> GetHealth(
-        [FromQuery] string? path,
-        [FromQuery] int limit = 100,
-        CancellationToken cancellationToken = default)
+    [FromQuery] string? path,
+    [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Library health check requested for path: {Path}", path ?? "(all)");
 
@@ -83,8 +83,8 @@ public class LibraryHealthController : ControllerBase
     [HttpPost("remediate")]
     [Authorize]
     public async Task<IActionResult> CreateRemediationJob(
-        [FromBody] LibraryRemediationRequest request,
-        CancellationToken cancellationToken = default)
+    [FromBody] LibraryRemediationRequest request,
+            CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Remediation job requested for {IssueCount} issues", request?.IssueIds?.Count ?? 0);
 

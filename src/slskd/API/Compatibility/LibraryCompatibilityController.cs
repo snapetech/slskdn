@@ -16,7 +16,7 @@ using slskd.LibraryHealth;
 [ApiController]
 [Route("api/library")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class LibraryCompatibilityController : ControllerBase
 {
     private readonly ILibraryHealthService healthService;
@@ -36,8 +36,8 @@ public class LibraryCompatibilityController : ControllerBase
     [HttpPost("scan")]
     [Authorize]
     public async Task<IActionResult> StartScan(
-        [FromBody] LibraryHealthScanRequest? request = null,
-        CancellationToken cancellationToken = default)
+    [FromBody] LibraryHealthScanRequest? request = null,
+            CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Compatibility library scan requested");
 

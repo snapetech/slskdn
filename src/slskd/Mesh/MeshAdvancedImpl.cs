@@ -109,6 +109,7 @@ public class MeshAdvanced : IMeshAdvanced
             if (peerDescriptor?.Address != null)
             {
                 var connectionSimStart = DateTimeOffset.UtcNow;
+
                 // Simulate connection timing (in real implementation this would be actual connection attempt)
                 await Task.Delay(1, ct); // Minimal delay for simulation
                 var connectionTime = (DateTimeOffset.UtcNow - connectionSimStart).TotalMilliseconds;

@@ -195,4 +195,3 @@ public record SimilarityRequest(
     string HashA,
     string HashB,
     double Threshold = 0.8);
-

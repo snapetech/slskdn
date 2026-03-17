@@ -56,7 +56,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         ///     - H-08 caps enforced (MaxSearchesPerMinute, etc.)
         ///     - Work budget limits (H-02)
         ///     - MCP gating (no blocked/quarantined sources)
-        ///     
+        ///
         ///     This is the "friendly neighbor" mode for Music domain.
         /// </remarks>
         SoulseekFriendly,

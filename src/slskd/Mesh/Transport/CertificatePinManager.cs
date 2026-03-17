@@ -64,7 +64,7 @@ public class CertificatePinManager
             {
                 // For new peers, accept the certificate and pin it
                 AddPin(peerId, currentPin, CertificatePinType.Current);
-                        _logger.LogDebugSafe("Pinned new certificate for peer {PeerId}: {Pin}", LoggingUtils.SafePeerId(peerId), "[redacted]");
+                _logger.LogDebugSafe("Pinned new certificate for peer {PeerId}: {Pin}", LoggingUtils.SafePeerId(peerId), "[redacted]");
                 return true;
             }
 
@@ -93,8 +93,8 @@ public class CertificatePinManager
             }
 
             // Pin mismatch - potential MITM attack
-                    _logger.LogWarning("Certificate pin mismatch for peer {PeerId}. Pin validation failed.",
-                LoggingUtils.SafePeerId(peerId));
+            _logger.LogWarning("Certificate pin mismatch for peer {PeerId}. Pin validation failed.",
+        LoggingUtils.SafePeerId(peerId));
             return false;
         }
     }
@@ -134,6 +134,7 @@ public class CertificatePinManager
 
                         _logger.LogInformation("Updated current pin for peer {PeerId}: {Pin}", peerId, pin);
                     }
+
                     break;
 
                 case CertificatePinType.Previous:

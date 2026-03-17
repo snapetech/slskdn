@@ -67,7 +67,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 1. Resolve the remote actor
                     // 2. Send a Follow activity
                     // 3. Handle the response
-
                     _logger.LogInformation(
                         "[ActivityPubBridge] Following actor '{ActorId}' from realm '{RemoteRealm}' in local realm '{LocalRealm}'",
                         actorId, remoteRealmId, localRealmId);
@@ -107,7 +106,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 2. Validate content against local policies
                     // 3. Create local copy if mirroring enabled
                     // 4. Respect MCP moderation rules
-
                     _logger.LogInformation(
                         "[ActivityPubBridge] Mirroring post '{PostId}' from realm '{RemoteRealm}' to local realm '{LocalRealm}' (mirror: {Mirror})",
                         postId, remoteRealmId, localRealmId, mirrorToLocal);
@@ -151,7 +149,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 3. Create appropriate ActivityPub activity
                     // 4. Send to remote realm's inbox
                     // 5. Handle delivery confirmations/errors
-
                     _logger.LogInformation(
                         "[ActivityPubBridge] Sharing content to realm '{RemoteRealm}' from local realm '{LocalRealm}'",
                         remoteRealmId, localRealmId);
@@ -197,7 +194,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 3. Create Announce activity
                     // 4. Send to local followers
                     // 5. Optionally send back to remote realm
-
                     _logger.LogInformation(
                         "[ActivityPubBridge] Announcing content '{PostId}' from realm '{RemoteRealm}' in local realm '{LocalRealm}'",
                         originalPostId, remoteRealmId, localRealmId);
@@ -286,5 +282,3 @@ namespace slskd.Mesh.Realm.Bridge
         public bool AnyAllowed => CanRead || CanWrite || CanFollow || CanMirror || CanShare || CanAnnounce;
     }
 }
-
-

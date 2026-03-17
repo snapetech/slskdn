@@ -68,6 +68,7 @@ public class QuicOverlayClient : IOverlayClient
                     logger.LogTrace("[Overlay-QUIC] Message queued for batching, not sending immediately");
                     return true; // Not an error, just delayed
                 }
+
                 logger.LogTrace("[Overlay-QUIC] Applied outbound privacy transforms to envelope {MessageId}", envelope.MessageId);
             }
 
@@ -85,6 +86,7 @@ public class QuicOverlayClient : IOverlayClient
                             return false;
                         }
                     }
+
                     logger.LogDebug("[Overlay-QUIC] Sent {Count} batched messages to {Endpoint}", batches.Count, endpoint);
                 }
             }
@@ -134,14 +136,15 @@ public class QuicOverlayClient : IOverlayClient
             {
                 return false;
             }
+
             connections.TryAdd(endpoint, connection);
         }
 
         // Open stream and send
         await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
         await stream.WriteAsync(payload, ct);
-        // Stream will be closed when disposed
 
+        // Stream will be closed when disposed
         return true;
     }
 

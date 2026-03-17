@@ -74,7 +74,7 @@ public class PodDiscovery : IPodDiscovery
             // Get pod index from DHT
             const string PodIndexKey = "pod:index:listed";
             var index = await dht.GetAsync<PodIndex>(PodIndexKey, ct);
-            
+
             if (index == null || index.PodIds == null || index.PodIds.Count == 0)
             {
                 logger.LogDebug("[PodDiscovery] No pods found in index");
@@ -108,7 +108,7 @@ public class PodDiscovery : IPodDiscovery
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 var queryLower = searchQuery.ToLowerInvariant();
-                filtered = filtered.Where(p => 
+                filtered = filtered.Where(p =>
                     (p.Name != null && p.Name.ToLowerInvariant().Contains(queryLower)) ||
                     (p.PodId != null && p.PodId.ToLowerInvariant().Contains(queryLower)));
             }
@@ -128,7 +128,7 @@ public class PodDiscovery : IPodDiscovery
                 .Take(limit)
                 .ToList();
 
-            logger.LogInformation("[PodDiscovery] Discovered {Count} pods (filtered from {Total} total)", 
+            logger.LogInformation("[PodDiscovery] Discovered {Count} pods (filtered from {Total} total)",
                 results.Count, validMetadata.Count);
             return results;
         }

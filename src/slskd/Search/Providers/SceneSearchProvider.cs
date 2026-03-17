@@ -85,6 +85,7 @@ public class SceneSearchProvider : ISearchProvider
                 }
 
                 var responseObj = Response.FromSoulseekSearchResponse(response);
+
                 // Attach provenance to Response
                 responseObj.SourceProviders = new List<string> { "scene" };
                 responseObj.PrimarySource = "scene";

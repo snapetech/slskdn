@@ -28,17 +28,17 @@ public class SoulseekHealthChangedEventArgs : EventArgs
     public string? Reason { get; set; }
 }
 
-public interface ISoulseekClient 
-{ 
+public interface ISoulseekClient
+{
     event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
 }
 
 public class SoulseekClientWrapper : ISoulseekClient
 {
     private readonly Soulseek.ISoulseekClient client;
-    
+
     public event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
-    
+
     public SoulseekClientWrapper(Soulseek.ISoulseekClient client)
     {
         this.client = client;
@@ -85,10 +85,10 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
             {
                 var oldHealth = currentHealth;
                 currentHealth = value;
-                
+
                 logger.LogWarning("[VSF-HEALTH] Soulseek health changed: {Old} → {New}",
                     oldHealth, value);
-                
+
                 HealthChanged?.Invoke(this, new SoulseekHealthChangedEventArgs
                 {
                     OldHealth = oldHealth,
@@ -112,7 +112,7 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
 
         monitoringCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         monitoringTask = Task.Run(async () => await MonitorLoopAsync(monitoringCts.Token), ct);
-        
+
         logger.LogInformation("[VSF-HEALTH] Health monitoring started");
         return Task.CompletedTask;
     }
@@ -131,7 +131,7 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
     private async Task MonitorLoopAsync(CancellationToken ct)
     {
         var checkInterval = TimeSpan.FromSeconds(30);
-        
+
         while (!ct.IsCancellationRequested)
         {
             try
@@ -157,7 +157,7 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
         if (!soulseekClient.State.HasFlag(SoulseekClientStates.Connected))
         {
             logger.LogDebug("[VSF-HEALTH] Soulseek not connected, attempting reconnect");
-            
+
             try
             {
                 // Try to reconnect (if not already connecting)
@@ -167,10 +167,10 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
                     // Instead, we just check the state - ConnectionWatchdog handles actual reconnection
                     logger.LogDebug("[VSF-HEALTH] Soulseek disconnected, ConnectionWatchdog will handle reconnection");
                 }
-                
+
                 // Wait a bit for connection to establish
                 await Task.Delay(TimeSpan.FromSeconds(2), ct);
-                
+
                 if (soulseekClient.State.HasFlag(SoulseekClientStates.Connected))
                 {
                     logger.LogDebug("[VSF-HEALTH] Reconnected successfully");
@@ -186,7 +186,7 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
             {
                 logger.LogDebug(ex, "[VSF-HEALTH] Reconnect attempt failed");
             }
-            
+
             return SoulseekHealth.Unavailable;
         }
 
@@ -197,11 +197,11 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
             // Use a timeout to detect slow/unresponsive server
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
-            
+
             // Try to get our own user status (lightweight operation)
             // If this times out, server is degraded
             await Task.Delay(100, timeoutCts.Token); // Minimal check - just verify we can proceed
-            
+
             return SoulseekHealth.Healthy;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

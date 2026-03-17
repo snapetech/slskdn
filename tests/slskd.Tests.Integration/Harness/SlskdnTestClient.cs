@@ -38,7 +38,7 @@ public class SlskdnTestClient : IAsyncDisposable
         this.testId = testId;
         this.configDir = Path.Combine(Path.GetTempPath(), "slskdn-test", testId, "config");
         this.shareDir = Path.Combine(Path.GetTempPath(), "slskdn-test", testId, "shares");
-        
+
         System.IO.Directory.CreateDirectory(configDir);
         System.IO.Directory.CreateDirectory(shareDir);
     }
@@ -82,7 +82,7 @@ public class SlskdnTestClient : IAsyncDisposable
 
         // Build minimal WebApplication
         var builder = WebApplication.CreateBuilder();
-        
+
         foreach (var (key, value) in config)
         {
             builder.Configuration[key] = value;
@@ -93,7 +93,7 @@ public class SlskdnTestClient : IAsyncDisposable
 
         // Minimal service setup
         builder.Services.AddLogging(logging => logging.AddConsole().SetMinimumLevel(LogLevel.Debug));
-        
+
         // Add authentication for [Authorize] attributes
         builder.Services.AddAuthentication("Test")
             .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
@@ -102,8 +102,14 @@ public class SlskdnTestClient : IAsyncDisposable
             options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("Test")
                 .RequireAuthenticatedUser()
                 .Build();
+
+            options.AddPolicy(slskd.AuthPolicy.Any, policy =>
+            {
+                policy.AuthenticationSchemes.Add("Test");
+                policy.RequireAuthenticatedUser();
+            });
         });
-        
+
         // Add API versioning (required for routes with apiVersion constraint)
         builder.Services.AddApiVersioning(options =>
         {
@@ -116,40 +122,40 @@ public class SlskdnTestClient : IAsyncDisposable
             options.GroupNameFormat = "'v'VVV";
             options.SubstituteApiVersionInUrl = true;
         });
-        
+
         // Add stub services that controllers need
-        builder.Services.AddSingleton<global::slskd.Search.ISearchService>(_ => 
+        builder.Services.AddSingleton<global::slskd.Search.ISearchService>(_ =>
             CreateNullProxy<global::slskd.Search.ISearchService>());
-        builder.Services.AddSingleton<global::slskd.Transfers.ITransferService>(_ => 
+        builder.Services.AddSingleton<global::slskd.Transfers.ITransferService>(_ =>
             CreateNullProxy<global::slskd.Transfers.ITransferService>());
         // Add stub LibraryHealthService (needs to return actual objects, not null)
-        builder.Services.AddSingleton<global::slskd.LibraryHealth.ILibraryHealthService>(_ => 
+        builder.Services.AddSingleton<global::slskd.LibraryHealth.ILibraryHealthService>(_ =>
             new StubLibraryHealthService());
         // IDownloadService for DownloadsCompatibilityController
         builder.Services.AddSingleton<global::slskd.Transfers.Downloads.IDownloadService, slskd.Tests.Integration.StubDownloadService>();
         // IOptionsMonitor<Options> for Native LibraryHealthController (api/slskdn/library)
         builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
             new slskd.Tests.Integration.StaticOptionsMonitor<slskd.Options>(new slskd.Options()));
-        
+
         // ISoulseekClient for ServerCompatibilityController (GET /api/server/status) - ProtocolContractTests
         // If Soulfind is running, we'd need a real client connection, but for stub mode we use a mock
-        builder.Services.AddSingleton<Soulseek.ISoulseekClient>(_ => 
+        builder.Services.AddSingleton<Soulseek.ISoulseekClient>(_ =>
             Moq.Mock.Of<Soulseek.ISoulseekClient>(x =>
-                x.State == Soulseek.SoulseekClientStates.LoggedIn && 
+                x.State == Soulseek.SoulseekClientStates.LoggedIn &&
                 x.Username == $"test-{testId}"));
-        
+
         // Bridge services for BridgeController and BridgeAdminController
-        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.IBridgeApi>(_ => 
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.IBridgeApi>(_ =>
             new StubBridgeApiForTests());
-        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ISoulfindBridgeService>(_ => 
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ISoulfindBridgeService>(_ =>
             new StubSoulfindBridgeServiceForTests());
-        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.IBridgeDashboard>(_ => 
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.IBridgeDashboard>(_ =>
             new StubBridgeDashboardForTests());
-        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>(_ => 
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>(_ =>
             CreateNullProxy<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>());
         builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
             new StaticOptionsMonitorForTests());
-        
+
         // Add only the controllers needed for DisasterMode/ProtocolContract tests to avoid
         // resolving the full slskd app's controller tree (which can hang on missing deps).
         var slskdAssembly = typeof(global::slskd.API.Compatibility.SearchCompatibilityController).Assembly;
@@ -168,7 +174,7 @@ public class SlskdnTestClient : IAsyncDisposable
             });
 
         app = builder.Build();
-        
+
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
@@ -250,7 +256,7 @@ public class SlskdnTestClient : IAsyncDisposable
         var path = Path.Combine(shareDir, filename);
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         await System.IO.File.WriteAllBytesAsync(path, content);
-        
+
         logger.LogDebug("[TEST-SLSKDN] Added shared file: {File}", filename);
     }
 
@@ -323,7 +329,7 @@ public class SlskdnTestClient : IAsyncDisposable
 }
 
 /// <summary>Only exposes the controllers required for DisasterMode/ProtocolContract tests so the app host does not resolve the full slskd controller tree.</summary>
-internal sealed class IncludeOnlyControllersFeatureProvider : ControllerFeatureProvider
+internal sealed class IncludeOnlyControllersFeatureProvider : ControllerFeatureProvider, IApplicationFeatureProvider<ControllerFeature>
 {
     private static readonly HashSet<Type> Include = new()
     {
@@ -339,6 +345,53 @@ internal sealed class IncludeOnlyControllersFeatureProvider : ControllerFeatureP
         typeof(global::slskd.API.VirtualSoulfind.BridgeController),
         typeof(global::slskd.API.VirtualSoulfind.BridgeAdminController)
     };
+
+    void IApplicationFeatureProvider<ControllerFeature>.PopulateFeature(
+        IEnumerable<ApplicationPart> parts, ControllerFeature feature)
+    {
+        foreach (var part in parts.OfType<IApplicationPartTypeProvider>())
+        {
+            IEnumerable<TypeInfo> types;
+            try
+            {
+                types = part.Types.ToList();
+            }
+            catch
+            {
+                if (part is not AssemblyPart assemblyPart)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    types = assemblyPart.Assembly.GetTypes().Select(t => t.GetTypeInfo());
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    types = ex.Types.Where(t => t != null).Select(t => t!.GetTypeInfo());
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            foreach (var type in types)
+            {
+                try
+                {
+                    if (IsController(type) && !feature.Controllers.Contains(type))
+                    {
+                        feature.Controllers.Add(type);
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
 
     protected override bool IsController(TypeInfo typeInfo)
     {
@@ -378,10 +431,10 @@ internal class NullProxy<T> : DispatchProxy where T : class
 
 internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHealthService
 {
-    public Task<string> StartScanAsync(global::slskd.LibraryHealth.LibraryHealthScanRequest request, CancellationToken ct = default) => 
+    public Task<string> StartScanAsync(global::slskd.LibraryHealth.LibraryHealthScanRequest request, CancellationToken ct = default) =>
         Task.FromResult(Guid.NewGuid().ToString("N"));
 
-    public Task<global::slskd.LibraryHealth.LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default) => 
+    public Task<global::slskd.LibraryHealth.LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default) =>
         Task.FromResult(new global::slskd.LibraryHealth.LibraryHealthScan
         {
             ScanId = scanId,
@@ -391,10 +444,10 @@ internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHe
             Status = global::slskd.LibraryHealth.ScanStatus.Completed
         });
 
-    public Task<List<global::slskd.LibraryHealth.LibraryIssue>> GetIssuesAsync(global::slskd.LibraryHealth.LibraryHealthIssueFilter filter, CancellationToken ct = default) => 
+    public Task<List<global::slskd.LibraryHealth.LibraryIssue>> GetIssuesAsync(global::slskd.LibraryHealth.LibraryHealthIssueFilter filter, CancellationToken ct = default) =>
         Task.FromResult(new List<global::slskd.LibraryHealth.LibraryIssue>());
 
-    public Task UpdateIssueStatusAsync(string issueId, global::slskd.LibraryHealth.LibraryIssueStatus newStatus, CancellationToken ct = default) => 
+    public Task UpdateIssueStatusAsync(string issueId, global::slskd.LibraryHealth.LibraryIssueStatus newStatus, CancellationToken ct = default) =>
         Task.CompletedTask;
 
     public Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)
@@ -403,13 +456,13 @@ internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHe
         return Task.FromResult("remediation-job-" + Guid.NewGuid().ToString("N"));
     }
 
-    public Task<global::slskd.LibraryHealth.LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default) => 
-        Task.FromResult(new global::slskd.LibraryHealth.LibraryHealthSummary 
-        { 
-            LibraryPath = libraryPath ?? "(all)", 
-            TotalIssues = 0, 
-            IssuesOpen = 0, 
-            IssuesResolved = 0 
+    public Task<global::slskd.LibraryHealth.LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default) =>
+        Task.FromResult(new global::slskd.LibraryHealth.LibraryHealthSummary
+        {
+            LibraryPath = libraryPath ?? "(all)",
+            TotalIssues = 0,
+            IssuesOpen = 0,
+            IssuesResolved = 0
         });
 }
 

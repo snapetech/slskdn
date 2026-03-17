@@ -27,8 +27,8 @@ public interface IPodAffinityScorer
     /// Gets ranked pod recommendations for a user.
     /// </summary>
     Task<IReadOnlyList<PodRecommendation>> GetRecommendationsAsync(
-        string userId, 
-        int limit = 10, 
+        string userId,
+        int limit = 10,
         CancellationToken ct = default);
 }
 
@@ -67,7 +67,7 @@ public class PodAffinityScorer : IPodAffinityScorer
             var activityScore = ComputeActivityScore(messages);
 
             // Weighted combination
-            var affinity = 
+            var affinity =
                 (engagementScore * 0.3) +
                 (trustScore * 0.4) +
                 (sizeScore * 0.15) +
@@ -83,8 +83,8 @@ public class PodAffinityScorer : IPodAffinityScorer
     }
 
     public async Task<IReadOnlyList<PodRecommendation>> GetRecommendationsAsync(
-        string userId, 
-        int limit = 10, 
+        string userId,
+        int limit = 10,
         CancellationToken ct = default)
     {
         try
@@ -115,7 +115,7 @@ public class PodAffinityScorer : IPodAffinityScorer
     /// Engagement score based on member count and message activity.
     /// </summary>
     private static double ComputeEngagementScore(
-        IReadOnlyList<PodMember> members, 
+        IReadOnlyList<PodMember> members,
         IReadOnlyList<PodMessage> messages)
     {
         if (members.Count == 0) return 0.0;
@@ -139,14 +139,14 @@ public class PodAffinityScorer : IPodAffinityScorer
     /// Trust score based on known/trusted members in the pod.
     /// </summary>
     private async Task<double> ComputeTrustScoreAsync(
-        string podId, 
-        string userId, 
-        IReadOnlyList<PodMember> members, 
+        string podId,
+        string userId,
+        IReadOnlyList<PodMember> members,
         CancellationToken ct)
     {
         // TODO: Integrate with SecurityCore PeerReputation system
         // For now, use simple heuristics:
-        
+
         // 1. Is user already a member? → high trust
         if (members.Any(m => m.PeerId == userId))
             return 1.0;

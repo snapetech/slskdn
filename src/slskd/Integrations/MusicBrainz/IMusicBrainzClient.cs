@@ -45,6 +45,3 @@ namespace slskd.Integrations.MusicBrainz
         Task<IReadOnlyList<RecordingSearchHit>> SearchRecordingsAsync(string query, int limit = 10, CancellationToken cancellationToken = default);
     }
 }
-
-
-

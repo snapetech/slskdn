@@ -78,6 +78,7 @@ public static class MeshGatewayCliHelper
         {
             rng.GetBytes(bytes);
         }
+
         return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }

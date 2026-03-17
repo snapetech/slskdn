@@ -208,10 +208,14 @@ public class PodsControllerTests
         };
         _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
 
-        var conv = new Conversation { Username = "remoteuser", Messages = new[]
+        var conv = new Conversation
+        {
+            Username = "remoteuser",
+            Messages = new[]
         {
             new PrivateMessage { Id = 1, Username = "remoteuser", Direction = MessageDirection.In, Message = "Hi from Soulseek", Timestamp = DateTime.UtcNow.AddMinutes(-1) }
-        }};
+        }
+        };
         _conversationServiceMock.Setup(x => x.FindAsync("remoteuser", true, true)).ReturnsAsync(conv);
 
         var result = await _controller.GetMessages(podId, channelId);

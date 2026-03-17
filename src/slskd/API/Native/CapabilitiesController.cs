@@ -19,7 +19,7 @@ using OptionsModel = slskd.Options;
 [ApiController]
 [Route("api/slskdn")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class CapabilitiesController : ControllerBase
 {
     private readonly IOptionsMonitor<OptionsModel> optionsMonitor;

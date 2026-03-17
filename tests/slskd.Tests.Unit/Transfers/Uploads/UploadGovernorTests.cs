@@ -240,9 +240,9 @@ namespace slskd.Tests.Unit.Transfers.Uploads
                 // Arrange
                 var options = new AppOptions()
                 {
-                Global = new slskd.Options.GlobalOptions()
-                {
-                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                    Global = new slskd.Options.GlobalOptions()
+                    {
+                        Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                         {
                             SpeedLimit = 1000, // High day limit
                             ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
@@ -277,9 +277,9 @@ namespace slskd.Tests.Unit.Transfers.Uploads
                 // Arrange
                 var options = new AppOptions()
                 {
-                Global = new slskd.Options.GlobalOptions()
-                {
-                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                    Global = new slskd.Options.GlobalOptions()
+                    {
+                        Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                         {
                             SpeedLimit = 500, // Regular limit
                             ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
@@ -311,9 +311,9 @@ namespace slskd.Tests.Unit.Transfers.Uploads
                 // Arrange - null scheduled service (backward compatibility)
                 var options = new AppOptions()
                 {
-                Global = new slskd.Options.GlobalOptions()
-                {
-                    Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
+                    Global = new slskd.Options.GlobalOptions()
+                    {
+                        Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                         {
                             SpeedLimit = 300
                         }

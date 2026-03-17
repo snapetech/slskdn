@@ -62,4 +62,3 @@ public record SignatureStats(
     double AverageSigningTimeMs,
     double AverageVerificationTimeMs,
     DateTimeOffset LastSignatureOperation);
-

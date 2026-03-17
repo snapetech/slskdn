@@ -63,7 +63,7 @@ public class MeshGatewayAuthMiddlewareTests
 
         // Assert
         Assert.Equal((int)HttpStatusCode.Unauthorized, context.Response.StatusCode);
-        
+
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
         Assert.Contains("unauthorized", responseText);
@@ -113,7 +113,7 @@ public class MeshGatewayAuthMiddlewareTests
 
         // Assert
         Assert.Equal((int)HttpStatusCode.Forbidden, context.Response.StatusCode);
-        
+
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
         Assert.Contains("csrf_required", responseText);
@@ -164,7 +164,7 @@ public class MeshGatewayAuthMiddlewareTests
 
         // Assert
         Assert.Equal((int)HttpStatusCode.Forbidden, context.Response.StatusCode);
-        
+
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
         Assert.Contains("origin_not_allowed", responseText);
@@ -245,7 +245,7 @@ public class MeshGatewayAuthMiddlewareTests
     {
         var logger = new LoggerFactory().CreateLogger<MeshGatewayAuthMiddleware>();
         var optionsWrapper = Microsoft.Extensions.Options.Options.Create(options);
-        
+
         var nextCalled = false;
         RequestDelegate next = (HttpContext ctx) =>
         {

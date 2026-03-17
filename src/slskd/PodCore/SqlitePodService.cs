@@ -36,21 +36,21 @@ namespace slskd.PodCore
         private readonly ILogger<SqlitePodService> logger;
         private readonly IServiceScopeFactory? scopeFactory;
 
-    public SqlitePodService(
-        IDbContextFactory<PodDbContext> dbFactory,
-        IPodPublisher podPublisher,
-        IPodMembershipSigner membershipSigner,
-        ILogger<SqlitePodService> logger,
-        IServiceScopeFactory? scopeFactory = null)
-    {
-        this.dbFactory = dbFactory;
-        this.podPublisher = podPublisher;
-        this.membershipSigner = membershipSigner;
-        this.logger = logger;
-        this.scopeFactory = scopeFactory;
-    }
+        public SqlitePodService(
+            IDbContextFactory<PodDbContext> dbFactory,
+            IPodPublisher podPublisher,
+            IPodMembershipSigner membershipSigner,
+            ILogger<SqlitePodService> logger,
+            IServiceScopeFactory? scopeFactory = null)
+        {
+            this.dbFactory = dbFactory;
+            this.podPublisher = podPublisher;
+            this.membershipSigner = membershipSigner;
+            this.logger = logger;
+            this.scopeFactory = scopeFactory;
+        }
 
-    private IContentLinkService? ContentLinkService => scopeFactory?.CreateScope().ServiceProvider.GetService<IContentLinkService>();
+        private IContentLinkService? ContentLinkService => scopeFactory?.CreateScope().ServiceProvider.GetService<IContentLinkService>();
 
         public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
         {
@@ -276,6 +276,7 @@ namespace slskd.PodCore
         {
             if (member == null)
                 throw new ArgumentNullException(nameof(member));
+
             // SECURITY: Validate inputs
             if (!PodValidation.IsValidPodId(podId))
             {
@@ -701,6 +702,7 @@ namespace slskd.PodCore
                     {
                         pod.Tags.Add($"content:{validation.Metadata.Domain}");
                     }
+
                     if (!pod.Tags.Contains($"type:{validation.Metadata.Type}"))
                     {
                         pod.Tags.Add($"type:{validation.Metadata.Type}");

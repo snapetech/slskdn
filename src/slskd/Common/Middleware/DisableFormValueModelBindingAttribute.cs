@@ -14,7 +14,7 @@ namespace slskd
     /// <summary>
     ///     Disables form value model binding for decorated controllers and endpoints. This prevents buffering when processing multipart upload requests.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class DisableFormValueModelBindingAttribute : Attribute, IResourceFilter
     {
         public void OnResourceExecuting(ResourceExecutingContext context)

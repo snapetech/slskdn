@@ -93,6 +93,7 @@ public class BucketPadder : IMessagePadder
         {
             Array.Reverse(originalLengthBytes);
         }
+
         Array.Copy(originalLengthBytes, 0, paddedMessage, paddedLength - 2, 2);
 
         // Fill padding area with random bytes (not zeros to prevent compression analysis)
@@ -138,6 +139,7 @@ public class BucketPadder : IMessagePadder
         {
             Array.Reverse(lengthBytes);
         }
+
         var originalLength = BitConverter.ToUInt16(lengthBytes);
 
         if (originalLength > paddedMessage.Length - 2)
@@ -189,5 +191,3 @@ public class BucketPadder : IMessagePadder
         return bucketSize - messageSize;
     }
 }
-
-

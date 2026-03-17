@@ -51,4 +51,3 @@ public interface IMeshOverlayConnector
     /// <returns>Connector statistics.</returns>
     MeshOverlayConnectorStats GetStats();
 }
-

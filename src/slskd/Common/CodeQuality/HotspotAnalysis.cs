@@ -239,7 +239,7 @@ namespace slskd.Common.CodeQuality
                 new[] { "process", "execute", "run", "start" },         // Processing
                 new[] { "encrypt", "decrypt", "hash", "sign" },         // Security
                 new[] { "log", "trace", "debug", "info" },              // Logging
-                new[] { "parse", "serialize", "convert", "transform" }  // Data transformation
+                new[] { "parse", "serialize", "convert", "transform" } // Data transformation
             };
 
             var matchedCategories = responsibilityCategories
@@ -475,5 +475,3 @@ namespace slskd.Common.CodeQuality
         Critical
     }
 }
-
-

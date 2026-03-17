@@ -100,11 +100,11 @@ public class ContactsControllerTests
     {
         var c = CreateController();
         // Create a properly signed profile for the test
-        var profile = new PeerProfile 
-        { 
-            PeerId = "p1", 
-            DisplayName = "Test", 
-            PublicKey = Convert.ToBase64String(new byte[32]), 
+        var profile = new PeerProfile
+        {
+            PeerId = "p1",
+            DisplayName = "Test",
+            PublicKey = Convert.ToBase64String(new byte[32]),
             Signature = Convert.ToBase64String(new byte[64]),
             CreatedAt = DateTimeOffset.UtcNow,
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(7)

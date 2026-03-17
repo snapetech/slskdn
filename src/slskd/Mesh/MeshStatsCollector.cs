@@ -44,16 +44,16 @@ public class MeshStatsCollector : IMeshStatsCollector
     {
         logger.LogInformation("[MeshStatsCollector] Constructor called");
         this.logger = logger;
-        
+
         // Use Lazy to avoid circular dependencies and handle optional services
         logger.LogInformation("[MeshStatsCollector] Creating lazy service resolvers...");
-        this.natDetector = new Lazy<INatDetector>(() => 
+        this.natDetector = new Lazy<INatDetector>(() =>
             serviceProvider.GetService(typeof(INatDetector)) as INatDetector);
-        this.dhtClient = new Lazy<Dht.InMemoryDhtClient>(() => 
+        this.dhtClient = new Lazy<Dht.InMemoryDhtClient>(() =>
             serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as Dht.InMemoryDhtClient);
-        this.overlayServer = new Lazy<Overlay.QuicOverlayServer>(() => 
+        this.overlayServer = new Lazy<Overlay.QuicOverlayServer>(() =>
             serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.QuicOverlayServer);
-        this.overlayClient = new Lazy<Overlay.QuicOverlayClient>(() => 
+        this.overlayClient = new Lazy<Overlay.QuicOverlayClient>(() =>
             serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.QuicOverlayClient);
         logger.LogInformation("[MeshStatsCollector] Constructor completed");
     }
@@ -61,7 +61,7 @@ public class MeshStatsCollector : IMeshStatsCollector
     /// <summary>
     /// Gets current mesh transport statistics.
     /// </summary>
-        public async Task<MeshTransportStats> GetStatsAsync()
+    public async Task<MeshTransportStats> GetStatsAsync()
     {
         try
         {
@@ -127,6 +127,7 @@ public class MeshStatsCollector : IMeshStatsCollector
                     if (stunDetector.LastDetectedType == NatType.Unknown)
                     {
                         logger.LogDebug("Performing NAT detection for mesh stats");
+
                         // Add timeout to NAT detection to prevent hanging health checks
                         using var natTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                         natType = await stunDetector.DetectAsync(natTimeoutCts.Token);

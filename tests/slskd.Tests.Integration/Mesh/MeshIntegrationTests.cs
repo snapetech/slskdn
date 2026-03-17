@@ -59,7 +59,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         {
             // Mesh directory is available
             Assert.NotNull(meshDirectory);
-            
+
             // Try to query for peers (may return empty if no peers)
             var peers = await meshDirectory.FindPeersByContentAsync("test-content-id", CancellationToken.None);
             Assert.NotNull(peers);
@@ -81,7 +81,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         if (meshAdvanced != null)
         {
             Assert.NotNull(meshAdvanced);
-            
+
             // Try to trace routes (may return empty list if no routes)
             var routes = await meshAdvanced.TraceRoutesAsync("test-peer-id", CancellationToken.None);
             Assert.NotNull(routes);
@@ -103,7 +103,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         if (meshAdvanced != null)
         {
             Assert.NotNull(meshAdvanced);
-            
+
             // Try to get transport stats
             var stats = await meshAdvanced.GetTransportStatsAsync(CancellationToken.None);
             Assert.NotNull(stats);
@@ -144,7 +144,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Act
         var testKey = "test-key";
         var testValue = System.Text.Encoding.UTF8.GetBytes("test-value");
-        
+
         await simulator.DhtPutAsync(testKey, testValue);
         var retrieved = await simulator.DhtGetAsync(testKey);
 
@@ -159,17 +159,17 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Arrange
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var simulator = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
-        
+
         var node1 = simulator.AddNode("node1");
         var node2 = simulator.AddNode("node2");
-        
+
         var testFile = System.Text.Encoding.UTF8.GetBytes("test file content");
         node1.AddFile("test.txt", testFile);
 
         // Act
         var hash = System.Security.Cryptography.SHA256.HashData(testFile);
         var hashHex = Convert.ToHexString(hash);
-        
+
         var transferred = await simulator.OverlayTransferAsync("node1", "node2", hashHex);
 
         // Assert

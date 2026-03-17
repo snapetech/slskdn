@@ -174,5 +174,3 @@ namespace slskd.Capabilities
         string GetCapabilityFileContent();
     }
 }
-
-

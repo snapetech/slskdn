@@ -66,6 +66,7 @@ public static class OpenTelemetryExtensions
                                     options.AgentPort = tracingOptions.JaegerPort ?? 6831;
                                 });
                             }
+
                             break;
                         case "otlp":
                             if (!string.IsNullOrEmpty(tracingOptions.OtlpEndpoint))
@@ -75,6 +76,7 @@ public static class OpenTelemetryExtensions
                                     options.Endpoint = new Uri(tracingOptions.OtlpEndpoint);
                                 });
                             }
+
                             break;
                     }
                 }

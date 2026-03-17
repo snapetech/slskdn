@@ -25,24 +25,24 @@ public sealed class CertificateManager
     private X509Certificate2? _serverCertificate;
     private string? _certificatePassword;
     private readonly object _lock = new();
-    
+
     /// <summary>
     /// Certificate validity period.
     /// </summary>
     public static readonly TimeSpan CertificateValidity = TimeSpan.FromDays(365);
-    
+
     /// <summary>
     /// RSA key size.
     /// </summary>
     public const int KeySize = 4096;
-    
+
     public CertificateManager(ILogger<CertificateManager> logger, string appDirectory)
     {
         _logger = logger;
         _certificatePath = Path.Combine(appDirectory, "overlay_cert.pfx");
         _passwordPath = Path.Combine(appDirectory, "overlay_cert.key");
     }
-    
+
     /// <summary>
     /// Get or create the server certificate.
     /// </summary>
@@ -55,14 +55,14 @@ public sealed class CertificateManager
             {
                 return _serverCertificate;
             }
-            
+
             // Try to load existing certificate
             if (File.Exists(_certificatePath))
             {
                 try
                 {
                     _serverCertificate = LoadCertificate(_certificatePath);
-                    
+
                     // Check if certificate is still valid (with 30-day buffer)
                     if (_serverCertificate.NotAfter > DateTime.UtcNow.AddDays(30))
                     {
@@ -71,7 +71,7 @@ public sealed class CertificateManager
                             _serverCertificate.NotAfter);
                         return _serverCertificate;
                     }
-                    
+
                     _logger.LogWarning(
                         "Existing certificate expires soon ({ExpiryDate}), generating new one",
                         _serverCertificate.NotAfter);
@@ -82,19 +82,19 @@ public sealed class CertificateManager
                     _logger.LogWarning(ex, "Failed to load existing certificate, generating new one");
                 }
             }
-            
+
             // Generate new certificate
             _serverCertificate = GenerateSelfSignedCertificate();
             SaveCertificate(_serverCertificate, _certificatePath);
-            
+
             _logger.LogInformation(
                 "Generated new overlay certificate, expires {ExpiryDate}",
                 _serverCertificate.NotAfter);
-            
+
             return _serverCertificate;
         }
     }
-    
+
     /// <summary>
     /// Get the certificate thumbprint (SHA256).
     /// </summary>
@@ -103,31 +103,31 @@ public sealed class CertificateManager
         var cert = GetOrCreateServerCertificate();
         return cert.GetCertHashString(HashAlgorithmName.SHA256);
     }
-    
+
     /// <summary>
     /// Generate a self-signed certificate.
     /// </summary>
     private X509Certificate2 GenerateSelfSignedCertificate()
     {
         _logger.LogDebug("Generating self-signed certificate with {KeySize}-bit RSA key", KeySize);
-        
+
         using var rsa = RSA.Create(KeySize);
-        
+
         var request = new CertificateRequest(
             "CN=slskdn-overlay,O=slskdn",
             rsa,
             HashAlgorithmName.SHA256,
             RSASignaturePadding.Pkcs1);
-        
+
         // Add extensions
         request.CertificateExtensions.Add(
             new X509BasicConstraintsExtension(false, false, 0, false));
-        
+
         request.CertificateExtensions.Add(
             new X509KeyUsageExtension(
                 X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
                 true));
-        
+
         request.CertificateExtensions.Add(
             new X509EnhancedKeyUsageExtension(
                 new OidCollection
@@ -136,24 +136,24 @@ public sealed class CertificateManager
                     new("1.3.6.1.5.5.7.3.2"), // Client auth
                 },
                 true));
-        
+
         // Add SAN (Subject Alternative Name)
         var sanBuilder = new SubjectAlternativeNameBuilder();
         sanBuilder.AddDnsName("localhost");
         sanBuilder.AddIpAddress(System.Net.IPAddress.Loopback);
         sanBuilder.AddIpAddress(System.Net.IPAddress.IPv6Loopback);
         request.CertificateExtensions.Add(sanBuilder.Build());
-        
+
         var notBefore = DateTimeOffset.UtcNow.AddDays(-1);
         var notAfter = DateTimeOffset.UtcNow.Add(CertificateValidity);
-        
+
         var certificate = request.CreateSelfSigned(notBefore, notAfter);
-        
+
         // Export and reimport to get a certificate with private key in usable form
         var pfxBytes = certificate.Export(X509ContentType.Pfx);
         return new X509Certificate2(pfxBytes, (string?)null, X509KeyStorageFlags.Exportable);
     }
-    
+
     /// <summary>
     /// Save certificate to file with password protection.
     /// </summary>
@@ -164,17 +164,17 @@ public sealed class CertificateManager
         {
             Directory.CreateDirectory(directory);
         }
-        
+
         // SECURITY: Generate a random password for the PFX
         var password = GenerateRandomPassword();
         _certificatePassword = password;
-        
+
         var pfxBytes = certificate.Export(X509ContentType.Pfx, password);
         File.WriteAllBytes(path, pfxBytes);
-        
+
         // Save password to separate file
         File.WriteAllText(_passwordPath, password);
-        
+
         // Set restrictive permissions (Unix only)
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
@@ -188,10 +188,10 @@ public sealed class CertificateManager
                 _logger.LogWarning(ex, "Could not set certificate file permissions");
             }
         }
-        
+
         _logger.LogDebug("Saved certificate to {Path} with password protection", path);
     }
-    
+
     /// <summary>
     /// Load certificate from file.
     /// </summary>
@@ -211,7 +211,7 @@ public sealed class CertificateManager
                 _logger.LogWarning(ex, "Could not read certificate password file");
             }
         }
-        
+
         // Try loading with password first, then without (for backwards compatibility)
         try
         {
@@ -223,7 +223,7 @@ public sealed class CertificateManager
             return new X509Certificate2(path);
         }
     }
-    
+
     /// <summary>
     /// Generate a cryptographically random password.
     /// </summary>
@@ -245,14 +245,14 @@ public sealed class CertificatePinStore
     private readonly string _pinStorePath;
     private readonly Dictionary<string, CertificatePin> _pins = new();
     private readonly object _lock = new();
-    
+
     public CertificatePinStore(ILogger<CertificatePinStore> logger, string appDirectory)
     {
         _logger = logger;
         _pinStorePath = Path.Combine(appDirectory, "cert_pins.json");
         Load();
     }
-    
+
     /// <summary>
     /// Check if a certificate is pinned for a peer.
     /// </summary>
@@ -267,22 +267,22 @@ public sealed class CertificatePinStore
             {
                 return PinCheckResult.NotPinned;
             }
-            
+
             if (pin.Thumbprint.Equals(thumbprint, StringComparison.OrdinalIgnoreCase))
             {
                 return PinCheckResult.Valid;
             }
-            
+
             _logger.LogWarning(
                 "Certificate pin mismatch for {Username}! Expected {Expected}, got {Actual}",
                 username,
                 pin.Thumbprint[..16] + "...",
                 thumbprint[..16] + "...");
-            
+
             return PinCheckResult.Mismatch;
         }
     }
-    
+
     /// <summary>
     /// Add or update a certificate pin.
     /// </summary>
@@ -298,12 +298,12 @@ public sealed class CertificatePinStore
                 FirstSeen = DateTimeOffset.UtcNow,
                 LastSeen = DateTimeOffset.UtcNow,
             };
-            
+
             Save();
             _logger.LogInformation("Pinned certificate for {Username}", username);
         }
     }
-    
+
     /// <summary>
     /// Update last seen time for a pinned certificate.
     /// </summary>
@@ -319,7 +319,7 @@ public sealed class CertificatePinStore
             }
         }
     }
-    
+
     /// <summary>
     /// Remove a certificate pin.
     /// </summary>
@@ -333,11 +333,11 @@ public sealed class CertificatePinStore
                 Save();
                 _logger.LogInformation("Removed certificate pin for {Username}", username);
             }
-            
+
             return removed;
         }
     }
-    
+
     /// <summary>
     /// Get all pinned certificates.
     /// </summary>
@@ -348,19 +348,19 @@ public sealed class CertificatePinStore
             return _pins.Values.ToList();
         }
     }
-    
+
     private void Load()
     {
         if (!File.Exists(_pinStorePath))
         {
             return;
         }
-        
+
         try
         {
             var json = File.ReadAllText(_pinStorePath);
             var pins = System.Text.Json.JsonSerializer.Deserialize<List<CertificatePin>>(json);
-            
+
             if (pins is not null)
             {
                 lock (_lock)
@@ -371,7 +371,7 @@ public sealed class CertificatePinStore
                     }
                 }
             }
-            
+
             _logger.LogDebug("Loaded {Count} certificate pins", _pins.Count);
         }
         catch (Exception ex)
@@ -379,7 +379,7 @@ public sealed class CertificatePinStore
             _logger.LogWarning(ex, "Failed to load certificate pins");
         }
     }
-    
+
     private void Save()
     {
         try
@@ -412,11 +412,10 @@ public enum PinCheckResult
 {
     /// <summary>No pin exists (first use - should pin it).</summary>
     NotPinned,
-    
+
     /// <summary>Pin exists and matches.</summary>
     Valid,
-    
+
     /// <summary>Pin exists but doesn't match (potential MITM!).</summary>
     Mismatch,
 }
-

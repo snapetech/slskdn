@@ -258,6 +258,7 @@ public class TorSocksDialer : ITransportDialer
         {
             Array.Reverse(portBytes);
         }
+
         request[5 + hostBytes.Length] = portBytes[0]; // Port high byte
         request[6 + hostBytes.Length] = portBytes[1]; // Port low byte
 
@@ -359,6 +360,7 @@ public class TorSocksDialer : ITransportDialer
             {
                 throw new EndOfStreamException("Unexpected end of stream during SOCKS5 handshake");
             }
+
             totalRead += read;
         }
     }
@@ -414,6 +416,7 @@ public class TorSocksDialer : ITransportDialer
                     _onDispose?.Invoke();
                 }
             }
+
             base.Dispose(disposing);
         }
     }

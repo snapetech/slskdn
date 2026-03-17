@@ -33,10 +33,9 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
 {
     private readonly ILogger<MeshServiceDescriptorValidator> _logger;
     private readonly MeshServiceFabricOptions _options;
-    
+
     // TODO: Integrate with actual SecurityCore when available
     // private readonly ISecurityCore _securityCore;
-
     public MeshServiceDescriptorValidator(
         ILogger<MeshServiceDescriptorValidator> logger,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options)

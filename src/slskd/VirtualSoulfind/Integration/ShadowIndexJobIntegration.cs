@@ -21,7 +21,7 @@ public interface IShadowIndexJobIntegration
     /// Get peer hints from shadow index for a recording.
     /// </summary>
     Task<List<string>> GetPeerHintsAsync(string mbRecordingId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get peer hints for multiple recordings (batch).
     /// </summary>

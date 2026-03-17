@@ -107,11 +107,11 @@ public class BridgeApi : IBridgeApi
         {
             // Strategy 1: Try to resolve query to MBIDs (T-853)
             var mbids = await TryResolveToMBIDsAsync(query, ct);
-            
+
             if (mbids.Count > 0)
             {
                 logger.LogDebug("[VSF-BRIDGE] Resolved {Count} MBIDs for query: {Query}", mbids.Count, query);
-                
+
                 // Query shadow index for each MBID
                 foreach (var mbid in mbids)
                 {
@@ -125,7 +125,7 @@ public class BridgeApi : IBridgeApi
                     foreach (var peerId in shadowResult.PeerIds)
                     {
                         var username = await peerAnonymizer.GetAnonymizedUsernameAsync(peerId, ct);
-                        
+
                         if (!userMap.TryGetValue(username, out var user))
                         {
                             user = new BridgeUser
@@ -169,11 +169,11 @@ public class BridgeApi : IBridgeApi
             {
                 logger.LogDebug("[VSF-BRIDGE] No MBID results, trying mesh search");
                 var meshResult = await meshSearch.SearchAsync(query, ct);
-                
+
                 foreach (var peerResult in meshResult.PeerResults)
                 {
                     var username = await peerAnonymizer.GetAnonymizedUsernameAsync(peerResult.PeerId, ct);
-                    
+
                     if (!userMap.TryGetValue(username, out var user))
                     {
                         user = new BridgeUser
@@ -283,12 +283,12 @@ public class BridgeApi : IBridgeApi
 
             // Get joined scenes
             var scenes = await sceneService.GetJoinedScenesAsync(ct);
-            
+
             foreach (var scene in scenes)
             {
                 // Map scene to room name (T-856)
                 var roomName = roomSceneMapper.MapSceneToRoom(scene.SceneId);
-                
+
                 // Get scene members for count
                 var members = await sceneService.GetSceneMembersAsync(scene.SceneId, ct);
                 var memberCount = members?.Count ?? scene.MemberCount;

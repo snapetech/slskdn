@@ -181,6 +181,7 @@ public class TransportSelector
                 {
                     _logger.LogWarning("Security downgrade detected for peer {PeerId}: {Error}",
                         targetPeerId, downgradeValidation.ErrorMessage);
+
                     // Allow the connection but log the security concern
                     // In strict mode, this could be changed to 'continue' to block
                 }

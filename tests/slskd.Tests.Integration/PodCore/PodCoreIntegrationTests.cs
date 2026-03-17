@@ -28,7 +28,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available (PodCore may not be fully configured)");
@@ -55,7 +55,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available (PodCore may not be fully configured)");
@@ -83,7 +83,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available (PodCore may not be fully configured)");
@@ -114,7 +114,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available (PodCore may not be fully configured)");
@@ -146,7 +146,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available (PodCore may not be fully configured)");
@@ -171,7 +171,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podMessaging = serviceProvider.GetService<IPodMessaging>();
-        
+
         if (podMessaging == null)
         {
             Assert.True(true, "Pod messaging not available (PodCore may not be fully configured)");
@@ -199,7 +199,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var chatBridge = serviceProvider.GetService<ISoulseekChatBridge>();
-        
+
         if (chatBridge == null)
         {
             Assert.True(true, "Soulseek chat bridge not available (PodCore may not be fully configured)");
@@ -218,7 +218,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available (PodCore may not be fully configured)");
@@ -242,7 +242,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
         var membershipSigner = serviceProvider.GetService<IPodMembershipSigner>();
-        
+
         if (podService == null || membershipSigner == null)
         {
             Assert.True(true, "Pod service or membership signer not available");
@@ -270,12 +270,12 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         Assert.NotNull(history);
         var historyList = history.ToList();
         Assert.True(historyList.Count > 0);
-        
+
         var joinRecord = history.FirstOrDefault(r => r.Action == "join" && r.PeerId == "test-peer-signed");
         Assert.NotNull(joinRecord);
         Assert.False(string.IsNullOrWhiteSpace(joinRecord.Signature));
         Assert.False(string.IsNullOrWhiteSpace(joinRecord.PublicKey));
-        
+
         // Verify signature
         var publicKey = Convert.FromBase64String(joinRecord.PublicKey);
         var isValid = await membershipSigner.VerifyMembershipAsync(joinRecord, publicKey);
@@ -288,7 +288,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
         var membershipSigner = serviceProvider.GetService<IPodMembershipSigner>();
-        
+
         if (podService == null || membershipSigner == null)
         {
             Assert.True(true, "Pod service or membership signer not available");
@@ -315,11 +315,11 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Assert
         Assert.True(left);
         Assert.NotNull(history);
-        
+
         var leaveRecord = history.FirstOrDefault(r => r.Action == "leave" && r.PeerId == "test-peer-leave");
         Assert.NotNull(leaveRecord);
         Assert.False(string.IsNullOrWhiteSpace(leaveRecord.Signature));
-        
+
         // Verify signature
         var publicKey = Convert.FromBase64String(leaveRecord.PublicKey);
         var isValid = await membershipSigner.VerifyMembershipAsync(leaveRecord, publicKey);
@@ -332,7 +332,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
         var membershipSigner = serviceProvider.GetService<IPodMembershipSigner>();
-        
+
         if (podService == null || membershipSigner == null)
         {
             Assert.True(true, "Pod service or membership signer not available");
@@ -359,11 +359,11 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         // Assert
         Assert.True(banned);
         Assert.NotNull(history);
-        
+
         var banRecord = history.FirstOrDefault(r => r.Action == "ban" && r.PeerId == "test-peer-ban");
         Assert.NotNull(banRecord);
         Assert.False(string.IsNullOrWhiteSpace(banRecord.Signature));
-        
+
         // Verify signature
         var publicKey = Convert.FromBase64String(banRecord.PublicKey);
         var isValid = await membershipSigner.VerifyMembershipAsync(banRecord, publicKey);
@@ -375,7 +375,7 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var podService = serviceProvider.GetService<IPodService>();
-        
+
         if (podService == null)
         {
             Assert.True(true, "Pod service not available");

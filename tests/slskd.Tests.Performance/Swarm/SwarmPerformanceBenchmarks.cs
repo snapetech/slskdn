@@ -39,17 +39,17 @@ public class SwarmPerformanceBenchmarks
         _logger = loggerFactory.CreateLogger<ChunkSizeOptimizer>();
     }
 
-    [GlobalSetup]
+[GlobalSetup]
     public void Setup()
     {
         _optimizer = new ChunkSizeOptimizer(_logger);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Optimization")]
-    [Arguments(100 * 1024 * 1024, 5)] // 100MB, 5 peers
-    [Arguments(500 * 1024 * 1024, 10)] // 500MB, 10 peers
-    [Arguments(1024 * 1024 * 1024, 20)] // 1GB, 20 peers
+[Benchmark]
+[BenchmarkCategory("Optimization")]
+[Arguments(100 * 1024 * 1024, 5)] // 100MB, 5 peers
+[Arguments(500 * 1024 * 1024, 10)] // 500MB, 10 peers
+[Arguments(1024 * 1024 * 1024, 20)] // 1GB, 20 peers
     public async Task ChunkSizeOptimization(long fileSize, int peerCount)
     {
         var chunkSize = await _optimizer!.RecommendChunkSizeAsync(
@@ -62,21 +62,21 @@ public class SwarmPerformanceBenchmarks
         _output.WriteLine($"[BENCH] File: {fileSize / 1024 / 1024}MB, Peers: {peerCount}, Chunk: {chunkSize / 1024}KB");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Optimization")]
-    [Arguments(100, 10)]
-    [Arguments(200, 20)]
-    [Arguments(500, 50)]
+[Benchmark]
+[BenchmarkCategory("Optimization")]
+[Arguments(100, 10)]
+[Arguments(200, 20)]
+[Arguments(500, 50)]
     public int CalculateChunkSizeForTargetCount(long fileSize, int targetChunkCount)
     {
         return _optimizer!.CalculateChunkSizeForTargetCount(fileSize, targetChunkCount);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Scheduling")]
-    [Arguments(10)]
-    [Arguments(50)]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("Scheduling")]
+[Arguments(10)]
+[Arguments(50)]
+[Arguments(100)]
     public void ChunkAssignment_Sequential(int chunkCount)
     {
         // Simulate chunk assignment logic
@@ -87,11 +87,11 @@ public class SwarmPerformanceBenchmarks
         _output.WriteLine($"[BENCH] Assigned {chunks.Count} chunks to peers");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Scheduling")]
-    [Arguments(10, 5)]
-    [Arguments(50, 10)]
-    [Arguments(100, 20)]
+[Benchmark]
+[BenchmarkCategory("Scheduling")]
+[Arguments(10, 5)]
+[Arguments(50, 10)]
+[Arguments(100, 20)]
     public void ChunkAssignment_Parallel(int chunkCount, int peerCount)
     {
         // Simulate parallel chunk assignment
@@ -110,11 +110,11 @@ public class SwarmPerformanceBenchmarks
         _output.WriteLine($"[BENCH] Assigned {chunks.Count} chunks to {peerCount} peers in parallel");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Selection")]
-    [Arguments(10)]
-    [Arguments(50)]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("Selection")]
+[Arguments(10)]
+[Arguments(50)]
+[Arguments(100)]
     public void PeerSelection(int candidateCount)
     {
         // Simulate peer selection based on metrics

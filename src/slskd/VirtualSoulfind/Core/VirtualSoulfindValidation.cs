@@ -98,6 +98,7 @@ namespace slskd.VirtualSoulfind.Core
                         errorMessage = "TrackId is required for Music domain";
                         return false;
                     }
+
                     break;
 
                 case ContentDomain.GenericFile:
@@ -106,11 +107,13 @@ namespace slskd.VirtualSoulfind.Core
                         errorMessage = "FileHash is required for GenericFile domain";
                         return false;
                     }
+
                     if (!fileSize.HasValue || fileSize.Value <= 0)
                     {
                         errorMessage = "FileSize is required and must be positive for GenericFile domain";
                         return false;
                     }
+
                     break;
 
                 default:
@@ -154,7 +157,6 @@ namespace slskd.VirtualSoulfind.Core
 
             // For GenericFile domain, track ID can be any non-empty string
             // (it represents the file hash)
-
             return true;
         }
 
@@ -207,5 +209,3 @@ namespace slskd.VirtualSoulfind.Core
         }
     }
 }
-
-

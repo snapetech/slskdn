@@ -19,7 +19,7 @@ public interface ISceneJobService
         string targetDir,
         int limit,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Create a discography job for a popular artist in a scene.
     /// </summary>

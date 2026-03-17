@@ -22,7 +22,7 @@ public class PeerReputationTests
     public void GetOrCreateProfile_NewUser_ReturnsBaseScore()
     {
         var profile = _reputation.GetOrCreateProfile("newuser");
-        
+
         Assert.NotNull(profile);
         Assert.Equal(PeerReputation.BaseScore, profile.Score);
         Assert.Equal("newuser", profile.Username);
@@ -40,7 +40,7 @@ public class PeerReputationTests
     {
         _reputation.GetOrCreateProfile("knownuser");
         var score = _reputation.GetScore("knownuser");
-        
+
         Assert.NotNull(score);
         Assert.Equal(PeerReputation.BaseScore, score);
     }
@@ -50,9 +50,9 @@ public class PeerReputationTests
     {
         var profile = _reputation.GetOrCreateProfile("goodpeer");
         var initialScore = profile.Score;
-        
+
         _reputation.RecordSuccessfulTransfer("goodpeer", 1000);
-        
+
         Assert.True(profile.Score > initialScore);
         Assert.Equal(1, profile.SuccessfulTransfers);
         Assert.Equal(1000, profile.TotalBytesTransferred);
@@ -63,9 +63,9 @@ public class PeerReputationTests
     {
         var profile = _reputation.GetOrCreateProfile("badpeer");
         var initialScore = profile.Score;
-        
+
         _reputation.RecordFailedTransfer("badpeer", "timeout");
-        
+
         Assert.True(profile.Score < initialScore);
         Assert.Equal(1, profile.FailedTransfers);
     }
@@ -75,9 +75,9 @@ public class PeerReputationTests
     {
         var profile = _reputation.GetOrCreateProfile("malicious");
         var initialScore = profile.Score;
-        
+
         _reputation.RecordMalformedMessage("malicious");
-        
+
         Assert.True(profile.Score < initialScore);
         Assert.Equal(1, profile.MalformedMessages);
     }
@@ -87,9 +87,9 @@ public class PeerReputationTests
     {
         var profile = _reputation.GetOrCreateProfile("violator");
         var initialScore = profile.Score;
-        
+
         _reputation.RecordProtocolViolation("violator", "bad handshake");
-        
+
         Assert.True(profile.Score < initialScore - 10);
         Assert.Equal(1, profile.ProtocolViolations);
     }
@@ -99,9 +99,9 @@ public class PeerReputationTests
     {
         var profile = _reputation.GetOrCreateProfile("faker");
         var initialScore = profile.Score;
-        
+
         _reputation.RecordContentMismatch("faker", "wrong hash");
-        
+
         Assert.True(profile.Score < initialScore);
         Assert.Equal(1, profile.ContentMismatches);
     }
@@ -138,7 +138,7 @@ public class PeerReputationTests
     public void SetScore_SetsExactScore()
     {
         _reputation.SetScore("testuser", 75, "manual set");
-        
+
         var score = _reputation.GetScore("testuser");
         Assert.Equal(75, score);
     }
@@ -147,7 +147,7 @@ public class PeerReputationTests
     public void SetScore_ClampsToMax()
     {
         _reputation.SetScore("testuser", 150, "above max");
-        
+
         var score = _reputation.GetScore("testuser");
         Assert.Equal(PeerReputation.MaxScore, score);
     }
@@ -156,7 +156,7 @@ public class PeerReputationTests
     public void SetScore_ClampsToMin()
     {
         _reputation.SetScore("testuser", -50, "below min");
-        
+
         var score = _reputation.GetScore("testuser");
         Assert.Equal(PeerReputation.MinScore, score);
     }
@@ -167,9 +167,9 @@ public class PeerReputationTests
         _reputation.SetScore("suspicious1", 30, "test");
         _reputation.SetScore("suspicious2", 25, "test");
         _reputation.SetScore("good", 80, "test");
-        
+
         var suspicious = _reputation.GetSuspiciousPeers();
-        
+
         Assert.Equal(2, suspicious.Count);
         Assert.All(suspicious, p => Assert.True(p.Score < PeerReputation.BaseScore));
     }
@@ -180,9 +180,9 @@ public class PeerReputationTests
         _reputation.SetScore("trusted1", 80, "test");
         _reputation.SetScore("trusted2", 90, "test");
         _reputation.SetScore("neutral", 50, "test");
-        
+
         var trusted = _reputation.GetTrustedPeers();
-        
+
         Assert.Equal(2, trusted.Count);
         Assert.All(trusted, p => Assert.True(p.Score >= PeerReputation.TrustedThreshold));
     }
@@ -193,9 +193,9 @@ public class PeerReputationTests
         _reputation.SetScore("user1", 30, "test");
         _reputation.SetScore("user2", 90, "test");
         _reputation.SetScore("user3", 60, "test");
-        
+
         var ranked = _reputation.RankByReputation(new[] { "user1", "user2", "user3" });
-        
+
         Assert.Equal("user2", ranked[0]);
         Assert.Equal("user3", ranked[1]);
         Assert.Equal("user1", ranked[2]);
@@ -207,9 +207,9 @@ public class PeerReputationTests
         _reputation.SetScore("trusted", 80, "test");
         _reputation.SetScore("untrusted", 10, "test");
         _reputation.SetScore("neutral", 50, "test");
-        
+
         var stats = _reputation.GetStats();
-        
+
         Assert.Equal(3, stats.TotalPeers);
         Assert.Equal(1, stats.TrustedPeers);
         Assert.Equal(1, stats.UntrustedPeers);
@@ -219,11 +219,11 @@ public class PeerReputationTests
     public void SuccessRate_CalculatesCorrectly()
     {
         var profile = _reputation.GetOrCreateProfile("testpeer");
-        
+
         _reputation.RecordSuccessfulTransfer("testpeer", 100);
         _reputation.RecordSuccessfulTransfer("testpeer", 100);
         _reputation.RecordFailedTransfer("testpeer");
-        
+
         Assert.Equal(2.0 / 3.0, profile.SuccessRate, 2);
     }
 
@@ -231,13 +231,13 @@ public class PeerReputationTests
     public void TrustLevel_ReflectsScore()
     {
         var profile = _reputation.GetOrCreateProfile("testpeer");
-        
+
         _reputation.SetScore("testpeer", 80, "test");
         Assert.Equal(TrustLevel.Trusted, profile.TrustLevel);
-        
+
         _reputation.SetScore("testpeer", 10, "test");
         Assert.Equal(TrustLevel.Untrusted, profile.TrustLevel);
-        
+
         _reputation.SetScore("testpeer", 50, "test");
         Assert.Equal(TrustLevel.Neutral, profile.TrustLevel);
     }

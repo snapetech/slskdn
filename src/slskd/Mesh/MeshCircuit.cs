@@ -129,7 +129,6 @@ public class MeshCircuit : IDisposable
 
         // In a real implementation, data would be received from the entry node
         // and decrypted layer by layer as it passes back through the circuit
-
         var entryHop = EntryHop;
         if (entryHop?.Stream == null)
         {
@@ -353,5 +352,3 @@ public class HopInfo
     /// </summary>
     public string? TransportType { get; set; }
 }
-
-

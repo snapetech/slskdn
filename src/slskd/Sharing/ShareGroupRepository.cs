@@ -74,6 +74,7 @@ public sealed class ShareGroupRepository : IShareGroupRepository
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         if (await db.ShareGroupMembers.AnyAsync(x => x.ShareGroupId == shareGroupId && x.PeerId == peerId, cancellationToken))
             return;
+
         // Use PeerId as UserId for backward compatibility (legacy code expects UserId)
         db.ShareGroupMembers.Add(new ShareGroupMember { ShareGroupId = shareGroupId, UserId = peerId, PeerId = peerId });
         await db.SaveChangesAsync(cancellationToken);

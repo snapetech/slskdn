@@ -122,4 +122,3 @@ namespace slskd.VirtualSoulfind.Core
         bool IsAdvertisable { get; }
     }
 }
-

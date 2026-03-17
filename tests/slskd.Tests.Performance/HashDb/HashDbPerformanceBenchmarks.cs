@@ -44,7 +44,7 @@ public class HashDbPerformanceBenchmarks
         _logger = loggerFactory.CreateLogger<HashDbService>();
     }
 
-    [GlobalSetup]
+[GlobalSetup]
     public void Setup()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"hashdb-bench-{Guid.NewGuid()}");
@@ -99,7 +99,7 @@ public class HashDbPerformanceBenchmarks
         _output.WriteLine("[BENCH] HashDb populated with 1000 entries");
     }
 
-    [GlobalCleanup]
+[GlobalCleanup]
     public void Cleanup()
     {
         // HashDbService doesn't implement IDisposable - no cleanup needed
@@ -117,24 +117,24 @@ public class HashDbPerformanceBenchmarks
         }
     }
 
-    [Benchmark(Baseline = true)]
-    [BenchmarkCategory("Lookup")]
+[Benchmark(Baseline = true)]
+[BenchmarkCategory("Lookup")]
     public async Task LookupHash_WithoutCache()
     {
         var key = _testKeys[500]; // Middle entry
         await _hashDbService!.LookupHashAsync(key);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Lookup")]
+[Benchmark]
+[BenchmarkCategory("Lookup")]
     public async Task LookupHash_WithCache()
     {
         var key = _testKeys[500]; // Middle entry
         await _hashDbServiceWithCache!.LookupHashAsync(key);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Lookup")]
+[Benchmark]
+[BenchmarkCategory("Lookup")]
     public async Task LookupHash_CacheHit()
     {
         // First call populates cache
@@ -145,8 +145,8 @@ public class HashDbPerformanceBenchmarks
         await _hashDbServiceWithCache.LookupHashAsync(key);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Query")]
+[Benchmark]
+[BenchmarkCategory("Query")]
     public async Task LookupHashesBySize()
     {
         // Query for a common size (50MB)
@@ -156,11 +156,11 @@ public class HashDbPerformanceBenchmarks
         _output.WriteLine($"[BENCH] Found {count} entries for size {size / 1024 / 1024}MB");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Query")]
-    [Arguments(10)]
-    [Arguments(100)]
-    [Arguments(1000)]
+[Benchmark]
+[BenchmarkCategory("Query")]
+[Arguments(10)]
+[Arguments(100)]
+[Arguments(1000)]
     public async Task SequentialLookups(int count)
     {
         for (int i = 0; i < count; i++)
@@ -170,10 +170,10 @@ public class HashDbPerformanceBenchmarks
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Query")]
-    [Arguments(10)]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("Query")]
+[Arguments(10)]
+[Arguments(100)]
     public async Task ParallelLookups(int concurrency)
     {
         var tasks = Enumerable.Range(0, concurrency)
@@ -182,8 +182,8 @@ public class HashDbPerformanceBenchmarks
         await Task.WhenAll(tasks);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Write")]
+[Benchmark]
+[BenchmarkCategory("Write")]
     public async Task StoreHash()
     {
         var entry = new HashDbEntry
@@ -200,10 +200,10 @@ public class HashDbPerformanceBenchmarks
         await _hashDbService!.StoreHashAsync(entry);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Write")]
-    [Arguments(10)]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("Write")]
+[Arguments(10)]
+[Arguments(100)]
     public async Task BatchStoreHashes(int count)
     {
         var tasks = Enumerable.Range(0, count)
@@ -226,8 +226,8 @@ public class HashDbPerformanceBenchmarks
         await Task.WhenAll(tasks);
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Stats")]
+[Benchmark]
+[BenchmarkCategory("Stats")]
     public void GetStats()
     {
         var stats = _hashDbService!.GetStats();

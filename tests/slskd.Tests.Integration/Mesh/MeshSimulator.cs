@@ -77,7 +77,7 @@ public class MeshSimulator
         }
 
         logger.LogDebug("[MESH-SIM] DHT PUT: {Key} ({Size} bytes)", key, value.Length);
-        
+
         await Task.Delay(SimulateNetworkLatency(), ct);
         dht[key] = value;
     }
@@ -94,10 +94,10 @@ public class MeshSimulator
         }
 
         logger.LogDebug("[MESH-SIM] DHT GET: {Key}", key);
-        
+
         await Task.Delay(SimulateNetworkLatency(), ct);
         dht.TryGetValue(key, out var value);
-        
+
         return value;
     }
 
@@ -429,7 +429,7 @@ public class SimulatedNode
     public byte[]? GetFileByHash(string hash)
     {
         using var sha = System.Security.Cryptography.SHA256.Create();
-        
+
         foreach (var (filename, content) in Library)
         {
             var fileHash = Convert.ToHexString(sha.ComputeHash(content));

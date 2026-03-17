@@ -243,8 +243,10 @@ namespace slskd.Common.CodeQuality
                 {
                     return true;
                 }
+
                 current = current.Parent;
             }
+
             return false;
         }
 
@@ -286,5 +288,3 @@ namespace slskd.Common.CodeQuality
         }
     }
 }
-
-

@@ -78,12 +78,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core
         [InlineData(ContentDomain.GenericFile, null, null, 1024L, false, "FileHash is required")]
         [InlineData(ContentDomain.GenericFile, null, "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", 0L, false, "FileSize is required")]
         public void ValidateRequiredFields_EnforcesFieldRequirements(
-            ContentDomain domain,
-            string trackId,
-            string fileHash,
-            long? fileSize,
-            bool expectedValid,
-            string expectedErrorSubstring)
+                    ContentDomain domain,
+                    string trackId,
+                    string fileHash,
+                    long? fileSize,
+                    bool expectedValid,
+                    string expectedErrorSubstring)
         {
             // Act
             var result = VirtualSoulfindValidation.ValidateRequiredFields(
@@ -103,10 +103,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core
         [InlineData(ContentDomain.Music, "", false, "cannot be null or empty")]
         [InlineData(ContentDomain.GenericFile, "any-string-works", true, null)] // GenericFile allows any format
         public void ValidateTrackIdFormat_EnforcesFormatRules(
-            ContentDomain domain,
-            string trackId,
-            bool expectedValid,
-            string expectedErrorSubstring)
+                    ContentDomain domain,
+                    string trackId,
+                    bool expectedValid,
+                    string expectedErrorSubstring)
         {
             // Act
             var result = VirtualSoulfindValidation.ValidateTrackIdFormat(domain, trackId, out var errorMessage);
@@ -125,9 +125,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core
         [InlineData("", false, "cannot be null or empty")]
         [InlineData("a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae", false, "64 hexadecimal characters")] // Too short
         public void ValidateFileHashFormat_EnforcesSHA256Rules(
-            string fileHash,
-            bool expectedValid,
-            string expectedErrorSubstring)
+                    string fileHash,
+                    bool expectedValid,
+                    string expectedErrorSubstring)
         {
             // Act
             var result = VirtualSoulfindValidation.ValidateFileHashFormat(fileHash, out var errorMessage);

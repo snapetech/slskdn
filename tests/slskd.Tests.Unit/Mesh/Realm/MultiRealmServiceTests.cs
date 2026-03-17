@@ -210,10 +210,10 @@ namespace slskd.Tests.Unit.Mesh.Realm
         [InlineData("realm-alpha", "realm-beta", "governance:root", false)] // Cross-realm disallowed flow
         [InlineData("realm-alpha", "realm-beta", "unauthorized:flow", false)] // Cross-realm unauthorized flow
         public void IsCrossRealmOperationPermitted_EnforcesBridgePolicies(
-            string sourceRealm,
-            string targetRealm,
-            string flow,
-            bool expected)
+                    string sourceRealm,
+                    string targetRealm,
+                    string flow,
+                    bool expected)
         {
             // Arrange
             var service = CreateService();

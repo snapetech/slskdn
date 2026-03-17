@@ -30,7 +30,7 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
     {
         // Arrange
         var dhtService = serviceProvider.GetService<IDhtRendezvousService>();
-        
+
         if (dhtService == null)
         {
             Assert.True(true, "DHT service not available (DHT may not be configured)");
@@ -54,13 +54,13 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
             // Assert - Service should be running
             // Give it a moment to initialize
             await Task.Delay(TimeSpan.FromSeconds(2), cts.Token);
-            
+
             // Check basic properties
             Assert.NotNull(dhtService);
-            
+
             // Stop
             await hostedService.StopAsync(cts.Token);
-            
+
             // Assert - Service should stop gracefully
             // No exceptions should be thrown
             Assert.True(true, "Service started and stopped successfully");
@@ -81,7 +81,7 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
     {
         // Arrange
         var dhtService = serviceProvider.GetService<IDhtRendezvousService>();
-        
+
         if (dhtService == null)
         {
             Assert.True(true, "DHT service not available");
@@ -133,7 +133,7 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
     {
         // Arrange
         var dhtService = serviceProvider.GetService<IDhtRendezvousService>();
-        
+
         if (dhtService == null)
         {
             Assert.True(true, "DHT service not available");

@@ -19,6 +19,3 @@ namespace slskd.Integrations.AutoTagging
         Task<AutoTagResult?> TagAsync(string filePath, TrackTarget track, CancellationToken cancellationToken = default);
     }
 }
-
-
-

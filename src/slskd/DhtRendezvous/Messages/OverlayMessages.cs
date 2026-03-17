@@ -19,12 +19,12 @@ public static class OverlayProtocol
     /// Protocol magic identifier. Must match exactly.
     /// </summary>
     public const string Magic = "SLSKDNM1";
-    
+
     /// <summary>
     /// Current protocol version.
     /// </summary>
     public const int Version = 1;
-    
+
     /// <summary>
     /// Maximum message size in bytes.
     /// </summary>
@@ -60,7 +60,7 @@ public sealed class SoulseekPorts
 {
     [JsonPropertyName("peer")]
     public int Peer { get; set; }
-    
+
     [JsonPropertyName("file")]
     public int File { get; set; }
 }
@@ -72,10 +72,10 @@ public abstract class OverlayMessage
 {
     [JsonPropertyName("magic")]
     public string Magic { get; set; } = OverlayProtocol.Magic;
-    
+
     [JsonPropertyName("type")]
     public abstract string Type { get; }
-    
+
     [JsonPropertyName("version")]
     public int Version { get; set; } = OverlayProtocol.Version;
 }
@@ -87,25 +87,25 @@ public sealed class MeshHelloMessage : OverlayMessage
 {
     [JsonPropertyName("type")]
     public override string Type => OverlayMessageType.Hello;
-    
+
     /// <summary>
     /// Soulseek username of the connecting client.
     /// </summary>
     [JsonPropertyName("username")]
     public string Username { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// List of supported features.
     /// </summary>
     [JsonPropertyName("features")]
     public List<string> Features { get; set; } = new();
-    
+
     /// <summary>
     /// Soulseek listening ports.
     /// </summary>
     [JsonPropertyName("soulseek_ports")]
     public SoulseekPorts? SoulseekPorts { get; set; }
-    
+
     /// <summary>
     /// Optional nonce for replay attack prevention.
     /// </summary>
@@ -120,25 +120,25 @@ public sealed class MeshHelloAckMessage : OverlayMessage
 {
     [JsonPropertyName("type")]
     public override string Type => OverlayMessageType.HelloAck;
-    
+
     /// <summary>
     /// Soulseek username of the beacon.
     /// </summary>
     [JsonPropertyName("username")]
     public string Username { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// List of supported features.
     /// </summary>
     [JsonPropertyName("features")]
     public List<string> Features { get; set; } = new();
-    
+
     /// <summary>
     /// Soulseek listening ports.
     /// </summary>
     [JsonPropertyName("soulseek_ports")]
     public SoulseekPorts? SoulseekPorts { get; set; }
-    
+
     /// <summary>
     /// Echo of client's nonce if provided.
     /// </summary>
@@ -153,7 +153,7 @@ public sealed class PingMessage : OverlayMessage
 {
     [JsonPropertyName("type")]
     public override string Type => OverlayMessageType.Ping;
-    
+
     /// <summary>
     /// Timestamp for RTT calculation.
     /// </summary>
@@ -168,7 +168,7 @@ public sealed class PongMessage : OverlayMessage
 {
     [JsonPropertyName("type")]
     public override string Type => OverlayMessageType.Pong;
-    
+
     /// <summary>
     /// Echo of ping timestamp.
     /// </summary>
@@ -183,7 +183,7 @@ public sealed class DisconnectMessage : OverlayMessage
 {
     [JsonPropertyName("type")]
     public override string Type => OverlayMessageType.Disconnect;
-    
+
     /// <summary>
     /// Reason for disconnect.
     /// </summary>

@@ -47,4 +47,3 @@ namespace slskd.VirtualSoulfind.Core
         }
     }
 }
-

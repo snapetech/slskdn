@@ -10,12 +10,12 @@ using slskd.Signals;
 using slskd.Swarm;
 using slskd.Security;
 
-public class StubBitTorrentBackend : IBitTorrentBackend 
-{ 
+public class StubBitTorrentBackend : IBitTorrentBackend
+{
     public bool IsSupported() => false;
-    public Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken ct = default) => 
+    public Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken ct = default) =>
         Task.FromResult(string.Empty);
-    public Task<string?> FetchByInfoHashOrMagnetAsync(string backendRef, string destDirectory, CancellationToken ct = default) => 
+    public Task<string?> FetchByInfoHashOrMagnetAsync(string backendRef, string destDirectory, CancellationToken ct = default) =>
         Task.FromResult<string?>(null);
 }
 
@@ -178,6 +178,7 @@ public class SwarmSignalHandlers
             {
                 logger.LogInformation("BT fallback accepted for job {JobId}, variant {VariantId}, btFallbackId: {BtFallbackId}",
                     jobId, variantId, btFallbackId);
+
                 // Deferred: Enable BT fallback in SwarmCore
                 // See memory-bank/triage-todo-fixme.md (defer section)
             }

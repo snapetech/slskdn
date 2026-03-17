@@ -24,7 +24,7 @@ public class MeshServiceDescriptorValidatorTests
         _options = new MeshServiceFabricOptions();
         var optionsMock = new Mock<IOptions<MeshServiceFabricOptions>>();
         optionsMock.Setup(o => o.Value).Returns(_options);
-        
+
         _validator = new MeshServiceDescriptorValidator(_loggerMock.Object, optionsMock.Object);
     }
 
@@ -75,8 +75,8 @@ public class MeshServiceDescriptorValidatorTests
     {
         // Arrange
         var futureTime = DateTimeOffset.UtcNow.AddMinutes(10);
-        var descriptor = CreateValidDescriptor() with 
-        { 
+        var descriptor = CreateValidDescriptor() with
+        {
             CreatedAt = futureTime,
             ExpiresAt = futureTime.AddHours(1)
         };
@@ -94,8 +94,8 @@ public class MeshServiceDescriptorValidatorTests
     {
         // Arrange
         var pastTime = DateTimeOffset.UtcNow.AddHours(-2);
-        var descriptor = CreateValidDescriptor() with 
-        { 
+        var descriptor = CreateValidDescriptor() with
+        {
             CreatedAt = pastTime.AddHours(-1),
             ExpiresAt = pastTime
         };
@@ -113,8 +113,8 @@ public class MeshServiceDescriptorValidatorTests
     {
         // Arrange
         var now = DateTimeOffset.UtcNow;
-        var descriptor = CreateValidDescriptor() with 
-        { 
+        var descriptor = CreateValidDescriptor() with
+        {
             CreatedAt = now.AddMinutes(10),
             ExpiresAt = now.AddMinutes(5) // Expires before created!
         };
@@ -126,8 +126,8 @@ public class MeshServiceDescriptorValidatorTests
         Assert.False(result);
         // Either "before ExpiresAt" or "expired" or "future" is acceptable
         Assert.True(
-            reason.Contains("before ExpiresAt") || 
-            reason.Contains("expired") || 
+            reason.Contains("before ExpiresAt") ||
+            reason.Contains("expired") ||
             reason.Contains("future"),
             $"Unexpected reason: {reason}");
     }
@@ -141,7 +141,7 @@ public class MeshServiceDescriptorValidatorTests
         {
             metadata[$"key{i}"] = $"value{i}";
         }
-        
+
         var descriptor = CreateValidDescriptor() with { Metadata = metadata };
 
         // Act
@@ -200,8 +200,8 @@ public class MeshServiceDescriptorValidatorTests
     public void Validate_WithInvalidSignatureLength_ReturnsFalse()
     {
         // Arrange
-        var descriptor = CreateValidDescriptor() with 
-        { 
+        var descriptor = CreateValidDescriptor() with
+        {
             Signature = new byte[32] // Wrong length, should be 64 for Ed25519
         };
 
@@ -217,8 +217,8 @@ public class MeshServiceDescriptorValidatorTests
     public void Validate_WithCorrectSignatureLength_ReturnsTrue()
     {
         // Arrange
-        var descriptor = CreateValidDescriptor() with 
-        { 
+        var descriptor = CreateValidDescriptor() with
+        {
             Signature = new byte[64] // Correct Ed25519 signature length
         };
 

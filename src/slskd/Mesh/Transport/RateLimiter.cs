@@ -52,6 +52,7 @@ public class RateLimiter
         {
             return bucket.GetCurrentTokens();
         }
+
         return 0;
     }
 
@@ -219,5 +220,3 @@ public class RateLimiterStatistics
     /// </summary>
     public long TotalRequestsBlocked { get; set; }
 }
-
-

@@ -194,6 +194,7 @@ public class PodService : IPodService
         {
             return Task.FromResult<IReadOnlyList<PodMember>>(members.Where(m => !m.IsBanned).ToList());
         }
+
         return Task.FromResult<IReadOnlyList<PodMember>>(Array.Empty<PodMember>());
     }
 
@@ -203,6 +204,7 @@ public class PodService : IPodService
         {
             return Task.FromResult<IReadOnlyList<SignedMembershipRecord>>(history.OrderByDescending(r => r.TimestampUnixMs).ToList());
         }
+
         return Task.FromResult<IReadOnlyList<SignedMembershipRecord>>(Array.Empty<SignedMembershipRecord>());
     }
 
@@ -256,6 +258,7 @@ public class PodService : IPodService
                     membershipHistory[podId] = new List<SignedMembershipRecord>();
                     history = membershipHistory[podId];
                 }
+
                 history.Add(record);
 
                 // Store public key in member record if available
@@ -278,20 +281,20 @@ public class PodService : IPodService
     public Task<bool> LeaveAsync(string podId, string peerId, CancellationToken ct = default)
     {
         if (!pods.TryGetValue(podId, out var pod)) return Task.FromResult(false);
-        
+
         if (podMembers.TryGetValue(podId, out var members))
         {
             var removed = members.RemoveAll(m => m.PeerId == peerId);
             return Task.FromResult(removed > 0);
         }
-        
+
         return Task.FromResult(false);
     }
 
     public async Task<bool> BanAsync(string podId, string peerId, CancellationToken ct = default)
     {
         if (!pods.TryGetValue(podId, out var pod)) return false;
-        
+
         if (podMembers.TryGetValue(podId, out var members))
         {
             var member = members.FirstOrDefault(m => m.PeerId == peerId);
@@ -315,6 +318,7 @@ public class PodService : IPodService
                             membershipHistory[podId] = new List<SignedMembershipRecord>();
                             history = membershipHistory[podId];
                         }
+
                         history.Add(record);
                     }
                     catch (Exception ex)
@@ -328,7 +332,7 @@ public class PodService : IPodService
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -551,6 +555,7 @@ public class PodService : IPodService
                 {
                     pod.Tags.Add($"content:{validation.Metadata.Domain}");
                 }
+
                 if (!pod.Tags.Contains($"type:{validation.Metadata.Type}"))
                 {
                     pod.Tags.Add($"type:{validation.Metadata.Type}");
@@ -640,6 +645,7 @@ public class PodMessaging : IPodMessaging
                 logger.LogDebug("[PodMessaging] Rejecting duplicate message {MessageId}", message.MessageId);
                 return false;
             }
+
             seenMessageIds.Add(message.MessageId);
         }
 
@@ -702,7 +708,7 @@ public class PodMessaging : IPodMessaging
             }
 
             messages.Add(message);
-            
+
             // Keep only last 1000 messages per channel
             if (messages.Count > 1000)
             {
@@ -808,7 +814,7 @@ public class PodMessaging : IPodMessaging
     public Task<IReadOnlyList<PodMessage>> GetMessagesAsync(string podId, string channelId, long? sinceTimestamp = null, CancellationToken ct = default)
     {
         var storageKey = $"{podId}:{channelId}";
-        
+
         lock (storageLock)
         {
             if (!messageStorage.TryGetValue(storageKey, out var messages))
@@ -841,7 +847,7 @@ public class PodMessaging : IPodMessaging
             // Get sender's public key from pod membership
             var members = await podService.GetMembersAsync(podId, ct);
             var senderMember = members.FirstOrDefault(m => m.PeerId == message.SenderPeerId);
-            
+
             if (senderMember == null)
             {
                 logger.LogWarning("[PodMessaging] Sender {PeerId} not found in pod {PodId} membership", message.SenderPeerId, podId);
@@ -852,6 +858,7 @@ public class PodMessaging : IPodMessaging
             if (string.IsNullOrWhiteSpace(senderMember.PublicKey))
             {
                 logger.LogWarning("[PodMessaging] Sender {PeerId} has no public key stored - signature verification skipped", message.SenderPeerId);
+
                 // For backward compatibility, accept messages from members without public keys
                 // but log a warning
                 return true;
@@ -929,7 +936,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     private readonly Microsoft.Extensions.Logging.ILogger<SoulseekChatBridge> logger;
     private readonly Dictionary<string, RoomBinding> activeBindings = new(); // channelId -> binding
     private readonly object bindingsLock = new();
-    
+
     // Identity mapping: Soulseek username <-> Pod PeerId
     // In production, this would be stored in database or queried from DHT
     private readonly Dictionary<string, string> soulseekToPodMapping = new(); // username -> peerId
@@ -978,7 +985,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     {
         using var scope = scopeFactory.CreateScope();
         var podService = scope.ServiceProvider.GetRequiredService<IPodService>();
-        
+
         logger.LogInformation("[ChatBridge] Binding pod {PodId} channel {ChannelId} to Soulseek room {Room} (mode: {Mode})",
             podId, channelId, roomName, mode);
 
@@ -1013,6 +1020,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         catch (Exception ex)
         {
             logger.LogWarning(ex, "[ChatBridge] Failed to join Soulseek room {Room}", roomName);
+
             // Continue anyway - might already be joined
         }
 
@@ -1061,7 +1069,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     {
         using var scope = scopeFactory.CreateScope();
         var podMessaging = scope.ServiceProvider.GetRequiredService<IPodMessaging>();
-        
+
         try
         {
             // Map Soulseek username to Pod PeerId (for now, use username as-is)
@@ -1128,11 +1136,11 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
             logger.LogDebug("[ChatBridge] Created identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
                 LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), peerId);
-            
+
             return peerId;
         }
     }
-    
+
     /// <summary>
     /// Registers an identity mapping between Soulseek username and Pod PeerId.
     /// Called when a user joins a pod or when identity is verified.
@@ -1148,7 +1156,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         {
             soulseekToPodMapping[soulseekUsername] = podPeerId;
             podToSoulseekMapping[podPeerId] = soulseekUsername;
-            
+
             logger.LogInformation("[ChatBridge] Registered identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
                 LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), podPeerId);
         }
@@ -1225,6 +1233,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             if (podPeerId.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase))
             {
                 var extractedUsername = podPeerId.Substring("bridge:".Length);
+
                 // Register the mapping for future use
                 RegisterIdentityMapping(extractedUsername, podPeerId);
                 return extractedUsername;
@@ -1235,7 +1244,6 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             // - Query pod membership records for public key -> username mapping
             // - Query DHT for peer's identity record
             // - Return null if no mapping found
-            
             logger.LogDebug("[ChatBridge] No identity mapping found for Pod peer {PeerId}", podPeerId);
             return null;
         }

@@ -251,6 +251,7 @@ namespace slskd.SocialFederation
                 if (line.Contains("-----END", StringComparison.Ordinal)) break;
                 if (inKey) b64.Add(line.Trim());
             }
+
             return Convert.FromBase64String(string.Concat(b64));
         }
 
@@ -300,5 +301,3 @@ namespace slskd.SocialFederation
         }
     }
 }
-
-

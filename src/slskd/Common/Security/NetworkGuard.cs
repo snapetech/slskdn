@@ -480,4 +480,3 @@ public sealed class ConnectionInfo
     /// <summary>Gets or sets pending request count.</summary>
     public int PendingRequests { get; init; }
 }
-

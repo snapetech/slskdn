@@ -783,4 +783,3 @@ public static class HashDbMigrations
         public Action<SqliteConnection> Apply { get; set; }
     }
 }
-

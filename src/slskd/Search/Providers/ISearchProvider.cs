@@ -30,8 +30,8 @@ public interface ISearchProvider
 }
 
 /// <summary>
-    ///     Sink interface for receiving search results from providers.
-    /// </summary>
+///     Sink interface for receiving search results from providers.
+/// </summary>
 public interface ISearchResultSink
 {
     /// <summary>
@@ -42,8 +42,8 @@ public interface ISearchResultSink
 }
 
 /// <summary>
-    ///     Search request for providers.
-    /// </summary>
+///     Search request for providers.
+/// </summary>
 public class SearchRequest
 {
     /// <summary>
@@ -68,8 +68,8 @@ public class SearchRequest
 }
 
 /// <summary>
-    ///     Search result from a provider with provenance information.
-    /// </summary>
+///     Search result from a provider with provenance information.
+/// </summary>
 public class SearchResult
 {
     /// <summary>
@@ -114,8 +114,8 @@ public class SearchResult
 }
 
 /// <summary>
-    ///     Pod content reference.
-    /// </summary>
+///     Pod content reference.
+/// </summary>
 public class PodContentRef
 {
     /// <summary>
@@ -130,8 +130,8 @@ public class PodContentRef
 }
 
 /// <summary>
-    ///     Scene content reference (Soulseek username + file tuple).
-    /// </summary>
+///     Scene content reference (Soulseek username + file tuple).
+/// </summary>
 public class SceneContentRef
 {
     /// <summary>

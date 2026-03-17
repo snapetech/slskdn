@@ -310,5 +310,3 @@ namespace slskd.Capabilities
         }
     }
 }
-
-

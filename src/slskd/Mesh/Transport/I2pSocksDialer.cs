@@ -227,6 +227,7 @@ public class I2pSocksDialer : ITransportDialer
         {
             Array.Reverse(portBytes);
         }
+
         request[5 + destBytes.Length] = portBytes[0]; // Port high byte
         request[6 + destBytes.Length] = portBytes[1]; // Port low byte
 
@@ -283,6 +284,7 @@ public class I2pSocksDialer : ITransportDialer
             {
                 throw new EndOfStreamException("Unexpected end of stream during SOCKS5 handshake");
             }
+
             totalRead += read;
         }
     }
@@ -338,6 +340,7 @@ public class I2pSocksDialer : ITransportDialer
                     _onDispose?.Invoke();
                 }
             }
+
             base.Dispose(disposing);
         }
     }

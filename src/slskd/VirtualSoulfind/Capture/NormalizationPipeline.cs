@@ -58,7 +58,6 @@ public class NormalizationPipeline : INormalizationPipeline
     {
         // For search results, we only have path + heuristic metadata
         // Can't fingerprint without the file, so we do best-effort MB lookup
-
         if (string.IsNullOrWhiteSpace(obs.Artist) || string.IsNullOrWhiteSpace(obs.Title))
         {
             logger.LogDebug("[VSF-NORM] Insufficient metadata for search observation: Artist={Artist}, Title={Title}",

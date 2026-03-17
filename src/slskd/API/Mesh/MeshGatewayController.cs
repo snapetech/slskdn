@@ -71,9 +71,9 @@ public class MeshGatewayController : ControllerBase
     /// <returns>Service reply</returns>
     [HttpPost("{serviceName}/{method}")]
     public async Task<IActionResult> CallService(
-        string serviceName,
-        string method,
-        CancellationToken cancellationToken)
+            string serviceName,
+            string method,
+            CancellationToken cancellationToken)
     {
         // Check if gateway is enabled (should be enforced by middleware, but double-check)
         if (!_options.Enabled)
@@ -133,8 +133,10 @@ public class MeshGatewayController : ControllerBase
                             message = $"Request body exceeds {max} bytes"
                         });
                     }
+
                     ms.Write(buffer, 0, read);
                 }
+
                 payload = ms.ToArray();
             }
             finally
@@ -212,7 +214,7 @@ public class MeshGatewayController : ControllerBase
             {
                 // Map service status codes to HTTP status codes
                 var httpStatus = MapServiceStatusToHttp(reply.StatusCode);
-                
+
                 _logger.LogWarning(
                     "[GatewayController] Service call failed: {ServiceName}/{Method} - Status={StatusCode}, Error={Error}",
                     serviceName, method, reply.StatusCode, reply.ErrorMessage);
@@ -321,4 +323,3 @@ public class MeshGatewayController : ControllerBase
         };
     }
 }
-

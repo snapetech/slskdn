@@ -104,6 +104,7 @@ public class PrivacyLayer : IPrivacyLayer
             if (_batcher != null)
             {
                 await _batcher.AddMessageAsync(transformedMessage, metadata);
+
                 // For batched messages, we return empty array as they're not sent immediately
                 transformedMessage = Array.Empty<byte>();
             }
@@ -124,6 +125,7 @@ public class PrivacyLayer : IPrivacyLayer
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error transforming outbound message");
+
             // Return original message on error to avoid breaking communication
             return message;
         }
@@ -164,6 +166,7 @@ public class PrivacyLayer : IPrivacyLayer
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error transforming inbound message");
+
             // Return original message on error
             return message;
         }

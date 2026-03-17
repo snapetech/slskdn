@@ -63,7 +63,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 2. Make authenticated request to remote realm's metadata API
                     // 3. Filter response to remove any sensitive data
                     // 4. Return sanitized metadata
-
                     _logger.LogInformation(
                         "[MetadataBridge] Querying metadata from realm '{RemoteRealm}' for local realm '{LocalRealm}' - Query: {QueryType}",
                         remoteRealmId, localRealmId, query.QueryType);
@@ -116,7 +115,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 2. Execute search against remote realm's search API
                     // 3. Filter results to remove private/inappropriate content
                     // 4. Return search results with proper attribution
-
                     _logger.LogInformation(
                         "[MetadataBridge] Searching content in realm '{RemoteRealm}' for local realm '{LocalRealm}' - Query: '{SearchTerm}'",
                         remoteRealmId, localRealmId, searchQuery.SearchTerm);
@@ -169,7 +167,6 @@ namespace slskd.Mesh.Realm.Bridge
                     // 1. Query remote realm's public information endpoint
                     // 2. Return sanitized realm metadata (name, description, etc.)
                     // 3. Never expose sensitive information like governance roots
-
                     _logger.LogDebug(
                         "[MetadataBridge] Getting realm info for '{RemoteRealm}' from local realm '{LocalRealm}'",
                         remoteRealmId, localRealmId);
@@ -181,6 +178,7 @@ namespace slskd.Mesh.Realm.Bridge
                         DisplayName = $"Realm {remoteRealmId}",
                         Description = "A connected realm",
                         IsPubliclyVisible = true,
+
                         // Never expose: GovernanceRoots, BootstrapNodes, internal policies
                     };
 

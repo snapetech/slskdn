@@ -118,7 +118,7 @@ public class SignalSystemTestFixture : IDisposable
     public SignalSystemTestFixture()
     {
         var services = new ServiceCollection();
-        
+
         // Add logging
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
 

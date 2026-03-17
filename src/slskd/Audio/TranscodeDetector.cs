@@ -42,7 +42,7 @@ namespace slskd.Audio
             {
                 // Check encoder signature for clues
                 if (variant.EncoderSignature != null &&
-                    variant.EncoderSignature.Contains("LAME", StringComparison.OrdinalIgnoreCase))  // MP3 encoder in FLAC
+                    variant.EncoderSignature.Contains("LAME", StringComparison.OrdinalIgnoreCase)) // MP3 encoder in FLAC
                 {
                     return (true, "Lossy encoder signature in lossless file");
                 }

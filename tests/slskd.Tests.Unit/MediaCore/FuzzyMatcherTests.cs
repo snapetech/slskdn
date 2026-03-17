@@ -47,7 +47,7 @@ public class FuzzyMatcherTests
     [InlineData("Pink Floyd", "Dark Side of the Moon", "Pink Floyd", "The Dark Side of the Moon", 0.95)] // Extra "The" → high token overlap
     [InlineData("Queen", "Bohemian Rhapsody", "Madonna", "Like a Virgin", 0.0)] // Completely different
     public void Score_ReturnsExpectedJaccardSimilarity(
-        string title1, string artist1, string title2, string artist2, double expected)
+            string title1, string artist1, string title2, string artist2, double expected)
     {
         var score = matcher.Score(title1, artist1, title2, artist2);
         Assert.InRange(score, expected - 0.1, expected + 0.1);

@@ -131,9 +131,9 @@ namespace slskd.VirtualSoulfind.v2.Sources
             cmd.Parameters.AddWithValue("@backendRef", candidate.BackendRef);
             cmd.Parameters.AddWithValue("@expectedQuality", candidate.ExpectedQuality);
             cmd.Parameters.AddWithValue("@trustScore", candidate.TrustScore);
-            cmd.Parameters.AddWithValue("@lastValidatedAt", 
+            cmd.Parameters.AddWithValue("@lastValidatedAt",
                 candidate.LastValidatedAt?.ToUnixTimeSeconds() ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@lastSeenAt", 
+            cmd.Parameters.AddWithValue("@lastSeenAt",
                 candidate.LastSeenAt?.ToUnixTimeSeconds() ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@isPreferred", candidate.IsPreferred ? 1 : 0);
 
@@ -251,11 +251,11 @@ namespace slskd.VirtualSoulfind.v2.Sources
                 BackendRef = reader.GetString(3),
                 ExpectedQuality = reader.GetFloat(4),
                 TrustScore = reader.GetFloat(5),
-                LastValidatedAt = reader.IsDBNull(6) 
-                    ? null 
+                LastValidatedAt = reader.IsDBNull(6)
+                    ? null
                     : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(6)),
-                LastSeenAt = reader.IsDBNull(7) 
-                    ? null 
+                LastSeenAt = reader.IsDBNull(7)
+                    ? null
                     : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(7)),
                 IsPreferred = reader.GetInt32(8) != 0,
             };

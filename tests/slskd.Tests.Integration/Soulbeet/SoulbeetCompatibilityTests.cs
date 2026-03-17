@@ -55,7 +55,7 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
         // Assert
         response.EnsureSuccessStatusCode();
         var searchResult = await response.Content.ReadFromJsonAsync<SearchResponse>();
-        
+
         Assert.NotNull(searchResult);
         Assert.NotNull(searchResult.SearchId);
         Assert.Equal("test artist", searchResult.Query);
@@ -85,7 +85,7 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
         // Assert
         response.EnsureSuccessStatusCode();
         var downloadResult = await response.Content.ReadFromJsonAsync<DownloadResponse>();
-        
+
         Assert.NotNull(downloadResult);
         Assert.NotEmpty(downloadResult.DownloadIds);
     }
@@ -99,7 +99,7 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
         // Assert
         response.EnsureSuccessStatusCode();
         var downloads = await response.Content.ReadFromJsonAsync<DownloadsListResponse>();
-        
+
         Assert.NotNull(downloads);
         Assert.NotNull(downloads.Downloads);
     }
@@ -130,7 +130,7 @@ public class SoulbeetCompatibilityTests : IClassFixture<slskd.Tests.Integration.
         // Assert
         response.EnsureSuccessStatusCode();
         var download = await response.Content.ReadFromJsonAsync<DownloadDetailResponse>();
-        
+
         Assert.NotNull(download);
         Assert.Equal(downloadId, download.Id);
     }

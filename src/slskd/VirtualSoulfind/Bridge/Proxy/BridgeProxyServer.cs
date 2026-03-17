@@ -93,7 +93,7 @@ public class BridgeProxyServer : BackgroundService
 
                     var client = await listener.AcceptTcpClientAsync();
                     var clientId = Guid.NewGuid().ToString("N");
-                    
+
                     logger.LogInformation("[VSF-BRIDGE-PROXY] New client connection: {ClientId} from {Endpoint}",
                         clientId, client.Client.RemoteEndPoint);
 
@@ -150,108 +150,110 @@ public class BridgeProxyServer : BackgroundService
 
         var stream = client.GetStream();
 
-            try
+        try
+        {
+            // Phase 1: Handshake
+            await PerformHandshakeAsync(stream, session, ct);
+
+            // Phase 2: Login
+            var loginResult = await PerformLoginAsync(stream, session, ct);
+            if (!loginResult)
             {
-                // Phase 1: Handshake
-                await PerformHandshakeAsync(stream, session, ct);
+                logger.LogWarning("[VSF-BRIDGE-PROXY] Client {ClientId} login failed", clientId);
+                return;
+            }
 
-                // Phase 2: Login
-                var loginResult = await PerformLoginAsync(stream, session, ct);
-                if (!loginResult)
+            // Phase 3: Handle requests (T-851.8: Error handling and graceful degradation)
+            while (!ct.IsCancellationRequested && client.Connected)
+            {
+                try
                 {
-                    logger.LogWarning("[VSF-BRIDGE-PROXY] Client {ClientId} login failed", clientId);
-                    return;
-                }
-
-                // Phase 3: Handle requests (T-851.8: Error handling and graceful degradation)
-                while (!ct.IsCancellationRequested && client.Connected)
-                {
-                    try
+                    // Read message using protocol parser
+                    var message = await protocolParser.ReadMessageAsync(stream, ct);
+                    if (message == null)
                     {
-                        // Read message using protocol parser
-                        var message = await protocolParser.ReadMessageAsync(stream, ct);
-                        if (message == null)
-                        {
-                            // Connection closed
-                            break;
-                        }
-
-                        // Route to appropriate handler
-                        session.RequestCount++;
-                        switch (message.Type)
-                        {
-                            case SoulseekProtocolParser.MessageType.SearchRequest:
-                                await HandleSearchRequestAsync(stream, message, session, ct);
-                                break;
-
-                            case SoulseekProtocolParser.MessageType.DownloadRequest:
-                                await HandleDownloadRequestAsync(stream, message, session, ct);
-                                break;
-
-                            case SoulseekProtocolParser.MessageType.RoomListRequest:
-                                await HandleRoomListRequestAsync(stream, message, session, ct);
-                                break;
-
-                            default:
-                                logger.LogWarning("[VSF-BRIDGE-PROXY] Unhandled message type: {Type} from {ClientId}",
-                                    message.Type, session.ClientId);
-                                // Send error response for unknown message types
-                                await SendErrorResponseAsync(stream, "Unknown message type", ct);
-                                break;
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Shutdown requested
+                        // Connection closed
                         break;
                     }
-                    catch (IOException ioEx)
+
+                    // Route to appropriate handler
+                    session.RequestCount++;
+                    switch (message.Type)
                     {
-                        // Client disconnected
-                        logger.LogDebug("[VSF-BRIDGE-PROXY] Client {ClientId} disconnected: {Message}",
-                            clientId, ioEx.Message);
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log error but continue processing (graceful degradation)
-                        logger.LogError(ex, "[VSF-BRIDGE-PROXY] Error handling message from {ClientId}: {Message}",
-                            clientId, ex.Message);
-                        
-                        // Try to send error response
-                        try
-                        {
-                            await SendErrorResponseAsync(stream, $"Internal error: {ex.Message}", ct);
-                        }
-                        catch
-                        {
-                            // Failed to send error - client likely disconnected
+                        case SoulseekProtocolParser.MessageType.SearchRequest:
+                            await HandleSearchRequestAsync(stream, message, session, ct);
                             break;
-                        }
+
+                        case SoulseekProtocolParser.MessageType.DownloadRequest:
+                            await HandleDownloadRequestAsync(stream, message, session, ct);
+                            break;
+
+                        case SoulseekProtocolParser.MessageType.RoomListRequest:
+                            await HandleRoomListRequestAsync(stream, message, session, ct);
+                            break;
+
+                        default:
+                            logger.LogWarning("[VSF-BRIDGE-PROXY] Unhandled message type: {Type} from {ClientId}",
+                                message.Type, session.ClientId);
+
+                            // Send error response for unknown message types
+                            await SendErrorResponseAsync(stream, "Unknown message type", ct);
+                            break;
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "[VSF-BRIDGE-PROXY] Fatal error in client session {ClientId}: {Message}",
-                    clientId, ex.Message);
-            }
-            finally
-            {
-                // Cleanup (T-851.6)
-                if (session.ActiveProxyId != null)
+                catch (OperationCanceledException)
                 {
+                    // Shutdown requested
+                    break;
+                }
+                catch (IOException ioEx)
+                {
+                    // Client disconnected
+                    logger.LogDebug("[VSF-BRIDGE-PROXY] Client {ClientId} disconnected: {Message}",
+                        clientId, ioEx.Message);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // Log error but continue processing (graceful degradation)
+                    logger.LogError(ex, "[VSF-BRIDGE-PROXY] Error handling message from {ClientId}: {Message}",
+                        clientId, ex.Message);
+
+                    // Try to send error response
                     try
                     {
-                        await progressProxy.StopProxyAsync(session.ActiveProxyId, ct);
+                        await SendErrorResponseAsync(stream, $"Internal error: {ex.Message}", ct);
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        logger.LogWarning(ex, "[VSF-BRIDGE-PROXY] Error stopping proxy for {ClientId}", clientId);
+                        // Failed to send error - client likely disconnected
+                        break;
                     }
                 }
-                clientIdToProxyId.TryRemove(clientId, out _);
             }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[VSF-BRIDGE-PROXY] Fatal error in client session {ClientId}: {Message}",
+                clientId, ex.Message);
+        }
+        finally
+        {
+            // Cleanup (T-851.6)
+            if (session.ActiveProxyId != null)
+            {
+                try
+                {
+                    await progressProxy.StopProxyAsync(session.ActiveProxyId, ct);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "[VSF-BRIDGE-PROXY] Error stopping proxy for {ClientId}", clientId);
+                }
+            }
+
+            clientIdToProxyId.TryRemove(clientId, out _);
+        }
     }
 
     private async Task PerformHandshakeAsync(NetworkStream stream, ClientSession session, CancellationToken ct)
@@ -449,7 +451,7 @@ public class BridgeProxyServer : BackgroundService
         catch (Exception ex)
         {
             logger.LogError(ex, "[VSF-BRIDGE-PROXY] Error processing download request from {ClientId}", session.ClientId);
-            
+
             // Send error response
             try
             {
@@ -461,7 +463,7 @@ public class BridgeProxyServer : BackgroundService
                 writer.Write(errorMsg);
                 writer.Write(downloadRequest.Token);
                 var errorPayload = errorStream.ToArray();
-                
+
                 await protocolParser.WriteMessageAsync(
                     stream,
                     SoulseekProtocolParser.MessageType.DownloadResponse,
@@ -528,6 +530,7 @@ public class BridgeProxyServer : BackgroundService
                     kvp.Value, kvp.Key);
             }
         }
+
         clientIdToProxyId.Clear();
 
         // Close all client connections (T-851.6)
@@ -539,6 +542,7 @@ public class BridgeProxyServer : BackgroundService
                 {
                     await progressProxy.StopProxyAsync(session.ActiveProxyId, cancellationToken);
                 }
+
                 session.TcpClient?.Close();
             }
             catch (Exception ex)

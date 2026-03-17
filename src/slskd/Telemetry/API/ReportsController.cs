@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="ReportsController.cs" company="slskdN">
+// <copyright file="ReportsController.cs" company="slskdN">
 //     Copyright (c) slskdN. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 namespace slskd.Telemetry;
 
 using slskd.Core.Security;
@@ -41,7 +40,7 @@ using Soulseek;
 [ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ReportsController : ControllerBase
 {
     /// <summary>
@@ -72,10 +71,10 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferSummary(
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null,
-        [FromQuery] string direction = null,
-        [FromQuery] string username = null)
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null,
+    [FromQuery] string direction = null,
+    [FromQuery] string username = null)
     {
         var now = DateTime.UtcNow;
 
@@ -133,11 +132,11 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferHistogram(
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null,
-        [FromQuery] int interval = 60,
-        [FromQuery] string direction = null,
-        [FromQuery] string username = null)
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null,
+    [FromQuery] int interval = 60,
+    [FromQuery] string direction = null,
+    [FromQuery] string username = null)
     {
         var now = DateTime.UtcNow;
 
@@ -212,13 +211,13 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferLeaderboard(
-        [FromQuery] string direction,
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null,
-        [FromQuery] string sortBy = "Count",
-        [FromQuery] string sortOrder = "DESC",
-        [FromQuery] int limit = 25,
-        [FromQuery] int offset = 0)
+    [FromQuery] string direction,
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null,
+    [FromQuery] string sortBy = "Count",
+    [FromQuery] string sortOrder = "DESC",
+    [FromQuery] int limit = 25,
+    [FromQuery] int offset = 0)
     {
         if (string.IsNullOrWhiteSpace(direction))
         {
@@ -292,9 +291,9 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetUserDetails(
-        [FromRoute] string username,
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null)
+    [FromRoute] string username,
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -374,13 +373,13 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferExceptions(
-        [FromQuery] string direction = null,
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null,
-        [FromQuery] string username = null,
-        [FromQuery] string sortOrder = "DESC",
-        [FromQuery] int limit = 25,
-        [FromQuery] int offset = 0)
+    [FromQuery] string direction = null,
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null,
+    [FromQuery] string username = null,
+    [FromQuery] string sortOrder = "DESC",
+    [FromQuery] int limit = 25,
+    [FromQuery] int offset = 0)
     {
         if (string.IsNullOrWhiteSpace(direction))
         {
@@ -452,12 +451,12 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferExceptionsPareto(
-        [FromQuery] string direction,
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null,
-        [FromQuery] string username = null,
-        [FromQuery] int limit = 25,
-        [FromQuery] int offset = 0)
+    [FromQuery] string direction,
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null,
+    [FromQuery] string username = null,
+    [FromQuery] int limit = 25,
+    [FromQuery] int offset = 0)
     {
         if (string.IsNullOrWhiteSpace(direction))
         {
@@ -522,11 +521,11 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferDirectoryFrequency(
-        [FromQuery] DateTime? start = null,
-        [FromQuery] DateTime? end = null,
-        [FromQuery] string username = null,
-        [FromQuery] int limit = 25,
-        [FromQuery] int offset = 0)
+    [FromQuery] DateTime? start = null,
+    [FromQuery] DateTime? end = null,
+    [FromQuery] string username = null,
+    [FromQuery] int limit = 25,
+    [FromQuery] int offset = 0)
     {
         start ??= Program.GenesisDateTime;
         end ??= DateTime.MaxValue;

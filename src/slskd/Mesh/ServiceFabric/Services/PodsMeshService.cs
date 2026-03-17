@@ -93,12 +93,12 @@ public class PodsMeshService : IMeshService
         CancellationToken cancellationToken)
     {
         var pods = await _podService.ListAsync(cancellationToken);
-        
+
         // Only return public/listed pods to external callers
         var publicPods = pods.Where(p => p.Visibility == PodVisibility.Listed).ToArray();
-        
+
         var response = JsonSerializer.Serialize(publicPods);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -136,7 +136,7 @@ public class PodsMeshService : IMeshService
         }
 
         var response = JsonSerializer.Serialize(pod);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -170,9 +170,9 @@ public class PodsMeshService : IMeshService
         };
 
         var success = await _podService.JoinAsync(request.PodId, member, cancellationToken);
-        
+
         var response = JsonSerializer.Serialize(new { Success = success });
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -199,9 +199,9 @@ public class PodsMeshService : IMeshService
         }
 
         var success = await _podService.LeaveAsync(request.PodId, context.RemotePeerId, cancellationToken);
-        
+
         var response = JsonSerializer.Serialize(new { Success = success });
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -249,9 +249,9 @@ public class PodsMeshService : IMeshService
         };
 
         var success = await _podMessaging.SendAsync(message, cancellationToken);
-        
+
         var response = JsonSerializer.Serialize(new { Success = success, MessageId = message.MessageId });
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,
@@ -282,9 +282,9 @@ public class PodsMeshService : IMeshService
             request.ChannelId,
             request.SinceTimestamp,
             cancellationToken);
-        
+
         var response = JsonSerializer.Serialize(messages);
-        
+
         return new ServiceReply
         {
             CorrelationId = call.CorrelationId,

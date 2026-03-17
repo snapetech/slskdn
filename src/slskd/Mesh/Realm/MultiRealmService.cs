@@ -320,7 +320,6 @@ namespace slskd.Mesh.Realm
         }
 
         // Temporary implementations - in production these would be proper services
-
         private class RealmConfigOptionsMonitor : IOptionsMonitor<RealmConfig>
         {
             public RealmConfigOptionsMonitor(RealmConfig currentValue)

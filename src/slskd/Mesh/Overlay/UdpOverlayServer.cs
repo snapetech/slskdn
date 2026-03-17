@@ -101,6 +101,7 @@ public class UdpOverlayServer : BackgroundService
                         logger.LogWarning("[Overlay] Dropping datagram exceeding MaxRemotePayloadSize ({Size} bytes)", result.Buffer.Length);
                         continue;
                     }
+
                     if (result.Buffer.Length > options.MaxDatagramBytes)
                     {
                         logger.LogWarning("[Overlay] Dropping oversized datagram size={Size}", result.Buffer.Length);
@@ -142,6 +143,7 @@ public class UdpOverlayServer : BackgroundService
         catch (Exception ex)
         {
             logger.LogError(ex, "[Overlay] UDP overlay server error (non-fatal): {Message}", ex.Message);
+
             // Don't re-throw - allow mesh to continue operating via other transports
         }
     }

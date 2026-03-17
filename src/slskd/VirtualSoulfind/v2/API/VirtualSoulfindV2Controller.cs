@@ -79,8 +79,8 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(DesiredTrack), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> EnqueueTrack(
-            [FromBody] EnqueueTrackRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] EnqueueTrackRequest request,
+                    CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
@@ -128,8 +128,8 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(DesiredRelease), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> EnqueueRelease(
-            [FromBody] EnqueueReleaseRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] EnqueueReleaseRequest request,
+                    CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
@@ -158,8 +158,8 @@ namespace slskd.VirtualSoulfind.v2.API
         [HttpGet("intents/tracks/pending")]
         [ProducesResponseType(typeof(IReadOnlyList<DesiredTrack>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPendingTracks(
-            [FromQuery] int limit = 100,
-            CancellationToken cancellationToken = default)
+        [FromQuery] int limit = 100,
+                    CancellationToken cancellationToken = default)
         {
             var intents = await _intentQueue.GetPendingTracksAsync(limit, cancellationToken);
             return Ok(intents);
@@ -175,11 +175,11 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(DesiredTrack), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetTrackIntent(
-            string intentId,
-            CancellationToken cancellationToken)
+                    string intentId,
+                    CancellationToken cancellationToken)
         {
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
-            
+
             if (intent == null)
             {
                 return NotFound();
@@ -213,12 +213,12 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateTrackIntent(
-            string intentId,
-            [FromBody] UpdateIntentRequest request,
-            CancellationToken cancellationToken)
+                    string intentId,
+        [FromBody] UpdateIntentRequest request,
+                    CancellationToken cancellationToken)
         {
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
-            
+
             if (intent == null)
             {
                 return NotFound();
@@ -250,9 +250,9 @@ namespace slskd.VirtualSoulfind.v2.API
         [HttpGet("catalogue/artists/search")]
         [ProducesResponseType(typeof(IReadOnlyList<Artist>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SearchArtists(
-            [FromQuery] [Required] string query,
-            [FromQuery] int limit = 50,
-            CancellationToken cancellationToken = default)
+        [FromQuery][Required] string query,
+        [FromQuery] int limit = 50,
+                    CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -273,11 +273,11 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(Artist), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetArtist(
-            string artistId,
-            CancellationToken cancellationToken)
+                    string artistId,
+                    CancellationToken cancellationToken)
         {
             var artist = await _catalogueStore.FindArtistByIdAsync(artistId, cancellationToken);
-            
+
             if (artist == null)
             {
                 return NotFound();
@@ -296,12 +296,12 @@ namespace slskd.VirtualSoulfind.v2.API
         [HttpGet("catalogue/artists/{artistId}/releases")]
         [ProducesResponseType(typeof(IReadOnlyList<ReleaseGroup>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetArtistReleases(
-            string artistId,
-            [FromQuery] int limit = 100,
-            CancellationToken cancellationToken = default)
+                    string artistId,
+        [FromQuery] int limit = 100,
+                    CancellationToken cancellationToken = default)
         {
             var releases = await _catalogueStore.ListReleaseGroupsForArtistAsync(artistId, cancellationToken);
-            
+
             // Apply limit client-side
             var limited = limit > 0 ? releases.Take(limit).ToList() : releases;
             return Ok(limited);
@@ -316,8 +316,8 @@ namespace slskd.VirtualSoulfind.v2.API
         [HttpGet("catalogue/releases/{releaseId}/tracks")]
         [ProducesResponseType(typeof(IReadOnlyList<Track>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetReleaseTracks(
-            string releaseId,
-            CancellationToken cancellationToken)
+                    string releaseId,
+                    CancellationToken cancellationToken)
         {
             var tracks = await _catalogueStore.ListTracksForReleaseAsync(releaseId, cancellationToken);
             return Ok(tracks);
@@ -333,8 +333,8 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(TrackAcquisitionPlan), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreatePlan(
-            [FromBody] CreatePlanRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] CreatePlanRequest request,
+                    CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
@@ -366,11 +366,11 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(PlanExecutionState), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetExecutionStatus(
-            string executionId,
-            CancellationToken cancellationToken = default)
+                    string executionId,
+                    CancellationToken cancellationToken = default)
         {
             var state = await _resolver.GetExecutionStatusAsync(executionId, cancellationToken);
-            
+
             if (state == null)
             {
                 return NotFound();
@@ -389,11 +389,11 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ProcessIntent(
-            string intentId,
-            CancellationToken cancellationToken)
+                    string intentId,
+                    CancellationToken cancellationToken)
         {
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
-            
+
             if (intent == null)
             {
                 return NotFound();

@@ -30,7 +30,7 @@ public class BackfillIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var backfillService = serviceProvider.GetService<IBackfillSchedulerService>();
-        
+
         if (backfillService == null)
         {
             Assert.True(true, "Backfill service not available (Backfill may not be configured)");
@@ -76,7 +76,7 @@ public class BackfillIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var backfillService = serviceProvider.GetService<IBackfillSchedulerService>();
-        
+
         if (backfillService == null)
         {
             Assert.True(true, "Backfill service not available");
@@ -124,7 +124,7 @@ public class BackfillIntegrationTests : IClassFixture<StubWebApplicationFactory>
     {
         // Arrange
         var backfillService = serviceProvider.GetService<IBackfillSchedulerService>();
-        
+
         if (backfillService == null)
         {
             Assert.True(true, "Backfill service not available");

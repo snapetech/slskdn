@@ -197,5 +197,3 @@ namespace slskd.Capabilities.API
         public string VersionString { get; set; }
     }
 }
-
-

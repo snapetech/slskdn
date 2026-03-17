@@ -28,9 +28,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var options = new LanBackendOptions { Enabled = false };
             var backend = CreateLanBackend(options);
             var itemId = ContentItemId.NewId();
-            
+
             var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
-            
+
             Assert.Empty(candidates);
         }
 
@@ -52,9 +52,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.9f,
                 ExpectedQuality = 95,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.True(result.IsValid);
         }
 
@@ -76,9 +76,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.9f,
                 ExpectedQuality = 95,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.True(result.IsValid);
         }
 
@@ -100,9 +100,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.9f,
                 ExpectedQuality = 95,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.False(result.IsValid);
             Assert.Contains("not in allowed networks", result.InvalidityReason);
         }
@@ -120,9 +120,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 TrustScore = 0.9f,
                 ExpectedQuality = 95,
             };
-            
+
             var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
-            
+
             Assert.False(result.IsValid);
             Assert.Contains("Not a LAN", result.InvalidityReason);
         }

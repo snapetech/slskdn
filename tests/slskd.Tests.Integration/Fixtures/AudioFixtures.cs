@@ -25,7 +25,7 @@ public static class AudioFixtures
                 ExpectedTranscode = false,
                 Content = GenerateFLAC()
             },
-            
+
             "mp3-320" => new TestAudioFile
             {
                 Id = "mp3-320",
@@ -39,7 +39,7 @@ public static class AudioFixtures
                 ExpectedTranscode = false,
                 Content = GenerateMP3()
             },
-            
+
             "mp3-128-transcode" => new TestAudioFile
             {
                 Id = "mp3-128-transcode",
@@ -53,7 +53,7 @@ public static class AudioFixtures
                 ExpectedTranscode = true,
                 Content = GenerateMP3Transcode()
             },
-            
+
             "opus-256" => new TestAudioFile
             {
                 Id = "opus-256",
@@ -67,7 +67,7 @@ public static class AudioFixtures
                 ExpectedTranscode = false,
                 Content = GenerateOpus()
             },
-            
+
             "aac-256" => new TestAudioFile
             {
                 Id = "aac-256",
@@ -81,7 +81,7 @@ public static class AudioFixtures
                 ExpectedTranscode = false,
                 Content = GenerateAAC()
             },
-            
+
             _ => throw new ArgumentException($"Unknown test file: {id}")
         };
     }
@@ -162,7 +162,7 @@ public class TestAudioFile
     public double ExpectedQualityScore { get; set; }
     public bool ExpectedTranscode { get; set; }
     public byte[] Content { get; set; } = Array.Empty<byte>();
-    
+
     // MusicBrainz test data
     public string MbRecordingId { get; set; } = "test-recording-" + Guid.NewGuid().ToString();
     public string MbReleaseId { get; set; } = "test-release-" + Guid.NewGuid().ToString();

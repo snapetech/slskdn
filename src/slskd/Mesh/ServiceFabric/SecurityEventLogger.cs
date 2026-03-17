@@ -225,7 +225,7 @@ public class SecurityEventLogger
         string pattern,
         Dictionary<string, object>? metrics = null)
     {
-        var metricsStr = metrics != null 
+        var metricsStr = metrics != null
             ? string.Join(", ", metrics.Select(kvp => $"{kvp.Key}={kvp.Value}"))
             : "none";
 

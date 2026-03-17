@@ -88,7 +88,6 @@ namespace slskd.Transfers.Rescue
             // - Check if file has been seen on Soulseek before (HashDb lookup)
             // - Check maximum concurrent rescue jobs
             // - Check daily rescue quota
-
             log.Debug("[GUARDRAIL] Rescue allowed for transfer {TransferId}, file {File}", transferId, filename);
             return (true, "Allowed");
         }
@@ -110,7 +109,7 @@ namespace slskd.Transfers.Rescue
             if (overlayPeerCount > 0 && soulseekPeerCount > 0)
             {
                 double overlayRatio = (double)overlayPeerCount / (overlayPeerCount + soulseekPeerCount);
-                
+
                 if (overlayRatio > Config.MaxOverlayRatio)
                 {
                     log.Warning("[GUARDRAIL] Overlay ratio {Ratio:F2} exceeds limit {Limit:F2}",
@@ -129,7 +128,7 @@ namespace slskd.Transfers.Rescue
 
             log.Debug("[GUARDRAIL] Multi-source job allowed: {SoulseekCount} Soulseek peers, {OverlayCount} overlay peers",
                 soulseekPeerCount, overlayPeerCount);
-            
+
             return (true, "Allowed");
         }
     }
@@ -175,5 +174,3 @@ namespace slskd.Transfers.Rescue
         public int DailyRescueQuota { get; set; } = -1;
     }
 }
-
-

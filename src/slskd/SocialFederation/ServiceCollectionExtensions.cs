@@ -112,7 +112,6 @@ namespace slskd.SocialFederation
 
             // Register controllers (ASP.NET Core will auto-discover them)
             // The controllers are in the API namespace and will be found by the framework
-
             return services;
         }
     }

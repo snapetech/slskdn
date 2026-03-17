@@ -10,6 +10,7 @@ import Browse from './Browse/Browse';
 import Chat from './Chat/Chat';
 import Collections from './Collections/Collections';
 import Contacts from './Contacts/Contacts';
+import DiscoveryGraphAtlasPage from './Search/DiscoveryGraphAtlasPage';
 import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
@@ -483,6 +484,12 @@ class App extends Component {
                     Search
                   </Menu.Item>
                 </Link>
+                <Link to="/discovery-graph">
+                  <Menu.Item data-testid="nav-discovery-graph">
+                    <Icon name="crosshairs" />
+                    Discovery Graph
+                  </Menu.Item>
+                </Link>
                 <Link to="/wishlist">
                   <Menu.Item data-testid="nav-wishlist">
                     <Icon name="star" />
@@ -753,6 +760,18 @@ class App extends Component {
                         <div className="view">
                           <SolidSettings {...props} />
                         </div>,
+                      )
+                    }
+                  />
+                  <Route
+                    exact
+                    path="/discovery-graph"
+                    render={(props) =>
+                      this.withTokenCheck(
+                        <DiscoveryGraphAtlasPage
+                          server={applicationState.server}
+                          {...props}
+                        />,
                       )
                     }
                   />

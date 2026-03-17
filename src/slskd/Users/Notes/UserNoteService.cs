@@ -102,7 +102,3 @@ namespace slskd.Users.Notes
         }
     }
 }
-
-
-
-

@@ -314,7 +314,6 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
 
             // In a real implementation, this would need to expire/remove from DHT
             // DHT entries typically expire naturally, so this mainly updates local tracking
-
             _logger.LogInformation(
                 "[ContentDescriptorPublisher] Unpublished {ContentId} (was published: {WasPublished})",
                 contentId, wasPublished);

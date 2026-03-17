@@ -94,6 +94,7 @@ public class SignalBus : ISignalBus, IDisposable
             {
                 logger.LogWarning(ex, "Failed to send signal {SignalId} via {Channel}, trying next channel",
                     signal.SignalId, channel);
+
                 // Continue to next channel
             }
         }

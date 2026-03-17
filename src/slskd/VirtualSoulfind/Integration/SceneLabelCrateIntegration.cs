@@ -15,7 +15,7 @@ public interface ISceneLabelCrateIntegration
     /// Get label crate peers from scene.
     /// </summary>
     Task<List<string>> GetLabelScenePeersAsync(string labelName, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Check if a label has a scene.
     /// </summary>
@@ -41,7 +41,7 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
     public async Task<List<string>> GetLabelScenePeersAsync(string labelName, CancellationToken ct)
     {
         var sceneId = NormalizeLabelToSceneId(labelName);
-        
+
         logger.LogDebug("[VSF-INTEGRATION] Getting peers from label scene {SceneId}", sceneId);
 
         try
@@ -64,7 +64,7 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
     public async Task<bool> HasLabelSceneAsync(string labelName, CancellationToken ct)
     {
         var sceneId = NormalizeLabelToSceneId(labelName);
-        
+
         try
         {
             var metadata = await sceneTracker.GetSceneMetadataAsync(sceneId, ct);
@@ -83,7 +83,7 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
             .ToLowerInvariant()
             .Replace(" ", "-")
             .Replace("_", "-");
-        
+
         return $"scene:label:{normalized}";
     }
 }

@@ -22,11 +22,11 @@ public class PodMembershipSignerTests
     {
         mockLogger = new Mock<ILogger<PodMembershipSigner>>();
         mockKeyStore = new Mock<IKeyStore>();
-        
+
         // Generate a test keypair
         var keyPair = Ed25519KeyPair.Generate();
         mockKeyStore.Setup(k => k.Current).Returns(keyPair);
-        
+
         signer = new PodMembershipSigner(mockLogger.Object, mockKeyStore.Object);
     }
 
@@ -65,7 +65,7 @@ public class PodMembershipSignerTests
 
         // Act
         var record = await signer.SignMembershipAsync(
-            podId, peerId, role, action, 
+            podId, peerId, role, action,
             signerPrivateKey: customKeyPair.PrivateKey);
 
         // Assert
@@ -103,10 +103,10 @@ public class PodMembershipSignerTests
         var action = "join";
 
         var record = await signer.SignMembershipAsync(podId, peerId, role, action);
-        
+
         // Tamper with the signature
         record.Signature = Convert.ToBase64String(new byte[64]); // Invalid signature
-        
+
         var publicKey = mockKeyStore.Object.Current.PublicKey;
 
         // Act
@@ -126,7 +126,7 @@ public class PodMembershipSignerTests
         var action = "join";
 
         var record = await signer.SignMembershipAsync(podId, peerId, role, action);
-        
+
         // Use a different public key
         var wrongKeyPair = Ed25519KeyPair.Generate();
         var wrongPublicKey = wrongKeyPair.PublicKey;
@@ -152,7 +152,7 @@ public class PodMembershipSignerTests
             PublicKey = Convert.ToBase64String(mockKeyStore.Object.Current.PublicKey),
             Signature = string.Empty // Missing signature
         };
-        
+
         var publicKey = mockKeyStore.Object.Current.PublicKey;
 
         // Act

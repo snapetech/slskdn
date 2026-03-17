@@ -13,22 +13,22 @@ public class ContentSafetyTests
 {
     // FLAC magic bytes
     private static readonly byte[] FlacMagic = { 0x66, 0x4C, 0x61, 0x43 }; // "fLaC"
-    
+
     // MP3 ID3v2 magic
     private static readonly byte[] Mp3Id3Magic = { 0x49, 0x44, 0x33 }; // "ID3"
-    
+
     // MP3 frame sync
     private static readonly byte[] Mp3FrameMagic = { 0xFF, 0xFB };
-    
+
     // PE/DOS executable
     private static readonly byte[] PeMagic = { 0x4D, 0x5A }; // "MZ"
-    
+
     // ELF executable
     private static readonly byte[] ElfMagic = { 0x7F, 0x45, 0x4C, 0x46 }; // "\x7FELF"
-    
+
     // PNG
     private static readonly byte[] PngMagic = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-    
+
     // OGG
     private static readonly byte[] OggMagic = { 0x4F, 0x67, 0x67, 0x53 }; // "OggS"
 
@@ -37,7 +37,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(FlacMagic);
         var result = ContentSafety.VerifyHeader(header, ".flac");
-        
+
         Assert.True(result.IsValid);
         Assert.False(result.IsWarning);
         Assert.Equal(ContentThreatLevel.Safe, result.ThreatLevel);
@@ -48,7 +48,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(Mp3Id3Magic);
         var result = ContentSafety.VerifyHeader(header, ".mp3");
-        
+
         Assert.True(result.IsValid);
         Assert.Equal(ContentThreatLevel.Safe, result.ThreatLevel);
     }
@@ -58,7 +58,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(Mp3FrameMagic);
         var result = ContentSafety.VerifyHeader(header, ".mp3");
-        
+
         Assert.True(result.IsValid);
     }
 
@@ -67,7 +67,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(OggMagic);
         var result = ContentSafety.VerifyHeader(header, ".ogg");
-        
+
         Assert.True(result.IsValid);
     }
 
@@ -76,7 +76,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(PeMagic);
         var result = ContentSafety.VerifyHeader(header, ".flac");
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(ContentThreatLevel.Dangerous, result.ThreatLevel);
         Assert.Contains("executable", result.Message, System.StringComparison.OrdinalIgnoreCase);
@@ -87,7 +87,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(ElfMagic);
         var result = ContentSafety.VerifyHeader(header, ".mp3");
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(ContentThreatLevel.Dangerous, result.ThreatLevel);
     }
@@ -97,7 +97,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(PeMagic);
         var result = ContentSafety.VerifyHeader(header, ".png");
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(ContentThreatLevel.Dangerous, result.ThreatLevel);
     }
@@ -107,7 +107,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(PeMagic);
         var result = ContentSafety.VerifyHeader(header, ".exe");
-        
+
         // EXE with PE content is valid but flagged as executable
         Assert.True(result.IsValid);
         Assert.True(result.IsWarning);
@@ -119,7 +119,7 @@ public class ContentSafetyTests
     {
         var header = new byte[] { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 };
         var result = ContentSafety.VerifyHeader(header, ".flac");
-        
+
         Assert.True(result.IsValid); // Not blocked, just warned
         Assert.True(result.IsWarning);
         Assert.Equal(ContentThreatLevel.Mismatch, result.ThreatLevel);
@@ -159,7 +159,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(FlacMagic);
         var type = ContentSafety.DetectFileType(header);
-        
+
         Assert.NotNull(type);
         Assert.Contains("FLAC", type, System.StringComparison.OrdinalIgnoreCase);
     }
@@ -169,7 +169,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(PeMagic);
         var type = ContentSafety.DetectFileType(header);
-        
+
         Assert.NotNull(type);
         Assert.Contains("executable", type, System.StringComparison.OrdinalIgnoreCase);
     }
@@ -179,7 +179,7 @@ public class ContentSafetyTests
     {
         var header = new byte[] { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56, 0x78, 0x9A };
         var type = ContentSafety.DetectFileType(header);
-        
+
         Assert.Null(type);
     }
 
@@ -188,7 +188,7 @@ public class ContentSafetyTests
     {
         var header = new byte[] { 0x00 };
         var result = ContentSafety.VerifyHeader(header, ".flac");
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(ContentThreatLevel.Unknown, result.ThreatLevel);
     }
@@ -197,7 +197,7 @@ public class ContentSafetyTests
     public void VerifyHeader_NullHeader_ReturnsUnknown()
     {
         var result = ContentSafety.VerifyHeader(null!, ".flac");
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(ContentThreatLevel.Unknown, result.ThreatLevel);
     }
@@ -207,7 +207,7 @@ public class ContentSafetyTests
     {
         var header = CreateHeader(FlacMagic);
         var result = ContentSafety.VerifyHeader(header, null!);
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(ContentThreatLevel.Unknown, result.ThreatLevel);
     }

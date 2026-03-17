@@ -39,8 +39,8 @@ public class MeshSearchLoopbackTests
     [Fact]
     public async Task MeshSearchReq_OverLoopback_ReturnsMeshSearchResp()
     {
-            var tempDir = Path.Combine(Path.GetTempPath(), "slskdn-mesh-lb-" + Guid.NewGuid().ToString("N")[..8]);
-            System.IO.Directory.CreateDirectory(tempDir);
+        var tempDir = Path.Combine(Path.GetTempPath(), "slskdn-mesh-lb-" + Guid.NewGuid().ToString("N")[..8]);
+        System.IO.Directory.CreateDirectory(tempDir);
         try
         {
             // Find an available port (50499 may be in use)

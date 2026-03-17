@@ -466,14 +466,14 @@ public sealed class ConsensusResult
         int totalVotes,
         double ratio,
         List<string> dissenters) => new()
-    {
-        HasConsensus = true,
-        MajorityHash = hash,
-        MajorityCount = majorityCount,
-        TotalVotes = totalVotes,
-        AgreementRatio = ratio,
-        Dissenters = dissenters,
-    };
+        {
+            HasConsensus = true,
+            MajorityHash = hash,
+            MajorityCount = majorityCount,
+            TotalVotes = totalVotes,
+            AgreementRatio = ratio,
+            Dissenters = dissenters,
+        };
 
     /// <summary>Create a no-consensus result.</summary>
     public static ConsensusResult NoConsensus(string message, int totalVotes, double ratio) => new()
@@ -565,5 +565,3 @@ public sealed class ConsensusStats
     /// <summary>Gets total votes.</summary>
     public long TotalVotes { get; init; }
 }
-
-

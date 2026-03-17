@@ -582,5 +582,3 @@ public sealed class DisclosureStats
     /// <summary>Gets total negative interactions.</summary>
     public long TotalNegativeInteractions { get; init; }
 }
-
-

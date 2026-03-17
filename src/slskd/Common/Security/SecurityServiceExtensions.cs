@@ -247,4 +247,3 @@ public sealed class SecurityServiceRegistrationOptions
         EnableAsymmetricDisclosure = false;
     }
 }
-

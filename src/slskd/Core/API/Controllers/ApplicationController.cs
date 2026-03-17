@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="ApplicationController.cs" company="slskd Team">
+// <copyright file="ApplicationController.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 using Microsoft.Extensions.Options;
 
 namespace slskd.Core.API
@@ -182,6 +181,7 @@ namespace slskd.Core.API
                 }
 
                 Log.Warning("Dump failed: {Error}", error);
+
                 // PR-06: when DiagnosticsClient/WriteDump unavailable (e.g. older runtime), return 501 with instructions
                 var e = error ?? "";
                 var isUnsupported = e.Contains("not supported", StringComparison.OrdinalIgnoreCase) ||

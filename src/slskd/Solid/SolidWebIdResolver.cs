@@ -64,10 +64,11 @@ public sealed class SolidWebIdResolver : ISolidWebIdResolver
         limited.Position = 0;
 
         var g = new Graph();
+
         // dotNetRDF: use RdfReader for auto-detection, or parse based on content-type
         var ctType = resp.Content.Headers.ContentType?.MediaType ?? "";
         using var reader = new StreamReader(limited);
-        
+
         if (ctType.Contains("turtle", StringComparison.OrdinalIgnoreCase) || ctType.Contains("text/turtle", StringComparison.OrdinalIgnoreCase))
         {
             var parser = new TurtleParser();
@@ -82,6 +83,7 @@ public sealed class SolidWebIdResolver : ISolidWebIdResolver
             var store = new TripleStore();
             var jsonParser = new JsonLdParser();
             jsonParser.Load(store, content);
+
             // Copy triples from store to graph
             foreach (var graph in store.Graphs)
             {

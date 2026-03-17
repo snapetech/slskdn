@@ -72,6 +72,7 @@ public class I2PTransport : IAnonymityTransport
                         _status.LastError = null;
                         _status.LastSuccessfulConnection = DateTimeOffset.UtcNow;
                     }
+
                     _logger.LogDebug("I2P SAM bridge is available at {Address}", _options.SamAddress);
                     return true;
                 }
@@ -82,6 +83,7 @@ public class I2PTransport : IAnonymityTransport
                         _status.IsAvailable = false;
                         _status.LastError = $"SAM bridge responded: {response}";
                     }
+
                     _logger.LogWarning("I2P SAM bridge rejected HELLO command: {Response}", response);
                     return false;
                 }
@@ -92,6 +94,7 @@ public class I2PTransport : IAnonymityTransport
                 _status.IsAvailable = false;
                 _status.LastError = "Failed to connect to SAM bridge";
             }
+
             _logger.LogWarning("I2P SAM bridge not available at {Address}", _options.SamAddress);
             return false;
         }
@@ -102,6 +105,7 @@ public class I2PTransport : IAnonymityTransport
                 _status.IsAvailable = false;
                 _status.LastError = ex.Message;
             }
+
             _logger.LogWarning(ex, "I2P SAM bridge not available at {Address}", _options.SamAddress);
             return false;
         }
@@ -191,6 +195,7 @@ public class I2PTransport : IAnonymityTransport
                 {
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
+
                 c.Dispose();
             });
         }
@@ -200,6 +205,7 @@ public class I2PTransport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish I2P connection to destination {Host}", host);
             client?.Dispose();
             throw;
@@ -248,6 +254,7 @@ public class I2PTransport : IAnonymityTransport
                 _onDispose();
                 _innerStream.Dispose();
             }
+
             base.Dispose(disposing);
         }
 

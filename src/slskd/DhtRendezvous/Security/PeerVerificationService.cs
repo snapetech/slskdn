@@ -25,12 +25,12 @@ public sealed class PeerVerificationService
     private readonly ConcurrentDictionary<string, VerificationRecord> _verificationCache = new();
     private readonly TimeSpan _cacheExpiry = TimeSpan.FromHours(1);
     private readonly TimeSpan _verificationTimeout = TimeSpan.FromSeconds(30);
-    
+
     /// <summary>
     /// Challenge prefix for verification tokens.
     /// </summary>
     public const string ChallengePrefix = "slskdn-verify-v1:";
-    
+
     public PeerVerificationService(
         ILogger<PeerVerificationService> logger,
         ISoulseekClient soulseekClient)
@@ -38,7 +38,7 @@ public sealed class PeerVerificationService
         _logger = logger;
         _soulseekClient = soulseekClient;
     }
-    
+
     /// <summary>
     /// Generate a challenge token for a peer to include in their UserInfo.
     /// </summary>
@@ -53,7 +53,7 @@ public sealed class PeerVerificationService
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)))[..8];
         return $"{ChallengePrefix}{nonce}:{hash}";
     }
-    
+
     /// <summary>
     /// Generate a random nonce for verification.
     /// </summary>
@@ -61,7 +61,7 @@ public sealed class PeerVerificationService
     {
         return Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
     }
-    
+
     /// <summary>
     /// Verify that a peer controls the claimed Soulseek username.
     /// </summary>
@@ -87,24 +87,24 @@ public sealed class PeerVerificationService
                 _verificationCache.TryRemove(claimedUsername, out _);
             }
         }
-        
+
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(_verificationTimeout);
-            
+
             // Get the user's info from Soulseek
             var userInfo = await _soulseekClient.GetUserInfoAsync(claimedUsername, cts.Token);
-            
+
             if (userInfo is null)
             {
                 _logger.LogWarning("Could not get UserInfo for {Username}", claimedUsername);
                 return VerificationResult.Failed("User not found on Soulseek");
             }
-            
+
             // Check if their description contains our challenge
             var description = userInfo.Description ?? string.Empty;
-            
+
             if (description.Contains(expectedChallenge))
             {
                 _logger.LogInformation("Verified username {Username} via Soulseek UserInfo challenge", claimedUsername);
@@ -112,7 +112,7 @@ public sealed class PeerVerificationService
                 CacheVerification(claimedUsername, result);
                 return result;
             }
-            
+
             // Check if they have any slskdn capability tag (weaker verification)
             if (description.Contains("slskdn_caps:") || description.Contains("slskdn/"))
             {
@@ -120,7 +120,7 @@ public sealed class PeerVerificationService
                 var result = VerificationResult.Partial("Has slskdn tags but challenge not found");
                 return result;
             }
-            
+
             _logger.LogWarning("Username verification failed for {Username}: challenge not found in description", claimedUsername);
             return VerificationResult.Failed("Challenge not found in user description");
         }
@@ -140,7 +140,7 @@ public sealed class PeerVerificationService
             return VerificationResult.Failed($"Error: {ex.Message}");
         }
     }
-    
+
     /// <summary>
     /// Quick check if a user appears to be an slskdn client based on their UserInfo.
     /// Does not verify identity, just checks for slskdn markers.
@@ -151,11 +151,11 @@ public sealed class PeerVerificationService
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
-            
+
             var userInfo = await _soulseekClient.GetUserInfoAsync(username, cts.Token);
             var description = userInfo?.Description ?? string.Empty;
-            
-            return description.Contains("slskdn_caps:") || 
+
+            return description.Contains("slskdn_caps:") ||
                    description.Contains("slskdn/") ||
                    description.Contains(ChallengePrefix);
         }
@@ -164,7 +164,7 @@ public sealed class PeerVerificationService
             return false;
         }
     }
-    
+
     /// <summary>
     /// Get verification statistics.
     /// </summary>
@@ -173,7 +173,7 @@ public sealed class PeerVerificationService
         var now = DateTimeOffset.UtcNow;
         var validCached = 0;
         var expiredCached = 0;
-        
+
         foreach (var kvp in _verificationCache)
         {
             if (now - kvp.Value.VerifiedAt < _cacheExpiry)
@@ -185,7 +185,7 @@ public sealed class PeerVerificationService
                 expiredCached++;
             }
         }
-        
+
         return new VerificationStats
         {
             CachedVerifications = validCached,
@@ -193,7 +193,7 @@ public sealed class PeerVerificationService
             CacheExpiryMinutes = (int)_cacheExpiry.TotalMinutes,
         };
     }
-    
+
     /// <summary>
     /// Clear verification cache for a specific user.
     /// </summary>
@@ -201,7 +201,7 @@ public sealed class PeerVerificationService
     {
         _verificationCache.TryRemove(username, out _);
     }
-    
+
     /// <summary>
     /// Clear all cached verifications.
     /// </summary>
@@ -209,7 +209,7 @@ public sealed class PeerVerificationService
     {
         _verificationCache.Clear();
     }
-    
+
     private void CacheVerification(string username, VerificationResult result)
     {
         _verificationCache[username] = new VerificationRecord
@@ -218,7 +218,7 @@ public sealed class PeerVerificationService
             VerifiedAt = DateTimeOffset.UtcNow,
         };
     }
-    
+
     private sealed class VerificationRecord
     {
         public required VerificationResult Result { get; init; }
@@ -234,7 +234,7 @@ public sealed class VerificationResult
     public bool IsVerified { get; init; }
     public bool IsPartial { get; init; }
     public string? FailureReason { get; init; }
-    
+
     public static VerificationResult Success() => new() { IsVerified = true };
     public static VerificationResult Partial(string reason) => new() { IsPartial = true, FailureReason = reason };
     public static VerificationResult Failed(string reason) => new() { FailureReason = reason };
@@ -249,5 +249,3 @@ public sealed class VerificationStats
     public int ExpiredCacheEntries { get; init; }
     public int CacheExpiryMinutes { get; init; }
 }
-
-

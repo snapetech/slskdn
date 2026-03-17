@@ -15,7 +15,7 @@ using slskd.VirtualSoulfind.Bridge;
 [Route("api/bridge/admin")]
 [ApiController]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class BridgeAdminController : ControllerBase
 {
     private readonly ILogger<BridgeAdminController> logger;
@@ -66,7 +66,6 @@ public class BridgeAdminController : ControllerBase
 
         // Note: This would require hot-reload support or service restart
         // For now, return a message indicating restart required
-
         return Ok(new
         {
             message = "Configuration updated. Restart bridge service to apply changes.",

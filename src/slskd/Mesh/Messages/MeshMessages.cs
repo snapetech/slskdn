@@ -315,5 +315,3 @@ namespace slskd.Mesh.Messages
         public int? MetaFlags { get; set; }
     }
 }
-
-

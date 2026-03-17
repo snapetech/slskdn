@@ -30,10 +30,10 @@ public class DhtMeshServiceDirectoryTests
         _dhtClientMock = new Mock<IMeshDhtClient>();
         _validatorMock = new Mock<IMeshServiceDescriptorValidator>();
         _options = new MeshServiceFabricOptions();
-        
+
         var optionsMock = new Mock<IOptions<MeshServiceFabricOptions>>();
         optionsMock.Setup(o => o.Value).Returns(_options);
-        
+
         _directory = new DhtMeshServiceDirectory(
             _loggerMock.Object,
             _dhtClientMock.Object,
@@ -95,7 +95,7 @@ public class DhtMeshServiceDirectoryTests
             CreateTestDescriptor("test-service", "peer2"),
             CreateTestDescriptor("test-service", "peer3")
         };
-        
+
         var serialized = MessagePackSerializer.Serialize(descriptors);
         _dhtClientMock
             .Setup(d => d.GetRawAsync("svc:test-service", It.IsAny<CancellationToken>()))
@@ -130,7 +130,7 @@ public class DhtMeshServiceDirectoryTests
             CreateTestDescriptor("test-service", "peer2"),
             CreateTestDescriptor("test-service", "peer3")
         };
-        
+
         var serialized = MessagePackSerializer.Serialize(descriptors);
         _dhtClientMock
             .Setup(d => d.GetRawAsync("svc:test-service", It.IsAny<CancellationToken>()))
@@ -160,13 +160,13 @@ public class DhtMeshServiceDirectoryTests
     {
         // Arrange
         _options.MaxDescriptorsPerLookup = 5;
-        
+
         var descriptors = new List<MeshServiceDescriptor>();
         for (int i = 0; i < 10; i++)
         {
             descriptors.Add(CreateTestDescriptor("test-service", $"peer{i}"));
         }
-        
+
         var serialized = MessagePackSerializer.Serialize(descriptors);
         _dhtClientMock
             .Setup(d => d.GetRawAsync("svc:test-service", It.IsAny<CancellationToken>()))

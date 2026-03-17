@@ -145,7 +145,6 @@ public static class SecurityUtils
             // This is a simplified extraction. In production, you'd properly parse
             // the certificate ASN.1 structure to extract the SPKI.
             // For now, we'll use the public key raw data as an approximation.
-
             using var cert = new X509Certificate2(certificate);
             return cert.PublicKey.EncodedKeyValue.RawData;
         }

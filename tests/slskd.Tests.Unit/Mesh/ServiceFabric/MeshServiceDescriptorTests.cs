@@ -65,8 +65,8 @@ public class MeshServiceDescriptorTests
     [InlineData("service", null)]
     [InlineData("service", "  ")]
     public void DeriveServiceId_WithInvalidInputs_ThrowsArgumentException(
-        string serviceName,
-        string ownerPeerId)
+            string serviceName,
+            string ownerPeerId)
     {
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>

@@ -12,7 +12,7 @@ using slskd.Core.Security;
 
 [ApiController]
 [Route("api/v0/mesh/health")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class MeshHealthController : ControllerBase
 {
     private readonly IMeshHealthService health;

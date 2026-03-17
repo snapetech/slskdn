@@ -144,4 +144,3 @@ namespace slskd.VirtualSoulfind.Core
         // Future: Game, Software
     }
 }
-

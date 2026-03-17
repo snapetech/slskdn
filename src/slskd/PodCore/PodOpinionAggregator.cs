@@ -202,6 +202,7 @@ public class PodOpinionAggregator : IPodOpinionAggregator
                     foreach (var channelId in channelIds)
                     {
                         var channelMessageCount = await _messageStorage.GetMessageCountAsync(podId, channelId, ct);
+
                         // Note: This is simplified - in a real implementation, we'd need to filter by sender and date
                         messageCount += (int)channelMessageCount;
                     }

@@ -235,6 +235,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                         logger.LogWarning("[SwarmOrchestrator] Job {JobId}: Chunk {ChunkIndex} verification failed",
                                             job.JobId, chunk.Index);
                                         chunkScheduler.UnregisterAssignment(chunk.Index);
+
                                         // Re-enqueue for retry
                                         chunkQueue.Enqueue(chunk);
                                     }
@@ -244,6 +245,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                     logger.LogWarning("[SwarmOrchestrator] Job {JobId}: Chunk {ChunkIndex} download failed: {Error}",
                                         job.JobId, chunk.Index, chunkResult.Error);
                                     chunkScheduler.UnregisterAssignment(chunk.Index);
+
                                     // Re-enqueue for retry
                                     chunkQueue.Enqueue(chunk);
                                 }
@@ -253,6 +255,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                 logger.LogError(ex, "[SwarmOrchestrator] Job {JobId}: Error processing chunk {ChunkIndex}",
                                     job.JobId, chunk.Index);
                                 chunkScheduler.UnregisterAssignment(chunk.Index);
+
                                 // Re-enqueue for retry
                                 chunkQueue.Enqueue(chunk);
                             }
@@ -261,7 +264,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                 activeDownloadTasks.TryRemove(chunk.Index, out _);
                             }
                         }, ct);
-                        
+
                         activeDownloadTasks[chunk.Index] = downloadTask;
                         downloadTasks.Add(downloadTask);
                     }
@@ -269,6 +272,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                     {
                         logger.LogWarning("[SwarmOrchestrator] Job {JobId}: Failed to assign chunk {ChunkIndex}: {Reason}",
                             job.JobId, chunk.Index, assignment.Reason);
+
                         // Re-enqueue for retry
                         chunkQueue.Enqueue(chunk);
                     }
@@ -421,7 +425,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
 
                     // Read chunk data into memory for assembly
                     var chunkData = await IOFile.ReadAllBytesAsync(tempFile, ct);
-                    
+
                     return new ChunkResult
                     {
                         ChunkIndex = chunk.Index,

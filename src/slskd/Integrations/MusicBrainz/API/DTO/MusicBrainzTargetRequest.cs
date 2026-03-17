@@ -31,11 +31,8 @@ namespace slskd.Integrations.MusicBrainz.API.DTO
         /// </summary>
         [JsonIgnore]
         public bool HasIdentifier =>
-            !string.IsNullOrWhiteSpace(ReleaseId) ||
-            !string.IsNullOrWhiteSpace(RecordingId) ||
-            !string.IsNullOrWhiteSpace(DiscogsReleaseId);
+                    !string.IsNullOrWhiteSpace(ReleaseId) ||
+                    !string.IsNullOrWhiteSpace(RecordingId) ||
+                    !string.IsNullOrWhiteSpace(DiscogsReleaseId);
     }
 }
-
-
-

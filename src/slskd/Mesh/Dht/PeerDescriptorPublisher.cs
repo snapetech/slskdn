@@ -115,6 +115,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             RelayRequired = nat == NatType.Symmetric,
             SequenceNumber = sequenceNumber,
             TransportEndpoints = transportEndpoints,
+
             // TODO: Add certificate pins and signing keys when identity system is complete
             CertificatePins = new List<string>(),
             ControlSigningKeys = new List<string>()
@@ -133,6 +134,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "[MeshDHT] Failed to get private key from KeyStore, using placeholder");
+
                 // Fallback to placeholder for now - this will fail but won't crash
                 privateKey = new byte[32];
             }
@@ -142,7 +144,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             logger.LogWarning("[MeshDHT] KeyStore not available, using placeholder key (signature will be invalid)");
             privateKey = new byte[32];
         }
-        
+
         try
         {
             var signature = signingService.SignDescriptor(descriptor, privateKey);

@@ -401,5 +401,3 @@ public sealed class SecurityEventStats
     /// <summary>Gets last event time by type.</summary>
     public required Dictionary<string, DateTimeOffset> LastEventByType { get; init; }
 }
-
-

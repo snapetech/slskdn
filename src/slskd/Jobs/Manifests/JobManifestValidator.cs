@@ -57,6 +57,7 @@ namespace slskd.Jobs.Manifests
                     {
                         errors.Add("Spec is required for multi-source job");
                     }
+
                     break;
                 default:
                     errors.Add($"Unknown job_type: {manifest.JobType}");

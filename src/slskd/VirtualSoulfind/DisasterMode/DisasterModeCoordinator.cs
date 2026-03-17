@@ -17,17 +17,17 @@ public interface IDisasterModeCoordinator
     /// Is disaster mode currently active?
     /// </summary>
     bool IsDisasterModeActive { get; }
-    
+
     /// <summary>
     /// Activate disaster mode (mesh-only operation).
     /// </summary>
     Task ActivateDisasterModeAsync(string reason, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Deactivate disaster mode (restore Soulseek).
     /// </summary>
     Task DeactivateDisasterModeAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Event fired when disaster mode is activated or deactivated.
     /// </summary>

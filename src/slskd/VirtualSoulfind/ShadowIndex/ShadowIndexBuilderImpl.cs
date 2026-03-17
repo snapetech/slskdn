@@ -58,13 +58,14 @@ public class ShadowIndexBuilder : IShadowIndexBuilder
                 lock (list)
                 {
                     list.Add(obs);
-                    
+
                     // Keep only recent observations (last 100 per recording)
                     if (list.Count > 100)
                     {
                         list.RemoveAt(0);
                     }
                 }
+
                 return list;
             });
 
@@ -105,7 +106,7 @@ public class ShadowIndexBuilder : IShadowIndexBuilder
             .GroupBy(obs => obs.Variant.Codec)
             .SelectMany(group => group
                 .OrderByDescending(obs => obs.Variant.QualityScore)
-                .Take(3))  // Top 3 per codec
+                .Take(3)) // Top 3 per codec
             .Select(obs => new VariantHint
             {
                 Codec = obs.Variant.Codec ?? "UNKNOWN",

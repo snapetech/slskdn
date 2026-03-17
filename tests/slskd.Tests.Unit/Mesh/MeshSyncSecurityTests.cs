@@ -68,14 +68,14 @@ namespace slskd.Tests.Unit.Mesh
                 .ReturnsAsync(new List<HashDbEntry>());
             mockHashDb.Setup(h => h.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((IEnumerable<HashDbEntry> entries, CancellationToken ct) => entries.Count());
-            
+
             // Setup UpdatePeerLastSeqSeenAsync which is called in MergeEntriesAsync
             mockHashDb.Setup(h => h.UpdatePeerLastSeqSeenAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
-            
+
             // Setup capabilities mock
             mockCapabilities.Setup(c => c.VersionString).Returns("1.0.0-test");
-            
+
             // Setup hashDb GetStats() for GenerateHelloMessage
             var dbStats = new slskd.HashDb.HashDbStats { TotalHashEntries = 1000 };
             mockHashDb.Setup(h => h.GetStats()).Returns(dbStats);
@@ -207,7 +207,7 @@ namespace slskd.Tests.Unit.Mesh
 
             // Set trusted peer reputation
             peerReputation.SetScore("trusted-peer", 80, "Test setup");
-            
+
             // Reset and setup the mock to ensure it's called correctly
             mockHashDb.Reset();
             mockHashDb.Setup(h => h.CurrentSeqId).Returns(100);
@@ -215,7 +215,7 @@ namespace slskd.Tests.Unit.Mesh
             mockHashDb.Setup(h => h.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<HashDbEntry>());
             mockHashDb.Setup(h => h.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((IEnumerable<HashDbEntry> entries, CancellationToken ct) => 
+                .ReturnsAsync((IEnumerable<HashDbEntry> entries, CancellationToken ct) =>
                 {
                     var entryList = entries.ToList();
                     return entryList.Count;
@@ -242,17 +242,17 @@ namespace slskd.Tests.Unit.Mesh
             mockHashDbForNullTest.Setup(h => h.GetEntriesSinceSeqAsync(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<HashDbEntry>());
             mockHashDbForNullTest.Setup(h => h.MergeEntriesFromMeshAsync(It.IsAny<IEnumerable<HashDbEntry>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((IEnumerable<HashDbEntry> entries, CancellationToken ct) => 
+                .ReturnsAsync((IEnumerable<HashDbEntry> entries, CancellationToken ct) =>
                 {
                     var entryList = entries.ToList();
                     // Return the count of entries that were actually passed to merge
                     return entryList.Count;
                 });
-            
+
             // Also need to setup UpdatePeerLastSeqSeenAsync which is called in MergeEntriesAsync
             mockHashDbForNullTest.Setup(h => h.UpdatePeerLastSeqSeenAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
-            
+
             var serviceWithoutReputation = new MeshSyncService(
                 mockHashDbForNullTest.Object,
                 mockCapabilities.Object,

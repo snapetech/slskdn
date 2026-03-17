@@ -128,7 +128,7 @@ public class ContentLinkService : IContentLinkService
                         Domain: ContentDomains.Audio,
                         Metadata: new Dictionary<string, string>
                         {
-                            ["note"] = "Search integration requires additional API endpoints"
+["note"] = "Search integration requires additional API endpoints"
                         })
                 });
             }
@@ -179,6 +179,7 @@ public class ContentLinkService : IContentLinkService
                             ["label"] = release.Metadata.Label ?? "Unknown"
                         });
                 }
+
                 break;
 
             case ContentDomains.AudioTrack:
@@ -199,6 +200,7 @@ public class ContentLinkService : IContentLinkService
                             ["album"] = "Unknown" // TrackTarget doesn't have album info
                         });
                 }
+
                 break;
         }
 

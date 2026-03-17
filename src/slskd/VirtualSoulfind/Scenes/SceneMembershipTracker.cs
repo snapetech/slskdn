@@ -17,17 +17,17 @@ public interface ISceneMembershipTracker
     /// Get scene metadata from DHT.
     /// </summary>
     Task<SceneMetadata?> GetSceneMetadataAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get active members of a scene from DHT.
     /// </summary>
     Task<List<SceneMember>> GetMembersAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Track a peer joining a scene (local cache).
     /// </summary>
     Task TrackJoinAsync(string sceneId, string peerId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Track a peer leaving a scene (local cache).
     /// </summary>
@@ -90,6 +90,7 @@ public class SceneMembershipTracker : ISceneMembershipTracker
         catch (Exception ex)
         {
             logger.LogWarning(ex, "[VSF-SCENE-TRACK] Failed to deserialize scene metadata, using defaults");
+
             // Fallback: create metadata from scene ID
             metadata = new SceneMetadata
             {

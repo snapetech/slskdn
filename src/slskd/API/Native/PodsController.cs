@@ -20,7 +20,7 @@ using slskd.PodCore;
 [Route("api/v0/pods")]
 [Produces("application/json")]
 [Authorize]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodsController : ControllerBase
 {
     private const string SoulseekDmBindingPrefix = "soulseek-dm:";
@@ -169,9 +169,9 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPut("{podId}")]
     public async Task<IActionResult> UpdatePod(
-        string podId,
-        [FromBody] UpdatePodRequest request,
-        CancellationToken ct = default)
+            string podId,
+    [FromBody] UpdatePodRequest request,
+            CancellationToken ct = default)
     {
         try
         {
@@ -267,9 +267,9 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPost("{podId}/join")]
     public async Task<IActionResult> JoinPod(
-        string podId,
-        [FromBody] JoinPodRequest request,
-        CancellationToken ct = default)
+            string podId,
+    [FromBody] JoinPodRequest request,
+            CancellationToken ct = default)
     {
         try
         {
@@ -305,9 +305,9 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPost("{podId}/leave")]
     public async Task<IActionResult> LeavePod(
-        string podId,
-        [FromBody] LeavePodRequest request,
-        CancellationToken ct = default)
+            string podId,
+    [FromBody] LeavePodRequest request,
+            CancellationToken ct = default)
     {
         try
         {
@@ -336,9 +336,9 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPost("{podId}/ban")]
     public async Task<IActionResult> BanMember(
-        string podId,
-        [FromBody] BanMemberRequest request,
-        CancellationToken ct = default)
+            string podId,
+    [FromBody] BanMemberRequest request,
+            CancellationToken ct = default)
     {
         try
         {
@@ -367,10 +367,10 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpGet("{podId}/channels/{channelId}/messages")]
     public async Task<IActionResult> GetMessages(
-        string podId,
-        string channelId,
-        [FromQuery] long? since = null,
-        CancellationToken ct = default)
+            string podId,
+            string channelId,
+    [FromQuery] long? since = null,
+            CancellationToken ct = default)
     {
         try
         {
@@ -412,10 +412,10 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPost("{podId}/channels/{channelId}/messages")]
     public async Task<IActionResult> SendMessage(
-        string podId,
-        string channelId,
-        [FromBody] SendMessageRequest request,
-        CancellationToken ct = default)
+            string podId,
+            string channelId,
+    [FromBody] SendMessageRequest request,
+            CancellationToken ct = default)
     {
         try
         {
@@ -477,10 +477,10 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPost("{podId}/channels/{channelId}/bind")]
     public async Task<IActionResult> BindRoom(
-        string podId,
-        string channelId,
-        [FromBody] BindRoomRequest request,
-        CancellationToken ct = default)
+            string podId,
+            string channelId,
+    [FromBody] BindRoomRequest request,
+            CancellationToken ct = default)
     {
         try
         {
@@ -515,9 +515,9 @@ public class PodsController : ControllerBase
     /// </summary>
     [HttpPost("{podId}/channels/{channelId}/unbind")]
     public async Task<IActionResult> UnbindRoom(
-        string podId,
-        string channelId,
-        CancellationToken ct = default)
+            string podId,
+            string channelId,
+            CancellationToken ct = default)
     {
         try
         {

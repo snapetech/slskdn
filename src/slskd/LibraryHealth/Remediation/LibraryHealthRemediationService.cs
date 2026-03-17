@@ -57,7 +57,7 @@ namespace slskd.LibraryHealth.Remediation
             this.log = log;
         }
 
-        private ILibraryHealthService HealthService => 
+        private ILibraryHealthService HealthService =>
             healthService ??= serviceProvider.GetRequiredService<ILibraryHealthService>();
 
         /// <inheritdoc/>
@@ -66,7 +66,7 @@ namespace slskd.LibraryHealth.Remediation
             // Fetch issues from database
             var issues = new List<LibraryIssue>();
             var allIssues = await hashDb.GetLibraryIssuesAsync(new LibraryHealthIssueFilter(), ct).ConfigureAwait(false);
-            
+
             foreach (var issueId in issueIds)
             {
                 var issue = allIssues.FirstOrDefault(i => i.IssueId == issueId);
@@ -115,7 +115,7 @@ namespace slskd.LibraryHealth.Remediation
         public async Task LinkJobToIssuesAsync(string jobId, List<string> issueIds, CancellationToken ct = default)
         {
             var allIssues = await hashDb.GetLibraryIssuesAsync(new LibraryHealthIssueFilter(), ct).ConfigureAwait(false);
-            
+
             foreach (var issueId in issueIds)
             {
                 var issue = allIssues.FirstOrDefault(i => i.IssueId == issueId);
@@ -236,14 +236,14 @@ namespace slskd.LibraryHealth.Remediation
 
             // Create download jobs for each recording
             var downloadJobs = new List<Guid>();
-            
+
             foreach (var recordingId in recordingIds)
             {
                 try
                 {
                     // Get track metadata from MusicBrainz
                     var trackMetadata = await musicBrainzClient.GetRecordingAsync(recordingId, ct).ConfigureAwait(false);
-                    
+
                     if (trackMetadata == null)
                     {
                         log.LogWarning("[LH-Remediation] Could not fetch metadata for recording {RecordingId}", recordingId);
@@ -252,11 +252,11 @@ namespace slskd.LibraryHealth.Remediation
 
                     // Construct search query from track metadata
                     var searchQuery = $"{trackMetadata.Artist} {trackMetadata.Title}";
-                    
+
                     // Find verified sources using multi-source download service
                     // Note: We need a filename - use a constructed one based on metadata
                     var constructedFilename = $"{trackMetadata.Artist} - {trackMetadata.Title}.flac";
-                    
+
                     // Try to find sources - this will search and verify
                     var verificationResult = await multiSourceDownloads.FindVerifiedSourcesAsync(
                         constructedFilename,
@@ -272,7 +272,7 @@ namespace slskd.LibraryHealth.Remediation
 
                     // Select canonical sources if available
                     var sources = await multiSourceDownloads.SelectCanonicalSourcesAsync(verificationResult, ct).ConfigureAwait(false);
-                    
+
                     if (sources.Count == 0)
                     {
                         log.LogWarning("[LH-Remediation] No suitable sources selected for recording {RecordingId}", recordingId);
@@ -327,7 +327,7 @@ namespace slskd.LibraryHealth.Remediation
             // Return the first job ID as the main job ID
             // All jobs are tracked individually via multi-source download service
             var jobId = downloadJobs[0].ToString();
-            
+
             log.LogInformation(
                 "[LH-Remediation] Created {Count} download jobs, main job ID: {JobId}",
                 downloadJobs.Count,
@@ -387,7 +387,7 @@ namespace slskd.LibraryHealth.Remediation
 
             // Return placeholder job ID
             var jobId = Guid.NewGuid().ToString();
-            
+
             log.LogInformation(
                 "[LH-Remediation] Created album completion job {JobId} (placeholder - full integration pending)",
                 jobId);
@@ -405,4 +405,3 @@ namespace slskd.LibraryHealth.Remediation
         }
     }
 }
-

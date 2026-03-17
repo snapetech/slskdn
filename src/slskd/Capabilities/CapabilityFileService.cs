@@ -26,12 +26,12 @@ public sealed class CapabilityFileService
     private readonly ISoulseekClient _soulseekClient;
     private readonly ConcurrentDictionary<string, CachedCapabilityFile> _cache = new();
     private readonly TimeSpan _cacheExpiry = TimeSpan.FromHours(1);
-    
+
     /// <summary>
     /// Virtual file path for capability discovery.
     /// </summary>
     public const string CapabilityFilePath = "@@slskdn/__caps__.json";
-    
+
     /// <summary>
     /// Alternative paths for compatibility.
     /// </summary>
@@ -41,7 +41,7 @@ public sealed class CapabilityFileService
         "@@slskdn/capabilities.json",
         ".slskdn/caps.json",
     };
-    
+
     public CapabilityFileService(
         ILogger<CapabilityFileService> logger,
         ICapabilityService capabilityService,
@@ -51,7 +51,7 @@ public sealed class CapabilityFileService
         _capabilityService = capabilityService;
         _soulseekClient = soulseekClient;
     }
-    
+
     /// <summary>
     /// Generate the capability file content for our client.
     /// </summary>
@@ -74,16 +74,16 @@ public sealed class CapabilityFileService
             OverlayPort = 50305, // TODO: Get from config
             Timestamp = DateTimeOffset.UtcNow,
         };
-        
+
         var json = JsonSerializer.Serialize(caps, new JsonSerializerOptions
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         });
-        
+
         return Encoding.UTF8.GetBytes(json);
     }
-    
+
     /// <summary>
     /// Check if a file request is for our capability file.
     /// </summary>
@@ -93,7 +93,7 @@ public sealed class CapabilityFileService
         {
             return true;
         }
-        
+
         foreach (var alt in AlternativePaths)
         {
             if (filename.EndsWith(alt, StringComparison.OrdinalIgnoreCase))
@@ -101,10 +101,10 @@ public sealed class CapabilityFileService
                 return true;
             }
         }
-        
+
         return false;
     }
-    
+
     /// <summary>
     /// Request capability file from a peer to discover their capabilities.
     /// </summary>
@@ -127,22 +127,22 @@ public sealed class CapabilityFileService
                 _cache.TryRemove(username, out _);
             }
         }
-        
+
         // Try each path until one works
         var pathsToTry = new[] { CapabilityFilePath }.Concat(AlternativePaths);
-        
+
         foreach (var path in pathsToTry)
         {
             try
             {
                 _logger.LogDebug("Requesting capability file from {Username} at {Path}", username, path);
-                
+
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(30));
-                
+
                 // Try to download the file
                 var data = await DownloadSmallFileAsync(username, path, maxBytes: 4096, cts.Token);
-                
+
                 if (data is not null && data.Length > 0)
                 {
                     var content = ParseCapabilityFile(data);
@@ -150,14 +150,14 @@ public sealed class CapabilityFileService
                     {
                         _logger.LogInformation("Got capability file from {Username}: {Client} v{Version}",
                             username, content.Client, content.Version);
-                        
+
                         // Cache the result
                         _cache[username] = new CachedCapabilityFile
                         {
                             Content = content,
                             FetchedAt = DateTimeOffset.UtcNow,
                         };
-                        
+
                         // Also update the capability service
                         var peerCaps = new PeerCapabilities
                         {
@@ -167,7 +167,7 @@ public sealed class CapabilityFileService
                             ProtocolVersion = content.ProtocolVersion,
                         };
                         _capabilityService.SetPeerCapabilities(username, peerCaps);
-                        
+
                         return content;
                     }
                 }
@@ -177,11 +177,11 @@ public sealed class CapabilityFileService
                 _logger.LogDebug(ex, "Failed to get capability file from {Username} at {Path}", username, path);
             }
         }
-        
+
         _logger.LogDebug("No capability file available from {Username}", username);
         return null;
     }
-    
+
     /// <summary>
     /// Parse capability file JSON.
     /// </summary>
@@ -201,7 +201,7 @@ public sealed class CapabilityFileService
             return null;
         }
     }
-    
+
     /// <summary>
     /// Clear cached capabilities for a user.
     /// </summary>
@@ -209,7 +209,7 @@ public sealed class CapabilityFileService
     {
         _cache.TryRemove(username, out _);
     }
-    
+
     /// <summary>
     /// Clear all cached capabilities.
     /// </summary>
@@ -217,7 +217,7 @@ public sealed class CapabilityFileService
     {
         _cache.Clear();
     }
-    
+
     private async Task<byte[]?> DownloadSmallFileAsync(
         string username,
         string filename,
@@ -227,14 +227,12 @@ public sealed class CapabilityFileService
         // Note: This is a simplified implementation
         // In practice, you'd use the Soulseek client's download functionality
         // with a limited byte count
-        
         try
         {
             // Queue a download request for the capability file
             // The actual implementation would need to hook into the Soulseek download flow
             // For now, we return null to indicate not implemented
             // TODO: Implement via ISoulseekClient download APIs
-            
             _logger.LogDebug("Capability file download not yet implemented for {Username}/{Path}",
                 username, filename);
             return null;
@@ -245,7 +243,7 @@ public sealed class CapabilityFileService
             return null;
         }
     }
-    
+
     private sealed class CachedCapabilityFile
     {
         public required CapabilityFileContent Content { get; init; }
@@ -260,23 +258,22 @@ public sealed class CapabilityFileContent
 {
     /// <summary>Client name (e.g., "slskdn").</summary>
     public string Client { get; set; } = "slskdn";
-    
+
     /// <summary>Client version.</summary>
     public string Version { get; set; } = "1.0.0";
-    
+
     /// <summary>Capability protocol version.</summary>
     public int ProtocolVersion { get; set; } = 1;
-    
+
     /// <summary>Capability flags.</summary>
     public PeerCapabilityFlags Capabilities { get; set; }
-    
+
     /// <summary>List of supported feature names.</summary>
     public string[] Features { get; set; } = Array.Empty<string>();
-    
+
     /// <summary>Overlay port for mesh connections.</summary>
     public int OverlayPort { get; set; }
-    
+
     /// <summary>When this file was generated.</summary>
     public DateTimeOffset Timestamp { get; set; }
 }
-

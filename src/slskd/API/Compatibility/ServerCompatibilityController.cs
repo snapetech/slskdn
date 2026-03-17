@@ -16,7 +16,7 @@ using Soulseek;
 [ApiController]
 [Route("api/server")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class ServerCompatibilityController : ControllerBase
 {
     private readonly ISoulseekClient soulseek;

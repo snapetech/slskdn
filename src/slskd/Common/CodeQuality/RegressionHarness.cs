@@ -475,6 +475,7 @@ namespace slskd.Common.CodeQuality
                         sb.AppendLine($"- {type}");
                     }
                 }
+
                 sb.AppendLine();
             }
 
@@ -860,5 +861,3 @@ namespace slskd.Common.CodeQuality
         public TimeSpan ExpectedMaxDuration { get; init; }
     }
 }
-
-

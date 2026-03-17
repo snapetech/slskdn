@@ -15,19 +15,19 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using slskd.AudioCore;
 using slskd.Core.Diagnostics;
+using slskd.Mesh.Gossip;
+using slskd.Mesh.Governance;
 using slskd.Mesh.Realm;
 using slskd.Mesh.Realm.Bridge;
-using slskd.Mesh.Governance;
-using slskd.Mesh.Gossip;
 using slskd.SocialFederation;
 using slskd.VirtualSoulfind.Core;
 
@@ -60,6 +60,7 @@ namespace slskd
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Mvc.Authorization;
     using Microsoft.AspNetCore.RateLimiting;
+    using Microsoft.AspNetCore.SignalR;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Caching.Memory;
     using Microsoft.Extensions.Configuration;
@@ -68,20 +69,25 @@ namespace slskd
     using Microsoft.Extensions.FileProviders.Physical;
     using Microsoft.IdentityModel.Tokens;
     using Microsoft.OpenApi.Models;
+    using OpenTelemetry.Trace;
     using Prometheus.DotNetRuntime;
     using Prometheus.SystemMetrics;
     using Serilog;
     using Serilog.Events;
     using Serilog.Sinks.Grafana.Loki;
     using Serilog.Sinks.SystemConsole.Themes;
-    using slskd.Authentication;
     using slskd.Audio;
-    using slskd.LibraryHealth;
+    using slskd.Authentication;
+    using slskd.Common.Security;
+    using slskd.Common.Security;
     using slskd.Configuration;
     using slskd.Core.API;
     using slskd.Cryptography;
+    using slskd.DhtRendezvous;
+    using slskd.DhtRendezvous.Security;
     using slskd.Events;
     using slskd.Files;
+    using slskd.Identity;
     using slskd.Integrations.AcoustId;
     using slskd.Integrations.AutoTagging;
     using slskd.Integrations.Chromaprint;
@@ -92,31 +98,26 @@ namespace slskd
     using slskd.Integrations.Scripts;
     using slskd.Integrations.VPN;
     using slskd.Integrations.Webhooks;
+    using slskd.LibraryHealth;
     using slskd.Mesh;
     using slskd.Messaging;
     using slskd.Relay;
     using slskd.Search;
     using slskd.Search.API;
-    using Microsoft.AspNetCore.SignalR;
-using slskd.Sharing;
-using slskd.Shares;
-using slskd.Streaming;
-using slskd.Identity;
-using slskd.Telemetry;
-using OpenTelemetry.Trace;
+    using slskd.Shares;
+    using slskd.Sharing;
+    using slskd.Signals;
+    using slskd.SongID;
+    using slskd.Streaming;
+    using slskd.Telemetry;
     using slskd.Transfers;
     using slskd.Transfers.Downloads;
     using slskd.Transfers.MultiSource;
-    using slskd.Transfers.Uploads;
-    using slskd.Users;
-    using slskd.Common.Security;
-    using slskd.Validation;
-    using slskd.Common.Security;
-    using slskd.DhtRendezvous;
-    using slskd.DhtRendezvous.Security;
     using slskd.Transfers.MultiSource.Discovery;
     using slskd.Transfers.Rescue;
-    using slskd.Signals;
+    using slskd.Transfers.Uploads;
+    using slskd.Users;
+    using slskd.Validation;
     using Soulseek;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
@@ -288,21 +289,22 @@ using OpenTelemetry.Trace;
 
         private static IConfigurationRoot Configuration { get; set; }
         private static OptionsAtStartup OptionsAtStartup { get; } = new OptionsAtStartup();
-        
+
         // Explicit Serilog.ILogger type to avoid ambiguity with Microsoft.Extensions.Logging.ILogger
         private static Serilog.ILogger Log { get; set; } = new Serilog.LoggerConfiguration()
             .WriteTo.Sink(new ConsoleWriteLineLogger())
             .CreateLogger();
-            
+
         // Mutex is created lazily after AppDirectory is set to allow multiple test instances with different app dirs
         private static Mutex Mutex { get; set; }
-        
+
         private static string GetMutexName()
         {
             // Use app directory in mutex name if set, otherwise use default
             var dir = AppDirectory ?? DefaultAppDirectory;
             return $"{AppName}_{Compute.Sha256Hash(dir)}";
         }
+
         private static IDisposable DotNetRuntimeStats { get; set; }
         private static VolatileOverlayConfigurationSource<OptionsOverlay> VolatileOverlayConfigurationSource { get; set; } = new VolatileOverlayConfigurationSource<OptionsOverlay>();
 
@@ -407,7 +409,7 @@ using OpenTelemetry.Trace;
 
             // derive the application directory value and defaults that are dependent upon it
             AppDirectory ??= DefaultAppDirectory;
-            
+
             // the application isn't being run in command mode. check the mutex to ensure
             // only one long-running instance per app directory.
             // Create mutex with name that includes app directory to allow multiple test instances
@@ -417,6 +419,7 @@ using OpenTelemetry.Trace;
                 Log.Fatal($"An instance of {AppName} is already running in app directory: {AppDirectory}");
                 return;
             }
+
             DataDirectory = Path.Combine(AppDirectory, "data");
             DataBackupDirectory = Path.Combine(DataDirectory, "backups");
             LogDirectory = Path.Combine(AppDirectory, "logs");
@@ -458,20 +461,21 @@ using OpenTelemetry.Trace;
                     .Bind(OptionsAtStartup, (o) => { o.BindNonPublicProperties = true; });
 
                 // Log security configuration after binding
-                Log.Information("[Config] After binding OptionsAtStartup.Security.Enabled = {Enabled}, Profile = {Profile}", 
-                    OptionsAtStartup.Security?.Enabled ?? false, 
+                Log.Information("[Config] After binding OptionsAtStartup.Security.Enabled = {Enabled}, Profile = {Profile}",
+                    OptionsAtStartup.Security?.Enabled ?? false,
                     OptionsAtStartup.Security?.Profile.ToString() ?? "null");
-                
+
                 // Also check raw configuration sections
                 var securitySection = Configuration.GetSection("security");
                 var slskdSecuritySection = Configuration.GetSection("slskd:security");
-                Log.Information("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}", 
-                    securitySection.Exists(), 
+                Log.Information("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}",
+                    securitySection.Exists(),
                     slskdSecuritySection.Exists());
                 if (securitySection.Exists())
                 {
                     Log.Information("[Config] Raw security section enabled value: {Enabled}", securitySection["enabled"]);
                 }
+
                 if (slskdSecuritySection.Exists())
                 {
                     Log.Information("[Config] Raw slskd:security section enabled value: {Enabled}", slskdSecuritySection["enabled"]);
@@ -573,7 +577,6 @@ using OpenTelemetry.Trace;
                 // Note: OptionsAtStartup was bound earlier from a different Configuration instance.
                 // Since Options properties are init-only, we can't rebind them. Instead, we read
                 // values directly from builder.Configuration when needed (e.g., in UseKestrel below).
-
                 builder.Host
                     .UseSerilog();
 
@@ -594,7 +597,7 @@ using OpenTelemetry.Trace;
                             builder.Configuration.GetValue<string>($"{AppName}:Web:Port") ?? "null",
                             builder.Configuration.GetValue<string>($"{AppName}:{AppName}:Web:Port") ?? "null",
                             webPort);
-                        
+
                         Log.Information($"[Kestrel] Configuring HTTP listener at http://{IPAddress.Any}:{webPort}/ (from config: {webPortSection.Exists()})");
                         options.Listen(IPAddress.Any, webPort);
                         Log.Information($"[Kestrel] HTTP listener configured");
@@ -624,7 +627,6 @@ using OpenTelemetry.Trace;
                                 }
                             });
                         }
-
                     });
 
                 Log.Information("[MAIN] About to configure ASP.NET services...");
@@ -635,6 +637,7 @@ using OpenTelemetry.Trace;
                 if (Environment.GetEnvironmentVariable("SLSKDN_E2E_TRACE_HOSTED") == "1")
                 {
                     Console.Error.WriteLine("[HostedServiceTracer] Enabled (SLSKDN_E2E_TRACE_HOSTED=1)");
+
                     // Replace hosted services with a tracer to pinpoint startup blockers
                     var hostedDescriptors = builder.Services
                         .Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService))
@@ -743,7 +746,7 @@ using OpenTelemetry.Trace;
                 }
 
                 Log.Information("Configuration complete.  Starting application...");
-                
+
                 // Add lifecycle hook to log when host actually starts listening
                 var lifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
                 lifetime.ApplicationStarted.Register(() =>
@@ -775,12 +778,12 @@ using OpenTelemetry.Trace;
                         }
                     }
                 });
-                
+
                 lifetime.ApplicationStopping.Register(() =>
                 {
                     Log.Information("Application is stopping...");
                 });
-                
+
                 if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SERVER_PROBE") == "1")
                 {
                     var hostedServices = app.Services.GetServices<IHostedService>()
@@ -796,15 +799,15 @@ using OpenTelemetry.Trace;
 
                 Log.Information("[Program] About to call app.Run()...");
                 Log.Information("[Program] app.Run() will start the web server and all hosted services...");
-                
+
                 // Add lifecycle hooks to track startup progress
                 var hostLifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
-                
+
                 // Log when web server starts listening (happens before hosted services StartAsync)
                 hostLifetime.ApplicationStarted.Register(() =>
                 {
                     Log.Information("[Program] ✓ ApplicationStarted event fired - all hosted services have completed StartAsync");
-                    
+
                     // Start LAN discovery advertising if enabled
                     if (OptionsAtStartup.Feature.IdentityFriends)
                     {
@@ -832,7 +835,7 @@ using OpenTelemetry.Trace;
                         }
                     }
                 });
-                
+
                 hostLifetime.ApplicationStopping.Register(() =>
                 {
                     try
@@ -840,16 +843,18 @@ using OpenTelemetry.Trace;
                         var discovery = app.Services.GetService<Identity.ILanDiscoveryService>();
                         discovery?.StopAdvertisingAsync().GetAwaiter().GetResult();
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 });
-                
+
                 // Try to detect if we're hanging during web server startup
                 Log.Information("[Program] Calling app.Run() - this will block until shutdown...");
                 Log.Information("[Program] If you see this but not 'Host started and bound', the web server is hanging");
-                
+
                 // Deterministic Kestrel binding probe (cannot be filtered) - write to stderr
                 System.Console.Error.WriteLine($"[KestrelProbe] URLs={string.Join(";", app.Urls)}");
-                
+
                 app.Run();
                 Log.Information("[Program] app.Run() returned (this should not happen normally)");
             }
@@ -985,6 +990,7 @@ using OpenTelemetry.Trace;
                 Log.Information("[DI] Application singleton constructed successfully");
                 return app;
             });
+
             // Use a wrapper to avoid factory function blocking
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_APP_HOSTED")))
             {
@@ -1244,6 +1250,7 @@ using OpenTelemetry.Trace;
             services.AddSignalSystem();
             services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackPriorityService, Transfers.MultiSource.Playback.PlaybackPriorityService>();
             services.AddSingleton<Transfers.MultiSource.Playback.IPlaybackFeedbackService, Transfers.MultiSource.Playback.PlaybackFeedbackService>();
+
             // (ILibraryHealthService, ILibraryHealthRemediationService in AddAudioCore)
 
             // Virtual Soulfind services
@@ -1253,6 +1260,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VirtualSoulfind.Capture.IObservationStore, VirtualSoulfind.Capture.InMemoryObservationStore>();
             services.AddSingleton<VirtualSoulfind.Capture.TrafficObserverIntegrationService>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilder>();
+
             // Note: IDhtClient is registered later in MeshCore section (line ~1456) as InMemoryDhtClient
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtRateLimiter>(sp =>
             {
@@ -1289,7 +1297,7 @@ using OpenTelemetry.Trace;
                     sp.GetRequiredService<IOptionsMonitor<slskd.Options>>(),
                     sp.GetService<Identity.IProfileService>()));
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneModerationService, VirtualSoulfind.Scenes.SceneModerationService>();
-            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekClient>(sp => 
+            services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekClient>(sp =>
                 new VirtualSoulfind.DisasterMode.SoulseekClientWrapper(sp.GetRequiredService<Soulseek.ISoulseekClient>()));
             services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekHealthMonitor>(sp =>
                 new VirtualSoulfind.DisasterMode.SoulseekHealthMonitor(
@@ -1311,6 +1319,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VirtualSoulfind.Integration.IPerformanceOptimizer, VirtualSoulfind.Integration.PerformanceOptimizer>();
             services.AddSingleton<VirtualSoulfind.Integration.ITelemetryDashboard, VirtualSoulfind.Integration.TelemetryDashboardService>();
             services.AddSingleton<VirtualSoulfind.Bridge.ISoulfindBridgeService, VirtualSoulfind.Bridge.SoulfindBridgeService>();
+
             // Register ITransferProgressProxy BEFORE BridgeApi (BridgeApi depends on it)
             services.AddSingleton<VirtualSoulfind.Bridge.IPeerIdAnonymizer, VirtualSoulfind.Bridge.PeerIdAnonymizer>();
             services.AddSingleton<VirtualSoulfind.Bridge.IFilenameGenerator, VirtualSoulfind.Bridge.FilenameGenerator>();
@@ -1318,6 +1327,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<VirtualSoulfind.Bridge.ITransferProgressProxy, VirtualSoulfind.Bridge.TransferProgressProxy>();
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
             services.AddSingleton<VirtualSoulfind.Bridge.Protocol.SoulseekProtocolParser>();
+
             // BridgeProxyServer causes startup deadlock - skip for local dev
             // TODO: Investigate why BridgeProxyServer construction blocks startup
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_BRIDGE_PROXY")) &&
@@ -1329,6 +1339,7 @@ using OpenTelemetry.Trace;
             {
                 Log.Information("[DI] BridgeProxyServer disabled (set SLSKDN_ENABLE_BRIDGE_PROXY=1 to enable)");
             }
+
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeDashboard, VirtualSoulfind.Bridge.BridgeDashboard>();
 
             // VirtualSoulfind v2 Domain Providers (T-VC02, T-VC03) (IMusicContentDomainProvider in AddAudioCore)
@@ -1411,7 +1422,7 @@ using OpenTelemetry.Trace;
                     .Options))
             {
                 podContext.Database.EnsureCreated();
-                
+
                 // Apply schema migrations for existing databases (synchronous since we're in ConfigureServices)
                 try
                 {
@@ -1420,7 +1431,7 @@ using OpenTelemetry.Trace;
                     {
                         connection.Open();
                     }
-                    
+
                     // Check if AllowGuests column exists, if not add it
                     using var checkCmd = connection.CreateCommand();
                     checkCmd.CommandText = "PRAGMA table_info(Pods)";
@@ -1434,8 +1445,9 @@ using OpenTelemetry.Trace;
                             break;
                         }
                     }
+
                     reader.Close();
-                    
+
                     if (!hasAllowGuests)
                     {
                         Log.Information("[PodDb] Adding missing AllowGuests column to Pods table");
@@ -1449,7 +1461,7 @@ using OpenTelemetry.Trace;
                 {
                     Log.Warning(ex, "[PodDb] Could not apply schema migration (database may be new or already up to date)");
                 }
-                
+
                 // SECURITY: Set restrictive file permissions on the database (Unix/Linux only)
                 if (System.IO.File.Exists(podDbPath))
                 {
@@ -1682,6 +1694,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
             services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
             services.AddSingleton<Mesh.Nat.INatTraversalService, Mesh.Nat.NatTraversalService>();
+
             // DHT: use in-memory Kademlia-style implementation for now
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IDhtClient>(sp =>
             {
@@ -1784,7 +1797,7 @@ using OpenTelemetry.Trace;
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDescriptorValidator, Mesh.ServiceFabric.MeshServiceDescriptorValidator>();
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDirectory, Mesh.ServiceFabric.DhtMeshServiceDirectory>();
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceClient, Mesh.ServiceFabric.MeshServiceClient>();
-            
+
             // MeshContentFetcher requires IMeshServiceClient, so register after it
             services.AddSingleton<IMeshContentFetcher, MeshContentFetcher>();
 
@@ -1945,6 +1958,7 @@ using OpenTelemetry.Trace;
                 var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
                 return new Mesh.Overlay.ControlDispatcher(logger, validator, privacyLayer);
             });
+
             // Mesh message signing for mesh sync security
             services.AddSingleton<Mesh.IMeshMessageSigner, Mesh.MeshMessageSigner>();
             services.AddSingleton(sp =>
@@ -2097,6 +2111,9 @@ using OpenTelemetry.Trace;
                 sp.GetRequiredService<IOptionsMonitor<Options>>(),
                 sp.GetRequiredService<ILogger<MetadataFacade>>(),
                 sp.GetService<IMemoryCache>()));
+            services.AddSingleton<ISongIdRunStore, SongIdRunStore>();
+            services.AddSingleton<ISongIdService, SongIdService>();
+            services.AddSingleton<DiscoveryGraph.IDiscoveryGraphService, DiscoveryGraph.DiscoveryGraphService>();
             services.AddSingleton<IPushbulletService, PushbulletService>();
             services.AddSingleton<Integrations.Notifications.INotificationService, Integrations.Notifications.NotificationService>();
 
@@ -2131,6 +2148,7 @@ using OpenTelemetry.Trace;
             {
                 collectionsContext.Database.EnsureCreated();
             }
+
             services.AddSingleton<Sharing.IShareGroupRepository, Sharing.ShareGroupRepository>();
             services.AddSingleton<Sharing.ICollectionRepository, Sharing.CollectionRepository>();
             services.AddSingleton<Sharing.IShareGrantRepository, Sharing.ShareGrantRepository>();
@@ -2152,6 +2170,7 @@ using OpenTelemetry.Trace;
             {
                 // Column already exists or DB is read-only; ignore.
             }
+
             try
             {
                 using (var collectionsContext = new Sharing.CollectionsDbContext(
@@ -2180,6 +2199,7 @@ using OpenTelemetry.Trace;
             {
                 identityContext.Database.EnsureCreated();
             }
+
             services.AddSingleton<Identity.IContactRepository, Identity.ContactRepository>();
             services.AddSingleton<Identity.IContactService, Identity.ContactService>();
             services.AddSingleton<Identity.IProfileService, Identity.ProfileService>();
@@ -2226,7 +2246,7 @@ using OpenTelemetry.Trace;
         private static IServiceCollection ConfigureAspDotNetServices(this IServiceCollection services)
         {
             Log.Information("[ASP] Starting ConfigureAspDotNetServices...");
-            
+
             services.AddCors(options =>
             {
                 var c = OptionsAtStartup.Web.Cors;
@@ -2245,18 +2265,30 @@ using OpenTelemetry.Trace;
                         {
                             b.WithOrigins(c.AllowedOrigins);
                             if (c.AllowCredentials)
+                            {
                                 b.AllowCredentials();
+                            }
                         }
+
                         b.WithExposedHeaders("X-URL-Base", "X-Total-Count")
                             .SetPreflightMaxAge(TimeSpan.FromHours(1));
                         if (c.AllowedHeaders != null && c.AllowedHeaders.Length > 0)
+                        {
                             b.WithHeaders(c.AllowedHeaders);
+                        }
                         else
+                        {
                             b.AllowAnyHeader();
+                        }
+
                         if (c.AllowedMethods != null && c.AllowedMethods.Length > 0)
+                        {
                             b.WithMethods(c.AllowedMethods);
+                        }
                         else
+                        {
                             b.AllowAnyMethod();
+                        }
                     });
                 }
             });
@@ -2370,6 +2402,7 @@ using OpenTelemetry.Trace;
                                         context.Fail("Token has been revoked");
                                     }
                                 }
+
                                 return Task.CompletedTask;
                             },
                             OnMessageReceived = context =>
@@ -2468,18 +2501,18 @@ using OpenTelemetry.Trace;
                 options.Cookie.SameSite = SameSiteMode.Strict;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS in prod, HTTP in dev
                 options.Cookie.HttpOnly = false; // JavaScript needs to read this
-                
+
                 // IMPORTANT: Don't auto-validate - we use custom ValidateCsrfForCookiesOnlyAttribute
                 // This ensures GET requests are never validated automatically
                 options.SuppressXFrameOptionsHeader = false; // Keep X-Frame-Options for security
-                
+
                 // Session-based tokens (30 days with sliding expiration)
                 // Tokens don't expire independently - they're tied to the session
             });
 
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddProblemDetails();
-            
+
             services.AddControllers(options =>
                 {
                     options.Filters.Add(new AuthorizeFilter(AuthPolicy.Any));
@@ -2493,16 +2526,22 @@ using OpenTelemetry.Trace;
                     // (18.x+) targets net9.0+ so its runtime DLL is absent from a net8.0 output.
                     var existing = manager.FeatureProviders
                         .OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList();
-                    foreach (var p in existing) manager.FeatureProviders.Remove(p);
+                    foreach (var p in existing)
+                    {
+                        manager.FeatureProviders.Remove(p);
+                    }
+
                     manager.FeatureProviders.Add(new slskd.Common.CodeQuality.SafeControllerFeatureProvider());
                 })
                 .ConfigureApiBehaviorOptions(options =>
                 {
                     options.SuppressInferBindingSourcesForParameters = true; // explicit [FromRoute], etc
                     options.SuppressMapClientErrors = true; // disables automatic ProblemDetails for 4xx
+
                     // PR-07: when EnforceSecurity, enable automatic 400 for invalid model (ValidationProblemDetails)
                     options.SuppressModelStateInvalidFilter = false;
                     options.DisableImplicitFromServicesParameters = true; // explicit [FromServices]
+
                     // PR-05, PR-07: custom ValidationProblemDetails; in Production do not leak internal property paths or structure.
                     options.InvalidModelStateResponseFactory = actionContext =>
                     {
@@ -2518,6 +2557,7 @@ using OpenTelemetry.Trace;
                             problem.Detail = "The request is invalid.";
                             problem.Errors.Clear();
                         }
+
                         return new BadRequestObjectResult(problem);
                     };
                 })
@@ -2574,12 +2614,18 @@ using OpenTelemetry.Trace;
                     options.RejectionStatusCode = 429;
                     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
-                        var path = context.Request.Path.Value ?? "";
+                        var path = context.Request.Path.Value ?? string.Empty;
                         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                         if (path.StartsWith("/mesh/", StringComparison.OrdinalIgnoreCase))
+                        {
                             return RateLimitPartition.GetFixedWindowLimiter("mesh:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = meshPermit, Window = meshWindow });
+                        }
+
                         if (path.Contains("/inbox", StringComparison.OrdinalIgnoreCase) && string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase))
+                        {
                             return RateLimitPartition.GetFixedWindowLimiter("fed:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = fedPermit, Window = fedWindow });
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter("api:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = apiPermit, Window = apiWindow });
                     });
                 });
@@ -2635,7 +2681,7 @@ using OpenTelemetry.Trace;
             // STEP 2: Check for exceptions during pipeline construction
             // STEP 3: Use a custom middleware class instead of inline delegate
             Log.Information("[Pipeline] Starting ConfigureAspDotNetPipeline...");
-            
+
             // PR-05: RFC 7807 ProblemDetails; in Production do not leak exception message; always include traceId
             app.UseExceptionHandler(a => a.Run(async context =>
             {
@@ -2668,6 +2714,7 @@ using OpenTelemetry.Trace;
                             title = "Internal Server Error";
                             detail = isDev ? ex.ToString() : "An unexpected error occurred.";
                         }
+
                         var problem = new ProblemDetails { Status = status, Title = title, Detail = detail };
                         problem.Extensions["traceId"] = traceId;
                         context.Response.StatusCode = status;
@@ -2683,7 +2730,9 @@ using OpenTelemetry.Trace;
             }));
 
             if (OptionsAtStartup.Web.Cors.Enabled && OptionsAtStartup.Web.Cors.AllowedOrigins != null && OptionsAtStartup.Web.Cors.AllowedOrigins.Length > 0)
+            {
                 app.UseCors("ConfiguredCors");
+            }
 
             // CSRF token middleware - generates tokens for cookie-based auth
             // This must come AFTER UsePathBase but BEFORE UseAuthentication
@@ -2693,44 +2742,44 @@ using OpenTelemetry.Trace;
                 var path = context.Request.Path.Value ?? string.Empty;
                 if (path.Contains("mediacore", StringComparison.OrdinalIgnoreCase))
                 {
-                    Log.Information("[CSRF Middleware] Processing MediaCore request: {Method} {Path} (Raw: {RawPath})", 
+                    Log.Information("[CSRF Middleware] Processing MediaCore request: {Method} {Path} (Raw: {RawPath})",
                         context.Request.Method, path, context.Request.Path);
                 }
-                
+
                 try
                 {
                     var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
-                    
+
                     // GetAndStoreTokens can throw for some requests - catch and log but don't fail
                     // This is safe because our custom ValidateCsrfForCookiesOnlyAttribute handles validation
                     var tokens = antiforgery.GetAndStoreTokens(context);
-                    
+
                     // Set the XSRF-TOKEN cookie that frontend JavaScript can read
                     if (tokens.RequestToken != null)
                     {
-                        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken, 
-                            new CookieOptions 
-                            { 
+                        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken,
+                            new CookieOptions
+                            {
                                 HttpOnly = false,  // JavaScript needs to read this
                                 Secure = context.Request.IsHttps,
                                 SameSite = SameSiteMode.Strict,
-                                Path = "/"
+                                Path = "/",
                             });
                     }
                 }
                 catch (Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException ex)
                 {
                     // This is expected for some requests - log at debug level only
-                    Log.Debug(ex, "[CSRF Middleware] Antiforgery validation exception for {Method} {Path} (this is normal for some requests)", 
+                    Log.Debug(ex, "[CSRF Middleware] Antiforgery validation exception for {Method} {Path} (this is normal for some requests)",
                         context.Request.Method, context.Request.Path);
                 }
                 catch (Exception ex)
                 {
                     // Log other exceptions but don't fail - GetAndStoreTokens can fail for some requests
-                    Log.Warning(ex, "[CSRF Middleware] Exception getting/storing tokens for {Method} {Path}", 
+                    Log.Warning(ex, "[CSRF Middleware] Exception getting/storing tokens for {Method} {Path}",
                         context.Request.Method, context.Request.Path);
                 }
-                
+
                 await next();
             });
 
@@ -2772,18 +2821,18 @@ using OpenTelemetry.Trace;
                 EnableDirectoryBrowsing = false,
                 EnableDefaultFiles = true,
             };
-            
+
             // CRITICAL: Block suspicious paths at the file server level
             // This is the last line of defense before files are served
             fileServerOptions.StaticFileOptions.OnPrepareResponse = (context) =>
             {
                 var path = context.Context.Request.Path.Value ?? string.Empty;
                 var rawTarget = context.Context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpRequestFeature>()?.RawTarget ?? string.Empty;
-                
+
                 // Log static file requests for debugging
                 Log.Debug("[FILE_SERVER] Serving static file: {Path}, Status: {Status}", path, context.Context.Response.StatusCode);
-                
-                if (path.Contains("/etc/passwd") || path.Contains("/etc/") || 
+
+                if (path.Contains("/etc/passwd") || path.Contains("/etc/") ||
                     rawTarget.Contains("/etc/passwd") || rawTarget.Contains("/etc/") ||
                     path.StartsWith("/etc", StringComparison.OrdinalIgnoreCase))
                 {
@@ -2813,6 +2862,7 @@ using OpenTelemetry.Trace;
                         ctx.Response.StatusCode = 413;
                         return;
                     }
+
                     var buf = new byte[8192];
                     int total = 0;
                     using var ms = new MemoryStream();
@@ -2825,8 +2875,10 @@ using OpenTelemetry.Trace;
                             ctx.Response.StatusCode = 413;
                             return;
                         }
+
                         ms.Write(buf, 0, n);
                     }
+
                     var b = ms.ToArray();
                     ctx.Request.Body.Position = 0;
                     ctx.Items["ActivityPubInboxBody"] = b;
@@ -2836,7 +2888,10 @@ using OpenTelemetry.Trace;
             app.UseAuthentication();
             app.UseRouting();
             if (OptionsAtStartup.Web.RateLimiting.Enabled)
+            {
                 app.UseRateLimiter();
+            }
+
             app.UseAuthorization();
 
             if (OptionsAtStartup.Web.Logging)
@@ -2854,13 +2909,21 @@ using OpenTelemetry.Trace;
                 endpoints.MapHub<LogsHub>("/hub/logs");
                 endpoints.MapHub<Transfers.API.TransfersHub>("/hub/transfers");
                 var searchHub = endpoints.MapHub<SearchHub>("/hub/search");
+                var songIdHub = endpoints.MapHub<slskd.SongID.API.SongIdHub>("/hub/songid");
                 if (OptionsAtStartup.Web.EnforceSecurity)
+                {
                     searchHub.RequireAuthorization(AuthPolicy.Any);
+                    songIdHub.RequireAuthorization(AuthPolicy.Any);
+                }
+
                 var relayHub = endpoints.MapHub<RelayHub>("/hub/relay");
                 if (OptionsAtStartup.Web.EnforceSecurity)
+                {
                     relayHub.RequireAuthorization(AuthPolicy.Any);
+                }
 
                 endpoints.MapControllers();
+
                 // Solid-OIDC Client ID document (must be anonymous and return application/ld+json)
                 endpoints.MapGet("/solid/clientid.jsonld", async context =>
                 {
@@ -2875,12 +2938,14 @@ using OpenTelemetry.Trace;
                     context.Response.ContentType = "application/ld+json";
                     await svc.WriteClientIdDocumentAsync(context, context.RequestAborted).ConfigureAwait(false);
                 }).AllowAnonymous();
+
                 // Make /health explicitly anonymous to avoid auth issues in E2E harness
                 endpoints.MapHealthChecks("/health").AllowAnonymous();
                 endpoints.MapHealthChecks("/health/mesh", new HealthCheckOptions
                 {
-                    Predicate = check => check.Tags.Contains("mesh")
+                    Predicate = check => check.Tags.Contains("mesh"),
                 }).AllowAnonymous();
+
                 // Simple readiness endpoint for E2E tests - just checks if server is listening
                 // This bypasses complex health checks that might hang during startup
                 endpoints.MapGet("/health/ready", async context =>
@@ -2888,6 +2953,7 @@ using OpenTelemetry.Trace;
                     context.Response.StatusCode = 200;
                     await context.Response.WriteAsync("ready");
                 });
+
                 // Test-only route listing endpoint for E2E diagnostics
                 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SHARE_ANNOUNCE")))
                 {
@@ -2950,12 +3016,14 @@ using OpenTelemetry.Trace;
                                 Reject(context);
                                 return;
                             }
+
                             var providedBase64 = auth["Basic ".Length..].Trim();
                             if (string.IsNullOrEmpty(providedBase64))
                             {
                                 Reject(context);
                                 return;
                             }
+
                             byte[] providedBytes;
                             try
                             {
@@ -2966,6 +3034,7 @@ using OpenTelemetry.Trace;
                                 Reject(context);
                                 return;
                             }
+
                             var validBytes = Encoding.UTF8.GetBytes($"{options.Authentication.Username}:{options.Authentication.Password}");
                             if (!CryptographicOperations.FixedTimeEquals(providedBytes, validBytes))
                             {
@@ -3034,6 +3103,7 @@ using OpenTelemetry.Trace;
                         {
                             ctx.Response.ContentLength = bufferLen;
                         }
+
                         await buffer.CopyToAsync(originalBody);
                     }
                     else
@@ -3082,7 +3152,7 @@ using OpenTelemetry.Trace;
             {
                 app.UseFileServer(fileServerOptions);
                 Log.Information("Serving static content from {ContentPath}", contentPath);
-                
+
                 // SPA Fallback: Serve index.html for client-side routes AFTER file server
                 // This runs AFTER file server so static files are served first, and only 404s get index.html
                 var indexPath = Path.Combine(AppContext.BaseDirectory, OptionsAtStartup.Web.ContentPath, "index.html");
@@ -3091,12 +3161,12 @@ using OpenTelemetry.Trace;
                     app.Use(async (context, next) =>
                     {
                         await next(); // Let file server try first
-                        
+
                         // If file server returned 404 and this is a client-side route, serve index.html
                         if (context.Response.StatusCode == 404 && !context.Response.HasStarted)
                         {
-                            var path = context.Request.Path.Value ?? "";
-                            
+                            var path = context.Request.Path.Value ?? string.Empty;
+
                             // Only serve index.html for non-API, non-file, non-static paths
                             var isApi = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
                             var isSwagger = path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase);
@@ -3104,7 +3174,7 @@ using OpenTelemetry.Trace;
                             var isHealth = path.StartsWith("/health", StringComparison.OrdinalIgnoreCase);
                             var isStatic = path.StartsWith("/static", StringComparison.OrdinalIgnoreCase);
                             var hasExtension = Path.GetExtension(path) != string.Empty;
-                            
+
                             if (!isApi && !isSwagger && !isHub && !isHealth && !isStatic && !hasExtension)
                             {
                                 Log.Information("[SPA Fallback Middleware] Serving index.html for {Path} (file server returned 404)", path);
@@ -3552,12 +3622,17 @@ using OpenTelemetry.Trace;
         {
             // Install hard telemetry to catch silent exits and unhandled exceptions
             // This ensures we always know WHY the process terminated
-
             AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
             {
                 var msg = $"[FATAL] ProcessExit event fired - process terminating";
                 Console.Error.WriteLine(msg);
-                try { Log?.Fatal(msg); } catch { }
+                try
+                {
+                    Log?.Fatal(msg);
+                }
+                catch
+                {
+                }
             };
 
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
@@ -3566,7 +3641,13 @@ using OpenTelemetry.Trace;
                 var msg = $"[FATAL] Unhandled exception: {ex?.Message ?? e.ExceptionObject?.ToString() ?? "unknown"}";
                 Console.Error.WriteLine(msg);
                 Console.Error.WriteLine(ex?.StackTrace ?? "no stack trace");
-                try { Log?.Fatal(ex, msg); } catch { }
+                try
+                {
+                    Log?.Fatal(ex, msg);
+                }
+                catch
+                {
+                }
             };
 
             TaskScheduler.UnobservedTaskException += (sender, e) =>
@@ -3574,10 +3655,16 @@ using OpenTelemetry.Trace;
                 var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
                 Console.Error.WriteLine(msg);
                 Console.Error.WriteLine(e.Exception.StackTrace);
-                try { Log?.Fatal(e.Exception, msg); } catch { }
+                try
+                {
+                    Log?.Fatal(e.Exception, msg);
+                }
+                catch
+                {
+                }
+
                 e.SetObserved(); // Prevent process termination
             };
         }
-
     }
 }

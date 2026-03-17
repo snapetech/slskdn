@@ -19,7 +19,7 @@ using slskd.Transfers.MultiSource.Caching;
 [ApiController]
 [Route("api/slskdn/warm-cache")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class WarmCacheController : ControllerBase
 {
     private readonly IWarmCachePopularityService popularityService;
@@ -42,8 +42,8 @@ public class WarmCacheController : ControllerBase
     [HttpPost("hints")]
     [Authorize]
     public async Task<IActionResult> SubmitHints(
-        [FromBody] WarmCacheHintsRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] WarmCacheHintsRequest request,
+            CancellationToken cancellationToken)
     {
         var options = optionsMonitor.CurrentValue;
         if (options.WarmCache?.Enabled != true)

@@ -292,5 +292,3 @@ namespace slskd.Mesh.API
         public MeshHashEntry[] Entries { get; set; }
     }
 }
-
-

@@ -47,7 +47,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public void Type_IsSoulseek()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             Assert.Equal(ContentBackendType.Soulseek, backend.Type);
         }
 
@@ -55,7 +55,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public void SupportedDomain_IsMusic()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             Assert.Equal(ContentDomain.Music, backend.SupportedDomain);
         }
 
@@ -64,9 +64,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         {
             _defaultOptions.Enabled = false;
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var results = await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
-            
+
             Assert.Empty(results);
         }
 
@@ -75,9 +75,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         {
             _mockLimiter.Setup(l => l.TryConsumeSearch(It.IsAny<string>())).Returns(false);
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var results = await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
-            
+
             Assert.Empty(results);
             _mockLimiter.Verify(l => l.TryConsumeSearch("virtualsoulfind-v2"), Times.Once);
         }
@@ -89,12 +89,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             _mockLimiter.Setup(l => l.TryConsumeSearch(It.IsAny<string>())).Returns(false);
 
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
-            
+
             // Verify safety limiter was called BEFORE any search would happen
             _mockLimiter.Verify(l => l.TryConsumeSearch("virtualsoulfind-v2"), Times.Once);
-            
+
             // Verify search was NOT attempted when rate limited. Use 6-arg overload; when rate limited no SearchAsync is called.
             _mockClient.Verify(
                 c => c.SearchAsync(
@@ -111,7 +111,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_WithValidSoulseekCandidate_ReturnsValid()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -133,7 +133,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_WithNonSoulseekBackend_ReturnsInvalid()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -153,7 +153,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         {
             _defaultOptions.Enabled = false;
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -172,7 +172,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_WithInvalidBackendRef_ReturnsInvalid()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -191,7 +191,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_WithLowTrustScore_ReturnsInvalid()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -212,7 +212,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_ParsesBackendRefCorrectly()
         {
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -246,7 +246,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         {
             // This is THE MOST CRITICAL test for H-08 compliance
             // Verify that the safety limiter is ALWAYS checked before searching
-            
+
             var callCount = 0;
             _mockLimiter
                 .Setup(l => l.TryConsumeSearch("virtualsoulfind-v2"))
@@ -257,7 +257,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                 });
 
             var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
-            
+
             // Try multiple searches
             for (int i = 0; i < 5; i++)
             {
@@ -266,7 +266,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 
             // Safety limiter should have been called EXACTLY 5 times
             Assert.Equal(5, callCount);
-            
+
             // No actual searches should have been performed. Use 6-arg overload; when rate limited no SearchAsync is called.
             _mockClient.Verify(
                 c => c.SearchAsync(

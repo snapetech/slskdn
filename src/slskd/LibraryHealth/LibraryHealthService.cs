@@ -151,6 +151,7 @@ namespace slskd.LibraryHealth
                         {
                             scan.FilesScanned = scannedCount;
                         }
+
                         await hashDb.UpsertLibraryHealthScanAsync(scan, ct).ConfigureAwait(false);
                     }
                     catch (Exception ex)
@@ -390,7 +391,7 @@ namespace slskd.LibraryHealth
                         // For now, we'll check if the recording ID matches any files in the directory
                         var filesInDir = Directory.EnumerateFiles(libraryPath, "*.*", SearchOption.TopDirectoryOnly)
                             .Where(f => Path.GetExtension(f).ToLowerInvariant() is ".flac" or ".mp3" or ".m4a" or ".ogg" or ".opus");
-                        
+
                         // Simplified check: if we have hashes for this recording, assume it might be present
                         // Full implementation would need reverse lookup from HashDb
                         foundInAlbum = true; // Optimistic for now
@@ -447,6 +448,7 @@ namespace slskd.LibraryHealth
                 {
                     scan.IssuesDetected++;
                 }
+
                 log.LogDebug("[LH] Detected issue: {Type} for {Path}", issue.Type, issue.FilePath);
             }
             catch (Exception ex)

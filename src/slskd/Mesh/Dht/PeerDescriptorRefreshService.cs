@@ -43,6 +43,7 @@ public class PeerDescriptorRefreshService : BackgroundService
             lastKnownEndpoints = GetCurrentEndpoints();
             logger.LogInformation("[PeerDescriptorRefreshService] Got {Count} endpoints", lastKnownEndpoints.Count);
         }
+
         logger.LogInformation("[PeerDescriptorRefreshService] Constructor completed");
     }
 

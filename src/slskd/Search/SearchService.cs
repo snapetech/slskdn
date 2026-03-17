@@ -284,7 +284,7 @@ namespace slskd.Search
                 var providersToUse = requestedProviders != null && requestedProviders.Any()
                     ? SearchProviders.Where(p => requestedProviders.Contains(p.Name)).ToList()
                     : SearchProviders;
-                
+
                 if (providersToUse.Any())
                 {
                     return await StartBridgedSearchAsync(id, query, scope, options, providersToUse);
@@ -393,7 +393,7 @@ namespace slskd.Search
                     {
                         // Start mesh overlay search in parallel when enabled (hybrid mode)
                         // MeshParallelSearch flag or VirtualSoulfind.MeshSearch.Enabled can enable it
-                        var meshEnabled = OptionsMonitor.CurrentValue.Feature.MeshParallelSearch 
+                        var meshEnabled = OptionsMonitor.CurrentValue.Feature.MeshParallelSearch
                             || OptionsMonitor.CurrentValue.VirtualSoulfind?.MeshSearch?.Enabled == true;
                         var meshTask = (meshEnabled && MeshOverlaySearchService != null)
                             ? MeshOverlaySearchService.SearchAsync(query.SearchText, cancellationTokenSource.Token)
@@ -767,7 +767,6 @@ namespace slskd.Search
             // For text queries, we would normally query MusicBrainz API
             // For this implementation, we'll use a simple heuristic or return empty
             // In production, this should integrate with IMusicBrainzClient
-
             Log.Debug("[VSF-DISASTER-SEARCH] Query '{Query}' is not an MBID - mesh search may return limited results", query);
 
             // MusicBrainz API integration deferred: requires IMusicBrainzClient integration

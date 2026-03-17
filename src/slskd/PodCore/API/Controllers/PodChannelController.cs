@@ -22,7 +22,7 @@ using Microsoft.Extensions.Logging;
 [Produces("application/json")]
 [Consumes("application/json")]
 [Authorize(Policy = AuthPolicy.Any)]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodChannelController : ControllerBase
 {
     private readonly IPodService _podService;
@@ -53,9 +53,9 @@ public class PodChannelController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> CreateChannel(
-        [FromRoute] string podId,
-        [FromBody] PodChannel channel,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromBody] PodChannel channel,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -108,8 +108,8 @@ public class PodChannelController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetChannels(
-        [FromRoute] string podId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -150,9 +150,9 @@ public class PodChannelController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetChannel(
-        [FromRoute] string podId,
-        [FromRoute] string channelId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string channelId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -206,10 +206,10 @@ public class PodChannelController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> UpdateChannel(
-        [FromRoute] string podId,
-        [FromRoute] string channelId,
-        [FromBody] PodChannel channel,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string channelId,
+    [FromBody] PodChannel channel,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -288,9 +288,9 @@ public class PodChannelController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> DeleteChannel(
-        [FromRoute] string podId,
-        [FromRoute] string channelId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string channelId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {

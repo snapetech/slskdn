@@ -72,7 +72,7 @@ namespace slskd.Mesh.Realm
                     _logger.LogError(task.Exception?.GetBaseException(), "[RealmHostedService] Unobserved exception in realm initialization");
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
-            
+
             return Task.CompletedTask;
         }
 
@@ -84,5 +84,3 @@ namespace slskd.Mesh.Realm
         }
     }
 }
-
-

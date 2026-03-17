@@ -168,5 +168,3 @@ namespace slskd.Mesh.Realm.Bridge
         }
     }
 }
-
-

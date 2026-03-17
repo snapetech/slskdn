@@ -288,7 +288,6 @@ public static class IpRangeClassifier
         }
 
         // IPv6 cloud metadata services can be added here if needed
-
         return false;
     }
 
@@ -315,5 +314,3 @@ public static class IpRangeClassifier
         };
     }
 }
-
-

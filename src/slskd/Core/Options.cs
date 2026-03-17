@@ -34,13 +34,13 @@ namespace slskd
     using slskd.Common;
     using slskd.Common.Moderation;
     using slskd.Configuration;
+    using slskd.DhtRendezvous;
     using slskd.Events;
-    using slskd.SocialFederation;
     using slskd.Relay;
     using slskd.Shares;
-    using slskd.Validation;
-    using slskd.DhtRendezvous;
     using slskd.Signals;
+    using slskd.SocialFederation;
+    using slskd.Validation;
     using Utility.CommandLine;
     using Utility.EnvironmentVariables;
     using YamlDotNet.Serialization;
@@ -371,6 +371,12 @@ namespace slskd
         public SharingOptions Sharing { get; init; } = new SharingOptions();
 
         /// <summary>
+        ///     Gets options for SongID background processing.
+        /// </summary>
+        [Validate]
+        public SongIdOptions SongId { get; init; } = new SongIdOptions();
+
+        /// <summary>
         ///     Gets options for the Soulseek client.
         /// </summary>
         [Validate]
@@ -414,7 +420,7 @@ namespace slskd
             Id = "default-realm",
             GovernanceRoots = new[] { "default-governance" },
             BootstrapNodes = Array.Empty<string>(),
-            Policies = new Mesh.Realm.RealmPolicies()
+            Policies = new Mesh.Realm.RealmPolicies(),
         };
 
         /// <summary>
@@ -430,9 +436,9 @@ namespace slskd
                     GovernanceRoots = new[] { "default-governance" },
                     BootstrapNodes = Array.Empty<string>(),
                     Policies = new Mesh.Realm.RealmPolicies()
-                }
+                },
             },
-            Bridge = new Mesh.Realm.BridgeConfig()
+            Bridge = new Mesh.Realm.BridgeConfig(),
         };
 
         /// <summary>
@@ -1553,6 +1559,30 @@ namespace slskd
         }
 
         /// <summary>
+        ///     SongID options.
+        /// </summary>
+        public class SongIdOptions : IValidatableObject
+        {
+            /// <summary>
+            ///     Gets the number of SongID runs processed concurrently.
+            /// </summary>
+            [Argument(default, "songid-max-concurrent-runs")]
+            [EnvironmentVariable("SONGID_MAX_CONCURRENT_RUNS")]
+            [Description("number of SongID runs processed concurrently")]
+            [RequiresRestart]
+            public int MaxConcurrentRuns { get; init; } = 2;
+
+            /// <inheritdoc />
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                if (MaxConcurrentRuns < 1)
+                {
+                    yield return new ValidationResult("SongId.MaxConcurrentRuns must be at least 1.", new[] { nameof(MaxConcurrentRuns) });
+                }
+            }
+        }
+
+        /// <summary>
         ///     Blacklist options.
         /// </summary>
         public class BlacklistOptions : IValidatableObject
@@ -1992,26 +2022,26 @@ namespace slskd
                 {
                     results.Add(new ValidationResult(
                         "Metrics authentication username must be configured when metrics auth is enabled.",
-                        new[] { nameof(Authentication.Username) }));
+                        [nameof(Authentication.Username)]));
                 }
                 else if (Authentication.Username.Length > 255)
                 {
                     results.Add(new ValidationResult(
                         "Metrics authentication username must be 255 characters or fewer.",
-                        new[] { nameof(Authentication.Username) }));
+                        [nameof(Authentication.Username)]));
                 }
 
                 if (string.IsNullOrWhiteSpace(Authentication.Password))
                 {
                     results.Add(new ValidationResult(
                         "Metrics authentication password must be configured when metrics auth is enabled.",
-                        new[] { nameof(Authentication.Password) }));
+                        [nameof(Authentication.Password)]));
                 }
                 else if (Authentication.Password.Length > 255)
                 {
                     results.Add(new ValidationResult(
                         "Metrics authentication password must be 255 characters or fewer.",
-                        new[] { nameof(Authentication.Password) }));
+                        [nameof(Authentication.Password)]));
                 }
 
                 return results;
@@ -3402,6 +3432,7 @@ namespace slskd
                 /// <summary>
                 ///     Extended validation.
                 /// </summary>
+                /// <returns></returns>
                 public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
                 {
                     var results = new List<ValidationResult>();
@@ -3474,6 +3505,7 @@ namespace slskd
                 /// <summary>
                 ///     Extended validation.
                 /// </summary>
+                /// <returns></returns>
                 public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
                 {
                     var results = new List<ValidationResult>();

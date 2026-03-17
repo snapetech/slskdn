@@ -22,7 +22,7 @@ using Microsoft.Extensions.Logging;
 [Produces("application/json")]
 [Consumes("application/json")]
 [Authorize(Policy = AuthPolicy.Any)]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodMessageStorageController : ControllerBase
 {
     private readonly IPodMessageStorage messageStorage;
@@ -53,11 +53,11 @@ public class PodMessageStorageController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> SearchMessages(
-        [FromRoute] string podId,
-        [FromQuery] string query,
-        [FromQuery] string channelId = null,
-        [FromQuery] int limit = 50,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromQuery] string query,
+    [FromQuery] string channelId = null,
+    [FromQuery] int limit = 50,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -119,8 +119,8 @@ public class PodMessageStorageController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> CleanupMessages(
-        [FromQuery] long olderThan,
-        CancellationToken cancellationToken = default)
+    [FromQuery] long olderThan,
+            CancellationToken cancellationToken = default)
     {
         if (olderThan <= 0)
         {
@@ -155,10 +155,10 @@ public class PodMessageStorageController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> CleanupChannelMessages(
-        [FromRoute] string podId,
-        [FromRoute] string channelId,
-        [FromQuery] long olderThan,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string channelId,
+    [FromQuery] long olderThan,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -203,9 +203,9 @@ public class PodMessageStorageController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetMessageCount(
-        [FromRoute] string podId,
-        [FromRoute] string channelId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string channelId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {

@@ -127,6 +127,3 @@ namespace slskd.Integrations.Chromaprint
         }
     }
 }
-
-
-

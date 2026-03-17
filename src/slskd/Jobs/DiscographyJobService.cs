@@ -48,7 +48,8 @@ namespace slskd.Jobs
             }
 
             var profile = request.Profile;
-            var releaseIds = await profileService.GetReleaseIdsForProfileAsync(request.ArtistId, profile, ct).ConfigureAwait(false);
+            var releaseIds = request.ReleaseIds?.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                ?? await profileService.GetReleaseIdsForProfileAsync(request.ArtistId, profile, ct).ConfigureAwait(false);
 
             var graph = await graphService.GetArtistReleaseGraphAsync(request.ArtistId, forceRefresh: false, ct).ConfigureAwait(false);
             var job = new DiscographyJob
@@ -136,5 +137,7 @@ namespace slskd.Jobs
         public DiscographyProfile Profile { get; set; } = DiscographyProfile.CoreDiscography;
 
         public string TargetDirectory { get; set; }
+
+        public List<string>? ReleaseIds { get; set; }
     }
 }

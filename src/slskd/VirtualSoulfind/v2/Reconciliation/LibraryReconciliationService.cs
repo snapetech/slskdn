@@ -97,7 +97,6 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
 
             // In a real implementation, we'd paginate through all local files
             // For now, this is a simplified version that would need pagination support
-
             return suggestions;
         }
 
@@ -134,7 +133,6 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
             // - InferredTrackId == null
             // - AND no VerifiedCopy linking them
             // This requires pagination support
-
             return orphanedFiles;
         }
     }

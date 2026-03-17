@@ -99,8 +99,9 @@ namespace slskd.Common.Security
             }
 
             // 4. LOW-05: Prometheus/metrics endpoint has a weak or empty password
-            var metricsAuth = options.Metrics?.Authentication;
-            if (metricsAuth != null && !metricsAuth.Disabled &&
+            var metrics = options.Metrics;
+            var metricsAuth = metrics?.Authentication;
+            if (metrics?.Enabled == true && metricsAuth != null && !metricsAuth.Disabled &&
                 string.IsNullOrWhiteSpace(metricsAuth.Password))
             {
                 const string msg = "Web.Authentication.Metrics.Password is empty. " +

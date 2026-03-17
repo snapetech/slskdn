@@ -6,13 +6,16 @@ namespace slskd.Tests;
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.TestHost;
@@ -108,6 +111,17 @@ public class FedMeshRateLimitTestHostFactory : WebApplicationFactory<ProgramStub
                         o.AddPolicy(AuthPolicy.Any, p => p.RequireAuthenticatedUser()));
 
                     services.AddControllers(o => o.Filters.Add(new AuthorizeFilter(AuthPolicy.Any)))
+                        .ConfigureApplicationPartManager(manager =>
+                        {
+                            var existing = manager.FeatureProviders
+                                .OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList();
+                            foreach (var provider in existing)
+                            {
+                                manager.FeatureProviders.Remove(provider);
+                            }
+
+                            manager.FeatureProviders.Add(new slskd.Common.CodeQuality.SafeControllerFeatureProvider());
+                        })
                         .ConfigureApiBehaviorOptions(o =>
                             o.SuppressModelStateInvalidFilter = !optionsAtStartup.Web.EnforceSecurity)
                         .AddApplicationPart(typeof(SessionController).Assembly);

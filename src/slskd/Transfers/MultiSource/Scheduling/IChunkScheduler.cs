@@ -76,5 +76,3 @@ namespace slskd.Transfers.MultiSource.Scheduling
         void UnregisterAssignment(int chunkIndex);
     }
 }
-
-

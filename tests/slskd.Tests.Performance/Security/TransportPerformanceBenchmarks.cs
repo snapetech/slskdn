@@ -46,7 +46,7 @@ public class TransportPerformanceBenchmarks
         _logger = new XunitLogger(_output);
     }
 
-    [GlobalSetup]
+[GlobalSetup]
     public void Setup()
     {
         // Initialize mock transports
@@ -57,8 +57,8 @@ public class TransportPerformanceBenchmarks
         // _httpTunnelTransport = new HttpTunnelTransport(...);
     }
 
-    [Benchmark(Baseline = true)]
-    [BenchmarkCategory("Latency")]
+[Benchmark(Baseline = true)]
+[BenchmarkCategory("Latency")]
     public async Task DirectTransport_ConnectionLatency()
     {
         if (_directTransport == null) return;
@@ -86,9 +86,9 @@ public class TransportPerformanceBenchmarks
     // [BenchmarkCategory("Latency")]
     // public async Task HttpTunnelTransport_ConnectionLatency() { ... }
 
-    [Benchmark]
-    [BenchmarkCategory("Throughput")]
-    [Arguments(100)] // 100 iterations
+[Benchmark]
+[BenchmarkCategory("Throughput")]
+[Arguments(100)] // 100 iterations
     public async Task TransportSelector_SelectionThroughput(int iterations)
     {
         var adversarialOptions = new AdversarialOptions
@@ -122,8 +122,8 @@ public class TransportPerformanceBenchmarks
         _output.WriteLine($"Transport selection throughput: {throughput:F2} selections/sec");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Memory")]
+[Benchmark]
+[BenchmarkCategory("Memory")]
     public void TransportCreation_MemoryUsage()
     {
         var before = GC.GetTotalMemory(true);
@@ -151,9 +151,9 @@ public class TransportPerformanceBenchmarks
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Concurrency")]
-    [Arguments(10)] // 10 concurrent operations
+[Benchmark]
+[BenchmarkCategory("Concurrency")]
+[Arguments(10)] // 10 concurrent operations
     public async Task ConcurrentTransportOperations(int concurrencyLevel)
     {
         var adversarialOptions = new AdversarialOptions
@@ -193,8 +193,8 @@ public class TransportPerformanceBenchmarks
         _output.WriteLine($"Concurrent operations ({concurrencyLevel}): {sw.Elapsed.TotalMilliseconds}ms total");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Serialization")]
+[Benchmark]
+[BenchmarkCategory("Serialization")]
     public async Task PayloadProcessing_Overhead()
     {
         var paddingOptions = new MessagePaddingOptions { Enabled = true, BucketSizes = new List<int> { 512, 1024 } };
@@ -231,9 +231,9 @@ public class TransportPerformanceBenchmarks
         _output.WriteLine($"Privacy layer processing: {throughput:F2} payloads/sec");
     }
 
-    [Benchmark]
-    [BenchmarkCategory("ErrorHandling")]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("ErrorHandling")]
+[Arguments(100)]
     public async Task TransportErrorRecovery_Time(int errorCount)
     {
         var adversarialOptions = new AdversarialOptions
@@ -374,7 +374,7 @@ public class TransportPerformanceBenchmarks
 /// </summary>
 public class TransportInitializationBenchmarks
 {
-    [Benchmark]
+[Benchmark]
     public void TransportInitialization_Placeholder()
     {
         // Placeholder for transport initialization benchmarks
@@ -388,7 +388,7 @@ public class TransportInitializationBenchmarks
 /// </summary>
 public class TransportStatusBenchmarks
 {
-    [Benchmark]
+[Benchmark]
     public void TransportStatusCheck_Placeholder()
     {
         // Placeholder for transport status check benchmarks

@@ -15,7 +15,7 @@ public interface IPeerIdAnonymizer
     /// Get anonymized username for a peer ID.
     /// </summary>
     Task<string> GetAnonymizedUsernameAsync(string peerId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get peer ID from anonymized username.
     /// </summary>
@@ -129,7 +129,7 @@ public interface IRoomSceneMapper
     /// Map legacy room name to scene ID.
     /// </summary>
     string MapRoomToScene(string roomName);
-    
+
     /// <summary>
     /// Map scene ID to legacy room name.
     /// </summary>
@@ -152,7 +152,6 @@ public class RoomSceneMapper : IRoomSceneMapper
     {
         // "warp" → "scene:label:warp-records"
         // "techno" → "scene:genre:techno"
-        
         var normalized = roomName.ToLowerInvariant().Replace(" ", "-");
 
         // Heuristic: if it looks like a label, treat as label scene
@@ -169,7 +168,6 @@ public class RoomSceneMapper : IRoomSceneMapper
     {
         // "scene:label:warp-records" → "warp"
         // "scene:genre:techno" → "techno"
-        
         var parts = sceneId.Split(':');
         if (parts.Length >= 3)
         {

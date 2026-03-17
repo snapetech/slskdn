@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/users")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class UsersCompatibilityController : ControllerBase
 {
     private readonly ILogger<UsersCompatibilityController> logger;
@@ -31,8 +31,8 @@ public class UsersCompatibilityController : ControllerBase
     [HttpGet("{username}/browse")]
     [Authorize]
     public async Task<IActionResult> BrowseUser(
-        string username,
-        CancellationToken cancellationToken = default)
+            string username,
+            CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Browse user requested: {Username}", username);
 

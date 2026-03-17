@@ -62,10 +62,10 @@ public class LibraryItemsController : ControllerBase
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> SearchItems(
-        [FromQuery] string? query = null,
-        [FromQuery] string? kinds = null,
-        [FromQuery] int limit = 100,
-        CancellationToken cancellationToken = default)
+    [FromQuery] string? query = null,
+    [FromQuery] string? kinds = null,
+    [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
     {
         logger?.LogInformation("Library items search: query={Query}, kinds={Kinds}, limit={Limit}", query, kinds, limit);
 
@@ -293,8 +293,8 @@ public class LibraryItemsController : ControllerBase
     [HttpGet("{contentId}")]
     [Authorize]
     public async Task<IActionResult> GetItem(
-        string contentId,
-        CancellationToken cancellationToken = default)
+            string contentId,
+            CancellationToken cancellationToken = default)
     {
         logger?.LogInformation("Get library item: contentId={ContentId}", contentId);
 
@@ -467,15 +467,16 @@ public class LibraryItemsController : ControllerBase
     {
         using var sha256 = SHA256.Create();
         using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
-        
+
         var buffer = new byte[32768]; // 32KB chunks
         int bytesRead;
         while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
         {
             sha256.TransformBlock(buffer, 0, bytesRead, null, 0);
         }
+
         sha256.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-        
+
         var hashBytes = sha256.Hash ?? throw new InvalidOperationException("SHA256 hash computation failed");
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }

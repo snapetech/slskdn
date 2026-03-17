@@ -16,19 +16,19 @@ public class ShadowIndexShard
 {
     [Key(0)]
     public string ShardVersion { get; set; } = "1.0";
-    
+
     [Key(1)]
     public DateTimeOffset Timestamp { get; set; }
-    
+
     [Key(2)]
     public int TTLSeconds { get; set; } = 3600;  // 1 hour default
-    
+
     [Key(3)]
     public List<byte[]> PeerIdHints { get; set; } = new();  // Each 8 bytes
-    
+
     [Key(4)]
     public List<VariantHint> CanonicalVariants { get; set; } = new();
-    
+
     [Key(5)]
     public int ApproximatePeerCount { get; set; }
 }
@@ -41,16 +41,16 @@ public class VariantHint
 {
     [Key(0)]
     public string Codec { get; set; } = string.Empty;  // "FLAC", "MP3", etc.
-    
+
     [Key(1)]
     public int BitrateKbps { get; set; }
-    
+
     [Key(2)]
     public long SizeBytes { get; set; }
-    
+
     [Key(3)]
     public byte[] HashPrefix { get; set; } = Array.Empty<byte>();  // First 16 bytes of SHA256
-    
+
     [Key(4)]
     public double QualityScore { get; set; }
 }

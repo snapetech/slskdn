@@ -42,7 +42,7 @@ public class MessagePadder : IMessagePadder
     {
         if (message == null)
             throw new ArgumentNullException(nameof(message));
-        
+
         return Pad(new ReadOnlyMemory<byte>(message));
     }
 
@@ -128,10 +128,10 @@ public class MessagePadder : IMessagePadder
         var adversarialOpts = adversarialOptions?.CurrentValue;
         var privacyOptions = adversarialOpts?.Privacy;
         var paddingOptions = privacyOptions?.Padding;
-        
+
         if (paddingOptions == null || !paddingOptions.Enabled)
             return messageLength;
-        
+
         var configuredBucket = paddingOptions.BucketSizes?.FirstOrDefault(b => b >= messageLength) ?? 0;
         return ResolveBucketSize(configuredBucket, messageLength);
     }

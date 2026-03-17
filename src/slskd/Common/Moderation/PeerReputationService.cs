@@ -180,5 +180,3 @@ namespace slskd.Common.Moderation
         }
     }
 }
-
-

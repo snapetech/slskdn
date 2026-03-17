@@ -35,7 +35,7 @@ public sealed class Checkpointer : IDisposable
 {
     public Checkpointer(
         string context = null,
-        [CallerMemberName] string memberName = "",
+[CallerMemberName] string memberName = "",
         ILogger logger = null)
     {
         Stopwatch = Stopwatch.StartNew();
@@ -55,7 +55,7 @@ public sealed class Checkpointer : IDisposable
 
     public void Capture(
         string name,
-        [CallerLineNumber] int lineNumber = 0)
+[CallerLineNumber] int lineNumber = 0)
     {
         var currentMs = Stopwatch.ElapsedMilliseconds;
         var deltaMs = currentMs - LastCheckpointMs;

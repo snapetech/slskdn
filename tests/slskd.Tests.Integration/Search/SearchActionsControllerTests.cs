@@ -70,7 +70,7 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, downloadResponse.StatusCode);
-        
+
         var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
         Assert.NotNull(problemDetails);
         Assert.Equal("invalid_item_id", problemDetails.Type);
@@ -90,7 +90,7 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, downloadResponse.StatusCode);
-        
+
         var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
         Assert.NotNull(problemDetails);
         Assert.Equal("search_not_found", problemDetails.Type);
@@ -153,19 +153,19 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, downloadResponse.StatusCode);
-        
+
         var result = await downloadResponse.Content.ReadFromJsonAsync<DownloadResultResponse>();
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.Equal("pod", result.Source);
         Assert.False(result.Local);
         Assert.NotNull(result.Path);
-        
+
         // Verify file was written
         Assert.True(System.IO.File.Exists(result.Path));
         var downloadedContent = await System.IO.File.ReadAllBytesAsync(result.Path);
         Assert.Equal(testContent, downloadedContent);
-        
+
         // Cleanup
         if (System.IO.File.Exists(result.Path))
         {
@@ -234,13 +234,13 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, downloadResponse.StatusCode);
-        
+
         var result = await downloadResponse.Content.ReadFromJsonAsync<DownloadResultResponse>();
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.Equal("pod", result.Source);
         Assert.False(result.Local);
-        
+
         // Cleanup
         if (result.Path != null && System.IO.File.Exists(result.Path))
         {
@@ -300,7 +300,7 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, downloadResponse.StatusCode);
-        
+
         var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
         Assert.NotNull(problemDetails);
         Assert.Equal("pod_peer_not_found", problemDetails.Type);
@@ -359,7 +359,7 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.BadGateway, downloadResponse.StatusCode);
-        
+
         var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
         Assert.NotNull(problemDetails);
         Assert.Equal("pod_fetch_failed", problemDetails.Type);
@@ -412,7 +412,7 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, streamResponse.StatusCode);
-        
+
         var result = await streamResponse.Content.ReadFromJsonAsync<StreamResultResponse>();
         Assert.NotNull(result);
         Assert.NotNull(result.stream_url);
@@ -468,7 +468,7 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, streamResponse.StatusCode);
-        
+
         var problemDetails = await streamResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
         Assert.NotNull(problemDetails);
         Assert.Equal("scene_streaming_not_supported", problemDetails.Type);

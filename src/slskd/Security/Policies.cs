@@ -49,7 +49,6 @@ public class NetworkGuardPolicy : ISecurityPolicy
         // TODO: Resolve PeerId to IP address for IP-based checks
         // For now, we only check username blocklist
         // IP-based checks require a PeerId -> IP mapping service
-
         return Task.FromResult(new SecurityDecision(true, "network ok"));
     }
 }

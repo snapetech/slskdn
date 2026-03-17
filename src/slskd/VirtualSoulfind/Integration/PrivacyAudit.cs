@@ -149,7 +149,7 @@ public class PrivacyAudit : IPrivacyAudit
     private void CheckConfiguration(List<PrivacyFinding> findings)
     {
         var options = optionsMonitor.CurrentValue;
-        
+
         if (options.VirtualSoulfind?.Capture?.Enabled == true &&
             options.VirtualSoulfind?.Privacy?.PersistRawObservations == true)
         {

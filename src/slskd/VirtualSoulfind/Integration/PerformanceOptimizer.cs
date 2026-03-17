@@ -16,7 +16,7 @@ public interface IPerformanceOptimizer
     /// Prefetch hot MBIDs into cache.
     /// </summary>
     Task PrefetchHotMbidsAsync(List<string> mbids, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get cache statistics.
     /// </summary>

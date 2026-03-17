@@ -13,12 +13,12 @@ public enum SceneType
     /// Record label scene (e.g., "scene:label:warp-records").
     /// </summary>
     Label,
-    
+
     /// <summary>
     /// Genre/style scene (e.g., "scene:genre:dub-techno").
     /// </summary>
     Genre,
-    
+
     /// <summary>
     /// Private/invite-only scene (e.g., "scene:key:pubkey:friends").
     /// </summary>
@@ -48,25 +48,25 @@ public class SceneMetadata
 {
     [MessagePack.Key(0)]
     public string SceneId { get; set; } = string.Empty;
-    
+
     [MessagePack.Key(1)]
     public string DisplayName { get; set; } = string.Empty;
-    
+
     [MessagePack.Key(2)]
     public string? Description { get; set; }
-    
+
     [MessagePack.Key(3)]
     public SceneType Type { get; set; }
-    
+
     [MessagePack.Key(4)]
     public int ApproximateMemberCount { get; set; }
-    
+
     [MessagePack.Key(5)]
     public DateTimeOffset CreatedAt { get; set; }
-    
+
     [MessagePack.Key(6)]
     public DateTimeOffset LastUpdatedAt { get; set; }
-    
+
     /// <summary>
     /// Top content shared in this scene (MBIDs).
     /// </summary>

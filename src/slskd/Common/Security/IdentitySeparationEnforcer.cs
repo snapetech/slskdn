@@ -136,7 +136,7 @@ namespace slskd.Common.Security
             // Reject formats that might leak other external identities
             if (podPeerId.Contains("@") || // Email-like
                 podPeerId.Contains("/") || // URL-like
-                podPeerId.Contains("\\"))   // Windows path-like
+                podPeerId.Contains("\\")) // Windows path-like
             {
                 return false;
             }
@@ -188,6 +188,7 @@ namespace slskd.Common.Security
             var part = identity.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase)
                 ? identity.Substring(7)
                 : identity;
+
             // Soulseek usernames: alphanumeric, underscores, dots, max 30 chars
             return part.Length >= 1 && part.Length <= 30 &&
                    part.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.');

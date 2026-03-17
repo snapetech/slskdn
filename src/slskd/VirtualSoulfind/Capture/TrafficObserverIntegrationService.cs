@@ -70,7 +70,6 @@ public class TrafficObserverIntegrationService
             // so this event handler is a backup for any other code paths that raise this event.
             // We don't have the query text here, so we use a placeholder.
             // In practice, SearchService integration handles this.
-            
             foreach (var response in evt.Responses)
             {
                 var query = "unknown"; // Placeholder - query not available in event

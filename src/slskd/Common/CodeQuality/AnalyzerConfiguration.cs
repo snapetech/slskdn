@@ -279,5 +279,3 @@ namespace slskd.Common.CodeQuality
         public bool IsEnabled { get; init; }
     }
 }
-
-

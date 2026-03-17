@@ -24,33 +24,33 @@ public sealed class DhtPeerGreetingService : BackgroundService
     private readonly MeshNeighborRegistry _neighborRegistry;
     private readonly ISoulseekClient _soulseekClient;
     private readonly ConcurrentDictionary<string, DateTimeOffset> _greetedPeers = new(StringComparer.OrdinalIgnoreCase);
-    
+
     private static readonly string[] FirstConnectionMessages = new[]
     {
         "🎉 Hello! We just connected via the slskdn mesh network! This is my first mesh peer - exciting!",
         "👋 Hey there, fellow slskdn user! You're my first mesh peer! The future of P2P is here!",
         "🌐 Wow, mesh connection established! You're my first - let's celebrate decentralization!",
     };
-    
+
     private static readonly string[] RegularGreetings = new[]
     {
         "🔗 slskdn mesh connection established! Happy sharing!",
         "👋 Connected via slskdn mesh. Welcome to the network!",
         "🌐 Mesh peer connection successful! Greetings from slskdn!",
     };
-    
+
     /// <summary>
     /// Maximum number of peers to auto-greet (to avoid spam).
     /// </summary>
     public int MaxAutoGreetings { get; set; } = 10;
-    
+
     /// <summary>
     /// Whether auto-greetings are enabled.
     /// </summary>
     public bool Enabled { get; set; } = true;
-    
+
     private int _greetingCount = 0;
-    
+
     public DhtPeerGreetingService(
         ILogger<DhtPeerGreetingService> logger,
         MeshNeighborRegistry neighborRegistry,
@@ -60,7 +60,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
         _neighborRegistry = neighborRegistry;
         _soulseekClient = soulseekClient;
     }
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
@@ -71,56 +71,56 @@ public sealed class DhtPeerGreetingService : BackgroundService
 
         _logger.LogInformation("DHT Peer Greeting Service started (max greetings: {Max})", MaxAutoGreetings);
     }
-    
+
     public override Task StopAsync(CancellationToken cancellationToken)
     {
         _neighborRegistry.NeighborAdded -= OnNeighborAdded;
         _neighborRegistry.FirstNeighborConnected -= OnFirstNeighborConnected;
-        
+
         return base.StopAsync(cancellationToken);
     }
-    
+
     private void OnFirstNeighborConnected(object? sender, MeshNeighborEventArgs e)
     {
         if (!Enabled || e.Username is null)
         {
             return;
         }
-        
+
         // Special message for the very first mesh peer ever!
         _ = SendGreetingAsync(e.Username, isFirstEver: true);
     }
-    
+
     private void OnNeighborAdded(object? sender, MeshNeighborEventArgs e)
     {
         if (!Enabled || e.Username is null)
         {
             return;
         }
-        
+
         // Skip if this is the first peer (handled by FirstNeighborConnected)
         if (_neighborRegistry.Count == 1)
         {
             return;
         }
-        
+
         // Only auto-greet the first few peers
         if (_greetingCount >= MaxAutoGreetings)
         {
             _logger.LogDebug("Skipping auto-greeting for {Username} (limit reached)", e.Username);
             return;
         }
-        
+
         // Don't greet the same peer twice
         if (_greetedPeers.ContainsKey(e.Username))
         {
             _logger.LogDebug("Already greeted {Username}, skipping", e.Username);
             return;
         }
-        
+
         _ = SendGreetingAsync(e.Username, isFirstEver: false);
     }
-    
+
     private async Task SendGreetingAsync(string username, bool isFirstEver)
     {
         if (!_soulseekClient.State.HasFlag(SoulseekClientStates.Connected))
@@ -128,22 +128,22 @@ public sealed class DhtPeerGreetingService : BackgroundService
             _logger.LogDebug("Not connected to Soulseek, skipping greeting to {Username}", username);
             return;
         }
-        
+
         try
         {
             // Pick a random message
             var random = new Random();
             var messages = isFirstEver ? FirstConnectionMessages : RegularGreetings;
             var message = messages[random.Next(messages.Length)];
-            
+
             _logger.LogInformation("Sending mesh greeting to {Username}: {Message}", username, message);
-            
+
             await _soulseekClient.SendPrivateMessageAsync(username, message);
-            
+
             _greetedPeers[username] = DateTimeOffset.UtcNow;
             Interlocked.Increment(ref _greetingCount);
-            
-            _logger.LogDebug("Greeting sent successfully to {Username} (total: {Count})", 
+
+            _logger.LogDebug("Greeting sent successfully to {Username} (total: {Count})",
                 username, _greetingCount);
         }
         catch (Exception ex)
@@ -151,7 +151,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
             _logger.LogWarning(ex, "Failed to send greeting to {Username}", username);
         }
     }
-    
+
     /// <summary>
     /// Manually send a greeting to a peer.
     /// </summary>
@@ -159,7 +159,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
     {
         return SendGreetingAsync(username, isFirstEver: false);
     }
-    
+
     /// <summary>
     /// Get greeting service statistics.
     /// </summary>
@@ -185,4 +185,3 @@ public sealed class GreetingStats
     public string[] GreetedPeers { get; init; } = Array.Empty<string>();
     public bool Enabled { get; init; }
 }
-

@@ -110,6 +110,7 @@ namespace slskd.Transfers.MultiSource.Tracing
             {
                 val = 0;
             }
+
             dict[key] = val + bytes;
         }
 
@@ -119,6 +120,7 @@ namespace slskd.Transfers.MultiSource.Tracing
             {
                 return b;
             }
+
             return a.Value <= b ? a : b;
         }
 
@@ -128,6 +130,7 @@ namespace slskd.Transfers.MultiSource.Tracing
             {
                 return b;
             }
+
             return a.Value >= b ? a : b;
         }
     }

@@ -139,6 +139,7 @@ public class BucketPadder : IMessagePadder
                 if (messageLength <= bucket)
                     return bucket;
             }
+
             return defaultBuckets[^1]; // Return last bucket if message is larger than all
         }
 
@@ -153,5 +154,3 @@ public class BucketPadder : IMessagePadder
         return _options.BucketSizes.Max();
     }
 }
-
-

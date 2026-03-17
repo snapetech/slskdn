@@ -93,6 +93,7 @@ public class ContactsController : ControllerBase
                 contact.CachedEndpointsJson = JsonSerializer.Serialize(invite.Profile.Endpoints);
                 await _contacts.UpdateAsync(contact, ct).ConfigureAwait(false);
             }
+
             return CreatedAtAction(nameof(Get), new { id = contact.Id }, contact);
         }
         catch (Exception ex)
@@ -122,6 +123,7 @@ public class ContactsController : ControllerBase
             contact.CachedEndpointsJson = JsonSerializer.Serialize(profile.Endpoints);
             await _contacts.UpdateAsync(contact, ct).ConfigureAwait(false);
         }
+
         return CreatedAtAction(nameof(Get), new { id = contact.Id }, contact);
     }
 

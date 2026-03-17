@@ -89,7 +89,7 @@ public class PodPublisher : IPodPublisher
         try
         {
             var dhtKey = DeriveDhtKey(pod.PodId);
-            
+
             // Create pod metadata for DHT (exclude sensitive data)
             var metadata = new PodMetadata
             {
@@ -127,10 +127,10 @@ public class PodPublisher : IPodPublisher
         try
         {
             logger.LogInformation("[PodPublisher] Unpublishing pod {PodId} from DHT", podId);
-            
+
             // Remove from index
             await UpdatePodIndexAsync(podId, add: false, ct);
-            
+
             // Note: DHT doesn't support deletion, metadata entry will expire naturally
             // We could publish a tombstone with short TTL if needed
         }
@@ -151,7 +151,7 @@ public class PodPublisher : IPodPublisher
         {
             using var scope = scopeFactory.CreateScope();
             var podService = scope.ServiceProvider.GetRequiredService<IPodService>();
-            
+
             var pod = await podService.GetPodAsync(podId, ct);
             if (pod != null)
             {
@@ -252,7 +252,7 @@ public class PodPublisherBackgroundService : BackgroundService
 
                 using var scope = scopeFactory.CreateScope();
                 var podService = scope.ServiceProvider.GetRequiredService<IPodService>();
-                
+
                 // Refresh all listed pods
                 var pods = await podService.ListAsync(stoppingToken);
                 var listedPods = pods.Where(p => p.Visibility == PodVisibility.Listed).ToList();
@@ -281,6 +281,7 @@ public class PodPublisherBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 logger.LogError(ex, "[PodPublisher] Error in background refresh cycle");
+
                 // Continue running despite errors
             }
         }

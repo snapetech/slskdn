@@ -154,7 +154,7 @@ public class PathGuardTests
     public void Validate_ReturnsDetailedError()
     {
         var result = PathGuard.Validate("../etc/passwd", TestRoot);
-        
+
         Assert.False(result.IsValid);
         Assert.Equal(PathViolationType.DirectoryTraversal, result.ViolationType);
         Assert.NotNull(result.Error);
@@ -164,7 +164,7 @@ public class PathGuardTests
     public void Validate_ValidPath_ReturnsSuccess()
     {
         var result = PathGuard.Validate("music/track.flac", TestRoot);
-        
+
         Assert.True(result.IsValid);
         Assert.NotNull(result.SafePath);
         Assert.Equal(PathViolationType.None, result.ViolationType);

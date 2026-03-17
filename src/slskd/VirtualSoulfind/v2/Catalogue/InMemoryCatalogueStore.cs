@@ -48,7 +48,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         private readonly ConcurrentDictionary<string, string> _localFilePathToId = new();
 
         // ========== Artist Methods ==========
-
         public Task<Artist?> FindArtistByIdAsync(string artistId, CancellationToken ct = default)
         {
             _artists.TryGetValue(artistId, out var artist);
@@ -88,7 +87,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         }
 
         // ========== Release Group Methods ==========
-
         public Task<ReleaseGroup?> FindReleaseGroupByIdAsync(string releaseGroupId, CancellationToken ct = default)
         {
             _releaseGroups.TryGetValue(releaseGroupId, out var rg);
@@ -127,7 +125,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         }
 
         // ========== Release Methods ==========
-
         public Task<Release?> FindReleaseByIdAsync(string releaseId, CancellationToken ct = default)
         {
             _releases.TryGetValue(releaseId, out var release);
@@ -166,7 +163,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         }
 
         // ========== Track Methods ==========
-
         public Task<Track?> FindTrackByIdAsync(string trackId, CancellationToken ct = default)
         {
             _tracks.TryGetValue(trackId, out var track);
@@ -207,7 +203,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         }
 
         // ========== Bulk Operations ==========
-
         public Task<int> CountArtistsAsync(CancellationToken ct = default)
         {
             return Task.FromResult(_artists.Count);
@@ -224,7 +219,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         }
 
         // ========== LocalFile Methods ==========
-
         public Task<LocalFile?> FindLocalFileByPathAsync(string path, CancellationToken ct = default)
         {
             if (_localFilePathToId.TryGetValue(path, out var id))
@@ -272,7 +266,6 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         }
 
         // ========== VerifiedCopy Methods ==========
-
         public Task<VerifiedCopy?> FindVerifiedCopyForTrackAsync(string trackId, CancellationToken ct = default)
         {
             var verifiedCopy = _verifiedCopies.Values

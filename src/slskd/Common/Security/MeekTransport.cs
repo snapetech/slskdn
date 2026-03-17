@@ -101,6 +101,7 @@ public class MeekTransport : IAnonymityTransport
                 _status.IsAvailable = false;
                 _status.LastError = ex.Message;
             }
+
             _logger.LogWarning(ex, "Meek transport not available");
             return false;
         }
@@ -197,6 +198,7 @@ public class MeekTransport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish meek connection to {Host}:{Port}", host, port);
             throw;
         }

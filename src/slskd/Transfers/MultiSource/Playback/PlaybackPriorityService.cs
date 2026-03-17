@@ -56,15 +56,15 @@ namespace slskd.Transfers.MultiSource.Playback
             {
                 var isNew = !latest.ContainsKey(feedback.JobId);
                 latest[feedback.JobId] = feedback;
-                
+
                 if (isNew)
                 {
-                    logger.LogInformation("[Playback] Started tracking playback for job {JobId} (buffer target: {BufferMs}ms)", 
+                    logger.LogInformation("[Playback] Started tracking playback for job {JobId} (buffer target: {BufferMs}ms)",
                         feedback.JobId, feedback.BufferAheadMs);
                 }
                 else
                 {
-                    logger.LogDebug("[Playback] Updated playback feedback for job {JobId} (buffer target: {BufferMs}ms)", 
+                    logger.LogDebug("[Playback] Updated playback feedback for job {JobId} (buffer target: {BufferMs}ms)",
                         feedback.JobId, feedback.BufferAheadMs);
                 }
             }
@@ -92,13 +92,13 @@ namespace slskd.Transfers.MultiSource.Playback
             if (actual < desired)
             {
                 zone = PriorityZone.High;
-                logger.LogDebug("[Playback] Job {JobId} priority: HIGH (buffer {Actual}ms < target {Desired}ms)", 
+                logger.LogDebug("[Playback] Job {JobId} priority: HIGH (buffer {Actual}ms < target {Desired}ms)",
                     jobId, actual, desired);
             }
             else if (actual >= desired * 2)
             {
                 zone = PriorityZone.Low;
-                logger.LogDebug("[Playback] Job {JobId} priority: LOW (buffer {Actual}ms >= 2x target {Desired}ms)", 
+                logger.LogDebug("[Playback] Job {JobId} priority: LOW (buffer {Actual}ms >= 2x target {Desired}ms)",
                     jobId, actual, desired);
             }
             else

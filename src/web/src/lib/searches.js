@@ -1,4 +1,5 @@
 import api from './api';
+import { v4 as uuidv4 } from 'uuid';
 
 export const getAll = async (limit = 500) => {
   return (await api.get(`/searches?limit=${limit}`)).data;
@@ -62,6 +63,26 @@ export const create = ({ id, searchText, providers = null }) => {
   }
 
   return api.post('/searches', body);
+};
+
+export const createBatch = async ({ queries = [], providers = null } = {}) => {
+  const normalizedQueries = Array.isArray(queries)
+    ? queries.map((query) => (query || '').trim()).filter(Boolean)
+    : [];
+
+  await normalizedQueries.reduce(
+    (chain, searchText) =>
+      chain.then(() =>
+        create({
+          id: uuidv4(),
+          providers,
+          searchText,
+        }),
+      ),
+    Promise.resolve(),
+  );
+
+  return normalizedQueries.length;
 };
 
 export const getStatus = async ({ id, includeResponses = false }) => {

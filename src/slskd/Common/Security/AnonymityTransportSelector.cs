@@ -175,10 +175,10 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
     /// <returns>The selected transport and connection stream.</returns>
     [Obsolete("Use SelectAndConnectAsync(peerId, podId, host, port, isolationKey, cancellationToken) for policy-aware selection")]
     public async Task<(IAnonymityTransport Transport, Stream Stream)> SelectAndConnectAsync(
-        string host,
-        int port,
-        string? isolationKey = null,
-        CancellationToken cancellationToken = default)
+            string host,
+            int port,
+            string? isolationKey = null,
+            CancellationToken cancellationToken = default)
     {
         // Use default peer/pod context (no specific policy)
         return await SelectAndConnectAsync(peerId: null, podId: null, host, port, isolationKey, cancellationToken);
@@ -291,7 +291,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
             if (anonymityOptions.Mode == AnonymityMode.Tor || anonymityOptions.Mode == AnonymityMode.Direct)
             {
                 _transports[AnonymityTransportType.Tor] = new TorSocksTransport(
-                    anonymityOptions.Tor, 
+                    anonymityOptions.Tor,
                     _loggerFactory.CreateLogger<TorSocksTransport>());
             }
 
@@ -315,28 +315,28 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
             if (transportOptions.WebSocket.Enabled)
             {
                 _transports[AnonymityTransportType.WebSocket] = new WebSocketTransport(
-                    transportOptions.WebSocket, 
+                    transportOptions.WebSocket,
                     _loggerFactory.CreateLogger<WebSocketTransport>());
             }
 
             if (transportOptions.HttpTunnel.Enabled)
             {
                 _transports[AnonymityTransportType.HttpTunnel] = new HttpTunnelTransport(
-                    transportOptions.HttpTunnel, 
+                    transportOptions.HttpTunnel,
                     _loggerFactory.CreateLogger<HttpTunnelTransport>());
             }
 
             if (transportOptions.Obfs4.Enabled)
             {
                 _transports[AnonymityTransportType.Obfs4] = new Obfs4Transport(
-                    transportOptions.Obfs4, 
+                    transportOptions.Obfs4,
                     _loggerFactory.CreateLogger<Obfs4Transport>());
             }
 
             if (transportOptions.Meek.Enabled)
             {
                 _transports[AnonymityTransportType.Meek] = new MeekTransport(
-                    transportOptions.Meek, 
+                    transportOptions.Meek,
                     _loggerFactory.CreateLogger<MeekTransport>());
             }
 
@@ -587,6 +587,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
                             disposable.Dispose();
                         }
                     }
+
                     _transports.Clear();
                 }
             }

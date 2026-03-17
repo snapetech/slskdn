@@ -58,6 +58,3 @@ namespace slskd.Integrations.MusicBrainz.API.DTO
         public long LastUpdatedAt { get; set; }
     }
 }
-
-
-

@@ -93,6 +93,7 @@ public class ContentPublisherService : BackgroundService
                 count++;
             }
         }
+
         logger.LogInformation("[MediaCore] Published descriptors batch count={Count}", count);
     }
 }

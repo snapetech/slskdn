@@ -129,7 +129,8 @@ namespace slskd.Integrations.MusicBrainz
                 .ToList();
         }
 
-        private async Task<T?> GetAsync<T>(string requestUri, CancellationToken cancellationToken) where T : class
+        private async Task<T?> GetAsync<T>(string requestUri, CancellationToken cancellationToken)
+            where T : class
         {
             var options = MusicBrainzOptions;
 
@@ -192,6 +193,7 @@ namespace slskd.Integrations.MusicBrainz
                 DiscogsReleaseId = ExtractDiscogsReleaseId(release.Relations),
                 Title = release.Title ?? string.Empty,
                 Artist = FormatArtistCredit(release.ArtistCredit),
+                MusicBrainzArtistId = release.ArtistCredit?.FirstOrDefault()?.Artist?.Id,
                 Metadata = metadata,
                 Tracks = tracks,
             };
@@ -351,7 +353,7 @@ namespace slskd.Integrations.MusicBrainz
             string[]? Isrcs,
             ArtistCreditResponse[]? ArtistCredit);
 
-        private sealed record ArtistCreditResponse(string Name, string? JoinPhrase);
+        private sealed record ArtistCreditResponse(string Name, string? JoinPhrase, ArtistRef? Artist);
 
         private sealed record LabelInfoResponse(LabelResponse? Label);
 
@@ -370,13 +372,10 @@ namespace slskd.Integrations.MusicBrainz
         private sealed record RecordingSearchItem(
             string Id,
             string? Title,
-            [property: System.Text.Json.Serialization.JsonPropertyName("artist-credit")] ArtistCreditSearchItem[]? ArtistCredit);
+[property: System.Text.Json.Serialization.JsonPropertyName("artist-credit")] ArtistCreditSearchItem[]? ArtistCredit);
 
         private sealed record ArtistCreditSearchItem(string? Name, ArtistRef? Artist);
 
         private sealed record ArtistRef(string? Id);
     }
 }
-
-
-

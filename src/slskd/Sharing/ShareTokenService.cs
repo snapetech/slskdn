@@ -90,6 +90,7 @@ public sealed class ShareTokenService : IShareTokenService
         {
             return Task.FromResult<ShareTokenClaims?>(null);
         }
+
         var handler = new JwtSecurityTokenHandler();
 
         try

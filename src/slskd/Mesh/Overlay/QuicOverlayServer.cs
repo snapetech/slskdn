@@ -131,29 +131,30 @@ public class QuicOverlayServer : BackgroundService
 
             await using (listener)
 
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    var connection = await listener.AcceptConnectionAsync(stoppingToken);
-                    var ep = connection.RemoteEndPoint as IPEndPoint;
-                    if (ep != null && !connectionThrottler.ShouldAllowConnection(ep.ToString(), TransportType.DirectQuic))
+                    try
                     {
-                        try { await connection.CloseAsync(0); } catch { /* ignore */ }
-                        await connection.DisposeAsync();
-                        continue;
+                        var connection = await listener.AcceptConnectionAsync(stoppingToken);
+                        var ep = connection.RemoteEndPoint as IPEndPoint;
+                        if (ep != null && !connectionThrottler.ShouldAllowConnection(ep.ToString(), TransportType.DirectQuic))
+                        {
+                            try { await connection.CloseAsync(0); } catch { /* ignore */ }
+                            await connection.DisposeAsync();
+                            continue;
+                        }
+
+                        _ = HandleConnectionAsync(connection, stoppingToken);
                     }
-                    _ = HandleConnectionAsync(connection, stoppingToken);
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "[Overlay-QUIC] Error accepting connection");
+                    }
                 }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "[Overlay-QUIC] Error accepting connection");
-                }
-            }
         }
         catch (Exception ex)
         {
@@ -183,6 +184,7 @@ public class QuicOverlayServer : BackgroundService
                             await stream.DisposeAsync();
                             continue;
                         }
+
                         _ = HandleStreamAsync(stream, remoteEndPoint, ct);
                     }
                     catch (OperationCanceledException)
@@ -246,6 +248,7 @@ public class QuicOverlayServer : BackgroundService
                 {
                     return;
                 }
+
                 logger.LogDebug("[Overlay-QUIC] Received control {Type} from {Endpoint}", envelope.Type, remoteEndPoint);
 
                 var handled = await dispatcher.HandleAsync(envelope, ct);

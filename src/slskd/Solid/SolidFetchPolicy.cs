@@ -101,6 +101,7 @@ public sealed class SolidFetchPolicy : ISolidFetchPolicy
         {
             if (ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal) return true;
             var b = ip.GetAddressBytes();
+
             // fc00::/7 (ULA)
             if ((b[0] & 0xfe) == 0xfc) return true;
         }

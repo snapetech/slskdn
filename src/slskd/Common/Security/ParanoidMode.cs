@@ -461,5 +461,3 @@ public sealed class ParanoidStats
     /// <summary>Gets or sets current enforcement level.</summary>
     public ParanoidLevel Level { get; init; }
 }
-
-

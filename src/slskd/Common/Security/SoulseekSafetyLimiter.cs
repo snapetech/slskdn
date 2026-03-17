@@ -44,10 +44,10 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
 {
     private readonly ILogger<SoulseekSafetyLimiter> _logger;
     private readonly IOptionsMonitor<slskd.Options> _options;
-    
+
     private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _searchWindows = new();
     private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _browseWindows = new();
-    
+
     private const int WindowDurationSeconds = 60;
 
     public SoulseekSafetyLimiter(
@@ -62,7 +62,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     public bool TryConsumeSearch(string source = "user")
     {
         var opts = _options.CurrentValue.Soulseek.Safety;
-        
+
         if (!opts.Enabled || opts.MaxSearchesPerMinute <= 0)
         {
             return true; // Unlimited
@@ -70,11 +70,11 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
 
         var key = $"search:{source}";
         var window = _searchWindows.GetOrAdd(key, _ => new ConcurrentQueue<DateTime>());
-        
+
         lock (window)
         {
             CleanExpiredEntries(window);
-            
+
             if (window.Count >= opts.MaxSearchesPerMinute)
             {
                 _logger.LogWarning(
@@ -83,7 +83,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
                     source, opts.MaxSearchesPerMinute, window.Count);
                 return false;
             }
-            
+
             window.Enqueue(DateTime.UtcNow);
             return true;
         }
@@ -93,7 +93,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     public bool TryConsumeBrowse(string source = "user")
     {
         var opts = _options.CurrentValue.Soulseek.Safety;
-        
+
         if (!opts.Enabled || opts.MaxBrowsesPerMinute <= 0)
         {
             return true; // Unlimited
@@ -101,11 +101,11 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
 
         var key = $"browse:{source}";
         var window = _browseWindows.GetOrAdd(key, _ => new ConcurrentQueue<DateTime>());
-        
+
         lock (window)
         {
             CleanExpiredEntries(window);
-            
+
             if (window.Count >= opts.MaxBrowsesPerMinute)
             {
                 _logger.LogWarning(
@@ -114,7 +114,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
                     source, opts.MaxBrowsesPerMinute, window.Count);
                 return false;
             }
-            
+
             window.Enqueue(DateTime.UtcNow);
             return true;
         }
@@ -124,7 +124,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     public SoulseekSafetyMetrics GetMetrics()
     {
         var opts = _options.CurrentValue.Soulseek.Safety;
-        
+
         var searchesBySource = _searchWindows.ToDictionary(
             kvp => kvp.Key.Replace("search:", ""),
             kvp =>
@@ -162,7 +162,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
     private static void CleanExpiredEntries(ConcurrentQueue<DateTime> window)
     {
         var cutoff = DateTime.UtcNow.AddSeconds(-WindowDurationSeconds);
-        
+
         while (window.TryPeek(out var timestamp) && timestamp < cutoff)
         {
             window.TryDequeue(out _);

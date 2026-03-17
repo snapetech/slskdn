@@ -59,7 +59,7 @@ public class DisasterModeRecovery : IDisasterModeRecovery
         {
             var timeSinceLastAttempt = DateTimeOffset.UtcNow - lastRecoveryAttempt.Value;
             var minInterval = TimeSpan.FromMinutes(recoveryOptions?.RecoveryCheckIntervalMinutes ?? 5);
-            
+
             if (timeSinceLastAttempt < minInterval)
             {
                 logger.LogDebug("[VSF-RECOVERY] Recovery attempt too soon, waiting");
@@ -77,15 +77,15 @@ public class DisasterModeRecovery : IDisasterModeRecovery
         if (health == SoulseekHealth.Healthy)
         {
             consecutiveHealthyChecks++;
-            
+
             // Require multiple consecutive healthy checks before recovery
             var requiredChecks = recoveryOptions?.RecoveryHealthyChecksRequired ?? 3;
-            
+
             if (consecutiveHealthyChecks >= requiredChecks)
             {
                 logger.LogInformation("[VSF-RECOVERY] Soulseek healthy for {Checks} checks, deactivating disaster mode",
                     consecutiveHealthyChecks);
-                
+
                 await disasterMode.DeactivateDisasterModeAsync(ct);
                 consecutiveHealthyChecks = 0;
             }

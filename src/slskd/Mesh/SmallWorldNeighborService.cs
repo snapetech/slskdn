@@ -15,11 +15,11 @@ using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Manages semi-sticky "small-world" neighbors for faster mesh propagation.
-/// 
+///
 /// Small-world networks have two properties:
 /// 1. Most nodes are not direct neighbors, but can reach each other quickly (short paths)
 /// 2. Each node has a few stable, long-term connections (neighbors)
-/// 
+///
 /// This creates a graph where:
 /// - New hashes propagate quickly via stable neighbor edges
 /// - Random connections prevent network fragmentation
@@ -32,33 +32,33 @@ public sealed class SmallWorldNeighborService
     private readonly ConcurrentDictionary<string, NeighborInfo> _neighbors = new();
     private readonly ConcurrentDictionary<string, NeighborInfo> _candidates = new();
     private readonly Random _random = new();
-    
+
     /// <summary>
     /// Target number of stable neighbors.
     /// </summary>
     public int TargetNeighborCount { get; set; } = 5;
-    
+
     /// <summary>
     /// Maximum candidates to track for promotion.
     /// </summary>
     public int MaxCandidates { get; set; } = 20;
-    
+
     /// <summary>
     /// Minimum successful interactions before promotion to neighbor.
     /// </summary>
     public int PromotionThreshold { get; set; } = 3;
-    
+
     /// <summary>
     /// Maximum time without interaction before neighbor is demoted.
     /// </summary>
     public TimeSpan NeighborTimeout { get; set; } = TimeSpan.FromHours(24);
-    
+
     /// <summary>
     /// Interval for syncing with neighbors vs random peers.
     /// </summary>
     public TimeSpan NeighborSyncInterval { get; set; } = TimeSpan.FromMinutes(30);
     public TimeSpan RandomSyncInterval { get; set; } = TimeSpan.FromHours(2);
-    
+
     public SmallWorldNeighborService(
         ILogger<SmallWorldNeighborService> logger,
         IMeshSyncService meshSyncService)
@@ -66,7 +66,7 @@ public sealed class SmallWorldNeighborService
         _logger = logger;
         _meshSyncService = meshSyncService;
     }
-    
+
     /// <summary>
     /// Get current stable neighbors.
     /// </summary>
@@ -74,7 +74,7 @@ public sealed class SmallWorldNeighborService
     {
         return _neighbors.Keys.ToList();
     }
-    
+
     /// <summary>
     /// Get current candidates for promotion.
     /// </summary>
@@ -82,7 +82,7 @@ public sealed class SmallWorldNeighborService
     {
         return _candidates.Keys.ToList();
     }
-    
+
     /// <summary>
     /// Record a successful interaction with a peer.
     /// May promote candidate to neighbor.
@@ -90,18 +90,18 @@ public sealed class SmallWorldNeighborService
     public void RecordInteraction(string username, InteractionType type)
     {
         var now = DateTimeOffset.UtcNow;
-        
+
         // If already a neighbor, update their info
         if (_neighbors.TryGetValue(username, out var neighbor))
         {
             neighbor.LastInteraction = now;
             neighbor.InteractionCount++;
             neighbor.LastInteractionType = type;
-            _logger.LogDebug("Updated neighbor {Username}: {Count} interactions", 
+            _logger.LogDebug("Updated neighbor {Username}: {Count} interactions",
                 username, neighbor.InteractionCount);
             return;
         }
-        
+
         // Track as candidate
         var candidate = _candidates.GetOrAdd(username, _ => new NeighborInfo
         {
@@ -110,22 +110,22 @@ public sealed class SmallWorldNeighborService
             LastInteraction = now,
             InteractionCount = 0,
         });
-        
+
         candidate.LastInteraction = now;
         candidate.InteractionCount++;
         candidate.LastInteractionType = type;
-        
+
         // Check for promotion
-        if (candidate.InteractionCount >= PromotionThreshold && 
+        if (candidate.InteractionCount >= PromotionThreshold &&
             _neighbors.Count < TargetNeighborCount)
         {
             PromoteToNeighbor(username, candidate);
         }
-        
+
         // Prune old candidates
         PruneCandidates();
     }
-    
+
     /// <summary>
     /// Record a failed interaction with a peer.
     /// May demote neighbor to candidate.
@@ -135,7 +135,7 @@ public sealed class SmallWorldNeighborService
         if (_neighbors.TryGetValue(username, out var neighbor))
         {
             neighbor.FailureCount++;
-            
+
             // Demote after 3 consecutive failures
             if (neighbor.FailureCount >= 3)
             {
@@ -143,7 +143,7 @@ public sealed class SmallWorldNeighborService
             }
         }
     }
-    
+
     /// <summary>
     /// Get peers to sync with, prioritizing neighbors.
     /// </summary>
@@ -151,7 +151,7 @@ public sealed class SmallWorldNeighborService
     {
         var result = new List<string>();
         var now = DateTimeOffset.UtcNow;
-        
+
         // Add neighbors that are due for sync
         var neighborsForSync = _neighbors.Values
             .Where(n => now - n.LastSync > NeighborSyncInterval)
@@ -159,9 +159,9 @@ public sealed class SmallWorldNeighborService
             .Take(count)
             .Select(n => n.Username)
             .ToList();
-        
+
         result.AddRange(neighborsForSync);
-        
+
         // Fill remaining slots with random candidates/known peers
         var remaining = count - result.Count;
         if (remaining > 0)
@@ -171,20 +171,20 @@ public sealed class SmallWorldNeighborService
                 .OrderBy(_ => _random.Next())
                 .Take(remaining)
                 .Select(c => c.Username);
-            
+
             result.AddRange(candidatesForSync);
         }
-        
+
         return result;
     }
-    
+
     /// <summary>
     /// Mark that we synced with a peer.
     /// </summary>
     public void RecordSync(string username)
     {
         var now = DateTimeOffset.UtcNow;
-        
+
         if (_neighbors.TryGetValue(username, out var neighbor))
         {
             neighbor.LastSync = now;
@@ -196,66 +196,66 @@ public sealed class SmallWorldNeighborService
             candidate.SyncCount++;
         }
     }
-    
+
     /// <summary>
     /// Get service statistics.
     /// </summary>
     public SmallWorldStats GetStats()
     {
         var now = DateTimeOffset.UtcNow;
-        
+
         return new SmallWorldStats
         {
             NeighborCount = _neighbors.Count,
             CandidateCount = _candidates.Count,
             TargetNeighborCount = TargetNeighborCount,
             NeighborsDueForSync = _neighbors.Values.Count(n => now - n.LastSync > NeighborSyncInterval),
-            OldestNeighborAge = _neighbors.Values.Any() 
-                ? now - _neighbors.Values.Min(n => n.FirstSeen) 
+            OldestNeighborAge = _neighbors.Values.Any()
+                ? now - _neighbors.Values.Min(n => n.FirstSeen)
                 : TimeSpan.Zero,
             TotalNeighborInteractions = _neighbors.Values.Sum(n => n.InteractionCount),
             TotalNeighborSyncs = _neighbors.Values.Sum(n => n.SyncCount),
         };
     }
-    
+
     /// <summary>
     /// Run maintenance: prune stale neighbors and candidates.
     /// </summary>
     public void RunMaintenance()
     {
         var now = DateTimeOffset.UtcNow;
-        
+
         // Demote stale neighbors
         var staleNeighbors = _neighbors.Values
             .Where(n => now - n.LastInteraction > NeighborTimeout)
             .Select(n => n.Username)
             .ToList();
-        
+
         foreach (var username in staleNeighbors)
         {
             _logger.LogInformation("Demoting stale neighbor {Username}", username);
             DemoteNeighbor(username);
         }
-        
+
         // Prune old candidates
         PruneCandidates();
-        
+
         // Try to fill neighbor slots from candidates
         while (_neighbors.Count < TargetNeighborCount)
         {
             var bestCandidate = _candidates.Values
                 .OrderByDescending(c => c.InteractionCount)
                 .FirstOrDefault(c => c.InteractionCount >= PromotionThreshold);
-            
+
             if (bestCandidate is null)
             {
                 break;
             }
-            
+
             PromoteToNeighbor(bestCandidate.Username, bestCandidate);
         }
     }
-    
+
     /// <summary>
     /// Force add a neighbor (e.g., from saved state).
     /// </summary>
@@ -265,7 +265,7 @@ public sealed class SmallWorldNeighborService
         {
             return;
         }
-        
+
         var now = DateTimeOffset.UtcNow;
         _neighbors[username] = new NeighborInfo
         {
@@ -274,11 +274,11 @@ public sealed class SmallWorldNeighborService
             LastInteraction = now,
             InteractionCount = PromotionThreshold, // Assume valid
         };
-        
+
         _candidates.TryRemove(username, out _);
         _logger.LogInformation("Added neighbor {Username}", username);
     }
-    
+
     /// <summary>
     /// Force remove a neighbor.
     /// </summary>
@@ -289,7 +289,7 @@ public sealed class SmallWorldNeighborService
             _logger.LogInformation("Removed neighbor {Username}", username);
         }
     }
-    
+
     private void PromoteToNeighbor(string username, NeighborInfo info)
     {
         if (_neighbors.Count >= TargetNeighborCount * 2)
@@ -297,14 +297,14 @@ public sealed class SmallWorldNeighborService
             // Don't exceed 2x target
             return;
         }
-        
+
         _neighbors[username] = info;
         _candidates.TryRemove(username, out _);
-        
+
         _logger.LogInformation("Promoted {Username} to neighbor after {Count} interactions",
             username, info.InteractionCount);
     }
-    
+
     private void DemoteNeighbor(string username)
     {
         if (_neighbors.TryRemove(username, out var info))
@@ -312,11 +312,11 @@ public sealed class SmallWorldNeighborService
             // Keep as candidate for potential re-promotion
             info.FailureCount = 0;
             _candidates[username] = info;
-            
+
             _logger.LogInformation("Demoted neighbor {Username} to candidate", username);
         }
     }
-    
+
     private void PruneCandidates()
     {
         // Remove oldest candidates if over limit
@@ -325,7 +325,7 @@ public sealed class SmallWorldNeighborService
             var oldest = _candidates.Values
                 .OrderBy(c => c.LastInteraction)
                 .FirstOrDefault();
-            
+
             if (oldest is not null)
             {
                 _candidates.TryRemove(oldest.Username, out _);
@@ -336,7 +336,7 @@ public sealed class SmallWorldNeighborService
             }
         }
     }
-    
+
     private sealed class NeighborInfo
     {
         public required string Username { get; init; }
@@ -357,19 +357,19 @@ public enum InteractionType
 {
     /// <summary>Received mesh sync from peer.</summary>
     MeshSync,
-    
+
     /// <summary>Downloaded from peer.</summary>
     Download,
-    
+
     /// <summary>Uploaded to peer.</summary>
     Upload,
-    
+
     /// <summary>Browsed peer's shares.</summary>
     Browse,
-    
+
     /// <summary>Chat message.</summary>
     Chat,
-    
+
     /// <summary>Overlay connection established.</summary>
     OverlayConnect,
 }
@@ -387,5 +387,3 @@ public sealed class SmallWorldStats
     public long TotalNeighborInteractions { get; init; }
     public long TotalNeighborSyncs { get; init; }
 }
-
-

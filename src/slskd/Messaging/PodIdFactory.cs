@@ -23,7 +23,7 @@ namespace slskd.Messaging
         {
             var ts = timestamp ?? DateTimeOffset.UtcNow;
             var input = $"{podName}:{ts.ToUnixTimeMilliseconds()}";
-            
+
             using var sha = SHA256.Create();
             var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(hash).Substring(0, 16).ToLowerInvariant();
@@ -68,8 +68,8 @@ namespace slskd.Messaging
                 if (string.IsNullOrWhiteSpace(peerIds[i]))
                     throw new ArgumentException("Peer IDs must be non-empty.", nameof(peerIds));
             }
+
             return ConversationPodId(peerIds[0], peerIds[1]);
         }
     }
 }
-

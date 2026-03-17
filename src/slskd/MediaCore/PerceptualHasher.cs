@@ -383,9 +383,11 @@ public class PerceptualHasher : IPerceptualHasher
             var r = pixels[i * 4];
             var g = pixels[i * 4 + 1];
             var b = pixels[i * 4 + 2];
+
             // Standard luminance formula
             grayscale[i] = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
         }
+
         return grayscale;
     }
 
@@ -571,6 +573,7 @@ public static class AudioUtilities
         {
             monoSamples[i] = (stereoSamples[i * 2] + stereoSamples[i * 2 + 1]) / 2.0f;
         }
+
         return monoSamples;
     }
 }

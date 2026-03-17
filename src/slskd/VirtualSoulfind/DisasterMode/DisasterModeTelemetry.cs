@@ -39,22 +39,22 @@ public interface IDisasterModeTelemetry
     /// Record disaster mode activation.
     /// </summary>
     void RecordActivation(string reason);
-    
+
     /// <summary>
     /// Record disaster mode deactivation.
     /// </summary>
     void RecordDeactivation();
-    
+
     /// <summary>
     /// Record mesh search.
     /// </summary>
     void RecordMeshSearch();
-    
+
     /// <summary>
     /// Record mesh transfer.
     /// </summary>
     void RecordMeshTransfer();
-    
+
     /// <summary>
     /// Get telemetry data.
     /// </summary>

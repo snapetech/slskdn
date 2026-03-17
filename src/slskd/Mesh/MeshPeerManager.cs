@@ -214,5 +214,3 @@ public class MeshPeerManager : IMeshPeerManager
         }
     }
 }
-
-

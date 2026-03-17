@@ -76,5 +76,3 @@ namespace slskd.Mesh.Gossip
         Task HandleAsync(GossipMessage message, CancellationToken cancellationToken = default);
     }
 }
-
-

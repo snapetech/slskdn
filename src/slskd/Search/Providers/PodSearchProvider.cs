@@ -103,6 +103,7 @@ public class PodSearchProvider : ISearchProvider
                 return filename.Substring(0, slashIndex);
             }
         }
+
         return null;
     }
 }

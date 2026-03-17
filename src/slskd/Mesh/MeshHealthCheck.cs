@@ -159,5 +159,3 @@ public static class MeshHealthCheckExtensions
             timeout: timeout ?? TimeSpan.FromSeconds(5)); // Default 5 second timeout to prevent hanging
     }
 }
-
-

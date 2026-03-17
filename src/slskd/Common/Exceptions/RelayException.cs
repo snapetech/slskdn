@@ -1,7 +1,7 @@
 // <copyright file="RelayException.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-﻿// <copyright file="RelayException.cs" company="slskd Team">
+// <copyright file="RelayException.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify

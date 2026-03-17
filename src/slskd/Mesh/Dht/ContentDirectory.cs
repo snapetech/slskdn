@@ -101,10 +101,10 @@ public class ContentDirectory : IMeshDirectory
     private (string? address, int? port) ParseEndpoint(string? endpoint)
     {
         if (string.IsNullOrEmpty(endpoint)) return (null, null);
-        
+
         var parts = endpoint.Split(':');
         if (parts.Length != 2) return (endpoint, null);
-        
+
         var address = parts[0];
         var port = int.TryParse(parts[1], out var p) ? p : (int?)null;
         return (address, port);

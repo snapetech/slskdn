@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 using Microsoft.Extensions.Options;
 
 namespace slskd.Relay
@@ -459,9 +458,9 @@ namespace slskd.Relay
             {
                 // Use existing relay file streaming mechanism
                 var stream = await Relay.GetFileStreamAsync(agentName, filename, startOffset: 0, id, timeout: 30000, HttpContext.RequestAborted);
-                
+
                 Log.Information("[RelayStreams] Streaming content {ContentId} (filename: {Filename}) from agent {Agent}", contentId, filename, agentName);
-                
+
                 return File(stream, resolved.ContentType, enableRangeProcessing: true);
             }
             catch (TimeoutException ex)

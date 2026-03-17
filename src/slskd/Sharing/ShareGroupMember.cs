@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 /// <summary>
-/// Membership of a user in a share group. 
+/// Membership of a user in a share group.
 /// - UserId: Soulseek username (legacy, v1)
 /// - PeerId: Contact PeerId (Identity & Friends, v2) - optional, takes precedence when set
 /// </summary>

@@ -33,7 +33,7 @@ public static class SecurityStartup
         // Create a temporary logger to report what we found
         var tempServiceProvider = services.BuildServiceProvider();
         var logger = tempServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("SecurityStartup.AddSlskdnSecurity");
-        
+
         // Read from configuration sections
         // YAML provider normalizes keys to lowercase and prefixes with namespace (slskd:)
         // So "Security" in YAML becomes "slskd:security" in configuration
@@ -41,15 +41,15 @@ public static class SecurityStartup
         var slskdSecuritySection = configuration.GetSection("slskd:security");
         var securitySection = configuration.GetSection(SecurityOptions.Section); // "Security"
         var securitySectionLower = configuration.GetSection("security");
-        
-        logger?.LogInformation("[AddSlskdnSecurity] STEP 1a: slskd:security.Exists() = {Exists}, enabled = {Enabled}", 
-            slskdSecuritySection.Exists(), 
+
+        logger?.LogInformation("[AddSlskdnSecurity] STEP 1a: slskd:security.Exists() = {Exists}, enabled = {Enabled}",
+            slskdSecuritySection.Exists(),
             slskdSecuritySection.Exists() ? slskdSecuritySection["enabled"] : "N/A");
-        logger?.LogInformation("[AddSlskdnSecurity] STEP 1b: Security.Exists() = {Exists}, enabled = {Enabled}", 
-            securitySection.Exists(), 
+        logger?.LogInformation("[AddSlskdnSecurity] STEP 1b: Security.Exists() = {Exists}, enabled = {Enabled}",
+            securitySection.Exists(),
             securitySection.Exists() ? securitySection["enabled"] : "N/A");
-        logger?.LogInformation("[AddSlskdnSecurity] STEP 1c: security.Exists() = {Exists}, enabled = {Enabled}", 
-            securitySectionLower.Exists(), 
+        logger?.LogInformation("[AddSlskdnSecurity] STEP 1c: security.Exists() = {Exists}, enabled = {Enabled}",
+            securitySectionLower.Exists(),
             securitySectionLower.Exists() ? securitySectionLower["enabled"] : "N/A");
 
         IConfigurationSection sectionToUse;
@@ -76,7 +76,7 @@ public static class SecurityStartup
 
         logger?.LogInformation("[AddSlskdnSecurity] STEP 3: Configuring SecurityOptions from section...");
         services.Configure<SecurityOptions>(sectionToUse);
-        
+
         // CRITICAL FIX: Read the value directly from the bound Options object after configuration
         // The YAML provider may have issues with boolean parsing, so we bind to Options first
         // and then read from the bound object which should have the correct value
@@ -86,19 +86,19 @@ public static class SecurityStartup
         logger?.LogInformation("[AddSlskdnSecurity] STEP 4a: boundOptions.Security is null: {IsNull}", boundOptions.Security == null);
         if (boundOptions.Security != null)
         {
-            logger?.LogInformation("[AddSlskdnSecurity] STEP 4b: boundOptions.Security.Enabled = {Enabled}, Profile = {Profile}", 
+            logger?.LogInformation("[AddSlskdnSecurity] STEP 4b: boundOptions.Security.Enabled = {Enabled}, Profile = {Profile}",
                 boundOptions.Security.Enabled, boundOptions.Security.Profile);
         }
-        
+
         logger?.LogInformation("[AddSlskdnSecurity] STEP 5: Getting SecurityOptions from section...");
         var sectionGetResult = sectionToUse.Get<SecurityOptions>();
-        logger?.LogInformation("[AddSlskdnSecurity] STEP 5a: sectionToUse.Get result: Enabled = {Enabled}, Profile = {Profile}", 
-            sectionGetResult?.Enabled ?? (bool?)null, 
+        logger?.LogInformation("[AddSlskdnSecurity] STEP 5a: sectionToUse.Get result: Enabled = {Enabled}, Profile = {Profile}",
+            sectionGetResult?.Enabled ?? (bool?)null,
             sectionGetResult?.Profile.ToString() ?? "null");
-        
+
         var options = boundOptions.Security ?? sectionGetResult ?? new SecurityOptions();
-        logger?.LogInformation("[AddSlskdnSecurity] STEP 6: Final options selected - Enabled = {Enabled}, Profile = {Profile} (source: {Source})", 
-            options.Enabled, 
+        logger?.LogInformation("[AddSlskdnSecurity] STEP 6: Final options selected - Enabled = {Enabled}, Profile = {Profile} (source: {Source})",
+            options.Enabled,
             options.Profile.ToString(),
             boundOptions.Security != null ? "boundOptions.Security" : (sectionGetResult != null ? "sectionToUse.Get" : "new SecurityOptions()"));
 
@@ -202,24 +202,25 @@ public static class SecurityStartup
         Common.Security.SecurityOptions? options = null;
         var loggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
         var logger = loggerFactory?.CreateLogger("SecurityStartup.UseSlskdnSecurity");
-        
+
         if (configuration != null)
         {
             logger?.LogInformation("[UseSlskdnSecurity] STEP 1: Checking configuration sections...");
+
             // YAML provider normalizes keys to lowercase and prefixes with namespace (slskd:)
             // Try paths in order of likelihood: slskd:security, Security, security
             var slskdSecuritySection = configuration.GetSection("slskd:security");
             var securitySection = configuration.GetSection(Common.Security.SecurityOptions.Section); // "Security"
             var securitySectionLower = configuration.GetSection("security");
 
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1a: slskd:security.Exists() = {Exists}, enabled = {Enabled}", 
-                slskdSecuritySection.Exists(), 
+            logger?.LogInformation("[UseSlskdnSecurity] STEP 1a: slskd:security.Exists() = {Exists}, enabled = {Enabled}",
+                slskdSecuritySection.Exists(),
                 slskdSecuritySection.Exists() ? slskdSecuritySection["enabled"] : "N/A");
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1b: Security.Exists() = {Exists}, enabled = {Enabled}", 
-                securitySection.Exists(), 
+            logger?.LogInformation("[UseSlskdnSecurity] STEP 1b: Security.Exists() = {Exists}, enabled = {Enabled}",
+                securitySection.Exists(),
                 securitySection.Exists() ? securitySection["enabled"] : "N/A");
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1c: security.Exists() = {Exists}, enabled = {Enabled}", 
-                securitySectionLower.Exists(), 
+            logger?.LogInformation("[UseSlskdnSecurity] STEP 1c: security.Exists() = {Exists}, enabled = {Enabled}",
+                securitySectionLower.Exists(),
                 securitySectionLower.Exists() ? securitySectionLower["enabled"] : "N/A");
 
             IConfigurationSection sectionToUse;
@@ -241,8 +242,8 @@ public static class SecurityStartup
 
             logger?.LogInformation("[UseSlskdnSecurity] STEP 3: Getting SecurityOptions from section...");
             options = sectionToUse.Get<Common.Security.SecurityOptions>();
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 3a: sectionToUse.Get result: Enabled = {Enabled}, Profile = {Profile}", 
-                options?.Enabled ?? (bool?)null, 
+            logger?.LogInformation("[UseSlskdnSecurity] STEP 3a: sectionToUse.Get result: Enabled = {Enabled}, Profile = {Profile}",
+                options?.Enabled ?? (bool?)null,
                 options?.Profile.ToString() ?? "null");
         }
 
@@ -281,7 +282,7 @@ public static class SecurityStartup
                 logger?.LogInformation("[UseSlskdnSecurity] Options: Enabled={Enabled}, Profile={Profile}", options.Enabled, options.Profile);
             }
         }
-        
+
         // Always register middleware - it will use null services if security is disabled
         // but will still perform critical path traversal checks
         try
@@ -385,4 +386,3 @@ public static class SecurityStartup
         return reg;
     }
 }
-

@@ -128,7 +128,7 @@ public class PodAffinityScorerTests
         // Optimal should beat huge due to:
         // 1. Better size score (1.0 vs 0.5, 15% weight)
         // 2. Better engagement ratio (5/25 vs 5/500, 30% weight)
-        Assert.True(optimalAffinity > hugeAffinity, 
+        Assert.True(optimalAffinity > hugeAffinity,
             $"Optimal size ({optimalAffinity:F3}) should beat huge ({hugeAffinity:F3})");
     }
 
@@ -203,21 +203,21 @@ public class PodAffinityScorerTests
     {
         var cleanPod = CreatePod("pod:clean", "Clean Pod");
         var bannedPod = CreatePod("pod:banned", "Pod with Banned Members");
-        
+
         var cleanMembers = new List<PodMember>
         {
             new PodMember { PeerId = "user2", Role = "member", PublicKey = "key2" },
             new PodMember { PeerId = "user3", Role = "member", PublicKey = "key3" },
             new PodMember { PeerId = "user4", Role = "member", PublicKey = "key4" }
         };
-        
+
         var bannedMembers = new List<PodMember>
         {
             new PodMember { PeerId = "user2", Role = "member", PublicKey = "key2" },
             new PodMember { PeerId = "banned1", Role = "member", IsBanned = true },
             new PodMember { PeerId = "banned2", Role = "member", IsBanned = true }
         };
-        
+
         var messages = CreateRecentMessages(10, 1);
 
         // Clean pod setup
@@ -236,7 +236,7 @@ public class PodAffinityScorerTests
         // Trust score has 0.5x penalty for banned members (affects 40% of overall weight)
         // Clean: trust=1.0 (all verified), Banned: trust=0.333*0.5=0.166
         // This should create noticeable difference
-        Assert.True(bannedAffinity < cleanAffinity - 0.1, 
+        Assert.True(bannedAffinity < cleanAffinity - 0.1,
             $"Expected banned pod ({bannedAffinity:F3}) to be at least 0.1 lower than clean pod ({cleanAffinity:F3})");
     }
 
@@ -271,7 +271,7 @@ public class PodAffinityScorerTests
     {
         var messages = new List<PodMessage>();
         var baseTime = DateTimeOffset.UtcNow.AddHours(-hoursAgo).ToUnixTimeMilliseconds();
-        
+
         for (int i = 0; i < count; i++)
         {
             messages.Add(new PodMessage

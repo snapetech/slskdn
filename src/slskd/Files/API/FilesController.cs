@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="FilesController.cs" company="slskd Team">
+// <copyright file="FilesController.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 using Microsoft.Extensions.Options;
 
 namespace slskd.Files.API
@@ -68,7 +67,7 @@ namespace slskd.Files.API
         [ProducesResponseType(typeof(FilesystemDirectory), 200)]
         [ProducesResponseType(401)]
         public Task<IActionResult> GetDownloadContentsAsync([FromQuery] bool recursive = false)
-            => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64SubdirectoryName: null, recursive);
+                    => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64SubdirectoryName: null, recursive);
 
         /// <summary>
         ///     Lists the contents of the specified subdirectory within the downloads directory.
@@ -87,7 +86,7 @@ namespace slskd.Files.API
         [ProducesResponseType(403)]
         [ProducesResponseType(404)]
         public Task<IActionResult> GetDownloadSubdirectoryContentsAsync([FromRoute] string base64SubdirectoryName, [FromQuery] bool recursive = false)
-            => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64SubdirectoryName, recursive);
+                    => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64SubdirectoryName, recursive);
 
         /// <summary>
         ///     Deletes the specified subdirectory within the downloads directory.
@@ -102,7 +101,7 @@ namespace slskd.Files.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(204)]
         public Task<IActionResult> DeleteDownloadSubdirectoryAsync([FromRoute] string base64SubdirectoryName)
-            => DeleteSubdirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64SubdirectoryName);
+                    => DeleteSubdirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64SubdirectoryName);
 
         /// <summary>
         ///     Deletes the specified file within the downloads directory.
@@ -117,7 +116,7 @@ namespace slskd.Files.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(204)]
         public Task<IActionResult> DeleteDownloadFileAsync([FromRoute] string base64FileName)
-            => DeleteFileAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64FileName);
+                    => DeleteFileAsync(rootDirectory: OptionsSnapshot.Value.Directories.Downloads, base64FileName);
 
         /// <summary>
         ///     Lists the contents of the downloads directory.
@@ -130,7 +129,7 @@ namespace slskd.Files.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(FilesystemDirectory), 200)]
         public Task<IActionResult> GetIncompleteContentsAsync([FromQuery] bool recursive = false)
-            => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64SubdirectoryName: null, recursive);
+                    => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64SubdirectoryName: null, recursive);
 
         /// <summary>
         ///     Lists the contents of the specified subdirectory within the incomplete directory.
@@ -146,7 +145,7 @@ namespace slskd.Files.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(FilesystemDirectory), 200)]
         public Task<IActionResult> GetIncompleteSubdirectoryContentsAsync([FromRoute, Required] string base64SubdirectoryName, [FromQuery] bool recursive = false)
-            => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64SubdirectoryName, recursive);
+                    => ListDirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64SubdirectoryName, recursive);
 
         /// <summary>
         ///     Deletes the specified subdirectory within the downloads directory.
@@ -161,7 +160,7 @@ namespace slskd.Files.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(204)]
         public Task<IActionResult> DeleteIncompleteSubdirectoryAsync([FromRoute] string base64SubdirectoryName)
-            => DeleteSubdirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64SubdirectoryName);
+                    => DeleteSubdirectoryAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64SubdirectoryName);
 
         /// <summary>
         ///     Deletes the specified file within the downloads directory.
@@ -176,7 +175,7 @@ namespace slskd.Files.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(204)]
         public Task<IActionResult> DeleteIncompleteFileAsync([FromRoute] string base64FileName)
-            => DeleteFileAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64FileName);
+                    => DeleteFileAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64FileName);
 
         private async Task<IActionResult> ListDirectoryAsync(string rootDirectory, string base64SubdirectoryName = null, bool recursive = false)
         {

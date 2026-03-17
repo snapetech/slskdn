@@ -209,7 +209,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Sources
 
             // Act
             var soulseekOnly = await _registry.FindCandidatesForItemAsync(
-                itemId, 
+                itemId,
                 ContentBackendType.Soulseek);
 
             // Assert

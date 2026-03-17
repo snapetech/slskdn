@@ -51,7 +51,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             // Arrange: Set up a complete v2 stack
             var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
-            
+
             // Create artist, release, and track in catalogue
             var artistId = "artist:pink-floyd";
             await catalogueStore.UpsertArtistAsync(new Artist
@@ -149,7 +149,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             // Arrange: Same setup but MCP blocks the content
             var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
-            
+
             var trackId = ContentItemId.NewId().ToString();
             await catalogueStore.UpsertTrackAsync(new Track
             {
@@ -263,7 +263,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             // Arrange: Multiple backends, but OfflinePlanning mode
             var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
-            
+
             var trackId = ContentItemId.NewId().ToString();
             await catalogueStore.UpsertTrackAsync(new Track
             {

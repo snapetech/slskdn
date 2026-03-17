@@ -5,9 +5,11 @@ import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import AlbumCompletionPanel from './AlbumCompletionPanel';
+import DiscoveryGraphAtlasPanel from './DiscoveryGraphAtlasPanel';
 import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
 import MusicBrainzLookup from './MusicBrainzLookup';
+import SongIDPanel from './SongIDPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   useHistory,
@@ -407,7 +409,9 @@ const Searches = ({ server } = {}) => {
           </div>
         )}
       </Segment>
+      <SongIDPanel disabled={!server?.isConnected} />
       <MusicBrainzLookup disabled={!server?.isConnected} />
+      <DiscoveryGraphAtlasPanel disabled={!server?.isConnected} />
       <AlbumCompletionPanel disabled={!server?.isConnected} />
       {Object.keys(searches).length === 0 ? (
         <PlaceholderSegment

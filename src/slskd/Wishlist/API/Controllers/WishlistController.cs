@@ -127,8 +127,8 @@ namespace slskd.Wishlist.API
         [ProducesResponseType(typeof(WishlistItem), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Update(
-            [FromRoute, Required] Guid id,
-            [FromBody, Required] UpdateWishlistRequest request)
+        [FromRoute, Required] Guid id,
+        [FromBody, Required] UpdateWishlistRequest request)
         {
             try
             {
@@ -179,8 +179,8 @@ namespace slskd.Wishlist.API
         [ProducesResponseType(typeof(Search.Search), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> RunSearch(
-            [FromRoute, Required] Guid id,
-            CancellationToken cancellationToken = default)
+        [FromRoute, Required] Guid id,
+                    CancellationToken cancellationToken = default)
         {
             try
             {
@@ -257,7 +257,3 @@ namespace slskd.Wishlist.API
         public int? MaxResults { get; set; }
     }
 }
-
-
-
-

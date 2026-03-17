@@ -132,7 +132,7 @@ public class MdnsPacketBuilderTests
     // Helper methods using reflection to access private/internal methods
     private static byte[] EncodeNameHelper(string name)
     {
-        var method = typeof(MdnsAdvertiser).GetMethod("EncodeNameToBytes", 
+        var method = typeof(MdnsAdvertiser).GetMethod("EncodeNameToBytes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance);
         if (method == null)
         {
@@ -154,7 +154,7 @@ public class MdnsPacketBuilderTests
 
     private static byte[] ToNetworkBytesHelper(ushort value)
     {
-        var method = typeof(MdnsAdvertiser).GetMethod("ToNetworkBytes", 
+        var method = typeof(MdnsAdvertiser).GetMethod("ToNetworkBytes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             null, new[] { typeof(ushort) }, null);
         if (method == null)
@@ -169,7 +169,7 @@ public class MdnsPacketBuilderTests
 
     private static byte[] ToNetworkBytesHelper(uint value)
     {
-        var method = typeof(MdnsAdvertiser).GetMethod("ToNetworkBytes", 
+        var method = typeof(MdnsAdvertiser).GetMethod("ToNetworkBytes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             null, new[] { typeof(uint) }, null);
         if (method == null)
@@ -184,7 +184,7 @@ public class MdnsPacketBuilderTests
 
     private static byte[] BuildDnsPacketHelper(string instanceName, string serviceType, string hostname, ushort port, Dictionary<string, string> properties)
     {
-        var method = typeof(MdnsAdvertiser).GetMethod("BuildDnsPacket", 
+        var method = typeof(MdnsAdvertiser).GetMethod("BuildDnsPacket",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (method == null)
         {

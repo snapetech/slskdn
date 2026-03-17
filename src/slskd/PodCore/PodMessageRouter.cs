@@ -40,7 +40,6 @@ public class PodMessageRouter : IPodMessageRouter
     private readonly ConcurrentDictionary<string, long> _routingStatsByPod = new();
     private DateTimeOffset _lastRoutingOperation = DateTimeOffset.MinValue;
 
-
     // Cleanup configuration
     private static readonly TimeSpan SeenMessageExpiration = TimeSpan.FromHours(24);
     private static readonly int MaxSeenMessagesPerPod = 10000;
@@ -332,6 +331,7 @@ public class PodMessageRouter : IPodMessageRouter
                     _logger.LogTrace("[PodMessageRouter] Message queued for batching, not sending immediately");
                     return true; // Not an error, just delayed
                 }
+
                 _logger.LogTrace("[PodMessageRouter] Applied outbound privacy transforms to message {MessageId}", message.MessageId);
             }
 

@@ -114,7 +114,7 @@ public static class ServiceStatusCodes
     public const int Unauthorized = 7;
     public const int Forbidden = 8;
     public const int PayloadTooLarge = 9;
-    
+
     /// <summary>
     /// Service unavailable (10) - Circuit breaker open or service degraded.
     /// </summary>

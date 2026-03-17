@@ -36,6 +36,7 @@ public class IpldLinkCollection
         {
             _linksByName[link.Name] = new List<IpldLink>();
         }
+
         _linksByName[link.Name].Add(link);
 
         // Index by target
@@ -43,6 +44,7 @@ public class IpldLinkCollection
         {
             _linksByTarget[link.Target] = new List<IpldLink>();
         }
+
         _linksByTarget[link.Target].Add(link);
     }
 
@@ -118,4 +120,3 @@ public static class IpldLinkNames
     public const string Sources = "sources";
     public const string References = "references";
 }
-

@@ -357,7 +357,6 @@ public sealed class ProbabilisticVerification
         // Simple confidence model:
         // - Base confidence from pass rate
         // - Scaled by coverage
-
         var passRate = (double)passed / verified;
         var coverage = (double)verified / totalChunks;
 
@@ -572,4 +571,3 @@ public sealed class VerificationStats
     /// <summary>Gets average sample rate.</summary>
     public double AverageSampleRate { get; init; }
 }
-

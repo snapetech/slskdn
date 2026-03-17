@@ -245,7 +245,7 @@ public class AdvancedDiscoveryService : IAdvancedDiscoveryService
             return MatchType.Exact;
         }
 
-        if (!string.IsNullOrEmpty(request.RecordingId) && 
+        if (!string.IsNullOrEmpty(request.RecordingId) &&
             !string.IsNullOrEmpty(source.MusicBrainzRecordingId) &&
             source.MusicBrainzRecordingId == request.RecordingId)
         {

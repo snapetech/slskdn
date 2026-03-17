@@ -97,7 +97,6 @@ namespace slskd.VirtualSoulfind.Core.Music
             // This is a simplified implementation - in practice this would use sophisticated
             // fuzzy matching against the HashDb catalog using title/artist/album metadata
             // For T-VC02 implementation, we'll use basic tag matching
-
             if (tags == null || string.IsNullOrWhiteSpace(tags.Title) || string.IsNullOrWhiteSpace(tags.Artist))
             {
                 _logger.LogDebug("Insufficient metadata for local file matching: {SanitizedPath}", LoggingSanitizer.SanitizeFilePath(fileMetadata.Id));

@@ -284,6 +284,7 @@ public class PodOpinionService : IPodOpinionService
                         validOpinions.Add(opinion);
                     }
                 }
+
                 return validOpinions;
             }
 

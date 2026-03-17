@@ -523,5 +523,3 @@ public sealed class HoneypotStats
     /// <summary>Gets interactions by type.</summary>
     public required Dictionary<string, int> InteractionsByType { get; init; }
 }
-
-

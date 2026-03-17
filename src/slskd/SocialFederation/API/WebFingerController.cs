@@ -57,9 +57,9 @@ namespace slskd.SocialFederation.API
         [HttpGet("webfinger")]
         [Produces("application/jrd+json")]
         public async Task<IActionResult> GetWebFinger(
-            [FromQuery] string resource,
-            [FromQuery] string? rel = null,
-            CancellationToken cancellationToken = default)
+        [FromQuery] string resource,
+        [FromQuery] string? rel = null,
+                    CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
@@ -247,5 +247,3 @@ namespace slskd.SocialFederation.API
         }
     }
 }
-
-

@@ -95,5 +95,3 @@ namespace slskd.SocialFederation
         }
     }
 }
-
-

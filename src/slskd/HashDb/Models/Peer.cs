@@ -76,5 +76,3 @@ namespace slskd.HashDb.Models
         public bool IsSlskdnPeer => Caps != 0;
     }
 }
-
-

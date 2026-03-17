@@ -105,5 +105,3 @@ namespace slskd.Common.Moderation
         public Dictionary<string, string> Details { get; set; } = new();
     }
 }
-
-

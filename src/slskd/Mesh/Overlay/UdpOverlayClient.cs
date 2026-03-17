@@ -53,6 +53,7 @@ public class UdpOverlayClient : IOverlayClient
                     logger.LogTrace("[Overlay] Message queued for batching, not sending immediately");
                     return true; // Not an error, just delayed
                 }
+
                 logger.LogTrace("[Overlay] Applied outbound privacy transforms to envelope {MessageId}", envelope.MessageId);
             }
 
@@ -70,6 +71,7 @@ public class UdpOverlayClient : IOverlayClient
                             return false;
                         }
                     }
+
                     logger.LogDebug("[Overlay] Sent {Count} batched messages to {Endpoint}", batches.Count, endpoint);
                 }
             }

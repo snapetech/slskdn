@@ -68,4 +68,3 @@ public record VerificationStats(
     int BannedMemberRejections,
     double AverageVerificationTimeMs,
     DateTimeOffset LastVerification);
-

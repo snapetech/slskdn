@@ -153,4 +153,3 @@ public record SwarmPrediction(
     double PredictedSpeed,
     double PredictedQuality,
     string Reasoning);
-

@@ -155,6 +155,7 @@ public sealed class MdnsAdvertiser : IDisposable
             txtData.Add((byte)txtBytes.Length); // Length byte
             txtData.AddRange(txtBytes);
         }
+
         packet.AddRange(ToNetworkBytes((ushort)txtData.Count)); // RDLength
         packet.AddRange(txtData);
 
@@ -187,6 +188,7 @@ public sealed class MdnsAdvertiser : IDisposable
             result.Add((byte)bytes.Length);
             result.AddRange(bytes);
         }
+
         result.Add(0); // Null terminator
         return result.ToArray();
     }

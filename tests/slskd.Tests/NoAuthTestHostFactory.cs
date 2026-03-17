@@ -6,11 +6,14 @@ namespace slskd.Tests;
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -87,6 +90,17 @@ public class NoAuthTestHostFactory : WebApplicationFactory<ProgramStub>
                         });
                     });
                     services.AddControllers(opt => opt.Filters.Add(new AuthorizeFilter(AuthPolicy.Any)))
+                        .ConfigureApplicationPartManager(manager =>
+                        {
+                            var existing = manager.FeatureProviders
+                                .OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList();
+                            foreach (var provider in existing)
+                            {
+                                manager.FeatureProviders.Remove(provider);
+                            }
+
+                            manager.FeatureProviders.Add(new slskd.Common.CodeQuality.SafeControllerFeatureProvider());
+                        })
                         .AddApplicationPart(typeof(SessionController).Assembly);
                 });
                 web.Configure(app =>

@@ -365,4 +365,3 @@ public sealed class CommitmentStats
     /// <summary>Gets expired commitments.</summary>
     public int ExpiredCommitments { get; init; }
 }
-

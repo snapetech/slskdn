@@ -149,7 +149,7 @@ namespace slskd.Mesh.Gossip
         /// </summary>
         [JsonPropertyName("properties")]
         public System.Collections.Generic.Dictionary<string, object> Properties { get; set; }
-            = new System.Collections.Generic.Dictionary<string, object>();
+                    = new System.Collections.Generic.Dictionary<string, object>();
     }
 
     /// <summary>
@@ -185,5 +185,3 @@ namespace slskd.Mesh.Gossip
         ExactlyOnce = 2
     }
 }
-
-

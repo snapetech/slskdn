@@ -69,6 +69,7 @@ public class BloomFilter
             {
                 if (_bitArray.Get(i)) setBits++;
             }
+
             return (double)setBits / _size;
         }
     }

@@ -12,7 +12,6 @@ namespace slskd.HashDb;
 public partial class HashDbService
 {
     // Virtual Soulfind pseudonym mapping implementation
-    
     public async Task UpsertPseudonymAsync(
         string soulseekUsername,
         string peerId,

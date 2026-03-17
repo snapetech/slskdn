@@ -508,7 +508,7 @@ public class LibraryItemsControllerTests
         var mediaKindProp = itemType.GetProperty("MediaKind");
 
         // Check Audio files
-        var audioFiles = items.Where(i => 
+        var audioFiles = items.Where(i =>
         {
             var fileName = (itemType.GetProperty("FileName")?.GetValue(i) as string) ?? string.Empty;
             return fileName.Contains("song");

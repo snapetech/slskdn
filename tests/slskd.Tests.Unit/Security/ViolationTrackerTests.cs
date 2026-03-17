@@ -31,7 +31,7 @@ public class ViolationTrackerTests
     public void RecordIpViolation_SingleViolation_ReturnsWarningOrNone()
     {
         var action = _tracker.RecordIpViolation(_testIp, ViolationType.InvalidMessage);
-        
+
         // With threshold of 3, a single violation may trigger warning (50% = 1.5 rounds to 1)
         Assert.True(action == ViolationAction.None || action == ViolationAction.Warning);
         Assert.False(_tracker.IsIpBanned(_testIp));
@@ -42,10 +42,10 @@ public class ViolationTrackerTests
     {
         // First violation
         _tracker.RecordIpViolation(_testIp, ViolationType.InvalidMessage);
-        
+
         // Second violation (50% of threshold)
         var action = _tracker.RecordIpViolation(_testIp, ViolationType.InvalidMessage);
-        
+
         Assert.Equal(ViolationAction.Warning, action);
     }
 
@@ -56,7 +56,7 @@ public class ViolationTrackerTests
         {
             _tracker.RecordIpViolation(_testIp, ViolationType.InvalidMessage);
         }
-        
+
         Assert.True(_tracker.IsIpBanned(_testIp));
     }
 
@@ -64,12 +64,12 @@ public class ViolationTrackerTests
     public void RecordUsernameViolation_ThresholdReached_TriggersBan()
     {
         var username = "baduser";
-        
+
         for (int i = 0; i < 3; i++)
         {
             _tracker.RecordUsernameViolation(username, ViolationType.ProtocolViolation);
         }
-        
+
         Assert.True(_tracker.IsUsernameBanned(username));
     }
 
@@ -89,9 +89,9 @@ public class ViolationTrackerTests
     public void BanIp_ManualBan_IsBanned()
     {
         var ip = IPAddress.Parse("10.0.0.50");
-        
+
         _tracker.BanIp(ip, "Test ban", TimeSpan.FromHours(1));
-        
+
         Assert.True(_tracker.IsIpBanned(ip));
     }
 
@@ -99,9 +99,9 @@ public class ViolationTrackerTests
     public void BanUsername_ManualBan_IsBanned()
     {
         var username = "testuser";
-        
+
         _tracker.BanUsername(username, "Test ban", TimeSpan.FromHours(1));
-        
+
         Assert.True(_tracker.IsUsernameBanned(username));
     }
 
@@ -109,10 +109,10 @@ public class ViolationTrackerTests
     public void UnbanIp_AfterBan_IsNotBanned()
     {
         var ip = IPAddress.Parse("10.0.0.51");
-        
+
         _tracker.BanIp(ip, "Test ban");
         Assert.True(_tracker.IsIpBanned(ip));
-        
+
         var result = _tracker.UnbanIp(ip);
         Assert.True(result);
         Assert.False(_tracker.IsIpBanned(ip));
@@ -122,10 +122,10 @@ public class ViolationTrackerTests
     public void UnbanUsername_AfterBan_IsNotBanned()
     {
         var username = "testuser2";
-        
+
         _tracker.BanUsername(username, "Test ban");
         Assert.True(_tracker.IsUsernameBanned(username));
-        
+
         var result = _tracker.UnbanUsername(username);
         Assert.True(result);
         Assert.False(_tracker.IsUsernameBanned(username));
@@ -135,9 +135,9 @@ public class ViolationTrackerTests
     public void GetIpViolations_ReturnsRecord()
     {
         _tracker.RecordIpViolation(_testIp, ViolationType.InvalidMessage);
-        
+
         var record = _tracker.GetIpViolations(_testIp);
-        
+
         Assert.NotNull(record);
         Assert.Equal(1, record.TotalViolations);
     }
@@ -147,9 +147,9 @@ public class ViolationTrackerTests
     {
         var username = "trackeduser";
         _tracker.RecordUsernameViolation(username, ViolationType.Abuse);
-        
+
         var record = _tracker.GetUsernameViolations(username);
-        
+
         Assert.NotNull(record);
         Assert.Equal(1, record.TotalViolations);
     }
@@ -159,9 +159,9 @@ public class ViolationTrackerTests
     {
         _tracker.RecordIpViolation(_testIp, ViolationType.InvalidMessage);
         _tracker.RecordUsernameViolation("user1", ViolationType.Abuse);
-        
+
         var stats = _tracker.GetStats();
-        
+
         Assert.Equal(1, stats.TrackedIps);
         Assert.Equal(1, stats.TrackedUsernames);
     }
@@ -171,9 +171,9 @@ public class ViolationTrackerTests
     {
         _tracker.BanIp(IPAddress.Parse("10.0.0.100"), "Ban 1");
         _tracker.BanUsername("banneduser", "Ban 2");
-        
+
         var bans = _tracker.GetActiveBans();
-        
+
         Assert.Equal(2, bans.Count);
     }
 
@@ -182,9 +182,9 @@ public class ViolationTrackerTests
     {
         var ip = IPAddress.Parse("10.0.0.101");
         _tracker.BanIp(ip, "Test reason", TimeSpan.FromHours(1));
-        
+
         var ban = _tracker.GetIpBan(ip);
-        
+
         Assert.NotNull(ban);
         Assert.Contains("Test reason", ban.Reason);
     }
@@ -194,9 +194,9 @@ public class ViolationTrackerTests
     {
         var username = "banneduser2";
         _tracker.BanUsername(username, "Test reason");
-        
+
         var ban = _tracker.GetUsernameBan(username);
-        
+
         Assert.NotNull(ban);
         Assert.Contains("Test reason", ban.Reason);
     }
@@ -213,7 +213,7 @@ public class ViolationTrackerTests
     public void IsUsernameBanned_CaseInsensitive()
     {
         _tracker.BanUsername("TestUser", "Ban");
-        
+
         Assert.True(_tracker.IsUsernameBanned("testuser"));
         Assert.True(_tracker.IsUsernameBanned("TESTUSER"));
     }

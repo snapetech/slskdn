@@ -15,5 +15,3 @@ public interface ITimingObfuscator
     /// <returns>The delay in milliseconds.</returns>
     Task<int> GetNextDelayAsync();
 }
-
-

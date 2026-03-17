@@ -47,4 +47,3 @@ public class MeshOverlayServerStats
     /// </summary>
     public TimeSpan Uptime => StartedAt.HasValue ? DateTimeOffset.UtcNow - StartedAt.Value : TimeSpan.Zero;
 }
-

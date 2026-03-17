@@ -96,4 +96,3 @@ namespace slskd.Common.Moderation
         Unknown = 3,
     }
 }
-

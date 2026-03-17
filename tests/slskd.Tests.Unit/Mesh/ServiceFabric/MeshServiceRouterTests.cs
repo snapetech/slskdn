@@ -23,10 +23,10 @@ public class MeshServiceRouterTests
     {
         _loggerMock = new Mock<ILogger<MeshServiceRouter>>();
         _options = new MeshServiceFabricOptions();
-        
+
         var optionsMock = new Mock<IOptions<MeshServiceFabricOptions>>();
         optionsMock.Setup(o => o.Value).Returns(_options);
-        
+
         // Pass null for violation tracker since it's optional
         _router = new MeshServiceRouter(
             _loggerMock.Object,
@@ -139,7 +139,7 @@ public class MeshServiceRouterTests
         // Arrange
         var service = new TestService("test-service");
         _router.RegisterService(service);
-        
+
         var call = new ServiceCall
         {
             ServiceName = "test-service",
@@ -163,7 +163,7 @@ public class MeshServiceRouterTests
         // Arrange
         var service = new TestService("test-service", throwOnHandle: true);
         _router.RegisterService(service);
-        
+
         var call = new ServiceCall
         {
             ServiceName = "test-service",

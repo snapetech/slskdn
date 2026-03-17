@@ -378,5 +378,3 @@ public enum ContentThreatLevel
     /// <summary>Content is dangerous (executable disguised as media).</summary>
     Dangerous,
 }
-
-

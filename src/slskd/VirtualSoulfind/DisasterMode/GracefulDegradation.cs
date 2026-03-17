@@ -13,7 +13,7 @@ public interface IGracefulDegradationService
     /// Check if Soulseek should be used for a specific operation.
     /// </summary>
     bool ShouldUseSoulseek(OperationType operationType);
-    
+
     /// <summary>
     /// Check if mesh should be used for a specific operation.
     /// </summary>
@@ -70,6 +70,7 @@ public class GracefulDegradationService : IGracefulDegradationService
             {
                 // Use Soulseek for transfers even when degraded (might still work)
                 OperationType.Transfer => true,
+
                 // Avoid Soulseek for searches when degraded (slow)
                 OperationType.Search => false,
                 _ => true
@@ -95,27 +96,27 @@ public class DisasterModeOptions
     /// Auto-detect and activate disaster mode.
     /// </summary>
     public bool Auto { get; set; } = true;
-    
+
     /// <summary>
     /// Force disaster mode (for testing).
     /// </summary>
     public bool Force { get; set; } = false;
-    
+
     /// <summary>
     /// Unavailable threshold in minutes before activating.
     /// </summary>
     public int UnavailableThresholdMinutes { get; set; } = 10;
-    
+
     /// <summary>
     /// Enable graceful degradation (partial Soulseek use).
     /// </summary>
     public bool EnableGracefulDegradation { get; set; } = true;
-    
+
     /// <summary>
     /// Recovery check interval in minutes (how often to check if recovery is possible).
     /// </summary>
     public int RecoveryCheckIntervalMinutes { get; set; } = 5;
-    
+
     /// <summary>
     /// Number of consecutive healthy checks required before recovery.
     /// </summary>

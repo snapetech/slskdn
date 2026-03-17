@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="SecurityService.cs" company="slskd Team">
+// <copyright file="SecurityService.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 using Microsoft.Extensions.Options;
 
 namespace slskd
@@ -94,6 +93,7 @@ namespace slskd
         public void RevokeToken(string jti)
         {
             if (string.IsNullOrWhiteSpace(jti)) return;
+
             // We don't know the original expiry here, so store with a far-future sentinel; the deny-list
             // sweep uses DateTimeOffset.MaxValue entries as "revoke until restart".
             _revokedJtis[jti] = DateTimeOffset.MaxValue;

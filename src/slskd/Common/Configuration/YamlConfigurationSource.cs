@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="YamlConfigurationSource.cs" company="slskd Team">
+// <copyright file="YamlConfigurationSource.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 namespace slskd.Configuration
 {
     using System;
@@ -152,6 +151,7 @@ namespace slskd.Configuration
                     if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
                     {
                         var fileContent = File.ReadAllText(filePath);
+
                         // DEBUG: Log what we're reading for security section
                         if (fileContent.Contains("security:", StringComparison.OrdinalIgnoreCase))
                         {
@@ -161,6 +161,7 @@ namespace slskd.Configuration
                                 System.Console.WriteLine($"[YamlConfigurationProvider] DEBUG - Found security.enabled = '{securityMatch.Groups[1].Value}' in file: {filePath}");
                             }
                         }
+
                         memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(fileContent));
                         actualStream = memoryStream;
                     }
@@ -171,9 +172,9 @@ namespace slskd.Configuration
                     yaml.Load(reader);
 
                     if (yaml.Documents.Count > 0)
-                {
-                    var rootNode = (YamlMappingNode)yaml.Documents[0].RootNode;
-                    Traverse(rootNode, Namespace);
+                    {
+                        var rootNode = (YamlMappingNode)yaml.Documents[0].RootNode;
+                        Traverse(rootNode, Namespace);
                     }
                 }
                 finally

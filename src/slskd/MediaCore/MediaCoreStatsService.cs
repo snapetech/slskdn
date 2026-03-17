@@ -147,7 +147,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
         {
             ["Levenshtein"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0), // Placeholder
             ["Phonetic"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0),     // Placeholder
-            ["Perceptual"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0)    // Placeholder
+            ["Perceptual"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0) // Placeholder
         };
 
         var matchesByDomain = _fuzzyMatchAttempts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);

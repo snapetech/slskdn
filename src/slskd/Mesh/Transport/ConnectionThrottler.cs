@@ -100,6 +100,7 @@ public class ConnectionThrottler
             _logger.LogWarning("[ConnectionThrottler] Inbound datagram rate limit exceeded for {Endpoint}", remoteEndpoint);
             return false;
         }
+
         return true;
     }
 
@@ -119,6 +120,7 @@ public class ConnectionThrottler
             _logger.LogWarning("[ConnectionThrottler] Inbound stream rate limit exceeded for {Endpoint}", remoteEndpoint);
             return false;
         }
+
         return true;
     }
 
@@ -220,5 +222,3 @@ public class ConnectionThrottlerStatistics
     /// </summary>
     public int GlobalConnectionTokens { get; set; }
 }
-
-

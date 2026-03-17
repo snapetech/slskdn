@@ -242,6 +242,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                         continue;
                     }
                 }
+
                 return StepResult.Failure("NativeMesh GetByContentId failed for all candidates");
             }
 
@@ -263,6 +264,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                             await fetchBackend.FetchToStreamAsync(candidate, fs, cancellationToken);
                         fetchedPath = tmpPath;
                     }
+
                     // Torrent: IBitTorrentBackend.FetchByInfoHashOrMagnetAsync (StubBitTorrentBackend returns null)
                     else if (step.Backend == ContentBackendType.Torrent && _btBackend != null)
                     {
@@ -271,6 +273,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                             continue; // not supported or failed, try next candidate
                         fetchedPath = path;
                     }
+
                     // LocalLibrary, Soulseek, MeshDht, Lan: no resolver fetch; success without path
                     else
                     {

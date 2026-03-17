@@ -22,7 +22,7 @@ public class ProtocolContractTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        
+
         soulfind = new SoulfindRunner(loggerFactory.CreateLogger<SoulfindRunner>());
         await soulfind.StartAsync();
 
@@ -56,11 +56,11 @@ public class ProtocolContractTests : IAsyncLifetime
 
         // Assert: Connection established
         Assert.True(response.IsSuccessStatusCode, "Server should be connected");
-        
+
         // Verify connection details
         var status = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.True(status.TryGetProperty("state", out var state), "Status should include state");
-        
+
         // In stub mode, we can't verify actual handshake, but we can verify API responds
         output.WriteLine($"Server status: {status}");
     }
@@ -88,11 +88,11 @@ public class ProtocolContractTests : IAsyncLifetime
 
         // Assert: Connection maintained
         Assert.True(response.IsSuccessStatusCode, "Connection should remain alive after keepalive period");
-        
+
         // Verify connection state hasn't changed
         var status = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.True(status.TryGetProperty("state", out _), "Status should include state");
-        
+
         output.WriteLine("Connection maintained - keepalive working (or connection stable)");
     }
 
@@ -180,10 +180,10 @@ public class ProtocolContractTests : IAsyncLifetime
         // Assert: Reconnected
         var reconnectedResponse = await client.HttpClient.GetAsync("/api/server/status");
         Assert.True(reconnectedResponse.IsSuccessStatusCode, "Should reconnect after server restart");
-        
+
         var status = await reconnectedResponse.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         output.WriteLine($"Reconnection status: {status}");
-        
+
         // Note: Full reconnection verification would require checking internal state
         // For now, we verify the API responds, indicating the client is functional
     }

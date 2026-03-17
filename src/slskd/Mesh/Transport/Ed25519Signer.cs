@@ -55,7 +55,7 @@ public class Ed25519Signer : IDisposable
                 using var tempKey = Key.Create(Algorithm, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
                 return Algorithm.Sign(tempKey, data);
             }
-            
+
             // Import the private key and sign
             using var key = Key.Import(Algorithm, privateKey, KeyBlobFormat.RawPrivateKey);
             return Algorithm.Sign(key, data);

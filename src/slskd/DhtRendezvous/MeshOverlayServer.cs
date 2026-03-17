@@ -43,13 +43,13 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private DateTimeOffset? _startedAt;
     private long _totalAccepted;
     private long _totalRejected;
-    
+
     // Helper for deserializing raw messages (stateless, just need the JSON options)
     private readonly SecureMessageFramer _framerInstance = new(Stream.Null);
-    
+
     private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
     private int ListenPortConfig => _dhtOptions.OverlayPort;
-    
+
     public MeshOverlayServer(
         ILogger<MeshOverlayServer> logger,
         IOptionsMonitor<slskd.Options> optionsMonitor,
@@ -73,13 +73,13 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _meshSearchRpcHandler = meshSearchRpcHandler ?? throw new ArgumentNullException(nameof(meshSearchRpcHandler));
         _dhtOptions = dhtOptions;
     }
-    
+
     public bool IsListening => _listener is not null;
     public int ListenPort => ListenPortConfig;
     public int ActiveConnections => _registry.Count;
     public long TotalConnectionsAccepted => _totalAccepted;
     public long TotalConnectionsRejected => _totalRejected;
-    
+
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (_listener is not null)
@@ -87,19 +87,19 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             _logger.LogWarning("Server already running");
             return;
         }
-        
+
         _cts = new CancellationTokenSource();
         _listener = new TcpListener(IPAddress.Any, ListenPortConfig);
-        
+
         try
         {
             _listener.Start();
             _startedAt = DateTimeOffset.UtcNow;
-            
+
             _logger.LogInformation(
                 "Mesh overlay server started on port {Port}",
                 ListenPortConfig);
-            
+
             _acceptLoopTask = AcceptLoopAsync(_cts.Token);
         }
         catch (Exception ex)
@@ -110,24 +110,24 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             throw;
         }
     }
-    
+
     public async Task StopAsync()
     {
         if (_listener is null)
         {
             return;
         }
-        
+
         _logger.LogInformation("Stopping mesh overlay server");
-        
+
         if (_cts is not null)
         {
             await _cts.CancelAsync();
         }
-        
+
         _listener.Stop();
         _listener = null;
-        
+
         if (_acceptLoopTask is not null)
         {
             try
@@ -139,10 +139,10 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 // Expected
             }
         }
-        
+
         _startedAt = null;
     }
-    
+
     private async Task AcceptLoopAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested && _listener is not null)
@@ -150,7 +150,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             try
             {
                 var tcpClient = await _listener.AcceptTcpClientAsync(cancellationToken);
-                
+
                 // Handle connection in background
                 _ = HandleConnectionAsync(tcpClient, cancellationToken);
             }
@@ -168,12 +168,12 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             }
         }
     }
-    
+
     private async Task HandleConnectionAsync(TcpClient tcpClient, CancellationToken cancellationToken)
     {
         var remoteEndPoint = (IPEndPoint)tcpClient.Client.RemoteEndPoint!;
         var remoteIp = remoteEndPoint.Address;
-        
+
         try
         {
             // Check blocklist
@@ -184,7 +184,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 tcpClient.Dispose();
                 return;
             }
-            
+
             // Check rate limit
             var rateResult = _rateLimiter.CheckConnection(remoteIp);
             if (!rateResult)
@@ -194,7 +194,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 tcpClient.Dispose();
                 return;
             }
-            
+
             // Check if registry is full
             if (_registry.IsFull)
             {
@@ -204,18 +204,18 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 tcpClient.Dispose();
                 return;
             }
-            
+
             _logger.LogDebug("Accepting connection from {Endpoint}", remoteEndPoint);
-            
+
             // Establish TLS and perform handshake
             var serverCert = _certificateManager.GetOrCreateServerCertificate();
             var connection = await MeshOverlayConnection.AcceptAsync(tcpClient, serverCert, cancellationToken);
-            
+
             try
             {
                 // Perform protocol handshake
                 var hello = await connection.PerformServerHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
-                
+
                 // Check if username is blocked
                 if (_blocklist.IsBlocked(hello.Username))
                 {
@@ -224,12 +224,12 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     await connection.DisconnectAsync("Blocked");
                     return;
                 }
-                
+
                 // Check certificate pin (TOFU)
                 if (connection.CertificateThumbprint is not null)
                 {
                     var pinResult = _pinStore.CheckPin(hello.Username, connection.CertificateThumbprint);
-                    
+
                     switch (pinResult)
                     {
                         case PinCheckResult.NotPinned:
@@ -241,12 +241,12 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                                 connection.CertificateThumbprint?[..16] + "...");
                             _pinStore.SetPin(hello.Username, connection.CertificateThumbprint);
                             break;
-                        
+
                         case PinCheckResult.Valid:
                             // Certificate matches pin
                             _pinStore.TouchPin(hello.Username);
                             break;
-                        
+
                         case PinCheckResult.Mismatch:
                             // Potential MITM attack!
                             _logger.LogError(
@@ -259,7 +259,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             return;
                     }
                 }
-                
+
                 // Register the connection
                 if (!await _registry.RegisterAsync(connection))
                 {
@@ -268,15 +268,15 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     await connection.DisconnectAsync("Registration failed");
                     return;
                 }
-                
+
                 Interlocked.Increment(ref _totalAccepted);
-                
+
                 _logger.LogInformation(
                     "Accepted mesh connection from {Username}@{Endpoint} (features: {Features})",
                     hello.Username,
                     remoteEndPoint,
                     string.Join(", ", (IEnumerable<string>?)hello.Features ?? Array.Empty<string>()));
-                
+
                 // Start message handling loop in background
                 _ = HandleMessagesAsync(connection, cancellationToken);
             }
@@ -296,7 +296,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             tcpClient.Dispose();
         }
     }
-    
+
     private async Task HandleMessagesAsync(MeshOverlayConnection connection, CancellationToken cancellationToken)
     {
         try
@@ -309,7 +309,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     _logger.LogDebug("Connection to {Username} idle, disconnecting", connection.Username);
                     break;
                 }
-                
+
                 // Send keepalive if needed
                 if (connection.NeedsKeepalive())
                 {
@@ -324,7 +324,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                         break;
                     }
                 }
-                
+
                 // Check message rate limit
                 var rateResult = _rateLimiter.CheckMessage(connection.ConnectionId);
                 if (!rateResult)
@@ -336,17 +336,18 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     _rateLimiter.RecordViolation(connection.RemoteAddress);
                     break;
                 }
-                
+
                 // Read next message
                 try
                 {
                     var rawMessage = await connection.ReadRawMessageAsync(cancellationToken);
                     var messageType = SecureMessageFramer.ExtractMessageType(rawMessage);
-                    
+
                     switch (messageType)
                     {
                         case Messages.OverlayMessageType.Ping:
                             var ping = _framerInstance.DeserializeMessage<Messages.PingMessage>(rawMessage);
+
                             // SECURITY: Validate ping message before responding
                             var pingValidation = MessageValidator.ValidatePing(ping);
                             if (!pingValidation.IsValid)
@@ -355,13 +356,14 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                                 _rateLimiter.RecordViolation(connection.RemoteAddress);
                                 break;
                             }
+
                             await connection.WriteMessageAsync(new Messages.PongMessage { Timestamp = ping.Timestamp }, cancellationToken);
                             break;
-                        
+
                         case Messages.OverlayMessageType.Pong:
                             // Already handled by PingAsync
                             break;
-                        
+
                         case Messages.OverlayMessageType.Disconnect:
                             var disconnect = _framerInstance.DeserializeMessage<Messages.DisconnectMessage>(rawMessage);
                             var disconnectValidation = MessageValidator.ValidateDisconnect(disconnect);
@@ -373,6 +375,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             {
                                 _logger.LogDebug("Received disconnect from {Username}: {Reason}", connection.Username, disconnect?.Reason ?? "no reason");
                             }
+
                             goto cleanup;
 
                         case Messages.OverlayMessageType.MeshSearchReq:
@@ -384,12 +387,14 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                                 _rateLimiter.RecordViolation(connection.RemoteAddress);
                                 break;
                             }
+
                             var meshRl = _rateLimiter.CheckMeshSearchRequest(connection.ConnectionId);
                             if (!meshRl)
                             {
                                 _logger.LogWarning("Mesh search rate limit exceeded for {Username}: {Reason}", connection.Username, meshRl.Reason);
                                 break;
                             }
+
                             var meshSearchResp = await _meshSearchRpcHandler.HandleAsync(meshSearchReq, cancellationToken);
                             await connection.WriteMessageAsync(meshSearchResp, cancellationToken);
                             break;
@@ -400,6 +405,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             {
                                 await HandleMeshMessageAsync(connection, rawMessage, messageType, cancellationToken);
                             }
+
                             break;
                     }
                 }
@@ -424,14 +430,14 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         {
             _logger.LogWarning(ex, "Error in message loop for {Username}", connection.Username);
         }
-        
-        cleanup:
+
+    cleanup:
         await _registry.UnregisterAsync(connection);
         _rateLimiter.RecordDisconnection(connection.RemoteAddress);
         _rateLimiter.RemoveConnection(connection.ConnectionId);
         await connection.DisposeAsync();
     }
-    
+
     /// <summary>
     /// Handle mesh protocol messages by forwarding to MeshSyncService.
     /// </summary>
@@ -449,18 +455,18 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 "mesh_ack" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshAckMessage>(rawMessage),
                 _ => null,
             };
-            
+
             if (meshMessage == null)
             {
                 _logger.LogDebug("Unknown message type {Type} from {Username}, ignoring", messageType, connection.Username);
                 return;
             }
-            
+
             _logger.LogDebug("Forwarding {Type} message from {Username} to MeshSyncService", messageType, connection.Username);
-            
+
             // Forward to mesh sync service
             var response = await _meshSyncService.HandleMessageAsync(connection.Username!, meshMessage, cancellationToken);
-            
+
             // Send response if any
             if (response != null)
             {
@@ -477,7 +483,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             _logger.LogWarning(ex, "Error handling mesh message from {Username}", connection.Username);
         }
     }
-    
+
     public MeshOverlayServerStats GetStats()
     {
         return new MeshOverlayServerStats
@@ -490,11 +496,10 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             StartedAt = _startedAt,
         };
     }
-    
+
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
         _cts?.Dispose();
     }
 }
-

@@ -65,6 +65,7 @@ public class ShareGroupsController : ControllerBase
 
         return string.Empty;
     }
+
     private bool Enabled => _options.CurrentValue.Feature.CollectionsSharing;
 
     [HttpGet]
@@ -74,6 +75,7 @@ public class ShareGroupsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+
         // If we can't determine user identity, return empty list instead of error
         if (string.IsNullOrWhiteSpace(currentUserId))
             return Ok(new List<ShareGroup>());
@@ -100,7 +102,7 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateShareGroupRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
-        if (string.IsNullOrWhiteSpace(req.Name)) 
+        if (string.IsNullOrWhiteSpace(req.Name))
         {
             return Problem(
                 title: "Name is required.",
@@ -108,6 +110,7 @@ public class ShareGroupsController : ControllerBase
                 statusCode: StatusCodes.Status400BadRequest
             );
         }
+
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
         {
@@ -117,6 +120,7 @@ public class ShareGroupsController : ControllerBase
                 statusCode: StatusCodes.Status400BadRequest
             );
         }
+
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
         var created = await _sharing.CreateShareGroupAsync(g, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
@@ -218,8 +222,8 @@ public class ShareGroupsController : ControllerBase
 
 public class CreateShareGroupRequest { [Required] public string? Name { get; set; } }
 public class UpdateShareGroupRequest { public string? Name { get; set; } }
-public class AddMemberRequest 
-{ 
+public class AddMemberRequest
+{
     /// <summary>Soulseek username (legacy).</summary>
     public string? UserId { get; set; }
     /// <summary>Contact PeerId (Identity & Friends). Takes precedence over UserId when set.</summary>

@@ -74,7 +74,7 @@ public class MeshServiceFabricOptions
     {
         ["shadow-index"] = 60,      // Complex MBID lookups need more time
         ["mesh-stats"] = 5,          // Introspection should be fast
-        ["pod-chat"] = 10            // Chat operations should be quick
+        ["pod-chat"] = 10 // Chat operations should be quick
     };
 
     /// <summary>

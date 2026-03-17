@@ -262,12 +262,14 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
         if (startIndex >= 0)
         {
             var potentialId = filename.Substring(startIndex);
+
             // Try to validate it's a proper ContentID
             if (ContentIdParser.IsValid(potentialId))
             {
                 return potentialId;
             }
         }
+
         return null;
     }
 
@@ -281,7 +283,6 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
             // Search for similar content in the registry
             // This is a simplified implementation - in practice, this would involve
             // more sophisticated fuzzy matching against known content
-
             var audioContent = await _contentRegistry.FindByDomainAsync("audio");
             var videoContent = await _contentRegistry.FindByDomainAsync("video");
 

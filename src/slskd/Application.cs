@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 using Microsoft.Extensions.Options;
 
 namespace slskd
@@ -385,7 +384,7 @@ namespace slskd
                     Log.Error(ex, "Failed to initialize application in background task");
                 }
             }, cancellationToken);
-            
+
             return Task.CompletedTask;
         }
 
@@ -590,7 +589,7 @@ namespace slskd
                     }
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
-            
+
             Log.Information("[Application] Initialization complete");
         }
 

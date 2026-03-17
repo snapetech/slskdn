@@ -36,7 +36,7 @@ public class ApiPerformanceBenchmarks : IDisposable
         _output = output;
     }
 
-    [GlobalSetup]
+[GlobalSetup]
     public void Setup()
     {
         // Note: These benchmarks require a running slskdn instance
@@ -68,14 +68,14 @@ public class ApiPerformanceBenchmarks : IDisposable
         }
     }
 
-    [GlobalCleanup]
+[GlobalCleanup]
     public void Cleanup()
     {
         _httpClient?.Dispose();
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Read")]
+[Benchmark]
+[BenchmarkCategory("Read")]
     public async Task GetSessionStatus()
     {
         if (_httpClient == null) return;
@@ -92,8 +92,8 @@ public class ApiPerformanceBenchmarks : IDisposable
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Read")]
+[Benchmark]
+[BenchmarkCategory("Read")]
     public async Task GetApplicationState()
     {
         if (_httpClient == null) return;
@@ -110,8 +110,8 @@ public class ApiPerformanceBenchmarks : IDisposable
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Read")]
+[Benchmark]
+[BenchmarkCategory("Read")]
     public async Task GetHashDbStats()
     {
         if (_httpClient == null) return;
@@ -128,11 +128,11 @@ public class ApiPerformanceBenchmarks : IDisposable
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Read")]
-    [Arguments(10)]
-    [Arguments(50)]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("Read")]
+[Arguments(10)]
+[Arguments(50)]
+[Arguments(100)]
     public async Task GetJobs_Paginated(int limit)
     {
         if (_httpClient == null) return;
@@ -149,8 +149,8 @@ public class ApiPerformanceBenchmarks : IDisposable
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Write")]
+[Benchmark]
+[BenchmarkCategory("Write")]
     public async Task CreateSearch()
     {
         if (_httpClient == null) return;
@@ -176,11 +176,11 @@ public class ApiPerformanceBenchmarks : IDisposable
         }
     }
 
-    [Benchmark]
-    [BenchmarkCategory("Concurrency")]
-    [Arguments(10)]
-    [Arguments(50)]
-    [Arguments(100)]
+[Benchmark]
+[BenchmarkCategory("Concurrency")]
+[Arguments(10)]
+[Arguments(50)]
+[Arguments(100)]
     public async Task ConcurrentGetRequests(int concurrency)
     {
         if (_httpClient == null) return;

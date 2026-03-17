@@ -19,6 +19,3 @@ namespace slskd.Integrations.AcoustId
         Task<AcoustIdResult?> LookupAsync(string fingerprint, int sampleRate, int durationSeconds, CancellationToken cancellationToken = default);
     }
 }
-
-
-

@@ -123,6 +123,7 @@ public class AdaptiveScheduler : IAdaptiveScheduler
                 {
                     learningData.FailedChunks++;
                 }
+
                 learningData.LastUpdated = DateTimeOffset.UtcNow;
             }
 

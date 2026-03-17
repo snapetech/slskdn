@@ -426,4 +426,3 @@ public sealed class TemporalStats
     /// <summary>Gets suspicious peers count.</summary>
     public int SuspiciousPeers { get; init; }
 }
-

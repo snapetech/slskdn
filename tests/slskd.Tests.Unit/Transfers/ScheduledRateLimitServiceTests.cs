@@ -21,7 +21,7 @@ namespace slskd.Tests.Unit.Transfers
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
                         SpeedLimit = 500,
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = false,
                             NightUploadSpeedLimit = 100
@@ -53,7 +53,7 @@ namespace slskd.Tests.Unit.Transfers
                     Download = new slskd.Options.GlobalOptions.GlobalDownloadOptions()
                     {
                         SpeedLimit = 600,
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = false,
                             NightDownloadSpeedLimit = 200
@@ -85,7 +85,7 @@ namespace slskd.Tests.Unit.Transfers
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
                         SpeedLimit = 1000, // Day limit
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = true,
                             NightStartHour = 22,
@@ -195,7 +195,7 @@ namespace slskd.Tests.Unit.Transfers
                 {
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = true,
                             NightStartHour = 22,
@@ -270,7 +270,7 @@ namespace slskd.Tests.Unit.Transfers
                 {
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = true,
                             NightStartHour = 22, // 10 PM
@@ -303,7 +303,7 @@ namespace slskd.Tests.Unit.Transfers
                 {
                     Upload = new slskd.Options.GlobalOptions.GlobalUploadOptions()
                     {
-                            ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
+                        ScheduledLimits = new slskd.Options.ScheduledSpeedLimitOptions()
                         {
                             Enabled = false,
                             NightStartHour = 22,

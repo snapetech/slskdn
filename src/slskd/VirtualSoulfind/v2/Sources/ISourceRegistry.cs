@@ -32,7 +32,7 @@ namespace slskd.VirtualSoulfind.v2.Sources
     ///     - Where to find content (which backends, which peers, which torrents, etc.)
     ///     - How trustworthy each source is
     ///     - When sources were last validated
-    ///     
+    ///
     ///     This is separate from the catalogue (what content exists) and the intent queue
     ///     (what we want to fetch).
     /// </remarks>

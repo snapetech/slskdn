@@ -407,9 +407,9 @@ namespace slskd.Transfers.API
         public IActionResult GetSpeeds()
         {
             // Calculate total speeds from active transfers
-            var activeDownloads = Transfers.Downloads.List(t => 
+            var activeDownloads = Transfers.Downloads.List(t =>
                 t.State == Soulseek.TransferStates.InProgress);
-            var activeUploads = Transfers.Uploads.List(t => 
+            var activeUploads = Transfers.Uploads.List(t =>
                 t.State == Soulseek.TransferStates.InProgress, includeRemoved: false);
 
             var totalDownloadSpeed = activeDownloads.Sum(t => t.AverageSpeed);
@@ -563,8 +563,8 @@ namespace slskd.Transfers.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(200)]
         public async Task<IActionResult> FindAlternativeAsync(
-            [FromBody] FindAlternativeRequest request,
-            CancellationToken cancellationToken = default)
+        [FromBody] FindAlternativeRequest request,
+                    CancellationToken cancellationToken = default)
         {
             if (Program.IsRelayAgent)
             {
@@ -588,8 +588,8 @@ namespace slskd.Transfers.API
         [ProducesResponseType(200)]
         [ProducesResponseType(500)]
         public async Task<IActionResult> ReplaceDownloadAsync(
-            [FromBody] ReplaceDownloadRequest request,
-            CancellationToken cancellationToken = default)
+        [FromBody] ReplaceDownloadRequest request,
+                    CancellationToken cancellationToken = default)
         {
             if (Program.IsRelayAgent)
             {
@@ -616,8 +616,8 @@ namespace slskd.Transfers.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(AutoReplaceResult), 200)]
         public async Task<IActionResult> AutoReplaceAsync(
-            [FromBody] AutoReplaceRequest request,
-            CancellationToken cancellationToken = default)
+        [FromBody] AutoReplaceRequest request,
+                    CancellationToken cancellationToken = default)
         {
             if (Program.IsRelayAgent)
             {

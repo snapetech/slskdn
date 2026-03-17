@@ -26,36 +26,36 @@ public static class ServiceCollectionExtensions
         // Register the registry
         services.AddSingleton<IContentDomainProviderRegistry, ContentDomainProviderRegistry>();
 
-            // Register all built-in providers with the registry after they're created
-            services.AddSingleton(sp =>
+        // Register all built-in providers with the registry after they're created
+        services.AddSingleton(sp =>
+        {
+            var registry = sp.GetRequiredService<IContentDomainProviderRegistry>();
+
+            // Register Music provider (if available)
+            var musicProvider = sp.GetService<IMusicContentDomainProvider>();
+            if (musicProvider != null)
             {
-                var registry = sp.GetRequiredService<IContentDomainProviderRegistry>();
+                registry.RegisterProvider(ContentDomainProviderAdapters.CreateMusicAdapter(musicProvider));
+            }
 
-                // Register Music provider (if available)
-                var musicProvider = sp.GetService<IMusicContentDomainProvider>();
-                if (musicProvider != null)
-                {
-                    registry.RegisterProvider(ContentDomainProviderAdapters.CreateMusicAdapter(musicProvider));
-                }
+            // Register Book provider
+            var bookProvider = sp.GetRequiredService<IBookContentDomainProvider>();
+            registry.RegisterProvider(ContentDomainProviderAdapters.CreateBookAdapter(bookProvider));
 
-                // Register Book provider
-                var bookProvider = sp.GetRequiredService<IBookContentDomainProvider>();
-                registry.RegisterProvider(ContentDomainProviderAdapters.CreateBookAdapter(bookProvider));
+            // Register Movie provider
+            var movieProvider = sp.GetRequiredService<IMovieContentDomainProvider>();
+            registry.RegisterProvider(ContentDomainProviderAdapters.CreateMovieAdapter(movieProvider));
 
-                // Register Movie provider
-                var movieProvider = sp.GetRequiredService<IMovieContentDomainProvider>();
-                registry.RegisterProvider(ContentDomainProviderAdapters.CreateMovieAdapter(movieProvider));
+            // Register TV provider
+            var tvProvider = sp.GetRequiredService<ITvContentDomainProvider>();
+            registry.RegisterProvider(ContentDomainProviderAdapters.CreateTvAdapter(tvProvider));
 
-                // Register TV provider
-                var tvProvider = sp.GetRequiredService<ITvContentDomainProvider>();
-                registry.RegisterProvider(ContentDomainProviderAdapters.CreateTvAdapter(tvProvider));
+            // Register GenericFile provider
+            var genericFileProvider = sp.GetRequiredService<GenericFile.IGenericFileContentDomainProvider>();
+            registry.RegisterProvider(ContentDomainProviderAdapters.CreateGenericFileAdapter(genericFileProvider));
 
-                // Register GenericFile provider
-                var genericFileProvider = sp.GetRequiredService<GenericFile.IGenericFileContentDomainProvider>();
-                registry.RegisterProvider(ContentDomainProviderAdapters.CreateGenericFileAdapter(genericFileProvider));
-
-                return registry;
-            });
+            return registry;
+        });
 
         return services;
     }

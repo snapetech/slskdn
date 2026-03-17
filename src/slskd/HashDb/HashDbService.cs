@@ -27,7 +27,7 @@ namespace slskd.HashDb
     using System.Threading.Tasks;
     using Microsoft.Data.Sqlite;
     using Microsoft.Extensions.Caching.Memory;
-using slskd.Telemetry;
+    using slskd.Telemetry;
     using Microsoft.Extensions.Options;
     using Serilog;
     using slskd;
@@ -103,6 +103,7 @@ using slskd.Telemetry;
             {
                 audioSketchService = new AudioSketchService(optionsMonitor);
             }
+
             dbPath = Path.Combine(appDirectory, "hashdb.db");
             InitializeDatabase();
             currentSeqId = GetLatestSeqIdSync();
@@ -1108,6 +1109,7 @@ using slskd.Telemetry;
                 log.Debug("[HashDb] Cache hit for flac_key: {Key}", flacKey);
                 return cached;
             }
+
             activity?.SetTag("hashdb.lookup.cache_hit", false);
 
             using var conn = GetConnection();
@@ -1119,7 +1121,7 @@ using slskd.Telemetry;
             if (await reader.ReadAsync(cancellationToken))
             {
                 var entry = ReadHashEntry(reader);
-                
+
                 // Cache the result (5 minute TTL)
                 if (hashCache != null)
                 {
@@ -1129,7 +1131,7 @@ using slskd.Telemetry;
                     });
                     log.Debug("[HashDb] Cached lookup result for flac_key: {Key}", flacKey);
                 }
-                
+
                 activity?.SetTag("hashdb.lookup.found", true);
                 return entry;
             }
@@ -1171,7 +1173,7 @@ using slskd.Telemetry;
             {
                 hashCache.Remove($"hashdb:lookup:{entry.FlacKey}");
             }
-            
+
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var newSeqId = Interlocked.Increment(ref currentSeqId);
 
@@ -2480,11 +2482,11 @@ using slskd.Telemetry;
         {
             var entriesList = entries.ToList();
             log.Information("[HashDb] Merging {Count} entries from mesh", entriesList.Count);
-            
+
             var merged = 0;
             var conflicts = 0;
             var skipped = 0;
-            
+
             foreach (var entry in entriesList)
             {
                 // Check if we have this entry
@@ -2498,9 +2500,9 @@ using slskd.Telemetry;
                 else if (existing.ByteHash != entry.ByteHash)
                 {
                     // Conflict! Keep the one with higher use_count
-                    log.Warning("[HashDb] Hash conflict for {Key}: local={Local} (uses:{LocalUse}) vs remote={Remote} (uses:{RemoteUse})", 
-                        entry.FlacKey, 
-                        existing.ByteHash?.Substring(0, 16), 
+                    log.Warning("[HashDb] Hash conflict for {Key}: local={Local} (uses:{LocalUse}) vs remote={Remote} (uses:{RemoteUse})",
+                        entry.FlacKey,
+                        existing.ByteHash?.Substring(0, 16),
                         existing.UseCount,
                         entry.ByteHash?.Substring(0, 16),
                         entry.UseCount);
@@ -2512,7 +2514,7 @@ using slskd.Telemetry;
                 }
             }
 
-            log.Information("[HashDb] Mesh merge complete: {Merged} new, {Conflicts} conflicts, {Skipped} already known", 
+            log.Information("[HashDb] Mesh merge complete: {Merged} new, {Conflicts} conflicts, {Skipped} already known",
                 merged, conflicts, skipped);
 
             return merged;
@@ -2719,7 +2721,6 @@ using slskd.Telemetry;
         }
 
         // ========== Helpers ==========
-
         private static Peer ReadPeer(SqliteDataReader reader)
         {
             return new Peer
@@ -3207,5 +3208,3 @@ using slskd.Telemetry;
         }
     }
 }
-
-

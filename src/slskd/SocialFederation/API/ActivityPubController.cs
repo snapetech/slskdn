@@ -132,9 +132,9 @@ namespace slskd.SocialFederation.API
         [HttpGet("{actorName}/inbox")]
         [Produces("application/activity+json")]
         public async Task<IActionResult> GetInbox(
-            string actorName,
-            [FromQuery] int? page = null,
-            CancellationToken cancellationToken = default)
+                    string actorName,
+        [FromQuery] int? page = null,
+                    CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
@@ -249,9 +249,9 @@ namespace slskd.SocialFederation.API
         [HttpGet("{actorName}/outbox")]
         [Produces("application/activity+json")]
         public async Task<IActionResult> GetOutbox(
-            string actorName,
-            [FromQuery] int? page = null,
-            CancellationToken cancellationToken = default)
+                    string actorName,
+        [FromQuery] int? page = null,
+                    CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
@@ -295,9 +295,9 @@ namespace slskd.SocialFederation.API
         [HttpPost("{actorName}/outbox")]
         [Consumes("application/activity+json")]
         public async Task<IActionResult> PostToOutbox(
-            string actorName,
-            [FromBody] ActivityPubActivity activity,
-            CancellationToken cancellationToken = default)
+                    string actorName,
+        [FromBody] ActivityPubActivity activity,
+                    CancellationToken cancellationToken = default)
         {
             // Outbox posting is typically restricted to the actor owner
             // For now, return not implemented
@@ -387,6 +387,7 @@ namespace slskd.SocialFederation.API
                 else if (k == "headers") headersList = v;
                 else if (k == "signature") signatureB64 = v;
             }
+
             return keyId.Length > 0 && algorithm.Length > 0 && headersList.Length > 0 && signatureB64.Length > 0;
         }
 
@@ -409,6 +410,7 @@ namespace slskd.SocialFederation.API
                 if (i > 0) sb.Append('\n');
                 sb.Append(v);
             }
+
             return sb.ToString();
         }
 

@@ -22,7 +22,7 @@ using Microsoft.Extensions.Logging;
 [Produces("application/json")]
 [Consumes("application/json")]
 [Authorize(Policy = AuthPolicy.Any)]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodMessageBackfillController : ControllerBase
 {
     private readonly IPodMessageBackfill _backfillService;
@@ -51,9 +51,9 @@ public class PodMessageBackfillController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> SyncOnRejoin(
-        [FromRoute] string podId,
-        [FromBody] Dictionary<string, long> lastSeenTimestamps,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromBody] Dictionary<string, long> lastSeenTimestamps,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -123,9 +123,9 @@ public class PodMessageBackfillController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public IActionResult UpdateLastSeenTimestamp(
-        [FromRoute] string podId,
-        [FromRoute] string channelId,
-        [FromBody] long timestamp)
+    [FromRoute] string podId,
+    [FromRoute] string channelId,
+    [FromBody] long timestamp)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {

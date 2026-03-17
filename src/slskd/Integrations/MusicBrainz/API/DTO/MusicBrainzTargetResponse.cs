@@ -22,6 +22,3 @@ namespace slskd.Integrations.MusicBrainz.API.DTO
         public TrackTarget? Track { get; set; }
     }
 }
-
-
-

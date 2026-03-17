@@ -126,7 +126,7 @@ public class BridgePerformanceTests : IAsyncLifetime
         {
             var stream = new MemoryStream();
             var payload = BuildLoginPayload("testuser", "testpass");
-            
+
             var sw = Stopwatch.StartNew();
             await parser.WriteMessageAsync(stream, SoulseekProtocolParser.MessageType.Login, payload);
             stream.Position = 0;
@@ -202,7 +202,7 @@ public class BridgePerformanceTests : IAsyncLifetime
         GC.Collect();
         GC.WaitForPendingFinalizers();
         var memoryBefore = GC.GetTotalMemory(false);
-        
+
         for (int i = 0; i < messageCount; i++)
         {
             var stream = new MemoryStream();
@@ -210,7 +210,7 @@ public class BridgePerformanceTests : IAsyncLifetime
             parser.WriteMessageAsync(stream, SoulseekProtocolParser.MessageType.Login, payload).Wait();
             streams.Add(stream);
         }
-        
+
         var memoryAfter = GC.GetTotalMemory(false);
         var memoryUsed = memoryAfter - memoryBefore;
 
@@ -229,7 +229,7 @@ public class BridgePerformanceTests : IAsyncLifetime
         // MemoryStream overhead is significant (each stream has internal buffers)
         // Allow up to 5KB per message to account for MemoryStream overhead in test scenario
         Assert.True(memoryPerMessage < 5000, $"Expected <5000 bytes/message, got {memoryPerMessage:F2}");
-        
+
         // More important: verify memory is released after cleanup
         var memoryAfterCleanup = GC.GetTotalMemory(false);
         var memoryReleased = memoryAfter - memoryAfterCleanup;

@@ -1,4 +1,5 @@
 import {
+  createBatch,
   blockUser,
   filterResponse,
   getBlockedUsers,
@@ -7,11 +8,13 @@ import {
   parseFiltersFromString,
   unblockUser,
 } from '../../../lib/searches';
+import { buildDiscoveryGraph } from '../../../lib/discoveryGraph';
 import { getAllNotes } from '../../../lib/userNotes';
 import { sleep } from '../../../lib/util';
 import ErrorSegment from '../../Shared/ErrorSegment';
 import LoaderSegment from '../../Shared/LoaderSegment';
 import Switch from '../../Shared/Switch';
+import DiscoveryGraphModal from '../DiscoveryGraphModal';
 import Response from '../Response';
 import SearchDetailHeader from './SearchDetailHeader';
 import SearchFilterModal from './SearchFilterModal';
@@ -114,6 +117,10 @@ const SearchDetail = ({
   const [displayCount, setDisplayCount] = useState(pageSize);
   const [userStats, setUserStats] = useState({});
   const [userNotes, setUserNotes] = useState({});
+  const [graphData, setGraphData] = useState(null);
+  const [graphLoading, setGraphLoading] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
+  const [graphRequest, setGraphRequest] = useState(null);
 
   const fetchUserNotes = useCallback(async () => {
     try {
@@ -275,6 +282,97 @@ const SearchDetail = ({
     onCreate({ navigate, searchForCreate });
   };
 
+  const openDiscoveryGraph = async (request) => {
+    setGraphLoading(true);
+    setGraphOpen(true);
+    setGraphRequest(request);
+
+    try {
+      const graph = await buildDiscoveryGraph(request);
+      setGraphData(graph);
+    } catch (error_) {
+      console.error(error_);
+      toast.error(
+        error_?.response?.data ??
+          error_?.message ??
+          'Failed to build discovery graph',
+      );
+      setGraphOpen(false);
+    } finally {
+      setGraphLoading(false);
+    }
+  };
+
+  const openSearchGraph = async () => {
+    await openDiscoveryGraph({
+      artist: search.searchText,
+      scope: 'songid_run',
+      title: search.searchText,
+    });
+  };
+
+  const handleGraphRecenter = async (nodeId) => {
+    if (!nodeId) {
+      return;
+    }
+
+    const [nodeType, rawId] = nodeId.split(':');
+
+    if (nodeType === 'artist') {
+      await openDiscoveryGraph({ scope: 'artist', artistId: rawId });
+      return;
+    }
+
+    if (nodeType === 'album' || nodeType === 'release-group') {
+      await openDiscoveryGraph({ scope: 'album', releaseId: rawId });
+      return;
+    }
+
+    if (nodeType === 'track') {
+      await openDiscoveryGraph({ scope: 'track', recordingId: rawId });
+      return;
+    }
+
+    await openSearchGraph();
+  };
+
+  const handleGraphCompare = async (nodeId, label) => {
+    if (!graphRequest || !nodeId) {
+      return;
+    }
+
+    await openDiscoveryGraph({
+      ...graphRequest,
+      compareLabel: label,
+      compareNodeId: nodeId,
+    });
+  };
+
+  const handleQueueNearby = async (graph) => {
+    const queries = (graph?.nodes || [])
+      .filter((node) => node.nodeType === 'track')
+      .map((node) => node.label || '')
+      .filter(Boolean)
+      .slice(0, 8);
+
+    if (queries.length === 0) {
+      toast.error('No nearby track nodes were available to queue');
+      return;
+    }
+
+    try {
+      const count = await createBatch({ queries });
+      toast.success(`Started ${count} nearby graph searches`);
+    } catch (error_) {
+      console.error(error_);
+      toast.error(
+        error_?.response?.data ??
+          error_?.message ??
+          'Failed to queue nearby graph searches',
+      );
+    }
+  };
+
   const remove = async () => {
     reset();
     onRemove(search);
@@ -308,6 +406,7 @@ const SearchDetail = ({
         loaded={loaded}
         loading={loading}
         onCreate={create}
+        onOpenGraph={openSearchGraph}
         onRemove={remove}
         onStop={onStop}
         removing={removing}
@@ -330,6 +429,16 @@ const SearchDetail = ({
           )
         }
       >
+        <DiscoveryGraphModal
+          graph={graphData}
+          loading={graphLoading}
+          onClose={() => setGraphOpen(false)}
+          onCompare={handleGraphCompare}
+          onQueueNearby={handleQueueNearby}
+          onRecenter={handleGraphRecenter}
+          onRestoreBranch={(branch) => branch?.request && openDiscoveryGraph(branch.request)}
+          open={graphOpen}
+        />
         {loaded && (
           <Segment
             className="search-options"

@@ -77,9 +77,10 @@ namespace slskd.Mesh
         private readonly ConcurrentDictionary<string, MeshPeerState> peerStates = new(StringComparer.OrdinalIgnoreCase);
         private readonly MeshSyncStats stats = new();
         private readonly SemaphoreSlim syncLock = new(1, 1);
-        
+
         // Pending requests: requestId -> TaskCompletionSource
         private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>> pendingRequests = new();
+
         // Pending chunk requests for proof-of-possession (T-1434): "{peer}:{flacKey}:{offset}" -> TCS
         private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>> pendingChunkRequests = new();
         private const string MeshMessagePrefix = "MESH:";
@@ -115,14 +116,14 @@ namespace slskd.Mesh
             _rateLimitWindowMinutes = o?.RateLimitWindowMinutes ?? DefaultRateLimitWindowMinutes;
             _quarantineViolationThreshold = o?.QuarantineViolationThreshold ?? DefaultQuarantineViolationThreshold;
             _quarantineDurationMinutes = o?.QuarantineDurationMinutes ?? 30;
-            
+
             // Subscribe to private messages for mesh protocol
             if (soulseekClient != null)
             {
                 soulseekClient.PrivateMessageReceived += SoulseekClient_PrivateMessageReceived;
             }
         }
-        
+
         private void SoulseekClient_PrivateMessageReceived(object sender, PrivateMessageReceivedEventArgs e)
         {
             // Check if this is a mesh message
@@ -130,7 +131,7 @@ namespace slskd.Mesh
             {
                 return;
             }
-            
+
             // Extract message type and payload
             var messageText = e.Message.Substring(MeshMessagePrefix.Length);
             var parts = messageText.Split(new[] { ':' }, 2);
@@ -139,10 +140,10 @@ namespace slskd.Mesh
                 log.Warning("[MESH] Invalid mesh message format from {Peer}: {Message}", e.Username, e.Message);
                 return;
             }
-            
+
             var messageType = parts[0];
             var payload = parts[1];
-            
+
             // Handle response messages
             if (messageType == "RESPKEY")
             {
@@ -180,7 +181,7 @@ namespace slskd.Mesh
                             "REQCHUNK" => JsonSerializer.Deserialize<MeshReqChunkMessage>(payload),
                             _ => null,
                         };
-                        
+
                         if (message != null)
                         {
                             var response = await HandleMessageAsync(e.Username, message);
@@ -198,7 +199,7 @@ namespace slskd.Mesh
                 });
             }
         }
-        
+
         private async Task SendMeshMessageAsync(string username, MeshMessage message)
         {
             if (soulseekClient == null)
@@ -206,12 +207,12 @@ namespace slskd.Mesh
                 log.Warning("[MESH] Cannot send mesh message - Soulseek client not available");
                 return;
             }
-            
+
             try
             {
                 // SECURITY: Sign message before sending (T-1430)
                 var signedMessage = messageSigner.SignMessage(message);
-                
+
                 var messageType = message.Type switch
                 {
                     MeshMessageType.RespKey => "RESPKEY",
@@ -224,10 +225,10 @@ namespace slskd.Mesh
                     MeshMessageType.RespChunk => "RESPCHUNK",
                     _ => "UNKNOWN",
                 };
-                
+
                 var payload = JsonSerializer.Serialize(signedMessage);
                 var messageText = $"{MeshMessagePrefix}{messageType}:{payload}";
-                
+
                 await soulseekClient.SendPrivateMessageAsync(username, messageText);
                 log.Debug("[MESH] Sent signed {Type} message to {Peer}", messageType, username);
             }
@@ -284,9 +285,9 @@ namespace slskd.Mesh
             {
                 stats.CurrentSeqId = hashDb.CurrentSeqId;
                 stats.KnownMeshPeers = peerStates.Count(p => p.Value.IsMeshCapable);
-                
+
                 // SECURITY: Update security metrics (T-1436)
-                stats.QuarantinedPeers = peerStates.Count(p => 
+                stats.QuarantinedPeers = peerStates.Count(p =>
                 {
                     var state = p.Value;
                     lock (state)
@@ -294,12 +295,12 @@ namespace slskd.Mesh
                         return state.QuarantinedUntil.HasValue && state.QuarantinedUntil.Value > DateTime.UtcNow;
                     }
                 });
-                
+
                 stats.Warnings = ComputeWarnings();
                 return stats;
             }
         }
-        
+
         /// <summary>Builds security warning messages when configured thresholds are exceeded.</summary>
         private List<string> ComputeWarnings()
         {
@@ -414,6 +415,7 @@ namespace slskd.Mesh
             {
                 log.Warning("[MESH] Rejecting message from quarantined peer {Peer}", fromUser);
                 stats.RejectedMessages++;
+
                 // Note: QuarantinedPeers count is updated in Stats getter
                 return null;
             }
@@ -433,31 +435,31 @@ namespace slskd.Mesh
             {
                 log.Warning("[MESH] Rejecting invalid message from {Peer}: {Error}", fromUser, messageValidation.Error);
                 stats.RejectedMessages++;
-                
+
                 // SECURITY: Track invalid message for rate limiting (T-1432)
                 RecordInvalidMessage(fromUser);
-                
+
                 // Check if peer exceeded rate limit
                 if (IsRateLimited(fromUser, isMessage: true))
                 {
                     log.Warning("[MESH] Peer {Peer} exceeded invalid message rate limit, rejecting", fromUser);
                     stats.RateLimitViolations++; // T-1436
-                    
+
                     if (peerReputation != null)
                     {
                         peerReputation.RecordProtocolViolation(fromUser, "Exceeded invalid message rate limit");
                     }
-                    
+
                     // SECURITY: Record rate limit violation and check for quarantine (T-1433)
                     RecordRateLimitViolation(fromUser);
                     if (ShouldQuarantine(fromUser))
                     {
                         QuarantinePeer(fromUser, "Exceeded invalid message rate limit multiple times");
                     }
-                    
+
                     return null;
                 }
-                
+
                 return null;
             }
 
@@ -488,10 +490,12 @@ namespace slskd.Mesh
                     {
                         return ValidationResult.Fail($"Invalid SinceSeqId: {req.SinceSeqId}");
                     }
+
                     if (req.MaxEntries < 0 || req.MaxEntries > MaxEntriesPerSync * 2)
                     {
                         return ValidationResult.Fail($"Invalid MaxEntries: {req.MaxEntries}");
                     }
+
                     break;
 
                 case MeshPushDeltaMessage push:
@@ -499,14 +503,17 @@ namespace slskd.Mesh
                     {
                         return ValidationResult.Fail("Entries list is null");
                     }
+
                     if (push.Entries.Count > MaxEntriesPerSync * 2)
                     {
                         return ValidationResult.Fail($"Too many entries: {push.Entries.Count} > {MaxEntriesPerSync * 2}");
                     }
+
                     if (push.LatestSeqId < 0)
                     {
                         return ValidationResult.Fail($"Invalid LatestSeqId: {push.LatestSeqId}");
                     }
+
                     break;
 
                 case MeshReqKeyMessage reqKey:
@@ -515,6 +522,7 @@ namespace slskd.Mesh
                     {
                         return keyValidation;
                     }
+
                     break;
 
                 case MeshReqChunkMessage reqChunk:
@@ -523,14 +531,17 @@ namespace slskd.Mesh
                     {
                         return chunkKeyValidation;
                     }
+
                     if (reqChunk.Offset < 0)
                     {
                         return ValidationResult.Fail($"Invalid Offset: {reqChunk.Offset}");
                     }
+
                     if (reqChunk.Length <= 0 || reqChunk.Length > 32768)
                     {
                         return ValidationResult.Fail($"Invalid Length: {reqChunk.Length} (max 32768)");
                     }
+
                     break;
 
                 case MeshHelloMessage hello:
@@ -538,19 +549,23 @@ namespace slskd.Mesh
                     {
                         return ValidationResult.Fail($"Invalid LatestSeqId: {hello.LatestSeqId}");
                     }
+
                     if (hello.HashCount < 0)
                     {
                         return ValidationResult.Fail($"Invalid HashCount: {hello.HashCount}");
                     }
+
                     // ClientId and ClientVersion are informational, just length-check them
                     if (hello.ClientId?.Length > 64)
                     {
                         return ValidationResult.Fail("ClientId too long");
                     }
+
                     if (hello.ClientVersion?.Length > 64)
                     {
                         return ValidationResult.Fail("ClientVersion too long");
                     }
+
                     break;
             }
 
@@ -607,6 +622,7 @@ namespace slskd.Mesh
             });
 
             var results = await Task.WhenAll(queryTasks);
+
             // T-1435: Group by (FlacKey, ByteHash, Size); only accept if >= ConsensusMinAgreements
             var groups = results
                 .Where(r => r != null && !string.IsNullOrEmpty(r.ByteHash))
@@ -618,6 +634,7 @@ namespace slskd.Mesh
             if (foundEntry != null)
             {
                 log.Debug("[MESH] Found hash {Key} via mesh query", flacKey);
+
                 // Optionally cache the result locally
                 if (foundEntry.ByteHash != null && foundEntry.Size > 0)
                 {
@@ -674,7 +691,7 @@ namespace slskd.Mesh
             // Create TaskCompletionSource to wait for response
             var tcs = new TaskCompletionSource<MeshRespKeyMessage>();
             var requestId = flacKey; // Use FlacKey as request ID for simplicity
-            
+
             // Register pending request
             if (!pendingRequests.TryAdd(requestId, tcs))
             {
@@ -686,15 +703,15 @@ namespace slskd.Mesh
             {
                 // Send request message
                 await SendMeshMessageAsync(username, request);
-                
+
                 log.Debug("[MESH] Sent REQKEY message to {Peer} for key {Key}", username, flacKey);
 
                 // Wait for response with timeout
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(10)); // 10 second timeout
-                
+
                 var response = await tcs.Task.WaitAsync(timeoutCts.Token);
-                
+
                 if (response.Found && response.Entry != null)
                 {
                     log.Debug("[MESH] Peer {Peer} found key {Key}", username, flacKey);
@@ -760,7 +777,7 @@ namespace slskd.Mesh
         public MeshHelloMessage GenerateHelloMessage()
         {
             var dbStats = hashDb.GetStats();
-            
+
             // Get actual username from application state, fallback to "slskdn" if not available
             var currentState = this.appState?.CurrentValue;
             var username = currentState?.User?.Username;
@@ -824,7 +841,7 @@ namespace slskd.Mesh
                 log.Warning("[MESH] Rejecting entries from untrusted peer {Peer} (score={Score})", fromUser, score);
                 stats.RejectedMessages++;
                 stats.ReputationBasedRejections++; // T-1436
-                
+
                 // Record protocol violation for attempting to sync with low reputation
                 peerReputation.RecordProtocolViolation(fromUser, "Attempted mesh sync with untrusted reputation");
                 return 0;
@@ -885,31 +902,31 @@ namespace slskd.Mesh
             {
                 log.Warning("[MESH] Skipped {Skipped}/{Total} invalid entries from {Peer}", skipped, entryList.Count, fromUser);
                 stats.SkippedEntries += skipped;
-                
+
                 // SECURITY: Track invalid entries for rate limiting (T-1432)
                 RecordInvalidEntries(fromUser, skipped);
-                
+
                 // SECURITY: Check if peer exceeded rate limit
                 if (IsRateLimited(fromUser, isMessage: false))
                 {
                     log.Warning("[MESH] Peer {Peer} exceeded invalid entry rate limit, rejecting remaining entries", fromUser);
                     stats.RateLimitViolations++; // T-1436
-                    
+
                     if (peerReputation != null)
                     {
                         peerReputation.RecordProtocolViolation(fromUser, $"Exceeded invalid entry rate limit ({skipped} invalid entries)");
                     }
-                    
+
                     // SECURITY: Record rate limit violation and check for quarantine (T-1433)
                     RecordRateLimitViolation(fromUser);
                     if (ShouldQuarantine(fromUser))
                     {
                         QuarantinePeer(fromUser, "Exceeded invalid entry rate limit multiple times");
                     }
-                    
+
                     return 0;
                 }
-                
+
                 // SECURITY: Record malformed message for peers sending invalid entries (T-1431)
                 if (peerReputation != null && skipped > entryList.Count / 2)
                 {
@@ -942,11 +959,13 @@ namespace slskd.Mesh
                             log.Debug("[MESH] Proof-of-possession failed for {Key} from {Peer}", entry.FlacKey, fromUser);
                         }
                     }
+
                     if (ok)
                     {
                         toMerge.Add(entry);
                     }
                 }
+
                 validatedEntries = toMerge;
                 if (validatedEntries.Count == 0)
                 {
@@ -1056,6 +1075,7 @@ namespace slskd.Mesh
                 {
                     return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
                 }
+
                 var toRead = (int)Math.Min(req.Length, fs.Length - req.Offset);
                 fs.Seek(req.Offset, SeekOrigin.Begin);
                 var buf = new byte[toRead];
@@ -1064,6 +1084,7 @@ namespace slskd.Mesh
                 {
                     return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
                 }
+
                 var b64 = read < buf.Length ? Convert.ToBase64String(buf.AsSpan(0, read)) : Convert.ToBase64String(buf);
                 return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = b64, Success = true };
             }
@@ -1082,7 +1103,7 @@ namespace slskd.Mesh
                 LastSeen = DateTime.UtcNow,
             });
         }
-        
+
         /// <summary>
         ///     Records invalid entries for rate limiting (T-1432).
         /// </summary>
@@ -1093,14 +1114,14 @@ namespace slskd.Mesh
             {
                 var now = DateTime.UtcNow;
                 var cutoff = now.AddMinutes(-_rateLimitWindowMinutes);
-                
+
                 // Clean up old timestamps outside the window
                 while (state.InvalidEntryTimestamps.Count > 0 && state.InvalidEntryTimestamps.Peek() < cutoff)
                 {
                     state.InvalidEntryTimestamps.Dequeue();
                     state.InvalidEntryCount--;
                 }
-                
+
                 // Add new invalid entry timestamps
                 for (int i = 0; i < count; i++)
                 {
@@ -1109,7 +1130,7 @@ namespace slskd.Mesh
                 }
             }
         }
-        
+
         /// <summary>
         ///     Records invalid message for rate limiting (T-1432).
         /// </summary>
@@ -1120,20 +1141,20 @@ namespace slskd.Mesh
             {
                 var now = DateTime.UtcNow;
                 var cutoff = now.AddMinutes(-_rateLimitWindowMinutes);
-                
+
                 // Clean up old timestamps outside the window
                 while (state.InvalidMessageTimestamps.Count > 0 && state.InvalidMessageTimestamps.Peek() < cutoff)
                 {
                     state.InvalidMessageTimestamps.Dequeue();
                     state.InvalidMessageCount--;
                 }
-                
+
                 // Add new invalid message timestamp
                 state.InvalidMessageTimestamps.Enqueue(now);
                 state.InvalidMessageCount++;
             }
         }
-        
+
         /// <summary>
         ///     Checks if a peer has exceeded the rate limit (T-1432).
         /// </summary>
@@ -1144,7 +1165,7 @@ namespace slskd.Mesh
             {
                 var now = DateTime.UtcNow;
                 var cutoff = now.AddMinutes(-_rateLimitWindowMinutes);
-                
+
                 if (isMessage)
                 {
                     // Clean up old message timestamps
@@ -1153,7 +1174,7 @@ namespace slskd.Mesh
                         state.InvalidMessageTimestamps.Dequeue();
                         state.InvalidMessageCount--;
                     }
-                    
+
                     return state.InvalidMessageCount >= _maxInvalidMessagesPerWindow;
                 }
                 else
@@ -1164,12 +1185,12 @@ namespace slskd.Mesh
                         state.InvalidEntryTimestamps.Dequeue();
                         state.InvalidEntryCount--;
                     }
-                    
+
                     return state.InvalidEntryCount >= _maxInvalidEntriesPerWindow;
                 }
             }
         }
-        
+
         /// <summary>
         ///     Records a rate limit violation for quarantine tracking (T-1433).
         /// </summary>
@@ -1183,7 +1204,7 @@ namespace slskd.Mesh
                 log.Debug("[MESH] Peer {Peer} rate limit violation count: {Count}", username, state.RateLimitViolationCount);
             }
         }
-        
+
         /// <summary>
         ///     Checks if a peer should be quarantined (T-1433).
         /// </summary>
@@ -1203,11 +1224,11 @@ namespace slskd.Mesh
                         return false;
                     }
                 }
-                
+
                 return state.RateLimitViolationCount >= _quarantineViolationThreshold;
             }
         }
-        
+
         /// <summary>
         ///     Quarantines a peer for the configured duration (T-1433).
         /// </summary>
@@ -1220,24 +1241,24 @@ namespace slskd.Mesh
                 {
                     // Already quarantined, extend duration
                     state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(_quarantineDurationMinutes);
-                    log.Warning("[MESH] Extended quarantine for peer {Peer} until {Until} (reason: {Reason})", 
+                    log.Warning("[MESH] Extended quarantine for peer {Peer} until {Until} (reason: {Reason})",
                         username, state.QuarantinedUntil, reason);
                 }
                 else
                 {
                     // New quarantine
                     state.QuarantinedUntil = DateTime.UtcNow.AddMinutes(_quarantineDurationMinutes);
-                    log.Warning("[MESH] Quarantined peer {Peer} until {Until} (reason: {Reason}, violations: {Count})", 
+                    log.Warning("[MESH] Quarantined peer {Peer} until {Until} (reason: {Reason}, violations: {Count})",
                         username, state.QuarantinedUntil, reason, state.RateLimitViolationCount);
-                    
+
                     stats.QuarantineEvents++; // T-1436
-                    
+
                     // Reset violation count after quarantine
                     state.RateLimitViolationCount = 0;
                 }
             }
         }
-        
+
         /// <summary>
         ///     Checks if a peer is currently quarantined (T-1433).
         /// </summary>
@@ -1250,7 +1271,7 @@ namespace slskd.Mesh
                 {
                     return false;
                 }
-                
+
                 // Check if quarantine has expired
                 if (state.QuarantinedUntil.Value <= DateTime.UtcNow)
                 {
@@ -1259,7 +1280,7 @@ namespace slskd.Mesh
                     log.Information("[MESH] Quarantine lifted for peer {Peer}", username);
                     return false;
                 }
-                
+
                 return true;
             }
         }
@@ -1276,13 +1297,13 @@ namespace slskd.Mesh
             public DateTime? LastSyncTime { get; set; }
             public DateTime LastSeen { get; set; }
             public string ClientVersion { get; set; }
-            
+
             // SECURITY: Rate limiting for invalid entries/messages (T-1432)
             public readonly Queue<DateTime> InvalidEntryTimestamps = new();
             public readonly Queue<DateTime> InvalidMessageTimestamps = new();
             public int InvalidEntryCount { get; set; }
             public int InvalidMessageCount { get; set; }
-            
+
             // SECURITY: Quarantine tracking (T-1433)
             public DateTime? QuarantinedUntil { get; set; }
             public int RateLimitViolationCount { get; set; }
@@ -1290,5 +1311,3 @@ namespace slskd.Mesh
         }
     }
 }
-
-

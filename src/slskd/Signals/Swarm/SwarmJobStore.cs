@@ -23,7 +23,7 @@ public interface ISwarmJobStore
 public class InMemorySwarmJobStore : ISwarmJobStore
 {
     private readonly ConcurrentDictionary<string, SwarmJob> jobs = new();
-    
+
     public Task<SwarmJob?> TryGetJobAsync(string jobId, CancellationToken ct = default)
     {
         jobs.TryGetValue(jobId, out var job);

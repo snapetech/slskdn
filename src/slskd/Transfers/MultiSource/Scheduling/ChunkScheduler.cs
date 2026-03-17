@@ -36,7 +36,7 @@ namespace slskd.Transfers.MultiSource.Scheduling
         private readonly ILogger log = Log.ForContext<ChunkScheduler>();
         private readonly bool enableCostBasedScheduling;
         private const double ReputationCutoff = 0.2; // Peers below this reputation are temporarily skipped
-        
+
         // T-1405: Track active chunk assignments for reassignment
         private readonly ConcurrentDictionary<int, string> activeAssignments = new(); // chunkIndex -> peerId
 

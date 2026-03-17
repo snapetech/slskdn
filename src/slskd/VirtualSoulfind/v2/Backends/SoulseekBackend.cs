@@ -35,14 +35,14 @@ namespace slskd.VirtualSoulfind.v2.Backends
     /// </summary>
     /// <remarks>
     ///     This is THE PRIMARY backend for music content in VirtualSoulfind v2.
-    ///     
+    ///
     ///     Key features:
     ///     - Full Soulseek network search integration
     ///     - Rate limiting via ISoulseekSafetyLimiter (H-08)
     ///     - Quality-based candidate scoring
     ///     - Music domain restriction
     ///     - Configurable search depth and timeouts
-    ///     
+    ///
     ///     Security:
     ///     - Enforces MaxSearchesPerMinute from H-08
     ///     - Cannot be used for non-Music domains
@@ -160,6 +160,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
                             Id = Guid.NewGuid().ToString(),
                             ItemId = itemId,
                             Backend = ContentBackendType.Soulseek,
+
                             // BackendRef format: "username|filename"
                             BackendRef = $"{response.Username}|{file.Filename}",
                             TrustScore = trustScore / 100.0f, // Normalize to 0-1

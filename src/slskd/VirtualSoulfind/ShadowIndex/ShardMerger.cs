@@ -54,7 +54,7 @@ public class ShardMerger : IShardMerger
             .GroupBy(v => v.Codec)
             .SelectMany(group => group
                 .OrderByDescending(v => v.QualityScore)
-                .Take(5))  // Top 5 per codec across all shards
+                .Take(5)) // Top 5 per codec across all shards
             .ToList();
 
         // Use most recent timestamp

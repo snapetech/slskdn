@@ -22,65 +22,65 @@ public static partial class MessageValidator
     /// Maximum username length.
     /// </summary>
     public const int MaxUsernameLength = 64;
-    
+
     /// <summary>
     /// Maximum number of features in handshake.
     /// </summary>
     public const int MaxFeatures = 20;
-    
+
     /// <summary>
     /// Maximum length of each feature string.
     /// </summary>
     public const int MaxFeatureLength = 32;
-    
+
     /// <summary>
     /// Maximum nonce length.
     /// </summary>
     public const int MaxNonceLength = 64;
-    
+
     /// <summary>
     /// Maximum disconnect reason length.
     /// </summary>
     public const int MaxReasonLength = 256;
-    
+
     /// <summary>
     /// Valid protocol versions (for forward compatibility).
     /// </summary>
     public const int MinVersion = 1;
     public const int MaxVersion = 100;
-    
+
     /// <summary>
     /// Valid port range.
     /// </summary>
     public const int MinPort = 1;
     public const int MaxPort = 65535;
-    
+
     /// <summary>
     /// Valid FLAC key length (64-bit = 16 hex chars).
     /// </summary>
     public const int FlacKeyLength = 16;
-    
+
     /// <summary>
     /// Valid SHA256 hash length (64 hex chars).
     /// </summary>
     public const int Sha256HexLength = 64;
-    
+
     // Compiled regex patterns for security-critical validation
     [GeneratedRegex(@"^[a-zA-Z0-9_\-\.]+$", RegexOptions.Compiled)]
     private static partial Regex UsernameRegex();
-    
+
     [GeneratedRegex(@"^[a-z0-9_]+$", RegexOptions.Compiled)]
     private static partial Regex FeatureRegex();
-    
+
     [GeneratedRegex(@"^[a-fA-F0-9]+$", RegexOptions.Compiled)]
     private static partial Regex HexRegex();
-    
+
     [GeneratedRegex(@"^[a-zA-Z0-9\-_]+$", RegexOptions.Compiled)]
     private static partial Regex NonceRegex();
 
     // Pre-computed magic bytes for constant-time comparison
     private static readonly byte[] ExpectedMagicBytes = Encoding.UTF8.GetBytes(OverlayProtocol.Magic);
-    
+
     /// <summary>
     /// Constant-time string comparison to prevent timing attacks.
     /// SECURITY: Use this for any security-critical string comparisons.
@@ -91,13 +91,13 @@ public static partial class MessageValidator
         {
             return a is null && b is null;
         }
-        
+
         var aBytes = Encoding.UTF8.GetBytes(a);
         var bBytes = Encoding.UTF8.GetBytes(b);
-        
+
         return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
     }
-    
+
     /// <summary>
     /// Validates the protocol magic string using constant-time comparison.
     /// </summary>
@@ -107,11 +107,11 @@ public static partial class MessageValidator
         {
             return false;
         }
-        
+
         var magicBytes = Encoding.UTF8.GetBytes(magic);
         return CryptographicOperations.FixedTimeEquals(magicBytes, ExpectedMagicBytes);
     }
-    
+
     /// <summary>
     /// Validates a mesh hello message.
     /// </summary>
@@ -123,33 +123,33 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Message is null");
         }
-        
+
         // SECURITY: Use constant-time comparison for magic to prevent timing attacks
         if (!ValidateMagic(message.Magic))
         {
             return ValidationResult.Fail("Invalid protocol magic");
         }
-        
+
         // Version bounds
         if (message.Version < MinVersion || message.Version > MaxVersion)
         {
             return ValidationResult.Fail($"Invalid version: {message.Version} (expected {MinVersion}-{MaxVersion})");
         }
-        
+
         // Username validation - CRITICAL for security
         var usernameResult = ValidateUsername(message.Username);
         if (!usernameResult.IsValid)
         {
             return usernameResult;
         }
-        
+
         // Features validation
         var featuresResult = ValidateFeatures(message.Features);
         if (!featuresResult.IsValid)
         {
             return featuresResult;
         }
-        
+
         // Ports validation
         if (message.SoulseekPorts is not null)
         {
@@ -159,7 +159,7 @@ public static partial class MessageValidator
                 return portsResult;
             }
         }
-        
+
         // Nonce validation (optional)
         if (message.Nonce is not null)
         {
@@ -169,10 +169,10 @@ public static partial class MessageValidator
                 return nonceResult;
             }
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a mesh hello ack message.
     /// </summary>
@@ -182,29 +182,29 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Message is null");
         }
-        
+
         if (!ValidateMagic(message.Magic))
         {
             return ValidationResult.Fail("Invalid protocol magic");
         }
-        
+
         if (message.Version < MinVersion || message.Version > MaxVersion)
         {
             return ValidationResult.Fail($"Invalid version: {message.Version}");
         }
-        
+
         var usernameResult = ValidateUsername(message.Username);
         if (!usernameResult.IsValid)
         {
             return usernameResult;
         }
-        
+
         var featuresResult = ValidateFeatures(message.Features);
         if (!featuresResult.IsValid)
         {
             return featuresResult;
         }
-        
+
         if (message.SoulseekPorts is not null)
         {
             var portsResult = ValidatePorts(message.SoulseekPorts);
@@ -213,7 +213,7 @@ public static partial class MessageValidator
                 return portsResult;
             }
         }
-        
+
         if (message.NonceEcho is not null)
         {
             var nonceResult = ValidateNonce(message.NonceEcho);
@@ -222,10 +222,10 @@ public static partial class MessageValidator
                 return nonceResult;
             }
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a ping message.
     /// </summary>
@@ -235,12 +235,12 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Message is null");
         }
-        
+
         if (!ValidateMagic(message.Magic))
         {
             return ValidationResult.Fail("Invalid protocol magic");
         }
-        
+
         // Timestamp must be reasonable (within last 24 hours to prevent replay)
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var diff = Math.Abs(now - message.Timestamp);
@@ -248,10 +248,10 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Timestamp too old or in future");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a pong message.
     /// </summary>
@@ -261,15 +261,15 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Message is null");
         }
-        
+
         if (!ValidateMagic(message.Magic))
         {
             return ValidationResult.Fail("Invalid protocol magic");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a disconnect message.
     /// </summary>
@@ -279,20 +279,20 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Message is null");
         }
-        
+
         if (!ValidateMagic(message.Magic))
         {
             return ValidationResult.Fail("Invalid protocol magic");
         }
-        
+
         if (message.Reason is not null && message.Reason.Length > MaxReasonLength)
         {
             return ValidationResult.Fail($"Reason too long: {message.Reason.Length} > {MaxReasonLength}");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a Soulseek username.
     /// </summary>
@@ -302,20 +302,20 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Username is empty");
         }
-        
+
         if (username.Length > MaxUsernameLength)
         {
             return ValidationResult.Fail($"Username too long: {username.Length} > {MaxUsernameLength}");
         }
-        
+
         if (!UsernameRegex().IsMatch(username))
         {
             return ValidationResult.Fail("Username contains invalid characters");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a list of features.
     /// </summary>
@@ -325,33 +325,33 @@ public static partial class MessageValidator
         {
             return ValidationResult.Success; // Features are optional
         }
-        
+
         if (features.Count > MaxFeatures)
         {
             return ValidationResult.Fail($"Too many features: {features.Count} > {MaxFeatures}");
         }
-        
+
         foreach (var feature in features)
         {
             if (string.IsNullOrEmpty(feature))
             {
                 return ValidationResult.Fail("Empty feature string");
             }
-            
+
             if (feature.Length > MaxFeatureLength)
             {
                 return ValidationResult.Fail($"Feature too long: {feature.Length} > {MaxFeatureLength}");
             }
-            
+
             if (!FeatureRegex().IsMatch(feature))
             {
                 return ValidationResult.Fail($"Feature contains invalid characters: {feature}");
             }
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates Soulseek ports.
     /// </summary>
@@ -361,15 +361,15 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail($"Invalid peer port: {ports.Peer}");
         }
-        
+
         if (ports.File < 0 || ports.File > MaxPort)
         {
             return ValidationResult.Fail($"Invalid file port: {ports.File}");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a nonce string.
     /// </summary>
@@ -379,15 +379,15 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail($"Nonce too long: {nonce.Length} > {MaxNonceLength}");
         }
-        
+
         if (!NonceRegex().IsMatch(nonce))
         {
             return ValidationResult.Fail("Nonce contains invalid characters");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a FLAC key (16 hex chars = 64-bit truncated hash).
     /// </summary>
@@ -397,20 +397,20 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("FLAC key is empty");
         }
-        
+
         if (key.Length != FlacKeyLength)
         {
             return ValidationResult.Fail($"FLAC key wrong length: {key.Length} != {FlacKeyLength}");
         }
-        
+
         if (!HexRegex().IsMatch(key))
         {
             return ValidationResult.Fail("FLAC key is not valid hex");
         }
-        
+
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates a SHA256 hash (64 hex chars).
     /// </summary>
@@ -420,17 +420,17 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("Hash is empty");
         }
-        
+
         if (hash.Length != Sha256HexLength)
         {
             return ValidationResult.Fail($"Hash wrong length: {hash.Length} != {Sha256HexLength}");
         }
-        
+
         if (!HexRegex().IsMatch(hash))
         {
             return ValidationResult.Fail("Hash is not valid hex");
         }
-        
+
         return ValidationResult.Success;
     }
 
@@ -545,7 +545,7 @@ public static partial class MessageValidator
 
         return ValidationResult.Success;
     }
-    
+
     /// <summary>
     /// Validates file size is reasonable.
     /// </summary>
@@ -555,13 +555,13 @@ public static partial class MessageValidator
         {
             return ValidationResult.Fail("File size must be positive");
         }
-        
+
         // Max 10 GB - reasonable for FLAC files
         if (size > 10_000_000_000)
         {
             return ValidationResult.Fail($"File size too large: {size}");
         }
-        
+
         return ValidationResult.Success;
     }
 }
@@ -575,31 +575,30 @@ public readonly struct ValidationResult
     /// Whether the validation passed.
     /// </summary>
     public bool IsValid { get; }
-    
+
     /// <summary>
     /// Error message if validation failed.
     /// </summary>
     public string? Error { get; }
-    
+
     private ValidationResult(bool isValid, string? error)
     {
         IsValid = isValid;
         Error = error;
     }
-    
+
     /// <summary>
     /// Successful validation result.
     /// </summary>
     public static ValidationResult Success => new(true, null);
-    
+
     /// <summary>
     /// Create a failed validation result.
     /// </summary>
     public static ValidationResult Fail(string error) => new(false, error);
-    
+
     /// <summary>
     /// Implicit conversion to bool.
     /// </summary>
     public static implicit operator bool(ValidationResult result) => result.IsValid;
 }
-

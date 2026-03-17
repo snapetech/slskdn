@@ -187,6 +187,7 @@ public sealed class EntropyMonitor : IDisposable
 
         // Test 4: Chi-square test for uniform distribution
         var chiSquare = CalculateChiSquare(largeSample);
+
         // For 255 degrees of freedom, critical value at p=0.01 is ~310
         // and at p=0.99 is ~198. Values outside this range suggest non-randomness.
         if (chiSquare < 180 || chiSquare > 330)
@@ -470,4 +471,3 @@ public sealed class RngHealthCheck
     /// <summary>Gets any issues detected.</summary>
     public required List<string> Issues { get; init; }
 }
-

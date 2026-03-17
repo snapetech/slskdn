@@ -67,7 +67,7 @@ namespace slskd.VirtualSoulfind.v2.Intents
         ///     - Which backends will be tried
         ///     - What order
         ///     - Constraints
-        ///     
+        ///
         ///     This is for observability/debugging, not execution.
         /// </remarks>
         public string? PlannedSources { get; init; }

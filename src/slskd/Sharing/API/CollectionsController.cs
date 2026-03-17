@@ -65,6 +65,7 @@ public class CollectionsController : ControllerBase
 
         return string.Empty;
     }
+
     private bool Enabled => _options.CurrentValue.Feature.CollectionsSharing;
 
     [HttpGet]
@@ -74,6 +75,7 @@ public class CollectionsController : ControllerBase
     {
         if (!Enabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+
         // If we can't determine user identity, return empty list instead of error
         if (string.IsNullOrWhiteSpace(currentUserId))
             return Ok(new List<Collection>());
@@ -113,7 +115,7 @@ public class CollectionsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCollectionRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
-        if (string.IsNullOrWhiteSpace(req.Title)) 
+        if (string.IsNullOrWhiteSpace(req.Title))
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Title is required.", Detail = "Title is required." });
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))

@@ -28,7 +28,7 @@ namespace slskd.Mesh.Realm
         /// </remarks>
         [MinLength(1, ErrorMessage = "At least one realm configuration is required.")]
         public RealmConfig[] Realms { get; set; } = new[]
-        {
+                {
             new RealmConfig
             {
                 Id = "default-realm-v1",
@@ -210,7 +210,7 @@ namespace slskd.Mesh.Realm
         {
             "governance:root",    // Never allow root governance changes across realms
             "replication:fullcopy", // Never allow full database copies
-            "mcp:control"         // Never allow moderation control across realms
+            "mcp:control" // Never allow moderation control across realms
         };
 
         /// <summary>
@@ -250,4 +250,3 @@ namespace slskd.Mesh.Realm
         }
     }
 }
-

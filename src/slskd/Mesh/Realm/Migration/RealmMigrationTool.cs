@@ -331,6 +331,7 @@ namespace slskd.Mesh.Realm.Migration
         {
             // Export sanitized configuration
             var configPath = Path.Combine(exportPath, "configuration.json");
+
             // Implementation would export configuration without secrets
             result.IncludedData.Add("Pod configuration (sanitized)");
             await Task.CompletedTask;
@@ -633,5 +634,3 @@ namespace slskd.Mesh.Realm.Migration
         public TimeSpan EstimatedDuration { get; set; }
     }
 }
-
-

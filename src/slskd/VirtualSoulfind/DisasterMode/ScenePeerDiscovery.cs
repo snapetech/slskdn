@@ -15,7 +15,7 @@ public interface IScenePeerDiscovery
     /// Discover peers from joined scenes (fallback when DHT is sparse).
     /// </summary>
     Task<List<string>> DiscoverPeersAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Discover peers for specific content from scenes.
     /// </summary>

@@ -66,7 +66,7 @@ public class SignalBusTests
     {
         // Arrange
         var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
-        
+
         var failingHandlerMock = new Mock<ISignalChannelHandler>();
         failingHandlerMock.Setup(x => x.CanSendTo(It.IsAny<string>())).Returns(true);
         failingHandlerMock.Setup(x => x.SendAsync(It.IsAny<Signal>(), It.IsAny<CancellationToken>()))
@@ -95,7 +95,7 @@ public class SignalBusTests
     {
         // Arrange
         var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
-        
+
         var unavailableHandlerMock = new Mock<ISignalChannelHandler>();
         unavailableHandlerMock.Setup(x => x.CanSendTo(It.IsAny<string>())).Returns(false);
 
@@ -149,7 +149,7 @@ public class SignalBusTests
         // Arrange
         var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
         var receivedSignals = new List<Signal>();
-        
+
         await signalBus.SubscribeAsync((signal, ct) =>
         {
             receivedSignals.Add(signal);
@@ -178,7 +178,7 @@ public class SignalBusTests
         // Arrange
         var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
         var receivedSignals = new List<Signal>();
-        
+
         await signalBus.SubscribeAsync((signal, ct) =>
         {
             receivedSignals.Add(signal);
@@ -206,7 +206,7 @@ public class SignalBusTests
         // Arrange
         var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
         var receivedSignals = new List<Signal>();
-        
+
         await signalBus.SubscribeAsync((signal, ct) =>
         {
             receivedSignals.Add(signal);

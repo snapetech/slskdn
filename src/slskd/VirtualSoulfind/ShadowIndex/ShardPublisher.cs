@@ -144,6 +144,7 @@ public class ShardPublisher : BackgroundService, IShardPublisher
         }
 
         var options = optionsMonitor.CurrentValue;
+
         // Limit to reasonable number per cycle to avoid overwhelming DHT
         var maxShardsPerCycle = options.VirtualSoulfind?.ShadowIndex?.MaxShardsPerPublish > 0
             ? options.VirtualSoulfind.ShadowIndex.MaxShardsPerPublish

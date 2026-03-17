@@ -511,4 +511,3 @@ public enum PathViolationType
     /// <summary>Path escaped the root directory.</summary>
     EscapedRoot,
 }
-

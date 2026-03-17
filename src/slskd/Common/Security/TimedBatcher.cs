@@ -173,5 +173,3 @@ public class TimedBatcher : IMessageBatcher
         }
     }
 }
-
-

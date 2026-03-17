@@ -461,4 +461,3 @@ public sealed class FingerprintStats
     /// <summary>Gets or sets current size of the event log.</summary>
     public int EventLogSize { get; init; }
 }
-

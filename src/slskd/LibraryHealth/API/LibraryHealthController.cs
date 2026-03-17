@@ -42,8 +42,8 @@ namespace slskd.LibraryHealth.API
         [HttpPost("scans")]
         [Authorize]
         public async Task<ActionResult<StartScanResponse>> StartScan(
-            [FromBody] LibraryHealthScanRequest request,
-            CancellationToken ct)
+        [FromBody] LibraryHealthScanRequest request,
+                    CancellationToken ct)
         {
             log.LogInformation("Starting library health scan for path: {Path}", request.LibraryPath);
 
@@ -65,8 +65,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("scans/{scanId}")]
         [Authorize]
         public async Task<ActionResult<LibraryHealthScan>> GetScanStatus(
-            string scanId,
-            CancellationToken ct)
+                    string scanId,
+                    CancellationToken ct)
         {
             var scan = await libraryHealth.GetScanStatusAsync(scanId, ct);
 
@@ -87,8 +87,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("summary")]
         [Authorize]
         public async Task<ActionResult<LibraryHealthSummary>> GetSummary(
-            [FromQuery] string libraryPath,
-            CancellationToken ct)
+        [FromQuery] string libraryPath,
+                    CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(libraryPath))
             {
@@ -111,8 +111,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues")]
         [Authorize]
         public async Task<ActionResult<IssuesResponse>> GetIssues(
-            [FromQuery] LibraryHealthIssueFilter filter,
-            CancellationToken ct)
+        [FromQuery] LibraryHealthIssueFilter filter,
+                    CancellationToken ct)
         {
             log.LogInformation(
                 "Getting library health issues: Types={Types}, Severities={Severities}, Statuses={Statuses}, Limit={Limit}",
@@ -140,8 +140,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues/by-type")]
         [Authorize]
         public async Task<ActionResult<IssuesByTypeResponse>> GetIssuesByType(
-            [FromQuery] string libraryPath,
-            CancellationToken ct)
+        [FromQuery] string libraryPath,
+                    CancellationToken ct)
         {
             var filter = new LibraryHealthIssueFilter { LibraryPath = libraryPath };
             var issues = await libraryHealth.GetIssuesAsync(filter, ct);
@@ -174,8 +174,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues/by-artist")]
         [Authorize]
         public async Task<ActionResult<IssuesByArtistResponse>> GetIssuesByArtist(
-            [FromQuery] int limit = 20,
-            CancellationToken ct = default)
+        [FromQuery] int limit = 20,
+                    CancellationToken ct = default)
         {
             var filter = new LibraryHealthIssueFilter();
             var issues = await libraryHealth.GetIssuesAsync(filter, ct);
@@ -210,8 +210,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues/by-release")]
         [Authorize]
         public async Task<ActionResult<IssuesByReleaseResponse>> GetIssuesByRelease(
-            [FromQuery] int limit = 20,
-            CancellationToken ct = default)
+        [FromQuery] int limit = 20,
+                    CancellationToken ct = default)
         {
             var filter = new LibraryHealthIssueFilter();
             var issues = await libraryHealth.GetIssuesAsync(filter, ct);
@@ -291,9 +291,9 @@ namespace slskd.LibraryHealth.API
         [HttpPatch("issues/{issueId}")]
         [Authorize]
         public async Task<IActionResult> UpdateIssueStatus(
-            string issueId,
-            [FromBody] UpdateIssueStatusRequest request,
-            CancellationToken ct)
+                    string issueId,
+        [FromBody] UpdateIssueStatusRequest request,
+                    CancellationToken ct)
         {
             log.LogInformation("Updating issue {IssueId} status to {Status}", issueId, request.Status);
 
@@ -311,8 +311,8 @@ namespace slskd.LibraryHealth.API
         [HttpPost("issues/fix")]
         [Authorize]
         public async Task<ActionResult<RemediationResponse>> CreateRemediationJob(
-            [FromBody] RemediationRequest request,
-            CancellationToken ct)
+        [FromBody] RemediationRequest request,
+                    CancellationToken ct)
         {
             log.LogInformation("Creating remediation job for {Count} issues", request.IssueIds.Count);
 

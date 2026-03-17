@@ -26,14 +26,14 @@ namespace slskd.VirtualSoulfind.v2.Matching
     /// </summary>
     /// <remarks>
     ///     The match engine determines if a candidate file is the right file for a catalogue track.
-    ///     
+    ///
     ///     Match strategies (in order of strength):
     ///     1. Hash match (SHA256) - EXACT
     ///     2. Chromaprint match - VERY STRONG
     ///     3. MBID + duration + size - STRONG
     ///     4. Title + artist + duration tolerance - MEDIUM
     ///     5. Filename heuristics - WEAK
-    ///     
+    ///
     ///     The engine is conservative:
     ///     - Prefer false negatives over false positives
     ///     - Medium confidence is minimum for auto-download

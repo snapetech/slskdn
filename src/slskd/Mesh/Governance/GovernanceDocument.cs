@@ -125,8 +125,6 @@ namespace slskd.Mesh.Governance
         /// </summary>
         [JsonPropertyName("properties")]
         public System.Collections.Generic.Dictionary<string, object> Properties { get; set; }
-            = new System.Collections.Generic.Dictionary<string, object>();
+                    = new System.Collections.Generic.Dictionary<string, object>();
     }
 }
-
-

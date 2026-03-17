@@ -42,9 +42,9 @@ public class DescriptorRetrieverController : ControllerBase
     /// <returns>The descriptor retrieval result.</returns>
     [HttpGet("descriptor/{*contentId}")]
     public async Task<IActionResult> RetrieveDescriptor(
-        string contentId,
-        [FromQuery] bool bypassCache = false,
-        CancellationToken cancellationToken = default)
+            string contentId,
+    [FromQuery] bool bypassCache = false,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
         {
@@ -115,10 +115,10 @@ public class DescriptorRetrieverController : ControllerBase
     /// <returns>Query results.</returns>
     [HttpGet("query/domain/{domain}")]
     public async Task<IActionResult> QueryByDomain(
-        string domain,
-        [FromQuery] string? type = null,
-        [FromQuery] int maxResults = 50,
-        CancellationToken cancellationToken = default)
+            string domain,
+    [FromQuery] string? type = null,
+    [FromQuery] int maxResults = 50,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(domain))
         {
@@ -234,4 +234,3 @@ public record BatchRetrievalRequest(IReadOnlyList<string> ContentIds);
 public record VerifyDescriptorRequest(
     ContentDescriptor Descriptor,
     DateTimeOffset? RetrievedAt = null);
-

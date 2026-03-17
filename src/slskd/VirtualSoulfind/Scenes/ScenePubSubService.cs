@@ -19,17 +19,17 @@ public interface IScenePubSubService
     /// Subscribe to a scene's pubsub topic.
     /// </summary>
     Task SubscribeAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Unsubscribe from a scene's pubsub topic.
     /// </summary>
     Task UnsubscribeAsync(string sceneId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publish a message to a scene.
     /// </summary>
     Task PublishAsync(string sceneId, byte[] message, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Event fired when a message is received.
     /// </summary>
@@ -103,7 +103,7 @@ public class ScenePubSubService : IScenePubSubService
 
         // Phase 6C: T-816 - Store message in DHT with scene-specific key
         var key = VirtualSoulfind.ShadowIndex.DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}:{Ulid.NewUlid()}");
-        
+
         // Store with short TTL (5 minutes) - messages are ephemeral
         await dht.PutAsync(key, message, ttlSeconds: 300, ct);
 

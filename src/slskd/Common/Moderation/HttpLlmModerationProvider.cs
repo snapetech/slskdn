@@ -95,7 +95,6 @@ namespace slskd.Common.Moderation
                 {
                     // Check if we should make the request (basic rate limiting)
                     // In a production system, this would use a proper rate limiter
-
                     var response = await MakeModerationRequestAsync(request, cancellationToken);
                     var processingTime = _requestTimer.Elapsed;
 
@@ -430,5 +429,3 @@ Respond with JSON as described above.",
         }
     }
 }
-
-

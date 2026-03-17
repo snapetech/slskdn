@@ -22,7 +22,7 @@ using Soulseek;
 [ApiController]
 [Route("api")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class DownloadsCompatibilityController : ControllerBase
 {
     private readonly IDownloadService downloadService;
@@ -45,8 +45,8 @@ public class DownloadsCompatibilityController : ControllerBase
     [HttpPost("downloads")]
     [Authorize]
     public async Task<IActionResult> CreateDownloads(
-        [FromBody] DownloadRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] DownloadRequest request,
+            CancellationToken cancellationToken)
     {
         logger.LogInformation("Compatibility download: {ItemCount} items", request.Items?.Count ?? 0);
 
@@ -107,8 +107,8 @@ public class DownloadsCompatibilityController : ControllerBase
     [HttpGet("downloads")]
     [Authorize]
     public async Task<IActionResult> GetDownloads(
-        [FromQuery] string? status,
-        CancellationToken cancellationToken)
+    [FromQuery] string? status,
+            CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting downloads list with status filter: {Status}", status);
 
@@ -158,8 +158,8 @@ public class DownloadsCompatibilityController : ControllerBase
     [HttpGet("downloads/{id}")]
     [Authorize]
     public async Task<IActionResult> GetDownload(
-        string id,
-        CancellationToken cancellationToken)
+            string id,
+            CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting download: {Id}", id);
 

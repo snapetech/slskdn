@@ -43,10 +43,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
         public async Task FULL_STACK_MultipleBackends_MCPFiltering_MatchVerification()
         {
             // ========== ARRANGE: Build the COMPLETE v2 stack ==========
-            
+
             // 1. Catalogue with full hierarchy
             var catalogueStore = new InMemoryCatalogueStore();
-            
+
             var artistId = "artist:radiohead";
             await catalogueStore.UpsertArtistAsync(new Artist
             {
@@ -108,7 +108,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             var mockShareRepo = new Mock<IShareRepository>();
             mockShareRepo.Setup(r => r.FindContentItem(trackId))
                 .Returns(("Music", releaseGroupId, "02_Paranoid_Android.flac", true, string.Empty, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-            
+
             var localBackend = new LocalLibraryBackend(mockShareRepo.Object);
 
             var itemId = ContentItemId.Parse(trackId);
@@ -207,7 +207,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             // MCP was called for candidates
             mockMcp.Verify(m => m.CheckContentIdAsync(
                 It.IsAny<string>(),
-                It.IsAny<System.Threading.CancellationToken>()), 
+                It.IsAny<System.Threading.CancellationToken>()),
                 Times.AtLeastOnce());
 
             // Match engine verification
@@ -225,7 +225,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             // ========== FUTURE TEST: Prove domain rules work ==========
             // When we add non-music domains, this test will verify that
             // Soulseek is NEVER used for Books/Movies/TV
-            
+
             // For now, just document the test plan:
             Assert.True(true, "✅ Domain rules enforced in planner (line 227 MultiSourcePlanner.cs)");
         }
@@ -235,7 +235,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
         {
             // ========== FUTURE TEST: Work budget integration ==========
             // When we add resolver, this will verify work budgets are respected
-            
+
             // For now, document that planner is ready:
             Assert.True(true, "✅ Planner architecture supports work budget integration (future Phase 2)");
         }

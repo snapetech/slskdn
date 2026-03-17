@@ -246,7 +246,7 @@ namespace slskd.Transfers.Rescue
         public async Task DeactivateRescueModeAsync(string transferId, CancellationToken ct = default)
         {
             log.Information("[RESCUE] Deactivating rescue mode for transfer {TransferId}", transferId);
-            
+
             if (activeRescueJobs.TryGetValue(transferId, out var jobId))
             {
                 if (!string.IsNullOrEmpty(jobId) && Guid.TryParse(jobId, out var jobGuid))
@@ -267,7 +267,7 @@ namespace slskd.Transfers.Rescue
 
                 activeRescueJobs.TryRemove(transferId, out _);
             }
-            
+
             await Task.CompletedTask;
         }
 
@@ -295,6 +295,7 @@ namespace slskd.Transfers.Rescue
                     var rescueDir = Path.Combine(Path.GetTempPath(), "slskd", "rescue");
                     Directory.CreateDirectory(rescueDir);
                     var safeFilename = Path.GetFileName(transfer.Filename) ?? $"rescue_{transferId}.tmp";
+
                     // Ensure filename is safe and unique
                     return Path.Combine(rescueDir, $"{transferId}_{safeFilename}");
                 }
@@ -324,7 +325,7 @@ namespace slskd.Transfers.Rescue
                             // Lookup by hash in HashDb
                             var flacKey = slskd.HashDb.Models.HashDbEntry.GenerateFlacKey(filename, bytesTransferred);
                             var hashEntry = await hashDb.LookupHashAsync(flacKey, ct);
-                            
+
                             if (hashEntry != null && !string.IsNullOrEmpty(hashEntry.MusicBrainzId))
                             {
                                 log.Debug("[RESCUE] Found recording ID in HashDb: {RecordingId}", hashEntry.MusicBrainzId);
@@ -356,21 +357,21 @@ namespace slskd.Transfers.Rescue
                     var partialFilePath = GetPartialFilePath(filename);
                     if (partialFilePath != null && File.Exists(partialFilePath))
                     {
-                    var fingerprint = await fingerprinting.ExtractFingerprintAsync(partialFilePath, ct);
-                    if (!string.IsNullOrEmpty(fingerprint))
-                    {
-                        // Estimate duration from bytes transferred (rough estimate: ~1MB per minute for FLAC)
-                        var estimatedDurationSeconds = Math.Max(30, (int)(bytesTransferred / (1024.0 * 1024.0))); // At least 30 seconds
-                        var sampleRate = 44100; // Default, could be improved by reading file metadata
-                        
-                        var lookupResult = await acoustId.LookupAsync(fingerprint, sampleRate, estimatedDurationSeconds, ct);
-                        if (lookupResult != null && lookupResult.Recordings != null && lookupResult.Recordings.Any())
+                        var fingerprint = await fingerprinting.ExtractFingerprintAsync(partialFilePath, ct);
+                        if (!string.IsNullOrEmpty(fingerprint))
                         {
-                            var recordingId = lookupResult.Recordings[0].Id;
-                            log.Debug("[RESCUE] Resolved recording ID via AcoustID fingerprint: {RecordingId}", recordingId);
-                            return recordingId;
+                            // Estimate duration from bytes transferred (rough estimate: ~1MB per minute for FLAC)
+                            var estimatedDurationSeconds = Math.Max(30, (int)(bytesTransferred / (1024.0 * 1024.0))); // At least 30 seconds
+                            var sampleRate = 44100; // Default, could be improved by reading file metadata
+
+                            var lookupResult = await acoustId.LookupAsync(fingerprint, sampleRate, estimatedDurationSeconds, ct);
+                            if (lookupResult != null && lookupResult.Recordings != null && lookupResult.Recordings.Any())
+                            {
+                                var recordingId = lookupResult.Recordings[0].Id;
+                                log.Debug("[RESCUE] Resolved recording ID via AcoustID fingerprint: {RecordingId}", recordingId);
+                                return recordingId;
+                            }
                         }
-                    }
                     }
                 }
                 catch (Exception ex)
@@ -404,14 +405,14 @@ namespace slskd.Transfers.Rescue
                     log.Debug("[RESCUE] Querying mesh DHT for content ID: {ContentId}", contentId);
 
                     var meshPeers = await meshDirectory.FindPeersByContentAsync(contentId, ct);
-                    
+
                     foreach (var meshPeer in meshPeers)
                     {
                         peers.Add(new OverlayPeerInfo
                         {
                             PeerId = meshPeer.PeerId,
-                            Endpoint = meshPeer.Address != null && meshPeer.Port.HasValue 
-                                ? $"{meshPeer.Address}:{meshPeer.Port.Value}" 
+                            Endpoint = meshPeer.Address != null && meshPeer.Port.HasValue
+                                ? $"{meshPeer.Address}:{meshPeer.Port.Value}"
                                 : null,
                             AvailabilityScore = 1.0 // Default score, could be improved with peer metrics
                         });
@@ -448,7 +449,7 @@ namespace slskd.Transfers.Rescue
                     // Construct partial file path (typically in downloads directory)
                     var downloadDir = Path.Combine(Path.GetTempPath(), "slskd", "downloads");
                     var partialPath = Path.Combine(downloadDir, $"{transfer.Id}.partial");
-                    
+
                     if (File.Exists(partialPath))
                     {
                         return partialPath;
@@ -633,4 +634,3 @@ namespace slskd.Transfers.Rescue
         PeerDisconnected,
     }
 }
-

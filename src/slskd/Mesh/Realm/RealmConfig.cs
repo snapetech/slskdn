@@ -29,7 +29,7 @@ namespace slskd.Mesh.Realm
         /// </remarks>
         [NotNullOrWhiteSpace]
         [RegularExpression(@"^[a-zA-Z0-9\-_\.]{3,64}$",
-            ErrorMessage = "Realm ID must be 3-64 characters, containing only letters, numbers, hyphens, underscores, and periods.")]
+                    ErrorMessage = "Realm ID must be 3-64 characters, containing only letters, numbers, hyphens, underscores, and periods.")]
         public string Id { get; set; } = "default-realm-v1";
 
         /// <summary>
@@ -261,4 +261,3 @@ namespace slskd.Mesh.Realm
         }
     }
 }
-

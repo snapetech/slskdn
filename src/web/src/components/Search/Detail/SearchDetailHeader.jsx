@@ -1,7 +1,7 @@
 import SearchStatusIcon from '../SearchStatusIcon';
 import React from 'react';
 import { useMediaQuery } from 'react-responsive';
-import { Button, Header, Icon, Segment } from 'semantic-ui-react';
+import { Button, Header, Icon, Popup, Segment } from 'semantic-ui-react';
 
 const RefreshButton = ({
   creating,
@@ -55,6 +55,7 @@ const SearchDetailHeader = ({
   loaded,
   loading,
   onCreate,
+  onOpenGraph,
   onRemove,
   onStop,
   removing,
@@ -90,50 +91,111 @@ const SearchDetailHeader = ({
         </Header>
         {!isTinyScreen && (
           <div className="search-detail-header-buttons">
-            <RefreshButton
-              creating={creating}
-              disabled={disabled}
-              isSmallScreen={isSmallScreen}
-              isTinyScreen={isTinyScreen}
-              loaded={loaded}
-              onCreate={onCreate}
-              searchText={searchText}
-              working={working}
+            <Popup
+              content="Run the same search again and refresh the result pool."
+              position="top center"
+              trigger={
+                <span>
+                  <RefreshButton
+                    creating={creating}
+                    disabled={disabled}
+                    isSmallScreen={isSmallScreen}
+                    isTinyScreen={isTinyScreen}
+                    loaded={loaded}
+                    onCreate={onCreate}
+                    searchText={searchText}
+                    working={working}
+                  />
+                </span>
+              }
             />
-            <StopOrDeleteButton
-              isComplete={isComplete}
-              isSmallScreen={isSmallScreen}
-              isTinyScreen={isTinyScreen}
-              loaded={loaded}
-              removing={removing}
-              stopOrRemove={stopOrRemove}
-              stopping={stopping}
-              working={working}
+            <Popup
+              content="Open a Discovery Graph around this search phrase so the result set becomes a navigable neighborhood."
+              position="top center"
+              trigger={
+                <span>
+                  <Button
+                    disabled={!loaded}
+                    icon={isSmallScreen && !isTinyScreen}
+                    onClick={onOpenGraph}
+                    style={{ marginLeft: '0.5em' }}
+                  >
+                    <Icon name="crosshairs" />
+                    {(!isSmallScreen || isTinyScreen) && 'Discovery Graph'}
+                  </Button>
+                </span>
+              }
+            />
+            <Popup
+              content={isComplete ? 'Delete this finished search.' : 'Stop this in-progress search.'}
+              position="top center"
+              trigger={
+                <span>
+                  <StopOrDeleteButton
+                    isComplete={isComplete}
+                    isSmallScreen={isSmallScreen}
+                    isTinyScreen={isTinyScreen}
+                    loaded={loaded}
+                    removing={removing}
+                    stopOrRemove={stopOrRemove}
+                    stopping={stopping}
+                    working={working}
+                  />
+                </span>
+              }
             />
           </div>
         )}
       </Segment>
       {isTinyScreen && (
         <Segment>
-          <RefreshButton
-            creating={creating}
-            disabled={disabled}
-            isSmallScreen={isSmallScreen}
-            isTinyScreen={isTinyScreen}
-            loaded={loaded}
-            onCreate={onCreate}
-            searchText={searchText}
-            working={working}
+          <Popup
+            content="Run the same search again and refresh the result pool."
+            position="top center"
+            trigger={
+              <span>
+                <RefreshButton
+                  creating={creating}
+                  disabled={disabled}
+                  isSmallScreen={isSmallScreen}
+                  isTinyScreen={isTinyScreen}
+                  loaded={loaded}
+                  onCreate={onCreate}
+                  searchText={searchText}
+                  working={working}
+                />
+              </span>
+            }
           />
-          <StopOrDeleteButton
-            isComplete={isComplete}
-            isSmallScreen={isSmallScreen}
-            isTinyScreen={isTinyScreen}
-            loaded={loaded}
-            removing={removing}
-            stopOrRemove={stopOrRemove}
-            stopping={stopping}
-            working={working}
+          <Popup
+            content="Open a Discovery Graph around this search phrase so the result set becomes a navigable neighborhood."
+            position="top center"
+            trigger={
+              <span>
+                <Button disabled={!loaded} onClick={onOpenGraph}>
+                  <Icon name="crosshairs" />
+                  Discovery Graph
+                </Button>
+              </span>
+            }
+          />
+          <Popup
+            content={isComplete ? 'Delete this finished search.' : 'Stop this in-progress search.'}
+            position="top center"
+            trigger={
+              <span>
+                <StopOrDeleteButton
+                  isComplete={isComplete}
+                  isSmallScreen={isSmallScreen}
+                  isTinyScreen={isTinyScreen}
+                  loaded={loaded}
+                  removing={removing}
+                  stopOrRemove={stopOrRemove}
+                  stopping={stopping}
+                  working={working}
+                />
+              </span>
+            }
           />
         </Segment>
       )}

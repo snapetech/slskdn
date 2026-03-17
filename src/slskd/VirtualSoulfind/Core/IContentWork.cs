@@ -79,4 +79,3 @@ namespace slskd.VirtualSoulfind.Core
         int? Year { get; }
     }
 }
-

@@ -334,6 +334,7 @@ namespace slskd.Shares
                                     catch (Exception ex)
                                     {
                                         Log.Error(ex, "[SECURITY] MCP check failed for file | Filename={Filename}", Path.GetFileName(originalFilename));
+
                                         // Note: Continue with isBlocked=false per failsafe logic in CompositeModerationProvider
                                     }
 

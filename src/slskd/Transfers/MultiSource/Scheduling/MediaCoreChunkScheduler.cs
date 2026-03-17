@@ -22,7 +22,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
     private readonly IDescriptorRetriever _descriptorRetriever;
     private readonly IFuzzyMatcher _fuzzyMatcher;
     private readonly IContentIdRegistry _contentRegistry;
-    
+
     // T-1405: Track active chunk assignments for reassignment
     private readonly System.Collections.Concurrent.ConcurrentDictionary<int, string> _activeAssignments = new(); // chunkIndex -> peerId
 
@@ -158,10 +158,10 @@ public class MediaCoreChunkScheduler : IChunkScheduler
 
                 // Select the best peer
                 var selectedPeer = adjustedScores.OrderByDescending(ps => ps.Score).First();
-                
+
                 // T-1405: Register assignment for tracking
                 RegisterAssignment(request.ChunkIndex, selectedPeer.Username);
-                
+
                 assignments.Add(new ChunkAssignment
                 {
                     ChunkIndex = request.ChunkIndex,
@@ -408,6 +408,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
                 return potentialId;
             }
         }
+
         return null;
     }
 
@@ -505,7 +506,6 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         // 2. Adjust future peer scoring based on degradation history
         // 3. Trigger re-evaluation of optimal swarm configuration
         // 4. Log degradation patterns for content-specific optimization
-
         return chunksToReassign;
     }
 

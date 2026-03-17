@@ -196,5 +196,3 @@ namespace slskd.Common.Security
     /// </summary>
     public sealed record LoggingSafeContext(string Context, string Id);
 }
-
-

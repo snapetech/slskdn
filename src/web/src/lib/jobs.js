@@ -47,6 +47,34 @@ export const getJob = async (jobId) => {
   return response.data;
 };
 
+export const createDiscographyJob = async ({
+  artistId,
+  profile = 'CoreDiscography',
+  targetDirectory = '',
+}) => {
+  const response = await api.post('/api/jobs/discography', {
+    artistId,
+    profile,
+    targetDirectory,
+  });
+  return response.data;
+};
+
+export const createMbReleaseJob = async ({
+  mbReleaseId,
+  targetDir = '',
+  tracks = 'all',
+  constraints = null,
+}) => {
+  const response = await api.post('/api/jobs/mb-release', {
+    mbReleaseId,
+    targetDir,
+    tracks,
+    constraints,
+  });
+  return response.data;
+};
+
 /**
  * Get active swarm download jobs.
  * @returns {Promise<Array>} List of active swarm jobs

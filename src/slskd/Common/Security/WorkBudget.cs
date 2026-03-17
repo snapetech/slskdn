@@ -238,6 +238,7 @@ public class PeerWorkBudgetTracker
                         WindowStart = now
                     };
                 }
+
                 return existing;
             });
 

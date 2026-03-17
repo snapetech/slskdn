@@ -74,6 +74,7 @@ public class StreamsController : ControllerBase
             if (auth != null && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 tokenRaw = auth.Substring("Bearer ".Length).Trim();
         }
+
         if (!string.IsNullOrEmpty(tokenRaw))
         {
             var toValidate = tokenRaw.StartsWith("share:", StringComparison.OrdinalIgnoreCase)

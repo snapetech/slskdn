@@ -37,7 +37,7 @@ using Serilog;
 [ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class MetricsController : ControllerBase
 {
     /// <summary>
@@ -66,7 +66,7 @@ public class MetricsController : ControllerBase
     ///     * process_start_time_seconds = unix timestamp of start time.
     /// </summary>
     private List<Regex> KpiRegexes { get; } =
-    [
+[
         new Regex("slskd_.*", RegexOptions.Compiled),
         new Regex("node_(?!cpu)", RegexOptions.Compiled),
         new Regex("process_.*", RegexOptions.Compiled),

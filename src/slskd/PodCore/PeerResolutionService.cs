@@ -100,6 +100,7 @@ public class PeerResolutionService : IPeerResolutionService
         catch (Exception ex)
         {
             logger.LogWarning(ex, "[PeerResolution] Error resolving peer {PeerId} to username", peerId);
+
             // Fallback to peer ID
             return peerId;
         }

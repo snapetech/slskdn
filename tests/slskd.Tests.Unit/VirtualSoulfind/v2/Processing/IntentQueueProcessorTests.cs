@@ -90,7 +90,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
 
             _mockIntentQueue
                 .Setup(q => q.GetTrackIntentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string id, CancellationToken _) => 
+                .ReturnsAsync((string id, CancellationToken _) =>
                     id == "intent1" ? intent1 : intent2);
 
             var now = DateTimeOffset.UtcNow;

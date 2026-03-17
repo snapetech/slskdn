@@ -282,6 +282,7 @@ namespace slskd.Common.CodeQuality
                     {
                         analysis.AnalysisNotes.Add($"Method {methodName} not found in type {type.FullName}");
                     }
+
                     break;
                 }
             }
@@ -510,5 +511,3 @@ namespace slskd.Common.CodeQuality
         public Dictionary<string, int> MostCommonMissingChecks { get; init; } = new();
     }
 }
-
-

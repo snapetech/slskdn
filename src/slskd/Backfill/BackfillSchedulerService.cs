@@ -278,7 +278,7 @@ namespace slskd.Backfill
                         var data = memoryStream.ToArray();
                         bytesRead = data.Length;
                         Array.Copy(data, buffer, Math.Min(data.Length, buffer.Length));
-                        
+
                         // Treat as success if we got enough bytes to parse
                         if (bytesRead >= 42)
                         {
@@ -433,5 +433,3 @@ namespace slskd.Backfill
         }
     }
 }
-
-

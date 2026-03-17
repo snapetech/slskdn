@@ -175,4 +175,3 @@ public static class ContentDomains
     public const string ApplicationGame = "game";
     public const string ApplicationArchive = "archive";
 }
-

@@ -396,4 +396,3 @@ public sealed class CanaryStats
     /// <summary>Gets unique users tracked.</summary>
     public int UniqueUsersTracked { get; init; }
 }
-

@@ -60,6 +60,3 @@ namespace slskd.HashDb.Models
         public string? DiscogsId { get; set; }
     }
 }
-
-
-

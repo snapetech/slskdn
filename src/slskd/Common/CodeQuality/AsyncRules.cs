@@ -100,7 +100,6 @@ namespace slskd.Common.CodeQuality
             // 2. Check for proper async/await usage
             // 3. Verify cancellation token propagation
             // 4. Detect blocking calls in async contexts
-
             return violations;
         }
 
@@ -255,5 +254,3 @@ namespace slskd.Common.CodeQuality
         Critical
     }
 }
-
-

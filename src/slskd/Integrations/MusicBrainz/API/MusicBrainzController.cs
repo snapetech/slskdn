@@ -48,8 +48,8 @@ namespace slskd.Integrations.MusicBrainz.API
         /// </summary>
         [HttpPost("targets")]
         public async Task<IActionResult> ResolveTarget(
-            [FromBody] MusicBrainzTargetRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] MusicBrainzTargetRequest request,
+                    CancellationToken cancellationToken)
         {
             if (Program.IsRelayAgent)
             {
@@ -89,6 +89,7 @@ namespace slskd.Integrations.MusicBrainz.API
             {
                 await hashDbService.UpsertAlbumTargetAsync(album, cancellationToken).ConfigureAwait(false);
             }
+
             return Ok(new MusicBrainzTargetResponse
             {
                 Album = album,
@@ -182,9 +183,9 @@ namespace slskd.Integrations.MusicBrainz.API
         /// </summary>
         [HttpGet("artist/{artistId}/release-graph")]
         public async Task<ActionResult<ArtistReleaseGraph>> GetReleaseGraph(
-            string artistId,
-            [FromQuery] bool forceRefresh = false,
-            CancellationToken cancellationToken = default)
+                    string artistId,
+        [FromQuery] bool forceRefresh = false,
+                    CancellationToken cancellationToken = default)
         {
             var graph = await releaseGraphService.GetArtistReleaseGraphAsync(artistId, forceRefresh, cancellationToken).ConfigureAwait(false);
             if (graph == null)
@@ -196,4 +197,3 @@ namespace slskd.Integrations.MusicBrainz.API
         }
     }
 }
-

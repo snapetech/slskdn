@@ -7,11 +7,15 @@ namespace slskd.Tests;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +23,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using slskd;
 using slskd.API.Mesh;
+using slskd.Authentication;
 using slskd.Mesh.ServiceFabric;
 
 /// <summary>
@@ -78,13 +83,37 @@ public class MeshGatewayTestHostFactory : WebApplicationFactory<ProgramStub>
                         o.SubstituteApiVersionInUrl = true;
                     });
 
+                    services.AddAuthentication(PassthroughAuthentication.AuthenticationScheme)
+                        .AddScheme<PassthroughAuthenticationOptions, PassthroughAuthenticationHandler>(
+                            PassthroughAuthentication.AuthenticationScheme,
+                            o =>
+                            {
+                                o.Username = "mesh-gateway-test";
+                                o.Role = Role.Administrator;
+                                o.AllowRemoteNoAuth = true;
+                            });
+                    services.AddAuthorization();
+
                     services.AddControllers()
+                        .ConfigureApplicationPartManager(manager =>
+                        {
+                            var existing = manager.FeatureProviders
+                                .OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList();
+                            foreach (var provider in existing)
+                            {
+                                manager.FeatureProviders.Remove(provider);
+                            }
+
+                            manager.FeatureProviders.Add(new slskd.Common.CodeQuality.SafeControllerFeatureProvider());
+                        })
                         .AddApplicationPart(typeof(MeshGatewayController).Assembly);
                 });
                 web.Configure(app =>
                 {
                     app.UseMiddleware<MeshGatewayAuthMiddleware>();
                     app.UseRouting();
+                    app.UseAuthentication();
+                    app.UseAuthorization();
                     app.UseEndpoints(e => e.MapControllers());
                 });
             });

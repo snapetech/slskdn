@@ -28,22 +28,22 @@ public interface IMeshTransferService
         long fileSize,
         string targetPath,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get transfer status.
     /// </summary>
     Task<MeshTransferStatus?> GetTransferStatusAsync(string transferId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Cancel a transfer.
     /// </summary>
     Task CancelTransferAsync(string transferId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get all active transfers.
     /// </summary>
     Task<List<MeshTransferStatus>> GetActiveTransfersAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Subscribe to transfer progress updates.
     /// </summary>
@@ -361,7 +361,7 @@ public class MeshTransferService : IMeshTransferService
         var computedHashHex = BitConverter.ToString(computedHash).Replace("-", "").ToLowerInvariant();
 
         // Compare with expected hash
-        if (!string.IsNullOrEmpty(status.FileHash) && 
+        if (!string.IsNullOrEmpty(status.FileHash) &&
             !computedHashHex.Equals(status.FileHash, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Hash mismatch: expected {status.FileHash}, got {computedHashHex}");

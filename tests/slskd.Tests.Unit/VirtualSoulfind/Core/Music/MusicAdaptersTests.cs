@@ -324,11 +324,11 @@ public class MusicDomainMappingTests
     public void ReleaseIdToContentWorkId_ThrowsOnNullOrEmpty()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.ReleaseIdToContentWorkId(null));
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.ReleaseIdToContentWorkId(""));
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.ReleaseIdToContentWorkId("   "));
     }
 
@@ -339,7 +339,7 @@ public class MusicDomainMappingTests
         var invalidGuid = "not-a-guid";
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.ReleaseIdToContentWorkId(invalidGuid));
     }
 
@@ -347,11 +347,11 @@ public class MusicDomainMappingTests
     public void RecordingIdToContentItemId_ThrowsOnNullOrEmpty()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.RecordingIdToContentItemId(null));
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.RecordingIdToContentItemId(""));
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.RecordingIdToContentItemId("   "));
     }
 
@@ -362,7 +362,7 @@ public class MusicDomainMappingTests
         var invalidGuid = "not-a-guid";
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             MusicDomainMapping.RecordingIdToContentItemId(invalidGuid));
     }
 

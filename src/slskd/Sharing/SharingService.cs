@@ -157,6 +157,7 @@ public sealed class SharingService : ISharingService
         {
             // Try to find owner as a contact (if they're using Identity & Friends)
             var allContacts = await contactService.GetAllAsync(ct).ConfigureAwait(false);
+
             // For now, we can't directly map OwnerUserId to PeerId without additional info
             // This would require storing PeerId in Collection or looking up by some other means
             // For MVP, we'll leave this as a placeholder that can be enhanced later

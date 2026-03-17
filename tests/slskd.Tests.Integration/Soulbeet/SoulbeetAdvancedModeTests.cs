@@ -18,7 +18,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         this.client = factory.CreateClient();
     }
 
-[Fact]
+    [Fact]
     public async Task GetCapabilities_ShouldDetectSlskdn()
     {
         // Act
@@ -27,14 +27,14 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var capabilities = await response.Content.ReadFromJsonAsync<CapabilitiesResponse>();
-        
+
         Assert.NotNull(capabilities);
         Assert.Equal("slskdn", capabilities.Impl);
         Assert.NotNull(capabilities.Version);
         Assert.Contains("mbid_jobs", capabilities.Features);
     }
 
-[Fact]
+    [Fact]
     public async Task GetCapabilities_ShouldReturn404_OnVanillaSlskd()
     {
         // This test would run against vanilla slskd instance
@@ -43,7 +43,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
-[Fact]
+    [Fact]
     public async Task CreateMbReleaseJob_ShouldReturnJobId()
     {
         // Arrange
@@ -67,13 +67,13 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var jobResult = await response.Content.ReadFromJsonAsync<JobResponse>();
-        
+
         Assert.NotNull(jobResult);
         Assert.NotNull(jobResult.JobId);
         Assert.Equal("pending", jobResult.Status);
     }
 
-[Fact]
+    [Fact]
     public async Task CreateDiscographyJob_ShouldReturnJobId()
     {
         // Arrange
@@ -94,12 +94,12 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var jobResult = await response.Content.ReadFromJsonAsync<JobResponse>();
-        
+
         Assert.NotNull(jobResult);
         Assert.NotNull(jobResult.JobId);
     }
 
-[Fact]
+    [Fact]
     public async Task CreateLabelCrateJob_ShouldReturnJobId()
     {
         // Arrange
@@ -117,12 +117,12 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var jobResult = await response.Content.ReadFromJsonAsync<JobResponse>();
-        
+
         Assert.NotNull(jobResult);
         Assert.NotNull(jobResult.JobId);
     }
 
-[Fact]
+    [Fact]
     public async Task GetJobs_ShouldReturnList()
     {
         // Act
@@ -131,12 +131,12 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var jobs = await response.Content.ReadFromJsonAsync<JobsListResponse>();
-        
+
         Assert.NotNull(jobs);
         Assert.NotNull(jobs.Jobs);
     }
 
-[Fact]
+    [Fact]
     public async Task GetJobs_WithFilters_ShouldReturnFilteredList()
     {
         // Act
@@ -145,12 +145,12 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var jobs = await response.Content.ReadFromJsonAsync<JobsListResponse>();
-        
+
         Assert.NotNull(jobs);
         Assert.NotNull(jobs.Jobs);
     }
 
-[Fact]
+    [Fact]
     public async Task GetJob_ById_ShouldReturnDetails()
     {
         // Arrange - create a job first
@@ -169,13 +169,13 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var job = await response.Content.ReadFromJsonAsync<JobDetailResponse>();
-        
+
         Assert.NotNull(job);
         Assert.Equal(jobId, job.Id);
         Assert.Equal("discography", job.Type);
     }
 
-[Fact]
+    [Fact]
     public async Task SubmitWarmCacheHints_ShouldAccept()
     {
         // Arrange
@@ -192,7 +192,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<WarmCacheHintsResponse>();
-        
+
         Assert.NotNull(result);
         Assert.True(result.Accepted);
     }
@@ -206,7 +206,7 @@ public class SoulbeetAdvancedModeTests : IClassFixture<slskd.Tests.Integration.S
         // Assert
         response.EnsureSuccessStatusCode();
         var health = await response.Content.ReadFromJsonAsync<LibraryHealthResponse>();
-        
+
         Assert.NotNull(health);
         Assert.NotNull(health.Summary);
         Assert.NotNull(health.Issues);

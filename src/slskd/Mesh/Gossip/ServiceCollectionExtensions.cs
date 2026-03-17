@@ -39,5 +39,3 @@ namespace slskd.Mesh.Gossip
         }
     }
 }
-
-

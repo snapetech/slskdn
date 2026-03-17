@@ -26,7 +26,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     ///     These costs integrate with the H-02 work budget system to prevent
     ///     amplification attacks where a single mesh service call triggers
     ///     expensive operations (Soulseek searches, HTTP fetches, etc.).
-    ///     
+    ///
     ///     Cost guidelines:
     ///     - 0 units: Local operations (LocalLibrary)
     ///     - 1 unit: Cheap network operations (HEAD requests)
@@ -48,7 +48,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
         ///     - Broadcast to entire network
         ///     - Hundreds of potential responses
         ///     - Rate-limited by H-08 (MaxSearchesPerMinute)
-        ///     
+        ///
         ///     This MUST be protected by work budget to prevent mesh peers
         ///     from triggering unlimited Soulseek searches.
         /// </remarks>

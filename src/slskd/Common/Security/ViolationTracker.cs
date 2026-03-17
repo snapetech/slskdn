@@ -260,6 +260,7 @@ public sealed class ViolationTracker : IDisposable
         if (tracker.Count >= MaxTrackedEntities && !tracker.ContainsKey(key))
         {
             _logger.LogWarning("Cannot track violations for {Key}: max entities limit ({Max}) reached", key, MaxTrackedEntities);
+
             // Still try to ban if this looks like a serious violation
             if (type is ViolationType.PathTraversal or ViolationType.DangerousContent or ViolationType.CertificateMismatch)
             {
@@ -572,4 +573,3 @@ public sealed class ViolationStats
     /// <summary>Gets or sets total username violations ever recorded.</summary>
     public long TotalUsernameViolations { get; init; }
 }
-

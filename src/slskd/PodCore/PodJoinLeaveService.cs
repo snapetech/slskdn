@@ -27,6 +27,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
     // In-memory storage for pending requests (in production, this would be persisted)
     private readonly ConcurrentDictionary<string, ConcurrentBag<PodJoinRequest>> _pendingJoinRequests = new();
     private readonly ConcurrentDictionary<string, ConcurrentBag<PodLeaveRequest>> _pendingLeaveRequests = new();
+
     // 6.4: replay protection when SignatureMode is Enforce. Key: PodId:PeerId:Nonce, Value: expiry.
     private readonly ConcurrentDictionary<string, DateTimeOffset> _joinReplayCache = new();
 
@@ -63,6 +64,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
                         PeerId: joinRequest.PeerId,
                         ErrorMessage: "Nonce is required when PodCore.Join.SignatureMode is Enforce");
                 }
+
                 var replayKey = $"{joinRequest.PodId}:{joinRequest.PeerId}:{joinRequest.Nonce}";
                 EvictExpiredJoinReplayEntries();
                 if (!_joinReplayCache.TryAdd(replayKey, DateTimeOffset.UtcNow + ReplayCacheTtl))
@@ -193,6 +195,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             {
                 newRequests.Add(r);
             }
+
             _pendingJoinRequests[acceptance.PodId] = newRequests;
 
             // 4. Add member to pod
@@ -220,6 +223,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             if (!membershipResult.Success)
             {
                 _logger.LogWarning("[PodJoinLeave] Failed to publish membership record for {PeerId} in {PodId}", acceptance.PeerId, acceptance.PodId);
+
                 // Note: Member was added but DHT publication failed - this is not a fatal error
             }
 
@@ -387,6 +391,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             {
                 newRequests.Add(r);
             }
+
             _pendingLeaveRequests[acceptance.PodId] = newRequests;
 
             // 4. Remove member from pod

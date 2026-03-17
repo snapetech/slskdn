@@ -201,7 +201,7 @@ public class DowngradeValidationResult
 }
 
 /// <summary>
-    /// Result of downgrade pattern detection.
+/// Result of downgrade pattern detection.
 /// </summary>
 public class DowngradeDetectionResult
 {

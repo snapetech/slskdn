@@ -172,7 +172,7 @@ public class MockMusicBrainzClient
         // Add default test data
         var recording = MusicBrainzFixtures.GetTestRecording();
         var release = MusicBrainzFixtures.GetTestRelease();
-        
+
         recordings[recording.Id] = recording;
         releases[release.Id] = release;
     }

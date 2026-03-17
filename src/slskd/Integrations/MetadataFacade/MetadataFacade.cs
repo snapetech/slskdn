@@ -267,16 +267,19 @@ namespace slskd.Integrations.MetadataFacade
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(filename);
             if (string.IsNullOrWhiteSpace(name)) return (null, null, null);
+
             // "Artist - Title", "Artist – Title" (en-dash), "Artist - Album - 01 - Title", "01 - Title"
             var parts = name.Split(new[] { " - ", " – ", " — " }, StringSplitOptions.None);
             if (parts.Length >= 4 && parts[2].Length <= 3 && System.Text.RegularExpressions.Regex.IsMatch(parts[2].Trim(), @"^\d{1,3}$"))
             {
                 return (parts[0].Trim(), parts[3].Trim(), parts[1].Trim());
             }
+
             if (parts.Length >= 2)
             {
                 return (parts[0].Trim(), parts[1].Trim(), null);
             }
+
             if (parts.Length == 1)
             {
                 var s = parts[0].Trim();
@@ -285,8 +288,10 @@ namespace slskd.Integrations.MetadataFacade
                     var m = System.Text.RegularExpressions.Regex.Match(s, @"^\d{1,3}[\.)\-\s]\s*(.+)$");
                     return (null, m.Groups[1].Value.Trim(), null);
                 }
+
                 return (null, s, null);
             }
+
             return (null, null, null);
         }
     }

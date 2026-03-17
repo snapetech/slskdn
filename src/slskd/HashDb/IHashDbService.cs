@@ -210,7 +210,6 @@ namespace slskd.HashDb
         Task UpsertArtistReleaseGraphAsync(Integrations.MusicBrainz.Models.ArtistReleaseGraph graph, CancellationToken cancellationToken = default);
 
         // ========== Discography Jobs ==========
-
         Task<Jobs.DiscographyJob?> GetDiscographyJobAsync(string jobId, CancellationToken cancellationToken = default);
 
         Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default);
@@ -229,7 +228,6 @@ namespace slskd.HashDb
         Task<IReadOnlyList<slskd.Integrations.MusicBrainz.Models.LabelPresence>> GetLabelPresenceAsync(CancellationToken cancellationToken = default);
 
         // ========== Label Crate Jobs ==========
-
         Task<Jobs.LabelCrateJob?> GetLabelCrateJobAsync(string jobId, CancellationToken cancellationToken = default);
 
         Task UpsertLabelCrateJobAsync(Jobs.LabelCrateJob job, CancellationToken cancellationToken = default);
@@ -267,7 +265,6 @@ namespace slskd.HashDb
         Task<IReadOnlyList<(string ContentId, long Hits)>> GetTopPopularAsync(int limit, long minHits = 1, CancellationToken cancellationToken = default);
 
         // ========== Warm Cache Entries ==========
-
         Task UpsertWarmCacheEntryAsync(Models.WarmCacheEntry entry, CancellationToken cancellationToken = default);
 
         Task DeleteWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default);
@@ -397,5 +394,3 @@ namespace slskd.HashDb
         public long DatabaseSizeBytes { get; set; }
     }
 }
-
-

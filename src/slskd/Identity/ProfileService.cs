@@ -106,6 +106,7 @@ public sealed class ProfileService : IProfileService
             var host = DetectHostname();
             endpoints.Add(new PeerEndpoint { Type = "Direct", Address = $"{scheme}://{host}:{webOpts.Port}", Priority = 1 });
         }
+
         var profile2 = new PeerProfile
         {
             PeerId = peerId,
@@ -292,6 +293,7 @@ public sealed class ProfileService : IProfileService
                 result.Append(alphabet[(bits >> bitCount) & 31]);
             }
         }
+
         if (bitCount > 0)
             result.Append(alphabet[(bits << (5 - bitCount)) & 31]);
         return result.ToString();

@@ -74,9 +74,9 @@ public class SearchActionsController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> DownloadItem(
-        [FromRoute] Guid searchId,
-        [FromRoute] string itemId,
-        CancellationToken cancellationToken)
+    [FromRoute] Guid searchId,
+    [FromRoute] string itemId,
+            CancellationToken cancellationToken)
     {
         _logger.LogDebug("[SearchActions] Download request: searchId={SearchId}, itemId={ItemId}", searchId, itemId);
 
@@ -166,9 +166,9 @@ public class SearchActionsController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> StreamItem(
-        [FromRoute] Guid searchId,
-        [FromRoute] string itemId,
-        CancellationToken cancellationToken)
+    [FromRoute] Guid searchId,
+    [FromRoute] string itemId,
+            CancellationToken cancellationToken)
     {
         _logger.LogDebug("[SearchActions] Stream request: searchId={SearchId}, itemId={ItemId}", searchId, itemId);
 
@@ -270,6 +270,7 @@ public class SearchActionsController : ControllerBase
                         Detail = $"No pod peers found hosting content {contentId}"
                     });
                 }
+
                 targetPeerId = peers[0].PeerId;
                 _logger.LogDebug("[SearchActions] Using peer {PeerId} from mesh directory lookup", targetPeerId);
             }
@@ -301,6 +302,7 @@ public class SearchActionsController : ControllerBase
             {
                 _logger.LogWarning("[SearchActions] Size mismatch for pod content {ContentId}: expected {Expected}, got {Actual}",
                     contentId, file.Size, fetchResult.Size);
+
                 // Continue anyway - size mismatch might be acceptable
             }
 

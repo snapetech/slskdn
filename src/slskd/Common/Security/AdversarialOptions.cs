@@ -7,7 +7,7 @@ namespace slskd.Common.Security;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-// Type aliases for backward compatibility  
+// Type aliases for backward compatibility
 using HttpTunnelOptions = slskd.Common.Security.HttpTunnelTransportOptions;
 using MeekOptions = slskd.Common.Security.MeekTransportOptions;
 using Obfs4Options = slskd.Common.Security.Obfs4TransportOptions;

@@ -382,5 +382,3 @@ namespace slskd.Common.CodeQuality
         public string? Recommendation { get; init; }
     }
 }
-
-

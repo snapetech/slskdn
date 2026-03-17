@@ -2,7 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-﻿// <copyright file="TelemetryController.cs" company="slskd Team">
+// <copyright file="TelemetryController.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,6 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
-
 namespace slskd.Telemetry;
 
 using slskd.Core.Security;
@@ -38,7 +37,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class TelemetryController : ControllerBase
 {
     /// <summary>

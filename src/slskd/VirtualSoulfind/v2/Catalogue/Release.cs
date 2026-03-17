@@ -27,7 +27,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
     ///     - 2009 US CD release
     ///     - 2010 UK vinyl remaster
     ///     - 2015 digital remaster
-    ///     
+    ///
     ///     Multiple releases belong to one release group.
     /// </remarks>
     public sealed class Release

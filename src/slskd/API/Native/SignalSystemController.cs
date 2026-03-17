@@ -18,7 +18,7 @@ using slskd.Signals;
 [ApiController]
 [Route("api/v0/signals")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class SignalSystemController : ControllerBase
 {
     private readonly IOptionsMonitor<SignalSystemOptions> optionsMonitor;
@@ -40,7 +40,7 @@ public class SignalSystemController : ControllerBase
     public IActionResult GetConfiguration()
     {
         var options = optionsMonitor.CurrentValue;
-        
+
         return Ok(new
         {
             enabled = options.Enabled,

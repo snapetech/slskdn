@@ -220,6 +220,7 @@ namespace slskd.Common.CodeQuality
                 {
                     Log.LogError($"Critical subsystem {subsystem.SubsystemName} has low coverage: {subsystem.MethodCoverage:P1}");
                 }
+
                 return FailOnLowCoverage;
             }
 
@@ -227,5 +228,3 @@ namespace slskd.Common.CodeQuality
         }
     }
 }
-
-

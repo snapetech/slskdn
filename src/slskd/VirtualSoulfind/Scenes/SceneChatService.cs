@@ -18,7 +18,7 @@ public interface ISceneChatService
     /// Send a chat message to a scene.
     /// </summary>
     Task SendMessageAsync(string sceneId, string content, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get recent chat messages for a scene.
     /// </summary>
@@ -26,7 +26,7 @@ public interface ISceneChatService
         string sceneId,
         int limit = 100,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Event fired when a new message is received.
     /// </summary>
@@ -185,6 +185,7 @@ public class SceneChatService : ISceneChatService
         catch (Exception ex)
         {
             logger.LogWarning(ex, "[VSF-SCENE-CHAT] Failed to deserialize message, falling back to simple parsing");
+
             // Fallback: try to parse as simple text
             try
             {

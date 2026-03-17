@@ -103,8 +103,7 @@ public class SolidClientIdDocumentServiceTests
         using var reader = new StreamReader(context.Response.Body);
         var json = await reader.ReadToEndAsync();
 
-        // JSON serialization converts @context to "context" in the output
-        Assert.Contains("context", json);
+        Assert.Contains("\"@context\"", json);
         Assert.Contains("client_id", json);
         Assert.Contains("client_name", json);
         Assert.Contains("application_type", json);

@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/rooms")]
 [Produces("application/json")]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class RoomsCompatibilityController : ControllerBase
 {
     private readonly ILogger<RoomsCompatibilityController> logger;
@@ -31,8 +31,8 @@ public class RoomsCompatibilityController : ControllerBase
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> JoinRoom(
-        [FromBody] JoinRoomRequest? request,
-        CancellationToken cancellationToken = default)
+    [FromBody] JoinRoomRequest? request,
+            CancellationToken cancellationToken = default)
     {
         var roomName = request?.Room;
         if (string.IsNullOrWhiteSpace(roomName))
@@ -55,7 +55,7 @@ public class RoomsCompatibilityController : ControllerBase
                 }
             }
         }
-        
+
         roomName ??= "default";
         logger.LogInformation("Join room requested: {Room}", roomName);
 
@@ -69,8 +69,8 @@ public class RoomsCompatibilityController : ControllerBase
     [HttpDelete("{roomName}")]
     [Authorize]
     public async Task<IActionResult> LeaveRoom(
-        string roomName,
-        CancellationToken cancellationToken = default)
+            string roomName,
+            CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Leave room requested: {Room}", roomName);
 

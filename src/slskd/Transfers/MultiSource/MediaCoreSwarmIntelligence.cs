@@ -232,7 +232,6 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
 
         // This is a simplified implementation - in practice, this would analyze
         // peer performance, content compatibility, and network conditions
-
         foreach (var peer in activePeers)
         {
             // Random recommendations for demonstration - in practice, use real metrics
@@ -411,21 +410,21 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
     }
 
     // Prediction methods
-        private static ContentType DetermineContentType(string contentId, ContentDescriptor descriptor)
+    private static ContentType DetermineContentType(string contentId, ContentDescriptor descriptor)
+    {
+        var parsed = ContentIdParser.Parse(contentId);
+        if (parsed != null)
         {
-            var parsed = ContentIdParser.Parse(contentId);
-            if (parsed != null)
-            {
-                if (parsed.IsAudio)
-                    return ContentType.Audio;
-                if (parsed.IsVideo)
-                    return ContentType.Video;
-                if (parsed.IsImage)
-                    return ContentType.Image;
-            }
-
-            return ContentType.Unknown;
+            if (parsed.IsAudio)
+                return ContentType.Audio;
+            if (parsed.IsVideo)
+                return ContentType.Video;
+            if (parsed.IsImage)
+                return ContentType.Image;
         }
+
+        return ContentType.Unknown;
+    }
 
     private static PeerCapabilityAnalysis AnalyzePeerCapabilities(IReadOnlyList<PeerCapability> peers, ContentType contentType)
     {

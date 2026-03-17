@@ -127,7 +127,6 @@ public class DnsLeakPreventionVerifier
     {
         // Note: True DNS leak prevention verification requires network traffic analysis
         // or specialized testing tools. This is a basic connectivity check.
-
         try
         {
             // Test with a known Tor/I2P test address if available

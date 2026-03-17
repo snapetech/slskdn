@@ -27,14 +27,14 @@ namespace slskd.VirtualSoulfind.v2.Planning
     /// <remarks>
     ///     The planner is the "brain" of VirtualSoulfind v2. Given a desired track/release,
     ///     it produces an acquisition plan that:
-    ///     
+    ///
     ///     - Selects appropriate backends based on domain rules
     ///     - Filters sources through MCP (no blocked/quarantined)
     ///     - Orders candidates by trust + quality scores
     ///     - Respects per-backend caps (H-08 for Soulseek)
     ///     - Respects work budgets (H-02)
     ///     - Enforces planning mode (OfflinePlanning/MeshOnly/SoulseekFriendly)
-    ///     
+    ///
     ///     The planner is pure logic - it doesn't execute plans, just creates them.
     /// </remarks>
     public interface IPlanner
@@ -54,7 +54,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         ///     - Filters through MCP (CheckContentIdAsync)
         ///     - Orders by trust/quality
         ///     - Builds PlanSteps respecting backend caps
-        ///     
+        ///
         ///     This is async because it may query backends and MCP.
         ///     It does NOT execute the plan (that's the resolver's job).
         /// </remarks>
@@ -74,7 +74,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         ///     - Backend availability (are backends still enabled?)
         ///     - Work budget (would this plan exceed budgets?)
         ///     - Per-backend caps (would this violate Soulseek caps?)
-        ///     
+        ///
         ///     Used before execution to avoid starting a plan that will fail.
         /// </remarks>
         Task<bool> ValidatePlanAsync(

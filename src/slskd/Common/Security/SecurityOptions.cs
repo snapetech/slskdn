@@ -386,5 +386,3 @@ public sealed class SecurityEventOptions
     /// </summary>
     public bool PersistEvents { get; set; } = false;
 }
-
-

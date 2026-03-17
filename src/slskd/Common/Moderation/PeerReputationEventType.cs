@@ -40,5 +40,3 @@ namespace slskd.Common.Moderation
         ProtocolViolation
     }
 }
-
-

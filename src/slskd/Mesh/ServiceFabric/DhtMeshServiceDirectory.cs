@@ -177,7 +177,6 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             // Service ID format: hash("svc:" + ServiceName + ":" + OwnerPeerId)
             // We need to query DHT by scanning service names or use a reverse index
             // For now, this is a stub - full implementation would require additional DHT structures
-
             _logger.LogDebug("[ServiceDirectory] FindById not yet fully implemented: {ServiceId}", serviceId);
 
             // Deferred: Implement efficient FindById
@@ -187,7 +186,6 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             // 2. Scan known service names (inefficient but works for now)
             // 3. Use DHT FindValue with serviceId directly
             // Current implementation returns empty array (service not found)
-
             return Array.Empty<MeshServiceDescriptor>();
         }
         catch (Exception ex)
@@ -245,11 +243,11 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         if (stats.ServiceNamesQueried.Count > 10)
         {
             _securityLogger?.LogDiscoveryAbuse(
-                peerId, 
-                "Enumeration", 
-                stats.QueryCount, 
+                peerId,
+                "Enumeration",
+                stats.QueryCount,
                 stats.ServiceNamesQueried.Count);
-            
+
             _logger.LogWarning(
                 "[ServiceDirectory] Possible enumeration attack from {PeerId}: {Count} unique service names queried in last minute",
                 peerId, stats.ServiceNamesQueried.Count);
@@ -259,11 +257,11 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         if (stats.QueryCount > 50)
         {
             _securityLogger?.LogDiscoveryAbuse(
-                peerId, 
-                "RapidFire", 
-                stats.QueryCount, 
+                peerId,
+                "RapidFire",
+                stats.QueryCount,
                 stats.ServiceNamesQueried.Count);
-            
+
             _logger.LogWarning(
                 "[ServiceDirectory] Possible discovery spam from {PeerId}: {Count} queries in last minute",
                 peerId, stats.QueryCount);
@@ -273,11 +271,11 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         if (stats.QueryCount > 30 && stats.ServiceNamesQueried.Count > 5)
         {
             _securityLogger?.LogDiscoveryAbuse(
-                peerId, 
-                "Scanning", 
-                stats.QueryCount, 
+                peerId,
+                "Scanning",
+                stats.QueryCount,
                 stats.ServiceNamesQueried.Count);
-            
+
             _logger.LogWarning(
                 "[ServiceDirectory] Possible scanning behavior from {PeerId}: {QueryCount} queries, {UniqueCount} unique services",
                 peerId, stats.QueryCount, stats.ServiceNamesQueried.Count);

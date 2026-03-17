@@ -22,7 +22,7 @@ using Microsoft.Extensions.Logging;
 [Produces("application/json")]
 [Consumes("application/json")]
 [Authorize(Policy = AuthPolicy.Any)]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodOpinionController : ControllerBase
 {
     private readonly IPodOpinionService _opinionService;
@@ -54,9 +54,9 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> PublishOpinion(
-        [FromRoute] string podId,
-        [FromBody] PodVariantOpinion opinion,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromBody] PodVariantOpinion opinion,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -100,9 +100,9 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetContentOpinions(
-        [FromRoute] string podId,
-        [FromRoute] string contentId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string contentId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -142,10 +142,10 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetVariantOpinions(
-        [FromRoute] string podId,
-        [FromRoute] string contentId,
-        [FromRoute] string variantHash,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string contentId,
+    [FromRoute] string variantHash,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -190,9 +190,9 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetOpinionStatistics(
-        [FromRoute] string podId,
-        [FromRoute] string contentId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string contentId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -230,8 +230,8 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> RefreshOpinions(
-        [FromRoute] string podId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -265,9 +265,9 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetAggregatedOpinions(
-        [FromRoute] string podId,
-        [FromRoute] string contentId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string contentId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -305,8 +305,8 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetMemberAffinities(
-        [FromRoute] string podId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -340,9 +340,9 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetConsensusRecommendations(
-        [FromRoute] string podId,
-        [FromRoute] string contentId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+    [FromRoute] string contentId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -380,8 +380,8 @@ public class PodOpinionController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> UpdateMemberAffinities(
-        [FromRoute] string podId,
-        CancellationToken cancellationToken = default)
+    [FromRoute] string podId,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {

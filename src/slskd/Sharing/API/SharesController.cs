@@ -90,6 +90,7 @@ public class SharesController : ControllerBase
 
         return string.Empty;
     }
+
     private bool CollectionsEnabled => _options.CurrentValue.Feature.CollectionsSharing;
 
     [HttpGet]
@@ -100,6 +101,7 @@ public class SharesController : ControllerBase
     {
         if (!CollectionsEnabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);
+
         // If we can't determine user identity, return empty list instead of error
         if (string.IsNullOrWhiteSpace(currentUserId))
             return Ok(new List<ShareGrant>());
@@ -148,9 +150,9 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
-        if (req.CollectionId == default) 
+        if (req.CollectionId == default)
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "CollectionId is required.", Detail = "CollectionId is required." });
-        if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId)) 
+        if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId))
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "AudienceType and AudienceId are required.", Detail = "AudienceType and AudienceId are required." });
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
@@ -177,6 +179,7 @@ public class SharesController : ControllerBase
         {
             _log.LogWarning("[ShareGrantAnnounce] Soulseek client not available; cannot announce share {ShareId}", created.Id);
         }
+
         _ = Task.Run(async () =>
         {
             try
@@ -200,6 +203,7 @@ public class SharesController : ControllerBase
         var scheme = web.Https?.Disabled != true ? "https" : "http";
         var urlBase = string.IsNullOrWhiteSpace(web.UrlBase) ? "/" : web.UrlBase;
         var basePath = urlBase == "/" ? string.Empty : "/" + urlBase.Trim('/'); // normalize: "" or "/slskd"
+
         // Use IPv4 loopback explicitly (Playwright request client may prefer ::1 for "localhost")
         var ownerEndpoint = web.Port > 0 ? $"{scheme}://127.0.0.1:{web.Port}{basePath}" : $"{scheme}://127.0.0.1{basePath}";
 
@@ -368,6 +372,7 @@ public class SharesController : ControllerBase
         if (!collectionsOrStreaming) return NotFound();
 
         string? tokenForStream = token;
+
         // IMPORTANT: The web UI uses a JWT in the Authorization header. Share tokens may also be passed via query (?token=)
         // or (for non-UI clients) via Authorization: Bearer <share-token>. We must not treat a JWT as a share token.
         if (!string.IsNullOrEmpty(tokenForStream))
@@ -382,7 +387,6 @@ public class SharesController : ControllerBase
 
         // If no query token was provided, do NOT attempt to interpret Authorization: Bearer <jwt> as a share token.
         // Authenticated users should use their normal JWT to access manifests for shares they can see.
-
         if (User?.Identity?.IsAuthenticated != true)
             return Unauthorized();
         var currentUserId = await GetCurrentUserIdAsync(ct);
@@ -438,7 +442,7 @@ public class SharesController : ControllerBase
         {
             // HTTP download from owner's endpoint (cross-node, no Soulseek required)
             _log.LogInformation("[Backfill] Using HTTP download from {OwnerEndpoint} for {Count} items", ownerEndpoint, manifest.Items.Count);
-            
+
             var downloadsDir = _options.CurrentValue.Directories.Downloads;
             if (string.IsNullOrWhiteSpace(downloadsDir) || !System.IO.Directory.Exists(downloadsDir))
             {
@@ -446,7 +450,7 @@ public class SharesController : ControllerBase
             }
 
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-            
+
             // Add authorization header with share token if available
             if (!string.IsNullOrWhiteSpace(grant.ShareToken))
             {

@@ -214,5 +214,3 @@ namespace slskd.Mesh
         public string ClientVersion { get; set; }
     }
 }
-
-

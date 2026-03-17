@@ -76,6 +76,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                         _status.LastError = null;
                         _status.LastSuccessfulConnection = DateTimeOffset.UtcNow;
                     }
+
                     _logger.LogDebug("Tor SOCKS proxy is available at {Address}", _options.SocksAddress);
                     return true;
                 }
@@ -86,6 +87,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                 _status.IsAvailable = false;
                 _status.LastError = "SOCKS5 handshake failed";
             }
+
             _logger.LogWarning("Tor SOCKS proxy handshake failed at {Address}", _options.SocksAddress);
             return false;
         }
@@ -96,6 +98,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                 _status.IsAvailable = false;
                 _status.LastError = ex.Message;
             }
+
             _logger.LogWarning(ex, "Tor SOCKS proxy not available at {Address}", _options.SocksAddress);
             return false;
         }
@@ -218,6 +221,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                 {
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
+
                 circuit.ReleaseConnection(client);
             });
         }
@@ -227,6 +231,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish Tor connection to {Host}:{Port} via circuit {CircuitKey}", host, port, circuitKey);
             throw;
         }
@@ -262,6 +267,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
             {
                 circuit.Dispose();
             }
+
             _circuitPool.Clear();
         }
     }
@@ -525,6 +531,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                         // Ignore disposal errors
                     }
                 }
+
                 _connectionPool.Clear();
             }
         }
@@ -553,6 +560,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                 _onDispose();
                 _innerStream.Dispose();
             }
+
             base.Dispose(disposing);
         }
 

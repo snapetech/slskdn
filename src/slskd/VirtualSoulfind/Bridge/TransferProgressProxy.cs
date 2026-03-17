@@ -19,14 +19,14 @@ public interface ITransferProgressProxy
         string meshTransferId,
         string legacyClientId,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get legacy transfer progress.
     /// </summary>
     Task<LegacyTransferProgress?> GetLegacyProgressAsync(
         string proxyId,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Stop proxying.
     /// </summary>

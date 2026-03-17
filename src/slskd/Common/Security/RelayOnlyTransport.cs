@@ -129,6 +129,7 @@ public class RelayOnlyTransport : IAnonymityTransport
                 if (lineBuf[n] == (byte)'\n') { n++; break; }
                 n += r;
             }
+
             var line = n > 0 ? Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : "";
             if (!line.StartsWith("OK", StringComparison.Ordinal))
                 throw new InvalidOperationException("Relay refused: " + (string.IsNullOrEmpty(line) ? "no response" : line));
@@ -148,6 +149,7 @@ public class RelayOnlyTransport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish relay connection to {Host}:{Port}", host, port);
             throw;
         }
@@ -169,6 +171,7 @@ public class RelayOnlyTransport : IAnonymityTransport
             var he = await Dns.GetHostEntryAsync(host, ct);
             ip = he.AddressList.FirstOrDefault() ?? throw new InvalidOperationException("Could not resolve relay host: " + host);
         }
+
         return new IPEndPoint(ip, port);
     }
 

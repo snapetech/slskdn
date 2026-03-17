@@ -22,7 +22,7 @@ using slskd.Core.Security;
 [ApiVersion("0")]
 [ApiController]
 [Authorize]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PortForwardingController : ControllerBase
 {
     private readonly LocalPortForwarder _portForwarder;
@@ -135,8 +135,8 @@ public class PortForwardingController : ControllerBase
     /// <returns>A list of available port numbers.</returns>
     [HttpGet("available-ports")]
     public IActionResult GetAvailablePorts(
-        [FromQuery] int startPort = 1024,
-        [FromQuery] int endPort = 65535)
+    [FromQuery] int startPort = 1024,
+    [FromQuery] int endPort = 65535)
     {
         try
         {
@@ -196,6 +196,7 @@ public class PortForwardingController : ControllerBase
                     s.IsActive,
                     s.ActiveConnections,
                     s.BytesForwarded,
+
                     // Would include stream mapping stats here when available
                     StreamMappingEnabled = true, // Placeholder for future enhancement
                     PerformanceMetrics = new

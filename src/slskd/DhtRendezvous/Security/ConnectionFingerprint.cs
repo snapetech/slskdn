@@ -23,22 +23,22 @@ public sealed class ConnectionFingerprintService
     private readonly ILogger<ConnectionFingerprintService> _logger;
     private readonly ConcurrentDictionary<string, ConnectionFingerprint> _recentFingerprints = new();
     private readonly ConcurrentQueue<ConnectionEvent> _eventLog = new();
-    
+
     /// <summary>
     /// Maximum events to keep in memory.
     /// </summary>
     public const int MaxEventLogSize = 10000;
-    
+
     /// <summary>
     /// Maximum fingerprints to track.
     /// </summary>
     public const int MaxFingerprints = 1000;
-    
+
     public ConnectionFingerprintService(ILogger<ConnectionFingerprintService> logger)
     {
         _logger = logger;
     }
-    
+
     /// <summary>
     /// Record a new connection attempt.
     /// </summary>
@@ -62,7 +62,7 @@ public sealed class ConnectionFingerprintService
             Timestamp = DateTimeOffset.UtcNow,
             IpHash = HashIp(ip),
         };
-        
+
         // Store fingerprint
         if (_recentFingerprints.Count >= MaxFingerprints)
         {
@@ -75,9 +75,9 @@ public sealed class ConnectionFingerprintService
                 _recentFingerprints.TryRemove(oldest.Id, out _);
             }
         }
-        
+
         _recentFingerprints[fingerprint.Id] = fingerprint;
-        
+
         // Log the connection event
         RecordEvent(new ConnectionEvent
         {
@@ -87,7 +87,7 @@ public sealed class ConnectionFingerprintService
             IpHash = fingerprint.IpHash,
             Username = username,
         });
-        
+
         _logger.LogInformation(
             "Connection fingerprint {Id}: IP={IpHash}, User={Username}, Cert={Cert}, Features=[{Features}]",
             fingerprint.Id,
@@ -95,10 +95,10 @@ public sealed class ConnectionFingerprintService
             username ?? "(none)",
             certificateThumbprint?[..Math.Min(16, certificateThumbprint.Length)] ?? "(none)",
             string.Join(",", fingerprint.Features.Take(5)));
-        
+
         return fingerprint;
     }
-    
+
     /// <summary>
     /// Record a disconnection.
     /// </summary>
@@ -108,7 +108,7 @@ public sealed class ConnectionFingerprintService
         {
             fingerprint.DisconnectedAt = DateTimeOffset.UtcNow;
             fingerprint.DisconnectReason = reason;
-            
+
             RecordEvent(new ConnectionEvent
             {
                 Type = ConnectionEventType.Disconnected,
@@ -120,7 +120,7 @@ public sealed class ConnectionFingerprintService
             });
         }
     }
-    
+
     /// <summary>
     /// Record a security event for a connection.
     /// </summary>
@@ -137,7 +137,7 @@ public sealed class ConnectionFingerprintService
                 Details = details,
                 Timestamp = DateTimeOffset.UtcNow,
             });
-            
+
             RecordEvent(new ConnectionEvent
             {
                 Type = ConnectionEventType.SecurityEvent,
@@ -147,7 +147,7 @@ public sealed class ConnectionFingerprintService
                 Username = fingerprint.Username,
                 Details = $"{eventType}: {details}",
             });
-            
+
             _logger.LogWarning(
                 "Security event for {Id} ({Username}): {Type} - {Details}",
                 fingerprintId,
@@ -156,7 +156,7 @@ public sealed class ConnectionFingerprintService
                 details);
         }
     }
-    
+
     /// <summary>
     /// Get fingerprint by ID.
     /// </summary>
@@ -164,7 +164,7 @@ public sealed class ConnectionFingerprintService
     {
         return _recentFingerprints.TryGetValue(id, out var fp) ? fp : null;
     }
-    
+
     /// <summary>
     /// Find fingerprints matching criteria.
     /// </summary>
@@ -183,7 +183,7 @@ public sealed class ConnectionFingerprintService
             .OrderByDescending(f => f.Timestamp)
             .ToList();
     }
-    
+
     /// <summary>
     /// Get recent events.
     /// </summary>
@@ -194,7 +194,7 @@ public sealed class ConnectionFingerprintService
             .Take(count)
             .ToList();
     }
-    
+
     /// <summary>
     /// Get statistics about connections.
     /// </summary>
@@ -203,7 +203,7 @@ public sealed class ConnectionFingerprintService
         var fingerprints = _recentFingerprints.Values.ToList();
         var now = DateTimeOffset.UtcNow;
         var lastHour = now.AddHours(-1);
-        
+
         return new FingerprintStats
         {
             TotalFingerprints = fingerprints.Count,
@@ -215,23 +215,23 @@ public sealed class ConnectionFingerprintService
             EventLogSize = _eventLog.Count,
         };
     }
-    
+
     private void RecordEvent(ConnectionEvent evt)
     {
         _eventLog.Enqueue(evt);
-        
+
         // Trim if too large
         while (_eventLog.Count > MaxEventLogSize)
         {
             _eventLog.TryDequeue(out _);
         }
     }
-    
+
     private static string GenerateFingerprintId()
     {
         return Guid.NewGuid().ToString("N")[..12];
     }
-    
+
     /// <summary>
     /// Hash an IP address for privacy-preserving logging.
     /// </summary>
@@ -257,12 +257,12 @@ public sealed class ConnectionFingerprint
     public string? ClientVersion { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
     public required string IpHash { get; init; }
-    
+
     public DateTimeOffset? DisconnectedAt { get; set; }
     public string? DisconnectReason { get; set; }
-    
+
     public List<SecurityEvent> SecurityEvents { get; } = new();
-    
+
     public TimeSpan? Duration => DisconnectedAt.HasValue
         ? DisconnectedAt.Value - Timestamp
         : DateTimeOffset.UtcNow - Timestamp;
@@ -316,4 +316,3 @@ public sealed class FingerprintStats
     public int TotalSecurityEvents { get; init; }
     public int EventLogSize { get; init; }
 }
-

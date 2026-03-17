@@ -34,24 +34,24 @@ namespace slskd.VirtualSoulfind.v2.Planning
     /// </summary>
     /// <remarks>
     ///     The planner implements the core domain rules:
-    ///     
+    ///
     ///     **Domain Rules:**
     ///     - Soulseek ONLY for ContentDomain.Music
     ///     - Non-music (GenericFile, Book, Movie, Tv) ONLY uses Mesh/DHT/Torrent/HTTP/LAN
-    ///     
+    ///
     ///     **MCP Integration:**
     ///     - ALL source candidates filtered through IModerationProvider.CheckContentIdAsync
     ///     - Blocked/Quarantined sources NEVER included in plans
-    ///     
+    ///
     ///     **Backend Selection:**
     ///     - Respects PlanningMode (OfflinePlanning/MeshOnly/SoulseekFriendly)
     ///     - Orders by: LocalLibrary → Mesh/DHT → HTTP → Soulseek (if allowed)
     ///     - Within backend: order by TrustScore DESC, then ExpectedQuality DESC
-    ///     
+    ///
     ///     **Caps & Budgets:**
     ///     - No plan validation against caps yet (future: integrate work budget checker)
     ///     - Relies on resolver/executor to respect H-08 Soulseek caps
-    ///     
+    ///
     ///     This is the foundation. SqliteCatalogueStore, real backends, and
     ///     work budget integration come in later phases.
     /// </remarks>
@@ -219,7 +219,6 @@ namespace slskd.VirtualSoulfind.v2.Planning
         }
 
         // ========== Private Helper Methods ==========
-
         private async Task<List<SourceCandidate>> FilterThroughModerationAsync(
             string trackId,
             ContentDomain domain,
@@ -321,7 +320,6 @@ namespace slskd.VirtualSoulfind.v2.Planning
             // 4. Lan (fast, local network)
             // 5. Torrent (good for large files, slower startup)
             // 6. Soulseek (last resort for Music, with caps)
-
             var backendPriority = new Dictionary<ContentBackendType, int>
             {
                 { ContentBackendType.LocalLibrary, 1 },

@@ -17,7 +17,7 @@ using slskd.Mesh;
 [Route("api/v0/mesh")]
 [Produces("application/json")]
 [Authorize]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class MeshStatsController : ControllerBase
 {
     private readonly IMeshAdvanced meshAdvanced;

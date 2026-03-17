@@ -161,10 +161,9 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in cover traffic generation loop");
+
                 // Continue the loop despite errors
             }
         }
     }
 }
-
-

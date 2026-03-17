@@ -222,13 +222,13 @@ public class LibraryHealthTests : IAsyncLifetime
         // Accept either snake_case or PascalCase
         remediateResult.TryGetProperty("job_id", out var jobIdSnake);
         remediateResult.TryGetProperty("jobId", out var jobIdPascal);
-        var hasJobId = jobIdSnake.ValueKind != System.Text.Json.JsonValueKind.Undefined || 
+        var hasJobId = jobIdSnake.ValueKind != System.Text.Json.JsonValueKind.Undefined ||
                        jobIdPascal.ValueKind != System.Text.Json.JsonValueKind.Undefined;
         Assert.True(hasJobId, "Response should contain job_id or jobId");
         if (hasJobId)
         {
-            var jobIdValue = jobIdSnake.ValueKind != System.Text.Json.JsonValueKind.Undefined 
-                ? jobIdSnake.GetString() 
+            var jobIdValue = jobIdSnake.ValueKind != System.Text.Json.JsonValueKind.Undefined
+                ? jobIdSnake.GetString()
                 : jobIdPascal.GetString();
             Assert.False(string.IsNullOrWhiteSpace(jobIdValue), "Job ID should not be empty");
         }

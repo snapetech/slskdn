@@ -43,6 +43,7 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
             CacheDirectory = _cacheDir,
             AllowLocalPeerDiscovery = pm?.DisablePex != false,
         };
+
         // Disable DHT at engine level when PrivateMode wants it
         if (pm?.DisableDht == true)
             builder.DhtEndPoint = null;

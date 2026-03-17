@@ -118,6 +118,7 @@ namespace slskd.Audio
         private static int RoundToNearestBitrate(int bitrate)
         {
             if (bitrate <= 0) return 0;
+
             // round to nearest 32 kbps bucket
             return (int)(Math.Round(bitrate / 32.0) * 32);
         }

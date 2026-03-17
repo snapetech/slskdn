@@ -43,9 +43,9 @@ public class MeshBootstrapService : BackgroundService
         }
 
         logger.LogInformation("[MeshBootstrapService] ExecuteAsync called");
-        logger.LogInformation("[MeshBootstrap] Starting service (refresh interval: {Minutes} minutes, bootstrap nodes: {Count})", 
+        logger.LogInformation("[MeshBootstrap] Starting service (refresh interval: {Minutes} minutes, bootstrap nodes: {Count})",
             refreshInterval.TotalMinutes, options.BootstrapNodes.Count);
-        
+
         await PublishOnce(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -60,7 +60,7 @@ public class MeshBootstrapService : BackgroundService
                 // shutdown
             }
         }
-        
+
         logger.LogInformation("[MeshBootstrap] Service stopped");
     }
 

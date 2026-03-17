@@ -575,4 +575,3 @@ public sealed class ReconnaissanceStats
     /// <summary>Gets event count.</summary>
     public int EventCount { get; init; }
 }
-

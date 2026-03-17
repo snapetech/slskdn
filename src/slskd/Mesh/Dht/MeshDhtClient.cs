@@ -46,6 +46,7 @@ public class MeshDhtClient : IMeshDhtClient
         this.logger = logger;
         this.inner = inner;
         _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
+
         // Use Lazy to break circular dependency: DhtService depends on KademliaRpcClient which depends on IMeshServiceClient
         // which depends on IMeshServiceDirectory which depends on IMeshDhtClient (this) which would depend on DhtService
         this.dhtService = new Lazy<DhtService?>(() => serviceProvider?.GetService<DhtService>());
@@ -105,6 +106,7 @@ public class MeshDhtClient : IMeshDhtClient
             {
                 return new List<byte[]> { result.Value };
             }
+
             return Array.Empty<byte[]>();
         }
 

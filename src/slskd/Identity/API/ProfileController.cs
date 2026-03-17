@@ -97,6 +97,7 @@ public class ProfileController : ControllerBase
                     statusCode: StatusCodes.Status400BadRequest
                 );
             }
+
             var invite = new FriendInvite
             {
                 InviteVersion = 1,

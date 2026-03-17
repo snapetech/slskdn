@@ -98,6 +98,7 @@ public class HttpTunnelTransport : IAnonymityTransport
                 _status.IsAvailable = false;
                 _status.LastError = ex.Message;
             }
+
             _logger.LogWarning(ex, "HTTP tunnel transport not available at {Url}", _options.ProxyUrl);
             return false;
         }
@@ -199,6 +200,7 @@ public class HttpTunnelTransport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish HTTP tunnel to {Host}:{Port}", host, port);
             throw;
         }

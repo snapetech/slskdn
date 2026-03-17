@@ -23,7 +23,7 @@ public class ShareGroupRepositoryTests : IDisposable
             .UseSqlite($"Data Source={_dbPath}")
             .Options;
         _factory = new TestDbContextFactory(options);
-        
+
         // Ensure database is created
         using var db = new CollectionsDbContext(options);
         db.Database.EnsureCreated();
@@ -41,7 +41,7 @@ public class ShareGroupRepositoryTests : IDisposable
         var repo = new ShareGroupRepository(_factory);
         var groupId = Guid.NewGuid();
         var group = new ShareGroup { Id = groupId, Name = "Test", OwnerUserId = "alice" };
-        
+
         using (var db = await _factory.CreateDbContextAsync())
         {
             db.ShareGroups.Add(group);
@@ -65,7 +65,7 @@ public class ShareGroupRepositoryTests : IDisposable
         var repo = new ShareGroupRepository(_factory);
         var groupId = Guid.NewGuid();
         var group = new ShareGroup { Id = groupId, Name = "Test", OwnerUserId = "alice" };
-        
+
         using (var db = await _factory.CreateDbContextAsync())
         {
             db.ShareGroups.Add(group);
@@ -88,7 +88,7 @@ public class ShareGroupRepositoryTests : IDisposable
         var repo = new ShareGroupRepository(_factory);
         var groupId = Guid.NewGuid();
         var group = new ShareGroup { Id = groupId, Name = "Test", OwnerUserId = "alice" };
-        
+
         using (var db = await _factory.CreateDbContextAsync())
         {
             db.ShareGroups.Add(group);
@@ -111,7 +111,7 @@ public class ShareGroupRepositoryTests : IDisposable
         var repo = new ShareGroupRepository(_factory);
         var groupId = Guid.NewGuid();
         var group = new ShareGroup { Id = groupId, Name = "Test", OwnerUserId = "alice" };
-        
+
         using (var db = await _factory.CreateDbContextAsync())
         {
             db.ShareGroups.Add(group);
@@ -133,7 +133,7 @@ public class ShareGroupRepositoryTests : IDisposable
         var repo = new ShareGroupRepository(_factory);
         var groupId = Guid.NewGuid();
         var group = new ShareGroup { Id = groupId, Name = "Test", OwnerUserId = "alice" };
-        
+
         using (var db = await _factory.CreateDbContextAsync())
         {
             db.ShareGroups.Add(group);
@@ -152,7 +152,7 @@ public class ShareGroupRepositoryTests : IDisposable
         var repo = new ShareGroupRepository(_factory);
         var groupId = Guid.NewGuid();
         var group = new ShareGroup { Id = groupId, Name = "Test", OwnerUserId = "alice" };
-        
+
         using (var db = await _factory.CreateDbContextAsync())
         {
             db.ShareGroups.Add(group);

@@ -14,10 +14,10 @@ public class PerceptualHasherTests
     public void ComputeHash_IdenticalSamples_ReturnsSameHash()
     {
         var samples = GenerateSineWave(44100, 1.0f, 440);
-        
+
         var hash1 = hasher.ComputeHash(samples, 44100);
         var hash2 = hasher.ComputeHash(samples, 44100);
-        
+
         Assert.Equal(hash1, hash2);
     }
 
@@ -260,10 +260,10 @@ public class PerceptualHasherTests
         // Generate two sine waves with same frequency
         var samples1 = GenerateSineWave(44100, 1.0f, 440);
         var samples2 = GenerateSineWave(44100, 1.0f, 440);
-        
+
         var hash1 = hasher.ComputeHash(samples1, 44100);
         var hash2 = hasher.ComputeHash(samples2, 44100);
-        
+
         var similarity = hasher.Similarity(hash1, hash2);
         Assert.True(similarity > 0.8, $"Expected similarity > 0.8, got {similarity}");
     }
@@ -275,10 +275,10 @@ public class PerceptualHasherTests
         // 440 vs 262 Hz (A4 vs C4): different pitch classes; better for "different freqs → different hashes".
         var samples1 = GenerateSineWave(44100, 1.0f, 440);
         var samples2 = GenerateSineWave(44100, 1.0f, 262);
-        
+
         var hash1 = hasher.ComputeHash(samples1, 44100);
         var hash2 = hasher.ComputeHash(samples2, 44100);
-        
+
         var similarity = hasher.Similarity(hash1, hash2);
         Assert.True(similarity < 0.95, $"Expected similarity < 0.95 for 440 vs 262 Hz, got {similarity}");
     }
@@ -307,10 +307,10 @@ public class PerceptualHasherTests
     {
         // Test that downsampling doesn't drastically change the hash
         var samples = GenerateSineWave(44100, 1.0f, 440);
-        
+
         var hashHighRate = hasher.ComputeHash(samples, 44100);
         var hashLowRate = hasher.ComputeHash(samples, 22050); // Triggers internal downsampling
-        
+
         // Hashes won't be identical due to downsampling, but should be similar
         var similarity = hasher.Similarity(hashHighRate, hashLowRate);
         Assert.True(similarity > 0.5, $"Expected similarity > 0.5 after downsampling, got {similarity}");
@@ -321,10 +321,10 @@ public class PerceptualHasherTests
     {
         var hash1 = 0x123456789ABCDEF0UL;
         var hash2 = 0xFEDCBA9876543210UL;
-        
+
         var distance1 = hasher.HammingDistance(hash1, hash2);
         var distance2 = hasher.HammingDistance(hash2, hash1);
-        
+
         Assert.Equal(distance1, distance2);
     }
 
@@ -333,10 +333,10 @@ public class PerceptualHasherTests
     {
         var hash1 = 0x123456789ABCDEF0UL;
         var hash2 = 0xFEDCBA9876543210UL;
-        
+
         var similarity1 = hasher.Similarity(hash1, hash2);
         var similarity2 = hasher.Similarity(hash2, hash1);
-        
+
         Assert.Equal(similarity1, similarity2);
     }
 
@@ -364,7 +364,7 @@ public class PerceptualHasherTests
         {
             hash2 |= (1UL << i);
         }
-        
+
         var similarity = hasher.Similarity(hash1, hash2);
         Assert.Equal(expected, similarity, precision: 6);
     }
@@ -374,13 +374,13 @@ public class PerceptualHasherTests
     {
         var sampleCount = (int)(sampleRate * duration);
         var samples = new float[sampleCount];
-        
+
         for (int i = 0; i < sampleCount; i++)
         {
             var time = i / (float)sampleRate;
             samples[i] = (float)Math.Sin(2 * Math.PI * frequency * time);
         }
-        
+
         return samples;
     }
 }

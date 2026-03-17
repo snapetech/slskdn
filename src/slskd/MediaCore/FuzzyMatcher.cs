@@ -7,7 +7,6 @@ namespace slskd.MediaCore;
 // <copyright file="FuzzyMatcher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,6 +83,7 @@ public class FuzzyMatcher : IFuzzyMatcher
         _descriptorRetriever = descriptorRetriever;
         _logger = logger;
     }
+
     public double Score(string title, string artist, string candidateTitle, string candidateArtist)
     {
         // Jaccard similarity: simple case-insensitive token overlap
@@ -112,7 +112,7 @@ public class FuzzyMatcher : IFuzzyMatcher
 
         var distance = ComputeLevenshteinDistance(a, b);
         var maxLength = Math.Max(a.Length, b.Length);
-        
+
         // Convert distance to similarity score (0.0 to 1.0)
         return 1.0 - ((double)distance / maxLength);
     }
@@ -186,7 +186,7 @@ public class FuzzyMatcher : IFuzzyMatcher
         if (string.IsNullOrWhiteSpace(s)) return "0000";
 
         s = s.ToUpperInvariant();
-        
+
         // Remove non-alphabetic characters
         s = new string(s.Where(char.IsLetter).ToArray());
         if (s.Length == 0) return "0000";
@@ -201,13 +201,13 @@ public class FuzzyMatcher : IFuzzyMatcher
         for (int i = 1; i < s.Length && index < 4; i++)
         {
             var code = GetSoundexCode(s[i]);
-            
+
             // Skip vowels and duplicates
             if (code != '0' && code != prevCode)
             {
                 result[index++] = code;
             }
-            
+
             prevCode = code;
         }
 

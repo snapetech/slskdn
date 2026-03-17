@@ -313,5 +313,3 @@ public static class SecurityUtils
         return max - min; // Return variance range
     }
 }
-
-

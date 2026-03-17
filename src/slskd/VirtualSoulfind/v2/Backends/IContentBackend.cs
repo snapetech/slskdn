@@ -75,7 +75,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
         ///     - Ping the source to check availability
         ///     - Verify expected quality/size
         ///     - Update trust scores based on reputation
-        ///     
+        ///
         ///     This method MUST NOT:
         ///     - Download the full content (that's the resolver's job)
         ///     - Block for extended periods (use short timeouts)

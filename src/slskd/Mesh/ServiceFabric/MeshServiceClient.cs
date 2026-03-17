@@ -23,21 +23,21 @@ public class MeshServiceClient : IMeshServiceClient
     private readonly IMeshServiceDirectory _serviceDirectory;
     private readonly IControlSigner _signer;
     private readonly MeshStatsCollector? _statsCollector;
-    
+
     // TODO: Inject actual overlay sender when available
     // private readonly IOverlaySender _overlaySender;
-    
+
     // Pending calls: correlationId -> TaskCompletionSource
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ServiceReply>> _pendingCalls = new();
-    
+
     // Per-peer concurrent call tracking: peerId -> call count
     private readonly ConcurrentDictionary<string, int> _perPeerCallCounts = new();
-    
+
     // Configuration
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(30);
     private readonly int _maxConcurrentCallsPerPeer = 10;
     private readonly int _maxTotalPendingCalls = 1000;
-    
+
     public MeshServiceClient(
         ILogger<MeshServiceClient> logger,
         IMeshServiceDirectory serviceDirectory,
@@ -57,7 +57,7 @@ public class MeshServiceClient : IMeshServiceClient
     {
         if (string.IsNullOrWhiteSpace(targetPeerId))
             throw new ArgumentException("Target peer ID cannot be empty", nameof(targetPeerId));
-        
+
         if (call == null)
             throw new ArgumentNullException(nameof(call));
 
@@ -67,7 +67,7 @@ public class MeshServiceClient : IMeshServiceClient
             _logger.LogWarning(
                 "[ServiceClient] Max total pending calls reached: {Count}",
                 _pendingCalls.Count);
-            
+
             return new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
@@ -83,7 +83,7 @@ public class MeshServiceClient : IMeshServiceClient
             _logger.LogWarning(
                 "[ServiceClient] Max concurrent calls to peer reached: {PeerId}, count: {Count}",
                 targetPeerId, currentPeerCalls);
-            
+
             return new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
@@ -97,7 +97,7 @@ public class MeshServiceClient : IMeshServiceClient
 
         // Create task completion source for this call
         var tcs = new TaskCompletionSource<ServiceReply>(TaskCreationOptions.RunContinuationsAsynchronously);
-        
+
         if (!_pendingCalls.TryAdd(call.CorrelationId, tcs))
         {
             _logger.LogWarning(
@@ -110,7 +110,7 @@ public class MeshServiceClient : IMeshServiceClient
         {
             // Serialize the call
             var callBytes = MessagePackSerializer.Serialize(call);
-            
+
             // Create control envelope
             var envelope = new ControlEnvelope
             {
@@ -118,7 +118,7 @@ public class MeshServiceClient : IMeshServiceClient
                 Payload = callBytes,
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
             };
-            
+
             // Sign envelope
             _signer.Sign(envelope);
 
@@ -127,21 +127,20 @@ public class MeshServiceClient : IMeshServiceClient
 
             // TODO: Send envelope to target peer via overlay
             // await _overlaySender.SendAsync(targetPeerId, envelope, cancellationToken);
-
             _logger.LogDebug(
                 "[ServiceClient] Sent call to {PeerId}: {Service}.{Method} (id: {CorrelationId})",
                 targetPeerId, call.ServiceName, call.Method, call.CorrelationId);
-            
+
             // Wait for reply with timeout
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(_defaultTimeout);
-            
+
             var reply = await tcs.Task.WaitAsync(cts.Token);
-            
+
             _logger.LogDebug(
                 "[ServiceClient] Received reply from {PeerId}: status={Status} (id: {CorrelationId})",
                 targetPeerId, reply.StatusCode, call.CorrelationId);
-            
+
             return reply;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -156,7 +155,7 @@ public class MeshServiceClient : IMeshServiceClient
             _logger.LogWarning(
                 "[ServiceClient] Call timed out: {Service}.{Method} to {PeerId}",
                 call.ServiceName, call.Method, targetPeerId);
-            
+
             return new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
@@ -170,7 +169,7 @@ public class MeshServiceClient : IMeshServiceClient
                 ex,
                 "[ServiceClient] Error calling service: {Service}.{Method} to {PeerId}",
                 call.ServiceName, call.Method, targetPeerId);
-            
+
             return new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
@@ -182,10 +181,10 @@ public class MeshServiceClient : IMeshServiceClient
         {
             // Clean up pending call
             _pendingCalls.TryRemove(call.CorrelationId, out _);
-            
+
             // MEDIUM-3 FIX 3: Decrement per-peer counter
             _perPeerCallCounts.AddOrUpdate(targetPeerId, 0, (_, count) => Math.Max(0, count - 1));
-            
+
             // Clean up zero entries to prevent memory leak
             if (_perPeerCallCounts.TryGetValue(targetPeerId, out var remainingCalls) && remainingCalls == 0)
             {
@@ -202,13 +201,13 @@ public class MeshServiceClient : IMeshServiceClient
     {
         // 1. Discover service
         var descriptors = await _serviceDirectory.FindByNameAsync(serviceName, cancellationToken);
-        
+
         if (descriptors.Count == 0)
         {
             _logger.LogWarning(
                 "[ServiceClient] No providers found for service: {ServiceName}",
                 serviceName);
-            
+
             return new ServiceReply
             {
                 CorrelationId = Guid.NewGuid().ToString(),
@@ -219,7 +218,7 @@ public class MeshServiceClient : IMeshServiceClient
 
         // 2. Pick first descriptor (TODO: Reputation-based selection)
         var descriptor = descriptors.First();
-        
+
         _logger.LogDebug(
             "[ServiceClient] Selected provider for {ServiceName}: {PeerId}",
             serviceName, descriptor.OwnerPeerId);

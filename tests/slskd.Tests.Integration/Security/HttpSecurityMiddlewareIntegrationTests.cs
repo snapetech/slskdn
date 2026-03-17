@@ -146,7 +146,7 @@ public class HttpSecurityMiddlewareIntegrationTests : IClassFixture<SecurityTest
 
         // Assert - should be blocked by SecurityMiddleware (first in pipeline)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        
+
         // Verify response doesn't contain static file content (would indicate UseFileServer ran first)
         var content = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("<!DOCTYPE html>", content);

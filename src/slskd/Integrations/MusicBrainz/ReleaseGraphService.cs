@@ -59,13 +59,13 @@ namespace slskd.Integrations.MusicBrainz
                 throw new ArgumentException("artistId is required", nameof(artistId));
             }
 
-            log.LogInformation("[MusicBrainz] Fetching release graph for artist {ArtistId} (forceRefresh={ForceRefresh})", 
+            log.LogInformation("[MusicBrainz] Fetching release graph for artist {ArtistId} (forceRefresh={ForceRefresh})",
                 artistId, forceRefresh);
 
             var cached = await hashDb.GetArtistReleaseGraphAsync(artistId, ct).ConfigureAwait(false);
             if (!forceRefresh && cached != null && (cached.ExpiresAt == null || cached.ExpiresAt > DateTimeOffset.UtcNow))
             {
-                log.LogInformation("[MusicBrainz] Using cached release graph for artist {ArtistId} ({Count} release groups, expires {ExpiresAt})", 
+                log.LogInformation("[MusicBrainz] Using cached release graph for artist {ArtistId} ({Count} release groups, expires {ExpiresAt})",
                     artistId, cached.ReleaseGroups?.Count ?? 0, cached.ExpiresAt);
                 return cached;
             }
@@ -85,7 +85,7 @@ namespace slskd.Integrations.MusicBrainz
                 return cached; // fallback to stale if exists
             }
 
-            log.LogInformation("[MusicBrainz] Fetching release groups for artist {ArtistName} ({ArtistId})", 
+            log.LogInformation("[MusicBrainz] Fetching release groups for artist {ArtistName} ({ArtistId})",
                 artist.Name, artistId);
             var releaseGroups = await FetchReleaseGroupsAsync(artistId, http, baseUrl, userAgent, ct).ConfigureAwait(false);
 
@@ -99,7 +99,7 @@ namespace slskd.Integrations.MusicBrainz
                 ExpiresAt = DateTimeOffset.UtcNow.Add(CacheTtl),
             };
 
-            log.LogInformation("[MusicBrainz] Cached release graph for artist {ArtistName}: {Count} release groups, expires in {Hours} hours", 
+            log.LogInformation("[MusicBrainz] Cached release graph for artist {ArtistName}: {Count} release groups, expires in {Hours} hours",
                 artist.Name, releaseGroups.Count, CacheTtl.TotalHours);
 
             await hashDb.UpsertArtistReleaseGraphAsync(graph, ct).ConfigureAwait(false);
@@ -112,7 +112,7 @@ namespace slskd.Integrations.MusicBrainz
             var offset = 0;
             const int limit = 100;
 
-            log.LogDebug("[MusicBrainz] Fetching release groups for artist {ArtistId} (pagination: limit={Limit})", 
+            log.LogDebug("[MusicBrainz] Fetching release groups for artist {ArtistId} (pagination: limit={Limit})",
                 artistId, limit);
 
             while (true)
@@ -124,7 +124,7 @@ namespace slskd.Integrations.MusicBrainz
                     break;
                 }
 
-                log.LogDebug("[MusicBrainz] Fetched {Count} release groups at offset {Offset}", 
+                log.LogDebug("[MusicBrainz] Fetched {Count} release groups at offset {Offset}",
                     page.ReleaseGroups.Length, offset);
 
                 foreach (var rg in page.ReleaseGroups)
@@ -153,8 +153,8 @@ namespace slskd.Integrations.MusicBrainz
                                 ReleaseDate = r.Date,
                             })
                             .ToList();
-                        
-                        log.LogDebug("[MusicBrainz] Release group '{Title}' has {Count} releases", 
+
+                        log.LogDebug("[MusicBrainz] Release group '{Title}' has {Count} releases",
                             group.Title, group.Releases.Count);
                     }
 
@@ -171,7 +171,7 @@ namespace slskd.Integrations.MusicBrainz
                 await Task.Delay(TimeSpan.FromMilliseconds(1100), ct).ConfigureAwait(false);
             }
 
-            log.LogInformation("[MusicBrainz] Fetched total of {Count} release groups for artist {ArtistId}", 
+            log.LogInformation("[MusicBrainz] Fetched total of {Count} release groups for artist {ArtistId}",
                 groups.Count, artistId);
 
             return groups;

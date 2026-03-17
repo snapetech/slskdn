@@ -136,12 +136,12 @@ public class ChunkReassignmentTests
         // Assert
         Assert.True(assignment.Success);
         Assert.NotNull(assignment.AssignedPeer);
-        
+
         // Verify assignment was registered
         // Note: HandlePeerDegradationAsync unregisters chunks, so we verify by calling it
         // If the chunk was registered, it will be in the returned list
         var degradedChunks = await scheduler.HandlePeerDegradationAsync(assignment.AssignedPeer, DegradationReason.HighErrorRate, CancellationToken.None);
-        
+
         // The chunk should be in the list (it was registered during AssignChunkAsync)
         Assert.Contains(request.ChunkIndex, degradedChunks);
     }
@@ -165,11 +165,11 @@ public class ChunkReassignmentTests
         Assert.Equal(2, peer1Chunks.Count);
         Assert.Contains(1, peer1Chunks);
         Assert.Contains(2, peer1Chunks);
-        
+
         Assert.Equal(2, peer2Chunks.Count);
         Assert.Contains(3, peer2Chunks);
         Assert.Contains(4, peer2Chunks);
-        
+
         Assert.Single(peer3Chunks);
         Assert.Contains(5, peer3Chunks);
     }

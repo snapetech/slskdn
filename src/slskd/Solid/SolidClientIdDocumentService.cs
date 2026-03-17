@@ -5,6 +5,7 @@
 namespace slskd.Solid;
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,15 +44,16 @@ public sealed class SolidClientIdDocumentService : ISolidClientIdDocumentService
         var redirectUri = $"{baseUrl}{solid.RedirectPath}";
 
         // Solid-OIDC requires JSON-LD with this context
-        var doc = new
+        var doc = new Dictionary<string, object?>
         {
-            @context = "https://www.w3.org/ns/solid/oidc-context.jsonld",
-            client_id = clientId,
-            client_name = "slskdn",
-            application_type = "web",
-            redirect_uris = new[] { redirectUri },
+            ["@context"] = "https://www.w3.org/ns/solid/oidc-context.jsonld",
+            ["client_id"] = clientId,
+            ["client_name"] = "slskdn",
+            ["application_type"] = "web",
+            ["redirect_uris"] = new[] { redirectUri },
+
             // keep scope minimal; expand later
-            scope = "openid webid",
+            ["scope"] = "openid webid",
         };
 
         http.Response.ContentType = "application/ld+json";

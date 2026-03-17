@@ -54,7 +54,6 @@ public class StunNatDetector : INatDetector
         //  - Direct: mapping == local endpoint
         //  - Symmetric: mapping changes when destination changes or when local port changes
         //  - Restricted (covers full/port-restricted cone): mapping stable across probes but differs from local
-
         var servers = options.StunServers.Take(2).ToArray();
         if (servers.Length == 0) return NatType.Unknown;
 
@@ -219,6 +218,7 @@ public class StunNatDetector : INatDetector
     private static IPEndPoint? ParseMappedAddress(byte[] buf, byte[] txn)
     {
         if (buf.Length < 20) return null;
+
         // Skip header
         int offset = 20;
         while (offset + 4 <= buf.Length)

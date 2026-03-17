@@ -46,7 +46,3 @@ namespace slskd.Users.Notes
         }
     }
 }
-
-
-
-

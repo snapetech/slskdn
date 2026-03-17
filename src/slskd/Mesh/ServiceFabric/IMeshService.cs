@@ -80,7 +80,7 @@ public class MeshServiceContext
     /// Optional: Work budget for this call (limits expensive downstream operations).
     /// Services should check and consume budget before triggering:
     /// - Soulseek operations
-    /// - BitTorrent operations  
+    /// - BitTorrent operations
     /// - Outbound mesh calls
     /// </summary>
     public WorkBudget? WorkBudget { get; init; }

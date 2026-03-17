@@ -1004,8 +1004,6 @@ public class PrivateGatewayMeshService : IMeshService
         return (true, string.Empty);
     }
 
-
-
     private bool IsBlockedAddress(string ipString)
     {
         try
@@ -1017,6 +1015,7 @@ public class PrivateGatewayMeshService : IMeshService
             if (ip.AddressFamily == AddressFamily.InterNetwork) // IPv4
             {
                 var bytes = ip.GetAddressBytes();
+
                 // AWS: 169.254.169.254
                 if (bytes[0] == 169 && bytes[1] == 254 && bytes[2] == 169 && bytes[3] == 254)
                     return true;

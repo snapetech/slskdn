@@ -95,11 +95,11 @@ public class MeshSearchRpcHandlerTests
         var mp3 = response.Files.First(f => f.Filename == "song.mp3");
         Assert.NotNull(mp3.MediaKinds);
         Assert.Contains("Music", mp3.MediaKinds);
-        
+
         var mp4 = response.Files.First(f => f.Filename == "video.mp4");
         Assert.NotNull(mp4.MediaKinds);
         Assert.Contains("Video", mp4.MediaKinds);
-        
+
         var jpg = response.Files.First(f => f.Filename == "image.jpg");
         Assert.NotNull(jpg.MediaKinds);
         Assert.Contains("Image", jpg.MediaKinds);
@@ -116,7 +116,7 @@ public class MeshSearchRpcHandlerTests
             MaxResults = 10
         };
         var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(1));
-        
+
         // Simulate slow search
         _shareServiceMock.Setup(x => x.SearchLocalAsync(It.IsAny<SearchQuery>()))
             .Returns(async () =>

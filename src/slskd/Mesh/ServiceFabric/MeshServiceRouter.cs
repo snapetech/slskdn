@@ -24,16 +24,16 @@ public class MeshServiceRouter
     private readonly PeerWorkBudgetTracker _workBudgetTracker;
     private readonly MeshServiceFabricOptions _options;
     private readonly ConcurrentDictionary<string, IMeshService> _services = new();
-    
+
     // Per-peer rate limiting: peerId -> (callCount, windowStart)
     private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _perPeerCallCounts = new();
-    
+
     // Global per-peer rate limiting across all services: peerId -> (callCount, windowStart)
     private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _globalPeerCallCounts = new();
-    
+
     // Circuit breaker per service: serviceName -> health tracker
     private readonly ConcurrentDictionary<string, ServiceHealthTracker> _serviceHealth = new();
-    
+
     public MeshServiceRouter(
         ILogger<MeshServiceRouter> logger,
         Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
@@ -45,7 +45,7 @@ public class MeshServiceRouter
         _violationTracker = violationTracker;
         _securityLogger = securityLogger;
         _options = options.Value;
-        
+
         // Create work budget tracker with embedded options
         _workBudgetTracker = workBudgetTracker ?? new PeerWorkBudgetTracker(
             new WorkBudgetOptions
@@ -128,9 +128,9 @@ public class MeshServiceRouter
                 _logger.LogWarning(
                     "[ServiceRouter] Payload too large from {PeerId}: {Size} > {Max}",
                     remotePeerId, call.Payload.Length, _options.MaxDescriptorBytes);
-                
+
                 RecordViolation(remotePeerId, ViolationType.RateLimitExceeded, "Payload too large");
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.PayloadTooLarge,
@@ -143,9 +143,9 @@ public class MeshServiceRouter
                 _logger.LogWarning(
                     "[ServiceRouter] Global rate limit exceeded for peer: {PeerId}",
                     remotePeerId);
-                
+
                 RecordViolation(remotePeerId, ViolationType.RateLimitExceeded, "Global service call rate limit");
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.RateLimited,
@@ -158,22 +158,22 @@ public class MeshServiceRouter
                 var key = $"{remotePeerId}:{call.ServiceName}";
                 var (count, _) = _perPeerCallCounts.GetValueOrDefault(key);
                 var serviceLimit = _options.PerServiceRateLimits.GetValueOrDefault(
-                    call.ServiceName, 
+                    call.ServiceName,
                     _options.DefaultMaxCallsPerMinute);
-                
+
                 _securityLogger?.LogRateLimitViolation(
                     remotePeerId,
                     call.ServiceName,
                     "PerService",
                     count,
                     serviceLimit);
-                
+
                 _logger.LogWarning(
                     "[ServiceRouter] Service rate limit exceeded for peer: {PeerId}, service: {ServiceName}",
                     remotePeerId, call.ServiceName);
-                
+
                 RecordViolation(remotePeerId, ViolationType.RateLimitExceeded, $"Service call rate limit for {call.ServiceName}");
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.RateLimited,
@@ -186,7 +186,7 @@ public class MeshServiceRouter
                 _logger.LogDebug(
                     "[ServiceRouter] Service not found: {ServiceName}",
                     call.ServiceName);
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.ServiceNotFound,
@@ -202,11 +202,11 @@ public class MeshServiceRouter
                     "Open",
                     health.ConsecutiveFailures,
                     health.CircuitOpenedAt);
-                
+
                 _logger.LogWarning(
                     "[ServiceRouter] Circuit breaker open for service: {ServiceName} (failures: {Failures}, opened: {OpenedAt})",
                     call.ServiceName, health.ConsecutiveFailures, health.CircuitOpenedAt);
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.ServiceUnavailable,
@@ -215,7 +215,7 @@ public class MeshServiceRouter
 
             // 6. Create context with work budget
             var workBudget = _workBudgetTracker.CreateBudgetForPeer(remotePeerId);
-            
+
             var context = new MeshServiceContext
             {
                 RemotePeerId = remotePeerId,
@@ -229,9 +229,9 @@ public class MeshServiceRouter
 
             // 7. Invoke service handler with timeout (per-service or default)
             var timeoutSeconds = _options.PerServiceTimeoutSeconds.GetValueOrDefault(
-                call.ServiceName, 
+                call.ServiceName,
                 30); // Default 30 seconds
-            
+
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
@@ -239,7 +239,7 @@ public class MeshServiceRouter
             try
             {
                 reply = await service.HandleCallAsync(call, context, cts.Token);
-                
+
                 // Success: reset circuit breaker
                 health.RecordSuccess();
             }
@@ -250,14 +250,14 @@ public class MeshServiceRouter
                     call.ServiceName,
                     call.Method,
                     TimeSpan.FromSeconds(timeoutSeconds));
-                
+
                 _logger.LogWarning(
                     "[ServiceRouter] Service call timed out: {ServiceName}.{Method}",
                     call.ServiceName, call.Method);
-                
+
                 // Timeout: record failure for circuit breaker
                 health.RecordFailure();
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.Timeout,
@@ -270,15 +270,15 @@ public class MeshServiceRouter
                     call.ServiceName,
                     call.Method,
                     ex);
-                
+
                 _logger.LogError(
                     ex,
                     "[ServiceRouter] Service handler threw exception: {ServiceName}.{Method}",
                     call.ServiceName, call.Method);
-                
+
                 // Exception: record failure for circuit breaker
                 health.RecordFailure();
-                
+
                 return CreateErrorReply(
                     call.CorrelationId,
                     ServiceStatusCodes.UnknownError,
@@ -339,10 +339,10 @@ public class MeshServiceRouter
     {
         var now = DateTimeOffset.UtcNow;
         var windowDuration = TimeSpan.FromMinutes(1);
-        
+
         // Get per-service limit or fall back to default
         var maxCallsPerWindow = _options.PerServiceRateLimits.GetValueOrDefault(
-            serviceName, 
+            serviceName,
             _options.DefaultMaxCallsPerMinute);
 
         // Use composite key for per-service tracking
@@ -435,15 +435,15 @@ public class MeshServiceRouter
         {
             RegisteredServiceCount = _services.Count,
             TrackedPeerCount = _perPeerCallCounts.Count,
-            
+
             // Rate limiting
             ActivePeersLastMinute = activeGlobalPeers,
             PerServiceTrackedPeers = activeServicePeers,
-            
+
             // Circuit breakers
             CircuitBreakers = circuitBreakerInfo,
             OpenCircuitCount = circuitBreakerInfo.Count(cb => cb.IsOpen),
-            
+
             // Work budget
             WorkBudgetEnabled = true,
             WorkBudgetMetrics = workBudgetMetrics
@@ -460,15 +460,15 @@ public sealed record RouterStats
     // Basic stats
     public int RegisteredServiceCount { get; init; }
     public int TrackedPeerCount { get; init; }
-    
+
     // Rate limiting stats
     public int ActivePeersLastMinute { get; init; }
     public int PerServiceTrackedPeers { get; init; }
-    
+
     // Circuit breaker stats
     public List<CircuitBreakerInfo> CircuitBreakers { get; init; } = new();
     public int OpenCircuitCount { get; init; }
-    
+
     // Work budget stats
     public bool WorkBudgetEnabled { get; init; }
     public WorkBudgetMetrics? WorkBudgetMetrics { get; init; }
@@ -492,7 +492,7 @@ internal class ServiceHealthTracker
 {
     private const int FailureThreshold = 5;
     private static readonly TimeSpan CircuitOpenDuration = TimeSpan.FromMinutes(5);
-    
+
     public int ConsecutiveFailures { get; private set; }
     public DateTimeOffset? CircuitOpenedAt { get; private set; }
 
@@ -505,7 +505,7 @@ internal class ServiceHealthTracker
             return false;
 
         // Circuit is open, check if it should reset (half-open state)
-        if (CircuitOpenedAt.HasValue && 
+        if (CircuitOpenedAt.HasValue &&
             DateTimeOffset.UtcNow - CircuitOpenedAt.Value >= CircuitOpenDuration)
         {
             // Circuit has been open long enough, allow one test request (half-open)
@@ -532,7 +532,7 @@ internal class ServiceHealthTracker
     public void RecordFailure()
     {
         ConsecutiveFailures++;
-        
+
         if (ConsecutiveFailures >= FailureThreshold && !CircuitOpenedAt.HasValue)
         {
             CircuitOpenedAt = DateTimeOffset.UtcNow;

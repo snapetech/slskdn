@@ -197,6 +197,7 @@ namespace slskd.SocialFederation
                         {
                             workRef = WorkRef.FromMusicItem(musicItem, "https://localhost:5000");
                         }
+
                         break;
 
                     case "books":
@@ -210,6 +211,7 @@ namespace slskd.SocialFederation
                         {
                             workRef.Metadata["name"] = contentItem.PrimaryName;
                         }
+
                         break;
 
                     default:

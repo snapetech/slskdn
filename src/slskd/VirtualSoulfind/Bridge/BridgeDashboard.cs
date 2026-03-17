@@ -15,22 +15,22 @@ public interface IBridgeDashboard
     /// Get complete dashboard data.
     /// </summary>
     Task<BridgeDashboardData> GetDashboardDataAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get connected clients.
     /// </summary>
     Task<List<ConnectedClient>> GetConnectedClientsAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get bridge statistics.
     /// </summary>
     Task<BridgeStatistics> GetStatsAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Record a proxied request.
     /// </summary>
     void RecordRequest(string clientId, string requestType);
-    
+
     /// <summary>
     /// Record mesh benefit (avoided Soulseek traffic).
     /// </summary>

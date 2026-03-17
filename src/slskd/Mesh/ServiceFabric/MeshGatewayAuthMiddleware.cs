@@ -20,7 +20,7 @@ public class MeshGatewayAuthMiddleware
 {
     private const string ApiKeyHeader = "X-Slskdn-ApiKey";
     private const string CsrfHeader = "X-Slskdn-Csrf";
-    
+
     private readonly RequestDelegate _next;
     private readonly ILogger<MeshGatewayAuthMiddleware> _logger;
     private readonly MeshGatewayOptions _options;
@@ -67,7 +67,7 @@ public class MeshGatewayAuthMiddleware
                 _logger.LogWarning(
                     "[GatewayAuth] Unauthorized access attempt from {RemoteIp} - invalid or missing API key",
                     remoteIp);
-                
+
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 await context.Response.WriteAsJsonAsync(new
                 {
@@ -87,7 +87,7 @@ public class MeshGatewayAuthMiddleware
                 _logger.LogWarning(
                     "[GatewayAuth] CSRF validation failed from {RemoteIp}",
                     remoteIp);
-                
+
                 context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 await context.Response.WriteAsJsonAsync(new
                 {
@@ -104,7 +104,7 @@ public class MeshGatewayAuthMiddleware
         if (context.Request.Headers.TryGetValue("Origin", out var origin))
         {
             var originStr = origin.ToString();
-            
+
             // If AllowedOrigins is configured, enforce it
             if (_options.AllowedOrigins.Count > 0)
             {
@@ -113,7 +113,7 @@ public class MeshGatewayAuthMiddleware
                     _logger.LogWarning(
                         "[GatewayAuth] Rejected request from unauthorized origin: {Origin}",
                         originStr);
-                    
+
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     await context.Response.WriteAsJsonAsync(new
                     {
@@ -123,13 +123,14 @@ public class MeshGatewayAuthMiddleware
                     return;
                 }
             }
+
             // If AllowedOrigins is empty and this is localhost, reject non-null origins as a safety measure
             else if (isLocalhost && !IsLocalhostOrigin(originStr))
             {
                 _logger.LogWarning(
                     "[GatewayAuth] Rejected cross-origin request to localhost from: {Origin}",
                     originStr);
-                
+
                 context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 await context.Response.WriteAsJsonAsync(new
                 {
@@ -144,7 +145,7 @@ public class MeshGatewayAuthMiddleware
         _logger.LogDebug(
             "[GatewayAuth] Authorized request from {RemoteIp} to {Path}",
             remoteIp, context.Request.Path);
-        
+
         await _next(context);
     }
 

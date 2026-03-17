@@ -30,7 +30,7 @@ namespace slskd.VirtualSoulfind.v2.Matching
     ///     - Prefer false negatives over false positives
     ///     - Clear, predictable matching rules
     ///     - No fuzzy logic, no ML
-    ///     
+    ///
     ///     Future: More sophisticated matching (Chromaprint, acoustic fingerprints, etc.)
     /// </remarks>
     public sealed class SimpleMatchEngine : IMatchEngine
@@ -146,7 +146,6 @@ namespace slskd.VirtualSoulfind.v2.Matching
         }
 
         // ========== Private Helper Methods ==========
-
         private static bool IsDurationMatch(int? expectedSeconds, int? actualSeconds)
         {
             if (!expectedSeconds.HasValue || !actualSeconds.HasValue)

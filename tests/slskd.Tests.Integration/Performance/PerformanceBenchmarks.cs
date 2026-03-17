@@ -66,9 +66,9 @@ public class VirtualSoulfindBenchmarks
     {
         // Benchmark: Canonical stats aggregation across 100 nodes
         // TODO: Implement actual CanonicalStatsService benchmark
-        
+
         var variants = new List<(string codec, int bitrate, double score)>();
-        
+
         foreach (var node in mesh!.GetAllNodes())
         {
             foreach (var file in node.Library)
@@ -97,7 +97,7 @@ public class VirtualSoulfindBenchmarks
         {
             var from = $"node-{i}";
             var to = $"node-{i + 10}";
-            
+
             tasks.Add(mesh!.OverlayTransferAsync(from, to, "test-hash", CancellationToken.None));
         }
 

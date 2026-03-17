@@ -49,6 +49,7 @@ public class ShadowIndexDescriptorSource : IContentDescriptorSource
             var descriptor = new ContentDescriptor
             {
                 ContentId = contentId,
+
                 // Hashes are unknown; we rely on content ID and confidence only.
                 Hashes = new List<ContentHash>(),
                 Confidence = 0.8 // heuristic: from shadow index

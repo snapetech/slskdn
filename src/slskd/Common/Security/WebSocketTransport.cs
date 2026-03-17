@@ -87,6 +87,7 @@ public class WebSocketTransport : IAnonymityTransport
                 _status.IsAvailable = false;
                 _status.LastError = ex.Message;
             }
+
             _logger.LogWarning(ex, "WebSocket transport not available at {Url}", _options.ServerUrl);
             return false;
         }
@@ -213,6 +214,7 @@ public class WebSocketTransport : IAnonymityTransport
                 {
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
+
                 ReturnToPool(connectionKey, connection);
             });
         }
@@ -222,6 +224,7 @@ public class WebSocketTransport : IAnonymityTransport
             {
                 _status.LastError = ex.Message;
             }
+
             _logger.LogError(ex, "Failed to establish WebSocket tunnel to {Host}:{Port}", host, port);
             throw;
         }

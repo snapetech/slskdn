@@ -34,6 +34,7 @@ public class FileKeyStore : IKeyStore
         {
             verifyKeys.Add(previous.PublicKey);
         }
+
         verifyKeys.Add(current.PublicKey);
     }
 
@@ -68,6 +69,7 @@ public class FileKeyStore : IKeyStore
                 WriteToFile(prevPath, existing);
                 prev = existing;
             }
+
             var fresh = Ed25519KeyPair.Generate();
             WriteToFile(path, fresh);
             logger.LogInformation("[Overlay] Rotated keypair at {Path}", path);
@@ -126,13 +128,13 @@ public class Ed25519KeyPair
     {
         // Generate real Ed25519 keypair using NSec (libsodium)
         using var key = Key.Create(SignatureAlgorithm.Ed25519, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
-        
+
         // Export public key (32 bytes for Ed25519)
         var publicKey = key.PublicKey.Export(KeyBlobFormat.RawPublicKey);
-        
+
         // Export private key (32 bytes for Ed25519)
         var privateKey = key.Export(KeyBlobFormat.RawPrivateKey);
-        
+
         return new Ed25519KeyPair(publicKey, privateKey, DateTimeOffset.UtcNow);
     }
 

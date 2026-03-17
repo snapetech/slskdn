@@ -39,7 +39,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         this.logger = logger;
         this.testId = testId;
         this.appDir = Path.Combine(Path.GetTempPath(), "slskdn-test", testId);
-        
+
         Directory.CreateDirectory(appDir);
         Directory.CreateDirectory(Path.Combine(appDir, "config"));
         Directory.CreateDirectory(Path.Combine(appDir, "downloads"));
@@ -103,13 +103,13 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
 
         // Wait for API to be ready
         await WaitForApiReadyAsync(ct);
-        
+
         // If bridge is enabled, wait for bridge port to be listening
         if (enableBridge && bridgePort.HasValue)
         {
             await WaitForBridgeReadyAsync(bridgePort.Value, ct);
         }
-        
+
         isRunning = true;
         logger.LogInformation("[TEST-SLSKDN-FULL] Instance {TestId} ready on API port {ApiPort}", testId, apiPort);
         if (enableBridge && bridgePort.HasValue)
@@ -126,7 +126,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         if (slskdnProcess != null && !slskdnProcess.HasExited)
         {
             logger.LogInformation("[TEST-SLSKDN-FULL] Stopping instance {TestId}", testId);
-            
+
             try
             {
                 slskdnProcess.Kill();
@@ -136,7 +136,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             {
                 logger.LogWarning(ex, "[TEST-SLSKDN-FULL] Error stopping process");
             }
-            
+
             slskdnProcess.Dispose();
             slskdnProcess = null;
         }
@@ -181,7 +181,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         sb.AppendLine("  identityFriends: true");
         sb.AppendLine("  collectionsSharing: true");
         sb.AppendLine("  scenePodBridge: true");
-        
+
         if (enableBridge && bridgePort.HasValue)
         {
             sb.AppendLine("virtualSoulfind:");
@@ -190,7 +190,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             sb.AppendLine($"    port: {bridgePort.Value}");
             sb.AppendLine("    requireAuth: false");
         }
-        
+
         sb.AppendLine("flags:");
         sb.AppendLine("  no_connect: true"); // Don't connect to real Soulseek for tests
 
@@ -233,7 +233,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
     {
         var current = Directory.GetCurrentDirectory();
         var dir = new DirectoryInfo(current);
-        
+
         while (dir != null)
         {
             if (File.Exists(Path.Combine(dir.FullName, "slskd.sln")) ||

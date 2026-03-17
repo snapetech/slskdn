@@ -87,7 +87,7 @@ public class ControlSigner : IControlSigner
             // Import private key and sign using NSec (libsodium)
             using var key = Key.Import(SignatureAlgorithm.Ed25519, privateKey, KeyBlobFormat.RawPrivateKey);
             var signature = SignatureAlgorithm.Ed25519.Sign(key, payloadBytes);
-            
+
             return Convert.ToBase64String(signature);
         }
         catch (Exception ex)

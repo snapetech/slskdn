@@ -12,7 +12,7 @@ namespace slskd.Audio
     /// </summary>
     public class CanonicalStats
     {
-        public string Id { get; set; }  // recordingId + ':' + codecProfileKey
+        public string Id { get; set; } // recordingId + ':' + codecProfileKey
         public string MusicBrainzRecordingId { get; set; }
         public string CodecProfileKey { get; set; }
 

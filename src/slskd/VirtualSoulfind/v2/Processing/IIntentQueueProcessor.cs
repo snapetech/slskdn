@@ -29,7 +29,7 @@ namespace slskd.VirtualSoulfind.v2.Processing
     ///     2. Creates acquisition plans via IPlanner
     ///     3. Executes plans via IResolver
     ///     4. Updates intent status based on results
-    ///     
+    ///
     ///     This is what makes VirtualSoulfind v2 autonomous - users add intents,
     ///     and the processor takes care of the rest.
     /// </remarks>

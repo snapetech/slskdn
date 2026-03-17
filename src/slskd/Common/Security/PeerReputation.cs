@@ -428,5 +428,3 @@ public sealed class ReputationStats
     /// <summary>Gets or sets total protocol violations across all peers.</summary>
     public long TotalProtocolViolations { get; init; }
 }
-
-

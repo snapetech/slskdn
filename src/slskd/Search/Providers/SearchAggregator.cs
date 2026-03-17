@@ -44,7 +44,6 @@ public class SearchAggregator
         // 1. Hash (exact match)
         // 2. Normalized filename + size
         // 3. Optional metadata fields (duration, bitrate)
-
         var seenByHash = new Dictionary<string, SearchResult>();
         var seenByFilename = new Dictionary<(string NormalizedFilename, long Size), SearchResult>();
         var merged = new List<SearchResult>();

@@ -21,44 +21,44 @@ public sealed class OverlayRateLimiter : IDisposable
     // Connection rate limits
     /// <summary>Maximum simultaneous connections from a single IP.</summary>
     public const int MaxConnectionsPerIp = 3;
-    
+
     /// <summary>Maximum new connections per minute globally.</summary>
     public const int MaxConnectionsPerMinute = 30;
-    
+
     /// <summary>Maximum total overlay connections.</summary>
     public const int MaxTotalConnections = 100;
-    
+
     // Message rate limits
     /// <summary>Maximum messages per second per connection.</summary>
     public const int MaxMessagesPerSecond = 10;
-    
+
     /// <summary>Maximum delta sync requests per hour per peer.</summary>
     public const int MaxDeltaRequestsPerHour = 60;
 
     /// <summary>Maximum mesh search requests per minute per peer.</summary>
     public const int MaxMeshSearchRequestsPerMinute = 30;
-    
+
     // Violation handling
     /// <summary>Seconds to block after violations.</summary>
     public const int ViolationBackoffSeconds = 300; // 5 minutes
-    
+
     /// <summary>Violations before permanent ban.</summary>
     public const int MaxViolationsBeforeBan = 3;
-    
+
     private readonly ConcurrentDictionary<IPAddress, IpRateLimitState> _ipStates = new();
     private readonly ConcurrentDictionary<string, ConnectionRateLimitState> _connectionStates = new();
     private readonly object _globalLock = new();
-    
+
     private int _totalConnections;
     private readonly Queue<DateTimeOffset> _recentConnections = new();
     private readonly Timer _cleanupTimer;
-    
+
     public OverlayRateLimiter()
     {
         // Cleanup stale entries every minute
         _cleanupTimer = new Timer(CleanupStaleEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
-    
+
     /// <summary>
     /// Check if a new connection from an IP is allowed.
     /// </summary>
@@ -68,7 +68,7 @@ public sealed class OverlayRateLimiter : IDisposable
     {
         var state = _ipStates.GetOrAdd(ip, _ => new IpRateLimitState());
         var now = DateTimeOffset.UtcNow;
-        
+
         lock (state.Lock)
         {
             // Check if IP is in backoff period
@@ -76,7 +76,7 @@ public sealed class OverlayRateLimiter : IDisposable
             {
                 return RateLimitResult.Blocked($"IP in backoff until {state.BackoffUntil}");
             }
-            
+
             // Check per-IP connection limit
             if (state.ActiveConnections >= MaxConnectionsPerIp)
             {
@@ -85,11 +85,11 @@ public sealed class OverlayRateLimiter : IDisposable
                 {
                     state.BackoffUntil = now.AddSeconds(ViolationBackoffSeconds);
                 }
-                
+
                 return RateLimitResult.RateLimited("Too many connections from this IP");
             }
         }
-        
+
         // Check global limits
         lock (_globalLock)
         {
@@ -98,32 +98,32 @@ public sealed class OverlayRateLimiter : IDisposable
             {
                 return RateLimitResult.RateLimited("Server at maximum connections");
             }
-            
+
             // Connections per minute limit
             while (_recentConnections.Count > 0 && _recentConnections.Peek() < now.AddMinutes(-1))
             {
                 _recentConnections.Dequeue();
             }
-            
+
             if (_recentConnections.Count >= MaxConnectionsPerMinute)
             {
                 return RateLimitResult.RateLimited("Too many connections per minute");
             }
-            
+
             // All checks passed - record connection
             _recentConnections.Enqueue(now);
             _totalConnections++;
         }
-        
+
         lock (state.Lock)
         {
             state.ActiveConnections++;
             state.LastConnectionTime = now;
         }
-        
+
         return RateLimitResult.Allowed();
     }
-    
+
     /// <summary>
     /// Record that a connection from an IP has closed.
     /// </summary>
@@ -136,13 +136,13 @@ public sealed class OverlayRateLimiter : IDisposable
                 state.ActiveConnections = Math.Max(0, state.ActiveConnections - 1);
             }
         }
-        
+
         lock (_globalLock)
         {
             _totalConnections = Math.Max(0, _totalConnections - 1);
         }
     }
-    
+
     /// <summary>
     /// Check if a message is allowed for a connection.
     /// </summary>
@@ -152,7 +152,7 @@ public sealed class OverlayRateLimiter : IDisposable
     {
         var state = _connectionStates.GetOrAdd(connectionId, _ => new ConnectionRateLimitState());
         var now = DateTimeOffset.UtcNow;
-        
+
         lock (state.Lock)
         {
             // Clean old entries
@@ -160,17 +160,17 @@ public sealed class OverlayRateLimiter : IDisposable
             {
                 state.MessageTimes.Dequeue();
             }
-            
+
             if (state.MessageTimes.Count >= MaxMessagesPerSecond)
             {
                 return RateLimitResult.RateLimited("Message rate limit exceeded");
             }
-            
+
             state.MessageTimes.Enqueue(now);
             return RateLimitResult.Allowed();
         }
     }
-    
+
     /// <summary>
     /// Check if a delta sync request is allowed.
     /// </summary>
@@ -179,7 +179,7 @@ public sealed class OverlayRateLimiter : IDisposable
     {
         var state = _connectionStates.GetOrAdd(peerId, _ => new ConnectionRateLimitState());
         var now = DateTimeOffset.UtcNow;
-        
+
         lock (state.Lock)
         {
             // Clean old entries
@@ -187,12 +187,12 @@ public sealed class OverlayRateLimiter : IDisposable
             {
                 state.DeltaRequestTimes.Dequeue();
             }
-            
+
             if (state.DeltaRequestTimes.Count >= MaxDeltaRequestsPerHour)
             {
                 return RateLimitResult.RateLimited("Delta sync rate limit exceeded");
             }
-            
+
             state.DeltaRequestTimes.Enqueue(now);
             return RateLimitResult.Allowed();
         }
@@ -223,7 +223,7 @@ public sealed class OverlayRateLimiter : IDisposable
             return RateLimitResult.Allowed();
         }
     }
-    
+
     /// <summary>
     /// Record a protocol violation from an IP.
     /// </summary>
@@ -231,18 +231,18 @@ public sealed class OverlayRateLimiter : IDisposable
     {
         var state = _ipStates.GetOrAdd(ip, _ => new IpRateLimitState());
         var now = DateTimeOffset.UtcNow;
-        
+
         lock (state.Lock)
         {
             state.Violations++;
-            
+
             if (state.Violations >= MaxViolationsBeforeBan)
             {
                 state.BackoffUntil = now.AddSeconds(ViolationBackoffSeconds);
             }
         }
     }
-    
+
     /// <summary>
     /// Remove connection state when connection is closed.
     /// </summary>
@@ -250,7 +250,7 @@ public sealed class OverlayRateLimiter : IDisposable
     {
         _connectionStates.TryRemove(connectionId, out _);
     }
-    
+
     /// <summary>
     /// Get current statistics.
     /// </summary>
@@ -274,12 +274,12 @@ public sealed class OverlayRateLimiter : IDisposable
             };
         }
     }
-    
+
     private void CleanupStaleEntries(object? state)
     {
         var now = DateTimeOffset.UtcNow;
         var staleThreshold = now.AddMinutes(-10);
-        
+
         // Clean up IP states with no recent activity
         foreach (var kvp in _ipStates)
         {
@@ -293,7 +293,7 @@ public sealed class OverlayRateLimiter : IDisposable
                 }
             }
         }
-        
+
         // Clean up connection states with no recent activity
         foreach (var kvp in _connectionStates)
         {
@@ -306,12 +306,12 @@ public sealed class OverlayRateLimiter : IDisposable
             }
         }
     }
-    
+
     public void Dispose()
     {
         _cleanupTimer.Dispose();
     }
-    
+
     private sealed class IpRateLimitState
     {
         public object Lock { get; } = new();
@@ -320,7 +320,7 @@ public sealed class OverlayRateLimiter : IDisposable
         public int Violations { get; set; }
         public DateTimeOffset BackoffUntil { get; set; }
     }
-    
+
     private sealed class ConnectionRateLimitState
     {
         public object Lock { get; } = new();
@@ -337,17 +337,17 @@ public readonly struct RateLimitResult
 {
     public bool IsAllowed { get; }
     public string? Reason { get; }
-    
+
     private RateLimitResult(bool isAllowed, string? reason)
     {
         IsAllowed = isAllowed;
         Reason = reason;
     }
-    
+
     public static RateLimitResult Allowed() => new(true, null);
     public static RateLimitResult RateLimited(string reason) => new(false, reason);
     public static RateLimitResult Blocked(string reason) => new(false, reason);
-    
+
     public static implicit operator bool(RateLimitResult result) => result.IsAllowed;
 }
 
@@ -362,4 +362,3 @@ public sealed class RateLimiterStats
     public int TrackedConnections { get; init; }
     public int BlockedIps { get; init; }
 }
-

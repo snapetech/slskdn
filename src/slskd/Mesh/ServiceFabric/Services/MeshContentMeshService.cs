@@ -170,6 +170,7 @@ public sealed class MeshContentMeshService : IMeshService
                 if (r == 0) break;
                 total += r;
             }
+
             if (total < length)
                 Array.Resize(ref bytes, total);
         }

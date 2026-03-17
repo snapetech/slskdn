@@ -17,22 +17,22 @@ public class VirtualSoulfindOptions
     /// Capture configuration.
     /// </summary>
     public CaptureOptions? Capture { get; set; }
-    
+
     /// <summary>
     /// Privacy configuration.
     /// </summary>
     public PrivacyOptions? Privacy { get; set; }
-    
+
     /// <summary>
     /// Shadow index configuration.
     /// </summary>
     public ShadowIndexOptions? ShadowIndex { get; set; }
-    
+
     /// <summary>
     /// Scenes configuration.
     /// </summary>
     public ScenesOptions? Scenes { get; set; }
-    
+
     /// <summary>
     /// Disaster mode configuration.
     /// </summary>
@@ -69,12 +69,12 @@ public class CaptureOptions
     /// Enable traffic capture and normalization.
     /// </summary>
     public bool Enabled { get; set; } = false;
-    
+
     /// <summary>
     /// Minimum file size to capture (bytes).
     /// </summary>
     public long MinimumFileSizeBytes { get; set; } = 1024 * 1024;  // 1 MB
-    
+
     /// <summary>
     /// Audio file extensions to capture.
     /// </summary>
@@ -93,17 +93,17 @@ public class PrivacyOptions
     /// Anonymization level: None, Pseudonymized, Aggregate.
     /// </summary>
     public string AnonymizationLevel { get; set; } = "Pseudonymized";
-    
+
     /// <summary>
     /// Raw observation retention (days).
     /// </summary>
     public int RawObservationRetentionDays { get; set; } = 7;
-    
+
     /// <summary>
     /// Variant cache retention (days).
     /// </summary>
     public int VariantCacheRetentionDays { get; set; } = 30;
-    
+
     /// <summary>
     /// Persist raw observations to disk (for debugging).
     /// </summary>
@@ -119,17 +119,17 @@ public class ScenesOptions
     /// Enable scenes (micro-networks).
     /// </summary>
     public bool Enabled { get; set; } = false;
-    
+
     /// <summary>
     /// Maximum number of scenes to join.
     /// </summary>
     public int MaxJoinedScenes { get; set; } = 20;
-    
+
     /// <summary>
     /// Enable scene chat (opt-in).
     /// </summary>
     public bool EnableChat { get; set; } = false;
-    
+
     /// <summary>
     /// Scene announcement refresh interval (minutes).
     /// </summary>

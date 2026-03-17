@@ -27,7 +27,7 @@ namespace slskd.SocialFederation
         /// </summary>
         [JsonPropertyName("@context")]
         public object Context { get; set; } = new[]
-        {
+                {
             "https://www.w3.org/ns/activitystreams",
             "https://w3id.org/federation/workref#"
         };
@@ -185,6 +185,7 @@ namespace slskd.SocialFederation
                 if (System.Text.RegularExpressions.Regex.IsMatch(input, p))
                     return true;
             }
+
             if (!allowUuid && System.Text.RegularExpressions.Regex.IsMatch(input, UuidPattern))
                 return true;
             return false;

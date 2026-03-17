@@ -33,6 +33,11 @@ namespace slskd.Integrations.MusicBrainz.Models
         public string Artist { get; init; } = string.Empty;
 
         /// <summary>
+        ///     Gets or sets the primary MusicBrainz artist identifier, if known.
+        /// </summary>
+        public string? MusicBrainzArtistId { get; init; }
+
+        /// <summary>
         ///     Gets or sets the configured metadata for the release.
         /// </summary>
         public ReleaseMetadata Metadata { get; init; } = new();
@@ -105,6 +110,3 @@ namespace slskd.Integrations.MusicBrainz.Models
         public string? Status { get; init; }
     }
 }
-
-
-

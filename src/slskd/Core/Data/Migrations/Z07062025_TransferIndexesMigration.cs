@@ -41,13 +41,13 @@ public class Z07062025_TransferIndexesMigration : IMigration
         {
             // check to see if *BOTH* of the indexes are in place. if one or both are missing, we must apply
             var idxes = SchemaInspector.GetDatabaseIndexes(ConnectionString);
-            
+
             // If Transfers table doesn't exist yet (fresh install), migration is not needed
             if (!idxes.ContainsKey("Transfers"))
             {
                 return false;
             }
-            
+
             var txfers = idxes["Transfers"];
 
             var directionExists = txfers.Any(c => c.Name.Equals("IDX_Transfers_Direction", StringComparison.OrdinalIgnoreCase));

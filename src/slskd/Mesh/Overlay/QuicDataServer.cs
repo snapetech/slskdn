@@ -110,6 +110,7 @@ public class QuicDataServer : BackgroundService
                         await connection.DisposeAsync();
                         continue;
                     }
+
                     _ = HandleConnectionAsync(connection, stoppingToken);
                 }
                 catch (OperationCanceledException)
@@ -150,6 +151,7 @@ public class QuicDataServer : BackgroundService
                             await stream.DisposeAsync();
                             continue;
                         }
+
                         _ = HandleStreamAsync(stream, remoteEndPoint, ct);
                     }
                     catch (OperationCanceledException)
@@ -197,6 +199,7 @@ public class QuicDataServer : BackgroundService
                     if (lineBuf[n] == (byte)'\n') { n++; break; }
                     n += r;
                 }
+
                 var line = n > 0 ? System.Text.Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : "";
 
                 if (line.StartsWith("RELAY_TCP ", StringComparison.Ordinal))
@@ -228,6 +231,7 @@ public class QuicDataServer : BackgroundService
                     {
                         try { await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR bad RELAY_TCP format\n"), ct); } catch { }
                     }
+
                     return;
                 }
 
@@ -242,9 +246,11 @@ public class QuicDataServer : BackgroundService
                     if (read == 0) break;
                     totalRead += read;
                 }
+
                 if (totalRead > 0)
                 {
                     logger.LogDebug("[Overlay-QUIC-DATA] Received {Size} bytes from {Endpoint}", totalRead, remoteEndPoint);
+
                     // Payload delivery: deferred until IOverlayDataPayloadHandler (or similar) is designed and wired.
                     // See memory-bank/triage-todo-fixme.md. For now we log and retain buffer for future use.
                 }

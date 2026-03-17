@@ -385,7 +385,6 @@ namespace slskd.Transfers.MultiSource
         /// </summary>
         public string TargetFingerprint { get; set; }
 
-
         /// <summary>
         ///     Gets or sets the semantic group key for this download.
         /// </summary>
@@ -466,6 +465,7 @@ namespace slskd.Transfers.MultiSource
                 if (DateTime.UtcNow < expiry) return true;
                 PeerTimeouts.TryRemove(username, out _);
             }
+
             return false;
         }
 
@@ -544,4 +544,3 @@ namespace slskd.Transfers.MultiSource
         Failed,
     }
 }
-

@@ -286,6 +286,7 @@ public class PodMessageBackfill : IPodMessageBackfill
                     if (stored)
                     {
                         messagesStored++;
+
                         // Update last seen timestamp
                         UpdateLastSeenTimestamp(podId, channelId, message.TimestampUnixMs);
                     }

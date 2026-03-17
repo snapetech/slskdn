@@ -30,7 +30,7 @@ using IOFile = System.IO.File;
 [ApiController]
 [Route("api/v0/security")]
 [Authorize]
-    [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
+[ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class SecurityController : ControllerBase
 {
     private readonly SecurityServices? _security;
@@ -94,8 +94,8 @@ public class SecurityController : ControllerBase
     /// </summary>
     [HttpGet("events")]
     public ActionResult<IEnumerable<SecurityEvent>> GetEvents(
-        [FromQuery] int count = 100,
-        [FromQuery] string? minSeverity = null)
+    [FromQuery] int count = 100,
+    [FromQuery] string? minSeverity = null)
     {
         var severity = SecuritySeverity.Info;
         if (!string.IsNullOrEmpty(minSeverity) && Enum.TryParse<SecuritySeverity>(minSeverity, true, out var parsed))
@@ -131,7 +131,7 @@ public class SecurityController : ControllerBase
         }
 
         // Compute duration with precedence: Duration (TimeSpan) first, then DurationMinutes, then null
-        var duration = request.Duration 
+        var duration = request.Duration
             ?? (request.DurationMinutes.HasValue ? TimeSpan.FromMinutes(request.DurationMinutes.Value) : null);
 
         _security?.ViolationTracker?.BanIp(ip, request.Reason ?? "Manual ban", duration, request.Permanent);
@@ -186,7 +186,7 @@ public class SecurityController : ControllerBase
         }
 
         // Compute duration with precedence: Duration (TimeSpan) first, then DurationMinutes, then null
-        var duration = request.Duration 
+        var duration = request.Duration
             ?? (request.DurationMinutes.HasValue ? TimeSpan.FromMinutes(request.DurationMinutes.Value) : null);
 
         _security?.ViolationTracker?.BanUsername(request.Username, request.Reason ?? "Manual ban", duration, request.Permanent);
@@ -386,6 +386,7 @@ public class SecurityController : ControllerBase
         var anomalies = _security?.ParanoidMode?.GetRecentAnomalies(count) ?? Array.Empty<ServerAnomaly>();
         return Ok(anomalies);
     }
+
     public ActionResult<AdversarialOptions> GetAdversarialSettings()
     {
         if (_adversarialOptions == null)

@@ -135,7 +135,7 @@ namespace slskd.Audio
     {
         public string RecordingId { get; set; }
 
-        public List<DedupeGroup> Groups { get; set; } = new ();
+        public List<DedupeGroup> Groups { get; set; } = new();
     }
 
     public class DedupeGroup
@@ -144,9 +144,9 @@ namespace slskd.Audio
 
         public int RepresentativeDurationMs { get; set; }
 
-        public List<DedupeVariant> Variants { get; set; } = new ();
+        public List<DedupeVariant> Variants { get; set; } = new();
 
-        public List<DedupeDuplicateSet> DuplicateSets { get; set; } = new ();
+        public List<DedupeDuplicateSet> DuplicateSets { get; set; } = new();
     }
 
     public class DedupeVariant

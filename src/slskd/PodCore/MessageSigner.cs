@@ -125,6 +125,7 @@ public class MessageSigner : IMessageSigner
                     Interlocked.Increment(ref _failedVerifications);
                     return false;
                 }
+
                 if (mode == SignatureMode.Warn)
                     _logger.LogWarning("[MessageSigner] Message {MessageId} has no signature (Warn)", message.MessageId);
                 Interlocked.Increment(ref _successfulVerifications);
@@ -138,6 +139,7 @@ public class MessageSigner : IMessageSigner
                     Interlocked.Increment(ref _failedVerifications);
                     return false;
                 }
+
                 if (mode == SignatureMode.Warn)
                     _logger.LogWarning("[MessageSigner] Message {MessageId} has non-ed25519 signature (Warn)", message.MessageId);
                 return true;

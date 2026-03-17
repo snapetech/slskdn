@@ -54,13 +54,13 @@ public class Z04012025_TransferStateMigration : IMigration
             // first, check the existing database to see if the StateDescription column exists
             // if it does, the migration has already been applied, or the database has been recreated
             var schema = SchemaInspector.GetDatabaseSchema(ConnectionString);
-            
+
             // If Transfers table doesn't exist yet (fresh install), migration is not needed
             if (!schema.ContainsKey("Transfers"))
             {
                 return false;
             }
-            
+
             var txfers = schema["Transfers"];
             return !txfers.Any(c => c.Name == nameof(Transfer.StateDescription));
         }
