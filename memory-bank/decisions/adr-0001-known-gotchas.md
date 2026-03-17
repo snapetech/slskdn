@@ -409,6 +409,25 @@ printf '\n  ./slskdn-vm.nix\n' >> /mnt/etc/nixos/configuration.nix
 
 **Why This Keeps Happening**: Generated NixOS config files look like plain attribute sets at a glance, but they are module functions. If you need to inject extra settings from a script, either edit inside the existing attrset carefully or create a separate module file and import it.
 
+### 2e. NixOS GRUB Configuration Now Expects `boot.loader.grub.devices` in This Installer Path
+
+**The Bug**: A scripted NixOS VM install set `boot.loader.grub.device = "/dev/vda";`, but the installer on NixOS 25.11 rejected it with an assertion asking for `boot.loader.grub.devices` or `boot.loader.grub.mirroredBoots`.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```nix
+boot.loader.grub.device = "/dev/vda";
+```
+
+**Correct**:
+```nix
+boot.loader.grub.devices = [ "/dev/vda" ];
+```
+
+**Why This Keeps Happening**: Older examples and muscle memory still use the singular `grub.device` form, but the current module assertions in this install path expect the list form. Check the generated module assertions on current NixOS releases instead of reusing older snippets blindly.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
