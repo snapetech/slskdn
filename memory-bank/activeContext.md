@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `dev/40-fixes`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Booted a disposable local NixOS 25.11 QEMU/KVM VM, validated the current `flake.nix` against a real NixOS userspace, and drove the package/service path far enough to distinguish packaging/runtime failures from ordinary application-config failures.
+  - Updated the stable flake pins to GitHub release `0.24.5-slskdn.54`, added the missing Nix runtime patching pieces (`autoPatchelfHook`, `patchelf`, `dontStrip`, `lttng-ust` SONAME rewrite), and synced the packaging metadata validator to the new flake contract.
+  - Verified in the NixOS VM that `nix build --no-write-lock-file 'path:/mnt/hostrepo#default'` succeeds and `/nix/store/.../bin/slskd --help` runs; `services.slskd` now launches the packaged binary and only stops on app-level config validation with dummy credentials.
+  - Fixed that metrics config-validation false positive locally: `metrics.authentication.password` is now only required when metrics are enabled and auth is enabled, with focused unit coverage and updated config docs/example.
+  - Investigated GitHub issue #117 (`How to install in NixOS declaratively?`) and fixed the remaining stable flake failure: after the earlier `bin/slskd` wrapper fix, NixOS was still rejecting the packaged generic Linux ELF with `stub-ld` / status 127 because the flake only wrapped it instead of patching it.
+  - Updated `flake.nix` to use `autoPatchelfHook` plus required runtime libraries, extended packaging metadata validation for the new Nix requirement, and documented the gotcha in ADR-0001.
   - Inspected current MusicBrainz lookup/UI, MetadataFacade, AcoustID/Chromaprint, release-graph/discography services, search stack, and multi-source ranking/download flow
   - Inspected `../ytdlpchop` feature surface and mapped its identification suite onto `slskdn` extension points
   - Wrote `docs/dev/SONGID_INTEGRATION_MAP.md`
@@ -92,8 +98,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 4. **slskd.Tests.Unit Re-enablement** — Historical note: plan documents still mention remaining work, but the active product priority is now new product work unless explicitly redirected.
 5. **Packaging / other product work** — T-010–T-013 done; continue only as prioritized.
 6. **Packaging audit follow-up** — Stable Nix/Winget compatibility fix done on 2026-03-16; `slskdn-dev` flake output is now intentionally disabled until a real `build-dev-<version>` release is published and its hashes are populated.
-7. **Repo-wide analyzer/lint debt** — `bash ./bin/lint` now passes with error-only gating in `bin/lint`, but the solution still carries a broad non-blocking warning backlog. Keep that cleanup as separate work unless release policy changes.
-8. **Release prep** — Packaging/test verification is green locally; if the next step is `.53`, update any remaining release-version metadata deliberately and create the release tag only when explicitly requested.
+7. **NixOS packaging verification** — Local QEMU/KVM NixOS verification is now done: the flake builds on NixOS, the packaged `slskd` binary starts, and the module reaches the process launch path. The remaining follow-up is only whether to add an automated VM smoke test or simplify the upstream NixOS module requirements for local testing.
+8. **Metrics config follow-up** — The false-positive metrics password validation is fixed locally and validated with focused unit coverage; if it needs to ship, commit only the metrics-specific hunks and avoid bundling unrelated `Options.cs` work.
+9. **Repo-wide analyzer/lint debt** — `bash ./bin/lint` now passes with error-only gating in `bin/lint`, but the solution still carries a broad non-blocking warning backlog. Keep that cleanup as separate work unless release policy changes.
+10. **Release prep** — Packaging/test verification is green locally and the local NixOS VM now confirms the package/runtime path. If the next step is a new release after the Nix fix, update any remaining release-version metadata deliberately and create the release tag only when explicitly requested.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

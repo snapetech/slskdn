@@ -1953,7 +1953,7 @@ namespace slskd
         /// <summary>
         ///     Metrics options.
         /// </summary>
-        public class MetricsOptions
+        public class MetricsOptions : IValidatableObject
         {
             /// <summary>
             ///     Gets a value indicating whether the metrics endpoint should be enabled.
@@ -1979,6 +1979,44 @@ namespace slskd
             [Validate]
             public MetricsAuthenticationOptions Authentication { get; init; } = new MetricsAuthenticationOptions();
 
+            public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+            {
+                var results = new List<ValidationResult>();
+
+                if (!Enabled || Authentication.Disabled)
+                {
+                    return results;
+                }
+
+                if (string.IsNullOrWhiteSpace(Authentication.Username))
+                {
+                    results.Add(new ValidationResult(
+                        "Metrics authentication username must be configured when metrics auth is enabled.",
+                        new[] { nameof(Authentication.Username) }));
+                }
+                else if (Authentication.Username.Length > 255)
+                {
+                    results.Add(new ValidationResult(
+                        "Metrics authentication username must be 255 characters or fewer.",
+                        new[] { nameof(Authentication.Username) }));
+                }
+
+                if (string.IsNullOrWhiteSpace(Authentication.Password))
+                {
+                    results.Add(new ValidationResult(
+                        "Metrics authentication password must be configured when metrics auth is enabled.",
+                        new[] { nameof(Authentication.Password) }));
+                }
+                else if (Authentication.Password.Length > 255)
+                {
+                    results.Add(new ValidationResult(
+                        "Metrics authentication password must be 255 characters or fewer.",
+                        new[] { nameof(Authentication.Password) }));
+                }
+
+                return results;
+            }
+
             /// <summary>
             ///     Metrics endpoint authentication options.
             /// </summary>
@@ -1999,7 +2037,6 @@ namespace slskd
                 [Argument(default, "metrics-username")]
                 [EnvironmentVariable("METRICS_USERNAME")]
                 [Description("username for metrics")]
-                [StringLength(255, MinimumLength = 1)]
                 [RequiresRestart]
                 public string Username { get; init; } = Program.AppName;
 
@@ -2009,7 +2046,6 @@ namespace slskd
                 [Argument(default, "metrics-password")]
                 [EnvironmentVariable("METRICS_PASSWORD")]
                 [Description("password for metrics")]
-                [StringLength(255, MinimumLength = 1)]
                 [Secret]
                 [RequiresRestart]
                 public string Password { get; init; } = string.Empty; // must be set explicitly; empty default forces configuration

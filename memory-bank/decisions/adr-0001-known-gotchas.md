@@ -324,6 +324,433 @@ PortableCommandAlias: slskdn
 
 **Why This Keeps Happening**: Packaging work tends to treat channel names, package names, and executable names as interchangeable. They are not. Each channel must preserve the runtime contract expected by downstream tools (`slskd` for service modules) while also publishing the correct channel identity (`slskdn` vs `slskdn-dev`). Add an explicit validation step whenever manifests or wrappers are generated.
 
+### 2b. Wrapping Generic Linux Binaries Is Not Enough for NixOS
+
+**The Bug**: The Nix flake wrapped the published `slskd` binary and set `LD_LIBRARY_PATH`, but the service still failed on NixOS because the extracted ELF kept its generic Linux dynamic loader and NixOS refused to execute it.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper ];
+
+installPhase = ''
+  makeWrapper $out/libexec/${pname}/slskd $out/bin/slskd \
+    --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath [ pkgs.icu pkgs.openssl ]}
+'';
+```
+
+**Correct**:
+```nix
+nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook ];
+buildInputs = [
+  pkgs.curl
+  pkgs.icu
+  pkgs.krb5
+  pkgs.libunwind
+  pkgs.openssl
+  pkgs.stdenv.cc.cc
+  pkgs.util-linux
+  pkgs.zlib
+];
+```
+
+**Why This Keeps Happening**: It is easy to treat Nix like any other Linux packaging target and assume a wrapper plus `LD_LIBRARY_PATH` solves native dependency issues. On NixOS, generic upstream ELF binaries also need their interpreter and linked libraries patched into the Nix store path, so use `autoPatchelfHook` or explicit `patchelf` instead of only wrapping the executable.
+
+### 2c. Do Not Assume Fresh Filesystem Labels Are Immediately Available Under `/dev/disk/by-label`
+
+**The Bug**: A QEMU/NixOS install helper formatted `/dev/vda1` with `mkfs.ext4 -L nixos` and immediately mounted `/dev/disk/by-label/nixos`, but the installer environment had not populated that symlink yet, so the mount failed even though the partition existed.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```bash
+mkfs.ext4 -F -L nixos /dev/vda1
+mount /dev/disk/by-label/nixos /mnt
+```
+
+**Correct**:
+```bash
+mkfs.ext4 -F -L nixos /dev/vda1
+udevadm settle
+mount /dev/vda1 /mnt
+```
+
+**Why This Keeps Happening**: It is tempting to use the friendlier `/dev/disk/by-label/...` path immediately after formatting, but installer/live environments can lag on udev updates. For fresh partitions, either wait for udev explicitly or mount the block device path you already know exists.
+
+### 2d. Do Not Append a Bare Attrset to `configuration.nix`; Add a Module or Edit Inside the Existing One
+
+**The Bug**: A NixOS install helper appended a second top-level `{ ... }` block to the generated `/etc/nixos/configuration.nix`, but that file already defines a module function (`{ config, pkgs, ... }:`). The next `nixos-install` failed with “attempt to call something which is not a function but a set”.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```bash
+cat >> /mnt/etc/nixos/configuration.nix <<'EOF'
+{
+  services.openssh.enable = true;
+}
+EOF
+```
+
+**Correct**:
+```bash
+cat > /mnt/etc/nixos/slskdn-vm.nix <<'EOF'
+{ ... }:
+{
+  services.openssh.enable = true;
+}
+EOF
+printf '\n  ./slskdn-vm.nix\n' >> /mnt/etc/nixos/configuration.nix
+```
+
+**Why This Keeps Happening**: Generated NixOS config files look like plain attribute sets at a glance, but they are module functions. If you need to inject extra settings from a script, either edit inside the existing attrset carefully or create a separate module file and import it.
+
+### 2e. NixOS GRUB Configuration Now Expects `boot.loader.grub.devices` in This Installer Path
+
+**The Bug**: A scripted NixOS VM install set `boot.loader.grub.device = "/dev/vda";`, but the installer on NixOS 25.11 rejected it with an assertion asking for `boot.loader.grub.devices` or `boot.loader.grub.mirroredBoots`.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```nix
+boot.loader.grub.device = "/dev/vda";
+```
+
+**Correct**:
+```nix
+boot.loader.grub.devices = [ "/dev/vda" ];
+```
+
+**Why This Keeps Happening**: Older examples and muscle memory still use the singular `grub.device` form, but the current module assertions in this install path expect the list form. Check the generated module assertions on current NixOS releases instead of reusing older snippets blindly.
+
+### 2f. Generated NixOS `imports` Blocks May Span Multiple Lines; Match the Real Shape Before Using `sed`
+
+**The Bug**: A helper tried to inject `./slskdn-vm.nix` with `sed '/imports = \[/a ...'`, but `nixos-generate-config` emitted `imports =` and `[` on separate lines, so the expression never matched and the custom module was not imported at all.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/install-nixos.sh`
+
+**Wrong**:
+```bash
+sed -i '/imports = \[/a\ \ \ \ ./slskdn-vm.nix' /mnt/etc/nixos/configuration.nix
+```
+
+**Correct**:
+```bash
+sed -i '/\.\/hardware-configuration\.nix/a\ \ \ \ \ \./slskdn-vm.nix' /mnt/etc/nixos/configuration.nix
+```
+
+**Why This Keeps Happening**: Generated config files look predictable, but their whitespace and line breaks are not stable enough to target with a guessed pattern. Match a concrete line that is actually present in the generated file, or rewrite the whole block explicitly instead of assuming a one-line `imports = [`.
+
+### 2g. `expect` Patterns for SSH Password Prompts Must Handle OpenSSH's Actual Prompt Casing
+
+**The Bug**: A local-VM validation helper waited for `password:` in lowercase, but OpenSSH prompted with `(root@127.0.0.1) Password:`. The automation stalled at the login prompt even though the VM was ready.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-vm.expect`
+
+**Wrong**:
+```tcl
+expect {
+  "password:" { send "root\r" }
+}
+```
+
+**Correct**:
+```tcl
+expect {
+  -re {[Pp]assword:} { send "root\r" }
+}
+```
+
+**Why This Keeps Happening**: Interactive prompt matching is brittle when it relies on exact casing or full literal text. SSH clients vary their password prompt prefix, so use a case-tolerant regex for the stable suffix instead of matching the whole prompt literally.
+
+### 2h. Nix Flakes on 9p-Mounted Git Repositories Can Trip Git Ownership Checks
+
+**The Bug**: Inside the NixOS VM, `nix build /mnt/hostrepo#default` treated the shared repo as a Git flake and failed because the 9p mount preserved host ownership that did not match the guest user, triggering Git's “safe directory” protection.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-slskdn.sh`
+
+**Wrong**:
+```bash
+nix build /mnt/hostrepo#default
+```
+
+**Correct**:
+```bash
+git config --global --add safe.directory /mnt/hostrepo
+nix build /mnt/hostrepo#default
+```
+
+**Why This Keeps Happening**: Shared folders in VMs often preserve host UIDs/GIDs or present synthetic ownership that does not match the guest account. When a flake path is also a Git repo, Nix delegates part of the source handling to Git, so you need to either mark the mount as a safe directory or use a non-Git path source when testing from a shared folder.
+
+### 2i. Prefer `path:` Flake URIs in Minimal Guest Images When Shared Repos Trigger Git Handling
+
+**The Bug**: The first recovery plan for a 9p-mounted flake repo assumed `git` was installed in the minimal NixOS guest so `safe.directory` could be configured, but the guest image did not include `git`, leaving the flake build blocked.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-slskdn.sh`
+
+**Wrong**:
+```bash
+git config --global --add safe.directory /mnt/hostrepo
+nix build /mnt/hostrepo#default
+```
+
+**Correct**:
+```bash
+nix build 'path:/mnt/hostrepo#default'
+```
+
+**Why This Keeps Happening**: It is easy to assume live or minimal troubleshooting images carry the same helper tools as a normal dev box. For ad hoc VM validation, use the simplest source form that avoids extra dependencies; `path:` flake URIs sidestep both Git ownership checks and the need for Git itself.
+
+### 2j. Read-Only Shared Flake Mounts Need `--no-write-lock-file`
+
+**The Bug**: After switching to a `path:` flake URI for a read-only 9p mount, `nix build` still failed because it tried to create `flake.lock` in the mounted repo and the filesystem was intentionally read-only.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-slskdn.sh`
+
+**Wrong**:
+```bash
+nix build 'path:/mnt/hostrepo#default'
+```
+
+**Correct**:
+```bash
+nix build --no-write-lock-file 'path:/mnt/hostrepo#default'
+```
+
+**Why This Keeps Happening**: Read-only source mounts are ideal for preserving the host checkout during guest validation, but flake evaluation still wants to persist lock updates by default. When validating from a read-only mount, always disable lock-file writes explicitly or copy the flake into a writable path first.
+
+### 2k. Nix Flake Stable Pins Must Move With the Latest Published Stable Release
+
+**The Bug**: The flake still pointed at stable release `0.24.5-slskdn.52` and its old hashes even though GitHub’s latest stable release had moved to `0.24.5-slskdn.54`, so `nix build` failed immediately with a fixed-output hash mismatch before the runtime patching fix could even be exercised.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+version = "0.24.5-slskdn.52";
+sha256 = "1gljb5zj7h0g7mhi8d9s5hjkqvn8v6dmrb812gfwggayl91ksj7y";
+```
+
+**Correct**:
+```nix
+version = "0.24.5-slskdn.54";
+sha256 = "sha256-M1gUyVXt1iPUjjh9eFheDBRWv/kixAgIxlvIRMbckoo=";
+```
+
+**Why This Keeps Happening**: Packaging work can fix wrapper logic or runtime behavior while leaving the stable source pin behind on an older release. For fixed-output fetches, a stale release pin is just as fatal as a stale hash, so treat version and hashes as one atomic update sourced from the actual latest published release metadata.
+
+### 2l. The Bundled .NET Runtime Also Needs `lttng-ust` on NixOS for `autoPatchelfHook` to Finish Cleanly
+
+**The Bug**: After adding the obvious runtime libraries, the NixOS VM still failed during `autoPatchelfHook` because `libcoreclrtraceptprovider.so` wanted `liblttng-ust.so.0`, which was not present in the flake inputs.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+buildInputs = [
+  pkgs.curl
+  pkgs.icu
+  pkgs.krb5
+  pkgs.libunwind
+  pkgs.openssl
+  pkgs.stdenv.cc.cc
+  pkgs.util-linux
+  pkgs.zlib
+];
+```
+
+**Correct**:
+```nix
+buildInputs = [
+  pkgs.curl
+  pkgs.icu
+  pkgs.krb5
+  pkgs.lttng-ust
+  pkgs.libunwind
+  pkgs.openssl
+  pkgs.stdenv.cc.cc
+  pkgs.util-linux
+  pkgs.zlib
+];
+```
+
+**Why This Keeps Happening**: The first-pass dependency list tends to cover the apphost and common runtime libs, but the bundled .NET runtime ships tracing/provider binaries that pull in less obvious native dependencies. Validate with `autoPatchelfHook` on real NixOS and add every missing provider library it reports instead of assuming the first set is complete.
+
+### 2m. Some Nix Packages Default to a Non-Library Output; Use the Output That Actually Contains the Shared Object
+
+**The Bug**: Adding `pkgs.lttng-ust` still did not satisfy `liblttng-ust.so.0` because that attribute resolved to the `bin` output in this nixpkgs revision, while the shared library lived in `pkgs.lttng-ust.out`.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+buildInputs = [
+  pkgs.lttng-ust
+];
+```
+
+**Correct**:
+```nix
+buildInputs = [
+  pkgs.lttng-ust.out
+];
+```
+
+**Why This Keeps Happening**: It is easy to assume a package attribute points at the runtime library output, but multi-output Nix packages often default to `bin` or `dev`. When `autoPatchelfHook` still cannot find a `.so`, inspect the package outputs and reference the one that actually contains the needed library.
+
+### 2n. Bundled Runtime SONAMEs Can Lag Behind nixpkgs; Patch `NEEDED` Entries Before `autoPatchelfHook` Runs
+
+**The Bug**: Even after adding the correct `lttng-ust` library output, the NixOS VM still failed because the bundled `.NET` trace provider asked for `liblttng-ust.so.0` while current nixpkgs only ships `liblttng-ust.so.1`.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+buildInputs = [
+  pkgs.lttng-ust.out
+];
+```
+
+**Correct**:
+```nix
+patchelf \
+  --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 \
+  $out/libexec/${pname}/libcoreclrtraceptprovider.so
+```
+
+**Why This Keeps Happening**: Upstream self-contained runtimes can be built against an older SONAME than the one available in current nixpkgs. Adding more packages will not help when the exact requested SONAME no longer exists; inspect the bundled binary and patch the `NEEDED` entry to the compatible library that nixpkgs actually provides before running `autoPatchelfHook`.
+
+### 2o. Do Not Strip Bundled .NET Runtime Payloads in the Nix Package
+
+**The Bug**: After the flake finally built, launching `slskd` on NixOS still failed with `Failed to load System.Private.CoreLib.dll ... 0x8007000B`. The package had gone through Nix’s default strip phase, which is unsafe for this bundled .NET payload.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+pkgs.stdenv.mkDerivation {
+  nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook pkgs.patchelf ];
+}
+```
+
+**Correct**:
+```nix
+pkgs.stdenv.mkDerivation {
+  nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook pkgs.patchelf ];
+  dontStrip = true;
+}
+```
+
+**Why This Keeps Happening**: Nix’s normal strip phase is reasonable for ordinary native packages, but bundled .NET distributions mix ELF binaries with managed/runtime payloads that are not safe to treat like a conventional C/C++ install tree. If CoreCLR starts failing with format/load errors after packaging, remove stripping from the equation before chasing more loader theories.
+
+### 2p. The NixOS `services.slskd` Module Requires `services.slskd.domain` Even for Local Validation
+
+**The Bug**: A local NixOS validation module enabled `services.slskd` and provided a custom package, but `nixos-rebuild test` failed before creating the service because the module accessed `services.slskd.domain` and no value was set.
+
+**Files Affected**:
+- `/etc/nixos/slskdn-local.nix` in the validation VM
+
+**Wrong**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.package = slskdn.packages.${pkgs.system}.default;
+}
+```
+
+**Correct**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.domain = "localhost";
+  services.slskd.package = slskdn.packages.${pkgs.system}.default;
+}
+```
+
+**Why This Keeps Happening**: It is easy to treat the NixOS module like a thin wrapper around the binary and only override `package`, but module assertions/options can still require unrelated application settings. For service validation, read the module’s required options instead of assuming `enable + package` is enough.
+
+### 2q. The NixOS `services.slskd` Module Also Requires `settings.shares.directories`, Even If You Want No Shares
+
+**The Bug**: After adding `domain` and `environmentFile`, `nixos-rebuild test` still failed because the module always maps over `cfg.settings.shares.directories` to build `ReadOnlyPaths`, so leaving it unset crashes evaluation.
+
+**Files Affected**:
+- `/etc/nixos/slskdn-local.nix` in the validation VM
+
+**Wrong**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.environmentFile = "/etc/slskd.env";
+}
+```
+
+**Correct**:
+```nix
+{
+  services.slskd.enable = true;
+  services.slskd.environmentFile = "/etc/slskd.env";
+  services.slskd.settings.shares.directories = [ ];
+}
+```
+
+**Why This Keeps Happening**: “No shares configured” feels like it should mean “unset,” but this module dereferences the list unconditionally when generating systemd hardening paths. For local validation, explicitly set it to an empty list.
+
+### 2r. Whenever `flake.nix` Packaging Logic Changes, Update the Metadata Validator in the Same Edit
+
+**The Bug**: After changing the Nix flake to add `patchelf`, `dontStrip`, `lttng-ust.out`, and the SONAME rewrite, `packaging/scripts/validate-packaging-metadata.sh` still enforced the old `nativeBuildInputs` line and failed immediately.
+
+**Files Affected**:
+- `flake.nix`
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+expect_line flake.nix 'nativeBuildInputs = \[ pkgs\.unzip pkgs\.makeWrapper pkgs\.autoPatchelfHook \];'
+```
+
+**Correct**:
+```bash
+expect_line flake.nix 'nativeBuildInputs = \[ pkgs\.unzip pkgs\.makeWrapper pkgs\.autoPatchelfHook pkgs\.patchelf \];'
+expect_line flake.nix 'dontStrip = true;'
+expect_line flake.nix '--replace-needed liblttng-ust\.so\.0 liblttng-ust\.so\.1'
+```
+
+**Why This Keeps Happening**: Packaging validation tends to get treated as a one-time guardrail, but it is really part of the packaging implementation. If the flake or package templates change and the validator does not, the repo ends up failing on stale assertions instead of catching real regressions.
+
+### 2s. Validator Helpers That Pass Regexes to `grep` Must Use `grep --` for Patterns Beginning With `-`
+
+**The Bug**: After adding a validation pattern for `--replace-needed ...`, the packaging validator failed inside `grep` because the pattern itself started with `-` and was parsed as an option rather than a regex.
+
+**Files Affected**:
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+grep -Eq "$pattern" "$file"
+```
+
+**Correct**:
+```bash
+grep -Eq -- "$pattern" "$file"
+```
+
+**Why This Keeps Happening**: Validation helpers often assume patterns are data, but command-line tools still parse them as arguments first. Any generic wrapper that forwards arbitrary regexes to `grep` should include `--` up front or it will break as soon as a pattern begins with `-`.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
@@ -2397,6 +2824,17 @@ if (useHttpDownload) {
 ```
 
 **Why This Keeps Happening**: Backfill needs to work for both cross-node shares (HTTP) and same-network shares (Soulseek). The implementation must check for both methods and provide clear error messages when neither is available.
+
+### 2w. Metrics Auth DataAnnotations Must Not Reject the Default Config When Metrics Are Disabled
+
+**The Bug**: `Options.MetricsOptions.MetricsAuthenticationOptions.Password` had a `[StringLength(MinimumLength = 1)]` attribute even though metrics are disabled by default and the default password is intentionally empty. Full options validation ran before startup, so a fresh config could fail with `Metrics.Authentication.Password` length validation even when `metrics.enabled = false` or `metrics.authentication.disabled = true`.
+
+**What Went Wrong**: The validation lived on the nested property instead of the feature gate. DataAnnotations treated the empty default password as invalid unconditionally, which broke NixOS service validation and any other startup path that bound defaults before metrics was actually enabled.
+
+**How to Prevent It**:
+- Put required-field validation for optional features on the parent options object where you can check `Enabled` and related flags.
+- Do not use unconditional `[StringLength(MinimumLength = 1)]` on values that are allowed to remain empty while the feature is disabled.
+- Add tests for all three cases: feature disabled, feature enabled with auth disabled, and feature enabled with auth required.
 
 ---
 

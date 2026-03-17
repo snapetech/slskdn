@@ -13,19 +13,25 @@ fail() {
 expect_line() {
     local file="$1"
     local pattern="$2"
-    grep -Eq "$pattern" "$file" || fail "$file is missing pattern: $pattern"
+    grep -Eq -- "$pattern" "$file" || fail "$file is missing pattern: $pattern"
 }
 
 reject_line() {
     local file="$1"
     local pattern="$2"
-    if grep -Eq "$pattern" "$file"; then
+    if grep -Eq -- "$pattern" "$file"; then
         fail "$file contains forbidden pattern: $pattern"
     fi
 }
 
 expect_line flake.nix 'makeWrapper \$out/libexec/\$\{pname\}/slskd \$out/bin/slskd'
 expect_line flake.nix 'ln -s slskd \$out/bin/\$\{pname\}'
+expect_line flake.nix 'nativeBuildInputs = \[ pkgs\.unzip pkgs\.makeWrapper pkgs\.autoPatchelfHook pkgs\.patchelf \];'
+expect_line flake.nix 'pkgs\.libunwind'
+expect_line flake.nix 'pkgs\.lttng-ust\.out'
+expect_line flake.nix 'dontStrip = true;'
+expect_line flake.nix '--replace-needed liblttng-ust\.so\.0 liblttng-ust\.so\.1'
+expect_line flake.nix 'pkgs\.util-linux'
 reject_line flake.nix 'releases/download/dev/'
 expect_line flake.nix 'slskdn-dev = throw "slskdn-dev flake output is temporarily unavailable'
 

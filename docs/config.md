@@ -1206,7 +1206,7 @@ logger:
 
 The application captures metrics internally and can optionally expose these metrics to be consumed by an instance of Prometheus.  This is a good option for those wanting to tune performance characteristics of the application.
 
-Metrics are disabled by default, and enabling them will make them available at `/metrics`.  Authentication is enabled by default, and the credentials are the same defaults as the web UI (`slskd`:`slskd`).
+Metrics are disabled by default, and enabling them will make them available at `/metrics`. Authentication is enabled by default, but the password must be set explicitly before the endpoint will start serving authenticated requests.
 
 If the application will be exposed to the internet, it's a good idea to leave this disabled or to set credentials other than the defaults.  Elements of the system configuration, like operating system, architecture, and drive configuration are included and can this can make it easier for an attacker to exploit a vulnerability in your system.
 
@@ -1228,7 +1228,7 @@ metrics:
   authentication:
     disabled: false
     username: slskd
-    password: slskd
+    password: "" # set a non-empty password before enabling metrics auth
 ```
 
 ## Features
