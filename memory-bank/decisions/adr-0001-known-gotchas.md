@@ -2943,6 +2943,17 @@ if (useHttpDownload) {
 - If there are no staged changes after regenerating a packaging file, exit early instead of creating a no-op push path.
 - Treat repository write-back steps as separate from artifact publication; a release can publish successfully while the write-back still races and turns the workflow red.
 
+### 2y. Do Not Rebase a Generated Release Commit Until the Workflow Cleans Nix-Generated Dirt
+
+**The Bug**: The Nix write-back job for release `0.24.5-slskdn.59` still failed after a 10-attempt retry loop because the checkout was already dirty by the time the loop reached `git rebase origin/master`, so every attempt died immediately with `cannot rebase: You have unstaged changes`.
+
+**What Went Wrong**: The retry logic assumed the only local change was the committed `flake.nix` bump. In reality, the Nix verification step left additional working-tree/index changes behind, so the rebase loop never had a clean tree to operate on.
+
+**How to Prevent It**:
+- Run `nix flake check` with `--no-write-lock-file` in CI when the job is only validating metadata.
+- Before any fetch/rebase/push retry loop, explicitly clean the checkout (`git reset --hard HEAD` plus `git clean -fd`) or regenerate the file from a fresh `origin/master` each attempt.
+- Do not interpret "more retries" as a fix when the underlying checkout state is dirty; first make the retry loop re-runnable.
+
 ---
 
 *Last updated: 2026-01-27*
