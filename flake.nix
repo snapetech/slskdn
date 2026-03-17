@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.24.5-slskdn.54";
+        version = "0.24.5-slskdn.55";
         devVersion = "0.24.1.dev.91769727133";
         devTag = "build-dev-${devVersion}";
         
@@ -82,19 +82,19 @@
         stableSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-x64.zip";
-            sha256 = "sha256-M1gUyVXt1iPUjjh9eFheDBRWv/kixAgIxlvIRMbckoo="; # x86_64-linux
+            sha256 = "sha256-uD7SB2B2WMRaV9SK1cCl+rifLs/GrykXd2iogALgTFo="; # x86_64-linux
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-arm64.zip";
-            sha256 = "sha256-K1bk+LDeXcR/PulpjYDypD5b39P0iu0d+KRfWon8bwI="; # aarch64-linux
+            sha256 = "sha256-xJOhqpNtgdiU+bJ2yywH8OSskIpFNG47tTrdqFvVBow="; # aarch64-linux
           };
           "x86_64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-x64.zip";
-            sha256 = "sha256-/y2L9oGQYMhO7frgpyWiKUXRnhm9RMqjoKOm7e9TOPE="; # x86_64-darwin
+            sha256 = "sha256-x+hU+77FwASeDHUOzikoAyj+Jox6p+a+8lJjg9yWqyc="; # x86_64-darwin
           };
           "aarch64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-arm64.zip";
-            sha256 = "sha256-UwDtL5a/SrCmq7nKaR33wlmb/tZQlcaxv/xS5dSkV7A="; # aarch64-darwin
+            sha256 = "sha256-tWklJisvMGbcizqc5iLgWaMiMVGTyHmhzfFZe0Yx6Sc="; # aarch64-darwin
           };
         };
 
