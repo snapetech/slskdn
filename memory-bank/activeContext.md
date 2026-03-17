@@ -27,7 +27,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Manually updated `Formula/slskdn.rb` to release `0.24.5-slskdn.57`, patched `build-on-tag.yml` so the Homebrew main-repo write-back rebases/retries before push, and confirmed the separate CodeQL failure is caused by GitHub default setup conflicting with the repo's advanced CodeQL workflow.
+  - Manually updated `Formula/slskdn.rb` to release `0.24.5-slskdn.57`, patched `build-on-tag.yml` so the Homebrew, Nix, and Winget main-repo write-back steps rebase/retry before push, and confirmed the separate CodeQL failure is caused by GitHub default setup conflicting with the repo's advanced CodeQL workflow.
   - Booted a disposable local NixOS 25.11 QEMU/KVM VM, validated the current `flake.nix` against a real NixOS userspace, and drove the package/service path far enough to distinguish packaging/runtime failures from ordinary application-config failures.
   - Updated the stable flake pins to GitHub release `0.24.5-slskdn.54`, added the missing Nix runtime patching pieces (`autoPatchelfHook`, `patchelf`, `dontStrip`, `lttng-ust` SONAME rewrite), and synced the packaging metadata validator to the new flake contract.
   - Verified in the NixOS VM that `nix build --no-write-lock-file 'path:/mnt/hostrepo#default'` succeeds and `/nix/store/.../bin/slskd --help` runs; `services.slskd` now launches the packaged binary and only stops on app-level config validation with dummy credentials.
@@ -94,7 +94,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. Disable GitHub default CodeQL setup in repo settings or remove the checked-in advanced workflow so SARIF uploads stop failing on every `master` push.
-2. Watch the next `build-main-*` tag and confirm the Homebrew main-repo update now lands cleanly after artifact publication.
+2. Watch the next `build-main-*` tag and confirm the Homebrew, Nix, and Winget write-back steps now land cleanly after artifact publication.
 3. Decide whether to spend separate cleanup time on the slow opaque blanket integration pass and the remaining warning backlog.
 
 4. **Recent completions** (2026-01-27):

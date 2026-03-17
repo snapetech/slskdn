@@ -1917,8 +1917,20 @@ jobs:
           else
             git add flake.nix
             git commit -m "chore(nix): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
-            git push origin HEAD:master
-            echo "✅ flake.nix updated"
+
+            for attempt in 1 2 3; do
+              git fetch origin master
+              if git rebase origin/master && git push origin HEAD:master; then
+                echo "✅ flake.nix updated"
+                exit 0
+              fi
+
+              git rebase --abort || true
+              sleep $((attempt * 5))
+            done
+
+            echo "::error::Failed to push flake.nix update after 3 attempts"
+            exit 1
           fi
 
   winget-main:
@@ -1981,8 +1993,27 @@ jobs:
           if (-not (git diff --quiet packaging/winget/)) {
             git add packaging/winget/
             git commit -m "chore(winget): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
-            git push origin HEAD:master
-            Write-Host "✅ Winget manifests updated"
+            $pushed = $false
+            foreach ($attempt in 1..3) {
+              git fetch origin master
+              git rebase origin/master
+              if ($LASTEXITCODE -eq 0) {
+                git push origin HEAD:master
+                if ($LASTEXITCODE -eq 0) {
+                  Write-Host "✅ Winget manifests updated"
+                  $pushed = $true
+                  break
+                }
+              }
+
+              git rebase --abort 2>$null
+              Start-Sleep -Seconds ($attempt * 5)
+            }
+
+            if (-not $pushed) {
+              Write-Error "Failed to push Winget manifest update after 3 attempts"
+              exit 1
+            }
           }
         shell: pwsh
 
