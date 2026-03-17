@@ -470,6 +470,26 @@ expect {
 
 **Why This Keeps Happening**: Interactive prompt matching is brittle when it relies on exact casing or full literal text. SSH clients vary their password prompt prefix, so use a case-tolerant regex for the stable suffix instead of matching the whole prompt literally.
 
+### 2h. Nix Flakes on 9p-Mounted Git Repositories Can Trip Git Ownership Checks
+
+**The Bug**: Inside the NixOS VM, `nix build /mnt/hostrepo#default` treated the shared repo as a Git flake and failed because the 9p mount preserved host ownership that did not match the guest user, triggering Git's “safe directory” protection.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-slskdn.sh`
+
+**Wrong**:
+```bash
+nix build /mnt/hostrepo#default
+```
+
+**Correct**:
+```bash
+git config --global --add safe.directory /mnt/hostrepo
+nix build /mnt/hostrepo#default
+```
+
+**Why This Keeps Happening**: Shared folders in VMs often preserve host UIDs/GIDs or present synthetic ownership that does not match the guest account. When a flake path is also a Git repo, Nix delegates part of the source handling to Git, so you need to either mark the mount as a safe directory or use a non-Git path source when testing from a shared folder.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
