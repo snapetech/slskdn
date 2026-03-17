@@ -20,17 +20,16 @@ case "$CHANNEL" in
         PACKAGE_NAME="slskdN"
         MONIKER="slskdn"
         COMMAND_ALIAS="slskdn"
-        SHORT_DESCRIPTION="Batteries-included Soulseek web client"
+        SHORT_DESCRIPTION="Soulseek client with built-in SongID and Discovery Graph"
         DESCRIPTION=$(cat <<'EOF'
-slskdN is a batteries-included fork of slskd with advanced download features,
-automation, and network enhancements for Soulseek.
+slskdN is the batteries-included fork of slskd that makes identity and
+discovery first-class features for Soulseek.
 
 Stable features include:
-- Multi-source swarm downloads
-- DHT mesh networking
-- MusicBrainz integration
-- Wishlist and background search
-- Security hardening
+- SongID for YouTube, Spotify, text, and local-file identification
+- Discovery Graph atlas across SongID, MusicBrainz, and search
+- Multi-source downloads, auto-replace, and wishlist/background search
+- Mesh, Solid, and package-manager friendly distribution
 EOF
 )
         RELEASE_NOTES=$(cat <<EOF
@@ -47,19 +46,17 @@ EOF
         PACKAGE_NAME="slskdN (Development)"
         MONIKER="slskdn-dev"
         COMMAND_ALIAS="slskdn-dev"
-        SHORT_DESCRIPTION="Batteries-included Soulseek web client (Development Build)"
+        SHORT_DESCRIPTION="Dev Soulseek client with SongID and Discovery Graph first"
         DESCRIPTION=$(cat <<'EOF'
-slskdN is an experimental fork of slskd exploring advanced download features,
-protocol extensions, and network enhancements for Soulseek.
+slskdN development builds ship the newest identity and discovery work first,
+especially SongID and Discovery Graph changes.
 
 WARNING: This is an unstable development build.
 
 Features in development builds:
-- Multi-source swarm downloads
-- DHT mesh network with content verification
-- BitTorrent DHT rendezvous for peer discovery
-- TLS-secured mesh connections
-- Distributed hash database with mesh sync
+- SongID from URLs, text, and local media with ranked acquisition paths
+- Discovery Graph atlas across SongID, MusicBrainz, and search
+- Acquisition, packaging, and network changes before they reach stable
 EOF
 )
         RELEASE_NOTES=$(cat <<EOF

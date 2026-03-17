@@ -32,6 +32,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Manually updated `flake.nix` to `0.24.5-slskdn.58` and strengthened the write-back retries again with explicit `origin/master` refspec fetches and a longer retry window.
   - Replaced duplicated GitHub release bodies with shared templates, rewrote the copy around SongID and Discovery Graph as first-class features, updated the Winget marketing copy, and added release-copy validation/documentation so future feature changes have one source of truth.
   - Pulled the `.59` Nix job log and confirmed the retry loop was failing because `nix flake check` left the checkout dirty, so `git rebase` could never start. Updated the workflow to validate with `--no-write-lock-file`, regenerate `flake.nix` from fresh `origin/master` on each attempt, and manually landed the missing `.59` flake update.
+  - Removed the deeper architectural source of these metadata races by replacing the separate Nix/Winget/main-formula writer jobs with one consolidated `metadata-main` job that pushes a single combined metadata commit to `master`.
   - Booted a disposable local NixOS 25.11 QEMU/KVM VM, validated the current `flake.nix` against a real NixOS userspace, and drove the package/service path far enough to distinguish packaging/runtime failures from ordinary application-config failures.
   - Updated the stable flake pins to GitHub release `0.24.5-slskdn.54`, added the missing Nix runtime patching pieces (`autoPatchelfHook`, `patchelf`, `dontStrip`, `lttng-ust` SONAME rewrite), and synced the packaging metadata validator to the new flake contract.
   - Verified in the NixOS VM that `nix build --no-write-lock-file 'path:/mnt/hostrepo#default'` succeeds and `/nix/store/.../bin/slskd --help` runs; `services.slskd` now launches the packaged binary and only stops on app-level config validation with dummy credentials.
@@ -97,7 +98,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Trigger the next stable tag and confirm the Nix write-back now succeeds with the regenerate-from-master strategy instead of rebasing a dirty checkout.
+1. Trigger the next stable tag and confirm the single `metadata-main` writer job lands the combined Nix/Homebrew/Winget metadata update cleanly.
 2. Decide whether to spend separate cleanup time on the slow opaque blanket integration pass and the remaining warning backlog.
 3. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 

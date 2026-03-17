@@ -1633,8 +1633,8 @@ jobs:
           }
         shell: pwsh
 
-  nix-main:
-    name: Update Nix Flake (Main)
+  metadata-main:
+    name: Update Main Repo Metadata
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: ubuntu-latest
@@ -1665,43 +1665,64 @@ jobs:
       - name: Calculate Hashes
         id: hashes
         run: |
-          LINUX_X64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-linux-x64.zip)
-          
-          if [ -f slskdn-main-linux-arm64.zip ]; then
-            LINUX_ARM64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-linux-arm64.zip)
-          else
-            LINUX_ARM64_SHA="0000000000000000000000000000000000000000000000000000"
-          fi
-          
-          if [ -f slskdn-main-osx-x64.zip ]; then
-            MACOS_X64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-osx-x64.zip)
-          else
-            MACOS_X64_SHA="0000000000000000000000000000000000000000000000000000"
-          fi
-          
-          if [ -f slskdn-main-osx-arm64.zip ]; then
-            MACOS_ARM64_SHA=$(nix-hash --type sha256 --flat --base32 slskdn-main-osx-arm64.zip)
-          else
-            MACOS_ARM64_SHA="0000000000000000000000000000000000000000000000000000"
-          fi
-          
-          echo "linux_x64_sha=$LINUX_X64_SHA" >> $GITHUB_OUTPUT
-          echo "linux_arm64_sha=$LINUX_ARM64_SHA" >> $GITHUB_OUTPUT
-          echo "macos_x64_sha=$MACOS_X64_SHA" >> $GITHUB_OUTPUT
-          echo "macos_arm64_sha=$MACOS_ARM64_SHA" >> $GITHUB_OUTPUT
+          sri_from_file() {
+            sha256sum "$1" | cut -d' ' -f1 | xxd -r -p | base64 -w0
+          }
 
-      - name: Update flake.nix
+          echo "linux_x64_sha=sha256-$(sri_from_file slskdn-main-linux-x64.zip)" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64_sha=sha256-$(sri_from_file slskdn-main-linux-arm64.zip)" >> "$GITHUB_OUTPUT"
+          echo "macos_x64_sha=sha256-$(sri_from_file slskdn-main-osx-x64.zip)" >> "$GITHUB_OUTPUT"
+          echo "macos_arm64_sha=sha256-$(sri_from_file slskdn-main-osx-arm64.zip)" >> "$GITHUB_OUTPUT"
+          echo "linux_x64_hex=$(sha256sum slskdn-main-linux-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "macos_x64_hex=$(sha256sum slskdn-main-osx-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "macos_arm64_hex=$(sha256sum slskdn-main-osx-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "win_x64_sha=$(sha256sum slskdn-main-win-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Update Metadata Files
         run: |
-          git fetch origin +refs/heads/master:refs/remotes/origin/master
-          git reset --hard origin/master
-          
-          sed -i "s/version = \".*\";/version = \"${{ needs.parse.outputs.version }}\";/" flake.nix
+          VERSION="${{ needs.parse.outputs.version }}"
+          WIN_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-win-x64.zip"
+
+          sed -i "s/version = \".*\";/version = \"${VERSION}\";/" flake.nix
           sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
           sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
           sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
           sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
-          
-          echo "📝 Updated flake.nix"
+
+          bash packaging/scripts/update-winget-manifests.sh \
+            stable \
+            "${VERSION}" \
+            "${WIN_URL}" \
+            "${{ steps.hashes.outputs.win_x64_sha }}" \
+            "${VERSION}"
+
+          cat > Formula/slskdn.rb <<EOF
+          class Slskdn < Formula
+            desc "Batteries-included Soulseek web client"
+            homepage "https://github.com/snapetech/slskdn"
+            license "AGPL-3.0-or-later"
+            version "${VERSION}"
+            on_macos do
+              on_arm do
+                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip"
+                sha256 "${{ steps.hashes.outputs.macos_arm64_hex }}"
+              end
+              on_intel do
+                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip"
+                sha256 "${{ steps.hashes.outputs.macos_x64_hex }}"
+              end
+            end
+            on_linux do
+              url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip"
+              sha256 "${{ steps.hashes.outputs.linux_x64_hex }}"
+            end
+            def install
+              libexec.install Dir["*"]
+              (bin/"slskd").write_exec_script libexec/"slskd"
+              (bin/"slskdn").write_exec_script libexec/"slskd"
+            end
+          end
+          EOF
 
       - name: Verify Flake
         run: |
@@ -1712,123 +1733,74 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          update_flake() {
-            sed -i "s/version = \".*\";/version = \"${{ needs.parse.outputs.version }}\";/" flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
-          }
-
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             git fetch origin +refs/heads/master:refs/remotes/origin/master
             git reset --hard origin/master
             git clean -fd
 
-            update_flake
-            git add flake.nix
+            VERSION="${{ needs.parse.outputs.version }}"
+            WIN_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-win-x64.zip"
+
+            sed -i "s/version = \".*\";/version = \"${VERSION}\";/" flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
+            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
+
+            bash packaging/scripts/update-winget-manifests.sh \
+              stable \
+              "${VERSION}" \
+              "${WIN_URL}" \
+              "${{ steps.hashes.outputs.win_x64_sha }}" \
+              "${VERSION}"
+
+            cat > Formula/slskdn.rb <<EOF
+            class Slskdn < Formula
+              desc "Batteries-included Soulseek web client"
+              homepage "https://github.com/snapetech/slskdn"
+              license "AGPL-3.0-or-later"
+              version "${VERSION}"
+              on_macos do
+                on_arm do
+                  url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip"
+                  sha256 "${{ steps.hashes.outputs.macos_arm64_hex }}"
+                end
+                on_intel do
+                  url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip"
+                  sha256 "${{ steps.hashes.outputs.macos_x64_hex }}"
+                end
+              end
+              on_linux do
+                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip"
+                sha256 "${{ steps.hashes.outputs.linux_x64_hex }}"
+              end
+              def install
+                libexec.install Dir["*"]
+                (bin/"slskd").write_exec_script libexec/"slskd"
+                (bin/"slskdn").write_exec_script libexec/"slskd"
+              end
+            end
+            EOF
+
+            git add flake.nix Formula/slskdn.rb packaging/winget/
 
             if git diff --cached --quiet; then
-              echo "No changes to flake.nix"
+              echo "No metadata changes"
               exit 0
             fi
 
-            git commit -m "chore(nix): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
+            git commit -m "chore(release): update stable metadata to ${VERSION} [skip ci]"
 
             if git push origin HEAD:master; then
-              echo "✅ flake.nix updated"
+              echo "✅ Updated main repo metadata"
               exit 0
             fi
 
             sleep $((attempt * 5))
           done
 
-          echo "::error::Failed to push flake.nix update after 10 attempts"
+          echo "::error::Failed to push main repo metadata after 10 attempts"
           exit 1
-
-  winget-main:
-    name: Update Winget Manifests (Main)
-    needs: [parse, release-main]
-    if: needs.parse.outputs.channel == 'main'
-    runs-on: windows-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-          fetch-depth: 0
-
-      - name: Download from Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download "${{ needs.parse.outputs.version }}" `
-            --repo ${{ github.repository }} `
-            --pattern "slskdn-main-win-x64.zip"
-        shell: pwsh
-
-      - name: Calculate SHA256
-        id: sha
-        run: |
-          $hash = (Get-FileHash -Algorithm SHA256 "slskdn-main-win-x64.zip").Hash
-          "win_x64_sha=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        shell: pwsh
-
-      - name: Update Winget Manifests
-        run: |
-          # Fetch only master to avoid case-sensitivity conflicts on Windows (refs that differ only in casing)
-          git fetch origin +refs/heads/master:refs/remotes/origin/master
-          git checkout -f master 2>&1 | Out-Null
-          if ($LASTEXITCODE -ne 0) {
-            git checkout -b master origin/master 2>&1 | Out-Null
-          }
-          
-          $WIN_URL = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
-          $WIN_SHA = "${{ steps.sha.outputs.win_x64_sha }}"
-
-          bash packaging/scripts/update-winget-manifests.sh `
-            "stable" `
-            "${{ needs.parse.outputs.version }}" `
-            "$WIN_URL" `
-            "$WIN_SHA" `
-            "${{ needs.parse.outputs.version }}"
-          
-          Write-Host "📝 Updated Winget manifests"
-        shell: pwsh
-
-      - name: Commit Winget Manifests
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          if (-not (git diff --quiet packaging/winget/)) {
-            git add packaging/winget/
-            git commit -m "chore(winget): update stable to ${{ needs.parse.outputs.version }} [skip ci]"
-            $pushed = $false
-            foreach ($attempt in 1..10) {
-              git fetch origin +refs/heads/master:refs/remotes/origin/master
-              git rebase origin/master
-              if ($LASTEXITCODE -eq 0) {
-                git push origin HEAD:master
-                if ($LASTEXITCODE -eq 0) {
-                  Write-Host "✅ Winget manifests updated"
-                  $pushed = $true
-                  break
-                }
-              }
-
-              git rebase --abort 2>$null
-              Start-Sleep -Seconds ($attempt * 5)
-            }
-
-            if (-not $pushed) {
-              Write-Error "Failed to push Winget manifest update after 10 attempts"
-              exit 1
-            }
-          }
-        shell: pwsh
 
   snap-main:
     name: Publish to Snap (Main/Stable)
@@ -1971,67 +1943,3 @@ jobs:
       - name: Skip if no credentials
         if: ${{ env.GH_TOKEN == '' }}
         run: echo "⚠️ TAP_GITHUB_TOKEN not configured"
-
-      - name: Update formula in main repo
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          SHA_MAC_X64=$(sha256sum slskdn-main-osx-x64.zip | cut -d' ' -f1)
-          SHA_MAC_ARM=$(sha256sum slskdn-main-osx-arm64.zip | cut -d' ' -f1)
-          SHA_LINUX=$(sha256sum slskdn-main-linux-x64.zip | cut -d' ' -f1)
-          VERSION="${{ needs.parse.outputs.version }}"
-          TAG="${{ needs.parse.outputs.version }}"
-
-          git clone https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git main-repo
-          cd main-repo
-          mkdir -p Formula
-          cat > Formula/slskdn.rb <<FORMULA
-          class Slskdn < Formula
-            desc "Batteries-included Soulseek web client"
-            homepage "https://github.com/snapetech/slskdn"
-            license "AGPL-3.0-or-later"
-            version "${VERSION}"
-            on_macos do
-              on_arm do
-                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-osx-arm64.zip"
-                sha256 "${SHA_MAC_ARM}"
-              end
-              on_intel do
-                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-osx-x64.zip"
-                sha256 "${SHA_MAC_X64}"
-              end
-            end
-            on_linux do
-              url "https://github.com/${{ github.repository }}/releases/download/${TAG}/slskdn-main-linux-x64.zip"
-              sha256 "${SHA_LINUX}"
-            end
-            def install
-              libexec.install Dir["*"]
-              (bin/"slskd").write_exec_script libexec/"slskd"
-              (bin/"slskdn").write_exec_script libexec/"slskd"
-            end
-          end
-          FORMULA
-          git config user.name "slskdn CI"
-          git config user.email "slskdn@proton.me"
-          git add Formula/slskdn.rb
-          if git diff --cached --quiet; then
-            echo "No formula changes"
-            exit 0
-          fi
-
-          git commit -m "chore(homebrew): update formula to ${VERSION} [skip ci]"
-
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
-              git fetch origin +refs/heads/master:refs/remotes/origin/master
-              if git rebase origin/master && git push origin HEAD:master; then
-                echo "✅ Updated formula in main repo"
-                exit 0
-            fi
-
-            git rebase --abort || true
-            sleep $((attempt * 5))
-          done
-
-          echo "::error::Failed to push formula update after 10 attempts"
-          exit 1

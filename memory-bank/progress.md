@@ -5005,3 +5005,9 @@ Code quality improvements were completed as part of Option A:
 - Pulled the completed `.59` `Update Nix Flake (Main)` log and confirmed the real failure was not "not enough retries"; the job was trying to `git rebase` with a dirty checkout after `nix flake check`, so every retry failed immediately with `cannot rebase: You have unstaged changes`.
 - Updated [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) so the Nix verification step uses `--no-write-lock-file` and the push loop now rebuilds `flake.nix` from a freshly fetched `origin/master` each attempt instead of rebasing a generated commit.
 - Manually moved [flake.nix](/home/keith/Documents/code/slskdn/flake.nix) to stable release `0.24.5-slskdn.59` with the published `.59` hashes so the repo state catches up with the release even though the workflow failed.
+
+## 2026-03-17 23:55 - Remove parallel metadata writers
+
+- Reworked [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) so `master` metadata is now updated by one consolidated `metadata-main` job instead of three competing jobs (`nix-main`, `winget-main`, and the checked-in formula part of `homebrew-main`).
+- The shared metadata writer now regenerates `flake.nix`, checked-in `Formula/slskdn.rb`, and Winget manifests in one workspace and pushes one commit, which removes the branch-contention class of failures instead of merely retrying around it.
+- Left the external Homebrew tap update as a separate job because it writes to another repository and does not contend with `master`.

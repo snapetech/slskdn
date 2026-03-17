@@ -2954,6 +2954,17 @@ if (useHttpDownload) {
 - Before any fetch/rebase/push retry loop, explicitly clean the checkout (`git reset --hard HEAD` plus `git clean -fd`) or regenerate the file from a fresh `origin/master` each attempt.
 - Do not interpret "more retries" as a fix when the underlying checkout state is dirty; first make the retry loop re-runnable.
 
+### 2z. Do Not Let Multiple Release Jobs Push Different Metadata Commits Into `master` In Parallel
+
+**The Bug**: Homebrew, Winget, and Nix each tried to write separate commits back into `master` during the same release run. Even after individual retry fixes, the jobs kept invalidating each other because they were all racing to move the same branch.
+
+**What Went Wrong**: The workflow treated each packaging surface as an isolated updater, but the shared target was still one branch. Independent retries reduce timing sensitivity; they do not eliminate branch-level write contention when three jobs are all competing to publish the "latest" metadata commit.
+
+**How to Prevent It**:
+- Use exactly one job to mutate `master` for release metadata.
+- Regenerate all checked-in release metadata (`flake.nix`, checked-in Homebrew formula, Winget manifests, etc.) in the same workspace and push one consolidated commit.
+- Keep external repo updates separate if necessary, but do not let more than one job in the workflow write to this repository's default branch.
+
 ---
 
 *Last updated: 2026-01-27*
