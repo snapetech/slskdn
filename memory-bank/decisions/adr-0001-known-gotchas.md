@@ -280,6 +280,36 @@ public IEnumerable<File> Search(SearchQuery query, int? limit = null) => ...;
 
 **Why This Keeps Happening**: The newer feature work tends to validate against focused unit tests first, but the repo still includes older smoke/integration projects with hand-written stubs. Interface drift is invisible until the broad solution test run compiles those projects, so every interface change needs a repo-wide grep for stub implementations before calling the tree releasable.
 
+### 0h. Gate Metrics Hardening Rules on the Metrics Endpoint Actually Being Enabled
+
+**The Bug**: `HardeningValidator` started enforcing a non-empty metrics password whenever metrics auth was not disabled, even if `metrics.enabled` was still `false`, which broke otherwise-valid startup configs and older hardening tests.
+
+**Files Affected**:
+- `src/slskd/Common/Security/HardeningValidator.cs`
+
+**Wrong**:
+```csharp
+var metricsAuth = options.Metrics?.Authentication;
+if (metricsAuth != null && !metricsAuth.Disabled &&
+    string.IsNullOrWhiteSpace(metricsAuth.Password))
+{
+    throw new HardeningValidationException(RuleWeakMetricsPassword, msg);
+}
+```
+
+**Correct**:
+```csharp
+var metrics = options.Metrics;
+var metricsAuth = metrics?.Authentication;
+if (metrics?.Enabled == true && metricsAuth != null && !metricsAuth.Disabled &&
+    string.IsNullOrWhiteSpace(metricsAuth.Password))
+{
+    throw new HardeningValidationException(RuleWeakMetricsPassword, msg);
+}
+```
+
+**Why This Keeps Happening**: Nested auth options default to “auth enabled” semantics even when the parent feature is disabled. Any startup validation that checks nested credentials must first gate on the top-level feature flag, or harmless defaults become fatal.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
