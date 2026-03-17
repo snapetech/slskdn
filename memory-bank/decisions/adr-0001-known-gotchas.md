@@ -324,6 +324,40 @@ PortableCommandAlias: slskdn
 
 **Why This Keeps Happening**: Packaging work tends to treat channel names, package names, and executable names as interchangeable. They are not. Each channel must preserve the runtime contract expected by downstream tools (`slskd` for service modules) while also publishing the correct channel identity (`slskdn` vs `slskdn-dev`). Add an explicit validation step whenever manifests or wrappers are generated.
 
+### 2b. Wrapping Generic Linux Binaries Is Not Enough for NixOS
+
+**The Bug**: The Nix flake wrapped the published `slskd` binary and set `LD_LIBRARY_PATH`, but the service still failed on NixOS because the extracted ELF kept its generic Linux dynamic loader and NixOS refused to execute it.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper ];
+
+installPhase = ''
+  makeWrapper $out/libexec/${pname}/slskd $out/bin/slskd \
+    --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath [ pkgs.icu pkgs.openssl ]}
+'';
+```
+
+**Correct**:
+```nix
+nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook ];
+buildInputs = [
+  pkgs.curl
+  pkgs.icu
+  pkgs.krb5
+  pkgs.libunwind
+  pkgs.openssl
+  pkgs.stdenv.cc.cc
+  pkgs.util-linux
+  pkgs.zlib
+];
+```
+
+**Why This Keeps Happening**: It is easy to treat Nix like any other Linux packaging target and assume a wrapper plus `LD_LIBRARY_PATH` solves native dependency issues. On NixOS, generic upstream ELF binaries also need their interpreter and linked libraries patched into the Nix store path, so use `autoPatchelfHook` or explicit `patchelf` instead of only wrapping the executable.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
