@@ -588,6 +588,29 @@ buildInputs = [
 
 **Why This Keeps Happening**: The first-pass dependency list tends to cover the apphost and common runtime libs, but the bundled .NET runtime ships tracing/provider binaries that pull in less obvious native dependencies. Validate with `autoPatchelfHook` on real NixOS and add every missing provider library it reports instead of assuming the first set is complete.
 
+### 2m. Some Nix Packages Default to a Non-Library Output; Use the Output That Actually Contains the Shared Object
+
+**The Bug**: Adding `pkgs.lttng-ust` still did not satisfy `liblttng-ust.so.0` because that attribute resolved to the `bin` output in this nixpkgs revision, while the shared library lived in `pkgs.lttng-ust.out`.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+buildInputs = [
+  pkgs.lttng-ust
+];
+```
+
+**Correct**:
+```nix
+buildInputs = [
+  pkgs.lttng-ust.out
+];
+```
+
+**Why This Keeps Happening**: It is easy to assume a package attribute points at the runtime library output, but multi-output Nix packages often default to `bin` or `dev`. When `autoPatchelfHook` still cannot find a `.so`, inspect the package outputs and reference the one that actually contains the needed library.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
