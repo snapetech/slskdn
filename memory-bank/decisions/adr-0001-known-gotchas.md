@@ -490,6 +490,26 @@ nix build /mnt/hostrepo#default
 
 **Why This Keeps Happening**: Shared folders in VMs often preserve host UIDs/GIDs or present synthetic ownership that does not match the guest account. When a flake path is also a Git repo, Nix delegates part of the source handling to Git, so you need to either mark the mount as a safe directory or use a non-Git path source when testing from a shared folder.
 
+### 2i. Prefer `path:` Flake URIs in Minimal Guest Images When Shared Repos Trigger Git Handling
+
+**The Bug**: The first recovery plan for a 9p-mounted flake repo assumed `git` was installed in the minimal NixOS guest so `safe.directory` could be configured, but the guest image did not include `git`, leaving the flake build blocked.
+
+**Files Affected**:
+- `/tmp/slskdn-nixos-vm/validate-slskdn.sh`
+
+**Wrong**:
+```bash
+git config --global --add safe.directory /mnt/hostrepo
+nix build /mnt/hostrepo#default
+```
+
+**Correct**:
+```bash
+nix build 'path:/mnt/hostrepo#default'
+```
+
+**Why This Keeps Happening**: It is easy to assume live or minimal troubleshooting images carry the same helper tools as a normal dev box. For ad hoc VM validation, use the simplest source form that avoids extra dependencies; `path:` flake URIs sidestep both Git ownership checks and the need for Git itself.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
