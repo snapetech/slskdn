@@ -51,6 +51,8 @@ expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^Moniker: s
 reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
 reject_line .github/workflows/release-packages.yml 'slskdn-\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
 
+bash packaging/scripts/validate-release-copy.sh
+
 expect_line packaging/chocolatey/slskdn.nuspec '<version>0\.24\.5-slskdn\.52</version>'
 expect_line packaging/chocolatey/tools/chocolateyinstall\.ps1 'releases/download/0\.24\.5-slskdn\.52/slskdn-main-win-x64\.zip'
 

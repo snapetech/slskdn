@@ -30,6 +30,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Disabled GitHub default CodeQL setup via the API, verified recent `master` CodeQL runs are green, manually updated `Formula/slskdn.rb` to release `0.24.5-slskdn.57`, and patched `build-on-tag.yml` so the Homebrew, Nix, and Winget main-repo write-back steps rebase/retry before push.
   - Triggered release `build-main-0.24.5-slskdn.58`, confirmed Homebrew and Winget write-backs now succeed, and found the remaining failure in `Update Nix Flake (Main)` still comes from branch churn during concurrent repo write-backs.
   - Manually updated `flake.nix` to `0.24.5-slskdn.58` and strengthened the write-back retries again with explicit `origin/master` refspec fetches and a longer retry window.
+  - Replaced duplicated GitHub release bodies with shared templates, rewrote the copy around SongID and Discovery Graph as first-class features, updated the Winget marketing copy, and added release-copy validation/documentation so future feature changes have one source of truth.
   - Booted a disposable local NixOS 25.11 QEMU/KVM VM, validated the current `flake.nix` against a real NixOS userspace, and drove the package/service path far enough to distinguish packaging/runtime failures from ordinary application-config failures.
   - Updated the stable flake pins to GitHub release `0.24.5-slskdn.54`, added the missing Nix runtime patching pieces (`autoPatchelfHook`, `patchelf`, `dontStrip`, `lttng-ust` SONAME rewrite), and synced the packaging metadata validator to the new flake contract.
   - Verified in the NixOS VM that `nix build --no-write-lock-file 'path:/mnt/hostrepo#default'` succeeds and `/nix/store/.../bin/slskd --help` runs; `services.slskd` now launches the packaged binary and only stops on app-level config validation with dummy credentials.
@@ -95,7 +96,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Watch the next `build-main-*` tag and confirm the Nix write-back also lands cleanly after the longer explicit-refspec retry loop.
+1. Watch the live `.59` run to completion and confirm whether the longer Nix retry loop is finally enough under real package-job contention.
 2. Decide whether to spend separate cleanup time on the slow opaque blanket integration pass and the remaining warning backlog.
 3. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 

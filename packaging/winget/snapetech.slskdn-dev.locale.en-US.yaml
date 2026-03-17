@@ -10,19 +10,17 @@ PackageName: slskdN (Development)
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Batteries-included Soulseek web client (Development Build)
+ShortDescription: Dev Soulseek client with SongID and Discovery Graph first
 Description: |-
-  slskdN is an experimental fork of slskd exploring advanced download features,
-  protocol extensions, and network enhancements for Soulseek.
+  slskdN development builds ship the newest identity and discovery work first,
+  especially SongID and Discovery Graph changes.
   
   WARNING: This is an unstable development build.
   
   Features in development builds:
-  - Multi-source swarm downloads
-  - DHT mesh network with content verification
-  - BitTorrent DHT rendezvous for peer discovery
-  - TLS-secured mesh connections
-  - Distributed hash database with mesh sync
+  - SongID from URLs, text, and local media with ranked acquisition paths
+  - Discovery Graph atlas across SongID, MusicBrainz, and search
+  - Acquisition, packaging, and network changes before they reach stable
 Moniker: slskdn-dev
 Tags:
   - soulseek

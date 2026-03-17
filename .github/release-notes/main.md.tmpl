@@ -1,0 +1,47 @@
+## slskdN __VERSION__
+
+slskdN is the batteries-included slskd fork that treats identity and discovery as first-class product features instead of external scripts.
+
+### First-Class Features
+- **SongID**: identify from YouTube URLs, Spotify URLs, direct text, or local files; fuse MusicBrainz, AcoustID, transcripts, OCR, comments, chapters, provenance, and audio evidence into ranked acquisition paths.
+- **Discovery Graph / Constellation**: move sideways through SongID runs, MusicBrainz targets, and search seeds with an explainable graph atlas, mini-map, modal, recentering, queue-nearby actions, compare, and saved branches.
+- **Queue-native acquisition**: durable SongID queue, persisted runs, live progress, split-track planning, album/discography handoff, and top-candidate search fan-out for ambiguous results.
+- **Built-in download stack**: multi-source swarm downloads, auto-replace for stuck transfers, wishlist/background search, smart ranking, multiple destinations, and streaming.
+- **Fork extras**: mesh + DHT networking, Solid integration, ShareGroups/collections, and broad package-manager support.
+
+### Install
+```bash
+# Arch Linux
+yay -S slskdn
+yay -S slskdn-bin
+
+# Fedora / RHEL
+sudo dnf copr enable slskdn/slskdn
+sudo dnf install slskdn
+
+# Ubuntu / Debian
+sudo add-apt-repository ppa:keefshape/slskdn
+sudo apt update
+sudo apt install slskdn
+
+# Docker
+docker pull ghcr.io/snapetech/slskdn:latest
+
+# Windows
+choco install slskdn
+
+# macOS
+brew install snapetech/slskdn/slskdn
+```
+
+Direct download works too: extract the archive for your platform and run `slskd`.
+
+### Artifacts
+- `slskdn-main-linux-x64.zip`
+- `slskdn-main-linux-arm64.zip`
+- `slskdn-main-linux-musl-x64.zip`
+- `slskdn-main-win-x64.zip`
+- `slskdn-main-osx-x64.zip`
+- `slskdn-main-osx-arm64.zip`
+
+Commit: `__COMMIT__`

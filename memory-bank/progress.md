@@ -4992,3 +4992,10 @@ Code quality improvements were completed as part of Option A:
 - Verified the `.58` release workflow fixed the Homebrew and Winget write-back failures, but `Update Nix Flake (Main)` still lost the branch race while those commits were landing.
 - Manually updated [flake.nix](/home/keith/Documents/code/slskdn/flake.nix) to `0.24.5-slskdn.58` with the published release hashes.
 - Strengthened the shared write-back pattern in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) again: explicit fetch refspec for `origin/master` plus a 10-attempt retry window for Nix, Homebrew, and Winget.
+
+## 2026-03-17 23:30 - Shared release copy and validation
+
+- Replaced duplicated GitHub release prose in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) and [dev-release.yml](/home/keith/Documents/code/slskdn/.github/workflows/dev-release.yml) with shared templates in [main.md.tmpl](/home/keith/Documents/code/slskdn/.github/release-notes/main.md.tmpl) and [dev.md.tmpl](/home/keith/Documents/code/slskdn/.github/release-notes/dev.md.tmpl).
+- Repositioned the release copy around the real first-class features: SongID, Discovery Graph / Constellation, queue-native acquisition, and the built-in download stack.
+- Updated the stable and dev Winget locale descriptions to match that positioning.
+- Added [render-release-notes.sh](/home/keith/Documents/code/slskdn/packaging/scripts/render-release-notes.sh), [validate-release-copy.sh](/home/keith/Documents/code/slskdn/packaging/scripts/validate-release-copy.sh), and [release-copy.md](/home/keith/Documents/code/slskdn/docs/dev/release-copy.md) so future drift is caught automatically.

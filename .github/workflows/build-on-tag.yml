@@ -172,110 +172,20 @@ jobs:
           echo "=== SHA256SUMS.txt ==="
           cat release/SHA256SUMS.txt
 
+      - name: Render Dev Release Notes
+        run: |
+          bash packaging/scripts/render-release-notes.sh \
+            .github/release-notes/dev.md.tmpl \
+            "${{ needs.parse.outputs.version }}" \
+            "${{ github.sha }}" \
+            release/RELEASE_NOTES.md
+
       - name: Create/Update Dev Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: "🧪 Dev Build ${{ needs.parse.outputs.version }}"
-          body: |
-            ## Development Build ${{ needs.parse.outputs.version }}
-            
-            **Commit:** ${{ github.sha }}
-            **Built:** ${{ github.event.head_commit.timestamp }}
-            
-            ---
-            
-            ## New since 0.24.1-slskdn.40
-            
-            ### Solid Integration (WebID & Solid-OIDC)
-            - WebID resolution and OIDC issuer extraction; Solid-OIDC Client ID document at `/solid/clientid.jsonld`
-            - SSRF hardening: host allow-list, HTTPS-only, private IP blocking, size/timeout limits
-            - API: `GET /api/v0/solid/status`, `POST /api/v0/solid/resolve-webid`; Solid settings UI in nav
-            
-            ### Swarm Analytics & Metrics
-            - Swarm Analytics Service: performance metrics, peer rankings, efficiency metrics, historical trends, recommendations engine
-            - New **Swarm Analytics** tab in System UI with dashboard and visualizations
-            - Advanced Discovery: content-aware matching, fuzzy matching, multi-factor peer ranking
-            - Adaptive scheduling: learning from feedback, factor correlation, performance-based adaptation
-            - Cross-domain swarming: Movies, TV, Books, GenericFile (domain-specific backends)
-            - Real-time Swarm Visualization: job overview, peer contributions table, chunk heatmap, performance metrics; "View Details" on swarm jobs
-            
-            ### OpenTelemetry Distributed Tracing
-            - Config: `telemetry.tracing` (enabled, exporter: console/jaeger/otlp)
-            - Activity sources: Transfers.MultiSource, Mesh, HashDb, Search
-            - Swarm/mesh/hashdb/search tracing with tags; ASP.NET Core and HTTP client instrumentation
-            
-            ### CI/CD & Quality
-            - Performance regression: BenchmarkDotNet in CI, baseline comparison, >10% degradation reported
-            - Load testing: k6, up to 100 concurrent users, thresholds (95% <500ms, 99% <1s)
-            - Security: CodeQL, Trivy container scan, NuGet/npm dependency scanning
-            - Release: SHA256SUMS.txt on releases; AUR dev PKGBUILD uses correct release tag URL
-            
-            ### Performance & Benchmarking
-            - Adaptive chunk size optimization; chunk size optimizer service
-            - BenchmarkDotNet suite: HashDb, Swarm, API, Transport benchmarks in `slskd.Tests.Performance`
-            
-            ### Documentation
-            - Developer: contributing guide, code style, testing, debugging, project structure, API discovery
-            - User: getting started, troubleshooting, advanced features walkthrough
-            - API documentation guide: full endpoint reference, auth, patterns, examples
-            
-            ### Search & Job UI
-            - Advanced Search: quality presets (High Quality, Lossless Only), sample rate filter, format/codec (ext:) filter; enhanced Scene ↔ Pod provider selection UI
-            - Jobs dashboard: analytics overview, active swarm downloads with progress/speed/ETA, filterable/sortable job list, pagination
-            
-            ### Scene ↔ Pod Bridging
-            - Unified search (Pod + Scene), provenance badges (POD/SCENE/POD+SCENE), action routing (download/stream by source)
-            - Remote pod downloads when not local; provider selection checkboxes; privacy (Pod IDs never to Scene)
-            
-            ### Identity & Friends
-            - Peer profiles (signed), contacts, friend codes, invite links (`slskdn://invite/`), mDNS LAN discovery
-            - ShareGroups + Contacts; WebUI: Contacts, ShareGroups, Shared with me; full sharing API
-            
-            ### Collections & Sharing
-            - ShareGroups, Collections, Share Grants, share tokens, manifest API; content resolution and streaming integration
-            
-            ### Streaming
-            - `GET /api/v0/streams/{contentId}` with Range support; token and user auth; stream session limiting
-            - Mesh search improvements (query limits, deduplication, media kind); relay streaming fallback by ContentId
-            
-            ### Mesh & Resilience
-            - Fault-tolerant UDP overlay: graceful degradation when port bind fails (mesh continues via DHT/relay)
-            
-            ### UI & Security
-            - Logs: CSRF noise reduced (safe methods → Verbose), log level filter, count display
-            - Security/hardening (40-fixes): EnforceSecurity, CORS, rate limits, metrics constant-time, and related fixes
-            
-            ### Testing
-            - Bridge protocol and performance tests; protocol contract tests; Bridge E2E with full instance runner
-            - E2E: main suite (tests/e2e) with search fixture hits and sharing/backfill tests; SlskdnNode download helpers
-            
-            ---
-            
-            ### ⚠️ Experimental (existing)
-            - Multi-source swarm downloads, DHT mesh, BitTorrent DHT rendezvous, TLS mesh, hash DB with mesh sync
-            
-            ### Changes in this build
-            See commit ${{ github.sha }} for details.
-            
-            ### Downloads
-            - **Linux x64**: `slskdn-dev-linux-x64.zip`
-            - **Linux ARM64**: `slskdn-dev-linux-arm64.zip`
-            - **Linux musl x64**: `slskdn-dev-linux-musl-x64.zip`
-            - **Windows x64**: `slskdn-dev-win-x64.zip`
-            - **macOS x64** (Intel): `slskdn-dev-osx-x64.zip`
-            - **macOS ARM64** (Apple Silicon): `slskdn-dev-osx-arm64.zip`
-            
-            ### Installation
-            **Package Managers** (recommended):
-            - Arch: `yay -S slskdn-dev`
-            - Fedora/RHEL: `sudo dnf copr enable slskdn/slskdn-dev && sudo dnf install slskdn-dev`
-            - Ubuntu/Debian: `sudo add-apt-repository ppa:keefshape/slskdn && sudo apt install slskdn-dev`
-            - Docker: `docker pull ghcr.io/snapetech/slskdn:dev-latest`
-            - Windows: `choco install slskdn --pre`
-            - macOS: `brew install snapetech/slskdn/slskdn-dev`
-            
-            **Direct Download**: Extract the zip for your platform and run the binary
+          body_path: release/RELEASE_NOTES.md
           prerelease: true
           files: release/*
 
@@ -1173,6 +1083,14 @@ jobs:
           echo "=== SHA256SUMS.txt ==="
           cat release/SHA256SUMS.txt
 
+      - name: Render Main Release Notes
+        run: |
+          bash packaging/scripts/render-release-notes.sh \
+            .github/release-notes/main.md.tmpl \
+            "${{ needs.parse.outputs.version }}" \
+            "${{ github.sha }}" \
+            release/RELEASE_NOTES.md
+
       # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
       # Build was triggered by build-main-VERSION tag, but release uses traditional format
       - name: Create Main Release
@@ -1180,125 +1098,7 @@ jobs:
         with:
           tag_name: ${{ needs.parse.outputs.version }}
           name: "🔋 slskdN ${{ needs.parse.outputs.version }} - The Batteries-Included Fork"
-          body: |
-            ## 🔋 slskdN ${{ needs.parse.outputs.version }} - The Batteries-Included Fork
-            
-            **Based on**: slskd 0.24.3  
-            **Note**: This is an experimental fork with many new features. Use at your own risk.
-            
-            ---
-            
-            ## Features
-            
-            ### Core Download Features
-            - **Auto-Replace Stuck Downloads** — Automatically finds alternative sources when downloads time out
-            - **Multi-Source Swarm Downloads** — Download from multiple peers simultaneously for faster transfers
-            - **Wishlist / Background Search** — Save searches that run automatically in the background
-            - **Multiple Download Destinations** — Route files to different folders based on rules
-            - **Smart Search Ranking** — Best sources automatically float to the top
-            - **Max File Size Filter** — Skip oversized files automatically
-            - **Delete Files on Remove** — Clean up incomplete files when cancelling
-            
-            ### Swarm Analytics & Metrics
-            - **Swarm Analytics Service** — Performance metrics, peer rankings, efficiency metrics, historical trends
-            - **Swarm Analytics Dashboard** — Real-time visualization of swarm jobs, peer contributions, chunk heatmaps
-            - **Adaptive Scheduling** — Learning from feedback, performance-based adaptation
-            - **Cross-Domain Swarming** — Movies, TV, Books, GenericFile domain-specific backends
-            
-            ### Identity & Social
-            - **Peer Profiles** — Signed profiles, contacts, friend codes
-            - **Invite Links** — Share `slskdn://invite/` links to connect with friends
-            - **User History Badges** — Know who's been reliable
-            - **User Notes** — Remember details about users
-            - **ShareGroups & Collections** — Organize and share content with specific groups
-            - **mDNS LAN Discovery** — Automatically find other slskdN users on your network
-            
-            ### Solid Integration (WebID & Solid-OIDC)
-            - **WebID Resolution** — OIDC issuer extraction with SSRF hardening
-            - **Solid-OIDC Client ID** — Document at `/solid/clientid.jsonld`
-            - **API Endpoints** — `GET /api/v0/solid/status`, `POST /api/v0/solid/resolve-webid`
-            
-            ### Scene ↔ Pod Bridging
-            - **Unified Search** — Search Pod + Scene simultaneously
-            - **Provenance Badges** — POD/SCENE/POD+SCENE indicators
-            - **Privacy Protection** — Pod IDs never exposed to Scene network
-            
-            ### Streaming
-            - **Stream API** — `GET /api/v0/streams/{contentId}` with Range support
-            - **Token & User Auth** — Secure streaming with session limiting
-            - **Relay Fallback** — Stream via relay when direct connection unavailable
-            
-            ### Mesh & DHT Networking
-            - **DHT Mesh Network** — Decentralized peer discovery
-            - **BitTorrent DHT Rendezvous** — Find peers via BT DHT
-            - **TLS Mesh** — Encrypted mesh connections
-            - **Hash DB with Mesh Sync** — Distributed content database
-            - **Fault-Tolerant UDP Overlay** — Graceful degradation when port bind fails
-            
-            ### OpenTelemetry Tracing
-            - **Distributed Tracing** — Console/Jaeger/OTLP exporters
-            - **Activity Sources** — Transfers.MultiSource, Mesh, HashDb, Search tracing
-            
-            ### UI Enhancements
-            - **Tabbed User Browsing** — Multiple users in proper tabs
-            - **Folder Checkboxes** — Bulk selection made easy
-            - **Configurable Search Results** — 25, 50, 100 per page
-            - **Advanced Search Filters** — Quality presets, sample rate, format/codec filters
-            - **Jobs Dashboard** — Analytics overview, active swarms, progress/speed/ETA
-            - **Clear All Searches** — One click cleanup
-            - **PWA Support** — Install as app on phone/desktop
-            
-            ### Notifications & Integration
-            - **Push Notifications** — Pushbullet, Ntfy, Pushover support
-            - **Download Complete Alerts** — Get notified when downloads finish
-            - **Webhooks** — Integrate with external services
-            
-            ### Security & Quality
-            - **CORS & Rate Limiting** — Hardened API security
-            - **CSRF Protection** — Safe method noise reduced
-            - **Metrics Constant-Time** — Timing-safe metrics endpoints
-            
-            ---
-            
-            ## 📦 Installation
-            
-            ```bash
-            # Arch Linux (AUR)
-            yay -S slskdn
-            # or for binary package:
-            yay -S slskdn-bin
-            
-            # Fedora/RHEL (COPR)
-            sudo dnf copr enable slskdn/slskdn
-            sudo dnf install slskdn
-            
-            # Ubuntu/Debian (PPA)
-            sudo add-apt-repository ppa:keefshape/slskdn
-            sudo apt update
-            sudo apt install slskdn
-            
-            # Docker
-            docker pull ghcr.io/snapetech/slskdn:latest
-            
-            # Windows (Chocolatey)
-            choco install slskdn
-            
-            # macOS (Homebrew)
-            brew install snapetech/slskdn/slskdn
-            ```
-            
-            **Direct Download:** Extract the zip for your platform and run the binary.
-            
-            ---
-            
-            ## 📥 Downloads
-            
-            - **Linux x64**: `slskdn-main-linux-x64.zip`
-            - **Linux ARM64**: `slskdn-main-linux-arm64.zip`
-            - **Linux musl x64**: `slskdn-main-linux-musl-x64.zip`
-            - **Windows x64**: `slskdn-main-win-x64.zip`
-            - **macOS x64** (Intel): `slskdn-main-osx-x64.zip`
-            - **macOS ARM64** (Apple Silicon): `slskdn-main-osx-arm64.zip`
+          body_path: release/RELEASE_NOTES.md
           prerelease: false
           files: release/*
 
