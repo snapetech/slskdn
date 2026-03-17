@@ -240,6 +240,46 @@ $url = "https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.52/s
 
 **Why This Keeps Happening**: It is easy to fix only the primary build workflow and forget the secondary packaging workflows and checked-in templates that still encode old asset names or versions. Any release-format change must be audited across tag workflows, auxiliary release workflows, validation scripts, and package templates together.
 
+### 0g. When You Extend Core Interfaces, Update Test Stubs and Fakes in the Legacy Test Projects Immediately
+
+**The Bug**: `ISecurityService`, `IShareService`, and `IShareRepository` gained new members, but the older smoke/integration test stubs still implemented the previous interface shapes, so `dotnet test` failed even though the feature code compiled and targeted SongID tests passed.
+
+**Files Affected**:
+- `src/slskd/Core/Security/SecurityService.cs`
+- `src/slskd/Shares/IShareService.cs`
+- `src/slskd/Shares/IShareRepository.cs`
+- `tests/slskd.Tests/TestHostFactory.cs`
+- `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs`
+- `tests/slskd.Tests.Integration/StubVirtualSoulfindServices.cs`
+
+**Wrong**:
+```csharp
+internal class StubSecurityService : ISecurityService
+{
+    public JwtSecurityToken GenerateJwt(...) => ...;
+    public (string Name, Role Role) AuthenticateWithApiKey(...) => ...;
+}
+
+public Task<IEnumerable<File>> SearchAsync(SearchQuery query) => ...;
+public IEnumerable<File> Search(SearchQuery query) => ...;
+```
+
+**Correct**:
+```csharp
+internal class StubSecurityService : ISecurityService
+{
+    public JwtSecurityToken GenerateJwt(...) => ...;
+    public (string Name, Role Role) AuthenticateWithApiKey(...) => ...;
+    public void RevokeToken(string jti) { }
+    public bool IsTokenRevoked(string jti) => false;
+}
+
+public Task<IEnumerable<File>> SearchAsync(SearchQuery query, int? limit = null) => ...;
+public IEnumerable<File> Search(SearchQuery query, int? limit = null) => ...;
+```
+
+**Why This Keeps Happening**: The newer feature work tends to validate against focused unit tests first, but the repo still includes older smoke/integration projects with hand-written stubs. Interface drift is invisible until the broad solution test run compiles those projects, so every interface change needs a repo-wide grep for stub implementations before calling the tree releasable.
+
 ### 1. `return undefined` vs `return []` in Frontend API Calls
 
 **The Bug**: Frontend API functions that return `undefined` on error instead of `[]` cause downstream crashes.
