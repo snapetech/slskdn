@@ -550,6 +550,44 @@ sha256 = "sha256-M1gUyVXt1iPUjjh9eFheDBRWv/kixAgIxlvIRMbckoo=";
 
 **Why This Keeps Happening**: Packaging work can fix wrapper logic or runtime behavior while leaving the stable source pin behind on an older release. For fixed-output fetches, a stale release pin is just as fatal as a stale hash, so treat version and hashes as one atomic update sourced from the actual latest published release metadata.
 
+### 2l. The Bundled .NET Runtime Also Needs `lttng-ust` on NixOS for `autoPatchelfHook` to Finish Cleanly
+
+**The Bug**: After adding the obvious runtime libraries, the NixOS VM still failed during `autoPatchelfHook` because `libcoreclrtraceptprovider.so` wanted `liblttng-ust.so.0`, which was not present in the flake inputs.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+buildInputs = [
+  pkgs.curl
+  pkgs.icu
+  pkgs.krb5
+  pkgs.libunwind
+  pkgs.openssl
+  pkgs.stdenv.cc.cc
+  pkgs.util-linux
+  pkgs.zlib
+];
+```
+
+**Correct**:
+```nix
+buildInputs = [
+  pkgs.curl
+  pkgs.icu
+  pkgs.krb5
+  pkgs.lttng-ust
+  pkgs.libunwind
+  pkgs.openssl
+  pkgs.stdenv.cc.cc
+  pkgs.util-linux
+  pkgs.zlib
+];
+```
+
+**Why This Keeps Happening**: The first-pass dependency list tends to cover the apphost and common runtime libs, but the bundled .NET runtime ships tracing/provider binaries that pull in less obvious native dependencies. Validate with `autoPatchelfHook` on real NixOS and add every missing provider library it reports instead of assuming the first set is complete.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
