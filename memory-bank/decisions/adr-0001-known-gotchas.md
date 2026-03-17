@@ -634,6 +634,30 @@ patchelf \
 
 **Why This Keeps Happening**: Upstream self-contained runtimes can be built against an older SONAME than the one available in current nixpkgs. Adding more packages will not help when the exact requested SONAME no longer exists; inspect the bundled binary and patch the `NEEDED` entry to the compatible library that nixpkgs actually provides before running `autoPatchelfHook`.
 
+### 2o. Do Not Strip Bundled .NET Runtime Payloads in the Nix Package
+
+**The Bug**: After the flake finally built, launching `slskd` on NixOS still failed with `Failed to load System.Private.CoreLib.dll ... 0x8007000B`. The package had gone through Nix’s default strip phase, which is unsafe for this bundled .NET payload.
+
+**Files Affected**:
+- `flake.nix`
+
+**Wrong**:
+```nix
+pkgs.stdenv.mkDerivation {
+  nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook pkgs.patchelf ];
+}
+```
+
+**Correct**:
+```nix
+pkgs.stdenv.mkDerivation {
+  nativeBuildInputs = [ pkgs.unzip pkgs.makeWrapper pkgs.autoPatchelfHook pkgs.patchelf ];
+  dontStrip = true;
+}
+```
+
+**Why This Keeps Happening**: Nix’s normal strip phase is reasonable for ordinary native packages, but bundled .NET distributions mix ELF binaries with managed/runtime payloads that are not safe to treat like a conventional C/C++ install tree. If CoreCLR starts failing with format/load errors after packaging, remove stripping from the equation before chasing more loader theories.
+
 ### 2b. Tests That Bind TCP Ports Must Not Hardcode Popular Local Ports
 
 **The Bug**: `LocalPortForwarderTests` bound to `8080` and `8081`, which caused unrelated CI and local failures whenever those ports were already in use; `TorSocksTransportTests` also assumed a specific connect-error substring even though timeout/cancellation wording varies by runtime and environment.
