@@ -4981,3 +4981,8 @@ Code quality improvements were completed as part of Option A:
 
 ### Notes
 - A clean blanket `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj` run remains very slow and produced no incremental console output for several minutes, so release validation relied on the previously failing groups plus the known green smoke/unit suites rather than waiting indefinitely on that one opaque run.
+## 2026-03-17 22:45 - Homebrew formula write-back race fix
+
+- Updated checked-in [Formula/slskdn.rb](/home/keith/Documents/code/slskdn/Formula/slskdn.rb) from `0.24.5-slskdn.56` to `0.24.5-slskdn.57` using the published `SHA256SUMS.txt` from the `.57` release assets.
+- Hardened the `homebrew-main` write-back step in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) so it exits cleanly on no-op changes and fetches/rebases/retries before pushing back into `master`.
+- Verified the red `.57` release email was caused by a post-release push race in `Update formula in main repo`, not by a product build failure. Also confirmed the separate CodeQL red check is a GitHub settings conflict (`default setup` enabled alongside the checked-in advanced workflow).

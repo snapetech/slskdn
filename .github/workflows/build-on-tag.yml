@@ -2171,6 +2171,23 @@ jobs:
           git config user.name "slskdn CI"
           git config user.email "slskdn@proton.me"
           git add Formula/slskdn.rb
-          git commit -m "chore(homebrew): update formula to ${VERSION} [skip ci]" || echo "No changes"
-          git push
-          echo "✅ Updated formula in main repo"
+          if git diff --cached --quiet; then
+            echo "No formula changes"
+            exit 0
+          fi
+
+          git commit -m "chore(homebrew): update formula to ${VERSION} [skip ci]"
+
+          for attempt in 1 2 3; do
+            git fetch origin master
+            if git rebase origin/master && git push origin HEAD:master; then
+              echo "✅ Updated formula in main repo"
+              exit 0
+            fi
+
+            git rebase --abort || true
+            sleep $((attempt * 5))
+          done
+
+          echo "::error::Failed to push formula update after 3 attempts"
+          exit 1
