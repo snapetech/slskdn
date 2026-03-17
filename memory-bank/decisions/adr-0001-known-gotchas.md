@@ -2932,6 +2932,17 @@ if (useHttpDownload) {
 - Do not use unconditional `[StringLength(MinimumLength = 1)]` on values that are allowed to remain empty while the feature is disabled.
 - Add tests for all three cases: feature disabled, feature enabled with auth disabled, and feature enabled with auth required.
 
+### 2x. Release Jobs That Write Back Into `master` Must Re-Sync Before Pushing
+
+**The Bug**: The tag workflow successfully published release `0.24.5-slskdn.57` and updated the Homebrew tap repo, but the follow-up step that rewrote `Formula/slskdn.rb` in the main repo failed with `git push ... fetch first` because it committed in a fresh clone and then pushed straight into a moving `master`.
+
+**What Went Wrong**: The workflow already derives the correct release version from the build tag, so the failure was not a versioning problem. The actual bug was treating a post-release write-back like an isolated branch update instead of a concurrent push target.
+
+**How to Prevent It**:
+- For any workflow that commits back into `master`, fetch and rebase against `origin/master` immediately before push, then retry a small number of times.
+- If there are no staged changes after regenerating a packaging file, exit early instead of creating a no-op push path.
+- Treat repository write-back steps as separate from artifact publication; a release can publish successfully while the write-back still races and turns the workflow red.
+
 ---
 
 *Last updated: 2026-01-27*
