@@ -2965,6 +2965,48 @@ if (useHttpDownload) {
 - Regenerate all checked-in release metadata (`flake.nix`, checked-in Homebrew formula, Winget manifests, etc.) in the same workspace and push one consolidated commit.
 - Keep external repo updates separate if necessary, but do not let more than one job in the workflow write to this repository's default branch.
 
+### 3a. Do Not Rename a Release-Blocking Option or Shared Release Copy in Only One Layer
+
+**The Bug**: `MeshServiceDescriptorValidator` checked `_options.RequireSignatures` even though `MeshServiceFabricOptions` only exposes `ValidateDhtSignatures`, which broke every publish job at compile time. Separately, the stable Winget locale text drifted away from the shared SongID/Discovery Graph release copy, so CI failed the packaging metadata validator before it even reached the app build.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshServiceDescriptorValidator.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServiceFabricOptions.cs`
+- `packaging/winget/snapetech.slskdn.locale.en-US.yaml`
+- `packaging/scripts/validate-release-copy.sh`
+
+**Wrong**:
+```csharp
+else if (_options.RequireSignatures)
+{
+    return (false, "Signature required but not provided");
+}
+```
+
+```yaml
+ShortDescription: Batteries-included Soulseek web client
+Description: |-
+  slskdN is a batteries-included fork of slskd with advanced download features,
+  automation, and network enhancements for Soulseek.
+```
+
+**Correct**:
+```csharp
+else if (_options.ValidateDhtSignatures)
+{
+    return (false, "Signature required but not provided");
+}
+```
+
+```yaml
+ShortDescription: Stable Soulseek client with SongID and Discovery Graph
+Description: |-
+  slskdN is a batteries-included fork of slskd with SongID, Discovery Graph,
+  advanced download features, automation, and network enhancements for Soulseek.
+```
+
+**Why This Keeps Happening**: Release work in this repo spans code, workflows, and checked-in packaging metadata. If you update only the validator, only the options type, or only one release-copy file, different CI gates fail in sequence and hide the next problem. Audit the real options type and every checked-in release copy file together before tagging.
+
 ---
 
 *Last updated: 2026-01-27*
