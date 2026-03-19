@@ -3007,6 +3007,29 @@ Description: |-
 
 **Why This Keeps Happening**: Release work in this repo spans code, workflows, and checked-in packaging metadata. If you update only the validator, only the options type, or only one release-copy file, different CI gates fail in sequence and hide the next problem. Audit the real options type and every checked-in release copy file together before tagging.
 
+### 3b. Do Not Persist Pod Creation Fields Without Normalizing Required Defaults First
+
+**The Bug**: `PodEntity.FocusContentId` is stored as a required SQLite column, but `SqlitePodService.CreateAsync()` wrote `pod.FocusContentId` directly. DM pod creation and several integration tests leave that field unset, so pod creation failed with `SQLite Error 19: 'NOT NULL constraint failed: Pods.FocusContentId'`.
+
+**Files Affected**:
+- `src/slskd/PodCore/SqlitePodService.cs`
+- `src/slskd/PodCore/PodDbContext.cs`
+
+**Wrong**:
+```csharp
+FocusContentId = pod.FocusContentId,
+```
+
+**Correct**:
+```csharp
+var normalizedFocusContentId = pod.FocusContentId ?? string.Empty;
+pod.FocusContentId = normalizedFocusContentId;
+
+FocusContentId = normalizedFocusContentId,
+```
+
+**Why This Keeps Happening**: The service layer treats some pod fields as optional, but the persistence model hard-requires non-null strings. If you change schema expectations or add a new required column, normalize the service input before save and keep the entity-to-model mapping tolerant of older/null rows.
+
 ---
 
 *Last updated: 2026-01-27*
