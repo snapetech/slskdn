@@ -19,10 +19,14 @@ using Microsoft.AspNetCore.Mvc;
 public class DisasterModeController : ControllerBase
 {
     private readonly ILogger<DisasterModeController> logger;
+    private readonly VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator;
 
-    public DisasterModeController(ILogger<DisasterModeController> logger)
+    public DisasterModeController(
+        ILogger<DisasterModeController> logger,
+        VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator)
     {
         this.logger = logger;
+        this.disasterModeCoordinator = disasterModeCoordinator;
     }
 
     /// <summary>
@@ -34,8 +38,11 @@ public class DisasterModeController : ControllerBase
     {
         logger.LogDebug("Disaster mode status requested");
 
-        // CRITICAL: Return 501 instead of fake data to prevent false confidence
-        throw new Common.Exceptions.FeatureNotImplementedException(
-            "Disaster mode status is not yet implemented. This feature provides fallback search capabilities when primary Soulseek network is degraded.");
+        return Ok(new
+        {
+            is_active = disasterModeCoordinator.IsDisasterModeActive,
+            activated_at = (DateTimeOffset?)null, // TODO: Track activation timestamp
+            reason = (string?)null // TODO: Track activation reason
+        });
     }
 }

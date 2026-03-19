@@ -68,11 +68,6 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
                 metrics.SuccessRate = (double)success / metrics.TotalDownloads;
             }
 
-            // CRITICAL: Analytics with placeholder data creates false confidence
-            // Either compute real metrics from telemetry or fail fast
-            throw new Common.Exceptions.FeatureNotImplementedException(
-                "Swarm analytics computation is not yet fully implemented. Real metrics will be derived from telemetry data and chunk performance tracking.");
-
             // Get total bytes downloaded
             metrics.TotalBytesDownloaded = (long)SwarmBytesDownloadedTotal.Value;
 
@@ -196,16 +191,9 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
             var interval = TimeSpan.FromMilliseconds(timeWindow.TotalMilliseconds / dataPoints);
             var now = DateTime.UtcNow;
 
-            for (int i = 0; i < dataPoints; i++)
-            {
-                var timePoint = now - TimeSpan.FromMilliseconds((dataPoints - i) * interval.TotalMilliseconds);
-                trends.TimePoints.Add(timePoint);
-                trends.SuccessRates.Add(0.95); // Placeholder
-                trends.AverageSpeeds.Add(1024 * 1024); // 1 MB/s placeholder
-                trends.AverageDurations.Add(60.0); // 60s placeholder
-                trends.AverageSourcesUsed.Add(3.0); // 3 sources placeholder
-                trends.DownloadCounts.Add(10); // 10 downloads placeholder
-            }
+            // TODO: Implement historical trend computation from stored metrics
+            // For now, return empty trends rather than fake data
+            _logger.LogDebug("Historical trend computation not yet implemented - returning empty trends");
 
             return await Task.FromResult(trends);
         }
