@@ -153,6 +153,8 @@ public class SlskdnTestClient : IAsyncDisposable
             new StubBridgeDashboardForTests());
         builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>(_ =>
             CreateNullProxy<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>());
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery>(_ =>
+            new StubShadowIndexQueryForTests());
         builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
             new StaticOptionsMonitorForTests());
 
@@ -464,6 +466,53 @@ internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHe
             IssuesOpen = 0,
             IssuesResolved = 0
         });
+}
+
+internal sealed class StubShadowIndexQueryForTests : global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery
+{
+    public Task<global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult?> QueryAsync(string mbid, CancellationToken ct = default)
+    {
+        return Task.FromResult<global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult?>(new global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult
+        {
+            MBID = mbid,
+            TotalPeerCount = 3,
+            CanonicalVariants = new List<global::slskd.VirtualSoulfind.ShadowIndex.VariantHint>
+            {
+                new()
+                {
+                    Codec = "FLAC",
+                    BitrateKbps = 1000,
+                    SizeBytes = 30_000_000,
+                    QualityScore = 100,
+                },
+                new()
+                {
+                    Codec = "MP3",
+                    BitrateKbps = 320,
+                    SizeBytes = 10_000_000,
+                    QualityScore = 60,
+                },
+            },
+        });
+    }
+
+    public async Task<Dictionary<string, global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult>> QueryBatchAsync(
+        List<string> mbids,
+        CancellationToken ct = default)
+    {
+        var results = new Dictionary<string, global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult>();
+
+        foreach (var mbid in mbids)
+        {
+            var result = await QueryAsync(mbid, ct);
+            if (result != null)
+            {
+                results[mbid] = result;
+            }
+        }
+
+        return results;
+    }
 }
 
 // Bridge service stubs for BridgeController and BridgeAdminController tests

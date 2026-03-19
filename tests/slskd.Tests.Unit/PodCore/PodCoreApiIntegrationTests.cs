@@ -12,9 +12,12 @@ using Microsoft.Extensions.Options;
 using Moq;
 using slskd.API.Native;
 using slskd.Mesh;
+using slskd.Messaging;
 using slskd.PodCore;
 using System.Data.Common;
+using System.Linq;
 using System.Security.Claims;
+using Soulseek;
 using Xunit;
 
 namespace slskd.Tests.Unit.PodCore;
@@ -59,6 +62,8 @@ public class PodCoreApiIntegrationTests : IDisposable
         signerMock.Setup(x => x.SignMembershipAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<byte[]?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SignedMembershipRecord { PodId = "", PeerId = "", TimestampUnixMs = 0, Action = "join", Signature = "" });
         services.AddSingleton(signerMock.Object);
+
+        services.AddSingleton<IConversationService, TestConversationService>();
 
         services.AddScoped<IPodService>(sp => new SqlitePodService(
             sp.GetRequiredService<IDbContextFactory<PodDbContext>>(),
@@ -285,7 +290,9 @@ public class PodCoreApiIntegrationTests : IDisposable
             services.GetRequiredService<IPodService>(),
             services.GetRequiredService<IPodMessaging>(),
             services.GetRequiredService<ISoulseekChatBridge>(),
-            services.GetRequiredService<ILogger<PodsController>>());
+            services.GetRequiredService<ILogger<PodsController>>(),
+            services.GetRequiredService<IConversationService>(),
+            services.GetRequiredService<IOptionsMonitor<MeshOptions>>());
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, username) })) }
@@ -294,4 +301,93 @@ public class PodCoreApiIntegrationTests : IDisposable
     }
 }
 
+internal sealed class TestConversationService : IConversationService
+{
+    private readonly Dictionary<string, List<PrivateMessage>> _messages = new(StringComparer.OrdinalIgnoreCase);
+    private int _nextId = 1;
 
+    public Task AcknowledgeAsync(string username) => Task.CompletedTask;
+
+    public Task AcknowledgeMessageAsync(string username, int id) => Task.CompletedTask;
+
+    public Task CreateAsync(string username)
+    {
+        EnsureConversation(username);
+        return Task.CompletedTask;
+    }
+
+    public Task<Conversation> FindAsync(string username, bool includeInactive = true, bool includeMessages = false)
+    {
+        var messages = EnsureConversation(username);
+        return Task.FromResult(new Conversation
+        {
+            Username = username,
+            IsActive = true,
+            Messages = includeMessages ? messages.ToList() : Array.Empty<PrivateMessage>(),
+            UnAcknowledgedMessageCount = messages.Count(m => !m.IsAcknowledged),
+        });
+    }
+
+    public Task<PrivateMessage> FindMessageAsync(string username, int id)
+    {
+        var message = EnsureConversation(username).First(m => m.Id == id);
+        return Task.FromResult(message);
+    }
+
+    public Task<IEnumerable<Conversation>> ListAsync(System.Linq.Expressions.Expression<Func<Conversation, bool>> expression = null)
+    {
+        IEnumerable<Conversation> conversations = _messages.Select(kvp => new Conversation
+        {
+            Username = kvp.Key,
+            IsActive = true,
+            Messages = kvp.Value.ToList(),
+            UnAcknowledgedMessageCount = kvp.Value.Count(m => !m.IsAcknowledged),
+        });
+
+        return Task.FromResult(conversations);
+    }
+
+    public Task<IEnumerable<PrivateMessage>> ListMessagesAsync(System.Linq.Expressions.Expression<Func<PrivateMessage, bool>> expression = null)
+    {
+        IEnumerable<PrivateMessage> messages = _messages.Values.SelectMany(v => v).ToList();
+        return Task.FromResult(messages);
+    }
+
+    public Task HandleMessageAsync(string username, PrivateMessage message)
+    {
+        EnsureConversation(username).Add(message);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(string username)
+    {
+        _messages.Remove(username);
+        return Task.CompletedTask;
+    }
+
+    public Task SendMessageAsync(string username, string message)
+    {
+        EnsureConversation(username).Add(new PrivateMessage
+        {
+            Id = _nextId++,
+            Username = username,
+            Message = message,
+            Timestamp = DateTime.UtcNow,
+            Direction = MessageDirection.Out,
+            IsAcknowledged = true,
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private List<PrivateMessage> EnsureConversation(string username)
+    {
+        if (!_messages.TryGetValue(username, out var messages))
+        {
+            messages = new List<PrivateMessage>();
+            _messages[username] = messages;
+        }
+
+        return messages;
+    }
+}

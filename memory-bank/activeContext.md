@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Monitor stable release `build-main-0.24.5-slskdn.71` after repairing the release gates on `master`
+- **Current Task**: Finish validating the repaired PodCore/integration blockers, then retrigger a clean stable release tag after `.71`
 - **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -98,9 +98,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Watch GitHub Actions run `23276643299` through `Create Main Release` and the downstream stable packaging jobs, then confirm the release assets and metadata write-back for `0.24.5-slskdn.71`.
-2. Decide whether to spend separate cleanup time on the unrelated `dotnet test` failures currently centered in PodCore (`Pods.FocusContentId` / API expectation drift) and the missing `IShadowIndexQuery` integration wiring.
-3. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
+1. Let the full `tests/slskd.Tests.Integration` project finish and confirm there are no remaining release-blocking failures outside the already-fixed canonical path.
+2. Commit the PodCore / test-harness repairs, push `master`, and trigger the next documented stable tag (`build-main-*`) so the whole release workflow reruns from the corrected branch tip.
+3. Verify the new stable run ends green, including the metadata write-back job that lost the branch race during `.71`.
+4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

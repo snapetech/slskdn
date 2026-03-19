@@ -69,6 +69,8 @@ namespace slskd.PodCore
 
             // SECURITY: Sanitize inputs
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+            var normalizedFocusContentId = pod.FocusContentId ?? string.Empty;
+            pod.FocusContentId = normalizedFocusContentId;
 
             // SECURITY: Use transaction for atomicity
             await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -80,7 +82,7 @@ namespace slskd.PodCore
                     PodId = pod.PodId,
                     Name = pod.Name,
                     Visibility = pod.Visibility,
-                    FocusContentId = pod.FocusContentId,
+                    FocusContentId = normalizedFocusContentId,
                     Tags = System.Text.Json.JsonSerializer.Serialize(pod.Tags ?? new List<string>()),
                     Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels ?? new List<PodChannel>()),
                     ExternalBindings = System.Text.Json.JsonSerializer.Serialize(pod.ExternalBindings ?? new List<ExternalBinding>()),
@@ -138,6 +140,7 @@ namespace slskd.PodCore
 
             // SECURITY: Sanitize inputs
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+            pod.FocusContentId ??= string.Empty;
 
             // SECURITY: Use transaction for atomicity
             await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -157,6 +160,7 @@ namespace slskd.PodCore
                 existingEntity.MaxMembers = pod.MaxMembers;
                 existingEntity.AllowGuests = pod.AllowGuests;
                 existingEntity.RequireApproval = pod.RequireApproval;
+                existingEntity.FocusContentId = pod.FocusContentId;
                 existingEntity.UpdatedAt = DateTimeOffset.UtcNow;
 
                 await db.SaveChangesAsync(ct);
@@ -338,7 +342,7 @@ namespace slskd.PodCore
                     PodId = podId,
                     PeerId = member.PeerId,
                     Role = member.Role ?? "member",
-                    PublicKey = member.PublicKey,
+                    PublicKey = member.PublicKey ?? string.Empty,
                     IsBanned = false,
                 };
 
@@ -440,7 +444,7 @@ namespace slskd.PodCore
                     PodId = entity.PodId,
                     Name = entity.Name,
                     Visibility = entity.Visibility,
-                    FocusContentId = entity.FocusContentId,
+                    FocusContentId = entity.FocusContentId ?? string.Empty,
                     Tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.Tags ?? "[]") ?? new List<string>(),
                     Channels = System.Text.Json.JsonSerializer.Deserialize<List<PodChannel>>(entity.Channels ?? "[]") ?? new List<PodChannel>(),
                     ExternalBindings = System.Text.Json.JsonSerializer.Deserialize<List<ExternalBinding>>(entity.ExternalBindings ?? "[]") ?? new List<ExternalBinding>(),
@@ -457,7 +461,7 @@ namespace slskd.PodCore
                     PodId = entity.PodId,
                     Name = entity.Name,
                     Visibility = entity.Visibility,
-                    FocusContentId = entity.FocusContentId,
+                    FocusContentId = entity.FocusContentId ?? string.Empty,
                     Tags = new List<string>(),
                     Channels = new List<PodChannel>(),
                     ExternalBindings = new List<ExternalBinding>(),

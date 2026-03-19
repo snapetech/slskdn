@@ -77,6 +77,7 @@ namespace slskd.PodCore
 
             // SECURITY: Sanitize message body
             message.Body = PodValidation.Sanitize(message.Body, PodValidation.MaxMessageBodyLength);
+            message.Signature ??= string.Empty;
 
             // SECURITY: Use transaction
             using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
