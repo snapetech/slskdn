@@ -68,11 +68,10 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
                 metrics.SuccessRate = (double)success / metrics.TotalDownloads;
             }
 
-            // Get average duration from histogram (simplified - would need Prometheus query in production)
-            // For now, use default values
-            metrics.AverageDurationSeconds = 60.0; // Placeholder
-            metrics.AverageSpeedBytesPerSecond = 1024 * 1024; // 1 MB/s placeholder
-            metrics.AverageSourcesUsed = 3.0; // Placeholder
+            // CRITICAL: Analytics with placeholder data creates false confidence
+            // Either compute real metrics from telemetry or fail fast
+            throw new Common.Exceptions.FeatureNotImplementedException(
+                "Swarm analytics computation is not yet fully implemented. Real metrics will be derived from telemetry data and chunk performance tracking.");
 
             // Get total bytes downloaded
             metrics.TotalBytesDownloaded = (long)SwarmBytesDownloadedTotal.Value;

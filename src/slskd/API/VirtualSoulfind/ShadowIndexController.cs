@@ -34,12 +34,8 @@ public class ShadowIndexController : ControllerBase
     {
         logger.LogDebug("Shadow index requested for MBID: {Mbid}", mbid);
 
-        // TODO: Integrate with actual shadow index service when available
-        // For now, return stub response
-        return Ok(new
-        {
-            mbid = mbid,
-            variants = new List<object>()
-        });
+        // CRITICAL: Return 501 instead of fake data to prevent false confidence
+        throw new Common.Exceptions.FeatureNotImplementedException(
+            "Shadow index is not yet implemented. This feature tracks file variants across different codecs and formats for deduplication and quality comparison.");
     }
 }

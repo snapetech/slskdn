@@ -34,18 +34,8 @@ public class CanonicalController : ControllerBase
     {
         logger.LogDebug("Canonical variant requested for MBID: {Mbid}", mbid);
 
-        // TODO: Integrate with actual canonical selection service when available
-        // For now, return stub response
-        return Ok(new
-        {
-            mbid = mbid,
-            canonical_variant = new
-            {
-                codec = "FLAC",
-                bitrate = 0,
-                source = "test-peer"
-            },
-            variants = new List<object>()
-        });
+        // CRITICAL: Return 501 instead of fake data to prevent false confidence
+        throw new Common.Exceptions.FeatureNotImplementedException(
+            "Canonical variant selection is not yet implemented. This feature will analyze available file variants and select the highest quality canonical version.");
     }
 }

@@ -121,39 +121,42 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             ControlSigningKeys = new List<string>()
         };
 
-        // Sign the descriptor
-        byte[] privateKey;
-        if (keyStore != null)
+        // Sign the descriptor - REQUIRE real keys for security
+        if (keyStore == null)
         {
-            try
-            {
-                var keyPair = keyStore.Current;
-                privateKey = keyPair.PrivateKey;
-                logger.LogDebug("[MeshDHT] Using private key from KeyStore for signing");
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "[MeshDHT] Failed to get private key from KeyStore, using placeholder");
-
-                // Fallback to placeholder for now - this will fail but won't crash
-                privateKey = new byte[32];
-            }
+            throw new InvalidOperationException("KeyStore is required for mesh peer publishing. Configure mesh identity keys.");
         }
-        else
+
+        byte[] privateKey;
+        try
         {
-            logger.LogWarning("[MeshDHT] KeyStore not available, using placeholder key (signature will be invalid)");
-            privateKey = new byte[32];
+            var keyPair = keyStore.Current;
+            privateKey = keyPair.PrivateKey;
+
+            // Validate the key is not placeholder (all zeros)
+            if (privateKey.All(b => b == 0))
+            {
+                throw new InvalidOperationException("Private key is placeholder (all zeros). Configure real mesh identity keys.");
+            }
+
+            logger.LogDebug("[MeshDHT] Using real private key from KeyStore for signing");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[MeshDHT] Failed to get valid private key from KeyStore - cannot publish peer descriptor securely");
+            throw new InvalidOperationException("Mesh identity keys are required for secure peer publishing", ex);
         }
 
         try
         {
             var signature = signingService.SignDescriptor(descriptor, privateKey);
             descriptor.Signature = signature;
+            logger.LogDebug("[MeshDHT] Successfully signed peer descriptor");
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "[MeshDHT] Failed to sign descriptor, continuing without signature");
-            descriptor.Signature = string.Empty;
+            logger.LogError(ex, "[MeshDHT] Failed to sign descriptor with real key");
+            throw new InvalidOperationException("Failed to sign peer descriptor with configured key", ex);
         }
 
         var key = $"mesh:peer:{descriptor.PeerId}";

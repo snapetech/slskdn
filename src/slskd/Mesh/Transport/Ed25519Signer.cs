@@ -45,33 +45,21 @@ public class Ed25519Signer : IDisposable
             throw new ArgumentException("Ed25519 private key must be 32 bytes", nameof(privateKey));
         }
 
+        // Reject placeholder keys (all zeros) - require real cryptographic material
+        if (privateKey.All(b => b == 0))
+        {
+            throw new ArgumentException("Placeholder key (all zeros) is not allowed for signing. Configure real cryptographic keys.", nameof(privateKey));
+        }
+
         try
         {
-            // Check if this is a placeholder key (all zeros)
-            if (privateKey.All(b => b == 0))
-            {
-                // Generate a temporary key for placeholder signing
-                // This allows the app to start even without a real key
-                using var tempKey = Key.Create(Algorithm, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
-                return Algorithm.Sign(tempKey, data);
-            }
-
             // Import the private key and sign
             using var key = Key.Import(Algorithm, privateKey, KeyBlobFormat.RawPrivateKey);
             return Algorithm.Sign(key, data);
         }
         catch (Exception ex)
         {
-            // If key import fails, try generating a temporary key as fallback
-            try
-            {
-                using var tempKey = Key.Create(Algorithm, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
-                return Algorithm.Sign(tempKey, data);
-            }
-            catch
-            {
-                throw new CryptographicException("Failed to sign data", ex);
-            }
+            throw new CryptographicException("Failed to sign data with provided key", ex);
         }
     }
 

@@ -34,13 +34,8 @@ public class DisasterModeController : ControllerBase
     {
         logger.LogDebug("Disaster mode status requested");
 
-        // TODO: Integrate with actual disaster mode service when available
-        // For now, return stub response
-        return Ok(new
-        {
-            is_active = false,
-            activated_at = (DateTimeOffset?)null,
-            reason = (string?)null
-        });
+        // CRITICAL: Return 501 instead of fake data to prevent false confidence
+        throw new Common.Exceptions.FeatureNotImplementedException(
+            "Disaster mode status is not yet implemented. This feature provides fallback search capabilities when primary Soulseek network is degraded.");
     }
 }

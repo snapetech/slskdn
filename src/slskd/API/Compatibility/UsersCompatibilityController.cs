@@ -36,12 +36,8 @@ public class UsersCompatibilityController : ControllerBase
     {
         logger.LogInformation("Browse user requested: {Username}", username);
 
-        // Return stub browse results
-        await Task.CompletedTask;
-        return Ok(new
-        {
-            username = username,
-            files = new List<object>()
-        });
+        // CRITICAL: Return 501 instead of fake data to prevent false confidence
+        throw new Common.Exceptions.FeatureNotImplementedException(
+            "User browsing compatibility is not yet implemented. This provides backward compatibility for older Soulseek client protocols.");
     }
 }
