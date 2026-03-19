@@ -25,7 +25,6 @@
   <img src="https://img.shields.io/badge/base-slskd%200.24.3-purple" alt="Based on slskd">
   <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
   <a href="https://discord.gg/NRzj8xycQZ"><img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://cursor.sh"><img src="https://img.shields.io/badge/Built%20with-Cursor-F7F7F7?logo=cursor&logoColor=black" alt="Built with Cursor"></a>
 </p>
 
 ---
