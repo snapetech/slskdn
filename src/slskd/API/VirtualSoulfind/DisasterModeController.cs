@@ -39,11 +39,29 @@ public class DisasterModeController : ControllerBase
     {
         logger.LogDebug("Disaster mode status requested");
 
+        var level = disasterModeCoordinator.CurrentLevel;
+        var levelDescription = level switch
+        {
+            DisasterModeLevel.Normal => "Soulseek + mesh networks operating together",
+            DisasterModeLevel.SoulseekDegraded => "Soulseek degraded, mesh assisting",
+            DisasterModeLevel.SoulseekUnavailable => "Soulseek unavailable, mesh primary",
+            DisasterModeLevel.FullFallback => "Full fallback: shadow-index, relay, swarm-only",
+            _ => "Unknown level"
+        };
+
         return Ok(new
         {
+            level = (int)level,
+            level_name = level.ToString(),
+            description = levelDescription,
             is_active = disasterModeCoordinator.IsDisasterModeActive,
-            activated_at = (DateTimeOffset?)null, // TODO: Track activation timestamp
-            reason = (string?)null // TODO: Track activation reason
+            networks = new
+            {
+                soulseek_available = level <= DisasterModeLevel.SoulseekDegraded,
+                mesh_assisting = level >= DisasterModeLevel.SoulseekDegraded,
+                mesh_primary = level >= DisasterModeLevel.SoulseekUnavailable,
+                full_fallback = level >= DisasterModeLevel.FullFallback
+            }
         });
     }
 }
