@@ -1627,12 +1627,11 @@ namespace slskd
             });
 
             // Typed options (Phase 11) - bind under slskd: namespace to match YAML provider
-            var slskdSection = Configuration.GetSection(AppName);
-            services.AddOptions<Core.SwarmOptions>().Bind(slskdSection.GetSection("Swarm"));
-            services.AddOptions<Core.SecurityOptions>().Bind(slskdSection.GetSection("Security"));
-            services.AddOptions<Common.Security.AdversarialOptions>().Bind(slskdSection.GetSection("Security:Adversarial"));
-            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(slskdSection.GetSection("PodCore:Security"));
-            services.AddOptions<PodCore.PodJoinOptions>().Bind(slskdSection.GetSection("PodCore:Join"));
+            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSlskdSection("Swarm"));
+            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSlskdSection("Security"));
+            services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSlskdSection("Security:Adversarial"));
+            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(Configuration.GetSlskdSection("PodCore:Security"));
+            services.AddOptions<PodCore.PodJoinOptions>().Bind(Configuration.GetSlskdSection("PodCore:Join"));
 
             // Transport policy manager for per-peer/per-pod transport policies
             services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
@@ -1657,16 +1656,16 @@ namespace slskd
                 return new Mesh.Privacy.PrivacyLayer(logger, loggerFactory, options.Value.Privacy);
             });
 
-            services.AddOptions<Core.BrainzOptions>().Bind(slskdSection.GetSection("Brainz"));
-            services.AddOptions<Mesh.MeshOptions>().Bind(slskdSection.GetSection("Mesh")); // transport prefs
-            services.AddOptions<Mesh.MeshSyncSecurityOptions>().Bind(slskdSection.GetSection("Mesh:SyncSecurity"));
-            services.AddOptions<Mesh.MeshTransportOptions>().Bind(slskdSection.GetSection("Mesh:Transport"));
-            services.AddOptions<Mesh.TorTransportOptions>().Bind(slskdSection.GetSection("Mesh:Transport:Tor"));
-            services.AddOptions<Mesh.I2PTransportOptions>().Bind(slskdSection.GetSection("Mesh:Transport:I2P"));
-            services.AddOptions<Common.Security.WebSocketTransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:WebSocket"));
-            services.AddOptions<Common.Security.HttpTunnelTransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:HttpTunnel"));
-            services.AddOptions<Common.Security.Obfs4TransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:Obfs4"));
-            services.AddOptions<Common.Security.MeekTransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:Meek"));
+            services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSlskdSection("Brainz"));
+            services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSlskdSection("Mesh")); // transport prefs
+            services.AddOptions<Mesh.MeshSyncSecurityOptions>().Bind(Configuration.GetSlskdSection("Mesh:SyncSecurity"));
+            services.AddOptions<Mesh.MeshTransportOptions>().Bind(Configuration.GetSlskdSection("Mesh:Transport"));
+            services.AddOptions<Mesh.TorTransportOptions>().Bind(Configuration.GetSlskdSection("Mesh:Transport:Tor"));
+            services.AddOptions<Mesh.I2PTransportOptions>().Bind(Configuration.GetSlskdSection("Mesh:Transport:I2P"));
+            services.AddOptions<Common.Security.WebSocketTransportOptions>().Bind(Configuration.GetSlskdSection("Security:Adversarial:Transport:WebSocket"));
+            services.AddOptions<Common.Security.HttpTunnelTransportOptions>().Bind(Configuration.GetSlskdSection("Security:Adversarial:Transport:HttpTunnel"));
+            services.AddOptions<Common.Security.Obfs4TransportOptions>().Bind(Configuration.GetSlskdSection("Security:Adversarial:Transport:Obfs4"));
+            services.AddOptions<Common.Security.MeekTransportOptions>().Bind(Configuration.GetSlskdSection("Security:Adversarial:Transport:Meek"));
 
             // Register options as singletons for direct injection (temporary workaround)
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>().Value);
@@ -1675,14 +1674,14 @@ namespace slskd
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.HttpTunnelTransportOptions>>().Value);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.Obfs4TransportOptions>>().Value);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.MeekTransportOptions>>().Value);
-            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(slskdSection.GetSection("MediaCore"));
-            services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(slskdSection.GetSection("Overlay"));
-            services.AddOptions<Mesh.ServiceFabric.MeshGatewayOptions>().Bind(slskdSection.GetSection("MeshGateway"));
+            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSlskdSection("MediaCore"));
+            services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSlskdSection("Overlay"));
+            services.AddOptions<Mesh.ServiceFabric.MeshGatewayOptions>().Bind(Configuration.GetSlskdSection("MeshGateway"));
 
             // Realm services (T-REALM-01, T-REALM-02, T-REALM-04)
             Log.Information("[DI] Configuring Realm services...");
-            services.Configure<Mesh.Realm.RealmConfig>(slskdSection.GetSection("Realm"));
-            services.Configure<Mesh.Realm.MultiRealmConfig>(slskdSection.GetSection("MultiRealm"));
+            services.Configure<Mesh.Realm.RealmConfig>(Configuration.GetSlskdSection("Realm"));
+            services.Configure<Mesh.Realm.MultiRealmConfig>(Configuration.GetSlskdSection("MultiRealm"));
             services.AddRealmServices();
 
             // Social federation services (required by bridges)
@@ -1697,7 +1696,7 @@ namespace slskd
 
             // MeshCore (Phase 8 implementation)
             Log.Information("[DI] Configuring MeshCore services...");
-            services.Configure<Mesh.MeshOptions>(slskdSection.GetSection("Mesh"));
+            services.Configure<Mesh.MeshOptions>(Configuration.GetSlskdSection("Mesh"));
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
             services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
             services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
@@ -3294,6 +3293,15 @@ namespace slskd
                     Serilog.Log.Logger.Error(exception, "Unhandled exception: {Message}", exception.Message);
                 }
             };
+        }
+
+        /// <summary>
+        /// Gets a configuration section under the slskd: namespace.
+        /// This ensures all options bind correctly to the YAML provider's namespace.
+        /// </summary>
+        private static IConfigurationSection GetSlskdSection(this IConfiguration configuration, string sectionName)
+        {
+            return configuration.GetSection($"{AppName}:{sectionName}");
         }
 
         private static IConfigurationBuilder AddConfigurationProviders(this IConfigurationBuilder builder, string environmentVariablePrefix, string configurationFile, bool reloadOnChange)

@@ -21,7 +21,7 @@ public interface IMeshServiceDescriptorValidator
     /// <param name="descriptor">The descriptor to validate.</param>
     /// <param name="reason">Output parameter describing why validation failed.</param>
     /// <returns>True if valid, false otherwise.</returns>
-    bool Validate(MeshServiceDescriptor descriptor, out string reason);
+    Task<(bool IsValid, string Reason)> ValidateAsync(MeshServiceDescriptor descriptor);
 
     /// <summary>
     /// Checks if a peer is banned or quarantined.
@@ -34,43 +34,41 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
     private readonly ILogger<MeshServiceDescriptorValidator> _logger;
     private readonly MeshServiceFabricOptions _options;
 
-    // TODO: Integrate with actual SecurityCore when available
-    // private readonly ISecurityCore _securityCore;
+    private readonly Common.Moderation.PeerReputationService _peerReputationService;
+
     public MeshServiceDescriptorValidator(
         ILogger<MeshServiceDescriptorValidator> logger,
-        Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options)
+        Microsoft.Extensions.Options.IOptions<MeshServiceFabricOptions> options,
+        Common.Moderation.PeerReputationService peerReputationService)
     {
         _logger = logger;
         _options = options.Value;
+        _peerReputationService = peerReputationService;
     }
 
-    public bool Validate(MeshServiceDescriptor descriptor, out string reason)
+    public async Task<(bool IsValid, string Reason)> ValidateAsync(MeshServiceDescriptor descriptor)
     {
         // 1. Check required fields
         if (string.IsNullOrWhiteSpace(descriptor.ServiceId))
         {
-            reason = "ServiceId is empty";
-            return false;
+            return (false, "ServiceId is empty");
         }
 
         if (string.IsNullOrWhiteSpace(descriptor.ServiceName))
         {
-            reason = "ServiceName is empty";
-            return false;
+            return (false, "ServiceName is empty");
         }
 
         if (string.IsNullOrWhiteSpace(descriptor.OwnerPeerId))
         {
-            reason = "OwnerPeerId is empty";
-            return false;
+            return (false, "OwnerPeerId is empty");
         }
 
         // 2. Validate ServiceId derivation
         var expectedId = MeshServiceDescriptor.DeriveServiceId(descriptor.ServiceName, descriptor.OwnerPeerId);
         if (descriptor.ServiceId != expectedId)
         {
-            reason = $"ServiceId mismatch: expected {expectedId}, got {descriptor.ServiceId}";
-            return false;
+            return (false, $"ServiceId mismatch: expected {expectedId}, got {descriptor.ServiceId}");
         }
 
         // 3. Check timestamps
@@ -79,20 +77,17 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
 
         if (descriptor.CreatedAt > now.Add(skew))
         {
-            reason = $"CreatedAt is in the future (skew > {_options.MaxTimestampSkewSeconds}s)";
-            return false;
+            return (false, $"CreatedAt is in the future (skew > {_options.MaxTimestampSkewSeconds}s)");
         }
 
         if (descriptor.ExpiresAt < now.Subtract(skew))
         {
-            reason = $"Descriptor has expired (ExpiresAt={descriptor.ExpiresAt}, now={now})";
-            return false;
+            return (false, $"Descriptor has expired (ExpiresAt={descriptor.ExpiresAt}, now={now})");
         }
 
         if (descriptor.CreatedAt >= descriptor.ExpiresAt)
         {
-            reason = "CreatedAt must be before ExpiresAt";
-            return false;
+            return (false, "CreatedAt must be before ExpiresAt");
         }
 
         // 4. Check metadata size
@@ -100,8 +95,7 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
         {
             if (descriptor.Metadata.Count > _options.MaxMetadataEntries)
             {
-                reason = $"Too many metadata entries ({descriptor.Metadata.Count} > {_options.MaxMetadataEntries})";
-                return false;
+                return (false, $"Too many metadata entries ({descriptor.Metadata.Count} > {_options.MaxMetadataEntries})");
             }
 
             // Check for PII-like patterns (basic check)
@@ -111,8 +105,7 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
                     kvp.Key.Contains("email", StringComparison.OrdinalIgnoreCase) ||
                     kvp.Key.Contains("ip", StringComparison.OrdinalIgnoreCase))
                 {
-                    reason = $"Metadata key '{kvp.Key}' may contain PII";
-                    return false;
+                    return (false, $"Metadata key '{kvp.Key}' may contain PII");
                 }
             }
         }
@@ -123,14 +116,12 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
             var serialized = MessagePackSerializer.Serialize(descriptor);
             if (serialized.Length > _options.MaxDescriptorBytes)
             {
-                reason = $"Descriptor too large ({serialized.Length} > {_options.MaxDescriptorBytes} bytes)";
-                return false;
+                return (false, $"Descriptor too large ({serialized.Length} > {_options.MaxDescriptorBytes} bytes)");
             }
         }
         catch (Exception ex)
         {
-            reason = $"Failed to serialize descriptor: {ex.Message}";
-            return false;
+            return (false, $"Failed to serialize descriptor: {ex.Message}");
         }
 
         // 6. Validate signature (if present)
@@ -138,8 +129,7 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
         {
             if (descriptor.Signature.Length != 64) // Ed25519 signature is 64 bytes
             {
-                reason = $"Invalid signature length ({descriptor.Signature.Length}, expected 64)";
-                return false;
+                return (false, $"Invalid signature length ({descriptor.Signature.Length}, expected 64)");
             }
 
             // TODO: Actually validate Ed25519 signature when crypto infrastructure is available
@@ -148,25 +138,20 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
         }
 
         // 7. Check if peer is allowed (ban list integration)
-        if (!IsPeerAllowed(descriptor.OwnerPeerId))
+        if (!await IsPeerAllowedAsync(descriptor.OwnerPeerId))
         {
-            reason = $"Peer {descriptor.OwnerPeerId} is banned or quarantined";
-            return false;
+            return (false, $"Peer {descriptor.OwnerPeerId} is banned or quarantined");
         }
 
-        reason = string.Empty;
-        return true;
+        return (true, string.Empty);
     }
 
-    public bool IsPeerAllowed(string peerId)
+    public async Task<bool> IsPeerAllowedAsync(string peerId)
     {
-        // TODO: Integrate with actual SecurityCore/ban list
-        // For now, just do basic validation
         if (string.IsNullOrWhiteSpace(peerId))
             return false;
 
-        // Placeholder: In real implementation, check against ban list
-        // return !_securityCore.IsBanned(peerId) && !_securityCore.IsQuarantined(peerId);
-        return true;
+        // Check with PeerReputationService
+        return await _peerReputationService.IsPeerAllowedForPlanningAsync(peerId);
     }
 }

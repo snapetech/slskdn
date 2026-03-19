@@ -118,7 +118,8 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             var validated = new List<MeshServiceDescriptor>();
             foreach (var descriptor in descriptors)
             {
-                if (!_validator.Validate(descriptor, out var reason))
+                var (isValid, reason) = await _validator.ValidateAsync(descriptor);
+                if (!isValid)
                 {
                     _logger.LogDebug(
                         "[ServiceDirectory] Invalid descriptor for {ServiceName}: {Reason}",
