@@ -147,7 +147,7 @@ public class SharesController : ControllerBase
     [ProducesResponseType(typeof(ShareGrant), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Create([FromBody] CreateShareGrantRequest req, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody, Required] CreateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
         if (req.CollectionId == default)
@@ -280,7 +280,7 @@ public class SharesController : ControllerBase
     [Authorize(Policy = AuthPolicy.Any)]
     [ProducesResponseType(200)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateShareGrantRequest req, CancellationToken ct)
+    public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody, Required] UpdateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
         var currentUserId = await GetCurrentUserIdAsync(ct);

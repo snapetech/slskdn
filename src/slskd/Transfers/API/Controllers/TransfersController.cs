@@ -218,7 +218,7 @@ namespace slskd.Transfers.API
         [ProducesResponseType(201)]
         [ProducesResponseType(typeof(string), 403)]
         [ProducesResponseType(typeof(string), 500)]
-        public async Task<IActionResult> EnqueueAsync([FromRoute, Required] string username, [FromBody] IEnumerable<QueueDownloadRequest> requests)
+        public async Task<IActionResult> EnqueueAsync([FromRoute, Required] string username, [FromBody, Required] IEnumerable<QueueDownloadRequest> requests)
         {
             if (Program.IsRelayAgent)
             {

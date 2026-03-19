@@ -7,6 +7,7 @@ namespace slskd.SongID.API;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using slskd.Authentication;
 using slskd.Core.Security;
 
@@ -27,7 +28,7 @@ public sealed class SongIdController : ControllerBase
     }
 
     [HttpPost("runs")]
-    public async Task<IActionResult> CreateRun([FromBody] SongIdRunRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateRun([FromBody, Required] SongIdRunRequest request, CancellationToken cancellationToken)
     {
         if (Program.IsRelayAgent)
         {
