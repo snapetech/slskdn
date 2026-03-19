@@ -26,7 +26,7 @@ public interface IMeshServiceDescriptorValidator
     /// <summary>
     /// Checks if a peer is banned or quarantined.
     /// </summary>
-    bool IsPeerAllowed(string peerId);
+    Task<bool> IsPeerAllowedAsync(string peerId);
 }
 
 public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator

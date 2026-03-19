@@ -153,6 +153,10 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         ContentVerificationResult verificationResult,
         CancellationToken cancellationToken = default)
     {
+        // FUTURE: Multi-swarm synergy - combine Soulseek sources with mesh peers
+        // If file is available from both Soulseek and mesh peers, coordinate parallel downloads
+        // using MediaCore chunking to reassemble from multiple sources
+
         // Use MediaCore swarm intelligence if available
         if (_mediaCoreSwarmService != null)
         {

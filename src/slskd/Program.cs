@@ -1627,11 +1627,12 @@ namespace slskd
             });
 
             // Typed options (Phase 11) - bind under slskd: namespace to match YAML provider
-            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSlskdSection("Swarm"));
-            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSlskdSection("Security"));
-            services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSlskdSection("Security:Adversarial"));
-            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(Configuration.GetSlskdSection("PodCore:Security"));
-            services.AddOptions<PodCore.PodJoinOptions>().Bind(Configuration.GetSlskdSection("PodCore:Join"));
+            var slskdSection = Configuration.GetSection(AppName);
+            services.AddOptions<Core.SwarmOptions>().Bind(slskdSection.GetSection("Swarm"));
+            services.AddOptions<Core.SecurityOptions>().Bind(slskdSection.GetSection("Security"));
+            services.AddOptions<Common.Security.AdversarialOptions>().Bind(slskdSection.GetSection("Security:Adversarial"));
+            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(slskdSection.GetSection("PodCore:Security"));
+            services.AddOptions<PodCore.PodJoinOptions>().Bind(slskdSection.GetSection("PodCore:Join"));
 
             // Transport policy manager for per-peer/per-pod transport policies
             services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
@@ -2814,15 +2815,9 @@ namespace slskd
             // prepend the url base.
             app.UsePathBase(urlBase);
             app.UseHTMLRewrite("((\\.)?\\/static)", $"{(urlBase == "/" ? string.Empty : urlBase)}/static");
-            // Get the actual listening port from server addresses (fixes mismatch with OptionsAtStartup.Web.Port)
-            var serverAddresses = app.ServerFeatures.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
-            var actualPort = serverAddresses?.Addresses
-                .Select(addr => new Uri(addr))
-                .Where(uri => uri.Scheme == "http")
-                .Select(uri => uri.Port)
-                .FirstOrDefault() ?? OptionsAtStartup.Web.Port; // fallback
-
-            app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={actualPort}</script>", excludedRoutes: new[] { "/api", "/swagger" });
+            // Note: webPort is computed in WebHost configuration but not accessible here
+            // The main fix is making HTTP_ADDRESS configurable for proper binding
+            app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={OptionsAtStartup.Web.Port}</script>", excludedRoutes: new[] { "/api", "/swagger" });
             Log.Information("Using base url {UrlBase}", urlBase);
 
             // serve static content from the configured path

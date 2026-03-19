@@ -5,7 +5,6 @@
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Overlay;
-using slskd.Common.Exceptions;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
