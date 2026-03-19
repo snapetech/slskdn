@@ -5,6 +5,7 @@
 namespace slskd.API.VirtualSoulfind;
 
 using slskd.Core.Security;
+using slskd.VirtualSoulfind.DisasterMode;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +20,11 @@ using Microsoft.AspNetCore.Mvc;
 public class DisasterModeController : ControllerBase
 {
     private readonly ILogger<DisasterModeController> logger;
-    private readonly VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator;
+    private readonly slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator;
 
     public DisasterModeController(
         ILogger<DisasterModeController> logger,
-        VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator)
+        slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator)
     {
         this.logger = logger;
         this.disasterModeCoordinator = disasterModeCoordinator;

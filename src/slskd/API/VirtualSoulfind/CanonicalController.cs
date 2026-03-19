@@ -19,11 +19,11 @@ using Microsoft.AspNetCore.Mvc;
 public class CanonicalController : ControllerBase
 {
     private readonly ILogger<CanonicalController> logger;
-    private readonly VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery;
+    private readonly slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery;
 
     public CanonicalController(
         ILogger<CanonicalController> logger,
-        VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery)
+        slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery)
     {
         this.logger = logger;
         this.shadowIndexQuery = shadowIndexQuery;
@@ -42,7 +42,7 @@ public class CanonicalController : ControllerBase
         {
             var result = await shadowIndexQuery.QueryAsync(mbid, ct);
 
-            if (result == null || !result.Variants.Any())
+            if (result == null || !result.CanonicalVariants.Any())
             {
                 return Ok(new
                 {
@@ -54,25 +54,20 @@ public class CanonicalController : ControllerBase
             }
 
             // Select canonical variant based on quality criteria
-            var canonicalVariant = SelectCanonicalVariant(result.Variants);
+            var canonicalVariant = SelectCanonicalVariant(result.CanonicalVariants);
 
             return Ok(new
             {
                 mbid = mbid,
                 canonical_variant = canonicalVariant == null ? null : new
                 {
-                    filename = canonicalVariant.Filename,
                     codec = canonicalVariant.Codec,
-                    bitrate = canonicalVariant.Bitrate,
-                    channels = canonicalVariant.Channels,
-                    sampleRate = canonicalVariant.SampleRate,
-                    duration = canonicalVariant.Duration,
-                    fileSize = canonicalVariant.FileSize,
-                    qualityScore = canonicalVariant.QualityScore,
-                    peerCount = canonicalVariant.PeerCount
+                    bitrate = canonicalVariant.BitrateKbps,
+                    fileSize = canonicalVariant.SizeBytes,
+                    qualityScore = canonicalVariant.QualityScore
                 },
-                available_variants = result.Variants.Count,
-                selection_reason = canonicalVariant != null ? "Selected highest quality FLAC variant" : "No suitable variant found"
+                available_variants = result.CanonicalVariants.Count,
+                selection_reason = canonicalVariant != null ? "Selected highest quality variant from shadow index" : "No suitable variant found"
             });
         }
         catch (Exception ex)
@@ -82,14 +77,13 @@ public class CanonicalController : ControllerBase
         }
     }
 
-    private VirtualSoulfind.ShadowIndex.ShadowIndexVariant? SelectCanonicalVariant(
-        IReadOnlyList<VirtualSoulfind.ShadowIndex.ShadowIndexVariant> variants)
+    private slskd.VirtualSoulfind.ShadowIndex.VariantHint? SelectCanonicalVariant(
+        IReadOnlyList<slskd.VirtualSoulfind.ShadowIndex.VariantHint> variants)
     {
-        // Prefer FLAC > ALAC > AAC > MP3, then by quality score, then by peer count
+        // Prefer FLAC > ALAC > AAC > MP3, then by quality score
         var orderedVariants = variants
             .OrderByDescending(v => GetCodecPriority(v.Codec))
             .ThenByDescending(v => v.QualityScore)
-            .ThenByDescending(v => v.PeerCount)
             .ToList();
 
         return orderedVariants.FirstOrDefault();

@@ -43,7 +43,7 @@ public class UsersCompatibilityController : ControllerBase
 
         try
         {
-            var browseResult = await soulseekClient.BrowseAsync(username, cancellationToken);
+            var browseResult = await soulseekClient.BrowseAsync(username);
 
             // Convert Soulseek browse result to compatibility format
             var directories = browseResult.Directories.Select(dir => new
@@ -53,12 +53,7 @@ public class UsersCompatibilityController : ControllerBase
                 {
                     filename = file.Filename,
                     size = file.Size,
-                    attributes = new[] { file.Extension },
-                    bitrate = file.Bitrate,
-                    duration = file.Length,
-                    sampleRate = file.SampleRate,
-                    bitDepth = file.BitDepth,
-                    codec = file.Codec
+                    attributes = new[] { file.Extension }
                 }).ToList()
             }).ToList();
 
@@ -75,19 +70,5 @@ public class UsersCompatibilityController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Browse user files (slskd compatibility).
-    /// </summary>
-    [HttpGet("{username}/browse")]
-    [Authorize]
-    public async Task<IActionResult> BrowseUser(
-            string username,
-            CancellationToken cancellationToken = default)
-    {
-        logger.LogInformation("Browse user requested: {Username}", username);
 
-        // CRITICAL: Return 501 instead of fake data to prevent false confidence
-        throw new Common.Exceptions.FeatureNotImplementedException(
-            "User browsing compatibility is not yet implemented. This provides backward compatibility for older Soulseek client protocols.");
-    }
 }

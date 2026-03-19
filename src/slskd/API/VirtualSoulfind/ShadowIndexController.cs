@@ -5,6 +5,7 @@
 namespace slskd.API.VirtualSoulfind;
 
 using slskd.Core.Security;
+using slskd.VirtualSoulfind.ShadowIndex;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +20,11 @@ using Microsoft.AspNetCore.Mvc;
 public class ShadowIndexController : ControllerBase
 {
     private readonly ILogger<ShadowIndexController> logger;
-    private readonly VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery;
+    private readonly slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery;
 
     public ShadowIndexController(
         ILogger<ShadowIndexController> logger,
-        VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery)
+        slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery shadowIndexQuery)
     {
         this.logger = logger;
         this.shadowIndexQuery = shadowIndexQuery;
@@ -48,18 +49,12 @@ public class ShadowIndexController : ControllerBase
             }
 
             // Convert to API-friendly format
-            var variants = result.Variants.Select(v => new
+            var variants = result.CanonicalVariants.Select(v => new
             {
-                filename = v.Filename,
                 codec = v.Codec,
-                bitrate = v.Bitrate,
-                channels = v.Channels,
-                sampleRate = v.SampleRate,
-                duration = v.Duration,
-                fileSize = v.FileSize,
-                qualityScore = v.QualityScore,
-                lastSeen = v.LastSeen,
-                peerCount = v.PeerCount
+                bitrate = v.BitrateKbps,
+                fileSize = v.SizeBytes,
+                qualityScore = v.QualityScore
             }).ToList();
 
             return Ok(new { mbid, variants });
