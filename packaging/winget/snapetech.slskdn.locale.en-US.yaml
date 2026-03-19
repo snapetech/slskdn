@@ -10,12 +10,14 @@ PackageName: slskdN
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Batteries-included Soulseek web client
+ShortDescription: Stable Soulseek client with SongID and Discovery Graph
 Description: |-
-  slskdN is a batteries-included fork of slskd with advanced download features,
-  automation, and network enhancements for Soulseek.
+  slskdN is a batteries-included fork of slskd with SongID, Discovery Graph,
+  advanced download features, automation, and network enhancements for Soulseek.
   
   Stable features include:
+  - SongID from URLs, text, and local media with ranked acquisition paths
+  - Discovery Graph atlas across SongID, MusicBrainz, and search
   - Multi-source swarm downloads
   - DHT mesh networking
   - MusicBrainz integration

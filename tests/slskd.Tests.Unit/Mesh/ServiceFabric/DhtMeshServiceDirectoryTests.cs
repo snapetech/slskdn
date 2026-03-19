@@ -103,12 +103,8 @@ public class DhtMeshServiceDirectoryTests
 
         // All descriptors are valid
         _validatorMock
-            .Setup(v => v.Validate(It.IsAny<MeshServiceDescriptor>(), out It.Ref<string>.IsAny))
-            .Returns((MeshServiceDescriptor d, out string reason) =>
-            {
-                reason = string.Empty;
-                return true;
-            });
+            .Setup(v => v.ValidateAsync(It.IsAny<MeshServiceDescriptor>()))
+            .ReturnsAsync((true, string.Empty));
 
         // Act
         var result = await _directory.FindByNameAsync("test-service", CancellationToken.None);
@@ -116,7 +112,7 @@ public class DhtMeshServiceDirectoryTests
         // Assert
         Assert.Equal(3, result.Count);
         _validatorMock.Verify(
-            v => v.Validate(It.IsAny<MeshServiceDescriptor>(), out It.Ref<string>.IsAny),
+            v => v.ValidateAsync(It.IsAny<MeshServiceDescriptor>()),
             Times.Exactly(3));
     }
 
@@ -139,12 +135,11 @@ public class DhtMeshServiceDirectoryTests
         // Only first descriptor is valid
         var callCount = 0;
         _validatorMock
-            .Setup(v => v.Validate(It.IsAny<MeshServiceDescriptor>(), out It.Ref<string>.IsAny))
-            .Returns((MeshServiceDescriptor d, out string reason) =>
+            .Setup(v => v.ValidateAsync(It.IsAny<MeshServiceDescriptor>()))
+            .ReturnsAsync((MeshServiceDescriptor d) =>
             {
                 callCount++;
-                reason = callCount == 1 ? string.Empty : "Invalid";
-                return callCount == 1;
+                return callCount == 1 ? (true, string.Empty) : (false, "Invalid");
             });
 
         // Act
@@ -174,12 +169,8 @@ public class DhtMeshServiceDirectoryTests
 
         // All descriptors are valid
         _validatorMock
-            .Setup(v => v.Validate(It.IsAny<MeshServiceDescriptor>(), out It.Ref<string>.IsAny))
-            .Returns((MeshServiceDescriptor d, out string reason) =>
-            {
-                reason = string.Empty;
-                return true;
-            });
+            .Setup(v => v.ValidateAsync(It.IsAny<MeshServiceDescriptor>()))
+            .ReturnsAsync((true, string.Empty));
 
         // Act
         var result = await _directory.FindByNameAsync("test-service", CancellationToken.None);
@@ -226,4 +217,3 @@ public class DhtMeshServiceDirectoryTests
         };
     }
 }
-

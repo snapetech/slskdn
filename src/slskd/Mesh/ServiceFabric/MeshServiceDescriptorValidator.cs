@@ -137,7 +137,7 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
             // of unsigned descriptors while acknowledging current crypto limitations.
             _logger.LogDebug("Signature presence validated (full verification requires key infrastructure)");
         }
-        else if (_options.RequireSignatures)
+        else if (_options.ValidateDhtSignatures)
         {
             return (false, "Signature required but not provided");
         }

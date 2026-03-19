@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Common.Moderation;
 using slskd.Mesh.ServiceFabric;
 using Xunit;
 using Moq;
@@ -15,63 +16,70 @@ namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 public class MeshServiceDescriptorValidatorTests
 {
     private readonly Mock<ILogger<MeshServiceDescriptorValidator>> _loggerMock;
+    private readonly Mock<IPeerReputationStore> _peerReputationStoreMock;
     private readonly MeshServiceFabricOptions _options;
     private readonly MeshServiceDescriptorValidator _validator;
 
     public MeshServiceDescriptorValidatorTests()
     {
         _loggerMock = new Mock<ILogger<MeshServiceDescriptorValidator>>();
+        _peerReputationStoreMock = new Mock<IPeerReputationStore>();
         _options = new MeshServiceFabricOptions();
         var optionsMock = new Mock<IOptions<MeshServiceFabricOptions>>();
         optionsMock.Setup(o => o.Value).Returns(_options);
+        _peerReputationStoreMock.Setup(x => x.IsPeerBannedAsync(It.IsAny<string>(), default)).ReturnsAsync(false);
 
-        _validator = new MeshServiceDescriptorValidator(_loggerMock.Object, optionsMock.Object);
+        var peerReputationService = new PeerReputationService(
+            new Mock<ILogger<PeerReputationService>>().Object,
+            _peerReputationStoreMock.Object);
+
+        _validator = new MeshServiceDescriptorValidator(_loggerMock.Object, optionsMock.Object, peerReputationService);
     }
 
     [Fact]
-    public void Validate_WithValidDescriptor_ReturnsTrue()
+    public async Task Validate_WithValidDescriptor_ReturnsTrue()
     {
         // Arrange
         var descriptor = CreateValidDescriptor();
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.True(result);
+        Assert.True(isValid);
         Assert.Empty(reason);
     }
 
     [Fact]
-    public void Validate_WithEmptyServiceId_ReturnsFalse()
+    public async Task Validate_WithEmptyServiceId_ReturnsFalse()
     {
         // Arrange
         var descriptor = CreateValidDescriptor() with { ServiceId = "" };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("ServiceId", reason);
     }
 
     [Fact]
-    public void Validate_WithMismatchedServiceId_ReturnsFalse()
+    public async Task Validate_WithMismatchedServiceId_ReturnsFalse()
     {
         // Arrange
         var descriptor = CreateValidDescriptor() with { ServiceId = "wrong-id" };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("ServiceId mismatch", reason);
     }
 
     [Fact]
-    public void Validate_WithFutureCreatedAt_ReturnsFalse()
+    public async Task Validate_WithFutureCreatedAt_ReturnsFalse()
     {
         // Arrange
         var futureTime = DateTimeOffset.UtcNow.AddMinutes(10);
@@ -82,15 +90,15 @@ public class MeshServiceDescriptorValidatorTests
         };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("future", reason);
     }
 
     [Fact]
-    public void Validate_WithExpiredDescriptor_ReturnsFalse()
+    public async Task Validate_WithExpiredDescriptor_ReturnsFalse()
     {
         // Arrange
         var pastTime = DateTimeOffset.UtcNow.AddHours(-2);
@@ -101,15 +109,15 @@ public class MeshServiceDescriptorValidatorTests
         };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("expired", reason);
     }
 
     [Fact]
-    public void Validate_WithCreatedAfterExpires_ReturnsFalse()
+    public async Task Validate_WithCreatedAfterExpires_ReturnsFalse()
     {
         // Arrange
         var now = DateTimeOffset.UtcNow;
@@ -120,10 +128,10 @@ public class MeshServiceDescriptorValidatorTests
         };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         // Either "before ExpiresAt" or "expired" or "future" is acceptable
         Assert.True(
             reason.Contains("before ExpiresAt") ||
@@ -133,7 +141,7 @@ public class MeshServiceDescriptorValidatorTests
     }
 
     [Fact]
-    public void Validate_WithTooManyMetadataEntries_ReturnsFalse()
+    public async Task Validate_WithTooManyMetadataEntries_ReturnsFalse()
     {
         // Arrange
         var metadata = new Dictionary<string, string>();
@@ -145,10 +153,10 @@ public class MeshServiceDescriptorValidatorTests
         var descriptor = CreateValidDescriptor() with { Metadata = metadata };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("Too many metadata", reason);
     }
 
@@ -159,7 +167,7 @@ public class MeshServiceDescriptorValidatorTests
     [InlineData("Email")]
     [InlineData("ip")]
     [InlineData("IP")]
-    public void Validate_WithPIIInMetadata_ReturnsFalse(string piiKey)
+    public async Task Validate_WithPIIInMetadata_ReturnsFalse(string piiKey)
     {
         // Arrange
         var metadata = new Dictionary<string, string>
@@ -169,15 +177,15 @@ public class MeshServiceDescriptorValidatorTests
         var descriptor = CreateValidDescriptor() with { Metadata = metadata };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("PII", reason);
     }
 
     [Fact]
-    public void Validate_WithOversizedDescriptor_ReturnsFalse()
+    public async Task Validate_WithOversizedDescriptor_ReturnsFalse()
     {
         // Arrange
         _options.MaxDescriptorBytes = 100; // Very small limit
@@ -189,15 +197,15 @@ public class MeshServiceDescriptorValidatorTests
         var descriptor = CreateValidDescriptor() with { Metadata = largeMetadata };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("too large", reason);
     }
 
     [Fact]
-    public void Validate_WithInvalidSignatureLength_ReturnsFalse()
+    public async Task Validate_WithInvalidSignatureLength_ReturnsFalse()
     {
         // Arrange
         var descriptor = CreateValidDescriptor() with
@@ -206,15 +214,15 @@ public class MeshServiceDescriptorValidatorTests
         };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.False(result);
+        Assert.False(isValid);
         Assert.Contains("signature length", reason);
     }
 
     [Fact]
-    public void Validate_WithCorrectSignatureLength_ReturnsTrue()
+    public async Task Validate_WithCorrectSignatureLength_ReturnsTrue()
     {
         // Arrange
         var descriptor = CreateValidDescriptor() with
@@ -223,10 +231,70 @@ public class MeshServiceDescriptorValidatorTests
         };
 
         // Act
-        var result = _validator.Validate(descriptor, out var reason);
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
 
         // Assert
-        Assert.True(result);
+        Assert.True(isValid);
+        Assert.Empty(reason);
+    }
+
+    [Fact]
+    public async Task Validate_WithoutSignature_WhenValidationEnabled_ReturnsFalse()
+    {
+        // Arrange
+        _options.ValidateDhtSignatures = true;
+        var descriptor = CreateValidDescriptor() with
+        {
+            Signature = Array.Empty<byte>()
+        };
+
+        // Act
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
+
+        // Assert
+        Assert.False(isValid);
+        Assert.Contains("Signature required", reason);
+    }
+
+    [Fact]
+    public async Task Validate_WithBannedPeer_ReturnsFalse()
+    {
+        // Arrange
+        _peerReputationStoreMock.Reset();
+        _peerReputationStoreMock.Setup(x => x.IsPeerBannedAsync(It.IsAny<string>(), default)).ReturnsAsync(true);
+
+        var peerReputationService = new PeerReputationService(
+            new Mock<ILogger<PeerReputationService>>().Object,
+            _peerReputationStoreMock.Object);
+
+        var validator = new MeshServiceDescriptorValidator(
+            _loggerMock.Object,
+            Mock.Of<IOptions<MeshServiceFabricOptions>>(x => x.Value == _options),
+            peerReputationService);
+
+        // Act
+        var (isValid, reason) = await validator.ValidateAsync(CreateValidDescriptor());
+
+        // Assert
+        Assert.False(isValid);
+        Assert.Contains("banned or quarantined", reason);
+    }
+
+    [Fact]
+    public async Task Validate_WithoutSignature_WhenValidationDisabled_ReturnsTrue()
+    {
+        // Arrange
+        _options.ValidateDhtSignatures = false;
+        var descriptor = CreateValidDescriptor() with
+        {
+            Signature = Array.Empty<byte>()
+        };
+
+        // Act
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
+
+        // Assert
+        Assert.True(isValid);
         Assert.Empty(reason);
     }
 
@@ -254,8 +322,7 @@ public class MeshServiceDescriptorValidatorTests
             },
             CreatedAt = now,
             ExpiresAt = now.AddHours(1),
-            Signature = Array.Empty<byte>()
+            Signature = new byte[64]
         };
     }
 }
-
