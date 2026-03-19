@@ -194,12 +194,12 @@ namespace slskd.Configuration
 
             if (root is YamlScalarNode scalar)
             {
-                var value = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                var value = scalar.Value == null || NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
 
                 if (value != null)
                 {
                     var normalizedPath = Normalize(path);
-                    var storedValue = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                    var storedValue = scalar.Value == null || NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
                     Data[normalizedPath] = storedValue;
                 }
             }

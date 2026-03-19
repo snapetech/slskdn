@@ -2468,6 +2468,15 @@ namespace slskd
             public int Port { get; init; } = 5030;
 
             /// <summary>
+            ///     Gets the HTTP listen address. Use "*" for all interfaces, "127.0.0.1" for localhost only.
+            /// </summary>
+            [Argument(default, "http-address")]
+            [EnvironmentVariable("HTTP_ADDRESS")]
+            [Description("HTTP listen address for web UI (* for all interfaces, 127.0.0.1 for localhost)")]
+            [RequiresRestart]
+            public string Address { get; init; } = "127.0.0.1";
+
+            /// <summary>
             ///     Gets the HTTP listen unix domain socket (UDS) path.
             /// </summary>
             [Argument(default, "http-socket")]

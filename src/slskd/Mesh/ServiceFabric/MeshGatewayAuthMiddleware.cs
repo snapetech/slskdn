@@ -169,9 +169,20 @@ public class MeshGatewayAuthMiddleware
 
     private static bool IsLocalhostOrigin(string origin)
     {
-        return origin.Contains("localhost") ||
-               origin.Contains("127.0.0.1") ||
-               origin.Contains("[::1]");
+        if (string.IsNullOrEmpty(origin))
+            return false;
+
+        try
+        {
+            var uri = new Uri(origin);
+            return uri.Host == "localhost" ||
+                   uri.Host == "127.0.0.1" ||
+                   uri.Host == "::1";
+        }
+        catch (UriFormatException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

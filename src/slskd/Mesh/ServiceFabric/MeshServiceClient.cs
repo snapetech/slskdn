@@ -5,6 +5,7 @@
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Overlay;
+using slskd.Common.Exceptions;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -125,11 +126,8 @@ public class MeshServiceClient : IMeshServiceClient
             // Track message sent
             _statsCollector?.RecordMessageSent();
 
-            // TODO: Send envelope to target peer via overlay
-            // await _overlaySender.SendAsync(targetPeerId, envelope, cancellationToken);
-            _logger.LogDebug(
-                "[ServiceClient] Sent call to {PeerId}: {Service}.{Method} (id: {CorrelationId})",
-                targetPeerId, call.ServiceName, call.Method, call.CorrelationId);
+            // CRITICAL: Mesh service calls are not implemented - fail fast instead of hanging
+            throw new FeatureNotImplementedException("Mesh service calls are not yet implemented. This feature will be available in a future version.");
 
             // Wait for reply with timeout
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

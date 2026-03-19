@@ -585,8 +585,15 @@ namespace slskd
                     ? port
                     : OptionsAtStartup.Web.Port; // Fallback to OptionsAtStartup if not in config
 
+                var webAddressSection = builder.Configuration.GetSection($"{AppName}:Web:Address");
+                var webAddress = webAddressSection.Exists() && !string.IsNullOrEmpty(webAddressSection.Value)
+                    ? webAddressSection.Value
+                    : OptionsAtStartup.Web.Address; // Fallback to OptionsAtStartup if not in config
+
+                var listenAddress = webAddress == "*" ? IPAddress.Any : IPAddress.Parse(webAddress);
+
                 builder.WebHost
-                    .UseUrls($"http://127.0.0.1:{webPort}")
+                    .UseUrls($"http://{webAddress}:{webPort}")
                     .UseKestrel(options =>
                     {
                         // PR-09: Global body size cap; configurable via Web.MaxRequestBodySize (default 10 MB). MeshGateway and others may enforce lower per-route.
@@ -598,8 +605,8 @@ namespace slskd
                             builder.Configuration.GetValue<string>($"{AppName}:{AppName}:Web:Port") ?? "null",
                             webPort);
 
-                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{IPAddress.Any}:{webPort}/ (from config: {webPortSection.Exists()})");
-                        options.Listen(IPAddress.Any, webPort);
+                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{webAddress}:{webPort}/ (from config: port={webPortSection.Exists()}, address={webAddressSection.Exists()})");
+                        options.Listen(listenAddress, webPort);
                         Log.Information($"[Kestrel] HTTP listener configured");
 
                         if (OptionsAtStartup.Web.Socket != null)
@@ -918,9 +925,9 @@ namespace slskd
                     ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
                 });
 
-            // PR-14: SSRF-safe key fetcher for ActivityPub HTTP Signature (timeout 3s, max 3 redirects)
+            // PR-14: SSRF-safe key fetcher for ActivityPub HTTP Signature (timeout 3s, no redirects to prevent SSRF)
             services.AddHttpClient<SocialFederation.IHttpSignatureKeyFetcher, SocialFederation.HttpSignatureKeyFetcher>(c => c.Timeout = TimeSpan.FromSeconds(3))
-                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { MaxAutomaticRedirections = 3 });
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
             // add a partially configured instance of SoulseekClient. the Application instance will
             // complete configuration at startup.
@@ -1619,12 +1626,13 @@ namespace slskd
                 return service;
             });
 
-            // Typed options (Phase 11)
-            services.AddOptions<Core.SwarmOptions>().Bind(Configuration.GetSection("Swarm"));
-            services.AddOptions<Core.SecurityOptions>().Bind(Configuration.GetSection("Security"));
-            services.AddOptions<Common.Security.AdversarialOptions>().Bind(Configuration.GetSection("Security:Adversarial"));
-            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(Configuration.GetSection("PodCore:Security"));
-            services.AddOptions<PodCore.PodJoinOptions>().Bind(Configuration.GetSection("PodCore:Join"));
+            // Typed options (Phase 11) - bind under slskd: namespace to match YAML provider
+            var slskdSection = Configuration.GetSection(AppName);
+            services.AddOptions<Core.SwarmOptions>().Bind(slskdSection.GetSection("Swarm"));
+            services.AddOptions<Core.SecurityOptions>().Bind(slskdSection.GetSection("Security"));
+            services.AddOptions<Common.Security.AdversarialOptions>().Bind(slskdSection.GetSection("Security:Adversarial"));
+            services.AddOptions<PodCore.PodMessageSignerOptions>().Bind(slskdSection.GetSection("PodCore:Security"));
+            services.AddOptions<PodCore.PodJoinOptions>().Bind(slskdSection.GetSection("PodCore:Join"));
 
             // Transport policy manager for per-peer/per-pod transport policies
             services.AddSingleton<Mesh.Transport.TransportPolicyManager>();
@@ -1649,16 +1657,16 @@ namespace slskd
                 return new Mesh.Privacy.PrivacyLayer(logger, loggerFactory, options.Value.Privacy);
             });
 
-            services.AddOptions<Core.BrainzOptions>().Bind(Configuration.GetSection("Brainz"));
-            services.AddOptions<Mesh.MeshOptions>().Bind(Configuration.GetSection("Mesh")); // transport prefs
-            services.AddOptions<Mesh.MeshSyncSecurityOptions>().Bind(Configuration.GetSection("Mesh:SyncSecurity"));
-            services.AddOptions<Mesh.MeshTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport"));
-            services.AddOptions<Mesh.TorTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:Tor"));
-            services.AddOptions<Mesh.I2PTransportOptions>().Bind(Configuration.GetSection("Mesh:Transport:I2P"));
-            services.AddOptions<Common.Security.WebSocketTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:WebSocket"));
-            services.AddOptions<Common.Security.HttpTunnelTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:HttpTunnel"));
-            services.AddOptions<Common.Security.Obfs4TransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:Obfs4"));
-            services.AddOptions<Common.Security.MeekTransportOptions>().Bind(Configuration.GetSection("Security:Adversarial:Transport:Meek"));
+            services.AddOptions<Core.BrainzOptions>().Bind(slskdSection.GetSection("Brainz"));
+            services.AddOptions<Mesh.MeshOptions>().Bind(slskdSection.GetSection("Mesh")); // transport prefs
+            services.AddOptions<Mesh.MeshSyncSecurityOptions>().Bind(slskdSection.GetSection("Mesh:SyncSecurity"));
+            services.AddOptions<Mesh.MeshTransportOptions>().Bind(slskdSection.GetSection("Mesh:Transport"));
+            services.AddOptions<Mesh.TorTransportOptions>().Bind(slskdSection.GetSection("Mesh:Transport:Tor"));
+            services.AddOptions<Mesh.I2PTransportOptions>().Bind(slskdSection.GetSection("Mesh:Transport:I2P"));
+            services.AddOptions<Common.Security.WebSocketTransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:WebSocket"));
+            services.AddOptions<Common.Security.HttpTunnelTransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:HttpTunnel"));
+            services.AddOptions<Common.Security.Obfs4TransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:Obfs4"));
+            services.AddOptions<Common.Security.MeekTransportOptions>().Bind(slskdSection.GetSection("Security:Adversarial:Transport:Meek"));
 
             // Register options as singletons for direct injection (temporary workaround)
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>().Value);
@@ -1667,14 +1675,14 @@ namespace slskd
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.HttpTunnelTransportOptions>>().Value);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.Obfs4TransportOptions>>().Value);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.MeekTransportOptions>>().Value);
-            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSection("MediaCore"));
-            services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSection("Overlay"));
-            services.AddOptions<Mesh.ServiceFabric.MeshGatewayOptions>().Bind(Configuration.GetSection("MeshGateway"));
+            services.AddOptions<MediaCore.MediaCoreOptions>().Bind(slskdSection.GetSection("MediaCore"));
+            services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(slskdSection.GetSection("Overlay"));
+            services.AddOptions<Mesh.ServiceFabric.MeshGatewayOptions>().Bind(slskdSection.GetSection("MeshGateway"));
 
             // Realm services (T-REALM-01, T-REALM-02, T-REALM-04)
             Log.Information("[DI] Configuring Realm services...");
-            services.Configure<Mesh.Realm.RealmConfig>(Configuration.GetSection("Realm"));
-            services.Configure<Mesh.Realm.MultiRealmConfig>(Configuration.GetSection("MultiRealm"));
+            services.Configure<Mesh.Realm.RealmConfig>(slskdSection.GetSection("Realm"));
+            services.Configure<Mesh.Realm.MultiRealmConfig>(slskdSection.GetSection("MultiRealm"));
             services.AddRealmServices();
 
             // Social federation services (required by bridges)
@@ -1689,7 +1697,7 @@ namespace slskd
 
             // MeshCore (Phase 8 implementation)
             Log.Information("[DI] Configuring MeshCore services...");
-            services.Configure<Mesh.MeshOptions>(Configuration.GetSection("Mesh"));
+            services.Configure<Mesh.MeshOptions>(slskdSection.GetSection("Mesh"));
             services.AddSingleton<Mesh.INatDetector, Mesh.StunNatDetector>();
             services.AddSingleton<Mesh.Nat.IUdpHolePuncher, Mesh.Nat.UdpHolePuncher>();
             services.AddSingleton<Mesh.Nat.IRelayClient, Mesh.Nat.RelayClient>();
@@ -1988,7 +1996,7 @@ namespace slskd
                 var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
                 return new Mesh.Overlay.QuicOverlayClient(logger, options, signer, privacyLayer);
             });
-            services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(Configuration.GetSection("OverlayData"));
+            services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(slskdSection.GetSection("OverlayData"));
             services.AddHostedService(p =>
             {
                 Log.Information("[DI] Constructing QuicDataServer hosted service...");
@@ -2807,7 +2815,15 @@ namespace slskd
             // prepend the url base.
             app.UsePathBase(urlBase);
             app.UseHTMLRewrite("((\\.)?\\/static)", $"{(urlBase == "/" ? string.Empty : urlBase)}/static");
-            app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={OptionsAtStartup.Web.Port}</script>", excludedRoutes: new[] { "/api", "/swagger" });
+            // Get the actual listening port from server addresses (fixes mismatch with OptionsAtStartup.Web.Port)
+            var serverAddresses = app.ServerFeatures.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+            var actualPort = serverAddresses?.Addresses
+                .Select(addr => new Uri(addr))
+                .Where(uri => uri.Scheme == "http")
+                .Select(uri => uri.Port)
+                .FirstOrDefault() ?? OptionsAtStartup.Web.Port; // fallback
+
+            app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={actualPort}</script>", excludedRoutes: new[] { "/api", "/swagger" });
             Log.Information("Using base url {UrlBase}", urlBase);
 
             // serve static content from the configured path
