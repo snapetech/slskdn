@@ -3056,6 +3056,31 @@ FocusContentId = normalizedFocusContentId,
 
 **Why This Keeps Happening**: The service layer treats some pod fields as optional, but the persistence model hard-requires non-null strings. If you change schema expectations or add a new required column, normalize the service input before save and keep the entity-to-model mapping tolerant of older/null rows.
 
+### 3c. Bash Heredoc Terminators in GitHub Actions Must Start at Column 1 Unless You Use `<<-`
+
+**The Bug**: The stable `metadata-main` job rewrote `Formula/slskdn.rb` with `cat <<EOF`, but the closing `EOF` was indented inside the workflow `run:` block. Bash never recognized the terminator, so the post-release metadata job crashed with `wanted 'EOF'` and `syntax error: unexpected end of file` even though the release artifacts were already published.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```bash
+cat > Formula/slskdn.rb <<EOF
+  class Slskdn < Formula
+    ...
+  EOF
+```
+
+**Correct**:
+```bash
+cat > Formula/slskdn.rb <<EOF
+class Slskdn < Formula
+  ...
+EOF
+```
+
+**Why This Keeps Happening**: YAML indentation makes it visually tempting to indent shell heredoc terminators to match the surrounding block, but bash still parses the literal script after YAML rendering. If you use plain `<<EOF`, the closing marker must be flush-left in the generated shell. Otherwise a release can fully publish and still fail red on a follow-up metadata write-back step.
+
 ---
 
 *Last updated: 2026-01-27*
