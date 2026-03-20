@@ -388,6 +388,33 @@ The hub startup stays bounded and logged, but it runs in the background instead 
 
 **Why This Keeps Happening**: Real-time channels feel "core" during implementation, so it is easy to treat them like a prerequisite for first paint. In this UI they are enhancement paths, not the gate for showing the authenticated shell. Keep session validation in the blocking path, but let hub connection, retries, and late state hydration happen asynchronously.
 
+### 1b. Do Not Run `security-and-quality` on `master` Unless You Intend to Triage Thousands of Maintainer Alerts
+
+**The Bug**: The checked-in C# CodeQL workflow used `queries: security-and-quality`, which repopulated roughly 2,400 `master` alerts with maintainability and code-smell findings (`cs/local-not-disposed`, `cs/log-forging`, `cs/catch-of-all-exceptions`, etc.) even though the goal was ordinary security scanning.
+
+**Files Affected**:
+- `.github/workflows/codeql.yml`
+
+**Wrong**:
+```yaml
+- name: Initialize CodeQL
+  uses: github/codeql-action/init@v3
+  with:
+    languages: csharp
+    queries: security-and-quality
+```
+
+**Correct**:
+```yaml
+- name: Initialize CodeQL
+  uses: github/codeql-action/init@v3
+  with:
+    languages: csharp
+    queries: security-extended
+```
+
+**Why This Keeps Happening**: `security-and-quality` sounds like a better default until it lands in a mature codebase and turns every broad code-quality heuristic into a repo-level security alert. On `master`, keep the suite scoped to security-focused queries unless there is an explicit, staffed cleanup plan for the extra findings.
+
 ---
 
 ### 2. Reverting Entire Workflow Files (build-on-tag.yml, CI)
