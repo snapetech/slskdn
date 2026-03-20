@@ -155,6 +155,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -172,13 +174,17 @@ jobs:
           echo "=== SHA256SUMS.txt ==="
           cat release/SHA256SUMS.txt
 
-      - name: Render Dev Release Notes
+      - name: Generate release notes (repo-backed)
+        env:
+          RELEASE_NOTES_PRODUCT_NAME: slskdN
         run: |
-          bash packaging/scripts/render-release-notes.sh \
-            .github/release-notes/dev.md.tmpl \
+          set -euo pipefail
+          chmod +x ./scripts/generate-release-notes.sh
+          ./scripts/generate-release-notes.sh \
             "${{ needs.parse.outputs.version }}" \
-            "${{ github.sha }}" \
-            release/RELEASE_NOTES.md
+            release/RELEASE_NOTES.md \
+            "${{ github.ref_name }}"
+          cat release/RELEASE_NOTES.md
 
       - name: Create/Update Dev Release
         uses: softprops/action-gh-release@v2
@@ -1067,6 +1073,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -1083,13 +1091,17 @@ jobs:
           echo "=== SHA256SUMS.txt ==="
           cat release/SHA256SUMS.txt
 
-      - name: Render Main Release Notes
+      - name: Generate release notes (repo-backed)
+        env:
+          RELEASE_NOTES_PRODUCT_NAME: slskdN
         run: |
-          bash packaging/scripts/render-release-notes.sh \
-            .github/release-notes/main.md.tmpl \
+          set -euo pipefail
+          chmod +x ./scripts/generate-release-notes.sh
+          ./scripts/generate-release-notes.sh \
             "${{ needs.parse.outputs.version }}" \
-            "${{ github.sha }}" \
-            release/RELEASE_NOTES.md
+            release/RELEASE_NOTES.md \
+            "${{ github.sha }}"
+          cat release/RELEASE_NOTES.md
 
       # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
       # Build was triggered by build-main-VERSION tag, but release uses traditional format

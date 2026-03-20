@@ -270,13 +270,17 @@ jobs:
         with:
           name: slskdn-dev-all-platforms
 
-      - name: Render Dev Release Notes
+      - name: Generate release notes (repo-backed)
+        env:
+          RELEASE_NOTES_PRODUCT_NAME: slskdN
         run: |
-          bash packaging/scripts/render-release-notes.sh \
-            .github/release-notes/dev.md.tmpl \
+          set -euo pipefail
+          chmod +x ./scripts/generate-release-notes.sh
+          ./scripts/generate-release-notes.sh \
             "${{ needs.build.outputs.dev_version }}" \
-            "${{ needs.build.outputs.short_sha }}" \
-            RELEASE_NOTES.md
+            RELEASE_NOTES.md \
+            "${{ github.sha }}"
+          cat RELEASE_NOTES.md
 
       - name: Create Timestamped Release
         uses: softprops/action-gh-release@v2
