@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Clear the released Arch loading-timeout investigation and monitor the `build-main-0.24.5-slskdn.73` follow-up build
+- **Current Task**: Land the workflow fix for the `.73` metadata write-back failure and decide how to replay the missed metadata update
 - **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -98,9 +98,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Watch the `build-main-0.24.5-slskdn.73` workflow and confirm the stable release finishes green.
-2. Follow up on issue `#117` once the Arch package is published and confirm whether the post-login timeout is resolved on the affected host.
-3. If the timeout persists after `.73`, collect the requested browser console output and `journalctl -u slskd -b --no-pager` logs to separate remaining packaging/runtime issues from the frontend startup regression already fixed.
+1. Push the `build-on-tag.yml` heredoc fix and choose whether to replay metadata manually or by a new build tag, since rerunning the old `.73` workflow would still use the broken workflow from that run.
+2. Confirm the checked-in release metadata (`flake.nix`, `Formula/slskdn.rb`, Winget manifests) matches `0.24.5-slskdn.73` after the chosen replay path.
+3. Follow up on issue `#117` once the Arch package is published and confirm whether the post-login timeout is resolved on the affected host.
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):

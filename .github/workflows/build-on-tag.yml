@@ -1709,32 +1709,32 @@ jobs:
             "${VERSION}"
 
           cat > Formula/slskdn.rb <<EOF
-          class Slskdn < Formula
-            desc "Batteries-included Soulseek web client"
-            homepage "https://github.com/snapetech/slskdn"
-            license "AGPL-3.0-or-later"
-            version "${VERSION}"
-            on_macos do
-              on_arm do
-                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip"
-                sha256 "${{ steps.hashes.outputs.macos_arm64_hex }}"
-              end
-              on_intel do
-                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip"
-                sha256 "${{ steps.hashes.outputs.macos_x64_hex }}"
-              end
-            end
-            on_linux do
-              url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip"
-              sha256 "${{ steps.hashes.outputs.linux_x64_hex }}"
-            end
-            def install
-              libexec.install Dir["*"]
-              (bin/"slskd").write_exec_script libexec/"slskd"
-              (bin/"slskdn").write_exec_script libexec/"slskd"
-            end
-          end
-          EOF
+class Slskdn < Formula
+  desc "Batteries-included Soulseek web client"
+  homepage "https://github.com/snapetech/slskdn"
+  license "AGPL-3.0-or-later"
+  version "${VERSION}"
+  on_macos do
+    on_arm do
+      url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip"
+      sha256 "${{ steps.hashes.outputs.macos_arm64_hex }}"
+    end
+    on_intel do
+      url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip"
+      sha256 "${{ steps.hashes.outputs.macos_x64_hex }}"
+    end
+  end
+  on_linux do
+    url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip"
+    sha256 "${{ steps.hashes.outputs.linux_x64_hex }}"
+  end
+  def install
+    libexec.install Dir["*"]
+    (bin/"slskd").write_exec_script libexec/"slskd"
+    (bin/"slskdn").write_exec_script libexec/"slskd"
+  end
+end
+EOF
 
       - name: Verify Flake
         run: |
@@ -1767,32 +1767,32 @@ jobs:
               "${VERSION}"
 
             cat > Formula/slskdn.rb <<EOF
-            class Slskdn < Formula
-              desc "Batteries-included Soulseek web client"
-              homepage "https://github.com/snapetech/slskdn"
-              license "AGPL-3.0-or-later"
-              version "${VERSION}"
-              on_macos do
-                on_arm do
-                  url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip"
-                  sha256 "${{ steps.hashes.outputs.macos_arm64_hex }}"
-                end
-                on_intel do
-                  url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip"
-                  sha256 "${{ steps.hashes.outputs.macos_x64_hex }}"
-                end
-              end
-              on_linux do
-                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip"
-                sha256 "${{ steps.hashes.outputs.linux_x64_hex }}"
-              end
-              def install
-                libexec.install Dir["*"]
-                (bin/"slskd").write_exec_script libexec/"slskd"
-                (bin/"slskdn").write_exec_script libexec/"slskd"
-              end
-            end
-            EOF
+class Slskdn < Formula
+  desc "Batteries-included Soulseek web client"
+  homepage "https://github.com/snapetech/slskdn"
+  license "AGPL-3.0-or-later"
+  version "${VERSION}"
+  on_macos do
+    on_arm do
+      url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip"
+      sha256 "${{ steps.hashes.outputs.macos_arm64_hex }}"
+    end
+    on_intel do
+      url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip"
+      sha256 "${{ steps.hashes.outputs.macos_x64_hex }}"
+    end
+  end
+  on_linux do
+    url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip"
+    sha256 "${{ steps.hashes.outputs.linux_x64_hex }}"
+  end
+  def install
+    libexec.install Dir["*"]
+    (bin/"slskd").write_exec_script libexec/"slskd"
+    (bin/"slskdn").write_exec_script libexec/"slskd"
+  end
+end
+EOF
 
             git add flake.nix Formula/slskdn.rb packaging/winget/
 

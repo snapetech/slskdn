@@ -5039,3 +5039,10 @@ Code quality improvements were completed as part of Option A:
 - Added ADR gotcha [1a](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and committed it immediately as `docs: Add gotcha for blocked SPA init on SignalR startup`.
 - Validation: manual local checks against a temporary authenticated node confirmed `/api/v0/session/enabled`, login, `/api/v0/session`, `/api/v0/application`, and `/hub/application/negotiate` all respond promptly; `npm test -- App.test.jsx` passed; `npm run build` passed. `npm run lint` is currently blocked by a pre-existing repo/tooling issue in `eslint-config-canonical` (`ERR_PACKAGE_PATH_NOT_EXPORTED`), not by this change.
 - Pushed [master](/home/keith/Documents/code/slskdn) at `740465fa`, created and pushed stable tag `build-main-0.24.5-slskdn.73`, and commented on [issue #117](https://github.com/snapetech/slskdn/issues/117#issuecomment-4099857587) with the findings, fix reference, and a request for browser/service diagnostics if the timeout still reproduces after the Arch package updates.
+
+## 2026-03-20 12:02 - Fix `.73` metadata workflow heredoc failure
+
+- Investigated the failed `Build on Tag` run for `build-main-0.24.5-slskdn.73` and confirmed the release itself succeeded; the only red job was `Update Main Repo Metadata`, step `Commit and Push`, due to a bash heredoc parse failure in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml).
+- Added ADR gotcha [3c](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and committed it immediately as `docs: Add gotcha for workflow heredoc indentation`.
+- Fixed the stable metadata writer in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) by making the generated `Formula/slskdn.rb` heredoc body and closing `EOF` valid for bash inside the GitHub Actions `run:` script.
+- Validation: inspected the exact `metadata-main` block after editing, confirmed both heredoc terminators are flush-left in the generated shell content, and confirmed there are no tab characters left in the edited block.
