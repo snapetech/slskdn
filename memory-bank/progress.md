@@ -4212,7 +4212,6 @@ var results = await messageStorage.SearchMessagesAsync(podId, "error timeout", c
 | Version check crash | ✅ Fixed | Suppress noisy warning |
 | ObjectDisposedException on shutdown | ✅ Fixed | Graceful shutdown |
 
-
 ## 2025-12-14 - MAJOR MILESTONE: Compilation Achieved (176 → 0 errors)
 
 ### Completed
@@ -5046,3 +5045,9 @@ Code quality improvements were completed as part of Option A:
 - Added ADR gotcha [3c](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and committed it immediately as `docs: Add gotcha for workflow heredoc indentation`.
 - Fixed the stable metadata writer in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) by making the generated `Formula/slskdn.rb` heredoc body and closing `EOF` valid for bash inside the GitHub Actions `run:` script.
 - Validation: inspected the exact `metadata-main` block after editing, confirmed both heredoc terminators are flush-left in the generated shell content, and confirmed there are no tab characters left in the edited block.
+
+## 2026-03-20 12:34 - CodeQL alert flood scope fix
+
+- Verified the current CodeQL alert spike is not a reopened PR and not GitHub default setup returning; `code-scanning/default-setup` is still `not-configured` and the open alerts are attached to `refs/heads/master`.
+- Confirmed the checked-in [codeql.yml](/home/keith/Documents/code/slskdn/.github/workflows/codeql.yml) was the source of the flood because it explicitly ran `queries: security-and-quality`, and recent successful analyses on `master` uploaded roughly 2,440 C# results dominated by maintainability-style rules.
+- Narrowed the custom C# CodeQL workflow to `queries: security-extended` so `master` scanning stays focused on security findings instead of repopulating thousands of quality/code-smell alerts.

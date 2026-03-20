@@ -37,7 +37,9 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
-          queries: security-and-quality
+          # Keep master scanning focused on security findings; the broader suite
+          # turns maintainability heuristics into thousands of repo alerts.
+          queries: security-extended
 
       - name: Restore dependencies
         run: dotnet restore src/slskd/slskd.csproj

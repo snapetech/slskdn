@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Land the workflow fix for the `.73` metadata write-back failure and decide how to replay the missed metadata update
+- **Current Task**: Narrow CodeQL scanning on `master` so it stops repopulating thousands of non-security alerts
 - **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -55,6 +55,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added a dedicated `/discovery-graph` route with modal handoff into that atlas workspace, plus SongID controller unit tests covering run creation, validation, list, and get flows
   - Propagated identity-first acquisition scoring into the remaining SongID segment option paths, reused corpus family hints in scoring, and expanded the dedicated Discovery Graph atlas with inline explainability (edge-family counts, why-near rows, provenance/score breakdowns, recenter actions, and hover context)
   - Fixed the 2026-03-16 packaging regressions for Nix/Winget/Homebrew/dev release metadata, disabled the broken dev flake output, repaired the flaky port-binding/Tor transport tests, and cleaned the touched unit tests up for current async analyzer expectations
+  - Confirmed GitHub default CodeQL setup is still `not-configured`, verified the open alert flood is attached to `refs/heads/master`, and narrowed the checked-in `.github/workflows/codeql.yml` from `queries: security-and-quality` to `queries: security-extended`
 
 ---
 
@@ -98,8 +99,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the `build-on-tag.yml` heredoc fix and choose whether to replay metadata manually or by a new build tag, since rerunning the old `.73` workflow would still use the broken workflow from that run.
-2. Confirm the checked-in release metadata (`flake.nix`, `Formula/slskdn.rb`, Winget manifests) matches `0.24.5-slskdn.73` after the chosen replay path.
+1. Push the `codeql.yml` scope fix and watch the next `master` CodeQL run to confirm the alert count collapses to the security-focused baseline.
+2. Decide whether to dismiss or delete stale broad-scope analyses if GitHub leaves old `security-and-quality` alerts open after the new run.
 3. Follow up on issue `#117` once the Arch package is published and confirm whether the post-login timeout is resolved on the affected host.
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
