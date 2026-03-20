@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish validating the repaired PodCore/integration blockers, then retrigger a clean stable release tag after `.71`
+- **Current Task**: Investigate and fix the reported post-login SPA loading timeout seen by an Arch user on `0.24.5.slskdn.72-1`
 - **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -98,9 +98,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Let the full `tests/slskd.Tests.Integration` project finish and confirm there are no remaining release-blocking failures outside the already-fixed canonical path.
-2. Commit the PodCore / test-harness repairs, push `master`, and trigger the next documented stable tag (`build-main-*`) so the whole release workflow reruns from the corrected branch tip.
-3. Verify the new stable run ends green, including the metadata write-back job that lost the branch race during `.71`.
+1. If the Arch reporter can share browser console and service logs from `0.24.5.slskdn.72-1`, confirm whether the remaining stall was the same blocking SignalR startup path or a packaging-only issue.
+2. Commit the frontend bootstrap fix and memory-bank updates, then decide whether to cut a follow-up stable tag once any adjacent release blockers are cleared.
+3. Verify the next stable run ends green, including the metadata write-back job that lost the branch race during `.71`.
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):

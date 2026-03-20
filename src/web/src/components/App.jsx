@@ -165,6 +165,7 @@ class App extends Component {
     super(props);
 
     this.state = initialState;
+    this.applicationHub = undefined;
   }
 
   componentDidMount() {
@@ -194,15 +195,81 @@ class App extends Component {
       'slskdn-status-toggle',
       this.handleStatusBarToggle,
     );
+
+    if (this.applicationHub) {
+      this.applicationHub.stop().catch(() => {});
+      this.applicationHub = undefined;
+    }
   }
 
   handleStatusBarToggle = () => {
     this.setState({ statusBarVisible: isStatusBarVisible() });
   };
 
+  startApplicationHub = () => {
+    if (this.applicationHub) {
+      this.applicationHub.stop().catch(() => {});
+    }
+
+    const HUB_START_TIMEOUT_MS = 30000;
+    const appHub = createApplicationHubConnection();
+    this.applicationHub = appHub;
+
+    appHub.on('state', (state) => {
+      this.setState({ applicationState: state });
+    });
+
+    appHub.on('options', (options) => {
+      this.setState({ applicationOptions: options });
+    });
+
+    appHub.onreconnecting(() =>
+      this.setState({ error: true, retriesExhausted: false }),
+    );
+    appHub.onclose(() =>
+      this.setState({ error: true, retriesExhausted: true }),
+    );
+    appHub.onreconnected(() =>
+      this.setState({ error: false, retriesExhausted: false }),
+    );
+
+    const hubStart = appHub.start();
+    let hubTimeoutId;
+    const hubTimeout = new Promise((_, reject) => {
+      hubTimeoutId = setTimeout(
+        () => reject(new Error('HubConnectionTimeout')),
+        HUB_START_TIMEOUT_MS,
+      );
+    });
+
+    Promise.race([hubStart, hubTimeout])
+      .catch((error) => {
+        if (this.applicationHub !== appHub) {
+          return;
+        }
+
+        if (error?.message === 'HubConnectionTimeout') {
+          console.warn(
+            'Hub connection timed out during background startup; allowing the UI to continue while SignalR retries.',
+          );
+          return;
+        }
+
+        console.error(error);
+        this.setState({ error: true, retriesExhausted: false });
+      })
+      .finally(() => {
+        if (hubTimeoutId) {
+          clearTimeout(hubTimeoutId);
+        }
+
+        // Prevent unhandled rejections if the timeout wins and the start later faults.
+        hubStart.catch(() => {});
+      });
+  };
+
   init = async () => {
     this.setState({ initialized: false }, async () => {
-      const HUB_START_TIMEOUT_MS = 30000;
       const INIT_TOTAL_TIMEOUT_MS = 30000;
 
       let initTimedOut = false;
@@ -217,44 +284,7 @@ class App extends Component {
           }
 
           if (await session.check()) {
-            const appHub = createApplicationHubConnection();
-
-            appHub.on('state', (state) => {
-              this.setState({ applicationState: state });
-            });
-
-            appHub.on('options', (options) => {
-              this.setState({ applicationOptions: options });
-            });
-
-            appHub.onreconnecting(() =>
-              this.setState({ error: true, retriesExhausted: false }),
-            );
-            appHub.onclose(() =>
-              this.setState({ error: true, retriesExhausted: true }),
-            );
-            appHub.onreconnected(() =>
-              this.setState({ error: false, retriesExhausted: false }),
-            );
-
-            const hubStart = appHub.start();
-            let hubTimeoutId;
-            const hubTimeout = new Promise((_, reject) => {
-              hubTimeoutId = setTimeout(
-                () => reject(new Error('HubConnectionTimeout')),
-                HUB_START_TIMEOUT_MS,
-              );
-            });
-
-            try {
-              await Promise.race([hubStart, hubTimeout]);
-            } finally {
-              if (hubTimeoutId) {
-                clearTimeout(hubTimeoutId);
-              }
-              // Prevent unhandled rejections if the timeout wins and the start later faults.
-              hubStart.catch(() => {});
-            }
+            this.startApplicationHub();
           }
 
           const savedTheme = this.getSavedTheme();
@@ -288,11 +318,7 @@ class App extends Component {
           console.warn('Init timed out; showing UI (hub/state may reconnect later).');
         }
       } catch (error) {
-        if (error?.message === 'HubConnectionTimeout') {
-          console.warn(
-            'Hub connection timed out; showing UI (automatic reconnect will retry).',
-          );
-        } else if (!initTimedOut) {
+        if (!initTimedOut) {
           console.error(error);
           this.setState({ error: true, retriesExhausted: true });
         }
