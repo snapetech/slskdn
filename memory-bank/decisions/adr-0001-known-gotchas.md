@@ -264,6 +264,33 @@ public Task<IEnumerable<File>> SearchAsync(SearchQuery query) => ...;
 public IEnumerable<File> Search(SearchQuery query) => ...;
 ```
 
+### 0h. Retry Loops Around External Uploads Must Bound Each Attempt, Not Just the Number of Attempts
+
+**The Bug**: The Snap Store publish steps retried transient `snapcraft upload` failures, but each upload attempt could block indefinitely waiting on the store, so the loop never advanced and the release stayed stuck in a single opaque upload step.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```bash
+for attempt in $(seq 1 60); do
+  OUT="$(snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
+  CODE=$?
+  ...
+done
+```
+
+**Correct**:
+```bash
+for attempt in $(seq 1 6); do
+  OUT="$(timeout --signal=TERM 10m snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
+  CODE=$?
+  ...
+done
+```
+
+**Why This Keeps Happening**: A retry loop looks resilient, but it does nothing if the wrapped command never returns. Any networked publish step needs both retry logic and a hard per-attempt timeout so GitHub Actions can surface the failure instead of hanging for tens of minutes.
+
 **Correct**:
 ```csharp
 internal class StubSecurityService : ISecurityService
