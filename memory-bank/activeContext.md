@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Investigate and fix the reported post-login SPA loading timeout seen by an Arch user on `0.24.5.slskdn.72-1`
+- **Current Task**: Clear the released Arch loading-timeout investigation and monitor the `build-main-0.24.5-slskdn.73` follow-up build
 - **Branch**: `master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -98,9 +98,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. If the Arch reporter can share browser console and service logs from `0.24.5.slskdn.72-1`, confirm whether the remaining stall was the same blocking SignalR startup path or a packaging-only issue.
-2. Commit the frontend bootstrap fix and memory-bank updates, then decide whether to cut a follow-up stable tag once any adjacent release blockers are cleared.
-3. Verify the next stable run ends green, including the metadata write-back job that lost the branch race during `.71`.
+1. Watch the `build-main-0.24.5-slskdn.73` workflow and confirm the stable release finishes green.
+2. Follow up on issue `#117` once the Arch package is published and confirm whether the post-login timeout is resolved on the affected host.
+3. If the timeout persists after `.73`, collect the requested browser console output and `journalctl -u slskd -b --no-pager` logs to separate remaining packaging/runtime issues from the frontend startup regression already fixed.
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):
