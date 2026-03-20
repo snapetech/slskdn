@@ -362,6 +362,32 @@ if (!Array.isArray(response)) {
 
 **Why This Keeps Happening**: Models see `undefined` as a "signal" value and forget that callers will `.map()` or `.filter()` the result.
 
+### 1a. Do Not Block SPA Initialization on Optional SignalR Handshakes
+
+**The Bug**: `App.init()` waited on `appHub.start()` before clearing the full-screen loader, so any stalled SignalR negotiation kept the whole site on "loading" for 30 seconds even though auth had succeeded and the rest of the UI could render.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+- `src/web/src/components/App.test.jsx`
+
+**Wrong**:
+```javascript
+if (await session.check()) {
+  const appHub = createApplicationHubConnection();
+  await Promise.race([appHub.start(), hubTimeout]);
+}
+```
+
+**Correct**:
+```javascript
+if (await session.check()) {
+  this.startApplicationHub();
+}
+```
+The hub startup stays bounded and logged, but it runs in the background instead of sitting in the critical render path.
+
+**Why This Keeps Happening**: Real-time channels feel "core" during implementation, so it is easy to treat them like a prerequisite for first paint. In this UI they are enhancement paths, not the gate for showing the authenticated shell. Keep session validation in the blocking path, but let hub connection, retries, and late state hydration happen asynchronously.
+
 ---
 
 ### 2. Reverting Entire Workflow Files (build-on-tag.yml, CI)
