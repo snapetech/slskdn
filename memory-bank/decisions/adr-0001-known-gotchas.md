@@ -3081,6 +3081,33 @@ EOF
 
 **Why This Keeps Happening**: YAML indentation makes it visually tempting to indent shell heredoc terminators to match the surrounding block, but bash still parses the literal script after YAML rendering. If you use plain `<<EOF`, the closing marker must be flush-left in the generated shell. Otherwise a release can fully publish and still fail red on a follow-up metadata write-back step.
 
+### 3d. GitHub Actions `run: |` Blocks Still Need Valid YAML Indentation Before Bash Ever Sees the Heredoc
+
+**The Bug**: After fixing the bash heredoc terminator bug, the next edit moved the heredoc body to column 1 in the workflow file itself. That made the shell content conceptually correct, but it broke the workflow at YAML parse time, so the `build-on-tag.yml` runs failed instantly with no jobs created.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```yaml
+run: |
+  cat > Formula/slskdn.rb <<EOF
+class Slskdn < Formula
+  ...
+EOF
+```
+
+**Correct**:
+```yaml
+run: |
+  cat > Formula/slskdn.rb <<EOF
+  class Slskdn < Formula
+    ...
+  EOF
+```
+
+**Why This Keeps Happening**: GitHub Actions first parses YAML, then hands the deindented block to bash. The workflow file must satisfy both layers at once: keep the heredoc lines indented enough for YAML block-scalar syntax, but consistently indented so the runner deindents them back to column 1 for bash.
+
 ---
 
 *Last updated: 2026-01-27*
