@@ -56,6 +56,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Propagated identity-first acquisition scoring into the remaining SongID segment option paths, reused corpus family hints in scoring, and expanded the dedicated Discovery Graph atlas with inline explainability (edge-family counts, why-near rows, provenance/score breakdowns, recenter actions, and hover context)
   - Fixed the 2026-03-16 packaging regressions for Nix/Winget/Homebrew/dev release metadata, disabled the broken dev flake output, repaired the flaky port-binding/Tor transport tests, and cleaned the touched unit tests up for current async analyzer expectations
   - Confirmed GitHub default CodeQL setup is still `not-configured`, verified the open alert flood is attached to `refs/heads/master`, and narrowed the checked-in `.github/workflows/codeql.yml` from `queries: security-and-quality` to `queries: security-extended`
+  - Investigated the `.76` release hang, confirmed the only stuck job was `Publish to Snap Store (stable)`, and updated both Snap Store upload steps to use per-attempt `timeout --signal=TERM 10m` bounds plus explicit retry/failure logging so future releases do not hang indefinitely inside `snapcraft upload`
 
 ---
 
@@ -99,8 +100,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the `codeql.yml` scope fix and watch the next `master` CodeQL run to confirm the alert count collapses to the security-focused baseline.
-2. Decide whether to dismiss or delete stale broad-scope analyses if GitHub leaves old `security-and-quality` alerts open after the new run.
+1. Push the Snap timeout fix and decide whether to let the current `.76` Snap upload continue or cancel/replay it with a fresh tag, since the already-running job will not pick up the new timeout wrapper.
+2. Confirm the next CodeQL run leaves the alert set at the intended security-focused baseline.
 3. Follow up on issue `#117` once the Arch package is published and confirm whether the post-login timeout is resolved on the affected host.
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 

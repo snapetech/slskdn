@@ -5051,3 +5051,9 @@ Code quality improvements were completed as part of Option A:
 - Verified the current CodeQL alert spike is not a reopened PR and not GitHub default setup returning; `code-scanning/default-setup` is still `not-configured` and the open alerts are attached to `refs/heads/master`.
 - Confirmed the checked-in [codeql.yml](/home/keith/Documents/code/slskdn/.github/workflows/codeql.yml) was the source of the flood because it explicitly ran `queries: security-and-quality`, and recent successful analyses on `master` uploaded roughly 2,440 C# results dominated by maintainability-style rules.
 - Narrowed the custom C# CodeQL workflow to `queries: security-extended` so `master` scanning stays focused on security findings instead of repopulating thousands of quality/code-smell alerts.
+
+## 2026-03-20 12:58 - Bound Snap Store publish attempts
+
+- Investigated the live `.76` stable release run and confirmed the only remaining in-progress job was `Publish to Snap (Main/Stable)`, specifically the `Publish to Snap Store (stable)` step after the snap artifact had already been built successfully.
+- Confirmed the workflow bug was not "missing retries"; it already retried transient Snapcraft errors, but each `snapcraft upload` call could block indefinitely, so the retry loop never advanced and the release appeared hung for long periods.
+- Updated both the dev (`edge`) and stable Snap publish steps in [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) to wrap each `snapcraft upload` call in `timeout --signal=TERM 10m`, emit per-attempt timestamps, treat timeout exit `124` as retryable, and fail explicitly after 6 bounded attempts instead of hanging inside one upload.

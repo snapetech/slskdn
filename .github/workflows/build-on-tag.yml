@@ -922,10 +922,11 @@ jobs:
           set -euo pipefail
           # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          for attempt in $(seq 1 60); do
-            echo "Upload attempt $attempt/60: $SNAP_PATH"
+          for attempt in $(seq 1 6); do
+            STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "Upload attempt $attempt/6 started at $STARTED_AT: $SNAP_PATH"
             set +e
-            OUT="$(snapcraft upload --release=edge "$SNAP_PATH" 2>&1)"
+            OUT="$(timeout --signal=TERM 10m snapcraft upload --release=edge "$SNAP_PATH" 2>&1)"
             CODE=$?
             set -e
             echo "$OUT"
@@ -933,13 +934,19 @@ jobs:
               echo "✅ Published to Snap (edge channel)"
               exit 0
             fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection"; then
+            if [ $CODE -eq 124 ]; then
+              echo "Upload attempt $attempt/6 timed out after 10 minutes."
+              sleep 30
+              continue
+            fi
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out"; then
               echo "Retrying in 30s (transient Snap Store error)..."
               sleep 30
               continue
             fi
             exit $CODE
           done
+          echo "❌ Snap Store upload failed after 6 attempts."
           exit 1
 
       - name: Skip if no credentials
@@ -1863,10 +1870,11 @@ jobs:
           set -euo pipefail
           # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          for attempt in $(seq 1 60); do
-            echo "Upload attempt $attempt/60: $SNAP_PATH"
+          for attempt in $(seq 1 6); do
+            STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "Upload attempt $attempt/6 started at $STARTED_AT: $SNAP_PATH"
             set +e
-            OUT="$(snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
+            OUT="$(timeout --signal=TERM 10m snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
             CODE=$?
             set -e
             echo "$OUT"
@@ -1874,13 +1882,19 @@ jobs:
               echo "✅ Published to Snap (stable channel)"
               exit 0
             fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection"; then
+            if [ $CODE -eq 124 ]; then
+              echo "Upload attempt $attempt/6 timed out after 10 minutes."
+              sleep 30
+              continue
+            fi
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out"; then
               echo "Retrying in 30s (transient Snap Store error)..."
               sleep 30
               continue
             fi
             exit $CODE
           done
+          echo "❌ Snap Store upload failed after 6 attempts."
           exit 1
 
       - name: Skip if no credentials
