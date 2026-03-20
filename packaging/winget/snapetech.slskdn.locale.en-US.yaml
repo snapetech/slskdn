@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 
 PackageIdentifier: snapetech.slskdn
-PackageVersion: 0.24.5.slskdn.60
+PackageVersion: 0.24.5.slskdn.76
 PackageLocale: en-US
 Publisher: slskdN Team
 PublisherUrl: https://github.com/snapetech
@@ -10,19 +10,16 @@ PackageName: slskdN
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Stable Soulseek client with SongID and Discovery Graph
+ShortDescription: Soulseek client with built-in SongID and Discovery Graph
 Description: |-
-  slskdN is a batteries-included fork of slskd with SongID, Discovery Graph,
-  advanced download features, automation, and network enhancements for Soulseek.
+  slskdN is the batteries-included fork of slskd that makes identity and
+  discovery first-class features for Soulseek.
   
   Stable features include:
-  - SongID from URLs, text, and local media with ranked acquisition paths
+  - SongID for YouTube, Spotify, text, and local-file identification
   - Discovery Graph atlas across SongID, MusicBrainz, and search
-  - Multi-source swarm downloads
-  - DHT mesh networking
-  - MusicBrainz integration
-  - Wishlist and background search
-  - Security hardening
+  - Multi-source downloads, auto-replace, and wishlist/background search
+  - Mesh, Solid, and package-manager friendly distribution
 Moniker: slskdn
 Tags:
   - soulseek
@@ -30,9 +27,9 @@ Tags:
   - music
   - filesharing
 ReleaseNotes: |-
-  Stable Release 0.24.5-slskdn.60
+  Stable Release 0.24.5-slskdn.76
   
-  See https://github.com/snapetech/slskdn/releases/tag/0.24.5-slskdn.60 for details.
-ReleaseNotesUrl: https://github.com/snapetech/slskdn/releases/tag/0.24.5-slskdn.60
+  See https://github.com/snapetech/slskdn/releases/tag/0.24.5-slskdn.76 for details.
+ReleaseNotesUrl: https://github.com/snapetech/slskdn/releases/tag/0.24.5-slskdn.76
 ManifestType: defaultLocale
 ManifestVersion: 1.6.0
