@@ -193,6 +193,70 @@ Assert.Equal(ServiceStatusCodes.ServiceUnavailable, lastReply.StatusCode);
 
 **Why This Keeps Happening**: The breaker state update is observable through asynchronous request flow, not as a hard guarantee tied to a specific numbered call. If the behavior being tested is "the breaker opens after sustained failures," the assertion should allow a bounded convergence window.
 
+### 0j. Subprocess Config Tests Must Use Absolute Paths For Filesystem Options
+
+**The Bug**: `EnforceInvalidConfigIntegrationTests` created a temp `wwwroot` but still wrote `contentPath: wwwroot`, so the subprocess resolved that path relative to the built app directory instead of the temp app dir and failed base config validation before reaching the hardening rule.
+
+**Files Affected**:
+- `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
+
+**Wrong**:
+```csharp
+await File.WriteAllTextAsync(yml, """
+    web:
+      contentPath: wwwroot
+""");
+```
+
+**Correct**:
+```csharp
+var contentPath = Path.Combine(tempDir, "wwwroot").Replace("\\", "/");
+await File.WriteAllTextAsync(yml, $"""
+    web:
+      contentPath: {contentPath}
+""");
+```
+
+**Why This Keeps Happening**: `SLSKD_APP_DIR` controls app data paths, not how relative config paths are resolved. Subprocess tests that point config at temporary files or directories should use absolute paths unless the application explicitly resolves them against the temp root being set up by the test.
+
+### 0k. Timeout-Based Circuit Tests Must Distinguish "Breaker Opened" From "Open-State Reply Observed"
+
+**The Bug**: `ServiceTimeout_TriggersCircuitBreaker` still flaked after widening the retry window because the last timeout call could be the one that opens the breaker, which means the first `ServiceUnavailable` reply only appears on the next probe request.
+
+**Files Affected**:
+- `tests/slskd.Tests/Mesh/ServiceFabric/MeshServiceRouterSecurityTests.cs`
+
+**Wrong**:
+```csharp
+for (int i = 0; i < 10; i++)
+{
+    lastReply = await router.RouteAsync(call, peerId);
+    if (lastReply.StatusCode == ServiceStatusCodes.ServiceUnavailable)
+    {
+        break;
+    }
+}
+```
+
+**Correct**:
+```csharp
+for (int i = 0; i < 10; i++)
+{
+    await router.RouteAsync(call, peerId);
+
+    var circuit = router.GetStats().CircuitBreakers.Find(cb => cb.ServiceName == "slow-service");
+    if (circuit?.IsOpen == true)
+    {
+        break;
+    }
+}
+
+var blockedReply = await router.RouteAsync(probeCall, peerId);
+Assert.Equal(ServiceStatusCodes.ServiceUnavailable, blockedReply.StatusCode);
+```
+
+**Why This Keeps Happening**: The timeout response reports the result of the current request, while the breaker state change affects the next request. For timeout-driven breaker tests, inspect router state or issue a separate probe after failures instead of expecting the opening transition and blocked reply to collapse onto the same call.
+
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 
 **The Bug**: `SongIdService` treated `TrackTarget` like `AlbumTarget` and tried to read `MusicBrainzArtistId` from it, which broke the build because `TrackTarget` does not expose that property.

@@ -234,11 +234,9 @@ public class MeshServiceRouterSecurityTests
 
         var peerId = "peer-timeout-test";
 
-        // Act: repeated timeouts should eventually open the circuit breaker.
-        // CI runners can schedule cancellation boundaries a little differently, so
-        // assert eventual open within a bounded number of attempts rather than
-        // assuming the state transition always appears on the exact same call.
-        ServiceReply? lastReply = null;
+        // Act: drive repeated timeouts until router health reports an open circuit.
+        // The timeout reply itself can still be the call that flips the breaker,
+        // so observe state through router stats and then probe once more.
         for (int i = 0; i < 10; i++)
         {
             var call = new ServiceCall
@@ -249,17 +247,30 @@ public class MeshServiceRouterSecurityTests
                 Payload = Array.Empty<byte>()
             };
 
-            lastReply = await router.RouteAsync(call, peerId);
-            if (lastReply.StatusCode == ServiceStatusCodes.ServiceUnavailable)
+            await router.RouteAsync(call, peerId);
+
+            var circuit = router.GetStats().CircuitBreakers.Find(cb => cb.ServiceName == "slow-service");
+            if (circuit?.IsOpen == true)
             {
                 break;
             }
         }
 
+        var circuitBreaker = router.GetStats().CircuitBreakers.Find(cb => cb.ServiceName == "slow-service");
+        Assert.NotNull(circuitBreaker);
+        Assert.True(circuitBreaker!.IsOpen, $"Expected slow-service circuit breaker to open. Consecutive failures: {circuitBreaker.ConsecutiveFailures}");
+
+        var blockedReply = await router.RouteAsync(new ServiceCall
+        {
+            ServiceName = "slow-service",
+            Method = "SlowMethod",
+            CorrelationId = Guid.NewGuid().ToString(),
+            Payload = Array.Empty<byte>()
+        }, peerId);
+
         // Assert
-        Assert.NotNull(lastReply);
-        Assert.Equal(ServiceStatusCodes.ServiceUnavailable, lastReply.StatusCode);
-        Assert.Contains("circuit breaker", lastReply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ServiceStatusCodes.ServiceUnavailable, blockedReply.StatusCode);
+        Assert.Contains("circuit breaker", blockedReply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
