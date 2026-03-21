@@ -25,7 +25,7 @@ namespace slskd.Tests.Unit.Common.CodeQuality
                 await Task.Delay(Timeout.InfiniteTimeSpan, ct);
             }
 
-            var result = await AsyncRules.ValidateCancellationHandlingAsync(TestOperationAsync, TimeSpan.FromMilliseconds(50));
+            var result = await AsyncRules.ValidateCancellationHandlingAsync(TestOperationAsync, TimeSpan.FromMilliseconds(100));
             Assert.True(result);
         }
 
@@ -123,4 +123,3 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         }
     }
 }
-

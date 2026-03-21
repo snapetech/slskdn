@@ -31,7 +31,7 @@ namespace slskd.SocialFederation.API
     /// </remarks>
     [ApiController]
     [Route("actors")]
-    [AllowAnonymous]
+    [Authorize(Policy = AuthPolicy.Any)]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ActivityPubController : ControllerBase
     {
@@ -78,6 +78,7 @@ namespace slskd.SocialFederation.API
         ///     Returns ActivityPub Actor object in JSON-LD format.
         /// </remarks>
         [HttpGet("{actorName}")]
+        [AllowAnonymous]
         [Produces("application/activity+json")]
         public async Task<IActionResult> GetActor(string actorName, CancellationToken cancellationToken = default)
         {
@@ -130,6 +131,7 @@ namespace slskd.SocialFederation.API
         ///     Returns ActivityPub OrderedCollection of received activities.
         /// </remarks>
         [HttpGet("{actorName}/inbox")]
+        [AllowAnonymous]
         [Produces("application/activity+json")]
         public async Task<IActionResult> GetInbox(
                     string actorName,
@@ -175,6 +177,7 @@ namespace slskd.SocialFederation.API
         ///     Receives and processes incoming ActivityPub activities.
         /// </remarks>
         [HttpPost("{actorName}/inbox")]
+        [AllowAnonymous]
         [Consumes("application/activity+json")]
         public async Task<IActionResult> PostToInbox(string actorName, CancellationToken cancellationToken = default)
         {
@@ -247,6 +250,7 @@ namespace slskd.SocialFederation.API
         ///     Returns ActivityPub OrderedCollection of sent activities.
         /// </remarks>
         [HttpGet("{actorName}/outbox")]
+        [AllowAnonymous]
         [Produces("application/activity+json")]
         public async Task<IActionResult> GetOutbox(
                     string actorName,
@@ -293,6 +297,7 @@ namespace slskd.SocialFederation.API
         ///     Creates and distributes outgoing ActivityPub activities.
         /// </remarks>
         [HttpPost("{actorName}/outbox")]
+        [AllowAnonymous]
         [Consumes("application/activity+json")]
         public async Task<IActionResult> PostToOutbox(
                     string actorName,

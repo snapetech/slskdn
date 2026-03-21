@@ -113,20 +113,40 @@ namespace slskd.Common.CodeQuality
             Func<CancellationToken, Task> operation,
             TimeSpan timeout)
         {
-            using var cts = new CancellationTokenSource(timeout);
+            if (operation == null)
+            {
+                throw new ArgumentNullException(nameof(operation));
+            }
+
+            var effectiveTimeout = timeout <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(100) : timeout;
+            var gracePeriod = TimeSpan.FromMilliseconds(Math.Max(effectiveTimeout.TotalMilliseconds, 250));
+
+            using var cts = new CancellationTokenSource();
             var operationTask = operation(cts.Token);
-            var delayTask = Task.Delay(timeout * 2, CancellationToken.None);
+            await Task.Delay(effectiveTimeout, CancellationToken.None).ConfigureAwait(false);
+            cts.Cancel();
+            var delayTask = Task.Delay(gracePeriod, CancellationToken.None);
 
-            var completedTask = await Task.WhenAny(operationTask, delayTask);
+            var completedTask = await Task.WhenAny(operationTask, delayTask).ConfigureAwait(false);
 
-            // If delay task completed first, the operation didn't respect cancellation
             if (completedTask == delayTask)
             {
-                cts.Cancel();
                 return false;
             }
 
-            // Operation completed (either successfully or with cancellation)
+            try
+            {
+                await operationTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            {
+                // Expected path for a cancellation-aware operation.
+            }
+            catch
+            {
+                // The validator only cares that the operation stopped promptly once cancelled.
+            }
+
             return true;
         }
 

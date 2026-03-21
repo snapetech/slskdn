@@ -729,3 +729,9 @@
 - [x] Add explicit regression coverage for intentionally-public protocol endpoints
   - Status: done
   - Notes: Added `PublicProtocolAnonymousActionTests` to lock down the approved anonymous action set for session bootstrap, profile lookup, token-backed streaming, ActivityPub delivery, and WebFinger discovery after the controller-by-controller auth review.
+- [x] Remove controller-level anonymous defaults from public protocol surfaces
+  - Status: done
+  - Notes: Tightened streaming and federation controllers to auth-by-default at class scope with per-action `[AllowAnonymous]`, then revalidated the exact public action set in tests.
+- [x] Fix release-gate cancellation validator race
+  - Status: done
+  - Notes: Updated `AsyncRules.ValidateCancellationHandlingAsync` to cancel explicitly and allow a bounded grace window, which removed the flaky `.81` release-gate failure in `AsyncRulesTests`.

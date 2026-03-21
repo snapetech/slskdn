@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using slskd.Core.API;
+using slskd.Core.Security;
 using slskd.Identity.API;
 using slskd.SocialFederation.API;
 using slskd.Streaming;
@@ -36,14 +37,14 @@ public class PublicProtocolAnonymousActionTests
     [Fact]
     public void StreamingController_RemainsAnonymousForTokenBackedTransport()
     {
-        AssertControllerAllowsAnonymous(typeof(StreamsController));
+        AssertControllerRequiresAuthenticationByDefault(typeof(StreamsController));
         AssertAnonymousActions(typeof(StreamsController), nameof(StreamsController.Get));
     }
 
     [Fact]
     public void FederationControllers_RemainAnonymousForProtocolDiscoveryAndDelivery()
     {
-        AssertControllerAllowsAnonymous(typeof(ActivityPubController));
+        AssertControllerRequiresAuthenticationByDefault(typeof(ActivityPubController));
         AssertAnonymousActions(
             typeof(ActivityPubController),
             nameof(ActivityPubController.GetActor),
@@ -52,19 +53,25 @@ public class PublicProtocolAnonymousActionTests
             nameof(ActivityPubController.GetOutbox),
             nameof(ActivityPubController.PostToOutbox));
 
-        AssertControllerAllowsAnonymous(typeof(WebFingerController));
+        AssertControllerRequiresAuthenticationByDefault(typeof(WebFingerController));
         AssertAnonymousActions(
             typeof(WebFingerController),
             nameof(WebFingerController.GetWebFinger));
     }
 
-    private static void AssertControllerAllowsAnonymous(Type controllerType)
+    private static void AssertControllerRequiresAuthenticationByDefault(Type controllerType)
     {
         var hasAllowAnonymous = controllerType
             .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true)
             .Any();
+        var authorize = controllerType
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .Cast<AuthorizeAttribute>()
+            .SingleOrDefault();
 
-        Assert.True(hasAllowAnonymous, $"{controllerType.Name} should allow anonymous access at controller scope.");
+        Assert.False(hasAllowAnonymous, $"{controllerType.Name} should not allow anonymous access at controller scope.");
+        Assert.NotNull(authorize);
+        Assert.Equal(AuthPolicy.Any, authorize!.Policy);
     }
 
     private static void AssertAnonymousActions(Type controllerType, params string[] expectedAnonymousActionNames)
@@ -76,8 +83,7 @@ public class PublicProtocolAnonymousActionTests
             .ToArray();
 
         var actualAnonymousActionNames = publicInstanceActions
-            .Where(method => method.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true).Any()
-                || controllerType.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true).Any())
+            .Where(method => method.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true).Any())
             .Select(method => method.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();

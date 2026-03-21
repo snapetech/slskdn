@@ -23,7 +23,7 @@ namespace slskd.SocialFederation.API
     /// </remarks>
     [ApiController]
     [Route(".well-known")]
-    [AllowAnonymous]
+    [Authorize(Policy = AuthPolicy.Any)]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class WebFingerController : ControllerBase
     {
@@ -55,6 +55,7 @@ namespace slskd.SocialFederation.API
         ///     Returns JRD (JSON Resource Descriptor) with actor links.
         /// </remarks>
         [HttpGet("webfinger")]
+        [AllowAnonymous]
         [Produces("application/jrd+json")]
         public async Task<IActionResult> GetWebFinger(
         [FromQuery] string resource,

@@ -20,7 +20,7 @@ using slskd.Sharing;
 [ApiController]
 [Route("api/v{version:apiVersion}/streams")]
 [ApiVersion("0")]
-[AllowAnonymous]
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly]
 public class StreamsController : ControllerBase
 {
@@ -52,6 +52,7 @@ public class StreamsController : ControllerBase
 
     /// <summary>Stream content by ID. Auth: ?token= or Authorization: Bearer (share:token) or normal [Authorize]. Single byte-range only; multi-range returns 400.</summary>
     [HttpGet("{contentId}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(FileStreamResult), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]
