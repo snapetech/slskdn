@@ -499,6 +499,63 @@ public class PodMembershipController : ControllerBase
 
 **Why This Keeps Happening**: Some PodCore endpoints are intentionally public for signed message exchange or DHT-facing workflows, and it is easy to copy that attribute onto mutation endpoints that actually exercise privileged server behavior. Membership publication and role changes are management operations, not anonymous transport endpoints.
 
+### 1e. Vite SPA Builds Must Use Relative Asset Paths When `web.url_base` Is Not `/`
+
+**The Bug**: The Vite web build emitted absolute asset URLs like `/assets/...`, `/manifest.json`, and `/logo192.png`, so deployments mounted under a subpath such as `/slskd` served `index.html` correctly but then fetched the JS bundle from the site root. Reverse proxies returned HTML/404 for those asset requests, which produced a blank white page with `NS_ERROR_CORRUPTED_CONTENT` and “disallowed MIME type (`text/html`)" in the browser.
+
+**Files Affected**:
+- `src/web/vite.config.js`
+- `src/web/index.html`
+
+**Wrong**:
+```javascript
+export default defineConfig({
+  plugins: [react()],
+});
+```
+
+```html
+<link rel="manifest" href="/manifest.json" />
+<script type="module" src="/src/index.jsx"></script>
+```
+
+**Correct**:
+```javascript
+export default defineConfig({
+  base: './',
+  plugins: [react()],
+});
+```
+
+```html
+<link rel="manifest" href="./manifest.json" />
+<script type="module" src="./src/index.jsx"></script>
+```
+
+**Why This Keeps Happening**: The old SPA pipeline used server-side HTML rewriting for CRA-era `/static/...` assets. Vite defaults to root-relative output unless told otherwise, so a subpath deployment works locally at `/` and silently breaks only behind `web.url_base` or a reverse proxy prefix.
+
+### 1f. Legacy Transfers Rows May Contain `NULL` Strings Even If New Code Treats Them As Required
+
+**The Bug**: Startup initialization called `Uploads.List(...)`, and EF Core materialization threw on upgraded databases because older `transfers.db` rows contained `NULL` in string columns like `StateDescription`/`Exception` while the model treated them as non-nullable strings.
+
+**Files Affected**:
+- `src/slskd/Transfers/Types/Transfer.cs`
+- `tests/slskd.Tests.Unit/Transfers/TransfersDbContextTests.cs`
+
+**Wrong**:
+```csharp
+public string StateDescription { get; set; }
+public string Exception { get; set; }
+```
+
+**Correct**:
+```csharp
+public string? StateDescription { get; set; }
+public string? Exception { get; set; }
+```
+
+**Why This Keeps Happening**: It is easy to tighten nullability on current writes and forget that persisted SQLite rows from older releases do not retroactively satisfy the new contract. For long-lived local databases, read models need to be tolerant of legacy `NULL` values unless a migration backfills them first.
+
 ---
 
 ### 2. Reverting Entire Workflow Files (build-on-tag.yml, CI)
