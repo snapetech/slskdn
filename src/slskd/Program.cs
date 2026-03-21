@@ -867,6 +867,7 @@ namespace slskd
             }
             catch (Common.Security.HardeningValidationException hex)
             {
+                Console.Error.WriteLine($"[HardeningValidation] {hex.RuleName}: {hex.Message}");
                 Log.Fatal(hex, "Hardening validation failed: {Message}", hex.Message);
                 Exit(1);
             }

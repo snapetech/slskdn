@@ -96,6 +96,70 @@ if (!OptionsAtStartup.TryValidate(out var result))
 
 **Why This Keeps Happening**: Startup has more than one validation layer. Tests that target a later validation stage can be accidentally preempted by unrelated defaults unless the temporary environment satisfies the earlier base constraints first. When startup does reject config, it must terminate non-zero or release-gate tests will treat a real config failure as a false success.
 
+### 0g. Startup Failure Tests Need a Deterministic Plain-Text Rule Signal, Not Just Structured Logger Output
+
+**The Bug**: The invalid-config subprocess test exited non-zero on CI but still failed because the captured output did not reliably include the hardening rule name, even though the exception was being logged.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
+
+**Wrong**:
+```csharp
+catch (HardeningValidationException hex)
+{
+    Log.Fatal(hex, "Hardening validation failed: {Message}", hex.Message);
+    Exit(1);
+}
+```
+
+**Correct**:
+```csharp
+catch (HardeningValidationException hex)
+{
+    Console.Error.WriteLine($"[HardeningValidation] {hex.RuleName}: {hex.Message}");
+    Log.Fatal(hex, "Hardening validation failed: {Message}", hex.Message);
+    Exit(1);
+}
+```
+
+**Why This Keeps Happening**: Integration tests read raw subprocess stdout/stderr, not the structured logger event stream. If the test depends on a specific diagnostic token, write that token directly to stderr/stdout before exiting.
+
+### 0h. Async Timeout/Circuit Tests Should Assert Eventual State Change, Not An Exact Transition Call Count
+
+**The Bug**: `ServiceTimeout_TriggersCircuitBreaker` assumed the circuit breaker would always be visibly open on the 6th timed-out call, but CI occasionally returned one more timeout before the open-state reply, making the test fail even though the breaker logic was still converging correctly.
+
+**Files Affected**:
+- `tests/slskd.Tests/Mesh/ServiceFabric/MeshServiceRouterSecurityTests.cs`
+
+**Wrong**:
+```csharp
+for (int i = 0; i < 5; i++)
+{
+    await router.RouteAsync(call, peerId);
+}
+
+var lastReply = await router.RouteAsync(lastCall, peerId);
+Assert.Equal(ServiceStatusCodes.ServiceUnavailable, lastReply.StatusCode);
+```
+
+**Correct**:
+```csharp
+ServiceReply? lastReply = null;
+for (int i = 0; i < 10; i++)
+{
+    lastReply = await router.RouteAsync(call, peerId);
+    if (lastReply.StatusCode == ServiceStatusCodes.ServiceUnavailable)
+    {
+        break;
+    }
+}
+
+Assert.Equal(ServiceStatusCodes.ServiceUnavailable, lastReply.StatusCode);
+```
+
+**Why This Keeps Happening**: Timeouts and cancellation-driven state transitions can land on slightly different attempts under CI scheduling. For async resilience tests, assert that the expected state change happens within a bounded window instead of pinning the assertion to one exact call number unless the implementation explicitly guarantees it.
+
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 
 **The Bug**: `SongIdService` treated `TrackTarget` like `AlbumTarget` and tried to read `MusicBrainzArtistId` from it, which broke the build because `TrackTarget` does not expose that property.
