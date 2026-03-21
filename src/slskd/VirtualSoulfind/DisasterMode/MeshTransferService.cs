@@ -5,11 +5,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Reactive.Subjects;
+using slskd.Common.Security;
 using slskd.VirtualSoulfind.ShadowIndex;
 
 namespace slskd.VirtualSoulfind.DisasterMode;
@@ -102,6 +105,7 @@ public class TransferProgressUpdate
 public class MeshTransferService : IMeshTransferService
 {
     private readonly ILogger<MeshTransferService> logger;
+    private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
     private readonly IShadowIndexQuery shadowIndex;
     private readonly IScenePeerDiscovery scenePeers;
     private readonly ConcurrentDictionary<string, MeshTransferStatus> activeTransfers = new();
@@ -109,10 +113,12 @@ public class MeshTransferService : IMeshTransferService
 
     public MeshTransferService(
         ILogger<MeshTransferService> logger,
+        IOptionsMonitor<slskd.Options> optionsMonitor,
         IShadowIndexQuery shadowIndex,
         IScenePeerDiscovery scenePeers)
     {
         this.logger = logger;
+        this.optionsMonitor = optionsMonitor;
         this.shadowIndex = shadowIndex;
         this.scenePeers = scenePeers;
     }
@@ -124,6 +130,12 @@ public class MeshTransferService : IMeshTransferService
         string targetPath,
         CancellationToken ct)
     {
+        var normalizedTargetPath = ResolveTargetPath(targetPath);
+        if (normalizedTargetPath == null)
+        {
+            throw new UnauthorizedException("Mesh transfers must write inside the configured downloads or destination directories");
+        }
+
         var transferId = Ulid.NewUlid().ToString();
 
         logger.LogInformation("[VSF-MESH-TRANSFER] Starting mesh transfer {TransferId}: {FileHash} ({Size} bytes)",
@@ -135,7 +147,7 @@ public class MeshTransferService : IMeshTransferService
             PeerId = peerId,
             FileHash = fileHash,
             FileSize = fileSize,
-            TargetPath = targetPath,
+            TargetPath = normalizedTargetPath,
             State = MeshTransferState.Initializing,
             StartedAt = DateTimeOffset.UtcNow
         };
@@ -187,6 +199,15 @@ public class MeshTransferService : IMeshTransferService
         }
 
         return subject;
+    }
+
+    private string? ResolveTargetPath(string targetPath)
+    {
+        var options = optionsMonitor.CurrentValue;
+        var allowedRoots = new[] { options.Directories.Downloads }
+            .Concat(options.Destinations?.Folders?.Select(destination => destination.Path) ?? Enumerable.Empty<string>());
+
+        return PathGuard.NormalizeAbsolutePathWithinRoots(targetPath, allowedRoots);
     }
 
     private async Task ExecuteTransferAsync(string transferId, CancellationToken ct)

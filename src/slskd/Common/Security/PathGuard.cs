@@ -6,6 +6,7 @@
 namespace slskd.Common.Security;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -172,6 +173,66 @@ public static partial class PathGuard
         catch
         {
             // Path operations failed - treat as unsafe
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Normalize and validate an absolute path against one or more trusted root directories.
+    /// </summary>
+    /// <param name="path">The untrusted absolute path.</param>
+    /// <param name="allowedRoots">The trusted root directories the path must stay within.</param>
+    /// <returns>Safe absolute path, or null if validation fails.</returns>
+    public static string? NormalizeAbsolutePathWithinRoots(string? path, IEnumerable<string> allowedRoots)
+    {
+        if (string.IsNullOrWhiteSpace(path) || allowedRoots == null)
+        {
+            return null;
+        }
+
+        if (path.Length > MaxPathLength)
+        {
+            return null;
+        }
+
+        path = NormalizeUnicode(path);
+
+        if (path.Contains('\0') || ControlCharsRegex().IsMatch(path) || ContainsTraversal(path))
+        {
+            return null;
+        }
+
+        if (!Path.IsPathRooted(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            var normalizedPath = Path.GetFullPath(path);
+            if (normalizedPath.Length > MaxPathLength)
+            {
+                return null;
+            }
+
+            var normalizedRoots = allowedRoots
+                .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Select(NormalizeUnicode)
+                .Select(Path.GetFullPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (!normalizedRoots.Any())
+            {
+                return null;
+            }
+
+            return normalizedRoots.Any(root => IsContainedIn(normalizedPath, root))
+                ? normalizedPath
+                : null;
+        }
+        catch
+        {
             return null;
         }
     }

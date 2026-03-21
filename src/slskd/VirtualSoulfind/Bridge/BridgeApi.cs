@@ -7,10 +7,13 @@ namespace slskd.VirtualSoulfind.Bridge;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using slskd.Common.Security;
 using slskd.Integrations.MusicBrainz;
 using slskd.VirtualSoulfind.DisasterMode;
 using slskd.VirtualSoulfind.Scenes;
@@ -58,6 +61,7 @@ public class BridgeFile
 public class BridgeApi : IBridgeApi
 {
     private readonly ILogger<BridgeApi> logger;
+    private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
     private readonly IShadowIndexQuery shadowIndex;
     private readonly IMusicBrainzClient musicBrainz;
     private readonly IMeshSearchService meshSearch;
@@ -71,6 +75,7 @@ public class BridgeApi : IBridgeApi
 
     public BridgeApi(
         ILogger<BridgeApi> logger,
+        IOptionsMonitor<slskd.Options> optionsMonitor,
         IShadowIndexQuery shadowIndex,
         IMusicBrainzClient musicBrainz,
         IMeshSearchService meshSearch,
@@ -82,6 +87,7 @@ public class BridgeApi : IBridgeApi
         ITransferProgressProxy progressProxy)
     {
         this.logger = logger;
+        this.optionsMonitor = optionsMonitor;
         this.shadowIndex = shadowIndex;
         this.musicBrainz = musicBrainz;
         this.meshSearch = meshSearch;
@@ -243,9 +249,8 @@ public class BridgeApi : IBridgeApi
 
             // Determine target path
             var finalTargetPath = targetPath ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Downloads",
-                filename);
+                optionsMonitor.CurrentValue.Directories.Downloads,
+                PathGuard.SanitizeFilename(filename));
 
             // Start mesh transfer
             var transferId = await meshTransfer.StartTransferAsync(

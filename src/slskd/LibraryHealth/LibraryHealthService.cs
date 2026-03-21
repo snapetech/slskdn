@@ -13,7 +13,9 @@ namespace slskd.LibraryHealth
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using slskd.Audio;
+    using slskd.Common.Security;
     using slskd.HashDb;
     using slskd.Integrations.MetadataFacade;
     using slskd.Integrations.MusicBrainz;
@@ -32,6 +34,7 @@ namespace slskd.LibraryHealth
         private readonly ICanonicalStatsService canonicalStats;
         private readonly IMusicBrainzClient musicBrainzClient;
         private readonly ILogger<LibraryHealthService> log;
+        private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
         private readonly ConcurrentDictionary<string, LibraryHealthScan> activeScans = new();
         private readonly QualityScorer qualityScorer = new();
         private readonly TranscodeDetector transcodeDetector = new();
@@ -42,6 +45,7 @@ namespace slskd.LibraryHealth
             IMetadataFacade metadataFacade,
             ICanonicalStatsService canonicalStats,
             IMusicBrainzClient musicBrainzClient,
+            IOptionsMonitor<slskd.Options> optionsMonitor,
             ILogger<LibraryHealthService> log)
         {
             this.hashDb = hashDb;
@@ -49,16 +53,23 @@ namespace slskd.LibraryHealth
             this.metadataFacade = metadataFacade;
             this.canonicalStats = canonicalStats;
             this.musicBrainzClient = musicBrainzClient;
+            this.optionsMonitor = optionsMonitor;
             this.log = log;
         }
 
         public async Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default)
         {
+            var libraryPath = ResolveLibraryPath(request.LibraryPath);
+            if (libraryPath == null)
+            {
+                throw new UnauthorizedException("Library Health scans must target a configured share directory");
+            }
+
             var scanId = Guid.NewGuid().ToString();
             var scan = new LibraryHealthScan
             {
                 ScanId = scanId,
-                LibraryPath = request.LibraryPath,
+                LibraryPath = libraryPath,
                 StartedAt = DateTimeOffset.UtcNow,
                 Status = ScanStatus.Running,
                 FilesScanned = 0,
@@ -68,7 +79,16 @@ namespace slskd.LibraryHealth
             activeScans[scanId] = scan;
             await hashDb.UpsertLibraryHealthScanAsync(scan, ct).ConfigureAwait(false);
 
-            _ = Task.Run(() => PerformScanAsync(scanId, request, ct), ct);
+            var normalizedRequest = new LibraryHealthScanRequest
+            {
+                LibraryPath = libraryPath,
+                IncludeSubdirectories = request.IncludeSubdirectories,
+                FileExtensions = request.FileExtensions,
+                SkipPreviouslyScanned = request.SkipPreviouslyScanned,
+                MaxConcurrentFiles = request.MaxConcurrentFiles,
+            };
+
+            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, ct), ct);
             return scanId;
         }
 
@@ -474,6 +494,26 @@ namespace slskd.LibraryHealth
                     var desc = props.Codecs.FirstOrDefault()?.Description;
                     return string.IsNullOrWhiteSpace(desc) ? "Unknown" : desc;
             }
+        }
+
+        private string? ResolveLibraryPath(string requestedPath)
+        {
+            var shareRoots = optionsMonitor.CurrentValue.Shares.Directories
+                .Select(share => new Shares.Share(share).LocalPath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .ToList();
+
+            if (!shareRoots.Any())
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(requestedPath))
+            {
+                return Path.GetFullPath(shareRoots[0]);
+            }
+
+            return PathGuard.NormalizeAbsolutePathWithinRoots(requestedPath, shareRoots);
         }
     }
 }

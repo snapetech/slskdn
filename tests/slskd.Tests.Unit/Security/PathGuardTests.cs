@@ -5,6 +5,7 @@
 
 namespace slskd.Tests.Unit.Security;
 
+using System.IO;
 using slskd.Common.Security;
 using Xunit;
 
@@ -169,6 +170,35 @@ public class PathGuardTests
         Assert.NotNull(result.SafePath);
         Assert.Equal(PathViolationType.None, result.ViolationType);
     }
-}
 
+    [Fact]
+    public void NormalizeAbsolutePathWithinRoots_AllowsPathWithinConfiguredRoot()
+    {
+        var target = Path.Combine(TestRoot, "album", "track.flac");
+
+        var result = PathGuard.NormalizeAbsolutePathWithinRoots(target, new[] { TestRoot });
+
+        Assert.Equal(target, result);
+    }
+
+    [Fact]
+    public void NormalizeAbsolutePathWithinRoots_RejectsPathOutsideConfiguredRoots()
+    {
+        var target = "/home/user/other/track.flac";
+
+        var result = PathGuard.NormalizeAbsolutePathWithinRoots(target, new[] { TestRoot });
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void NormalizeAbsolutePathWithinRoots_RejectsTraversalBeforeNormalization()
+    {
+        var target = Path.Combine(TestRoot, "..", "other", "track.flac");
+
+        var result = PathGuard.NormalizeAbsolutePathWithinRoots(target, new[] { TestRoot });
+
+        Assert.Null(result);
+    }
+}
 

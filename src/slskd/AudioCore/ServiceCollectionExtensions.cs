@@ -99,6 +99,7 @@ namespace slskd.AudioCore
                 sp.GetRequiredService<IMetadataFacade>(),
                 sp.GetRequiredService<ICanonicalStatsService>(),
                 sp.GetRequiredService<IMusicBrainzClient>(),
+                sp.GetRequiredService<IOptionsMonitor<slskd.Options>>(),
                 sp.GetRequiredService<ILogger<LibraryHealth.LibraryHealthService>>()));
             services.AddSingleton<ILibraryHealthRemediationService, LibraryHealthRemediationService>();
 

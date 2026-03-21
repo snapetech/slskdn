@@ -24,6 +24,7 @@ namespace slskd.Destinations.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Options;
+    using slskd.Common.Security;
     using slskd.Core.Security;
 
     /// <summary>
@@ -148,14 +149,25 @@ namespace slskd.Destinations.API
         [ProducesResponseType(typeof(ValidateDestinationResponse), 200)]
         public IActionResult Validate([FromBody] ValidateDestinationRequest request)
         {
-            var exists = Directory.Exists(request.Path);
+            var normalizedPath = PathGuard.NormalizeAbsolutePathWithinRoots(request.Path, GetAllowedDestinationRoots());
+            if (normalizedPath == null)
+            {
+                return Ok(new ValidateDestinationResponse
+                {
+                    Path = request.Path,
+                    Exists = false,
+                    Writable = false,
+                });
+            }
+
+            var exists = Directory.Exists(normalizedPath);
             var writable = false;
 
             if (exists)
             {
                 try
                 {
-                    var testFile = Path.Combine(request.Path, $".slskd-write-test-{System.Guid.NewGuid()}");
+                    var testFile = Path.Combine(normalizedPath, $".slskd-write-test-{System.Guid.NewGuid()}");
                     System.IO.File.WriteAllText(testFile, "test");
                     System.IO.File.Delete(testFile);
                     writable = true;
@@ -168,10 +180,25 @@ namespace slskd.Destinations.API
 
             return Ok(new ValidateDestinationResponse
             {
-                Path = request.Path,
+                Path = normalizedPath,
                 Exists = exists,
                 Writable = writable,
             });
+        }
+
+        private IEnumerable<string> GetAllowedDestinationRoots()
+        {
+            var options = OptionsSnapshot.Value;
+
+            yield return options.Directories.Downloads;
+
+            foreach (var destination in options.Destinations?.Folders ?? Enumerable.Empty<slskd.Options.DestinationOption>())
+            {
+                if (!string.IsNullOrWhiteSpace(destination.Path))
+                {
+                    yield return destination.Path;
+                }
+            }
         }
     }
 

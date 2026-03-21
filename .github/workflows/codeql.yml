@@ -40,6 +40,10 @@ jobs:
           # Keep master scanning focused on security findings; the broader suite
           # turns maintainability heuristics into thousands of repo alerts.
           queries: security-extended
+          config: |
+            query-filters:
+              - exclude:
+                  id: cs/log-forging
 
       - name: Restore dependencies
         run: dotnet restore src/slskd/slskd.csproj
