@@ -6,6 +6,7 @@ namespace slskd.Tests.Unit.Security;
 
 using System;
 using System.Linq;
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using slskd.Audio.API;
 using slskd.Core.Security;
@@ -33,6 +34,12 @@ public class AnonymousControlPlaneControllerAuthTests
             typeof(PodJoinLeaveController),
             typeof(PodMessageRoutingController),
             typeof(PodMessageSigningController),
+            typeof(CanonicalController),
+            typeof(DedupeController),
+            typeof(DescriptorRetrieverController),
+            typeof(PodDhtController),
+            typeof(PodDiscoveryController),
+            typeof(PodVerificationController),
         };
 
         foreach (var controllerType in controllerTypes)
@@ -50,5 +57,53 @@ public class AnonymousControlPlaneControllerAuthTests
             Assert.NotNull(authorize);
             Assert.Equal(AuthPolicy.Any, authorize!.Policy);
         }
+    }
+
+    [Fact]
+    public void ExplicitlyPublicProtocolActions_AreTheOnlyAnonymousActionsOnReviewedControllers()
+    {
+        AssertAnonymousActions(
+            typeof(DescriptorRetrieverController),
+            nameof(DescriptorRetrieverController.RetrieveDescriptor),
+            nameof(DescriptorRetrieverController.QueryByDomain),
+            nameof(DescriptorRetrieverController.VerifyDescriptor));
+
+        AssertAnonymousActions(
+            typeof(PodDhtController),
+            nameof(PodDhtController.GetPodMetadata));
+
+        AssertAnonymousActions(
+            typeof(PodDiscoveryController),
+            nameof(PodDiscoveryController.DiscoverPodsByName),
+            nameof(PodDiscoveryController.DiscoverPodsByTag),
+            nameof(PodDiscoveryController.DiscoverPodsByTags),
+            nameof(PodDiscoveryController.DiscoverAllPods));
+
+        AssertAnonymousActions(
+            typeof(PodVerificationController),
+            nameof(PodVerificationController.VerifyMembership),
+            nameof(PodVerificationController.VerifyMessage),
+            nameof(PodVerificationController.CheckRole));
+    }
+
+    private static void AssertAnonymousActions(Type controllerType, params string[] expectedAnonymousActionNames)
+    {
+        var publicInstanceActions = controllerType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .Where(method => method.IsPublic && !method.IsSpecialName)
+            .Where(method => method.GetCustomAttributes().Any(attribute => attribute.GetType().Name.StartsWith("Http", StringComparison.Ordinal)))
+            .ToArray();
+
+        var actualAnonymousActionNames = publicInstanceActions
+            .Where(method => method.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true).Any())
+            .Select(method => method.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        var expected = expectedAnonymousActionNames
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expected, actualAnonymousActionNames);
     }
 }

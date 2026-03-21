@@ -19,6 +19,7 @@
 - 4. Treat repo-wide lint debt as separate from the SongID / Discovery Graph release path unless explicitly pulled in.
 - 5. Keep release-gate regression tests deterministic; avoid real-time cancellation races that pass locally and fail on GitHub runners.
 - 6. Audit every remaining `AllowAnonymous` controller individually; only true read-only or protocol-required surfaces should stay public.
+- 7. Add a dedicated regression test for intentionally-public protocol endpoints (`ActivityPub`, `WebFinger`, streaming token access, session login/enabled, public profile lookup) so the allowed anonymous surface is documented in code too.
 
 - [ ] **T-919**: Discovery Graph / Constellation substrate
  - Status: in progress

@@ -17,7 +17,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/podcore/dht")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodDhtController : ControllerBase
 {
@@ -147,6 +147,7 @@ public class PodDhtController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The pod metadata.</returns>
     [HttpGet("metadata/{*podId}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetPodMetadata(string podId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))

@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Close the anonymous control-plane API exposures found in the security audit, verify the auth boundary with regression tests, and note any intentionally-public leftovers for a separate review
+- **Current Task**: Finish the endpoint-by-endpoint review of the remaining anonymous APIs, keep only the protocol/read exceptions, and push the hardened auth surface to `master`
 - **Branch**: `security-fixes-master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -103,11 +103,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the anonymous control-plane auth hardening to `origin/master`.
-2. Review the still-anonymous read/protocol endpoints (`DescriptorRetriever`, `Canonical`, `Dedupe`, pod discovery/DHT, etc.) one by one instead of using blanket `intended-public` conventions.
-3. Keep adding auth-attribute regression tests for any controller that owns mutation, queueing, or expensive background work.
-4. Finish the `.80` release watch once the current stable replay clears.
-5. Hand the tester the exact next green stable package/build for `/slskd` verification.
+1. Push the endpoint-by-endpoint anonymous surface review to `origin/master`.
+2. If needed, add one more regression test pass for ActivityPub/WebFinger/streaming/session/profile public actions so the intentional protocol surface stays explicit.
+3. Finish the `.80` release watch once the current stable replay clears.
+4. Hand the tester the exact next green stable package/build for `/slskd` verification.
+5. Re-run GitHub code scanning after the auth hardening lands and confirm no new auth-boundary findings appear.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

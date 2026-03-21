@@ -12,7 +12,7 @@ namespace slskd.Audio.API
 
     [ApiController]
     [Route("api/audio/variants/dedupe")]
-    [AllowAnonymous] // PR-02: intended-public
+    [Authorize(Policy = AuthPolicy.Any)]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class DedupeController : ControllerBase
     {

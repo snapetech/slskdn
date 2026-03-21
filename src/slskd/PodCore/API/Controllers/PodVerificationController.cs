@@ -17,7 +17,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/podcore/verification")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodVerificationController : ControllerBase
 {
@@ -40,6 +40,7 @@ public class PodVerificationController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The membership verification result.</returns>
     [HttpGet("membership/{podId}/{peerId}")]
+    [AllowAnonymous]
     public async Task<IActionResult> VerifyMembership(string podId, string peerId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
@@ -66,6 +67,7 @@ public class PodVerificationController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The message verification result.</returns>
     [HttpPost("message")]
+    [AllowAnonymous]
     public async Task<IActionResult> VerifyMessage([FromBody] PodMessage message, CancellationToken cancellationToken = default)
     {
         if (message == null)
@@ -94,6 +96,7 @@ public class PodVerificationController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The role check result.</returns>
     [HttpGet("role/{podId}/{peerId}/{requiredRole}")]
+    [AllowAnonymous]
     public async Task<IActionResult> CheckRole(string podId, string peerId, string requiredRole, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || string.IsNullOrWhiteSpace(requiredRole))

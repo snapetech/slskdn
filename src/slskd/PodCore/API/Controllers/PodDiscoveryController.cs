@@ -17,7 +17,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/podcore/discovery")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class PodDiscoveryController : ControllerBase
 {
@@ -147,6 +147,7 @@ public class PodDiscoveryController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching pods.</returns>
     [HttpGet("name/{name}")]
+    [AllowAnonymous]
     public async Task<IActionResult> DiscoverPodsByName(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -173,6 +174,7 @@ public class PodDiscoveryController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Pods with the specified tag.</returns>
     [HttpGet("tag/{tag}")]
+    [AllowAnonymous]
     public async Task<IActionResult> DiscoverPodsByTag(string tag, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(tag))
@@ -199,6 +201,7 @@ public class PodDiscoveryController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Pods matching all tags.</returns>
     [HttpGet("tags/{tags}")]
+    [AllowAnonymous]
     public async Task<IActionResult> DiscoverPodsByTags(string tags, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(tags))
@@ -226,6 +229,7 @@ public class PodDiscoveryController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A sample of discoverable pods.</returns>
     [HttpGet("all")]
+    [AllowAnonymous]
     public async Task<IActionResult> DiscoverAllPods([FromQuery] int limit = 50, CancellationToken cancellationToken = default)
     {
         if (limit <= 0 || limit > 1000)

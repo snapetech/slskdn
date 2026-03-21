@@ -94,6 +94,29 @@
 - Push the auth-boundary hardening to `master`.
 - Do a second-pass review of the still-anonymous read/protocol controllers and either justify them or narrow them further action-by-action.
 
+## 2026-03-21 18:17 - Endpoint-by-endpoint review of remaining anonymous APIs
+
+### Completed
+- Reviewed every remaining `AllowAnonymous` endpoint instead of relying on controller-level intent comments.
+- Tightened clearly non-public debug/read surfaces by requiring auth for `Audio/API/CanonicalController` and `Audio/API/DedupeController`.
+- Changed `DescriptorRetrieverController`, `PodDhtController`, `PodDiscoveryController`, and `PodVerificationController` to authenticated-by-default and re-opened only the specific protocol/read actions that still make sense anonymously.
+- Left the following anonymous surfaces in place by design after review:
+  - `SessionController.Enabled` and `SessionController.Login`
+  - `StreamsController.Get` (because token-based streaming depends on anonymous transport with explicit token validation)
+  - `ProfileController.GetProfile`
+  - `ActivityPubController` and `WebFingerController`
+  - selected anonymous protocol/read actions on descriptor retrieval and pod discovery/verification/DHT metadata
+- Extended `AnonymousControlPlaneControllerAuthTests` so the allowed anonymous actions are now asserted explicitly, not just the controller defaults.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~AnonymousControlPlaneControllerAuthTests|FullyQualifiedName~PodMembershipControllerTests|FullyQualifiedName~VirtualSoulfindV2ControllerTests"` passed (26 tests).
+- `dotnet build src/slskd/slskd.csproj --configuration Release` passed.
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Push the reviewed anonymous-surface split to `master`.
+- Optionally add a second regression test focused on the intentionally-public ActivityPub/WebFinger/session/streaming/profile actions if we want the public protocol surface to be asserted as tightly as the internal control-plane surface.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed
