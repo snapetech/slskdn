@@ -112,18 +112,8 @@ jobs:
           fi
           echo "AUR sha256sums OK"
 
-      - name: Packaging Metadata Consistency Check
-        run: bash packaging/scripts/validate-packaging-metadata.sh
-
-      - name: Web
-        run: ./bin/build --web-only
-
-      - name: Dotnet
-        run: ./bin/build --dotnet-only --version ${{ env.VERSION }}
-        env:
-          # Enable protocol contract tests if Soulfind Docker image is available
-          # Tests will gracefully skip if Docker/Soulfind unavailable
-          DOCKER_AVAILABLE: ${{ !contains(runner.name, 'keith') }}
+      - name: Release Gate
+        run: bash packaging/scripts/run-release-gate.sh
 
       - name: Upload Static Web Content
         if: startsWith(github.ref, 'refs/tags/')

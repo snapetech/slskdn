@@ -75,11 +75,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: src/web/package-lock.json
 
-      - name: Build Frontend
-        working-directory: src/web
-        run: |
-          npm ci --legacy-peer-deps
-          DISABLE_ESLINT_PLUGIN=true npm run build
+      - name: Release Gate
+        run: bash packaging/scripts/run-release-gate.sh
 
       - name: Upload Web Content
         uses: actions/upload-artifact@v4

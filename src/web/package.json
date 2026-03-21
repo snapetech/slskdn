@@ -66,6 +66,7 @@
     "pretest:e2e:ci": "npm run build",
     "start": "vite",
     "test": "vitest run",
+    "test:build-output": "node ./scripts/verify-build-output.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test --reporter=line",
     "test-unattended": "vitest run"

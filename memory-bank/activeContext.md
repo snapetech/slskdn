@@ -101,10 +101,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the white-page / legacy-transfer compatibility fixes from `security-fixes-master` to `origin/master`.
-2. Ask the tester on `.77` to retry with a fresh build once the next stable tag is cut, specifically verifying subpath hosting under `/slskd` and whether the startup upload-list exception is gone.
-3. Triage the remaining 24 CodeQL alerts by cluster: relay authorization flow (`cs/user-controlled-bypass`), share/hashdb raw SQL (`cs/resource-injection`, `cs/sql-injection`), and secret/cookie handling (`cs/cleartext-storage-of-sensitive-information`, `cs/web/cookie-httponly-not-set`).
-4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
+1. Push the new release-gate changes from `security-fixes-master` to `origin/master`.
+2. Watch stable release `.78` through the remaining Docker and Snap jobs, then hand the tester the exact package/build to retry under `/slskd`.
+3. Extend the new release gate over time with one added check per confirmed regression class, starting with a hosted subpath smoke test and then targeted security-cluster coverage.
+4. Triage the remaining 24 CodeQL alerts by cluster: relay authorization flow (`cs/user-controlled-bypass`), share/hashdb raw SQL (`cs/resource-injection`, `cs/sql-injection`), and secret/cookie handling (`cs/cleartext-storage-of-sensitive-information`, `cs/web/cookie-httponly-not-set`).
+5. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
