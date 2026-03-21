@@ -7,6 +7,7 @@ namespace slskd.Tests.Unit.DhtRendezvous.Search;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -115,22 +116,17 @@ public class MeshSearchRpcHandlerTests
             SearchText = "test",
             MaxResults = 10
         };
-        var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(1));
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
 
-        // Simulate slow search
         _shareServiceMock.Setup(x => x.SearchLocalAsync(It.IsAny<SearchQuery>()))
-            .Returns(async () =>
-            {
-                await Task.Delay(100, cts.Token);
-                return new List<Soulseek.File>();
-            });
+            .Returns(Task.FromCanceled<IEnumerable<Soulseek.File>>(cts.Token));
 
-        // Should complete quickly due to timeout
-        var start = DateTime.UtcNow;
+        var timer = Stopwatch.StartNew();
         var response = await handler.HandleAsync(request, cts.Token);
-        var elapsed = DateTime.UtcNow - start;
+        timer.Stop();
 
-        // Should complete within reasonable time (not wait full 5 seconds)
-        Assert.True(elapsed < TimeSpan.FromSeconds(1));
+        Assert.Equal("Search failed", response.Error);
+        Assert.True(timer.Elapsed < TimeSpan.FromSeconds(1));
     }
 }

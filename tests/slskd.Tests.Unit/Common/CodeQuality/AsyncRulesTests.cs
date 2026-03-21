@@ -20,16 +20,12 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         [Fact]
         public async Task ValidateCancellationHandlingAsync_WithProperCancellation_ReturnsTrue()
         {
-            // Arrange
             async Task TestOperationAsync(CancellationToken ct)
             {
-                await Task.Delay(100, ct);
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
             }
 
-            // Act
-            var result = await AsyncRules.ValidateCancellationHandlingAsync(TestOperationAsync, TimeSpan.FromSeconds(1));
-
-            // Assert
+            var result = await AsyncRules.ValidateCancellationHandlingAsync(TestOperationAsync, TimeSpan.FromMilliseconds(50));
             Assert.True(result);
         }
 
@@ -127,5 +123,4 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         }
     }
 }
-
 

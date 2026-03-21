@@ -211,6 +211,38 @@ Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
 
 **Why This Keeps Happening**: Async timing tests are easy to write like benchmark assertions, but `Task.Delay` is scheduler-dependent and CI hosts can stall for hundreds of milliseconds. Use monotonic timing (`Stopwatch`) and treat the upper bound as a broad sanity check, not a precision guarantee.
 
+### 0e1. Do Not Use Sub-Millisecond Cancellation Windows In Unit Tests
+
+**The Bug**: `MeshSearchRpcHandlerTests.HandleAsync_TimeCap_RespectsCancellation` and `AsyncRulesTests.ValidateCancellationHandlingAsync_WithProperCancellation_ReturnsTrue` used razor-thin delay/cancellation windows that passed locally but failed in release-gate CI when the runner scheduled work a little differently.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/DhtRendezvous/Search/MeshSearchRpcHandlerTests.cs`
+- `tests/slskd.Tests.Unit/Common/CodeQuality/AsyncRulesTests.cs`
+
+**Wrong**:
+```csharp
+var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(1));
+await Task.Delay(100, cts.Token);
+```
+
+**Correct**:
+```csharp
+using var cts = new CancellationTokenSource();
+cts.Cancel();
+_shareServiceMock
+    .Setup(x => x.SearchLocalAsync(It.IsAny<SearchQuery>()))
+    .Returns(Task.FromCanceled<IEnumerable<Soulseek.File>>(cts.Token));
+```
+
+```csharp
+await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+var result = await AsyncRules.ValidateCancellationHandlingAsync(
+    TestOperationAsync,
+    TimeSpan.FromMilliseconds(50));
+```
+
+**Why This Keeps Happening**: Tests that rely on "cancel within 1ms" or "wake up after 100ms" are really testing scheduler luck, not code behavior. Make cancellation deterministic with pre-cancelled tokens or infinite waits that must be interrupted by cancellation.
+
 ### 0f. Fix Every Release Workflow and Checked-In Package Template When Asset Names Change
 
 **The Bug**: The main tag workflow was corrected to publish `slskdn-main-*.zip`, but `release-packages.yml` still waited for the old `slskdn-<tag>-linux-x64.zip` pattern and the checked-in Chocolatey templates were still pinned to `0.24.1-slskdn.40`, leaving stable-package automation and manual package publishing stale.
