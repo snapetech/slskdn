@@ -219,6 +219,41 @@ Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
 - `tests/slskd.Tests.Unit/DhtRendezvous/Search/MeshSearchRpcHandlerTests.cs`
 - `tests/slskd.Tests.Unit/Common/CodeQuality/AsyncRulesTests.cs`
 
+### 0e1c. Do Not Use Cancellation Timeouts As The Success Condition For Async Enumerables
+
+**The Bug**: `CoverTrafficGeneratorTests.GenerateCoverTrafficAsync_GeneratesMessagesWithCorrectSize` used `CancellationTokenSource(TimeSpan.FromSeconds(5))` as the loop control while waiting for multiple messages from an async enumerable. CI sometimes hit token cancellation before the second message arrived, so the test failed with `TaskCanceledException` even though the generator was behaving correctly.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Mesh/Privacy/CoverTrafficGeneratorTests.cs`
+
+**Wrong**:
+```csharp
+var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+await foreach (var message in generator.GenerateCoverTrafficAsync(cts.Token))
+{
+    messages.Add(message);
+    if (messages.Count >= 2)
+        break;
+}
+```
+
+**Correct**:
+```csharp
+using var cts = new CancellationTokenSource();
+
+await foreach (var message in generator.GenerateCoverTrafficAsync(cts.Token))
+{
+    messages.Add(message);
+    if (messages.Count >= 1)
+    {
+        cts.Cancel();
+    }
+}
+```
+
+**Why This Keeps Happening**: Async enumerable tests often mix "eventually produce output" with "cancel after some time" and accidentally make timeout expiration the normal success path. For scheduler-dependent producers, use an explicit completion condition and only cancel after the assertion target is satisfied.
+
 **Wrong**:
 ```csharp
 var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(1));
