@@ -127,10 +127,9 @@ public class EnforceInvalidConfigIntegrationTests
             Directory.CreateDirectory(Path.Combine(tempDir, "wwwroot"));
             var yml = Path.Combine(tempDir, "slskd.yml");
             // YamlConfigurationProvider prefixes with Namespace "slskd"; use web/diagnostics at root (not slskd:)
-            var contentPath = Path.Combine(tempDir, "wwwroot").Replace("\\", "/");
-            await File.WriteAllTextAsync(yml, $"""
+            await File.WriteAllTextAsync(yml, """
                 web:
-                  contentPath: {contentPath}
+                  contentPath: wwwroot
                   enforceSecurity: true
                   allowRemoteNoAuth: false
                   authentication:
@@ -154,7 +153,7 @@ public class EnforceInvalidConfigIntegrationTests
                 {
                     FileName = "dotnet",
                     Arguments = $"\"{slskdDll}\" {configArg}",
-                    WorkingDirectory = Path.GetDirectoryName(slskdDll)!,
+                    WorkingDirectory = tempDir,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

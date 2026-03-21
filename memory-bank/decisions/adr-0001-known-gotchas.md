@@ -193,31 +193,36 @@ Assert.Equal(ServiceStatusCodes.ServiceUnavailable, lastReply.StatusCode);
 
 **Why This Keeps Happening**: The breaker state update is observable through asynchronous request flow, not as a hard guarantee tied to a specific numbered call. If the behavior being tested is "the breaker opens after sustained failures," the assertion should allow a bounded convergence window.
 
-### 0j. Subprocess Config Tests Must Use Absolute Paths For Filesystem Options
+### 0j. Subprocess Config Tests Must Align Relative Path Resolution With The Temp App Dir
 
-**The Bug**: `EnforceInvalidConfigIntegrationTests` created a temp `wwwroot` but still wrote `contentPath: wwwroot`, so the subprocess resolved that path relative to the built app directory instead of the temp app dir and failed base config validation before reaching the hardening rule.
+**The Bug**: `EnforceInvalidConfigIntegrationTests` created a temp `wwwroot` but launched the subprocess with `WorkingDirectory` set to the built app directory, so `contentPath: wwwroot` resolved under `bin/Release/...` and failed base config validation before the hardening rule.
 
 **Files Affected**:
 - `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
 
 **Wrong**:
 ```csharp
-await File.WriteAllTextAsync(yml, """
-    web:
-      contentPath: wwwroot
-""");
+var proc = new Process
+{
+    StartInfo = new ProcessStartInfo
+    {
+        WorkingDirectory = Path.GetDirectoryName(slskdDll)!,
+    }
+};
 ```
 
 **Correct**:
 ```csharp
-var contentPath = Path.Combine(tempDir, "wwwroot").Replace("\\", "/");
-await File.WriteAllTextAsync(yml, $"""
-    web:
-      contentPath: {contentPath}
-""");
+var proc = new Process
+{
+    StartInfo = new ProcessStartInfo
+    {
+        WorkingDirectory = tempDir,
+    }
+};
 ```
 
-**Why This Keeps Happening**: `SLSKD_APP_DIR` controls app data paths, not how relative config paths are resolved. Subprocess tests that point config at temporary files or directories should use absolute paths unless the application explicitly resolves them against the temp root being set up by the test.
+**Why This Keeps Happening**: `SLSKD_APP_DIR` controls app data paths, but relative config paths still resolve from the process working directory. If a test depends on repo-style relative config values like `wwwroot`, launch the subprocess from the temporary root that contains those directories.
 
 ### 0k. Timeout-Based Circuit Tests Must Distinguish "Breaker Opened" From "Open-State Reply Observed"
 
