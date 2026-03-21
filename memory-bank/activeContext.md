@@ -103,11 +103,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the endpoint-by-endpoint anonymous surface review to `origin/master`.
-2. If needed, add one more regression test pass for ActivityPub/WebFinger/streaming/session/profile public actions so the intentional protocol surface stays explicit.
-3. Finish the `.80` release watch once the current stable replay clears.
-4. Hand the tester the exact next green stable package/build for `/slskd` verification.
-5. Re-run GitHub code scanning after the auth hardening lands and confirm no new auth-boundary findings appear.
+1. Push the public-protocol auth regression test and auth hardening follow-up to `origin/master`.
+2. Cut the next stable tag so the hardened auth surface and new regression coverage ship together.
+3. Watch the new stable build through publish/release completion and hand the tester the exact green package for `/slskd` verification.
+4. Re-run GitHub code scanning after the build lands and confirm no auth-boundary findings reopen.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

@@ -723,3 +723,9 @@
 - **Future domains** and **polish** as user feedback indicates need
 
 **Current State**: Codebase is in excellent shape. All critical features complete. Future work is optional enhancements and quality improvements.
+
+## 2026-03-21 Completed Follow-up
+
+- [x] Add explicit regression coverage for intentionally-public protocol endpoints
+  - Status: done
+  - Notes: Added `PublicProtocolAnonymousActionTests` to lock down the approved anonymous action set for session bootstrap, profile lookup, token-backed streaming, ActivityPub delivery, and WebFinger discovery after the controller-by-controller auth review.
