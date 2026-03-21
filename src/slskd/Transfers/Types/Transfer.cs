@@ -50,7 +50,7 @@ namespace slskd.Transfers
         ///     and especially **DO NOT** set the value. The getter and setter can't be protected because
         ///     EF Core needs them to be public.
         /// </remarks>
-        public string StateDescription { get; set; }
+        public string? StateDescription { get; set; }
         public DateTime RequestedAt { get; set; }
         public DateTime? EnqueuedAt { get; set; }
         public DateTime? StartedAt { get; set; }
@@ -66,7 +66,7 @@ namespace slskd.Transfers
         public double AverageSpeed { get; set; }
 
         public int? PlaceInQueue { get; set; }
-        public string Exception { get; set; }
+        public string? Exception { get; set; }
 
         [JsonIgnore]
         public bool Removed { get; set; }

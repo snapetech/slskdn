@@ -101,9 +101,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push `security-fixes-master` to `origin/master` and confirm GitHub Actions starts a fresh CodeQL run from the updated workflow.
-2. Verify the open code-scanning set collapses to zero or the intended residual baseline after that run completes.
-3. Resolve PR `#147` once the branch state is current, either by merging it or closing it if the dependency bump is otherwise landed.
+1. Push the white-page / legacy-transfer compatibility fixes from `security-fixes-master` to `origin/master`.
+2. Ask the tester on `.77` to retry with a fresh build once the next stable tag is cut, specifically verifying subpath hosting under `/slskd` and whether the startup upload-list exception is gone.
+3. Triage the remaining 24 CodeQL alerts by cluster: relay authorization flow (`cs/user-controlled-bypass`), share/hashdb raw SQL (`cs/resource-injection`, `cs/sql-injection`), and secret/cookie handling (`cs/cleartext-storage-of-sensitive-information`, `cs/web/cookie-httponly-not-set`).
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):

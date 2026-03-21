@@ -45,6 +45,7 @@ class SemanticUILessFileManager {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react()],
 
   css: {
