@@ -556,6 +556,28 @@ public string? Exception { get; set; }
 
 **Why This Keeps Happening**: It is easy to tighten nullability on current writes and forget that persisted SQLite rows from older releases do not retroactively satisfy the new contract. For long-lived local databases, read models need to be tolerant of legacy `NULL` values unless a migration backfills them first.
 
+### 1g. Built-Web Verifier Scripts Must Resolve Paths Relative To `src/web`, Not The Repo Root
+
+**The Bug**: A release-gate script successfully built the frontend into `src/web/build`, then the Node verifier immediately failed because it looked for `build/index.html` relative to the repository root instead of the web project directory.
+
+**Files Affected**:
+- `src/web/scripts/verify-build-output.mjs`
+- `packaging/scripts/run-release-gate.sh`
+
+**Wrong**:
+```javascript
+const root = path.resolve(process.cwd());
+const buildDir = path.join(root, 'build');
+```
+
+**Correct**:
+```javascript
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const buildDir = path.resolve(scriptDir, '..', 'build');
+```
+
+**Why This Keeps Happening**: Top-level gate scripts usually execute from the repository root, but many frontend utilities assume they are running from `src/web`. If the verifier uses `process.cwd()`, it quietly depends on the caller's shell location instead of the actual artifact location.
+
 ---
 
 ### 2. Reverting Entire Workflow Files (build-on-tag.yml, CI)
