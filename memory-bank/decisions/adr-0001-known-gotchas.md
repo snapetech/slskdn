@@ -283,6 +283,36 @@ public class ContentIdController : ControllerBase
 
 **Why This Keeps Happening**: "Public data model" and "public unauthenticated endpoint" are not the same thing. Once `[AllowAnonymous]` is placed at class scope, every `POST`/`PUT`/`PATCH`/`DELETE` action under that controller becomes reachable unless explicitly re-protected.
 
+### 0e3. Public Protocol Controllers Must Still Default To Authenticated At Class Scope
+
+**The Bug**: Even after narrowing the anonymous surface, `StreamsController`, `ActivityPubController`, and `WebFingerController` still used class-level `[AllowAnonymous]`. That meant any future action added to those controllers would become public by default, recreating the same auth-boundary bug in a quieter form.
+
+**Files Affected**:
+- `src/slskd/Streaming/StreamsController.cs`
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SocialFederation/API/WebFingerController.cs`
+
+**Wrong**:
+```csharp
+[AllowAnonymous]
+public class ActivityPubController : ControllerBase
+{
+    [HttpGet("{actorName}")]
+    public async Task<IActionResult> GetActor(...)
+```
+
+**Correct**:
+```csharp
+[Authorize(Policy = AuthPolicy.Any)]
+public class ActivityPubController : ControllerBase
+{
+    [HttpGet("{actorName}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetActor(...)
+```
+
+**Why This Keeps Happening**: It is easy to think "this controller is for a public protocol" and stop there. The safer pattern is still auth-by-default at controller scope with `[AllowAnonymous]` only on the exact protocol/bootstrap actions that must stay public. That way future endpoints do not silently widen the unauthenticated surface.
+
 ### 0f. Fix Every Release Workflow and Checked-In Package Template When Asset Names Change
 
 **The Bug**: The main tag workflow was corrected to publish `slskdn-main-*.zip`, but `release-packages.yml` still waited for the old `slskdn-<tag>-linux-x64.zip` pattern and the checked-in Chocolatey templates were still pinned to `0.24.1-slskdn.40`, leaving stable-package automation and manual package publishing stale.
