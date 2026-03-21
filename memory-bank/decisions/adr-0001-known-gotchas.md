@@ -243,6 +243,34 @@ var result = await AsyncRules.ValidateCancellationHandlingAsync(
 
 **Why This Keeps Happening**: Tests that rely on "cancel within 1ms" or "wake up after 100ms" are really testing scheduler luck, not code behavior. Make cancellation deterministic with pre-cancelled tokens or infinite waits that must be interrupted by cancellation.
 
+### 0e1a. Cancellation Validators Need A Post-Cancel Grace Window, Not A Single Tight Race
+
+**The Bug**: `AsyncRules.ValidateCancellationHandlingAsync` raced the operation against `Task.Delay(timeout * 2)` and treated any miss as a cancellation failure. On a loaded CI runner, a correctly cancellable operation could still lose that race by a few scheduler ticks and fail the release gate.
+
+**Files Affected**:
+- `src/slskd/Common/CodeQuality/AsyncRules.cs`
+- `tests/slskd.Tests.Unit/Common/CodeQuality/AsyncRulesTests.cs`
+
+**Wrong**:
+```csharp
+using var cts = new CancellationTokenSource(timeout);
+var operationTask = operation(cts.Token);
+var delayTask = Task.Delay(timeout * 2, CancellationToken.None);
+var completedTask = await Task.WhenAny(operationTask, delayTask);
+return completedTask != delayTask;
+```
+
+**Correct**:
+```csharp
+using var cts = new CancellationTokenSource();
+var operationTask = operation(cts.Token);
+await Task.Delay(timeout);
+cts.Cancel();
+var completedTask = await Task.WhenAny(operationTask, Task.Delay(gracePeriod));
+```
+
+**Why This Keeps Happening**: Cancellation is not an instantaneous event. A validator that uses one narrow race window is still testing scheduler timing rather than cancellation handling. Cancel explicitly, then give the operation a bounded grace period to observe the token and unwind.
+
 ### 0e2. Do Not Mark Internal Mutation APIs As `AllowAnonymous` Just Because They Feel "Protocol-Like"
 
 **The Bug**: A broad `// PR-02: intended-public` pattern was applied to controllers that mutate local state or trigger expensive work, including analyzer migrations, VirtualSoulfind queue operations, MediaCore registry writes/imports, stats resets, and pod control-plane actions. That exposed internal admin/UI surfaces to unauthenticated callers.
