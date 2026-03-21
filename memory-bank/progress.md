@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-03-21 11:35 - Security alert cleanup and PR triage
+
+### Completed
+- Narrowed the checked-in CodeQL workflow further by excluding `cs/log-forging` from the `security-extended` suite so `master` stops carrying dozens of logging-only alerts as security findings.
+- Added `PathGuard.NormalizeAbsolutePathWithinRoots(...)` and used it to constrain destination validation, Library Health scan roots, and mesh-transfer target paths to configured app-owned directories.
+- Fixed a bridge default-path bug by routing mesh-transfer fallbacks into the configured downloads directory instead of the server account's home `~/Downloads`.
+- Locked `PodMembershipController` behind `AuthPolicy.Any` and added a unit test to prevent anonymous membership mutation from creeping back in.
+- Documented both bug patterns in `memory-bank/decisions/adr-0001-known-gotchas.md`.
+- Verified that `upstream` still points to `https://github.com/slskd/slskd.git`, not a planning fork.
+- Confirmed the lone open PR is still Dependabot `#147` for `flatted` and no longer conflated with the security-alert work.
+
+### Verification
+- `dotnet build src/slskd/slskd.csproj --configuration Release` passed.
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~PathGuardTests|FullyQualifiedName~PodMembershipControllerTests"` passed (51 tests).
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Push the CodeQL/workflow and security fixes to `master` so GitHub can run a fresh analysis and auto-close the resolved alerts.
+- Resolve PR `#147` on GitHub after the branch state is updated.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

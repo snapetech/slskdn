@@ -187,6 +187,8 @@
 
 ## Completed Tasks
 
+- [x] **chore (2026-03-21):** Security alert cleanup on `master`. Narrowed `.github/workflows/codeql.yml` to exclude noisy `cs/log-forging`, constrained API/bridge filesystem probes to configured app-owned roots, required auth for `PodMembershipController`, added `PathGuard` and controller regression coverage, and verified `upstream` still targets `slskd/slskd` rather than a planning fork.
+
 - [x] **T-912 (2026-01-25):** Metadata facade — IMetadataFacade, MetadataResult, MetadataFacade (GetByRecordingId, GetByFingerprint, GetByFile, Search). MusicBrainzClient.SearchRecordingsAsync + RecordingSearchHit. File tags (TagLib, XiphComment MUSICBRAINZ_*). AcoustID→MB for fingerprint. IMemoryCache. DI in Program. Soulseek adapter: follow-up.
 
 - [x] **T-911 (2026-01-25):** MediaVariant model and storage — MediaVariant (Domain, VariantId, FirstSeenAt, LastSeenAt, SeenCount, FileSha256, FileSizeBytes; Audio/ImageDimensions/ImageCodec/VideoDimensions/VideoCodec/VideoDurationSeconds). IMediaVariantStore (GetByVariantId, GetByRecordingId, GetByDomain, Upsert). HashDbMediaVariantStore (Music→IHashDbService, Image/Video/GenericFile in-memory). IHashDbService.GetAudioVariantByFlacKeyAsync. ContentDomain Image=2, Video=3. FromAudioVariant/ToAudioVariant. DI.

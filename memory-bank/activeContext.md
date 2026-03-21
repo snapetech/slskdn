@@ -23,8 +23,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Narrow CodeQL scanning on `master` so it stops repopulating thousands of non-security alerts
-- **Branch**: `master`
+- **Current Task**: Land the final `master` push for the CodeQL/security cleanup and verify GitHub closes the remaining open alerts/PRs
+- **Branch**: `security-fixes-master`
 - **Environment**: Local dev
 - **Last Activity**:
   - Disabled GitHub default CodeQL setup via the API, verified recent `master` CodeQL runs are green, manually updated `Formula/slskdn.rb` to release `0.24.5-slskdn.57`, and patched `build-on-tag.yml` so the Homebrew, Nix, and Winget main-repo write-back steps rebase/retry before push.
@@ -57,6 +57,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Fixed the 2026-03-16 packaging regressions for Nix/Winget/Homebrew/dev release metadata, disabled the broken dev flake output, repaired the flaky port-binding/Tor transport tests, and cleaned the touched unit tests up for current async analyzer expectations
   - Confirmed GitHub default CodeQL setup is still `not-configured`, verified the open alert flood is attached to `refs/heads/master`, and narrowed the checked-in `.github/workflows/codeql.yml` from `queries: security-and-quality` to `queries: security-extended`
   - Investigated the `.76` release hang, confirmed the only stuck job was `Publish to Snap Store (stable)`, and updated both Snap Store upload steps to use per-attempt `timeout --signal=TERM 10m` bounds plus explicit retry/failure logging so future releases do not hang indefinitely inside `snapcraft upload`
+  - Rebased the live security-fix work onto the actual GitHub `master` tip (`047a6da3`), excluded `cs/log-forging` from CodeQL, constrained destination/library-health/mesh-transfer paths to configured roots, switched bridge default downloads back to the configured downloads directory, and required auth on `PodMembershipController`
 
 ---
 
@@ -100,9 +101,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the Snap timeout fix and decide whether to let the current `.76` Snap upload continue or cancel/replay it with a fresh tag, since the already-running job will not pick up the new timeout wrapper.
-2. Confirm the next CodeQL run leaves the alert set at the intended security-focused baseline.
-3. Follow up on issue `#117` once the Arch package is published and confirm whether the post-login timeout is resolved on the affected host.
+1. Push `security-fixes-master` to `origin/master` and confirm GitHub Actions starts a fresh CodeQL run from the updated workflow.
+2. Verify the open code-scanning set collapses to zero or the intended residual baseline after that run completes.
+3. Resolve PR `#147` once the branch state is current, either by merging it or closing it if the dependency bump is otherwise landed.
 4. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
 
 4. **Recent completions** (2026-01-27):
