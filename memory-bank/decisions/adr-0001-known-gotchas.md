@@ -442,6 +442,63 @@ The hub startup stays bounded and logged, but it runs in the background instead 
 
 **Why This Keeps Happening**: `security-and-quality` sounds like a better default until it lands in a mature codebase and turns every broad code-quality heuristic into a repo-level security alert. On `master`, keep the suite scoped to security-focused queries unless there is an explicit, staffed cleanup plan for the extra findings.
 
+### 1c. Do Not Let Arbitrary API-Supplied Absolute Paths Reach Filesystem Probes
+
+**The Bug**: Destination validation, Library Health scans, and mesh-transfer target selection accepted caller-supplied absolute paths and passed them straight into `Directory.Exists`, `EnumerateFiles`, `File.WriteAllText`, or later file I/O, which triggered real path-injection findings and allowed the server to probe arbitrary filesystem locations.
+
+**Files Affected**:
+- `src/slskd/Common/Security/PathGuard.cs`
+- `src/slskd/Destinations/API/Controllers/DestinationsController.cs`
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshTransferService.cs`
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+
+**Wrong**:
+```csharp
+var exists = Directory.Exists(request.Path);
+var files = Directory.EnumerateFiles(request.LibraryPath, "*.*", SearchOption.AllDirectories);
+var finalTargetPath = targetPath ?? Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+    "Downloads",
+    filename);
+```
+
+**Correct**:
+```csharp
+var normalizedPath = PathGuard.NormalizeAbsolutePathWithinRoots(request.Path, allowedRoots);
+var libraryPath = ResolveLibraryPath(request.LibraryPath);
+var finalTargetPath = targetPath ?? Path.Combine(
+    optionsMonitor.CurrentValue.Directories.Downloads,
+    PathGuard.SanitizeFilename(filename));
+```
+
+**Why This Keeps Happening**: Admin-facing endpoints make it tempting to trust absolute paths, especially when the UI is just “checking” a directory or kicking off a scan. That still turns the server into a filesystem oracle. Any absolute path from HTTP or bridge input must be canonicalized and constrained to configured app-owned roots before touching disk.
+
+### 1d. Pod Membership Mutation Endpoints Must Not Be Anonymous
+
+**The Bug**: `PodMembershipController` was marked `[AllowAnonymous]`, which let unauthenticated callers publish, update, remove, ban, unban, and role-change pod membership records through the server-signed membership service.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodMembershipController.cs`
+
+**Wrong**:
+```csharp
+[AllowAnonymous]
+public class PodMembershipController : ControllerBase
+{
+}
+```
+
+**Correct**:
+```csharp
+[Authorize(Policy = AuthPolicy.Any)]
+public class PodMembershipController : ControllerBase
+{
+}
+```
+
+**Why This Keeps Happening**: Some PodCore endpoints are intentionally public for signed message exchange or DHT-facing workflows, and it is easy to copy that attribute onto mutation endpoints that actually exercise privileged server behavior. Membership publication and role changes are management operations, not anonymous transport endpoints.
+
 ---
 
 ### 2. Reverting Entire Workflow Files (build-on-tag.yml, CI)
