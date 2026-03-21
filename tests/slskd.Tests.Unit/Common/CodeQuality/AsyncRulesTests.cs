@@ -20,9 +20,15 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         [Fact]
         public async Task ValidateCancellationHandlingAsync_WithProperCancellation_ReturnsTrue()
         {
-            async Task TestOperationAsync(CancellationToken ct)
+            Task TestOperationAsync(CancellationToken ct)
             {
-                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+                var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+                ct.Register(static state =>
+                {
+                    var tuple = ((TaskCompletionSource<object?> Completion, CancellationToken Token))state!;
+                    tuple.Completion.TrySetCanceled(tuple.Token);
+                }, (completion, ct));
+                return completion.Task;
             }
 
             var result = await AsyncRules.ValidateCancellationHandlingAsync(TestOperationAsync, TimeSpan.FromMilliseconds(100));
@@ -32,17 +38,13 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         [Fact]
         public async Task ValidateCancellationHandlingAsync_WithIgnoredCancellation_ReturnsFalse()
         {
-            // Arrange: op ignores ct and runs longer than timeout*2 so delayTask (timeout*2) wins
-            // and we correctly detect "does not respect cancellation"
-            async Task TestOperationAsync(CancellationToken ct)
+            Task TestOperationAsync(CancellationToken ct)
             {
-                await Task.Delay(500);
+                return new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
             }
 
-            // Act
             var result = await AsyncRules.ValidateCancellationHandlingAsync(TestOperationAsync, TimeSpan.FromMilliseconds(100));
 
-            // Assert
             Assert.False(result);
         }
 

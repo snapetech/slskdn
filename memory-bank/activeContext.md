@@ -103,8 +103,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the public-protocol auth-default tightening and cancellation-validator CI fix to `origin/master`.
-2. Replay the failed stable build with a fresh tag once the user confirms they want the next release cut.
+1. Push the `.82` timing-flake fixes to `origin/master`.
+2. Replay the failed stable build with a fresh tag from the verified timing-fix commit.
 3. Watch the replayed stable build through publish/release completion and hand the tester the exact green package for `/slskd` verification.
 4. Re-run GitHub code scanning after the replayed build lands and confirm no auth-boundary findings reopen.
 

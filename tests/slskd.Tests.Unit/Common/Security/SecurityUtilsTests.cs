@@ -378,7 +378,7 @@ public class SecurityUtilsTests
         var actualDelay = timer.Elapsed.TotalMilliseconds;
         Assert.True(actualDelay >= minDelay - 5, $"Delay too short: {actualDelay}ms"); // Allow some tolerance
         // Upper bound: allow broad scheduler tolerance because Task.Delay is best-effort under CI load.
-        Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
+        Assert.True(actualDelay <= maxDelay + 5000, $"Delay too long: {actualDelay}ms");
     }
 
     [Fact]
@@ -469,4 +469,3 @@ public class SecurityUtilsTests
         Assert.True((scFlags & MethodImplAttributes.NoInlining) != 0, "SecureClear(Span<byte>) should have NoInlining");
     }
 }
-

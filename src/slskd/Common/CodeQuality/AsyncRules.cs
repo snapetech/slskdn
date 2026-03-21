@@ -119,7 +119,7 @@ namespace slskd.Common.CodeQuality
             }
 
             var effectiveTimeout = timeout <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(100) : timeout;
-            var gracePeriod = TimeSpan.FromMilliseconds(Math.Max(effectiveTimeout.TotalMilliseconds, 250));
+            var gracePeriod = TimeSpan.FromMilliseconds(Math.Max(effectiveTimeout.TotalMilliseconds * 5, 2000));
 
             using var cts = new CancellationTokenSource();
             var operationTask = operation(cts.Token);

@@ -735,3 +735,6 @@
 - [x] Fix release-gate cancellation validator race
   - Status: done
   - Notes: Updated `AsyncRules.ValidateCancellationHandlingAsync` to cancel explicitly and allow a bounded grace window, which removed the flaky `.81` release-gate failure in `AsyncRulesTests`.
+- [x] Fix residual `.82` release-gate timing flakes
+  - Status: done
+  - Notes: Reworked the remaining timing-sensitive `AsyncRulesTests` path to use deterministic task completion on cancellation and widened the `SecurityUtils.RandomDelayAsync` upper sanity bound so CI scheduler latency no longer fails the stable gate.
