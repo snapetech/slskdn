@@ -391,7 +391,7 @@ namespace slskd
                 var (filename, password) = GenerateX509Certificate(password: Cryptography.Random.GetBytes(16).ToBase62(), filename: $"{AppName}.pfx");
 
                 Log.Information($"Certificate exported to {filename}");
-                Log.Information($"Password: {password}");
+                Console.WriteLine($"Password: {password}");
                 return;
             }
 

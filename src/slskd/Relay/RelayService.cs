@@ -249,6 +249,16 @@ namespace slskd.Relay
         bool TryValidateFileDownloadCredential(Guid token, string agentName, string filename, string credential);
 
         /// <summary>
+        ///     Attempts to validate the file download response credential and returns the trusted agent name from server state.
+        /// </summary>
+        /// <param name="token">The token.</param>
+        /// <param name="filename">The name of the file being downloaded.</param>
+        /// <param name="credential">The response credential.</param>
+        /// <param name="validatedAgentName">The trusted agent name if validation succeeds.</param>
+        /// <returns>A value indicating whether the credential is valid.</returns>
+        bool TryValidateFileDownloadCredential(Guid token, string filename, string credential, out string validatedAgentName);
+
+        /// <summary>
         ///     Attempts to validate the file stream response credential associated with the specified <paramref name="token"/>.
         /// </summary>
         /// <param name="token">The token.</param>
@@ -259,6 +269,16 @@ namespace slskd.Relay
         bool TryValidateFileStreamResponseCredential(Guid token, string agentName, string filename, string credential);
 
         /// <summary>
+        ///     Attempts to validate the file stream response credential and returns the trusted agent name from server state.
+        /// </summary>
+        /// <param name="token">The token.</param>
+        /// <param name="filename">The name of the file being uploaded.</param>
+        /// <param name="credential">The response credential.</param>
+        /// <param name="validatedAgentName">The trusted agent name if validation succeeds.</param>
+        /// <returns>A value indicating whether the credential is valid.</returns>
+        bool TryValidateFileStreamResponseCredential(Guid token, string filename, string credential, out string validatedAgentName);
+
+        /// <summary>
         ///     Attempts to validate the share upload response credential associated with the specified <paramref name="token"/>.
         /// </summary>
         /// <param name="token">The token.</param>
@@ -266,6 +286,15 @@ namespace slskd.Relay
         /// <param name="credential">The response credential.</param>
         /// <returns>A value indicating whether the credential is valid.</returns>
         bool TryValidateShareUploadCredential(Guid token, string agentName, string credential);
+
+        /// <summary>
+        ///     Attempts to validate the share upload response credential and returns the trusted agent name from server state.
+        /// </summary>
+        /// <param name="token">The token.</param>
+        /// <param name="credential">The response credential.</param>
+        /// <param name="validatedAgentName">The trusted agent name if validation succeeds.</param>
+        /// <returns>A value indicating whether the credential is valid.</returns>
+        bool TryValidateShareUploadCredential(Guid token, string credential, out string validatedAgentName);
     }
 
     /// <summary>
@@ -784,7 +813,12 @@ namespace slskd.Relay
         /// <returns>A value indicating whether the credential is valid.</returns>
         public bool TryValidateFileDownloadCredential(Guid token, string agentName, string filename, string credential)
         {
-            return TryValidateCredential(token.ToString(), agentName, credential, GetDownloadTokenCacheKey(filename, token), suppressRemoval: true);
+            return TryValidateCredential(token.ToString(), agentName, credential, GetDownloadTokenCacheKey(filename, token), out _, suppressRemoval: true);
+        }
+
+        public bool TryValidateFileDownloadCredential(Guid token, string filename, string credential, out string validatedAgentName)
+        {
+            return TryValidateCredential(token.ToString(), credential, GetDownloadTokenCacheKey(filename, token), out validatedAgentName, suppressRemoval: true);
         }
 
         /// <summary>
@@ -797,7 +831,12 @@ namespace slskd.Relay
         /// <returns>A value indicating whether the credential is valid.</returns>
         public bool TryValidateFileStreamResponseCredential(Guid token, string agentName, string filename, string credential)
         {
-            return TryValidateCredential(token.ToString(), agentName, credential, GetFileTokenCacheKey(filename, token));
+            return TryValidateCredential(token.ToString(), agentName, credential, GetFileTokenCacheKey(filename, token), out _);
+        }
+
+        public bool TryValidateFileStreamResponseCredential(Guid token, string filename, string credential, out string validatedAgentName)
+        {
+            return TryValidateCredential(token.ToString(), credential, GetFileTokenCacheKey(filename, token), out validatedAgentName);
         }
 
         /// <summary>
@@ -809,7 +848,12 @@ namespace slskd.Relay
         /// <returns>A value indicating whether the credential is valid.</returns>
         public bool TryValidateShareUploadCredential(Guid token, string agentName, string credential)
         {
-            return TryValidateCredential(token.ToString(), agentName, credential, GetShareTokenCacheKey(token));
+            return TryValidateCredential(token.ToString(), agentName, credential, GetShareTokenCacheKey(token), out _);
+        }
+
+        public bool TryValidateShareUploadCredential(Guid token, string credential, out string validatedAgentName)
+        {
+            return TryValidateCredential(token.ToString(), credential, GetShareTokenCacheKey(token), out validatedAgentName);
         }
 
         private void Configure(Options options)
@@ -879,8 +923,10 @@ namespace slskd.Relay
 
         private string GetShareTokenCacheKey(Guid token) => $"{token}.share";
 
-        private bool TryValidateCredential(string token, string agentName, string credential, string cacheKey, bool suppressRemoval = false)
+        private bool TryValidateCredential(string token, string agentName, string credential, string cacheKey, out string validatedAgentName, bool suppressRemoval = false)
         {
+            validatedAgentName = null;
+
             try
             {
                 var agentOptions = OptionsMonitor.CurrentValue.Relay.Agents.Values.SingleOrDefault(a => a.InstanceName == agentName);
@@ -919,6 +965,7 @@ namespace slskd.Relay
                     return false;
                 }
 
+                validatedAgentName = agentName;
                 return true;
             }
             finally
@@ -929,6 +976,19 @@ namespace slskd.Relay
                     MemoryCache.Remove(cacheKey);
                 }
             }
+        }
+
+        private bool TryValidateCredential(string token, string credential, string cacheKey, out string validatedAgentName, bool suppressRemoval = false)
+        {
+            validatedAgentName = null;
+
+            if (!MemoryCache.TryGetValue(cacheKey, out var cachedAgentName) || cachedAgentName is not string trustedAgentName)
+            {
+                Log.Debug("Validation failed: Cache key {Key} not cached", cacheKey);
+                return false;
+            }
+
+            return TryValidateCredential(token, trustedAgentName, credential, cacheKey, out validatedAgentName, suppressRemoval);
         }
     }
 }

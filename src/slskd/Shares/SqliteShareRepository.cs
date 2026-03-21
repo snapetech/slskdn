@@ -30,13 +30,17 @@ namespace slskd.Shares
     /// </summary>
     public class SqliteShareRepository : IShareRepository
     {
+        private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteShareRepository"/> class.
         /// </summary>
         /// <param name="connectionString"></param>
         public SqliteShareRepository(string connectionString)
         {
-            ConnectionString = connectionString;
+            ConnectionString = NormalizeConnectionString(connectionString);
 
             // in-memory databases will be destroyed if at any point the number of connections reaches zero. to prevent this,
             // create a connection and hold it open for the duration of the application. SQLite will destroy this database when
@@ -696,8 +700,7 @@ namespace slskd.Shares
                     migrationConn.ExecuteNonQuery("ALTER TABLE files ADD COLUMN moderationReason TEXT");
                 }
 
-                using var conn = new SqliteConnection(ConnectionString);
-                conn.Open();
+                using var conn = GetConnection();
 
                 using var cmd = new SqliteCommand("SELECT name, sql from sqlite_master WHERE type = 'table';", conn);
 
@@ -885,11 +888,49 @@ namespace slskd.Shares
 
         private SqliteConnection GetConnection(string connectionString = null)
         {
-            connectionString ??= ConnectionString;
+            connectionString = NormalizeConnectionString(connectionString ?? ConnectionString);
 
             var conn = new SqliteConnection(connectionString);
             conn.Open();
             return conn;
+        }
+
+        private static string NormalizeConnectionString(string connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
+            }
+
+            var parsed = new SqliteConnectionStringBuilder(connectionString);
+            var dataSource = parsed.DataSource?.Trim();
+
+            if (string.IsNullOrWhiteSpace(dataSource))
+            {
+                throw new ArgumentException("Connection string must include a data source", nameof(connectionString));
+            }
+
+            if (dataSource.StartsWith("file:", PathComparison))
+            {
+                if (!dataSource.Contains("?mode=memory", PathComparison))
+                {
+                    throw new ArgumentException("Only in-memory SQLite file URIs are supported", nameof(connectionString));
+                }
+            }
+            else if (!Path.IsPathRooted(dataSource))
+            {
+                throw new ArgumentException("SQLite data source must be an absolute path", nameof(connectionString));
+            }
+
+            var normalized = new SqliteConnectionStringBuilder
+            {
+                DataSource = dataSource,
+                Cache = parsed.Cache,
+                Mode = parsed.Mode,
+                Pooling = parsed.Pooling,
+            };
+
+            return normalized.ToString();
         }
 
         private void Keepalive()

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -55,6 +56,23 @@ public interface IHashDbOptimizationService
 /// </summary>
 public class HashDbOptimizationService : IHashDbOptimizationService
 {
+    private static readonly string[] ForbiddenProfileQueryPrefixes =
+    {
+        "ALTER",
+        "ANALYZE",
+        "ATTACH",
+        "CREATE",
+        "DELETE",
+        "DETACH",
+        "DROP",
+        "INSERT",
+        "PRAGMA",
+        "REINDEX",
+        "REPLACE",
+        "UPDATE",
+        "VACUUM",
+    };
+
     private readonly string _dbPath;
     private readonly ILogger<HashDbOptimizationService> _logger;
     private readonly object _metricsLock = new();
@@ -129,6 +147,11 @@ public class HashDbOptimizationService : IHashDbOptimizationService
     /// <inheritdoc/>
     public async Task<QueryProfileResult> ProfileQueryAsync(string query, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default)
     {
+        if (!TryNormalizeProfileQuery(query, out var normalizedQuery, out var validationError))
+        {
+            throw new ArgumentException(validationError, nameof(query));
+        }
+
         try
         {
             using var conn = new SqliteConnection($"Data Source={_dbPath}");
@@ -136,7 +159,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
 
             // Enable query plan
             using var enableCmd = conn.CreateCommand();
-            enableCmd.CommandText = "EXPLAIN QUERY PLAN " + query;
+            enableCmd.CommandText = "EXPLAIN QUERY PLAN " + normalizedQuery;
             if (parameters != null)
             {
                 foreach (var param in parameters)
@@ -155,7 +178,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
             // Measure execution time
             var stopwatch = Stopwatch.StartNew();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = query;
+            cmd.CommandText = normalizedQuery;
             if (parameters != null)
             {
                 foreach (var param in parameters)
@@ -175,7 +198,7 @@ public class HashDbOptimizationService : IHashDbOptimizationService
 
             return new QueryProfileResult
             {
-                Query = query,
+                Query = normalizedQuery,
                 ExecutionTimeMs = stopwatch.ElapsedMilliseconds,
                 RowsReturned = rowCount,
                 QueryPlan = string.Join("\n", planLines),
@@ -186,6 +209,47 @@ public class HashDbOptimizationService : IHashDbOptimizationService
             _logger.LogError(ex, "[HashDbOptimization] Error profiling query");
             throw;
         }
+    }
+
+    internal static bool TryNormalizeProfileQuery(string query, out string normalizedQuery, out string error)
+    {
+        normalizedQuery = string.Empty;
+        error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            error = "Query is required.";
+            return false;
+        }
+
+        normalizedQuery = Regex.Replace(query.Trim(), @"\s+", " ");
+        var upperQuery = normalizedQuery.ToUpperInvariant();
+
+        if (normalizedQuery.Length > 2000)
+        {
+            error = "Query is too long.";
+            return false;
+        }
+
+        if (normalizedQuery.Contains(';'))
+        {
+            error = "Only single-statement SELECT queries are allowed.";
+            return false;
+        }
+
+        if (!(upperQuery.StartsWith("SELECT ", StringComparison.Ordinal) || upperQuery.StartsWith("WITH ", StringComparison.Ordinal)))
+        {
+            error = "Only read-only SELECT queries are allowed.";
+            return false;
+        }
+
+        if (ForbiddenProfileQueryPrefixes.Any(prefix => upperQuery.StartsWith(prefix + " ", StringComparison.Ordinal)))
+        {
+            error = "Mutating or administrative SQL statements are not allowed.";
+            return false;
+        }
+
+        return true;
     }
 
     /// <inheritdoc/>

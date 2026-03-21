@@ -25,6 +25,24 @@
 - Push the CodeQL/workflow and security fixes to `master` so GitHub can run a fresh analysis and auto-close the resolved alerts.
 - Resolve PR `#147` on GitHub after the branch state is updated.
 
+## 2026-03-21 13:04 - Final CodeQL cluster hardening pass
+
+### Completed
+- Removed cleartext secret-style logging from the certificate generation path in `Program.cs`; the generated password is still printed to the interactive console but is no longer written to normal application logs.
+- Replaced raw peer usernames in `AsymmetricDisclosure` trust-tier logs with stable hashed peer ids so trust transitions remain diagnosable without storing cleartext identifiers in security logs.
+- Hardened relay token validation so `RelayController` now derives the effective agent identity from the server-side token cache instead of trusting caller-supplied `X-Relay-Agent` headers after a token exists.
+- Tightened `SqliteShareRepository` connection-string handling by rebuilding connection strings from a validated data source and rejecting unsupported SQLite URI/path forms rather than passing arbitrary descriptors through.
+- Locked HashDb query profiling down to administrator-only, single-statement read-only `SELECT`/`WITH` SQL and added focused regression tests for accepted and rejected query shapes.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~RelayControllerModerationTests|FullyQualifiedName~HashDbOptimizationServiceTests"` passed (7 tests).
+- `dotnet build src/slskd/slskd.csproj --configuration Release` passed.
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Push the final security pass to GitHub so CodeQL can re-analyze the branch.
+- Dismiss the residual false positives that are expected secure patterns (`XSRF-TOKEN` double-submit cookie, SOCKS negotiation response checks, and the login-request null guard) once the new analysis lands.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

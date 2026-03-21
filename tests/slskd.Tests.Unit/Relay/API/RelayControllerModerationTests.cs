@@ -23,6 +23,8 @@ namespace slskd.Tests.Unit.Relay.API
     /// </summary>
     public class RelayControllerModerationTests
     {
+        private delegate void TryValidateFileDownloadCredentialCallback(Guid token, string filename, string credential, out string validatedAgentName);
+
         private readonly Mock<IRelayService> _relayServiceMock = new();
         private readonly Mock<IShareRepository> _shareRepositoryMock = new();
         private readonly Mock<IOptionsMonitor<slskd.Options>> _optionsMonitorMock = new();
@@ -64,7 +66,11 @@ namespace slskd.Tests.Unit.Relay.API
                 controller.HttpContext.Request.Headers["X-Relay-Filename-Base64"] = "dGVzdC5tcDM="; // "test.mp3"
 
                 _relayServiceMock
-                    .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), "test-agent", "test.mp3", "test-credential"))
+                    .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), "test.mp3", "test-credential", out It.Ref<string>.IsAny))
+                    .Callback(new TryValidateFileDownloadCredentialCallback((Guid _, string _, string _, out string validatedAgentName) =>
+                    {
+                        validatedAgentName = "test-agent";
+                    }))
                     .Returns(true);
 
                 _shareRepositoryMock
@@ -102,7 +108,11 @@ namespace slskd.Tests.Unit.Relay.API
             controller.HttpContext.Request.Headers["X-Relay-Filename-Base64"] = "dGVzdC5tcDM=";
 
             _relayServiceMock
-                .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), "test-agent", "test.mp3", "test-credential"))
+                .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), "test.mp3", "test-credential", out It.Ref<string>.IsAny))
+                .Callback(new TryValidateFileDownloadCredentialCallback((Guid _, string _, string _, out string validatedAgentName) =>
+                {
+                    validatedAgentName = "test-agent";
+                }))
                 .Returns(true);
 
             _shareRepositoryMock
@@ -131,7 +141,11 @@ namespace slskd.Tests.Unit.Relay.API
             controller.HttpContext.Request.Headers["X-Relay-Filename-Base64"] = "dGVzdC5tcDM=";
 
             _relayServiceMock
-                .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), "test-agent", "test.mp3", "test-credential"))
+                .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), "test.mp3", "test-credential", out It.Ref<string>.IsAny))
+                .Callback(new TryValidateFileDownloadCredentialCallback((Guid _, string _, string _, out string validatedAgentName) =>
+                {
+                    validatedAgentName = "test-agent";
+                }))
                 .Returns(true);
 
             _shareRepositoryMock
@@ -157,7 +171,7 @@ namespace slskd.Tests.Unit.Relay.API
             controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
             _relayServiceMock
-                .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(x => x.TryValidateFileDownloadCredential(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), out It.Ref<string>.IsAny))
                 .Returns(false);
 
             // Act

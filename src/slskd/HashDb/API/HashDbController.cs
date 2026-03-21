@@ -442,7 +442,7 @@ namespace slskd.HashDb.API
         ///     Profiles a query and returns performance metrics.
         /// </summary>
         [HttpPost("optimize/profile")]
-        [Authorize(Policy = AuthPolicy.Any)]
+        [Authorize(Policy = AuthPolicy.Any, Roles = AuthRole.AdministratorOnly)]
         public async Task<IActionResult> ProfileQuery([FromBody] ProfileQueryRequest request)
         {
             if (OptimizationService == null)
@@ -455,16 +455,21 @@ namespace slskd.HashDb.API
                 return BadRequest(new { error = "Query is required" });
             }
 
+            if (!Optimization.HashDbOptimizationService.TryNormalizeProfileQuery(request.Query, out var normalizedQuery, out var validationError))
+            {
+                return BadRequest(new { error = validationError });
+            }
+
             try
             {
                 var result = await OptimizationService.ProfileQueryAsync(
-                    request.Query,
+                    normalizedQuery,
                     request.Parameters,
                     HttpContext.RequestAborted);
 
                 // Record the metric for tracking
                 OptimizationService.RecordQueryMetric(
-                    request.Query,
+                    normalizedQuery,
                     result.ExecutionTimeMs,
                     result.RowsReturned);
 

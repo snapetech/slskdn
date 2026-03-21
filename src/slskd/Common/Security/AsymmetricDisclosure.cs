@@ -8,7 +8,10 @@ namespace slskd.Common.Security;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -99,8 +102,8 @@ public sealed class AsymmetricDisclosure
             if (state.CurrentTier != oldTier)
             {
                 _logger.LogInformation(
-                    "Trust upgraded for {Username}: {OldTier} -> {NewTier}",
-                    username, oldTier, state.CurrentTier);
+                    "Trust upgraded for {PeerId}: {OldTier} -> {NewTier}",
+                    GetPeerLogId(username), oldTier, state.CurrentTier);
             }
         }
     }
@@ -140,8 +143,8 @@ public sealed class AsymmetricDisclosure
             if (state.CurrentTier != oldTier)
             {
                 _logger.LogWarning(
-                    "Trust downgraded for {Username}: {OldTier} -> {NewTier}",
-                    username, oldTier, state.CurrentTier);
+                    "Trust downgraded for {PeerId}: {OldTier} -> {NewTier}",
+                    GetPeerLogId(username), oldTier, state.CurrentTier);
             }
         }
     }
@@ -164,8 +167,8 @@ public sealed class AsymmetricDisclosure
             state.OverrideReason = reason;
 
             _logger.LogInformation(
-                "Manual trust override for {Username}: {OldTier} -> {NewTier} ({Reason})",
-                username, oldTier, tier, reason);
+                "Manual trust override for {PeerId}: {OldTier} -> {NewTier} ({Reason})",
+                GetPeerLogId(username), oldTier, tier, reason);
         }
     }
 
@@ -247,6 +250,18 @@ public sealed class AsymmetricDisclosure
             LastInteraction = DateTimeOffset.UtcNow,
             CurrentTier = TrustTier.Unknown,
         });
+    }
+
+    private static string GetPeerLogId(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return "peer:unknown";
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(username.Trim().ToLowerInvariant()));
+        var prefix = Convert.ToHexString(hash.AsSpan(0, 6)).ToLower(CultureInfo.InvariantCulture);
+        return $"peer:{prefix}";
     }
 
     private TrustTier CalculateTier(PeerTrustState state)

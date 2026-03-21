@@ -137,7 +137,7 @@ namespace slskd.Relay
             var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault();
             var filename = Request.Headers["X-Relay-Filename-Base64"].FirstOrDefault()?.FromBase64();
 
-            if (!Relay.RegisteredAgents.Any(a => a.Name == agentName) || string.IsNullOrEmpty(credential))
+            if (string.IsNullOrEmpty(credential))
             {
                 return Unauthorized();
             }
@@ -151,7 +151,7 @@ namespace slskd.Relay
 
             // note: the token remains valid after the validation attempt, unlike most other endpoints.
             // this is done to support retries
-            if (!Relay.TryValidateFileDownloadCredential(token: guid, agentName, filename, credential))
+            if (!Relay.TryValidateFileDownloadCredential(token: guid, filename, credential, out var validatedAgentName))
             {
                 Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
                 return Unauthorized();
@@ -175,7 +175,7 @@ namespace slskd.Relay
                 }
             }
 
-            Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", agentName, guid, filename);
+            Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", validatedAgentName, guid, filename);
 
             var stream = new FileStream(sourceFile, FileMode.Open);
             return File(stream, "application/octet-stream");
@@ -213,7 +213,7 @@ namespace slskd.Relay
             var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault();
             var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault();
 
-            if (!Relay.RegisteredAgents.Any(a => a.Name == agentName) || string.IsNullOrEmpty(credential))
+            if (string.IsNullOrEmpty(credential))
             {
                 return Unauthorized();
             }
@@ -258,7 +258,7 @@ namespace slskd.Relay
                 // provide the encrypted value as the credential with the request. the validation below verifies a bunch of
                 // things, including that the encrypted value matches the expected value. the goal here is to ensure that the
                 // caller is the same caller that received the request, and that the caller knows the shared secret.
-                if (!Relay.TryValidateFileStreamResponseCredential(token: guid, agentName: agentName, filename: filename, credential: credential))
+                if (!Relay.TryValidateFileStreamResponseCredential(token: guid, filename: filename, credential: credential, out var validatedAgentName))
                 {
                     Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
                     return Unauthorized();
@@ -274,13 +274,13 @@ namespace slskd.Relay
                     return BadRequest("Invalid filename");
                 }
 
-                Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", agentName, guid, filename);
+                Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", validatedAgentName, guid, filename);
 
                 // pass the stream back to the relay service, which will in turn pass it to the upload service, and use it to
                 // feed data into the remote upload. await this call, it will complete when the upload is complete, one way or the other.
-                await Relay.HandleFileStreamResponseAsync(agentName, id: guid, stream);
+                await Relay.HandleFileStreamResponseAsync(validatedAgentName, id: guid, stream);
 
-                Log.Information("File upload of {Filename} ({Token}) from agent {Agent} complete", filename, token, agentName);
+                Log.Information("File upload of {Filename} ({Token}) from agent {Agent} complete", filename, token, validatedAgentName);
                 return Ok();
             }
             finally
@@ -320,7 +320,7 @@ namespace slskd.Relay
             var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault();
             var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault();
 
-            if (!Relay.RegisteredAgents.Any(a => a.Name == agentName) || string.IsNullOrEmpty(credential))
+            if (string.IsNullOrEmpty(credential))
             {
                 return Unauthorized();
             }
@@ -341,18 +341,18 @@ namespace slskd.Relay
 
             Log.Information("Handling share upload ({Token}) from a caller claiming to be agent {Agent}", token, agentName);
 
-            if (!Relay.TryValidateShareUploadCredential(token: guid, agentName, credential))
+            if (!Relay.TryValidateShareUploadCredential(token: guid, credential, out var validatedAgentName))
             {
                 Log.Warning("Failed to authenticate share upload from caller claiming to be agent {Agent} using token {Token}", agentName, guid);
                 return Unauthorized();
             }
 
             Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Program.AppName));
-            var temp = Path.Combine(Path.GetTempPath(), Program.AppName, $"share_{agentName}_{Path.GetRandomFileName()}.db");
+            var temp = Path.Combine(Path.GetTempPath(), Program.AppName, $"share_{validatedAgentName}_{Path.GetRandomFileName()}.db");
 
             try
             {
-                Log.Information("Agent {Agent} authenticated for token {Token}. Beginning download of shares to {Filename}", agentName, guid, temp);
+                Log.Information("Agent {Agent} authenticated for token {Token}. Beginning download of shares to {Filename}", validatedAgentName, guid, temp);
 
                 var sw = new Stopwatch();
                 sw.Start();
@@ -364,9 +364,9 @@ namespace slskd.Relay
 
                 sw.Stop();
 
-                Log.Information("Download of shares from {Agent} ({Token}) complete ({Size} in {Duration}ms)", agentName, guid, ((double)inputStream.Length).SizeSuffix(), sw.ElapsedMilliseconds);
+                Log.Information("Download of shares from {Agent} ({Token}) complete ({Size} in {Duration}ms)", validatedAgentName, guid, ((double)inputStream.Length).SizeSuffix(), sw.ElapsedMilliseconds);
 
-                await Relay.HandleShareUploadAsync(agentName, id: guid, shares, temp);
+                await Relay.HandleShareUploadAsync(validatedAgentName, id: guid, shares, temp);
 
                 return Ok();
             }

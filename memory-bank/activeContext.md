@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Land the final `master` push for the CodeQL/security cleanup and verify GitHub closes the remaining open alerts/PRs
+- **Current Task**: Push the final CodeQL/security hardening pass, wait for GitHub to re-analyze it, and clear the residual false-positive alerts with explicit dismissals
 - **Branch**: `security-fixes-master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -58,6 +58,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Confirmed GitHub default CodeQL setup is still `not-configured`, verified the open alert flood is attached to `refs/heads/master`, and narrowed the checked-in `.github/workflows/codeql.yml` from `queries: security-and-quality` to `queries: security-extended`
   - Investigated the `.76` release hang, confirmed the only stuck job was `Publish to Snap Store (stable)`, and updated both Snap Store upload steps to use per-attempt `timeout --signal=TERM 10m` bounds plus explicit retry/failure logging so future releases do not hang indefinitely inside `snapcraft upload`
   - Rebased the live security-fix work onto the actual GitHub `master` tip (`047a6da3`), excluded `cs/log-forging` from CodeQL, constrained destination/library-health/mesh-transfer paths to configured roots, switched bridge default downloads back to the configured downloads directory, and required auth on `PodMembershipController`
+  - Completed the final true-positive CodeQL pass locally: removed cleartext-style secret logging from `Program` and `AsymmetricDisclosure`, hardened relay token validation to trust server-side agent identity instead of request headers, rebuilt `SqliteShareRepository` connection strings from validated data sources, and constrained HashDb profiling to admin-only single-statement read-only SQL with focused unit coverage
 
 ---
 
@@ -101,11 +102,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the new release-gate changes from `security-fixes-master` to `origin/master`.
-2. Watch stable release `.78` through the remaining Docker and Snap jobs, then hand the tester the exact package/build to retry under `/slskd`.
-3. Extend the new release gate over time with one added check per confirmed regression class, starting with a hosted subpath smoke test and then targeted security-cluster coverage.
-4. Triage the remaining 24 CodeQL alerts by cluster: relay authorization flow (`cs/user-controlled-bypass`), share/hashdb raw SQL (`cs/resource-injection`, `cs/sql-injection`), and secret/cookie handling (`cs/cleartext-storage-of-sensitive-information`, `cs/web/cookie-httponly-not-set`).
-5. Clean up the malformed XML doc comments that keep producing publish warnings across all runtimes.
+1. Push `security-fixes-master` to `origin/master` so GitHub runs a fresh CodeQL analysis from the final security hardening pass.
+2. Watch the new CodeQL run and confirm the true-positive clusters auto-close (`cleartext-storage`, relay bypass, resource-injection, sql-injection).
+3. Dismiss the expected false positives that remain after re-analysis: the JavaScript-readable antiforgery double-submit cookie, SOCKS protocol negotiation response checks, and the `login == default` request guard.
+4. Re-check stable release `.78` status and hand the tester the exact package/build to retry under `/slskd` if the release is fully green.
+5. Extend the release gate over time with one added check per confirmed regression class, starting with a hosted subpath smoke test and then broader security-cluster coverage.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
