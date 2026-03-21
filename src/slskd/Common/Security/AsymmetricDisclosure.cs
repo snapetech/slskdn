@@ -167,8 +167,8 @@ public sealed class AsymmetricDisclosure
             state.OverrideReason = reason;
 
             _logger.LogInformation(
-                "Manual trust override for {PeerId}: {OldTier} -> {NewTier} ({Reason})",
-                GetPeerLogId(username), oldTier, tier, reason);
+                "Manual trust override for {PeerId}: {OldTierCode} -> {NewTierCode} ({Reason})",
+                GetPeerLogId(username), (int)oldTier, (int)tier, reason);
         }
     }
 

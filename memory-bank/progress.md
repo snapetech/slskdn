@@ -43,6 +43,22 @@
 - Push the final security pass to GitHub so CodeQL can re-analyze the branch.
 - Dismiss the residual false positives that are expected secure patterns (`XSRF-TOKEN` double-submit cookie, SOCKS negotiation response checks, and the login-request null guard) once the new analysis lands.
 
+## 2026-03-21 13:32 - Relay anonymization follow-up for residual CodeQL noise
+
+### Completed
+- Reworked relay token caching so share/file/download token state stores trusted relay connection ids instead of raw agent names.
+- Anonymized relay completion logs and temporary upload filenames with stable hashed agent ids rather than plain agent names.
+- Kept the relay authorization flow unchanged functionally while removing the remaining cleartext-style agent identifiers from the code paths CodeQL was still flagging.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~RelayControllerModerationTests|FullyQualifiedName~HashDbOptimizationServiceTests"` passed (7 tests).
+- `dotnet build src/slskd/slskd.csproj --configuration Release` passed.
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Push the relay anonymization follow-up to `master`.
+- Re-check open CodeQL alerts and dismiss the remaining scanner heuristics in relay/hashdb/trust logging if GitHub still keeps them open after the new analysis.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

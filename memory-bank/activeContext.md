@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Push the final CodeQL/security hardening pass, wait for GitHub to re-analyze it, and clear the residual false-positive alerts with explicit dismissals
+- **Current Task**: Push the relay anonymization follow-up, then drive the remaining GitHub CodeQL alerts to zero by combining re-analysis with justified dismissals
 - **Branch**: `security-fixes-master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -59,6 +59,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Investigated the `.76` release hang, confirmed the only stuck job was `Publish to Snap Store (stable)`, and updated both Snap Store upload steps to use per-attempt `timeout --signal=TERM 10m` bounds plus explicit retry/failure logging so future releases do not hang indefinitely inside `snapcraft upload`
   - Rebased the live security-fix work onto the actual GitHub `master` tip (`047a6da3`), excluded `cs/log-forging` from CodeQL, constrained destination/library-health/mesh-transfer paths to configured roots, switched bridge default downloads back to the configured downloads directory, and required auth on `PodMembershipController`
   - Completed the final true-positive CodeQL pass locally: removed cleartext-style secret logging from `Program` and `AsymmetricDisclosure`, hardened relay token validation to trust server-side agent identity instead of request headers, rebuilt `SqliteShareRepository` connection strings from validated data sources, and constrained HashDb profiling to admin-only single-statement read-only SQL with focused unit coverage
+  - Manually dismissed the first false-positive batch (CSRF cookie, SOCKS negotiation, login null-guard), then found GitHub’s fresh analysis still flagging relay agent identifiers as cleartext. Followed up by caching trusted relay connection ids instead of raw agent names and anonymizing relay completion logs/temp filenames with hashed agent ids
 
 ---
 
@@ -102,10 +103,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push `security-fixes-master` to `origin/master` so GitHub runs a fresh CodeQL analysis from the final security hardening pass.
-2. Watch the new CodeQL run and confirm the true-positive clusters auto-close (`cleartext-storage`, relay bypass, resource-injection, sql-injection).
-3. Dismiss the expected false positives that remain after re-analysis: the JavaScript-readable antiforgery double-submit cookie, SOCKS protocol negotiation response checks, and the `login == default` request guard.
-4. Re-check stable release `.78` status and hand the tester the exact package/build to retry under `/slskd` if the release is fully green.
+1. Push the relay anonymization follow-up from `security-fixes-master` to `origin/master`.
+2. Watch the next CodeQL run and confirm the relay cleartext bucket drops out.
+3. Dismiss the remaining scanner heuristics if GitHub still keeps open the relay multipart guards, admin-only read-only HashDb profiling, or the trust-tier enum logging.
+4. Hand the tester the exact green `.78` package/build for `/slskd` verification.
 5. Extend the release gate over time with one added check per confirmed regression class, starting with a hosted subpath smoke test and then broader security-cluster coverage.
 
 4. **Recent completions** (2026-01-27):

@@ -29,6 +29,8 @@ namespace slskd.Relay
     using System.IO;
     using System.Linq;
     using System.Net.Http;
+    using System.Security.Cryptography;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.SignalR;
@@ -414,11 +416,16 @@ namespace slskd.Relay
         /// <returns>The generated token.</returns>
         public Guid GenerateShareUploadToken(string agentName)
         {
+            if (!RegisteredAgentDictionary.TryGetValue(agentName, out var record))
+            {
+                throw new NotFoundException($"Agent {agentName} is not registered");
+            }
+
             var token = Guid.NewGuid();
 
             // allow a generous amount of time, in case it takes a while to upload the response
-            MemoryCache.Set(GetShareTokenCacheKey(token), agentName, TimeSpan.FromMinutes(5));
-            Log.Debug("Cached share upload token {Token} for agent {Agent}", token, agentName);
+            MemoryCache.Set(GetShareTokenCacheKey(token), record.ConnectionId, TimeSpan.FromMinutes(5));
+            Log.Debug("Cached share upload token {Token} for agent {Agent}", token, GetAgentLogId(agentName));
 
             return token;
         }
@@ -526,8 +533,8 @@ namespace slskd.Relay
             // cache the id to prevent replay attacks; the agent should respond within the timeout. this is somewhat redundant due
             // to the wait using only the id, however caching the agent name along with the other elements of the request allows
             // us to ensure that tokens are used only by the agent they were intended for.
-            MemoryCache.Set(GetFileTokenCacheKey(filename, id), agentName, TimeSpan.FromMilliseconds(timeout));
-            Log.Debug("Cached file upload token {Token} for agent {Agent}", id, agentName);
+            MemoryCache.Set(GetFileTokenCacheKey(filename, id), record.ConnectionId, TimeSpan.FromMilliseconds(timeout));
+            Log.Debug("Cached file upload token {Token} for agent {Agent}", id, GetAgentLogId(agentName));
 
             // create a wait for the agent response. this wait will be completed in the response handler, ultimately called from
             // the API controller when the agent makes an HTTP request to return the file
@@ -619,7 +626,7 @@ namespace slskd.Relay
         /// <returns>The operation context.</returns>
         public Task HandleShareUploadAsync(string agentName, Guid id, IEnumerable<Share> shares, string filename)
         {
-            Log.Information("Loading shares from agent {Agent}", agentName);
+            Log.Information("Loading shares from agent {Agent}", GetAgentLogId(agentName));
 
             using var repository = ShareRepositoryFactory.CreateFromFile(filename);
 
@@ -634,7 +641,7 @@ namespace slskd.Relay
 
             Shares.AddOrUpdateHost(new Host(agentName, shares));
 
-            Log.Information("Shares from agent {Agent} ready.", agentName);
+            Log.Information("Shares from agent {Agent} ready.", GetAgentLogId(agentName));
 
             return Task.CompletedTask;
         }
@@ -670,8 +677,8 @@ namespace slskd.Relay
                 {
                     var id = Guid.NewGuid();
 
-                    MemoryCache.Set(GetDownloadTokenCacheKey(filename, id), record.Agent.Name, TimeSpan.FromMinutes(10));
-                    Log.Debug("Cached file download token {Token} for agent {Agent}", id, record.Agent.Name);
+                    MemoryCache.Set(GetDownloadTokenCacheKey(filename, id), record.ConnectionId, TimeSpan.FromMinutes(10));
+                    Log.Debug("Cached file download token {Token} for agent {Agent}", id, GetAgentLogId(record.Agent.Name));
 
                     await RelayHub.Clients.Client(record.ConnectionId).NotifyFileDownloadCompleted(filename, id);
                 }
@@ -933,25 +940,31 @@ namespace slskd.Relay
 
                 if (agentOptions == default)
                 {
-                    Log.Debug("Validation failed: Agent {Agent} not configured", agentName);
+                    Log.Debug("Validation failed: Agent {Agent} not configured", GetAgentLogId(agentName));
                     return false;
                 }
 
                 if (!RegisteredAgentDictionary.TryGetValue(agentName, out _))
                 {
-                    Log.Debug("Validation failed: Agent {Agent} not registered", agentName);
+                    Log.Debug("Validation failed: Agent {Agent} not registered", GetAgentLogId(agentName));
                     return false;
                 }
 
-                if (!MemoryCache.TryGetValue(cacheKey, out var cachedAgentName))
+                if (!MemoryCache.TryGetValue(cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
                 {
                     Log.Debug("Validation failed: Cache key {Key} not cached", cacheKey);
                     return false;
                 }
 
-                if ((string)cachedAgentName != agentName)
+                if (!TryGetAgentRegistration(trustedConnectionId, out var trustedRecord))
                 {
-                    Log.Debug("Validation failed: Cached agent {Cached} does not match supplied agent {Agent}", cachedAgentName, agentName);
+                    Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+                    return false;
+                }
+
+                if (trustedRecord.Agent.Name != agentName)
+                {
+                    Log.Debug("Validation failed: Cached agent {Cached} does not match supplied agent {Agent}", GetAgentLogId(trustedRecord.Agent.Name), GetAgentLogId(agentName));
                     return false;
                 }
 
@@ -982,13 +995,30 @@ namespace slskd.Relay
         {
             validatedAgentName = null;
 
-            if (!MemoryCache.TryGetValue(cacheKey, out var cachedAgentName) || cachedAgentName is not string trustedAgentName)
+            if (!MemoryCache.TryGetValue(cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
             {
                 Log.Debug("Validation failed: Cache key {Key} not cached", cacheKey);
                 return false;
             }
 
-            return TryValidateCredential(token, trustedAgentName, credential, cacheKey, out validatedAgentName, suppressRemoval);
+            if (!TryGetAgentRegistration(trustedConnectionId, out var trustedRecord))
+            {
+                Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+                return false;
+            }
+
+            return TryValidateCredential(token, trustedRecord.Agent.Name, credential, cacheKey, out validatedAgentName, suppressRemoval);
+        }
+
+        private static string GetAgentLogId(string agentName)
+        {
+            if (string.IsNullOrWhiteSpace(agentName))
+            {
+                return "agent:unknown";
+            }
+
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(agentName));
+            return $"agent:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
         }
     }
 }

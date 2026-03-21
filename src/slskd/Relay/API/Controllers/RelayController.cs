@@ -27,6 +27,8 @@ namespace slskd.Relay
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Security.Cryptography;
+    using System.Text;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
@@ -79,6 +81,19 @@ namespace slskd.Relay
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IContentLocator? ContentLocator { get; }
+
+        private static string GetAgentFileToken(string agentName) => GetAgentLogId(agentName).Replace("agent:", string.Empty, StringComparison.Ordinal);
+
+        private static string GetAgentLogId(string agentName)
+        {
+            if (string.IsNullOrWhiteSpace(agentName))
+            {
+                return "agent:unknown";
+            }
+
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(agentName));
+            return $"agent:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
 
         /// <summary>
         ///     Connects to the configured controller.
@@ -175,7 +190,7 @@ namespace slskd.Relay
                 }
             }
 
-            Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", validatedAgentName, guid, filename);
+            Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", GetAgentLogId(validatedAgentName), guid, filename);
 
             var stream = new FileStream(sourceFile, FileMode.Open);
             return File(stream, "application/octet-stream");
@@ -274,13 +289,13 @@ namespace slskd.Relay
                     return BadRequest("Invalid filename");
                 }
 
-                Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", validatedAgentName, guid, filename);
+                Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", GetAgentLogId(validatedAgentName), guid, filename);
 
                 // pass the stream back to the relay service, which will in turn pass it to the upload service, and use it to
                 // feed data into the remote upload. await this call, it will complete when the upload is complete, one way or the other.
                 await Relay.HandleFileStreamResponseAsync(validatedAgentName, id: guid, stream);
 
-                Log.Information("File upload of {Filename} ({Token}) from agent {Agent} complete", filename, token, validatedAgentName);
+                Log.Information("File upload of {Filename} ({Token}) from agent {Agent} complete", filename, token, GetAgentLogId(validatedAgentName));
                 return Ok();
             }
             finally
@@ -348,11 +363,11 @@ namespace slskd.Relay
             }
 
             Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Program.AppName));
-            var temp = Path.Combine(Path.GetTempPath(), Program.AppName, $"share_{validatedAgentName}_{Path.GetRandomFileName()}.db");
+            var temp = Path.Combine(Path.GetTempPath(), Program.AppName, $"share_{GetAgentFileToken(validatedAgentName)}_{Path.GetRandomFileName()}.db");
 
             try
             {
-                Log.Information("Agent {Agent} authenticated for token {Token}. Beginning download of shares to {Filename}", validatedAgentName, guid, temp);
+                Log.Information("Agent {Agent} authenticated for token {Token}. Beginning download of shares to {Filename}", GetAgentLogId(validatedAgentName), guid, temp);
 
                 var sw = new Stopwatch();
                 sw.Start();
@@ -364,7 +379,7 @@ namespace slskd.Relay
 
                 sw.Stop();
 
-                Log.Information("Download of shares from {Agent} ({Token}) complete ({Size} in {Duration}ms)", validatedAgentName, guid, ((double)inputStream.Length).SizeSuffix(), sw.ElapsedMilliseconds);
+                Log.Information("Download of shares from {Agent} ({Token}) complete ({Size} in {Duration}ms)", GetAgentLogId(validatedAgentName), guid, ((double)inputStream.Length).SizeSuffix(), sw.ElapsedMilliseconds);
 
                 await Relay.HandleShareUploadAsync(validatedAgentName, id: guid, shares, temp);
 
