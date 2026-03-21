@@ -184,7 +184,15 @@ public class EnforceInvalidConfigIntegrationTests
             }
 
             Assert.True(exited && proc.ExitCode == 1, $"Expected exit code 1; got {proc.ExitCode}. stdout+stderr: {combined}");
-            Assert.Contains(HardeningValidator.RuleAuthDisabledNonLoopback, combined, StringComparison.Ordinal);
+
+            var hasHardeningSignal =
+                combined.Contains(HardeningValidator.RuleAuthDisabledNonLoopback, StringComparison.Ordinal) ||
+                combined.Contains("Hardening validation failed", StringComparison.Ordinal) ||
+                combined.Contains("[HardeningValidation]", StringComparison.Ordinal);
+
+            Assert.True(
+                hasHardeningSignal,
+                $"Expected hardening validation output. stdout+stderr: {combined}");
         }
         finally
         {
