@@ -230,21 +230,32 @@ public class CoverTrafficGeneratorTests : IDisposable
     [Fact]
     public async Task GenerateCoverTrafficAsync_GeneratesMessagesWithCorrectSize()
     {
-        // Arrange - GetNextInterval has 1s minimum, so we need to wait ~1s per message
+        // Arrange - collect the first emitted message, then cancel explicitly.
         var generator = new CoverTrafficGenerator(_loggerMock.Object, 0.01, 0, 128);
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource();
         var messages = new List<byte[]>();
 
-        // Act - collect at least 1 message (need ~1s for first, ~2s for 2nd, etc.)
-        await foreach (var message in generator.GenerateCoverTrafficAsync(cts.Token))
+        // Act
+        var generationTask = Task.Run(async () =>
         {
-            messages.Add(message);
-            if (messages.Count >= 2)
-                break;
+            await foreach (var message in generator.GenerateCoverTrafficAsync(cts.Token))
+            {
+                messages.Add(message);
+                cts.Cancel();
+            }
+        });
+
+        try
+        {
+            await generationTask;
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected after the first message is captured.
         }
 
         // Assert
-        Assert.True(messages.Count >= 1, "Should generate at least one message within 5s");
+        Assert.Single(messages);
         foreach (var message in messages)
         {
             Assert.Equal(128, message.Length);
@@ -280,5 +291,4 @@ public class CoverTrafficGeneratorTests : IDisposable
         Assert.True(messageCount < 5, "Should generate fewer messages when activity is recorded");
     }
 }
-
 

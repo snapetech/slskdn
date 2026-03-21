@@ -738,3 +738,6 @@
 - [x] Fix residual `.82` release-gate timing flakes
   - Status: done
   - Notes: Reworked the remaining timing-sensitive `AsyncRulesTests` path to use deterministic task completion on cancellation and widened the `SecurityUtils.RandomDelayAsync` upper sanity bound so CI scheduler latency no longer fails the stable gate.
+- [x] Fix residual `.83` cover-traffic async-enumerable test flake
+  - Status: done
+  - Notes: Reworked `CoverTrafficGeneratorTests.GenerateCoverTrafficAsync_GeneratesMessagesWithCorrectSize` so it cancels after collecting the first message instead of using a timeout as the normal completion path; validated with the focused mesh/privacy suite, the full release gate, and `./bin/lint`.
