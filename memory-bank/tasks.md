@@ -17,6 +17,7 @@
 - 2. Cover those outputs with direct API/service tests before spending more time on UI polish.
 - 3. Limit Discovery Graph work to release-visible wins: dedicated atlas, stronger explanations, and seed/navigation coherence.
 - 4. Treat repo-wide lint debt as separate from the SongID / Discovery Graph release path unless explicitly pulled in.
+- 5. Keep release-gate regression tests deterministic; avoid real-time cancellation races that pass locally and fail on GitHub runners.
 
 - [ ] **T-919**: Discovery Graph / Constellation substrate
  - Status: in progress

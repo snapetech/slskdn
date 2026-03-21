@@ -59,6 +59,23 @@
 - Push the relay anonymization follow-up to `master`.
 - Re-check open CodeQL alerts and dismiss the remaining scanner heuristics in relay/hashdb/trust logging if GitHub still keeps them open after the new analysis.
 
+## 2026-03-21 17:06 - Release-gate flaky test stabilization after `.79` failure
+
+### Completed
+- Investigated failed stable run `build-main-0.24.5-slskdn.79` and confirmed the product build was fine; the only break was the release gate in job `Build`.
+- Traced the failure to two scheduler-sensitive unit tests: `MeshSearchRpcHandlerTests.HandleAsync_TimeCap_RespectsCancellation` and `AsyncRulesTests.ValidateCancellationHandlingAsync_WithProperCancellation_ReturnsTrue`.
+- Rewrote both tests to use deterministic cancellation behavior instead of tiny real-time windows, specifically pre-cancelled tokens and infinite waits cancelled by timeout.
+- Documented the bug pattern immediately in `memory-bank/decisions/adr-0001-known-gotchas.md` so future timing-based regressions do not reuse 1 ms cancellation windows.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~MeshSearchRpcHandlerTests|FullyQualifiedName~AsyncRulesTests"` passed (13 tests).
+- `dotnet build src/slskd/slskd.csproj --configuration Release` passed.
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Push the flaky-test fix to `master`.
+- Replay the stable build from the fixed head with the next tag.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

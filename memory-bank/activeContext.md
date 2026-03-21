@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Push the relay anonymization follow-up, then drive the remaining GitHub CodeQL alerts to zero by combining re-analysis with justified dismissals
+- **Current Task**: Push the flaky release-gate test fix, replay the failed `.79` stable build, and confirm the release path is green again
 - **Branch**: `security-fixes-master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -103,11 +103,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the relay anonymization follow-up from `security-fixes-master` to `origin/master`.
-2. Watch the next CodeQL run and confirm the relay cleartext bucket drops out.
-3. Dismiss the remaining scanner heuristics if GitHub still keeps open the relay multipart guards, admin-only read-only HashDb profiling, or the trust-tier enum logging.
-4. Hand the tester the exact green `.78` package/build for `/slskd` verification.
-5. Extend the release gate over time with one added check per confirmed regression class, starting with a hosted subpath smoke test and then broader security-cluster coverage.
+1. Push the flaky cancellation-test fix from `security-fixes-master` to `origin/master`.
+2. Cut replay tag `build-main-0.24.5-slskdn.80` from the fixed head and watch the new run.
+3. Confirm the release gate clears in GitHub Actions and that the rest of the stable release path starts.
+4. Keep extending the release gate with deterministic regression coverage instead of scheduler-sensitive timing windows.
+5. Hand the tester the exact next green stable package/build for `/slskd` verification.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
