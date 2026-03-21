@@ -243,6 +243,46 @@ var result = await AsyncRules.ValidateCancellationHandlingAsync(
 
 **Why This Keeps Happening**: Tests that rely on "cancel within 1ms" or "wake up after 100ms" are really testing scheduler luck, not code behavior. Make cancellation deterministic with pre-cancelled tokens or infinite waits that must be interrupted by cancellation.
 
+### 0e2. Do Not Mark Internal Mutation APIs As `AllowAnonymous` Just Because They Feel "Protocol-Like"
+
+**The Bug**: A broad `// PR-02: intended-public` pattern was applied to controllers that mutate local state or trigger expensive work, including analyzer migrations, VirtualSoulfind queue operations, MediaCore registry writes/imports, stats resets, and pod control-plane actions. That exposed internal admin/UI surfaces to unauthenticated callers.
+
+**Files Affected**:
+- `src/slskd/Audio/API/AnalyzerMigrationController.cs`
+- `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+- `src/slskd/MediaCore/API/Controllers/ContentDescriptorPublisherController.cs`
+- `src/slskd/MediaCore/API/Controllers/ContentIdController.cs`
+- `src/slskd/MediaCore/API/Controllers/IpldController.cs`
+- `src/slskd/MediaCore/API/Controllers/MediaCoreStatsController.cs`
+- `src/slskd/MediaCore/API/Controllers/MetadataPortabilityController.cs`
+- `src/slskd/PodCore/API/Controllers/PodJoinLeaveController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageRoutingController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageSigningController.cs`
+
+**Wrong**:
+```csharp
+[ApiController]
+[AllowAnonymous] // PR-02: intended-public
+[ValidateCsrfForCookiesOnly]
+public class ContentIdController : ControllerBase
+{
+    [HttpPost("register")]
+    public Task<IActionResult> Register(...)
+```
+
+**Correct**:
+```csharp
+[ApiController]
+[Authorize(Policy = AuthPolicy.Any)]
+[ValidateCsrfForCookiesOnly]
+public class ContentIdController : ControllerBase
+{
+    [HttpPost("register")]
+    public Task<IActionResult> Register(...)
+```
+
+**Why This Keeps Happening**: "Public data model" and "public unauthenticated endpoint" are not the same thing. Once `[AllowAnonymous]` is placed at class scope, every `POST`/`PUT`/`PATCH`/`DELETE` action under that controller becomes reachable unless explicitly re-protected.
+
 ### 0f. Fix Every Release Workflow and Checked-In Package Template When Asset Names Change
 
 **The Bug**: The main tag workflow was corrected to publish `slskdn-main-*.zip`, but `release-packages.yml` still waited for the old `slskdn-<tag>-linux-x64.zip` pattern and the checked-in Chocolatey templates were still pinned to `0.24.1-slskdn.40`, leaving stable-package automation and manual package publishing stale.
