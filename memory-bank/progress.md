@@ -76,6 +76,24 @@
 - Push the flaky-test fix to `master`.
 - Replay the stable build from the fixed head with the next tag.
 
+## 2026-03-21 17:54 - Security audit auth-boundary hardening
+
+### Completed
+- Performed a red-team style pass over the current anonymous controller surface after confirming local package audits were clean (`dotnet list ... --vulnerable` and `npm audit` both came back with no current package advisories).
+- Identified and closed the highest-risk authorization gaps caused by the broad `// PR-02: intended-public` pattern.
+- Switched the following mutation/control-plane controllers from class-level anonymous access to `Authorize(Policy = AuthPolicy.Any)`: analyzer migration, VirtualSoulfind v2, MediaCore publishing/portability/content-id/IPLD/stats/perceptual-hash/fuzzy-match, and pod join-leave/message-routing/message-signing.
+- Added a focused regression test (`AnonymousControlPlaneControllerAuthTests`) that reflects over the hardened controllers and fails if they ever drift back to `AllowAnonymous`.
+- Documented the root cause immediately in `memory-bank/decisions/adr-0001-known-gotchas.md`.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~AnonymousControlPlaneControllerAuthTests|FullyQualifiedName~PodMembershipControllerTests|FullyQualifiedName~VirtualSoulfindV2ControllerTests"` passed (25 tests).
+- `dotnet build src/slskd/slskd.csproj --configuration Release` passed.
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Push the auth-boundary hardening to `master`.
+- Do a second-pass review of the still-anonymous read/protocol controllers and either justify them or narrow them further action-by-action.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

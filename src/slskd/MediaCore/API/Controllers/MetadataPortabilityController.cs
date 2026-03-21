@@ -18,7 +18,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/mediacore/portability")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class MetadataPortabilityController : ControllerBase
 {

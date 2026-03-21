@@ -19,7 +19,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/mediacore/fuzzymatch")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class FuzzyMatcherController : ControllerBase
 {

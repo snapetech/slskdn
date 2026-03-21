@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Push the flaky release-gate test fix, replay the failed `.79` stable build, and confirm the release path is green again
+- **Current Task**: Close the anonymous control-plane API exposures found in the security audit, verify the auth boundary with regression tests, and note any intentionally-public leftovers for a separate review
 - **Branch**: `security-fixes-master`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -103,10 +103,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the flaky cancellation-test fix from `security-fixes-master` to `origin/master`.
-2. Cut replay tag `build-main-0.24.5-slskdn.80` from the fixed head and watch the new run.
-3. Confirm the release gate clears in GitHub Actions and that the rest of the stable release path starts.
-4. Keep extending the release gate with deterministic regression coverage instead of scheduler-sensitive timing windows.
+1. Push the anonymous control-plane auth hardening to `origin/master`.
+2. Review the still-anonymous read/protocol endpoints (`DescriptorRetriever`, `Canonical`, `Dedupe`, pod discovery/DHT, etc.) one by one instead of using blanket `intended-public` conventions.
+3. Keep adding auth-attribute regression tests for any controller that owns mutation, queueing, or expensive background work.
+4. Finish the `.80` release watch once the current stable replay clears.
 5. Hand the tester the exact next green stable package/build for `/slskd` verification.
 
 4. **Recent completions** (2026-01-27):

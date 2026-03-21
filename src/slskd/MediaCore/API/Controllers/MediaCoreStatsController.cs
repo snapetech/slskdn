@@ -17,7 +17,7 @@ using slskd.Core.Security;
 /// </summary>
 [Route("api/v0/mediacore/stats")]
 [ApiController]
-[AllowAnonymous] // PR-02: intended-public
+[Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 [IgnoreAntiforgeryToken] // Explicitly ignore built-in antiforgery for GET requests
 public class MediaCoreStatsController : ControllerBase

@@ -40,7 +40,7 @@ namespace slskd.VirtualSoulfind.v2.API
     /// </summary>
     [ApiController]
     [Route("api/v1/virtualsoulfind/v2")]
-    [AllowAnonymous] // PR-02: intended-public
+    [Authorize(Policy = AuthPolicy.Any)]
     [Produces("application/json")]
     [Consumes("application/json")]
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
