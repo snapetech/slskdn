@@ -447,7 +447,7 @@ namespace slskd
             catch (Exception ex)
             {
                 Log.Information($"Filesystem exception: {ex.Message}");
-                return;
+                Exit(1);
             }
 
             // load and validate the configuration
@@ -484,13 +484,13 @@ namespace slskd
                 if (!OptionsAtStartup.TryValidate(out var result))
                 {
                     Log.Information(result.GetResultView());
-                    return;
+                    Exit(1);
                 }
             }
             catch (Exception ex)
             {
                 Log.Information($"Invalid configuration: {(!OptionsAtStartup.Debug ? ex : ex.Message)}");
-                return;
+                Exit(1);
             }
 
             IsRelayAgent = OptionsAtStartup.Relay.Enabled && OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>() == RelayMode.Agent;

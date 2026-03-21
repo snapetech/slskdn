@@ -52,6 +52,50 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
+
+**The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
+
+**Files Affected**:
+- `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+await File.WriteAllTextAsync(yml, """
+    web:
+      enforceSecurity: true
+""");
+```
+
+```csharp
+if (!OptionsAtStartup.TryValidate(out var result))
+{
+    Log.Information(result.GetResultView());
+    return;
+}
+```
+
+**Correct**:
+```csharp
+Directory.CreateDirectory(Path.Combine(tempDir, "wwwroot"));
+await File.WriteAllTextAsync(yml, """
+    web:
+      contentPath: wwwroot
+      enforceSecurity: true
+""");
+```
+
+```csharp
+if (!OptionsAtStartup.TryValidate(out var result))
+{
+    Log.Information(result.GetResultView());
+    Exit(1);
+}
+```
+
+**Why This Keeps Happening**: Startup has more than one validation layer. Tests that target a later validation stage can be accidentally preempted by unrelated defaults unless the temporary environment satisfies the earlier base constraints first. When startup does reject config, it must terminate non-zero or release-gate tests will treat a real config failure as a false success.
+
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 
 **The Bug**: `SongIdService` treated `TrackTarget` like `AlbumTarget` and tried to read `MusicBrainzArtistId` from it, which broke the build because `TrackTarget` does not expose that property.
