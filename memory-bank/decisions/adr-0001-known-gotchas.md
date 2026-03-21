@@ -271,6 +271,25 @@ var completedTask = await Task.WhenAny(operationTask, Task.Delay(gracePeriod));
 
 **Why This Keeps Happening**: Cancellation is not an instantaneous event. A validator that uses one narrow race window is still testing scheduler timing rather than cancellation handling. Cancel explicitly, then give the operation a bounded grace period to observe the token and unwind.
 
+### 0e1b. Timing-Sanity Tests Must Avoid Precise Upper Bounds On Loaded CI Runners
+
+**The Bug**: `SecurityUtilsTests.RandomDelayAsync_ValidRange_CompletesWithinExpectedTime` still used an upper bound that looked broad locally but was too tight for a loaded GitHub runner, where a `10-50ms` delay measured just over 2 seconds and failed the release gate.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Common/Security/SecurityUtilsTests.cs`
+
+**Wrong**:
+```csharp
+Assert.True(actualDelay <= maxDelay + 1500, $"Delay too long: {actualDelay}ms");
+```
+
+**Correct**:
+```csharp
+Assert.True(actualDelay <= maxDelay + 5000, $"Delay too long: {actualDelay}ms");
+```
+
+**Why This Keeps Happening**: `Task.Delay` timing in CI is dominated by scheduler availability, not just requested delay length. These tests should verify the code is not obviously broken, not enforce a pseudo-benchmark ceiling.
+
 ### 0e2. Do Not Mark Internal Mutation APIs As `AllowAnonymous` Just Because They Feel "Protocol-Like"
 
 **The Bug**: A broad `// PR-02: intended-public` pattern was applied to controllers that mutate local state or trigger expensive work, including analyzer migrations, VirtualSoulfind queue operations, MediaCore registry writes/imports, stats resets, and pod control-plane actions. That exposed internal admin/UI surfaces to unauthenticated callers.
