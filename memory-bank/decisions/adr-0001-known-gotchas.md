@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xBD. Harness, Batch, And Utility Result Records Must Not Echo Raw Exception Text
+
+**The Bug**: non-controller utility paths such as regression harness results, auto-replace batch details, and dump helper tuples were still copying `ex.Message` into observable result fields. Those surfaces are easy to mistake for “internal diagnostics,” but they still become user-visible or test-visible runtime contracts.
+
+**Files Affected**:
+- `src/slskd/Common/CodeQuality/RegressionHarness.cs`
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+- `src/slskd/Common/Dumper.cs`
+
+**Wrong**:
+```csharp
+detail.Error = ex.Message;
+result.ErrorMessage = ex.Message;
+return (false, ex.Message, null);
+```
+
+**Correct**:
+```csharp
+detail.Error = "Auto-replace processing failed";
+result.ErrorMessage = "Benchmark execution failed";
+return (false, "Failed to create dump", null);
+```
+
+**Why This Keeps Happening**: helper/batch/harness code often treats returned error strings as a debugging convenience rather than a stable contract. But once a caught exception is converted into a DTO, tuple, or detail record, that text becomes externally observable behavior. Log the exception privately and keep the returned message stable and sanitized.
+
 ### 0xBC. Background Protocol And Health Surfaces Need Sanitized Runtime Text Too
 
 **The Bug**: long-lived protocol and health helpers such as bridge proxy sessions, mesh health checks, and circuit-hop status were still embedding raw exception text into protocol error payloads or status fields. That leaked runtime/transport detail through background protocol surfaces even though higher-level APIs had already been sanitized.
