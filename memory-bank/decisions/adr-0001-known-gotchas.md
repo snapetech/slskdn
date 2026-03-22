@@ -335,6 +335,25 @@ if (content == null ||
 
 **Why This Keeps Happening**: DTO defaults are convenient for local generation but dangerous for remote parsing. When a protocol object has defaults like `"slskdn"` or `"1.0.0"`, deserialization can hide missing fields unless the parser explicitly validates the post-deserialize object. Remote capability documents need strict field validation after JSON parse, not just successful deserialization.
 
+### 0x12. Pending Mesh RPC Correlation Keys Must Include The Remote Peer, Not Just The Payload Key
+
+**The Bug**: Mesh hash lookups tracked pending requests only by `flacKey`. Consensus queries fan out to multiple peers in parallel, so the second request for the same key collided with the first and either failed immediately or delivered the wrong response.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+var requestId = flacKey;
+```
+
+**Correct**:
+```csharp
+var requestId = $"{username}:{flacKey}";
+```
+
+**Why This Keeps Happening**: It is easy to choose the “business identifier” as the correlation key and forget that the same business item may be requested concurrently from multiple remotes. For any fan-out network query, the correlation key must include enough dimensions to be unique per in-flight request, typically peer plus payload key.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
