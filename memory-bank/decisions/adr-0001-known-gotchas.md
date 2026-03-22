@@ -271,6 +271,42 @@ return new MultiSourcePlanner(..., root.DefaultMode);
 
 **Why This Keeps Happening**: nested option objects in the main `Options` model look like ordinary `IOptions<T>` registrations, but `AddOptions<T>()` alone does not map them from the already-bound parent object. That leaves the feature "configured" on paper while runtime services silently use library defaults. When a subsystem derives its settings from `Options.SomeNestedObject`, explicitly bridge that nested object into the option type or constructor that the subsystem actually consumes.
 
+### 0x9G. VirtualSoulfind v2 Planner And Resolver Must Respect `MeshOnly`, `FallbackMode`, And Step `Timeout`
+
+**The Bug**: `MultiSourcePlanner` advertised `MeshOnly` but still allowed any non-Soulseek backend, including HTTP, LAN, and Torrent. Separately, `SimpleResolver` ignored both `PlanStep.FallbackMode` and `PlanStep.Timeout`, so "fan-out" steps still ran sequentially and step-level timeouts were never applied.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Planning/MultiSourcePlanner.cs`
+- `src/slskd/VirtualSoulfind/v2/Resolution/SimpleResolver.cs`
+
+**Wrong**:
+```csharp
+case PlanningMode.MeshOnly:
+    return c.Backend != ContentBackendType.Soulseek;
+...
+foreach (var candidate in step.Candidates.Take(step.MaxParallel))
+{
+    ...
+}
+```
+
+**Correct**:
+```csharp
+case PlanningMode.MeshOnly:
+    return c.Backend == ContentBackendType.NativeMesh ||
+        c.Backend == ContentBackendType.MeshDht;
+...
+using var stepTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+stepTimeoutCts.CancelAfter(step.Timeout);
+...
+if (step.FallbackMode == PlanStepFallbackMode.FanOut)
+{
+    return await ExecuteFanOutStepAsync(...);
+}
+```
+
+**Why This Keeps Happening**: planners and resolvers often get implemented in separate passes. The planner accumulates richer semantics like "mesh only", "fan out", and per-step budgets, but the executor still reflects an earlier simpler model. That mismatch does not crash; it just makes the system quietly violate its own plan contract. Whenever a plan type gains mode or execution semantics, the resolver must be updated in the same change set.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
