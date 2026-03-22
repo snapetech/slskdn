@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xBB. Mesh And Swarm Status DTOs Must Not Copy Raw Exception Text Into Runtime Error Fields
+
+**The Bug**: mesh-fetch, mesh-sync, and swarm orchestration code already converted exceptions into status/result objects, but some of those runtime DTOs still stored `ex.Message` directly. That leaked transport and filesystem details through streaming, mesh, and swarm status surfaces even after controller hardening.
+
+**Files Affected**:
+- `src/slskd/Streaming/MeshContentFetcher.cs`
+- `src/slskd/Mesh/MeshSyncService.cs`
+- `src/slskd/Swarm/SwarmDownloadOrchestrator.cs`
+
+**Wrong**:
+```csharp
+Error = ex.Message;
+result.Error = ex.Message;
+status.Error = ex.Message;
+```
+
+**Correct**:
+```csharp
+Error = "Mesh content fetch failed";
+result.Error = "Mesh sync failed";
+status.Error = "Swarm download failed";
+```
+
+**Why This Keeps Happening**: service-layer DTOs feel “internal” because they are not controller `ProblemDetails`, but they are still observable contracts. If a path catches and converts an exception into a status/result object, treat that field as public-facing state: log the exception privately and store a stable sanitized error string instead.
+
 ### 0xBA. Background Scan And Verification Result Records Must Not Persist Raw Exception Text
 
 **The Bug**: long-running scan/verification helpers already converted failures into status records or result DTOs, but some of them still copied `ex.Message` straight into persisted scan state, issue reasons, or failed-source responses. That leaked filesystem and transfer internals through otherwise stable runtime/status contracts.
@@ -12275,3 +12300,26 @@ ErrorMessage = "Tunnel error"
 ```
 
 **Why This Keeps Happening**: dependency and transport failures feel like useful context to bubble up, especially in peer-to-peer code. But once that text crosses a mesh boundary, it becomes untrusted public output. Preserve the detail in logs only; mesh replies should use stable, coarse-grained failure strings.
+
+### 0k79. Policy/Enforcer Wrapper Results Still Cross Trust Boundaries
+
+**The Bug**: policy and flow-enforcement helpers often look like purely internal orchestration code, so exception text gets copied into result wrappers like `BridgeOperationResult`. But those wrappers are consumed directly by bridge APIs and higher-level workflows, so `ex.Message` there still leaks implementation detail.
+
+**Files Affected**:
+- `src/slskd/Mesh/Realm/Bridge/BridgeFlowEnforcer.cs`
+
+**Wrong**:
+```csharp
+return BridgeOperationResult.Failed(ex.Message);
+```
+
+**Correct**:
+```csharp
+return BridgeOperationResult.Failed("ActivityPub read failed");
+```
+
+```csharp
+return BridgeOperationResult.Failed("Metadata read failed");
+```
+
+**Why This Keeps Happening**: wrapper layers feel “one step removed” from the response boundary, especially when they only return domain result objects instead of MVC responses. Treat any failure string on a shared result type as potentially user-visible unless you have proven it stays internal.
