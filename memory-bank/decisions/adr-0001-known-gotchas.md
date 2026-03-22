@@ -112,6 +112,8 @@ _ = ObserveBackgroundTaskAsync(
 - `src/slskd/SocialFederation/API/ActivityPubController.cs`
 - `src/slskd/SongID/SongIdService.cs`
 - `src/slskd/Mesh/Realm/Bridge/ActivityPubBridge.cs`
+- `tests/slskd.Tests.Unit/SocialFederation/FederationServiceTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/Realm/Bridge/ActivityPubBridgeTests.cs`
 
 **Wrong**:
 ```csharp
@@ -127,7 +129,7 @@ return Task.FromResult<(bool Processed, string? Error)>((false, "Missing activit
 return BridgeOperationResult.Failed("Failed to follow remote actor.");
 ```
 
-**Why This Keeps Happening**: small refactors often change type names, helper factories, and nullability contracts at the same time, but the import list, helper invocations, and generic return expressions are easy to leave behind. When changing shared result helpers or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit instead of assuming local compile coverage will catch every stale call.
+**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, and nullability contracts at the same time, but the import list, helper invocations, generic return expressions, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit instead of assuming local compile coverage will catch every stale call.
 
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
