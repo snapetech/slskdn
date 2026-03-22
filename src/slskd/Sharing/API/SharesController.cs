@@ -601,7 +601,7 @@ public class SharesController : ControllerBase
                 catch (Exception ex)
                 {
                     _log.LogError(ex, "[Backfill] Failed to enqueue downloads from {Owner}", ownerUsername);
-                    return StatusCode(500, $"Failed to enqueue downloads: {ex.Message}");
+                    return StatusCode(500, "Failed to enqueue downloads");
                 }
             }
         }

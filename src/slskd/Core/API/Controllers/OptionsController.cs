@@ -110,8 +110,8 @@ namespace slskd.Core.API
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to apply options patch: {Message}", ex.Message);
-                return StatusCode(500, $"Failed to apply options patch: {ex.Message}");
+                Log.Error(ex, "Failed to apply options patch");
+                return StatusCode(500, "Failed to apply options patch");
             }
         }
 
@@ -270,13 +270,7 @@ namespace slskd.Core.API
             catch (Exception ex)
             {
                 Log.Warning(ex, "Configuration validation failed");
-
-                error = ex.Message;
-
-                if (ex.InnerException != null)
-                {
-                    error += $": {ex.InnerException.Message}";
-                }
+                error = "Invalid YAML configuration";
 
                 return false;
             }

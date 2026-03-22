@@ -84,6 +84,44 @@ public class PortForwardingControllerTests
         Assert.Contains("Failed to start port forwarding", error.Value?.ToString() ?? string.Empty);
     }
 
+    [Fact]
+    public async Task StartForwarding_WhenPortAlreadyForwarded_DoesNotLeakExceptionMessage()
+    {
+        var forwarder = new LocalPortForwarder(
+            NullLogger<LocalPortForwarder>.Instance,
+            Mock.Of<IMeshServiceClient>());
+        var controller = new PortForwardingController(forwarder);
+
+        try
+        {
+            var first = await controller.StartForwarding(new StartPortForwardingRequest
+            {
+                LocalPort = 12346,
+                PodId = "pod-1",
+                DestinationHost = "example.com",
+                DestinationPort = 80
+            });
+            Assert.IsType<OkObjectResult>(first);
+
+            var second = await controller.StartForwarding(new StartPortForwardingRequest
+            {
+                LocalPort = 12346,
+                PodId = "pod-1",
+                DestinationHost = "example.com",
+                DestinationPort = 80
+            });
+
+            var conflict = Assert.IsType<ConflictObjectResult>(second);
+            Assert.DoesNotContain("already being forwarded", conflict.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Port forwarding is already configured for this local port", conflict.Value?.ToString() ?? string.Empty);
+        }
+        finally
+        {
+            await forwarder.StopForwardingAsync(12346);
+            forwarder.Dispose();
+        }
+    }
+
     private static PortForwardingController CreateController()
     {
         var forwarder = new LocalPortForwarder(

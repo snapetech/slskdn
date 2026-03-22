@@ -75,9 +75,9 @@ public class PortForwardingController : ControllerBase
 
             return Ok(new { Message = $"Port forwarding started on local port {request.LocalPort}" });
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return Conflict(new { Error = ex.Message });
+            return Conflict(new { Error = "Port forwarding is already configured for this local port" });
         }
         catch (Exception)
         {

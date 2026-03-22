@@ -5634,3 +5634,13 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `d85c4684`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 23:05:20Z
+
+- Folded the final dirty spillover from the same error-contract family into a clean last checkpoint:
+  - fixed `PortForwardingController` so duplicate-forward conflicts return a stable message instead of surfacing the underlying `InvalidOperationException`
+  - fixed `OptionsController` so malformed YAML validation returns a stable validation error instead of echoing parser exception text
+  - fixed `SharesController` share-backfill download enqueue failures so they return the stable `Failed to enqueue downloads` contract instead of including the underlying exception
+  - added focused regressions for those duplicate-forward, YAML-validate, and share-backfill failure paths
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

@@ -27,7 +27,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers, identity/search, Solid, Users, and PodCore validation spillover into the same working sweep.
+  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers, identity/search, Solid, Users, PodCore, and final port-forward/options/share spillover into the same working sweep.
   - Normalized additional controller behavior:
     - `FilesController` now validates encoded route segments before Base64 decode/path resolution and returns explicit `400`s for invalid file/directory paths
     - `RoomsController` and `ConversationsController` now trim room/user/message inputs and reject blank or invalid identifiers before tracker/service dispatch
@@ -36,7 +36,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - maintenance/debug helpers in native library lookup, port forwarding, HashDb optimization, mesh NAT detection, transfer queue operations, and multi-source search/download now return sanitized `500` contracts instead of raw exception text
     - `ContactsController` and `SearchesController` now return stable sanitized invite/search failure contracts instead of exposing decode/start exceptions
     - `SolidController`, `UsersController`, `PodContentController`, `PodChannelController`, and native `PodsController` now stop surfacing raw policy/offline/service-validation exception text
-  - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, the maintenance/status leak cleanup across native/hashdb/mesh/transfers, the identity/search helper cleanup, and the final Solid/users/PodCore error-contract fixes.
+    - `PortForwardingController`, `OptionsController`, and `SharesController` now return stable duplicate-forward/YAML-validation/download-enqueue error contracts instead of surfacing underlying exception text
+  - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, the maintenance/status leak cleanup across native/hashdb/mesh/transfers, the identity/search helper cleanup, the Solid/users/PodCore error-contract fixes, and the final port-forward/options/share spillover.
   - Validation has still not been run in this pass.
 
 ---

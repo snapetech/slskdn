@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Sanitize final port-forwarding, options, and share-backfill error contracts
+  - Status: done
+  - Notes: Replaced the remaining leaked conflict/parser/download-enqueue messages in `PortForwardingController`, `OptionsController`, and `SharesController` with stable contracts and added focused regressions for duplicate forward rules, malformed YAML validation, and share-backfill enqueue failures.
 - [x] Sanitize Solid, user-offline, and PodCore validation error contracts
   - Status: done
   - Notes: Removed raw policy/exception detail leakage from Solid WebID resolution, sanitized offline-user `404` responses in `UsersController`, and replaced service-thrown argument/invalid-operation text with stable bad-request contracts in Pod content/channel/native pod create paths; added focused regressions for those error contracts.
