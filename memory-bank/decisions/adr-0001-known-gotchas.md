@@ -334,6 +334,46 @@ ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type)
 
 **Why This Keeps Happening**: Once one subsystem adds normalization for mixed ID schemes, every other filter path has to use the same rule set. Query helpers are especially easy to miss because they often start as “cache-only demos” and later become real API behavior.
 
+### 0x16. Fuzzy-Match Candidate Selection Must Query Normalized Domains, Not Raw Content-ID Tokens
+
+**The Bug**: The fuzzy-match controller parsed the target content ID and then queried candidates by `parsed.Domain`. For IDs like `content:mb:recording:*`, that meant it asked the registry for `mb` candidates instead of `audio`, even though the rest of MediaCore had already normalized that scheme.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/FuzzyMatcherController.cs`
+
+**Wrong**:
+```csharp
+var candidates = await _registry.FindByDomainAsync(parsed.Domain, cancellationToken);
+```
+
+**Correct**:
+```csharp
+var candidates = await _registry.FindByDomainAsync(
+    ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type),
+    cancellationToken);
+```
+
+**Why This Keeps Happening**: API/controller glue often re-derives simple filters from parsed IDs and forgets the normalization rules added deeper in the stack. Once mixed ID schemes exist, every boundary that turns a parsed ID into a query key has to normalize first.
+
+### 0x17. Detached Bridge Progress Loops Must Not Reuse The Request Token That Created The Transfer
+
+**The Bug**: The bridge proxy started its progress-push loop with the same cancellation token used to handle the original download request. Once that request finished, the detached loop could stop immediately even though the transfer and client session were still active.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(() => PushProgressUpdatesAsync(session, ct), CancellationToken.None);
+```
+
+**Correct**:
+```csharp
+_ = Task.Run(() => PushProgressUpdatesAsync(session, CancellationToken.None), CancellationToken.None);
+```
+
+**Why This Keeps Happening**: Request handlers often spin off follow-up work after sending an acknowledgement and accidentally pass the same request token into the detached loop. That token describes the request lifetime, not the transfer/session lifetime. Detached progress or cleanup loops need their own lifetime conditions.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
