@@ -7736,6 +7736,27 @@ var routingCount = memDht.GetNodeCount();
 
 **Why This Keeps Happening**: Diagnostics often feel “out of band,” so it is tempting to call lower-level APIs with placeholder values. Those APIs still enforce their data-shape contracts. For health/stat paths, prefer dedicated count/stat accessors over fabricating sentinel IDs or requests that were never valid for the underlying protocol.
 
+### 0k34. Rate-Or-Time Derived Metrics Need Their Clock Started Explicitly
+
+**The Bug**: `MeshStatsCollector` increments `dhtOperations`, but `dhtOpsTimer` was never started. `GetStatsAsync()` therefore divided by `Elapsed.TotalSeconds == 0` forever and reported `DhtOperationsPerSecond` as zero even while DHT traffic was being recorded.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshStatsCollector.cs`
+
+**Wrong**:
+```csharp
+private readonly Stopwatch dhtOpsTimer = new();
+```
+
+**Correct**:
+```csharp
+private readonly Stopwatch dhtOpsTimer = new();
+...
+dhtOpsTimer.Start();
+```
+
+**Why This Keeps Happening**: Counter plumbing often gets added first, and the timing side of a rate metric is easy to overlook because the code still compiles and returns a value. Any metric derived from elapsed time needs an explicit lifecycle decision for when the clock begins, or the rate silently degenerates to zero.
+
 ---
 
 *Last updated: 2026-03-22*
