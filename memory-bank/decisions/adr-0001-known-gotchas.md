@@ -93,6 +93,35 @@ if (disasterOptions?.Auto != true)
 
 **Why This Keeps Happening**: Nullable option sections and per-property defaults interact badly. It is easy to think “the section is optional, so the feature is opt-in,” but a nested object with permissive defaults flips that behavior as soon as any config binder materializes the object. For legacy fallback paths, keep the entire feature explicit: absent section should be off, present-but-empty section should also be off, and user-facing API text should say this is fallback behavior rather than the normal operating mode.
 
+### 0xA1. Catalogue Link Queries Must Include `VerifiedCopy`, Not Just `InferredTrackId`
+
+**The Bug**: `ICatalogueStore.ListLocalFilesForTrackAsync` claimed it returned local files linked by either `InferredTrackId` or `VerifiedCopy`, but both the SQLite and in-memory implementations only queried `InferredTrackId`. That made reconciliation, gap analysis, and upgrade suggestions quietly miss confirmed local copies and treat complete releases as incomplete.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Catalogue/ICatalogueStore.cs`
+- `src/slskd/VirtualSoulfind/v2/Catalogue/SqliteCatalogueStore.cs`
+- `src/slskd/VirtualSoulfind/v2/Catalogue/InMemoryCatalogueStore.cs`
+- `src/slskd/VirtualSoulfind/v2/Reconciliation/LibraryReconciliationService.cs`
+
+**Wrong**:
+```csharp
+var results = await connection.QueryAsync<LocalFile>(
+    "SELECT * FROM LocalFiles WHERE InferredTrackId = @TrackId",
+    new { TrackId = trackId });
+```
+
+**Correct**:
+```csharp
+var results = await connection.QueryAsync<LocalFile>(
+    @"SELECT DISTINCT lf.*
+      FROM LocalFiles lf
+      LEFT JOIN VerifiedCopies vc ON vc.LocalFileId = lf.LocalFileId
+      WHERE lf.InferredTrackId = @TrackId OR vc.TrackId = @TrackId",
+    new { TrackId = trackId });
+```
+
+**Why This Keeps Happening**: The model docs and the storage query drifted apart. Once a service interface says “local link means inferred or verified,” every implementation and every reconciliation flow must preserve that stronger semantic. Otherwise the system looks healthy in unit-level happy paths but undercounts real local ownership wherever verification is the only link.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
