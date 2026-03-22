@@ -90,6 +90,37 @@ return StatusCode(500, new { error = "Tor connectivity test failed" });
 
 **Why This Keeps Happening**: once the main CRUD/search/status surfaces are hardened, the remaining “utility” controllers look too simple to bother with. They are still public API boundaries. Encoded route segments, free-form chat payloads, and security admin endpoints need the same trim/null/range checks and sanitized error contracts as the rest of the control plane or they become the easiest place for drift to survive.
 
+### 0xAD. Maintenance And Debug Controllers Still Need Sanitized `500` Contracts
+
+**The Bug**: operational helpers like port-forwarding, HashDb optimization, mesh NAT detection, library lookup, and multi-source search kept returning `ex.Message` directly because they were treated as admin/debug surfaces instead of real API contracts. That leaked socket errors, search failures, and internal DB details back to callers even after the main API had been hardened.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `src/slskd/API/Native/PortForwardingController.cs`
+- `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/Mesh/API/MeshController.cs`
+- `src/slskd/Transfers/API/Controllers/TransfersController.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    return StatusCode(500, new { error = "Search failed", message = ex.Message });
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    Log.Warning(ex, "[MultiSource] Search failed");
+    return StatusCode(500, new { error = "Search failed" });
+}
+```
+
+**Why This Keeps Happening**: admin/maintenance endpoints feel “internal”, so they get a pass on error hygiene. They are still exposed over HTTP and often touch the most failure-prone subsystems. If they are not given the same sanitized error contract as user-facing endpoints, they become the place where environment details and internal exception text keep leaking back out.
+
 ### 0xA6. Controller Boundaries Must Normalize Route Keys Before Looking Up Or Mutating Existing State
 
 **The Bug**: Multiple controllers trimmed request bodies but still trusted raw route IDs or ignored them entirely after parsing object IDs. That let whitespace-padded pod/channel/user names fall through to downstream services, and transfer endpoints could mutate or return a transfer by GUID even when the route username did not match the actual transfer owner.
