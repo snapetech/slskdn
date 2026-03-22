@@ -387,6 +387,77 @@ if (!ShouldDeliver(sceneId, messageData))
 ```
 
 **Why This Keeps Happening**: Topic-based systems often mix “message identity” and “topic identity” when the transport is still being prototyped. If subscribers query by topic, publishers must store under that same topic key, and polling implementations need a local fingerprint cache so stable-key retrieval does not duplicate deliveries.
+
+### 0xD. Identity-Carrying Scene Features Must Fail Explicitly When Local Peer Identity Is Missing
+
+**The Bug**: Scene chat and scene announcements accepted a missing local profile by substituting placeholder peer IDs like `local` or all-zero byte hints. That poisoned membership/chat identity and made debugging harder because broken identity looked like valid traffic.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/SceneAnnouncementService.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneChatService.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+string peerId = "local";
+logger.LogWarning(ex, "... using placeholder");
+```
+
+**Correct**:
+```csharp
+var profile = await profileService.GetMyProfileAsync(ct);
+if (string.IsNullOrWhiteSpace(profile.PeerId))
+{
+    throw new InvalidOperationException("Local peer profile does not have a peer ID.");
+}
+```
+
+**Why This Keeps Happening**: Optional constructor dependencies are convenient during bring-up, but once a feature’s payloads include identity, placeholders stop being harmless. If a feature fundamentally depends on the local peer ID, register the dependency as required and fail explicitly instead of publishing corrupted identity data.
+
+### 0xE. Accepting Inbound Federation Activities Requires Real Storage Before Returning Success
+
+**The Bug**: ActivityPub inbox POST/GET endpoints moved from explicit `501` responses toward acceptance, but without a backing store they would either discard validated activities or have nothing real to return. Once the endpoint starts accepting inbound traffic, inbox state must persist locally.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/ActivityPubInboxStore.cs`
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SocialFederation/ServiceCollectionExtensions.cs`
+
+**Wrong**:
+```csharp
+await ProcessActivityAsync(activity, cancellationToken);
+return Accepted();
+```
+
+**Correct**:
+```csharp
+await _inboxStore.StoreAsync(actorName, MapActivity(activity), json, cancellationToken);
+return Accepted();
+```
+
+**Why This Keeps Happening**: Once signature verification and parsing exist, it is tempting to “finish” the endpoint by swapping `501` for `202`. That still loses state. For federated inboxes, successful acceptance must mean the activity is durably stored before the HTTP response is sent.
+
+### 0xF. External Tool Discovery Must Not Assume Sibling Repositories Are The Only Installation Layout
+
+**The Bug**: SongID tool discovery only searched sibling workspaces like `external/audfprint` and `external/Panako`, so installs that provided `audfprint.py` or `panako.jar` through environment variables or normal `PATH` locations were treated as missing features.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+foreach (var root in GetSiblingSearchRoots())
+{
+    var script = Path.Combine(root, "external", "audfprint", "audfprint.py");
+```
+
+**Correct**:
+```csharp
+var configuredScript = Environment.GetEnvironmentVariable("AUDFPRINT_SCRIPT");
+var pathScript = FindNewestFileOnPath("audfprint.py");
+```
+
+**Why This Keeps Happening**: Dev environments often colocate helper repos, so discovery code gets written around that one layout. Production and user machines do not. If a feature relies on external tools, search explicit env-vars first, then normal install locations, and only then fall back to repo-relative development paths.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
