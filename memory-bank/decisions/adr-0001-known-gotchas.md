@@ -8423,6 +8423,68 @@ syncLock.Dispose();
 
 **Why This Keeps Happening**: Event subscriptions and `TaskCompletionSource` maps are easy to treat as “just runtime plumbing,” so disposal gets written around the obvious semaphore or stream and forgets the service’s external hooks. Any long-lived service that both subscribes to external events and tracks pending async replies needs teardown to sever both: unsubscribe first, then fail or cancel all outstanding waiters so callers and GC can move on.
 
+### 0k40. Pod Peer Endpoint Parsers Must Handle Bracketed IPv6 And Schemed Endpoints, Not Just `ip:port`
+
+**The Bug**: `PeerResolutionService.ParseEndpoint(...)` split endpoints on `:`, so bracketed IPv6 metadata such as `[2001:db8::5]:2236` or `tcp://[2001:db8::6]:2237` could never resolve to an `IPEndPoint`. Peers with IPv6-only advertised metadata therefore looked unreachable even though the DHT record was valid.
+
+**Files Affected**:
+- `src/slskd/PodCore/PeerResolutionService.cs`
+
+**Wrong**:
+```csharp
+var parts = endpointString.Replace("udp://", string.Empty).Replace("tcp://", string.Empty).Split(':');
+if (parts.Length == 2 &&
+    IPAddress.TryParse(parts[0], out var ip) &&
+    int.TryParse(parts[1], out var port))
+{
+    return new IPEndPoint(ip, port);
+}
+```
+
+**Correct**:
+```csharp
+if (normalized.StartsWith("[", StringComparison.Ordinal))
+{
+    hostPart = normalized[1..closingBracketIndex];
+    portPart = normalized[(closingBracketIndex + 2)..];
+}
+else
+{
+    var separatorIndex = normalized.LastIndexOf(':');
+    hostPart = normalized[..separatorIndex];
+    portPart = normalized[(separatorIndex + 1)..];
+}
+```
+
+**Why This Keeps Happening**: Endpoint parsers often start life around IPv4 literals and simple `host:port` strings. Once IPv6 or URI-like prefixes arrive, `Split(':')` becomes a latent correctness bug. Any peer or transport metadata parser should treat IPv6 brackets as a first-class format rather than an edge case.
+
+### 0k41. DHT Index Readers Must Deduplicate Repeated IDs Before Returning User-Facing Results
+
+**The Bug**: `PodDiscovery.DiscoverPodsAsync(...)` trusted `PodIndex.PodIds` as unique. If a repeated publisher refresh or merge produced duplicate pod IDs in the shared index, discovery returned the same pod multiple times to callers.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodDiscovery.cs`
+
+**Wrong**:
+```csharp
+results = filtered
+    .OrderByDescending(p => p.PublishedAt)
+    .Take(limit)
+    .ToList();
+```
+
+**Correct**:
+```csharp
+results = filtered
+    .GroupBy(p => p.PodId, StringComparer.Ordinal)
+    .Select(group => group.OrderByDescending(p => p.PublishedAt).First())
+    .OrderByDescending(p => p.PublishedAt)
+    .Take(limit)
+    .ToList();
+```
+
+**Why This Keeps Happening**: Shared DHT indexes are eventually consistent and can accumulate duplicates during concurrent refreshes or imperfect unregister paths. Read-side discovery code should assume index membership is noisy and normalize it before producing user-facing lists.
+
 ---
 
 *Last updated: 2026-03-22*
