@@ -319,6 +319,32 @@ FileSize = meshStatus.FileSize > 0
 
 **Why This Keeps Happening**: Background I/O code often wraps all exceptions in one catch block, which turns normal cancellation into fake errors during shutdown. Progress proxies have a similar drift problem: if they poll a weaker execution status source repeatedly, they can overwrite stronger metadata they already learned earlier. Treat cancellation as control flow, and preserve the best-known transfer metadata instead of letting weaker follow-up reads erase it.
 
+### 0x15. Metadata Portability Must Export Real Retrieved Descriptors, Not Fabricated Mock Metadata
+
+**The Bug**: Metadata export created a fake `ContentDescriptor` for every requested content ID, with invented size, codec, and confidence values, even when no real descriptor could be retrieved. That made exported portability packages look complete while silently shipping fabricated metadata.
+
+**Files Affected**:
+- `src/slskd/MediaCore/MetadataPortability.cs`
+
+**Wrong**:
+```csharp
+var descriptor = await CreateMockDescriptorAsync(contentId, cancellationToken);
+Codec = "mock",
+Confidence = 0.8
+```
+
+**Correct**:
+```csharp
+var retrieval = await _descriptorRetriever.RetrieveAsync(contentId, cancellationToken: cancellationToken);
+if (!retrieval.Found || retrieval.Descriptor == null)
+{
+    continue;
+}
+var descriptor = retrieval.Descriptor;
+```
+
+**Why This Keeps Happening**: Portability/export code is easy to scaffold with fake placeholders because it needs a descriptor-shaped object to serialize. That placeholder then becomes user-visible data and quietly corrupts downstream import/merge behavior. For export surfaces, either serialize the real retrieved descriptor or skip the entry entirely; never fill the gap with invented metadata.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
