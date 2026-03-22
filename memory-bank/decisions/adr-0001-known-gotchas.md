@@ -4482,6 +4482,36 @@ var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PeerReputa
 
 **Why This Keeps Happening**: the JSON-compatibility rule is easy to remember for network payloads and long-lived caches like HashDb, but local encrypted stores are compatibility surfaces too. If the app persists JSON to disk for later reload, read it back with compatibility options instead of assuming the exact current serializer casing forever.
 
+### 0n2. Pre-Cancelled Background Mapping Requests Must Fail Closed Before Flipping Live State
+
+**The Bug**: `ForwarderConnection.MapToStream(...)` marked the connection as stream-mapped and spawned background tasks even when the provided cancellation token was already cancelled. The cleanup path then raced the test and left `IsStreamMapped` briefly or permanently true for a mapping that should never have started.
+
+**Files Affected**:
+- `src/slskd/Common/Security/LocalPortForwarder.cs`
+
+**Wrong**:
+```csharp
+_isStreamMapped = true;
+_streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+_ = Task.Run(() => MapStreamsAsync(localStream, _streamMappingCts.Token), CancellationToken.None);
+```
+
+**Correct**:
+```csharp
+if (cancellationToken.IsCancellationRequested)
+{
+    _isStreamMapped = false;
+    _streamMappingCompletion = TaskCompletionSourceFactory.Completed();
+    return;
+}
+
+_isStreamMapped = true;
+_streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+_ = Task.Run(() => MapStreamsAsync(localStream, _streamMappingCts.Token), CancellationToken.None);
+```
+
+**Why This Keeps Happening**: it is easy to treat cancellation as something the background task will observe later, but lifecycle booleans like `IsStreamMapped` are API-visible state. If the request is already cancelled, do not transition into the active state at all.
+
 ### 0o. Host Shutdown Hooks Need Logged Failures for Non-Cancellation Paths
 
 **The Bug**: A lifecycle cleanup callback swallowed all exceptions when stopping LAN discovery advertising during shutdown, which made shutdown telemetry look successful while resource cleanup could still be failing silently.
