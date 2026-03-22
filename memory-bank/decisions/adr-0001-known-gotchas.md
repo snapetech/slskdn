@@ -220,6 +220,26 @@ mesh_seq_id = hashDb?.CurrentSeqId ?? 0L
 
 **Why This Keeps Happening**: Static placeholder values are easy to leave behind in capability payloads because they don’t crash anything locally. But capability ads are protocol state, not UI sugar. If the app already has the authoritative local value, publish it from the real source instead of freezing the field at a bootstrap default.
 
+### 0x7. Scheduler Candidate Flags Must Use Real Peer Presence, Not Hardcoded `true`
+
+**The Bug**: Backfill candidate generation marked every peer as online regardless of actual Soulseek presence. That distorted scheduler decisions and made offline peers look backfillable.
+
+**Files Affected**:
+- `src/slskd/Backfill/BackfillSchedulerService.cs`
+
+**Wrong**:
+```csharp
+IsPeerOnline = true
+```
+
+**Correct**:
+```csharp
+var userStatus = await soulseekClient.GetUserStatusAsync(entry.PeerId);
+isPeerOnline = !string.Equals(userStatus.Presence.ToString(), "Offline", StringComparison.OrdinalIgnoreCase);
+```
+
+**Why This Keeps Happening**: Boolean readiness flags are easy to stub during scheduler bring-up because they make the queue move. In scheduling code, though, a fake `true` is not harmless; it changes who gets probed and when. If live presence data exists anywhere in the app, use it. Otherwise default to conservative unknown/offline behavior instead of optimistic availability.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
