@@ -21,6 +21,7 @@ The release gate now covers:
 - frontend unit tests
 - frontend production build
 - built-web output verification
+- served-under-subpath web smoke (`/slskd/`)
 - backend unit tests
 - backend smoke/regression tests
 - targeted backend integration smoke tests:
@@ -62,6 +63,7 @@ Run these when the change touches the relevant surface:
 - Frontend hosting/base-path changes:
   - `npm --prefix src/web run build`
   - `node src/web/scripts/verify-build-output.mjs`
+  - `node src/web/scripts/smoke-subpath-build.mjs`
 - Browser/user-journey changes:
   - use the existing Playwright workflow or local E2E smoke
 - Packaging or distro-specific changes:

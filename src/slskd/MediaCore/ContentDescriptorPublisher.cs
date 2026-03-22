@@ -231,7 +231,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 NewVersion: "error",
                 PreviousVersion: "unknown",
                 AppliedUpdates: Array.Empty<string>(),
-                ErrorMessage: ex.Message));
+                ErrorMessage: "Failed to update descriptor"));
         }
     }
 
@@ -308,7 +308,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 Success: false,
                 ContentId: contentId,
                 WasPublished: false,
-                ErrorMessage: ex.Message));
+                ErrorMessage: "Failed to unpublish descriptor"));
         }
     }
 

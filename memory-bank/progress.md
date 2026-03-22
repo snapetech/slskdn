@@ -5768,3 +5768,12 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `bash packaging/scripts/run-release-gate.sh` passed
   - `bash ./bin/lint` passed
+
+## 2026-03-22 17:04 - Subpath-hosted web smoke added to the release gate
+
+- Extended the web release checks beyond static HTML inspection:
+  - added [smoke-subpath-build.mjs](/home/keith/Documents/code/slskdn/src/web/scripts/smoke-subpath-build.mjs)
+  - it serves the built UI under `/slskd/`
+  - it fetches the built page from that mount point and verifies the relative asset URLs actually return their expected content instead of falling back to HTML/404 responses
+- Wired the subpath-hosted smoke into [run-release-gate.sh](/home/keith/Documents/code/slskdn/packaging/scripts/run-release-gate.sh) so packaged-web regressions are caught in the normal release bar rather than as a separate optional check.
+- Updated [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) and [testing-policy.md](/home/keith/Documents/code/slskdn/docs/dev/testing-policy.md) so the documented release gate matches the stronger behavior.

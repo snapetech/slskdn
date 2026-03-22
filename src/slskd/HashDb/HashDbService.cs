@@ -1190,6 +1190,7 @@ namespace slskd.HashDb
                             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                         });
                     }
+
                     log.Debug("[HashDb] Cached lookup result for flac_key: {Key}", flacKey);
                 }
 

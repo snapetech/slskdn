@@ -250,7 +250,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
                 maxDepth = Math.Max(maxDepth, Math.Max(0, path.ContentIds.Count - 1));
             }
 
-            var graphConnectivityRatio = graph.Nodes.Count > 0
+            var rootGraphConnectivityRatio = graph.Nodes.Count > 0
                 ? (double)graph.Nodes.Count(n => n.OutgoingLinks.Count > 0 || n.IncomingLinks.Count > 0) / graph.Nodes.Count
                 : 0.0;
 
@@ -259,10 +259,17 @@ public class MediaCoreStatsService : IMediaCoreStatsService
                 NodeCount: graph.Nodes.Count,
                 LinkCount: graphLinkCount,
                 MaxDepth: maxDepth,
-                ConnectivityRatio: graphConnectivityRatio);
+                ConnectivityRatio: rootGraphConnectivityRatio);
         }
 
         var validation = await _ipldMapper.ValidateLinksAsync(cancellationToken);
+
+        var averageTraversalTime = contentIds.Count > 0
+            ? TimeSpan.FromTicks(totalTraversalTime.Ticks / contentIds.Count)
+            : TimeSpan.Zero;
+        var overallGraphConnectivityRatio = seenNodes.Count > 0
+            ? (double)connectedNodes.Count / seenNodes.Count
+            : 0.0;
 
         return new IpldMappingStats(
             TotalLinks: totalLinks,
@@ -272,12 +279,8 @@ public class MediaCoreStatsService : IMediaCoreStatsService
             GraphsByRoot: graphsByRoot,
             BrokenLinksDetected: validation.BrokenLinks.Count,
             OrphanedNodes: orphanedNodes.Count,
-            AverageTraversalTime: contentIds.Count > 0
-                ? TimeSpan.FromTicks(totalTraversalTime.Ticks / contentIds.Count)
-                : TimeSpan.Zero,
-            GraphConnectivityRatio: seenNodes.Count > 0
-                ? (double)connectedNodes.Count / seenNodes.Count
-                : 0.0);
+            AverageTraversalTime: averageTraversalTime,
+            GraphConnectivityRatio: overallGraphConnectivityRatio);
     }
 
     /// <inheritdoc/>

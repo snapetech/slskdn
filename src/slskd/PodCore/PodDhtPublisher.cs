@@ -117,7 +117,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 DhtKey: dhtKey,
                 PublishedAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to publish pod");
         }
     }
 
@@ -165,7 +165,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 Success: false,
                 PodId: podId,
                 DhtKey: dhtKey,
-                ErrorMessage: ex.Message));
+                ErrorMessage: "Failed to unpublish pod"));
         }
     }
 
@@ -222,7 +222,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 RetrievedAt: DateTimeOffset.UtcNow,
                 ExpiresAt: DateTimeOffset.MinValue,
                 IsValidSignature: false,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to retrieve pod metadata");
         }
     }
 
@@ -294,7 +294,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 PodId: podId,
                 WasRepublished: false,
                 NextRefresh: DateTimeOffset.MinValue,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to refresh pod publication");
         }
     }
 

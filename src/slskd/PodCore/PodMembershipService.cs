@@ -104,7 +104,7 @@ public class PodMembershipService : IPodMembershipService
                 DhtKey: dhtKey,
                 PublishedAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to publish membership");
         }
     }
 
@@ -168,7 +168,7 @@ public class PodMembershipService : IPodMembershipService
                 DhtKey: dhtKey,
                 PublishedAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to remove membership");
         }
     }
 
@@ -228,7 +228,7 @@ public class PodMembershipService : IPodMembershipService
                 RetrievedAt: DateTimeOffset.UtcNow,
                 ExpiresAt: DateTimeOffset.MinValue,
                 IsValidSignature: false,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to retrieve membership");
         }
     }
 

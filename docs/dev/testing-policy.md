@@ -21,6 +21,7 @@ This is the minimum bar for code that is about to ship or gate CI:
 - frontend unit tests (`vitest`)
 - frontend production build
 - built-web output verification for subpath-safe relative assets
+- served-under-subpath web smoke for `web.url_base` deployments
 - backend unit tests
 - backend smoke/regression tests in `tests/slskd.Tests`
 - targeted backend integration smoke in `tests/slskd.Tests.Integration`:

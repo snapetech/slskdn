@@ -32,8 +32,10 @@ namespace slskd.SocialFederation
         /// <summary>
         ///     Initializes a new instance of the <see cref="VirtualSoulfindFederationIntegration"/> class.
         /// </summary>
+        /// <param name="federationOptions">The federation options.</param>
         /// <param name="publishingOptions">The publishing options.</param>
         /// <param name="federationService">The federation service.</param>
+        /// <param name="libraryActorService">The library actor service.</param>
         /// <param name="logger">The logger.</param>
         public VirtualSoulfindFederationIntegration(
             IOptionsMonitor<SocialFederationOptions> federationOptions,

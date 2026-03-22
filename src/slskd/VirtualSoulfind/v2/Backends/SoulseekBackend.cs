@@ -62,6 +62,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
         /// </summary>
         /// <param name="soulseekClient">The Soulseek client.</param>
         /// <param name="safetyLimiter">The safety limiter (H-08).</param>
+        /// <param name="catalogueStore">The catalogue store.</param>
         /// <param name="options">Backend options.</param>
         /// <param name="logger">Logger instance.</param>
         public SoulseekBackend(

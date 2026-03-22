@@ -35,6 +35,7 @@ namespace slskd.SocialFederation.API
         ///     Initializes a new instance of the <see cref="WebFingerController"/> class.
         /// </summary>
         /// <param name="federationOptions">The federation options.</param>
+        /// <param name="libraryActorService">The library actor service.</param>
         /// <param name="logger">The logger.</param>
         public WebFingerController(
             IOptionsMonitor<SocialFederationOptions> federationOptions,

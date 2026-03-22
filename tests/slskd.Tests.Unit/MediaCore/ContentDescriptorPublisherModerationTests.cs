@@ -145,11 +145,26 @@ namespace slskd.Tests.Unit.MediaCore
                 .Setup(x => x.PublishAsync(It.IsAny<ContentDescriptor>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException("sensitive publish detail"));
 
-            var result = await publisher.PublishAsync(descriptor);
+        var result = await publisher.PublishAsync(descriptor);
+
+        Assert.False(result.Success);
+        Assert.Equal("Failed to publish descriptor", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+        [Fact]
+        public async Task UnpublishAsync_WhenTrackingThrows_ReturnsSanitizedErrorMessage()
+        {
+            var publisher = CreatePublisher();
+            var publishedDescriptorsField = typeof(ContentDescriptorPublisher).GetField("_publishedDescriptors", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(publishedDescriptorsField);
+            publishedDescriptorsField!.SetValue(publisher, null);
+
+            var result = await publisher.UnpublishAsync("test-content-id");
 
             Assert.False(result.Success);
-            Assert.Equal("Failed to publish descriptor", result.ErrorMessage);
-            Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("Failed to unpublish descriptor", result.ErrorMessage);
+            Assert.DoesNotContain("Object reference", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

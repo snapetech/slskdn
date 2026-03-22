@@ -132,6 +132,30 @@ public class PodOpinionServiceTests
         Assert.Equal(8.0, result.VariantAggregates[0].WeightedAverageScore, 6);
     }
 
+    [Fact]
+    public async Task UpdateMemberAffinitiesAsync_WhenDependencyThrows_ReturnsSanitizedErrorMessage()
+    {
+        var podService = new Mock<IPodService>();
+        var opinionService = new Mock<IPodOpinionService>();
+        var messageStorage = new Mock<IPodMessageStorage>();
+
+        var aggregator = new PodOpinionAggregator(
+            podService.Object,
+            opinionService.Object,
+            messageStorage.Object,
+            NullLogger<PodOpinionAggregator>.Instance);
+
+        var affinityCacheField = typeof(PodOpinionAggregator).GetField("_affinityCache", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(affinityCacheField);
+        affinityCacheField!.SetValue(aggregator, null);
+
+        var result = await aggregator.UpdateMemberAffinitiesAsync("pod-1");
+
+        Assert.False(result.Success);
+        Assert.Equal("Failed to update member affinities", result.ErrorMessage);
+        Assert.DoesNotContain("Object reference", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Mock<IPodService> CreatePodServiceMock(string publicKeyBase64)
     {
         var podService = new Mock<IPodService>();

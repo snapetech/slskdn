@@ -100,6 +100,7 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
         {
             normalized = normalized.Replace("--", "-", StringComparison.Ordinal);
         }
+
         normalized = normalized.Trim('-');
 
         return $"scene:label:{normalized}";

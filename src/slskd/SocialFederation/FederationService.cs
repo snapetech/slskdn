@@ -36,6 +36,7 @@ namespace slskd.SocialFederation
         /// <param name="federationOptions">The federation options.</param>
         /// <param name="publishingOptions">The publishing options.</param>
         /// <param name="libraryActorService">The library actor service.</param>
+        /// <param name="relationshipStore">The ActivityPub relationship store.</param>
         /// <param name="keyStore">The ActivityPub key store.</param>
         /// <param name="deliveryService">The activity delivery service.</param>
         /// <param name="logger">The logger.</param>

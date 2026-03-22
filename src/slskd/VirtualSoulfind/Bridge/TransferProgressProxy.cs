@@ -144,11 +144,11 @@ public class TransferProgressProxy : ITransferProgressProxy
                 ? meshStatus.FileSize
                 : session.LastProgress?.FileSize ?? 0,
             PercentComplete = (int)Math.Clamp(
-                (meshStatus.FileSize > 0
+                meshStatus.FileSize > 0
                     ? meshStatus.ProgressPercent
                     : session.LastProgress?.FileSize > 0
                         ? (meshStatus.BytesTransferred * 100.0) / session.LastProgress.FileSize
-                        : meshStatus.ProgressPercent),
+                        : meshStatus.ProgressPercent,
                 0,
                 100),
             AverageSpeed = meshStatus.TransferRateBps,

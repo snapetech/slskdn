@@ -118,6 +118,27 @@ public class PodMembershipServiceTests
         Assert.Equal(1, unbannedStats.MembershipsByRole["member"]);
     }
 
+    [Fact]
+    public async Task GetMembershipAsync_WhenDhtLookupThrows_ReturnsSanitizedErrorMessage()
+    {
+        var dhtClient = new Mock<IMeshDhtClient>();
+        dhtClient
+            .Setup(client => client.GetAsync<SignedMembershipRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive membership detail"));
+
+        var signer = new Mock<IControlSigner>();
+        var service = new PodMembershipService(
+            NullLogger<PodMembershipService>.Instance,
+            dhtClient.Object,
+            signer.Object);
+
+        var result = await service.GetMembershipAsync("pod-1", "peer-a");
+
+        Assert.False(result.Found);
+        Assert.Equal("Failed to retrieve membership", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static PodMembershipService CreateService(
         out Mock<IMeshDhtClient> dhtClient,
         out ConcurrentDictionary<string, object?> store)

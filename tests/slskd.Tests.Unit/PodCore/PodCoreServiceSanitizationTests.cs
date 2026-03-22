@@ -84,4 +84,27 @@ public class PodCoreServiceSanitizationTests
         Assert.Equal("Backfill sync failed", result.ErrorMessage);
         Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task PodDhtPublisher_WhenPublishThrows_ReturnsSanitizedErrorMessage()
+    {
+        var dhtClient = new Mock<IMeshDhtClient>();
+        dhtClient
+            .Setup(client => client.PutAsync(It.IsAny<string>(), It.IsAny<object?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive dht detail"));
+
+        var signer = new Mock<IControlSigner>();
+        signer.Setup(service => service.Sign(It.IsAny<ControlEnvelope>())).Returns<ControlEnvelope>(envelope => envelope);
+        var publisher = new PodDhtPublisher(
+            NullLogger<PodDhtPublisher>.Instance,
+            dhtClient.Object,
+            signer.Object,
+            Mock.Of<IPodService>());
+
+        var result = await publisher.PublishAsync(new Pod { PodId = "pod-1" }, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("Failed to publish pod", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
 }

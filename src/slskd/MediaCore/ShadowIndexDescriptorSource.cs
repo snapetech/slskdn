@@ -82,10 +82,10 @@ public class ShadowIndexDescriptorSource : IContentDescriptorSource
             .Select(variant => new ContentHash("sha256-prefix16", Convert.ToHexString(variant.HashPrefix).ToLowerInvariant()))
             .Distinct()
             .ToList();
-        var confidence = Math.Min(0.98,
-            0.55 +
-            Math.Min(0.15, result.TotalPeerCount * 0.03) +
-            Math.Min(0.18, Math.Max(0.0, bestVariant.QualityScore) * 0.18));
+        var peerContribution = Math.Min(0.15, result.TotalPeerCount * 0.03);
+        var qualityContribution = Math.Min(0.18, Math.Max(0.0, bestVariant.QualityScore) * 0.18);
+        var confidenceBase = 0.55 + peerContribution + qualityContribution;
+        var confidence = Math.Min(0.98, confidenceBase);
 
         return new ContentDescriptor
         {

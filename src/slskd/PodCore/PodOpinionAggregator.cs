@@ -305,7 +305,7 @@ public class PodOpinionAggregator : IPodOpinionAggregator
                 PodId: podId,
                 MembersUpdated: 0,
                 Duration: stopwatch.Elapsed,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to update member affinities");
         }
     }
 

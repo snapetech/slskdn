@@ -149,6 +149,7 @@ public class CollectionsController : ControllerBase
             if (string.IsNullOrWhiteSpace(title)) return BadRequest("Title cannot be blank.");
             c.Title = title;
         }
+
         if (req.Description != null) c.Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
         if (req.Type != null) c.Type = req.Type.Trim() == CollectionType.Playlist ? CollectionType.Playlist : CollectionType.ShareList;
         await _sharing.UpdateCollectionAsync(c, ct);
@@ -233,6 +234,7 @@ public class CollectionsController : ControllerBase
         {
             it.ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHash.Trim();
         }
+
         await _sharing.UpdateCollectionItemAsync(it, ct);
         return Ok(it);
     }
@@ -264,6 +266,7 @@ public class CollectionsController : ControllerBase
         {
             return BadRequest("ItemIds must be non-empty and unique.");
         }
+
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();

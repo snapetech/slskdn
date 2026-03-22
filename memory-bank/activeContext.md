@@ -23,10 +23,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release-hardening follow-up after the broad runtime/read-side bughunt, focused on making release readiness explicit with a repeatable gate and checklist
+- **Current Task**: Release-hardening follow-up after the broad runtime/read-side bughunt, focused on making the release gate exercise real subpath-hosted web behavior instead of only static asset-shape checks
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Added a real subpath-hosted web smoke:
+    - new `src/web/scripts/smoke-subpath-build.mjs`
+    - wired into `packaging/scripts/run-release-gate.sh`
+    - serves the built UI under `/slskd/` and verifies the relative asset URLs actually load from that mount point
+  - Updated `docs/dev/release-checklist.md` and `docs/dev/testing-policy.md` so the release gate documentation includes the new subpath-hosted smoke step
   - Added an explicit release-surface integration smoke gate:
     - new `packaging/scripts/run-release-integration-smoke.sh`
     - wired into `packaging/scripts/run-release-gate.sh`
@@ -79,9 +84,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Resume the broad runtime/read-side bughunt from the new green release gate.
+1. Resume the broad runtime/read-side bughunt from the stronger green release gate.
 2. Prioritize remaining places where public APIs may still report success while backing work is impossible, silently filtered, or split across normalized-vs-raw boundary assumptions.
-3. Consider automating the remaining packaging-specific smokes called out in `memory-bank/tasks.md`, especially the NixOS VM smoke test and subpath-hosted web smoke.
+3. Consider automating the remaining packaging-specific smokes called out in `memory-bank/tasks.md`, especially the NixOS VM smoke test.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

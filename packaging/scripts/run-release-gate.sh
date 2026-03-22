@@ -25,6 +25,9 @@ npm --prefix src/web run build
 section "Verify built frontend output"
 node src/web/scripts/verify-build-output.mjs
 
+section "Smoke built frontend under a subpath"
+node src/web/scripts/smoke-subpath-build.mjs
+
 section "Run backend unit tests"
 dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release
 

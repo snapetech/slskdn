@@ -154,11 +154,10 @@ public class BridgeProxyServer : BackgroundService
         };
         activeSessions[clientId] = session;
         bridgeService.RecordClientConnection(clientId);
-        bridgeDashboard.RecordConnection(
-            clientId,
-            client.Client.RemoteEndPoint is IPEndPoint ipEndpoint
-                ? ipEndpoint.Address.ToString()
-                : client.Client.RemoteEndPoint?.ToString() ?? string.Empty);
+        var clientAddress = client.Client.RemoteEndPoint is IPEndPoint ipEndpoint
+            ? ipEndpoint.Address.ToString()
+            : client.Client.RemoteEndPoint?.ToString() ?? string.Empty;
+        bridgeDashboard.RecordConnection(clientId, clientAddress);
 
         var stream = client.GetStream();
 

@@ -51,6 +51,10 @@ namespace slskd.SocialFederation.API
         ///     Initializes a new instance of the <see cref="ActivityPubController"/> class.
         /// </summary>
         /// <param name="federationOptions">The federation options.</param>
+        /// <param name="inboxStore">The ActivityPub inbox store.</param>
+        /// <param name="outboxStore">The ActivityPub outbox store.</param>
+        /// <param name="relationshipStore">The ActivityPub relationship store.</param>
+        /// <param name="federationService">The federation service.</param>
         /// <param name="keyStore">The ActivityPub key store.</param>
         /// <param name="keyFetcher">SSRF-safe key fetcher for HTTP Signature verification. PR-14.</param>
         /// <param name="libraryActorService">The library actor service.</param>
