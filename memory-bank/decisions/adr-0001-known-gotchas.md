@@ -249,6 +249,27 @@ Filename = string.IsNullOrWhiteSpace(filenameFromStatus)
 
 **Why This Keeps Happening**: Progress/readback paths often assume the execution layer will always have a clean final path ready. In bridge code that assumption is fragile because callers may pass a directory, a temporary path, or no target path at all. Preserve the user-facing filename at request time and use it as the fallback presentation value.
 
+### 0x12. MediaCore Must Normalize `content:mb:*` IDs Into Audio Domains Before Domain/Type Queries
+
+**The Bug**: `MediaCore` documented and used IDs like `content:mb:recording:<id>`, but domain checks and registry queries only matched literal `audio` domains. As a result, MB recording IDs were excluded from audio workflows such as `FindByDomainAsync("audio")`, `FindByDomainAndTypeAsync("audio","track")`, and `IsAudio`.
+
+**Files Affected**:
+- `src/slskd/MediaCore/ContentId.cs`
+- `src/slskd/MediaCore/ContentIdRegistry.cs`
+
+**Wrong**:
+```csharp
+public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
+```
+
+**Correct**:
+```csharp
+public bool IsAudio => ContentIdParser.NormalizeDomain(Domain, Type)
+    .Equals("audio", StringComparison.OrdinalIgnoreCase);
+```
+
+**Why This Keeps Happening**: It is easy to treat the textual content ID format and the semantic media domain as the same thing. They are not. `content:mb:recording:*` is still audio content even though the raw domain token is `mb`. When the codebase mixes canonical media domains with source-specific ID schemes, normalize before filtering or classification.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
