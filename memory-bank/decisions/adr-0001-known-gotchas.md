@@ -655,6 +655,7 @@ finally
 - `src/slskd/SocialFederation/FederationService.cs`
 - `src/slskd/Users/BrowseTracker.cs`
 - `src/slskd/MediaCore/IpldMapper.cs`
+- `src/slskd/VirtualSoulfind/ShadowIndex/ShardCache.cs`
 
 **Wrong**:
 ```csharp
