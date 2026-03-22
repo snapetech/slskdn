@@ -9323,6 +9323,29 @@ if (!TryGetServerUri(out var uri, out var validationError))
 
 **Why This Keeps Happening**: Transport implementations often treat endpoint strings as “just another connection failure” and defer validation until the first actual dial. That blurs the line between configuration bugs and network bugs, which makes status reporting and tests noisy. Validate configured URIs before attempting transport work, and require the expected scheme (`ws`/`wss` here) explicitly.
 
+### 0k53. URL Sanitizers Must Re-Bracket IPv6 Hosts When Reconstructing Safe URLs
+
+**The Bug**: `LoggingSanitizer.SanitizeUrl(...)` rebuilt sanitized URLs with `"{scheme}://{uri.Host}"`. For IPv6 URLs, `uri.Host` returns the bare address without brackets, so a valid input like `https://[::1]:8443/path` became the invalid string `https://::1` in logs.
+
+**Files Affected**:
+- `src/slskd/Common/Security/LoggingSanitizer.cs`
+
+**Wrong**:
+```csharp
+var uri = new Uri(url);
+return $"{uri.Scheme}://{uri.Host}";
+```
+
+**Correct**:
+```csharp
+var host = uri.HostNameType == UriHostNameType.IPv6
+    ? $"[{uri.Host}]"
+    : uri.Host;
+return $"{uri.Scheme}://{host}";
+```
+
+**Why This Keeps Happening**: URI APIs split parsing and formatting responsibilities. `Uri.Host` is normalized host data, not a ready-to-emit authority string, so code that reconstructs URLs from it often forgets IPv6 bracket rules. If you rebuild a safe URL from parsed parts, explicitly handle IPv6 formatting instead of assuming the host property is directly printable.
+
 ---
 
 *Last updated: 2026-03-22*
