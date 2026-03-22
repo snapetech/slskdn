@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xBF. Filters And Validators Still Need Sanitized Response Text
+
+**The Bug**: infrastructure code that is not a controller still produced API-visible error text. A CSRF filter placed raw exception text into `ProblemDetails.Detail`, and a mesh descriptor validator returned raw serializer exception text in its validation tuple.
+
+**Files Affected**:
+- `src/slskd/Core/Security/ValidateCsrfForCookiesOnlyAttribute.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServiceDescriptorValidator.cs`
+
+**Wrong**:
+```csharp
+Detail = ex.Message;
+return (false, $"Failed to serialize descriptor: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+Detail = "CSRF validation could not be completed. ...";
+return (false, "Failed to serialize descriptor");
+```
+
+**Why This Keeps Happening**: filters, middleware, and validators are easy to mentally classify as private infrastructure. But once they populate `ProblemDetails`, tuples, or validation messages that cross the method boundary, they are part of the public contract and must be sanitized just like controller/service DTOs.
+
 ### 0xBE. Transport Status, Moderation Health, And SongID Evidence Are Observable Contracts Too
 
 **The Bug**: transport `LastError` fields, moderation provider health/status fields, and SongID run evidence/summary strings were still storing raw exception text. Those surfaces feel like diagnostics, but they are exposed to users, tests, and runtime dashboards just like any other contract.
