@@ -10328,6 +10328,33 @@ Members = pod.Members?
 
 **Why This Keeps Happening**: once a controller has a `NormalizePod(...)` helper, it is easy to assume the whole object graph is canonicalized. It is not unless every nested string-bearing subtype is rebuilt too. For DHT-published documents, partial normalization is still a correctness bug because peers consume the nested metadata exactly as published.
 
+### 0k65. Native Pod Create And Update Endpoints Must Normalize The Whole Pod Graph Before Persistence
+
+**The Bug**: `PodsController.CreatePod(...)` and `UpdatePod(...)` only normalized `RequestingPeerId` and `PodId` before handing the pod to `IPodService`. That left names, descriptions, tags, channels, members, external bindings, and private-service policy fields in whatever padded shape the caller supplied. The same logical pod could therefore be persisted differently through the native pod facade than through DHT publication or the more specialized PodCore controllers.
+
+**Files Affected**:
+- `src/slskd/API/Native/PodsController.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodsControllerTests.cs`
+
+**Wrong**:
+```csharp
+request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
+request.Pod.PodId = request.Pod.PodId?.Trim() ?? string.Empty;
+
+var created = await podService.CreateAsync(request.Pod, ct);
+```
+
+**Correct**:
+```csharp
+request = request with
+{
+    RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty,
+    Pod = NormalizePod(request.Pod),
+};
+```
+
+**Why This Keeps Happening**: large facade controllers often start with a couple of top-level validations and then assume downstream services will canonicalize the rest. That is not safe when the same aggregate is accepted by multiple entry points. If a controller accepts a `Pod`, normalize the full pod graph before persistence so all pod-ingest paths produce the same stored shape.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
