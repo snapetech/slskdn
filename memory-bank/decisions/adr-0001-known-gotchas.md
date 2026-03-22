@@ -370,6 +370,34 @@ var domain = parsed == null ? "unknown" : ContentIdParser.NormalizeDomain(parsed
 
 **Why This Keeps Happening**: Search, graph, and stats code often starts with “helpful” simulated fallbacks so APIs return something early. Those placeholders then leak into production behavior and silently look like real data. In MediaCore, synthetic similarity, synthetic graph edges, and raw-vs-normalized domain drift all create the same class of bug: the system claims knowledge it does not actually have. If the data is unknown, return none/zero and keep the semantics aligned with the normalized ID model.
 
+### 0x17. Shadow-Index Peer Hints Are Not Routable Peer IDs, And VSF Telemetry Must Report Real Cache State
+
+**The Bug**: Shadow-index query code converted 8-byte peer hints into fabricated `peer:vsf:*` IDs and returned them as if they were real routable peers. That made MBID-based bridge results look downloadable even though the peer IDs were synthetic. In parallel, VSF performance/telemetry services reported mostly zero cache state because the shard cache exposed no occupancy stats and prefetch used `Task.Run(..., ct)` in a way that could skip scheduled work on cancellation.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/ShadowIndex/ShadowIndexQueryImpl.cs`
+- `src/slskd/VirtualSoulfind/ShadowIndex/ShardCache.cs`
+- `src/slskd/VirtualSoulfind/Integration/PerformanceOptimizer.cs`
+- `src/slskd/VirtualSoulfind/Integration/TelemetryDashboard.cs`
+- `src/slskd/VirtualSoulfind/Integration/DisasterRescueIntegration.cs`
+
+**Wrong**:
+```csharp
+return $"peer:vsf:{Convert.ToHexString(hint).ToLowerInvariant()}";
+prefetchTasks.Add(Task.Run(async () => { ... }, ct));
+if (healthMonitor.CurrentHealth == SoulseekHealth.Degraded)
+```
+
+**Correct**:
+```csharp
+return null;
+await semaphore.WaitAsync(ct);
+var shardCacheStats = cache.GetStats();
+if (healthMonitor.CurrentHealth != SoulseekHealth.Healthy)
+```
+
+**Why This Keeps Happening**: Compact hints, telemetry counters, and degraded-mode feature gates all tempt “close enough” implementations: invent a peer ID from the hint, report zero because real cache stats are awkward, or only handle the middle degraded state and forget the hard-down state. Those shortcuts create deeper bugs because downstream code treats the output as authoritative. If a hint is not routable, do not present it as a peer. If a cache backs dashboard features, expose real cache stats. If a feature depends on service health, handle the full state machine, not one intermediate state.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
