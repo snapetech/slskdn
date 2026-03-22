@@ -89,6 +89,30 @@ private async void OnHealthChanged(object? sender, SoulseekHealthChangedEventArg
 
 **Why This Keeps Happening**: .NET event handlers often force `void`, which makes `async void` tempting. Unlike `Task`-returning methods, exceptions do not flow back to a caller that can observe them. If an event must remain `async void`, the entire body needs its own `try/catch` and explicit logging.
 
+### 0l. Streamed `HttpResponseMessage` Objects Must Be Disposed On Success Paths Too
+
+**The Bug**: Several HTTP client paths were fixed for error-case disposal, but a federation key-fetch path still kept the successful `HttpResponseMessage` alive while streaming content and returning early on parse/size failure. That can retain pooled connections and accumulate resource pressure under retries.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/HttpSignatureKeyFetcher.cs`
+
+**Wrong**:
+```csharp
+HttpResponseMessage? res = null;
+res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+await using var stream = await res.Content.ReadAsStreamAsync(cts.Token);
+return ExtractPublicKeyPkixFromActorJson(json, keyId);
+```
+
+**Correct**:
+```csharp
+using var res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+await using var stream = await res.Content.ReadAsStreamAsync(cts.Token);
+return ExtractPublicKeyPkixFromActorJson(json, keyId);
+```
+
+**Why This Keeps Happening**: It is easy to focus on stream disposal and miss that the owning `HttpResponseMessage` also needs disposal, especially when using `ResponseHeadersRead` and multiple early returns. In these paths, wrap the response in `using var` as soon as it is created unless ownership is intentionally transferred.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
