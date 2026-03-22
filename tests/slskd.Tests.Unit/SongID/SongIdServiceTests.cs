@@ -286,13 +286,16 @@ public sealed class SongIdServiceTests : IDisposable
         var outsideFingerprint = Path.Combine(_tempDir, "outside.fpcalc");
         File.WriteAllText(outsideFingerprint, "FINGERPRINT=1,2,3");
 
-        var entry = new SongIdCorpusEntry
-        {
-            FingerprintPath = Path.Combine("..", "outside.fpcalc"),
-        };
-
         var method = typeof(SongIdService).GetMethod("ResolveCorpusFingerprintPath", BindingFlags.NonPublic | BindingFlags.Static);
         Assert.NotNull(method);
+
+        var entryType = typeof(SongIdService).GetNestedType("SongIdCorpusEntry", BindingFlags.NonPublic);
+        Assert.NotNull(entryType);
+
+        var entry = Activator.CreateInstance(entryType!);
+        Assert.NotNull(entry);
+
+        entryType!.GetProperty("FingerprintPath")!.SetValue(entry, Path.Combine("..", "outside.fpcalc"));
 
         var result = method!.Invoke(null, new object[] { metadataPath, entry });
 

@@ -16,15 +16,15 @@ namespace slskd.Tests.Unit.Transfers.MultiSource.Metrics
         {
             var hashDb = new Mock<IHashDbService>();
             hashDb.Setup(m => m.GetPeerMetricsAsync("peer-1", It.IsAny<CancellationToken>()))
-                .ReturnsAsync((PeerPerformanceMetrics?)null);
+                .ReturnsAsync(default(PeerPerformanceMetrics));
 
             var service = new PeerMetricsService(hashDb.Object, NullLogger<PeerMetricsService>.Instance);
 
-            var metrics = await service.GetMetricsAsync("peer-1", PeerSource.Mesh);
+            var metrics = await service.GetMetricsAsync("peer-1", PeerSource.Overlay);
 
             Assert.NotNull(metrics);
             Assert.Equal("peer-1", metrics.PeerId);
-            Assert.Equal(PeerSource.Mesh, metrics.Source);
+            Assert.Equal(PeerSource.Overlay, metrics.Source);
             Assert.Equal(0.5, metrics.ReputationScore);
         }
     }

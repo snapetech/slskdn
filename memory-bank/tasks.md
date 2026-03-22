@@ -741,3 +741,12 @@
 - [x] Fix residual `.83` cover-traffic async-enumerable test flake
   - Status: done
   - Notes: Reworked `CoverTrafficGeneratorTests.GenerateCoverTrafficAsync_GeneratesMessagesWithCorrectSize` so it cancels after collecting the first message instead of using a timeout as the normal completion path; validated with the focused mesh/privacy suite, the full release gate, and `./bin/lint`.
+
+## 2026-03-22 Completed Follow-up
+
+- [x] Normalize HashDb and MediaCore read-side key handling
+  - Status: done
+  - Notes: Trimmed and validated HashDb lookup/write keys, made JSON deserialization case-insensitive with row-based fallback preservation, deduplicated warm-cache/popularity/query results, and normalized MediaCore descriptor retrieval/query inputs and reporting.
+- [x] Tighten runtime compatibility regression coverage
+  - Status: done
+  - Notes: Added/updated focused unit and integration regressions for Search item parsing, SongID tool parsing and path traversal, LoggingSanitizer IPv6 URL handling, WebSocket transport URL validation, blacklist/logging helper behavior, and descriptor retrieval normalization.

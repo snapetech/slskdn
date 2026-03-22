@@ -20,7 +20,7 @@ namespace slskd.Tests.Unit.LibraryHealth
         {
             var hashDb = new Mock<IHashDbService>();
             hashDb.Setup(m => m.GetLibraryHealthScanAsync("missing-scan", It.IsAny<CancellationToken>()))
-                .ReturnsAsync((LibraryHealthScan?)null);
+                .ReturnsAsync(default(LibraryHealthScan));
 
             var service = new LibraryHealthService(
                 hashDb.Object,

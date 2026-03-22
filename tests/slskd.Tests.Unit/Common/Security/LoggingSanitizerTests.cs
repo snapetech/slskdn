@@ -144,6 +144,19 @@ namespace slskd.Tests.Unit.Common.Security
         }
 
         [Fact]
+        public void SanitizeUrl_WithIpv6Url_PreservesBracketedHost()
+        {
+            // Arrange
+            var url = "https://[::1]:8443/users/12345/profile?token=secret";
+
+            // Act
+            var result = LoggingSanitizer.SanitizeUrl(url);
+
+            // Assert
+            Assert.Equal("https://[::1]", result);
+        }
+
+        [Fact]
         public void SanitizeSensitiveData_WithData_ReturnsRedactedPlaceholder()
         {
             // Arrange
@@ -171,5 +184,4 @@ namespace slskd.Tests.Unit.Common.Security
         }
     }
 }
-
 

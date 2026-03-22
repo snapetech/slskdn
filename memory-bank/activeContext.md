@@ -23,22 +23,23 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad backend bughunt focused on async/background lifecycle bugs, cancellation misuse, and detached-task observability across `src/slskd`
+- **Current Task**: Broad runtime/read-side bughunt across `src/slskd` dirty files, focused on key normalization, cache/query consistency, transport helper validation, and stale regression alignment
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad bughunt with a wider PodCore opinion-stack pass.
-  - Fixed `PodOpinionService` so opinion publishing/retrieval is no longer impossible by construction:
-    - real Ed25519 verification now uses a stable canonical opinion payload
-    - DHT writes now store typed `List<PodVariantOpinion>` values instead of JSON strings
-    - cache reads now return locked snapshots instead of live mutable views
-  - Fixed `PodOpinionAggregator` weighted averages so they normalize by total affinity weight instead of opinion count.
-  - Fixed an unrelated compile blocker in `VirtualSoulfind/v2/Resolution/SimpleResolver.cs` by restoring the `SourceCandidate` namespace import.
-  - Added regressions in `PodOpinionServiceTests` and documented the gotchas with commits `07a05fae` and `6afcf16a`.
-  - Re-verified:
-    - `dotnet build src/slskd/slskd.csproj -v minimal` passes
-    - `dotnet test --no-restore tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal --filter "FullyQualifiedName~PodOpinionServiceTests"` passes (`3/3`)
-    - `bash ./bin/lint` is currently blocked by pre-existing whitespace formatting errors in `SqlitePodService`, `ActivityPubController`, and `FederationService`
+  - Continued the broad bughunt through the remaining dirty runtime/test files instead of leaving a partial working tree behind.
+  - Normalized additional `HashDbService` read/write behavior:
+    - trims lookup and persistence keys before querying or writing
+    - uses case-insensitive JSON deserialization for persisted jobs/graphs
+    - preserves row-based fallback reconstruction when persisted JSON deserializes to `null`
+    - deduplicates warm-cache and popularity result sets
+    - accepts ISO-style persisted backfill timestamps
+  - Normalized `DescriptorRetriever` behavior:
+    - trims and deduplicates batch content IDs
+    - records normalized domains in retrieval stats
+    - excludes expired cache entries from reported cache size/count
+  - Kept the dirty test cluster aligned with the normalized runtime behavior, including descriptor retrieval normalization, SongID parsing/path handling, LoggingSanitizer IPv6 URL handling, and WebSocket transport URL validation.
+  - Current working tree is ready for a full commit; validation has not been run in this pass.
 
 ---
 
@@ -82,9 +83,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, or silently filtered out.
-2. Prioritize additional PodCore/VirtualSoulfind stateful services that still expose mutable cached collections or use placeholder validation logic.
-3. Keep validating each batch with targeted regressions plus `dotnet build src/slskd/slskd.csproj -v minimal`; use `bash ./bin/lint` and treat current SocialFederation/SqlitePodService whitespace failures as existing repo debt unless those files are touched.
+1. If requested, run `dotnet test` and `./bin/lint` to validate the committed runtime/read-side cleanup.
+2. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, or silently filtered out.
+3. Prioritize additional PodCore/VirtualSoulfind/MediaCore services that still expose mutable cached collections, placeholder validation logic, or under-reported state.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

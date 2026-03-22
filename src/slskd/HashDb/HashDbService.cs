@@ -20,6 +20,7 @@ namespace slskd.HashDb
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
@@ -73,6 +74,10 @@ namespace slskd.HashDb
         private readonly OpusAnalyzer opusAnalyzer = new();
         private readonly AacAnalyzer aacAnalyzer = new();
         private readonly IMemoryCache? hashCache;
+        private static readonly JsonSerializerOptions CaseInsensitiveJson = new()
+        {
+            PropertyNameCaseInsensitive = true,
+        };
         private long currentSeqId;
 
         /// <summary>
@@ -313,6 +318,7 @@ namespace slskd.HashDb
         {
             try
             {
+                filename = filename?.Trim() ?? string.Empty;
                 if (!System.IO.File.Exists(filename))
                 {
                     return null;
@@ -659,6 +665,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<AlbumTargetEntry?> GetAlbumTargetAsync(string releaseId, CancellationToken cancellationToken = default)
         {
+            releaseId = releaseId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(releaseId))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -680,6 +692,12 @@ namespace slskd.HashDb
         public async Task<IEnumerable<AlbumTargetTrackEntry>> GetAlbumTracksAsync(string releaseId, CancellationToken cancellationToken = default)
         {
             var tracks = new List<AlbumTargetTrackEntry>();
+            releaseId = releaseId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(releaseId))
+            {
+                return tracks;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -891,6 +909,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<Peer> GetOrCreatePeerAsync(string username, CancellationToken cancellationToken = default)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new ArgumentException("Peer ID is required", nameof(username));
+            }
+
             using var conn = GetConnection();
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -975,6 +999,8 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpsertFlacEntryAsync(FlacInventoryEntry entry, CancellationToken cancellationToken = default)
         {
+            entry.PeerId = entry.PeerId?.Trim() ?? string.Empty;
+            entry.Path = entry.Path?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(entry.FileId))
             {
                 entry.FileId = FlacInventoryEntry.GenerateFileId(entry.PeerId, entry.Path, entry.Size);
@@ -1020,6 +1046,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<FlacInventoryEntry?> GetFlacEntryAsync(string fileId, CancellationToken cancellationToken = default)
         {
+            fileId = fileId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(fileId))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM FlacInventory WHERE file_id = @file_id";
@@ -1038,6 +1070,11 @@ namespace slskd.HashDb
         public async Task<IEnumerable<FlacInventoryEntry>> GetFlacEntriesBySizeAsync(long size, int limit = 100, CancellationToken cancellationToken = default)
         {
             var entries = new List<FlacInventoryEntry>();
+            if (size <= 0 || limit <= 0)
+            {
+                return entries;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM FlacInventory WHERE size = @size ORDER BY discovered_at DESC LIMIT @limit";
@@ -1105,6 +1142,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<HashDbEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return null;
+            }
+
             using var activity = HashDbActivitySource.Source.StartActivity("hashdb.lookup");
             activity?.SetTag("hashdb.lookup.key", flacKey);
 
@@ -1339,6 +1382,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<LibraryHealth.LibraryHealthScan?> GetLibraryHealthScanAsync(string scanId, CancellationToken cancellationToken = default)
         {
+            scanId = scanId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(scanId))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM LibraryHealthScans WHERE scan_id = @id";
@@ -1808,6 +1857,13 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<CanonicalStats?> GetCanonicalStatsAsync(string recordingId, string codecProfileKey, CancellationToken cancellationToken = default)
         {
+            recordingId = recordingId?.Trim() ?? string.Empty;
+            codecProfileKey = codecProfileKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(recordingId) || string.IsNullOrWhiteSpace(codecProfileKey))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM CanonicalStats WHERE musicbrainz_recording_id = @rec AND codec_profile_key = @key";
@@ -1848,6 +1904,12 @@ namespace slskd.HashDb
         public async Task<List<string>> GetCodecProfilesForRecordingAsync(string recordingId, CancellationToken cancellationToken = default)
         {
             var list = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(recordingId))
+            {
+                return list;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT codec, sample_rate_hz, bit_depth, channels FROM HashDb WHERE musicbrainz_id = @rec";
@@ -1870,7 +1932,7 @@ namespace slskd.HashDb
                     Channels = channels,
                 }.ToKey();
 
-                if (!list.Contains(profile))
+                if (seen.Add(profile))
                 {
                     list.Add(profile);
                 }
@@ -1902,7 +1964,11 @@ namespace slskd.HashDb
             {
                 if (!string.IsNullOrWhiteSpace(json))
                 {
-                    return JsonSerializer.Deserialize<Jobs.DiscographyJob>(json);
+                    var deserialized = JsonSerializer.Deserialize<Jobs.DiscographyJob>(json, CaseInsensitiveJson);
+                    if (deserialized != null)
+                    {
+                        return deserialized;
+                    }
                 }
             }
             catch (Exception ex)
@@ -2161,6 +2227,7 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task IncrementPopularityAsync(string contentId, CancellationToken cancellationToken = default)
         {
+            contentId = contentId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(contentId))
             {
                 return;
@@ -2186,6 +2253,7 @@ namespace slskd.HashDb
         public async Task<IReadOnlyList<(string ContentId, long Hits)>> GetTopPopularAsync(int limit, long minHits = 1, CancellationToken cancellationToken = default)
         {
             var results = new List<(string, long)>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (limit <= 0)
             {
                 return results;
@@ -2206,9 +2274,12 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                var cid = reader.GetString(0);
+                var cid = reader.GetString(0).Trim();
                 var hits = reader.GetInt64(1);
-                results.Add((cid, hits));
+                if (!string.IsNullOrWhiteSpace(cid) && seen.Add(cid))
+                {
+                    results.Add((cid, hits));
+                }
             }
 
             return results;
@@ -2224,6 +2295,9 @@ namespace slskd.HashDb
                 return;
             }
 
+            entry.ContentId = entry.ContentId.Trim();
+            entry.Path = entry.Path?.Trim() ?? string.Empty;
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -2236,7 +2310,7 @@ namespace slskd.HashDb
                     last_accessed = excluded.last_accessed;
             ";
             cmd.Parameters.AddWithValue("@cid", entry.ContentId);
-            cmd.Parameters.AddWithValue("@path", entry.Path ?? string.Empty);
+            cmd.Parameters.AddWithValue("@path", entry.Path);
             cmd.Parameters.AddWithValue("@size", entry.SizeBytes);
             cmd.Parameters.AddWithValue("@pinned", entry.Pinned ? 1 : 0);
             cmd.Parameters.AddWithValue("@accessed", entry.LastAccessed > 0 ? entry.LastAccessed : DateTimeOffset.UtcNow.ToUnixTimeSeconds());
@@ -2247,6 +2321,7 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task DeleteWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default)
         {
+            contentId = contentId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(contentId))
             {
                 return;
@@ -2262,6 +2337,7 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<Models.WarmCacheEntry?> GetWarmCacheEntryAsync(string contentId, CancellationToken cancellationToken = default)
         {
+            contentId = contentId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(contentId))
             {
                 return null;
@@ -2285,6 +2361,7 @@ namespace slskd.HashDb
         public async Task<IReadOnlyList<Models.WarmCacheEntry>> ListWarmCacheEntriesAsync(CancellationToken cancellationToken = default)
         {
             var list = new List<Models.WarmCacheEntry>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT content_id, path, size_bytes, pinned, last_accessed FROM WarmCacheEntries ORDER BY last_accessed DESC";
@@ -2292,7 +2369,11 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                list.Add(ReadWarmCacheEntry(reader));
+                var entry = ReadWarmCacheEntry(reader);
+                if (!string.IsNullOrWhiteSpace(entry.ContentId) && seen.Add(entry.ContentId))
+                {
+                    list.Add(entry);
+                }
             }
 
             return list;
@@ -2351,7 +2432,11 @@ namespace slskd.HashDb
             {
                 if (!string.IsNullOrWhiteSpace(json))
                 {
-                    return JsonSerializer.Deserialize<LabelCrateJob>(json);
+                    var deserialized = JsonSerializer.Deserialize<LabelCrateJob>(json, CaseInsensitiveJson);
+                    if (deserialized != null)
+                    {
+                        return deserialized;
+                    }
                 }
             }
             catch (Exception ex)
@@ -2447,6 +2532,7 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpsertLabelCrateReleaseJobsAsync(string jobId, IEnumerable<DiscographyReleaseJobStatus> releases, CancellationToken cancellationToken = default)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(jobId) || releases == null)
             {
                 return;
@@ -2462,6 +2548,12 @@ namespace slskd.HashDb
                     continue;
                 }
 
+                var releaseId = release.ReleaseId.Trim();
+                if (string.IsNullOrWhiteSpace(releaseId))
+                {
+                    continue;
+                }
+
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = tx;
                 cmd.CommandText = @"
@@ -2471,7 +2563,7 @@ namespace slskd.HashDb
                         status = excluded.status";
 
                 cmd.Parameters.AddWithValue("@job_id", jobId);
-                cmd.Parameters.AddWithValue("@release_id", release.ReleaseId);
+                cmd.Parameters.AddWithValue("@release_id", releaseId);
                 cmd.Parameters.AddWithValue("@status", release.Status.ToString().ToLowerInvariant());
 
                 await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -2496,6 +2588,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<ArtistReleaseGraph?> GetArtistReleaseGraphAsync(string artistId, CancellationToken cancellationToken = default)
         {
+            artistId = artistId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(artistId))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -2512,10 +2610,7 @@ namespace slskd.HashDb
 
             try
             {
-                return JsonSerializer.Deserialize<ArtistReleaseGraph>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                });
+                return JsonSerializer.Deserialize<ArtistReleaseGraph>(json, CaseInsensitiveJson);
             }
             catch (Exception ex)
             {
@@ -2817,9 +2912,15 @@ namespace slskd.HashDb
                 return null;
             }
 
-            if (long.TryParse(result.ToString(), out var timestamp))
+            var text = result.ToString()?.Trim();
+            if (long.TryParse(text, out var timestamp))
             {
                 return DateTimeOffset.FromUnixTimeSeconds(timestamp);
+            }
+
+            if (DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
+            {
+                return parsed;
             }
 
             return null;
@@ -3193,7 +3294,7 @@ namespace slskd.HashDb
             using var reader = cmd.ExecuteReader();
             if (reader.Read())
             {
-                return Task.FromResult(ReadPeerMetrics(reader));
+                return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?>(ReadPeerMetrics(reader));
             }
 
             return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?>(null);

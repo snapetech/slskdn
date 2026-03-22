@@ -156,7 +156,10 @@ namespace slskd.Common.Security
             try
             {
                 var uri = new Uri(url);
-                return $"{uri.Scheme}://{uri.Host}";
+                var host = uri.HostNameType == UriHostNameType.IPv6 && !uri.Host.StartsWith("[", StringComparison.Ordinal)
+                    ? $"[{uri.Host}]"
+                    : uri.Host;
+                return $"{uri.Scheme}://{host}";
             }
             catch
             {

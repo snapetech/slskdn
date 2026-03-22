@@ -5409,3 +5409,13 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build src/slskd/slskd.csproj -v minimal` passed
   - `dotnet test --no-restore tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal --filter "FullyQualifiedName~PodOpinionServiceTests"` passed (`3/3`)
   - `bash ./bin/lint` currently fails on pre-existing whitespace-format debt in `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, and `SocialFederation/FederationService.cs`; this batch did not introduce those files
+
+## 2026-03-22 16:20:00Z
+
+- Continued the broad runtime/read-side bughunt across remaining dirty files and closed out the current repo-wide working tree for commit:
+  - normalized additional `HashDbService` read/write seams by trimming keys before lookup/persist, accepting case-insensitive persisted JSON, preserving fallback object reconstruction when deserialization returns null, deduplicating warm-cache/popularity results, and accepting ISO-style persisted backfill timestamps
+  - normalized `DescriptorRetriever` inputs and reporting by trimming/deduplicating batch IDs, recording normalized MediaCore domains, and excluding expired cache entries from reported cache stats
+  - tightened compatibility/runtime helpers and associated regressions already in the working tree, including IPv6 URL sanitization coverage and WebSocket transport URL validation behavior
+  - refreshed focused tests in unit/integration projects so current runtime expectations match the normalized key/domain behavior
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

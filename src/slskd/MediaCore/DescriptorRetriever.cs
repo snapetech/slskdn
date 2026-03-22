@@ -2,9 +2,6 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-// <copyright file="DescriptorRetriever.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,6 +50,7 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (string.IsNullOrWhiteSpace(contentId))
             throw new ArgumentException("ContentId cannot be empty", nameof(contentId));
 
+        contentId = contentId.Trim();
         var startTime = DateTimeOffset.UtcNow;
         Interlocked.Increment(ref _totalRetrievals);
 
@@ -103,7 +101,10 @@ public class DescriptorRetriever : IDescriptorRetriever
                     _cache[contentId] = cacheEntry;
 
                     // Update domain stats
-                    var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+                    var parsed = ContentIdParser.Parse(contentId);
+                    var domain = parsed == null
+                        ? "unknown"
+                        : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
                     _retrievalStats.AddOrUpdate(domain, 1, (_, count) => count + 1);
                 }
             }
@@ -155,7 +156,11 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (contentIds == null)
             throw new ArgumentNullException(nameof(contentIds));
 
-        var contentIdList = contentIds.Distinct().ToList();
+        var contentIdList = contentIds
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Select(contentId => contentId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         var startTime = DateTimeOffset.UtcNow;
         var results = new List<DescriptorRetrievalResult>();
         var found = 0;
@@ -212,8 +217,11 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (string.IsNullOrWhiteSpace(domain))
             throw new ArgumentException("Domain cannot be empty", nameof(domain));
 
-        domain = ContentIdParser.NormalizeDomain(domain.Trim(), type?.Trim());
-        type = string.IsNullOrWhiteSpace(type) ? null : ContentIdParser.NormalizeType(domain, type.Trim());
+        var trimmedDomain = domain.Trim();
+        var trimmedType = string.IsNullOrWhiteSpace(type) ? null : type.Trim();
+
+        domain = ContentIdParser.NormalizeDomain(trimmedDomain, trimmedType ?? string.Empty);
+        type = trimmedType == null ? null : ContentIdParser.NormalizeType(domain, trimmedType);
         maxResults = Math.Clamp(maxResults, 1, 500);
 
         var startTime = DateTimeOffset.UtcNow;
@@ -351,8 +359,10 @@ public class DescriptorRetriever : IDescriptorRetriever
         var cacheMisses = _totalRetrievals - _cacheHits;
         var cacheHitRatio = _totalRetrievals > 0 ? (double)_cacheHits / _totalRetrievals : 0;
 
-        var activeEntries = _cache.Count(kvp => !IsExpired(kvp.Value));
-        var cacheSizeBytes = _cache.Values.Sum(c => EstimateDescriptorSize(c.Descriptor));
+        var activeEntries = _cache.Values.Count(cached => !IsExpired(cached));
+        var cacheSizeBytes = _cache.Values
+            .Where(cached => !IsExpired(cached))
+            .Sum(cached => EstimateDescriptorSize(cached.Descriptor));
 
         var avgRetrievalTime = TimeSpan.Zero; // Would need to track individual retrieval times
 
