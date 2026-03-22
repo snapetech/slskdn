@@ -113,6 +113,28 @@ return ExtractPublicKeyPkixFromActorJson(json, keyId);
 
 **Why This Keeps Happening**: It is easy to focus on stream disposal and miss that the owning `HttpResponseMessage` also needs disposal, especially when using `ResponseHeadersRead` and multiple early returns. In these paths, wrap the response in `using var` as soon as it is created unless ownership is intentionally transferred.
 
+### 0m. Do Not `using`-Dispose A `CancellationTokenSource` That A Background Task Will Keep Using
+
+**The Bug**: `MdnsAdvertiser.StartAsync` created a linked cancellation source with `using var`, launched a background announce loop that captured the token, and then returned. The method disposed the source immediately, leaving the background loop to run against a disposed CTS.
+
+**Files Affected**:
+- `src/slskd/Identity/MdnsAdvertiser.cs`
+
+**Wrong**:
+```csharp
+_announceCts = new CancellationTokenSource();
+using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _announceCts.Token);
+_ = Task.Run(async () => await Task.Delay(TimeSpan.FromSeconds(10), linkedCts.Token), linkedCts.Token);
+```
+
+**Correct**:
+```csharp
+_announceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+_ = Task.Run(async () => await Task.Delay(TimeSpan.FromSeconds(10), _announceCts.Token), _announceCts.Token);
+```
+
+**Why This Keeps Happening**: `using var` around a CTS looks tidy, but it is only correct when all work using that token completes before the scope exits. If a background worker outlives the method, the CTS must be owned and disposed by the component lifecycle, not by a local scope.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
@@ -4798,6 +4820,38 @@ internal class StubBridgeApi : IBridgeApi
 ```
 
 **Why This Keeps Happening**: Test doubles are often updated late; when production interfaces change, every stub and fake implementing them must be updated before DI/container validation or compile catches the mismatch.
+
+### 0k14. STUN Probe Cancellation Should Return Null Instead of Propagating an Exception
+
+**The Bug**: `ProbeServer` handled timeout-driven `OperationCanceledException` but not explicit caller cancellation (`ct.IsCancellationRequested`), so canceling STUN detection could bubble an exception instead of falling back cleanly to `Unknown`.
+
+**Files Affected**:
+- `src/slskd/Mesh/Nat/StunNatDetector.cs`
+
+**Wrong**:
+```csharp
+catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+{
+    logger.LogDebug("[NAT] Timed out waiting for STUN response from {Server}", server);
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+{
+    logger.LogDebug("[NAT] Timed out waiting for STUN response from {Server}", server);
+    return null;
+}
+catch (OperationCanceledException) when (ct.IsCancellationRequested)
+{
+    logger.LogDebug("[NAT] STUN probe canceled for {Server}", server);
+    return null;
+}
+```
+
+**Why This Keeps Happening**: Cancellation can arrive in two forms: timeout-based linked-token cancellation and explicit caller cancellation. Guarding both paths keeps control flow consistent and avoids turning normal shutdown behavior into error handling.
 
 ---
 
