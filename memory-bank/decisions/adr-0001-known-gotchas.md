@@ -12223,3 +12223,31 @@ return new ServiceReply
 ```
 
 **Why This Keeps Happening**: once code moves below the HTTP layer, it stops looking like “response construction” even though the service reply is still serialized across trust boundaries. Treat `ServiceReply.ErrorMessage` exactly like an API error payload: log the exception detail locally, return a stable public string remotely.
+
+### 0k78. Service-To-Service Mesh Failures Must Not Relay Downstream Error Text
+
+**The Bug**: mesh services often forward or wrap another service call, tunnel connection, or NAT operation. It is easy to copy the downstream `reply.ErrorMessage` or local `ex.Message` straight into the current `ServiceReply`. That turns internal dependency failures into protocol-visible diagnostics for remote peers.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/HolePunchMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+
+**Wrong**:
+```csharp
+ErrorMessage = $"Failed to contact target peer: {reply.ErrorMessage}",
+```
+
+```csharp
+ErrorMessage = $"Tunnel error: {ex.Message}"
+```
+
+**Correct**:
+```csharp
+ErrorMessage = "Failed to contact target peer",
+```
+
+```csharp
+ErrorMessage = "Tunnel error"
+```
+
+**Why This Keeps Happening**: dependency and transport failures feel like useful context to bubble up, especially in peer-to-peer code. But once that text crosses a mesh boundary, it becomes untrusted public output. Preserve the detail in logs only; mesh replies should use stable, coarse-grained failure strings.
