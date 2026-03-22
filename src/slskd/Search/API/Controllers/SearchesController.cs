@@ -77,6 +77,18 @@ namespace slskd.Search.API
                 return Forbid();
             }
 
+            if (request == null)
+            {
+                return BadRequest("Request is required");
+            }
+
+            request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+            request.Providers = request.Providers?
+                .Select(provider => provider?.Trim() ?? string.Empty)
+                .Where(provider => !string.IsNullOrWhiteSpace(provider))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState.GetReadableString());
@@ -191,6 +203,11 @@ namespace slskd.Search.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            if (limit < 0 || offset < 0)
+            {
+                return BadRequest();
             }
 
             var searches = await Searches.ListAsync(limit: limit, offset: offset);

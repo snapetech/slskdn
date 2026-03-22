@@ -45,6 +45,12 @@ public class LibraryHealthController : ControllerBase
         [FromQuery] int limit = 100,
         CancellationToken cancellationToken = default)
     {
+        path = string.IsNullOrWhiteSpace(path) ? null : path.Trim();
+        if (limit <= 0)
+        {
+            return BadRequest(new { error = "limit must be greater than 0" });
+        }
+
         logger.LogInformation("Library health check requested for path: {Path}", path ?? "(all)");
 
         var summary = await healthService.GetSummaryAsync(path ?? string.Empty, cancellationToken);

@@ -46,7 +46,7 @@ public class MeshStatsController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = "Failed to retrieve mesh stats", message = ex.Message });
+            return StatusCode(500, new { error = "Failed to retrieve mesh stats" });
         }
     }
 }

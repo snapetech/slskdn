@@ -47,6 +47,11 @@ public class SearchCompatibilityController : ControllerBase
         }
 
         var query = request.Query.Trim();
+        if (request.Limit is <= 0)
+        {
+            return BadRequest(new { error = "Limit must be positive" });
+        }
+
         logger.LogInformation("Compatibility search: {Query}", query);
 
         // Generate a search ID

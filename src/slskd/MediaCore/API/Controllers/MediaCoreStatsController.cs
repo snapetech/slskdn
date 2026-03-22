@@ -41,11 +41,9 @@ public class MediaCoreStatsController : ControllerBase
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[MediaCoreStats] GetDashboard endpoint called");
         try
         {
             var dashboard = await _statsService.GetDashboardAsync(cancellationToken);
-            _logger.LogInformation("[MediaCoreStats] Dashboard retrieved successfully");
             return Ok(dashboard);
         }
         catch (Exception ex)

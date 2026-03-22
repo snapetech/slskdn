@@ -43,6 +43,9 @@ public class PodVerificationController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> VerifyMembership(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -75,6 +78,17 @@ public class PodVerificationController : ControllerBase
             return BadRequest(new { error = "Message is required" });
         }
 
+        message.MessageId = message.MessageId?.Trim() ?? string.Empty;
+        message.PodId = message.PodId?.Trim() ?? string.Empty;
+        message.ChannelId = message.ChannelId?.Trim() ?? string.Empty;
+        message.SenderPeerId = message.SenderPeerId?.Trim() ?? string.Empty;
+        message.Signature = message.Signature?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(message.MessageId) || string.IsNullOrWhiteSpace(message.PodId))
+        {
+            return BadRequest(new { error = "MessageId and PodId are required" });
+        }
+
         try
         {
             var result = await _membershipVerifier.VerifyMessageAsync(message, cancellationToken);
@@ -99,6 +113,10 @@ public class PodVerificationController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> CheckRole(string podId, string peerId, string requiredRole, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+        requiredRole = requiredRole?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || string.IsNullOrWhiteSpace(requiredRole))
         {
             return BadRequest(new { error = "PodId, PeerId, and RequiredRole are required" });

@@ -5501,3 +5501,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `4157e75b`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:00:42Z
+
+- Continued the broad read-side/controller-boundary bughunt into search, stats, and adjacent Pod verification surfaces:
+  - fixed `SearchesController` so null request bodies are rejected explicitly, `SearchText` and provider lists are trimmed/deduplicated before dispatch, and negative `limit`/`offset` pagination values now return `400`
+  - fixed `LibraryHealthController` so blank `path` is normalized consistently and non-positive `limit` values are rejected instead of being passed straight into the service filter
+  - fixed `MeshStatsController` so `500` responses no longer echo raw exception messages back to the client
+  - removed noisy success-path entry/exit logging from `MediaCoreStatsController.GetDashboard(...)` while preserving failure logging
+  - folded in adjacent dirty Pod discovery/verification tests and controller state already present in the tree so the PodCore API remains committed as one coherent batch
+  - added focused regressions for search controller normalization and mesh/library-health boundary handling
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `742821c7`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

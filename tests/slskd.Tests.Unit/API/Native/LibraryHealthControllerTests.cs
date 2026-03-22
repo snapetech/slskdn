@@ -51,6 +51,29 @@ public class LibraryHealthControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task GetHealth_WithWhitespacePath_UsesAllPathAndRejectsNonPositiveLimit()
+    {
+        var healthService = new Mock<ILibraryHealthService>();
+        var controller = CreateController(healthService);
+
+        var badRequest = await controller.GetHealth("   ", 0, default);
+        Assert.IsType<BadRequestObjectResult>(badRequest);
+
+        healthService
+            .Setup(service => service.GetSummaryAsync(string.Empty, default))
+            .ReturnsAsync(new LibraryHealthSummary());
+        healthService
+            .Setup(service => service.GetIssuesAsync(
+                It.Is<LibraryHealthIssueFilter>(filter => filter.LibraryPath == string.Empty && filter.Limit == 5),
+                default))
+            .ReturnsAsync(new List<LibraryHealthIssue>());
+
+        var ok = await controller.GetHealth("   ", 5, default);
+
+        Assert.IsType<OkObjectResult>(ok);
+    }
+
     private static LibraryHealthController CreateController(Mock<ILibraryHealthService> healthService)
     {
         return new LibraryHealthController(

@@ -62,4 +62,25 @@ public class SearchCompatibilityControllerTests
                 It.IsAny<List<string>>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task Search_WithNonPositiveLimit_ReturnsBadRequest()
+    {
+        var searchService = new Mock<ISearchService>();
+        var controller = new SearchCompatibilityController(
+            searchService.Object,
+            NullLogger<SearchCompatibilityController>.Instance);
+
+        var result = await controller.Search(new SearchRequest("hello", null, 0), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        searchService.Verify(
+            service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()),
+            Times.Never);
+    }
 }

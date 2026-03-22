@@ -41,6 +41,18 @@ public class PodDiscoveryController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> RegisterPod([FromBody] Pod pod, CancellationToken cancellationToken = default)
     {
+        if (pod != null)
+        {
+            pod.PodId = pod.PodId?.Trim() ?? string.Empty;
+            pod.Name = pod.Name?.Trim() ?? string.Empty;
+            pod.Description = pod.Description?.Trim() ?? string.Empty;
+            pod.Tags = pod.Tags?
+                .Select(tag => tag?.Trim() ?? string.Empty)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct()
+                .ToList() ?? new List<string>();
+        }
+
         if (pod == null || string.IsNullOrWhiteSpace(pod.PodId))
         {
             return BadRequest(new { error = "Valid pod with PodId is required" });
@@ -77,6 +89,7 @@ public class PodDiscoveryController : ControllerBase
     [HttpDelete("unregister/{podId}")]
     public async Task<IActionResult> UnregisterPod(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "PodId is required" });
@@ -113,6 +126,18 @@ public class PodDiscoveryController : ControllerBase
     [HttpPost("update")]
     public async Task<IActionResult> UpdatePod([FromBody] Pod pod, CancellationToken cancellationToken = default)
     {
+        if (pod != null)
+        {
+            pod.PodId = pod.PodId?.Trim() ?? string.Empty;
+            pod.Name = pod.Name?.Trim() ?? string.Empty;
+            pod.Description = pod.Description?.Trim() ?? string.Empty;
+            pod.Tags = pod.Tags?
+                .Select(tag => tag?.Trim() ?? string.Empty)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct()
+                .ToList() ?? new List<string>();
+        }
+
         if (pod == null || string.IsNullOrWhiteSpace(pod.PodId))
         {
             return BadRequest(new { error = "Valid pod with PodId is required" });
@@ -150,6 +175,7 @@ public class PodDiscoveryController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> DiscoverPodsByName(string name, CancellationToken cancellationToken = default)
     {
+        name = name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
             return BadRequest(new { error = "Name is required" });
@@ -177,6 +203,7 @@ public class PodDiscoveryController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> DiscoverPodsByTag(string tag, CancellationToken cancellationToken = default)
     {
+        tag = tag?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(tag))
         {
             return BadRequest(new { error = "Tag is required" });
@@ -204,6 +231,7 @@ public class PodDiscoveryController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> DiscoverPodsByTags(string tags, CancellationToken cancellationToken = default)
     {
+        tags = tags?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(tags))
         {
             return BadRequest(new { error = "Tags are required" });
@@ -211,7 +239,18 @@ public class PodDiscoveryController : ControllerBase
 
         try
         {
-            var tagList = tags.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t));
+            var tagList = tags
+                .Split(',')
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct()
+                .ToList();
+
+            if (tagList.Count == 0)
+            {
+                return BadRequest(new { error = "At least one non-empty tag is required" });
+            }
+
             var result = await _discoveryService.DiscoverPodsByTagsAsync(tagList, cancellationToken);
             return Ok(result);
         }
@@ -258,6 +297,7 @@ public class PodDiscoveryController : ControllerBase
     [HttpGet("content/{*contentId}")]
     public async Task<IActionResult> DiscoverPodsByContent(string contentId, CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest(new { error = "ContentId is required" });

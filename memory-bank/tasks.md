@@ -771,3 +771,6 @@
 - [x] Normalize share and job controller request boundaries
   - Status: done
   - Notes: Added null-body and trim validation to share/share-group and job creation endpoints, normalized job filter/id inputs, tightened share announcement/token handling, folded in adjacent Pod membership normalization, and added focused sharing/job boundary regressions.
+- [x] Normalize search and stats controller boundaries
+  - Status: done
+  - Notes: Added null-body, trim, dedupe, and pagination validation to search/list-health endpoints, stopped mesh stats from leaking raw exception messages, reduced noisy MediaCore dashboard logging, and folded in adjacent dirty Pod discovery/verification coverage from the working tree.
