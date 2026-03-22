@@ -74,6 +74,33 @@ await _outboxStore.StoreAsync(actorName, published, rawJson, cancellationToken);
 
 **Why This Keeps Happening**: It is easy to implement actor documents and inboxes first, leave the outbox as a placeholder, and assume generated recent activities are "good enough." They are not. Once an actor advertises an outbox, clients expect a real posting path, stable local history, and real fan-out semantics for public follower delivery. If those pieces are missing, either do not expose the outbox contract yet or wire the minimal durable path completely.
 
+### 0xB. SongID Corpus Readers Must Accept Case-Insensitive Metadata And Relative Fingerprint Paths
+
+**The Bug**: Corpus matching only deserialized metadata with the exact current JSON casing and only accepted absolute `FingerprintPath` values. Older entries, hand-edited entries, or entries moved with the corpus directory were silently ignored even though the fingerprint file was still present.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+entry = JsonSerializer.Deserialize<SongIdCorpusEntry>(json);
+if (string.IsNullOrWhiteSpace(entry.FingerprintPath) || !File.Exists(entry.FingerprintPath))
+{
+    continue;
+}
+```
+
+**Correct**:
+```csharp
+entry = JsonSerializer.Deserialize<SongIdCorpusEntry>(json, new JsonSerializerOptions
+{
+    PropertyNameCaseInsensitive = true,
+});
+var fingerprintPath = ResolveCorpusFingerprintPath(metadataPath, entry);
+```
+
+**Why This Keeps Happening**: Local corpus formats evolve slowly and often get copied between machines or edited by tools outside the app. Assuming the exact latest serializer casing and an unchanged absolute path makes the corpus brittle for no good reason. Treat local metadata as compatibility data: deserialize case-insensitively and resolve relative artifact paths relative to the metadata file.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
