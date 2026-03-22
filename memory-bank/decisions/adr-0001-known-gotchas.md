@@ -1558,7 +1558,7 @@ protected virtual void Dispose(bool disposing)
 
 ### 0w. Network And Coordination Waiters Should Default To `RunContinuationsAsynchronously`
 
-**The Bug**: Several runtime waiters still used default `TaskCompletionSource` instances in relay login, mesh sync request/response tracking, download enqueue coordination, token-bucket resets, and channel completion. Those waiters can be completed from event handlers, locks, or scheduler paths, allowing arbitrary continuations to run inline on sensitive coordination threads.
+**The Bug**: Several runtime waiters still used default `TaskCompletionSource` instances in relay login, mesh sync request/response tracking, download enqueue coordination, token-bucket resets, and channel completion. In `TokenBucket`, the reset path had already been fixed, but the original field initializer still used the default constructor. Those waiters can be completed from event handlers, locks, or scheduler paths, allowing arbitrary continuations to run inline on sensitive coordination threads.
 
 **Files Affected**:
 - `src/slskd/Relay/RelayClient.cs`
@@ -1570,14 +1570,45 @@ protected virtual void Dispose(bool disposing)
 **Wrong**:
 ```csharp
 var tcs = new TaskCompletionSource<Response>();
+private TaskCompletionSource<bool> waitForReset = new();
 ```
 
 **Correct**:
 ```csharp
 var tcs = new TaskCompletionSource<Response>(TaskCreationOptions.RunContinuationsAsynchronously);
+private TaskCompletionSource<bool> waitForReset =
+    new(TaskCreationOptions.RunContinuationsAsynchronously);
 ```
 
-**Why This Keeps Happening**: Default `TaskCompletionSource` is convenient and usually works in tests, but runtime completion often happens under callbacks, locks, semaphores, or transport handlers. When the continuation inlines there, it can create re-entrancy, hidden latency spikes, or deadlocks. For cross-component handoff signals, asynchronous continuations should be the default, not the exception.
+**Why This Keeps Happening**: Default `TaskCompletionSource` is convenient and usually works in tests, but runtime completion often happens under callbacks, locks, semaphores, or transport handlers. When the continuation inlines there, it can create re-entrancy, hidden latency spikes, or deadlocks. It is also easy to fix one construction site and miss the original field initializer. For cross-component handoff signals, asynchronous continuations should be the default everywhere, not only at later reset/replacement sites.
+
+### 0aa. Retrying HTTP Hooks Must Recreate And Dispose Per-Attempt Request Content
+
+**The Bug**: The webhook integration built one `StringContent` instance outside its retry loop and reused it across attempts without disposing it. That left request content lifetime unclear and made retries depend on reusing a mutable disposable payload object across multiple sends.
+
+**Files Affected**:
+- `src/slskd/Integrations/Webhooks/WebhookService.cs`
+
+**Wrong**:
+```csharp
+var content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
+
+await Retry.Do(task: async () =>
+{
+    using var response = await http.PostAsync(call.Url, content);
+});
+```
+
+**Correct**:
+```csharp
+await Retry.Do(task: async () =>
+{
+    using var content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
+    using var response = await http.PostAsync(call.Url, content);
+});
+```
+
+**Why This Keeps Happening**: Retry loops naturally push payload construction outward so the body looks cleaner, but that can accidentally turn per-request disposables into shared mutable state. For retryable HTTP sends, either recreate request content per attempt or isolate it behind an immutable factory so each send owns and disposes its own payload object.
 
 ### 0x. Singleton Services Must Not Launch Infinite Cleanup Loops Without A Disposal Hook
 
