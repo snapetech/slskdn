@@ -5223,3 +5223,10 @@ Code quality improvements were completed as part of Option A:
 - Fixed the frontend boot-time crash in [Searches.jsx](/home/keith/Documents/code/slskdn/src/web/src/components/Search/Searches.jsx) by normalizing missing `server` state before reading `isConnected` and by using the existing capabilities helper instead of a raw fetch path.
 - Added the new E2E gotchas to [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) immediately in three follow-up commits as the regressions were uncovered.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0` passed; `npm --prefix src/web run build` passed; targeted Playwright regressions `health_and_login` and `system_page_loads` passed locally after the final harness fix; remote GitHub Actions run `23392592169` (`E2E Tests`, `workflow_dispatch`, `master`) completed successfully with `Run E2E Tests` green.
+
+## 2026-03-21 19:15 - Updated GitHub Actions runtime versions and removed malformed XML doc warnings
+
+- Updated repo workflows off the deprecated Node 20-based action lines using the current upstream majors: `actions/checkout@v6`, `actions/setup-dotnet@v5`, `actions/setup-node@v6`, `actions/upload-artifact@v7`, and `actions/download-artifact@v8`.
+- Fixed the repeated `CS1570` malformed XML documentation warnings by escaping raw ampersands in XML doc comments across the moderation, code-quality, realm, sharing, and VirtualSoulfind files.
+- Documented the XML-doc pitfall in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) so future comment edits do not reintroduce invalid XML.
+- Validation: local `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0` no longer emitted `CS1570`; workflow grep confirmed no remaining `checkout/setup-dotnet/setup-node/upload-artifact/download-artifact@v4` pins; remote GitHub Actions run `23392771736` (`E2E Tests`, `workflow_dispatch`, `master`) completed successfully on the updated action stack without the previous Node 20 deprecation annotation.

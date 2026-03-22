@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Scheduled E2E workflow failures repaired and rerun green on `master`
+- **Current Task**: E2E workflow repaired, action runtime versions updated, and malformed XML doc warnings removed
 - **Branch**: `e2e-fixture-fix2`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -104,8 +104,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. If the nightly E2E workflow flakes again, inspect the uploaded Playwright report first before assuming the tagged release path regressed.
-2. Triage or suppress the longstanding XML-doc warnings that still appear during `dotnet build` in CI so they stop obscuring real failures.
-3. Update GitHub Actions dependencies off the Node 20-based action versions before the June 2, 2026 forced runner switch.
+2. Triage the remaining compiler/nullability warnings still surfaced in CI (`Common/Retry`, `ManagedState`, `WaitKey`, `Checkpointer`, duplicate using in `Program.cs`) so they stop masking real failures.
+3. If release workflows start warning on other third-party actions, repeat the same direct-release audit used here with `gh api repos/<owner>/<repo>/releases/latest`.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
