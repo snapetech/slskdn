@@ -9618,3 +9618,94 @@ var items = request.Items
 ```
 
 **Why This Keeps Happening**: route values and JSON strings often look “already parsed,” so it is easy to assume they are ready for authorization, allowlist checks, or enqueue operations. They are not. If controller behavior depends on string identity, trim and validate before comparing or dispatching. Otherwise the API contract depends on invisible downstream normalization and breaks on padded-but-human-plausible input.
+
+### 0k59. WebFinger Resource Parsing Must Reject Extra Path Segments And Trim Canonical Parts
+
+**The Bug**: `WebFingerController.TryParseResource(...)` accepted `https://domain/@user/extra` and `https://domain/actors/user/extra` by slicing everything after `@` or `actors/` into the username. It also treated padded `acct:` resources as raw input instead of trimming the actual username/domain parts first. That could turn malformed actor URLs into fake usernames like `music/extra` and make valid padded `acct:` resources fail discovery.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/WebFingerController.cs`
+- `tests/slskd.Tests.Unit/SocialFederation/WebFingerControllerTests.cs`
+
+**Wrong**:
+```csharp
+var path = uri.AbsolutePath.Trim('/');
+if (path.StartsWith("@"))
+{
+    username = path.Substring(1);
+}
+else if (path.StartsWith("actors/"))
+{
+    username = path.Substring(7);
+}
+```
+
+**Correct**:
+```csharp
+resource = resource.Trim();
+var pathSegments = uri.AbsolutePath
+    .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+if (pathSegments.Length == 1 && pathSegments[0].StartsWith("@", StringComparison.Ordinal))
+{
+    username = pathSegments[0][1..].Trim();
+}
+else if (pathSegments.Length == 2 &&
+         string.Equals(pathSegments[0], "actors", StringComparison.OrdinalIgnoreCase))
+{
+    username = pathSegments[1].Trim();
+}
+else
+{
+    return false;
+}
+```
+
+**Why This Keeps Happening**: URI parsers give you a path string, but they do not enforce your application’s path shape. If an endpoint only accepts `/@user` or `/actors/user`, parse by segments and require the exact segment count. Do not recover usernames by substring from the whole path.
+
+### 0k60. Collection Payloads Must Reject Partially Invalid Elements Instead Of Silently Dropping Them
+
+**The Bug**: collection-style controller payloads can look “mostly valid” when only some elements survive normalization. `DownloadsCompatibilityController` normalized `user`/`remotePath` fields, but if a request contained a valid item plus a blank one, silently filtering the bad item would mutate the caller’s request shape and enqueue only part of the batch. `IpldController.AddLinks(...)` had the same boundary problem for link entries: whitespace-only `Name` or `Target` values slipped through to mapper calls instead of being rejected as malformed input.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/DownloadsCompatibilityController.cs`
+- `src/slskd/MediaCore/API/Controllers/IpldController.cs`
+- `tests/slskd.Tests.Unit/API/Compatibility/DownloadsCompatibilityControllerTests.cs`
+- `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`
+
+**Wrong**:
+```csharp
+var items = request.Items
+    .Select(item => Normalize(item))
+    .Where(item => !string.IsNullOrWhiteSpace(item.User) && !string.IsNullOrWhiteSpace(item.RemotePath))
+    .ToList();
+
+var links = request.Links.Select(l => new IpldLink(l.Name, l.Target, l.LinkName)).ToList();
+await _ipldMapper.AddLinksAsync(contentId, links, cancellationToken);
+```
+
+**Correct**:
+```csharp
+var items = request.Items
+    .Select(item => Normalize(item))
+    .ToList();
+
+if (items.Any(item => string.IsNullOrWhiteSpace(item.User) || string.IsNullOrWhiteSpace(item.RemotePath)))
+{
+    return BadRequest(new { error = "Each item requires a non-empty user and remotePath" });
+}
+
+var links = request.Links
+    .Select(link => new IpldLink(
+        link.Name?.Trim() ?? string.Empty,
+        link.Target?.Trim() ?? string.Empty,
+        string.IsNullOrWhiteSpace(link.LinkName) ? null : link.LinkName.Trim()))
+    .ToList();
+
+if (links.Any(link => string.IsNullOrWhiteSpace(link.Name) || string.IsNullOrWhiteSpace(link.Target)))
+{
+    return BadRequest("Each link requires a non-empty name and target");
+}
+```
+
+**Why This Keeps Happening**: once normalization exists, it is tempting to “help” by dropping bad elements and proceeding with the rest. That changes API semantics and hides malformed client input. For batch payloads, normalize first, then reject the whole request if any element is invalid unless the endpoint explicitly documents partial-success behavior.
