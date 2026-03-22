@@ -218,6 +218,40 @@ public TaskCompletionSource TaskCompletionSource { get; set; } =
 
 **Why This Keeps Happening**: `TaskCompletionSource` looks like a passive signal, but by default it can execute awaiter continuations synchronously on the thread calling `SetResult`. In queue, lock, and semaphore-protected schedulers, that means arbitrary caller code can run before internal state is fully released. Use `RunContinuationsAsynchronously` for handoff signals that may be completed under coordination primitives.
 
+### 0v. Background Cleanup Loops Need Explicit Cancellation Before Disposing Their Synchronization Primitives
+
+**The Bug**: `SignalBus` started a perpetual cleanup task that slept with `Task.Delay(..., CancellationToken.None)` and used semaphores long after construction. `Dispose()` immediately disposed those semaphores without first cancelling and joining the cleanup task, so the background loop could wake up later and hit disposed primitives.
+
+**Files Affected**:
+- `src/slskd/Signals/SignalBus.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(CleanupExpiredSignalIdsAsync);
+
+protected virtual void Dispose(bool disposing)
+{
+    seenSignalIdsLock.Dispose();
+    subscribersLock.Dispose();
+}
+```
+
+**Correct**:
+```csharp
+cleanupTask = Task.Run(CleanupExpiredSignalIdsAsync);
+
+protected virtual void Dispose(bool disposing)
+{
+    cleanupCancellationTokenSource.Cancel();
+    cleanupTask.Wait(TimeSpan.FromSeconds(1));
+    cleanupCancellationTokenSource.Dispose();
+    seenSignalIdsLock.Dispose();
+    subscribersLock.Dispose();
+}
+```
+
+**Why This Keeps Happening**: Background maintenance loops are easy to treat as harmless fire-and-forget work, but they still own timers, locks, and semaphores. Any component that starts a long-lived loop must keep a cancellation handle and stop the loop before disposing the resources it uses.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
