@@ -285,6 +285,40 @@ var fileSize = status.FileSize > 0 ? status.FileSize : metadata?.SizeBytes ?? 0;
 
 **Why This Keeps Happening**: Bridge code has multiple readback surfaces: the proxy owns live sessions, the dashboard owns admin-facing stats, and the transfer layer owns execution status. If each surface reports only its own partial state, the UI regresses into obvious fiction like zero connections or zero-byte files. When a bridge workflow already captured live/session metadata earlier, status and admin endpoints need to reuse that same state instead of reconstructing weaker answers later.
 
+### 0x14. Protocol Parsers Must Not Log Cooperative Cancellation As An Error, And Proxy Progress Must Preserve The Last Known File Size
+
+**The Bug**: The Soulseek bridge protocol parser caught `OperationCanceledException` inside `ReadMessageAsync` and `WriteMessageAsync`, logged it as an error, and converted normal shutdown into noisy protocol failures. Separately, the transfer-progress proxy still trusted `meshStatus.FileSize` on every poll, so a later zero-sized status update could wipe out earlier correct file-size knowledge and collapse percentage math back to zero.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/Protocol/SoulseekProtocolParser.cs`
+- `src/slskd/VirtualSoulfind/Bridge/TransferProgressProxy.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "[SOULSEEK-PROTO] Error reading message");
+    return null;
+}
+
+FileSize = meshStatus.FileSize,
+PercentComplete = (int)Math.Clamp(meshStatus.ProgressPercent, 0, 100),
+```
+
+**Correct**:
+```csharp
+catch (OperationCanceledException)
+{
+    throw;
+}
+
+FileSize = meshStatus.FileSize > 0
+    ? meshStatus.FileSize
+    : session.LastProgress?.FileSize ?? 0;
+```
+
+**Why This Keeps Happening**: Background I/O code often wraps all exceptions in one catch block, which turns normal cancellation into fake errors during shutdown. Progress proxies have a similar drift problem: if they poll a weaker execution status source repeatedly, they can overwrite stronger metadata they already learned earlier. Treat cancellation as control flow, and preserve the best-known transfer metadata instead of letting weaker follow-up reads erase it.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
