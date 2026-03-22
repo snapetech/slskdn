@@ -9710,6 +9710,65 @@ if (links.Any(link => string.IsNullOrWhiteSpace(link.Name) || string.IsNullOrWhi
 
 **Why This Keeps Happening**: once normalization exists, it is tempting to “help” by dropping bad elements and proceeding with the rest. That changes API semantics and hides malformed client input. For batch payloads, normalize first, then reject the whole request if any element is invalid unless the endpoint explicitly documents partial-success behavior.
 
+### 0k61. Controller Boundaries Must Normalize Every Routed Or Batched Identifier Before Dispatch
+
+**The Bug**: several API controllers still treated route/body strings as canonical just because model binding had produced typed objects. `RankingController` passed raw usernames and candidates into ranking/history lookups, so padded or blank values could reach service code unchanged. `PodMessageRoutingController` accepted blank peer IDs in `route-to-peers` and raw padded message identifiers in routing and seen-message checks. `TransfersController.EnqueueAsync(...)` also trusted route `username` and batched `Filename` values without trimming, so whitespace-only filenames or padded usernames could slip into download enqueue logic.
+
+**Files Affected**:
+- `src/slskd/Transfers/Ranking/API/RankingController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageRoutingController.cs`
+- `src/slskd/Transfers/API/Controllers/TransfersController.cs`
+- `tests/slskd.Tests.Unit/Transfers/Ranking/API/RankingControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodMessageRoutingControllerTests.cs`
+- `tests/slskd.Tests.Unit/Transfers/API/TransfersControllerTests.cs`
+
+**Wrong**:
+```csharp
+var histories = await rankingService.GetHistoriesAsync(usernames);
+var ranked = await rankingService.RankSourcesAsync(candidates);
+
+var result = await _messageRouter.RouteMessageToPeersAsync(request.Message, request.TargetPeerIds, cancellationToken);
+var isSeen = _messageRouter.IsMessageSeen(messageId, podId);
+
+var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(
+    username,
+    requestList.Select(r => (r!.Filename, r!.Size)));
+```
+
+**Correct**:
+```csharp
+var normalizedUsernames = usernames
+    .Select(username => username?.Trim() ?? string.Empty)
+    .ToList();
+if (normalizedUsernames.Any(string.IsNullOrWhiteSpace))
+{
+    return BadRequest("Each username must be non-empty");
+}
+
+var normalizedTargetPeerIds = request.TargetPeerIds
+    .Select(peerId => peerId?.Trim() ?? string.Empty)
+    .ToList();
+if (normalizedTargetPeerIds.Any(string.IsNullOrWhiteSpace))
+{
+    return BadRequest(new { error = "Valid message and target peer IDs are required" });
+}
+
+username = username?.Trim() ?? string.Empty;
+var normalizedRequests = requestList
+    .Select(r => new QueueDownloadRequest
+    {
+        Filename = r!.Filename?.Trim() ?? string.Empty,
+        Size = r.Size
+    })
+    .ToList();
+if (normalizedRequests.Any(r => string.IsNullOrWhiteSpace(r.Filename)))
+{
+    return BadRequest("Each file requires a non-empty filename");
+}
+```
+
+**Why This Keeps Happening**: route segments, JSON arrays, and DTO properties all look “already validated” once model binding succeeds. They are not. If a controller forwards identifiers, usernames, peer IDs, or filenames to another subsystem, define the canonical form at the controller boundary first. Otherwise behavior depends on accidental downstream trimming and malformed-but-shaped input can leak into routing, ranking, or transfer operations.
+
 ### 0k59. Controllers Must Validate Null Bodies Before Logging Or Relying On Attribute Validation, And Must Trim Required String Fields Explicitly
 
 **The Bug**: two controller boundaries still assumed framework/model validation had already normalized the request. `SearchCompatibilityController` logged `request.Query` before checking whether `request` was null, so a null JSON body could throw before returning a proper `400`. `PortForwardingController` relied on `[Required]`/`[StringLength]` for `PodId` and `DestinationHost`, but whitespace-only strings still made it through to forwarding logic because attribute validation does not automatically trim them into the effective required shape.
