@@ -204,6 +204,36 @@ return StatusCode(500, new { error = "Failed to retrieve mesh stats" });
 
 **Why This Keeps Happening**: teams often harden POST/PUT/DELETE paths first and leave read-only or “status” endpoints for later, but those routes still sit on the public control plane. They can leak internals, accept invalid pagination/filter values, or silently normalize user intent differently from the rest of the API unless they get the same boundary pass.
 
+### 0xAA. Query Controllers Must Not Randomize Candidate Order After Filtering
+
+**The Bug**: `FuzzyMatcherController` built a candidate list, applied `Take(maxCandidates)`, and then randomized the remaining set with `OrderBy(Guid.NewGuid())`. That made identical requests return different candidate pools and therefore different match results, even when the registry had not changed.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/FuzzyMatcherController.cs`
+- `src/slskd/API/VirtualSoulfind/CanonicalController.cs`
+- `src/slskd/API/VirtualSoulfind/ShadowIndexController.cs`
+- `src/slskd/MediaCore/API/Controllers/ContentDescriptorPublisherController.cs`
+
+**Wrong**:
+```csharp
+return candidates
+    .Where(c => c != targetContentId)
+    .Take(maxCandidates)
+    .OrderBy(c => Guid.NewGuid());
+```
+
+**Correct**:
+```csharp
+return candidates
+    .Where(c => !string.Equals(c, targetContentId, StringComparison.OrdinalIgnoreCase))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .OrderBy(c => c, StringComparer.Ordinal)
+    .Take(maxCandidates)
+    .ToList();
+```
+
+**Why This Keeps Happening**: randomization can look like a cheap way to spread load or avoid bias, but once it sits inside a controller-facing query path it destroys reproducibility. For control-plane read APIs, normalize path/query inputs first and keep candidate ordering deterministic unless the product explicitly requires randomized sampling.
+
 ### 0xA0. Legacy Fallback Auto-Activation Must Be Explicitly Opt-In, Even When `VirtualSoulfind.DisasterMode` Exists
 
 **The Bug**: The code already failed closed when the entire `VirtualSoulfind.DisasterMode` section was absent, but `DisasterModeOptions.Auto` still defaulted to `true`. That meant a partial config block like `virtualSoulfind.disasterMode: {}` silently turned on legacy auto-fallback and could flip search/runtime behavior away from the default Soulseek+mesh path.
