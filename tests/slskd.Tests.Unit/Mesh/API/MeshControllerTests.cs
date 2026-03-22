@@ -140,7 +140,7 @@ public class MeshControllerTests
 
         var result = await controller.MergeEntries(
             "peer-1",
-            new MeshController.MergeEntriesRequest
+            new MergeEntriesRequest
             {
                 Entries = new[]
                 {

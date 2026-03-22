@@ -768,3 +768,6 @@
 - [x] Normalize route-scoped controller ownership and duplicate-key boundaries
   - Status: done
   - Notes: Tightened transfer/pod/bridge/warm-cache/ranking/controller inputs so trimmed route/body values are enforced before lookup or mutation, rejected duplicate post-trim channel keys in Pod backfill sync, normalized collection item/title updates, and aligned the adjacent mesh/pod/transfer/sharing test coverage with those API boundaries.
+- [x] Normalize share and job controller request boundaries
+  - Status: done
+  - Notes: Added null-body and trim validation to share/share-group and job creation endpoints, normalized job filter/id inputs, tightened share announcement/token handling, folded in adjacent Pod membership normalization, and added focused sharing/job boundary regressions.

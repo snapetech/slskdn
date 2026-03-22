@@ -42,6 +42,14 @@ public class PodMembershipController : ControllerBase
     [HttpPost("{podId}/members")]
     public async Task<IActionResult> PublishMembership(string podId, [FromBody] PodMember member, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        if (member != null)
+        {
+            member.PeerId = member.PeerId?.Trim() ?? string.Empty;
+            member.Role = member.Role?.Trim() ?? string.Empty;
+            member.PublicKey = member.PublicKey?.Trim() ?? string.Empty;
+        }
+
         if (string.IsNullOrWhiteSpace(podId) || member == null || string.IsNullOrWhiteSpace(member.PeerId))
         {
             return BadRequest(new { error = "Valid podId and member with PeerId are required" });
@@ -80,6 +88,9 @@ public class PodMembershipController : ControllerBase
     [HttpPut("{podId}/members/{peerId}")]
     public async Task<IActionResult> UpdateMembership(string podId, string peerId, [FromBody] PodMember member, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || member == null)
         {
             return BadRequest(new { error = "Valid podId, peerId, and member are required" });
@@ -87,6 +98,8 @@ public class PodMembershipController : ControllerBase
 
         // Ensure the member has the correct peer ID
         member.PeerId = peerId;
+        member.Role = member.Role?.Trim() ?? string.Empty;
+        member.PublicKey = member.PublicKey?.Trim() ?? string.Empty;
 
         try
         {
@@ -120,6 +133,9 @@ public class PodMembershipController : ControllerBase
     [HttpDelete("{podId}/{peerId}")]
     public async Task<IActionResult> RemoveMembership(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -157,6 +173,9 @@ public class PodMembershipController : ControllerBase
     [HttpGet("{podId}/{peerId}")]
     public async Task<IActionResult> GetMembership(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -192,6 +211,9 @@ public class PodMembershipController : ControllerBase
     [HttpGet("{podId}/{peerId}/verify")]
     public async Task<IActionResult> VerifyMembership(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -220,6 +242,9 @@ public class PodMembershipController : ControllerBase
     [HttpPost("{podId}/{peerId}/ban")]
     public async Task<IActionResult> BanMember(string podId, string peerId, [FromBody] BanRequest request, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -227,7 +252,8 @@ public class PodMembershipController : ControllerBase
 
         try
         {
-            var result = await _membershipService.BanMemberAsync(podId, peerId, request?.Reason, cancellationToken);
+            var reason = string.IsNullOrWhiteSpace(request?.Reason) ? null : request.Reason.Trim();
+            var result = await _membershipService.BanMemberAsync(podId, peerId, reason, cancellationToken);
 
             if (result.Success)
             {
@@ -257,6 +283,9 @@ public class PodMembershipController : ControllerBase
     [HttpPost("{podId}/{peerId}/unban")]
     public async Task<IActionResult> UnbanMember(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -295,18 +324,22 @@ public class PodMembershipController : ControllerBase
     [HttpPost("{podId}/{peerId}/role")]
     public async Task<IActionResult> ChangeRole(string podId, string peerId, [FromBody] ChangeRoleRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || string.IsNullOrWhiteSpace(request?.NewRole))
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+        var newRole = request?.NewRole?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || string.IsNullOrWhiteSpace(newRole))
         {
             return BadRequest(new { error = "PodId, PeerId, and NewRole are required" });
         }
 
         try
         {
-            var result = await _membershipService.ChangeRoleAsync(podId, peerId, request.NewRole, cancellationToken);
+            var result = await _membershipService.ChangeRoleAsync(podId, peerId, newRole, cancellationToken);
 
             if (result.Success)
             {
-                _logger.LogInformation("[PodMembership] Changed role for {PeerId} in pod {PodId} to {Role}", peerId, podId, request.NewRole);
+                _logger.LogInformation("[PodMembership] Changed role for {PeerId} in pod {PodId} to {Role}", peerId, podId, newRole);
                 return Ok(result);
             }
             else

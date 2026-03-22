@@ -54,7 +54,7 @@ public class CompatibilityController : ControllerBase
             {
                 connected = soulseek.State == SoulseekClientStates.Connected ||
                            soulseek.State == SoulseekClientStates.LoggedIn,
-                user = soulseek.Username
+                user = string.IsNullOrWhiteSpace(soulseek.Username) ? string.Empty : soulseek.Username.Trim()
             }
         });
     }

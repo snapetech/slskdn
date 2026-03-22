@@ -150,6 +150,8 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Create([FromBody, Required] CreateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        if (req == null)
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Request is required.", Detail = "Request is required." });
         if (req.CollectionId == default)
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "CollectionId is required.", Detail = "CollectionId is required." });
         if (string.IsNullOrWhiteSpace(req.AudienceType) || string.IsNullOrWhiteSpace(req.AudienceId))
@@ -164,7 +166,7 @@ public class SharesController : ControllerBase
             CollectionId = req.CollectionId,
             AudienceType = req.AudienceType.Trim(),
             AudienceId = req.AudienceId.Trim(),
-            AudiencePeerId = req.AudiencePeerId?.Trim(),
+            AudiencePeerId = string.IsNullOrWhiteSpace(req.AudiencePeerId) ? null : req.AudiencePeerId.Trim(),
             AllowStream = req.AllowStream,
             AllowDownload = req.AllowDownload,
             AllowReshare = req.AllowReshare,
@@ -283,6 +285,7 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody, Required] UpdateShareGrantRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        if (req == null) return BadRequest();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGrantAsync(id, ct);
         if (g == null) return NotFound();
@@ -328,6 +331,16 @@ public class SharesController : ControllerBase
 
         if (!CollectionsEnabled) return NotFound();
         if (_announcementService == null) return StatusCode(500, "Announcement service not available.");
+        if (req == null) return BadRequest("Announcement request is required.");
+        req.RecipientUserId = req.RecipientUserId?.Trim();
+        req.OwnerUserId = req.OwnerUserId?.Trim();
+        req.OwnerEndpoint = req.OwnerEndpoint?.Trim();
+        req.Token = req.Token?.Trim();
+
+        if (req.ShareGrantId == Guid.Empty || req.CollectionId == Guid.Empty || string.IsNullOrWhiteSpace(req.RecipientUserId))
+        {
+            return BadRequest("ShareGrantId, CollectionId, and RecipientUserId are required.");
+        }
 
         await _announcementService.IngestAsync(req, ct).ConfigureAwait(false);
         return Ok();
@@ -342,6 +355,7 @@ public class SharesController : ControllerBase
     public async Task<IActionResult> CreateToken([FromRoute] Guid id, [FromBody] CreateTokenRequest req, CancellationToken ct)
     {
         if (!CollectionsEnabled) return NotFound();
+        req ??= new CreateTokenRequest();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGrantAsync(id, ct);
         if (g == null) return NotFound();
@@ -371,7 +385,7 @@ public class SharesController : ControllerBase
         var collectionsOrStreaming = CollectionsEnabled || _options.CurrentValue.Feature.Streaming;
         if (!collectionsOrStreaming) return NotFound();
 
-        string? tokenForStream = token;
+        string? tokenForStream = string.IsNullOrWhiteSpace(token) ? null : token.Trim();
 
         // IMPORTANT: The web UI uses a JWT in the Authorization header. Share tokens may also be passed via query (?token=)
         // or (for non-UI clients) via Authorization: Bearer <share-token>. We must not treat a JWT as a share token.

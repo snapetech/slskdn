@@ -90,6 +90,16 @@ public class SharesControllerTests
     }
 
     [Fact]
+    public async Task Create_NullRequest_ReturnsBadRequest()
+    {
+        var c = CreateController();
+
+        var r = await c.Create(null!, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(r);
+    }
+
+    [Fact]
     public async Task Create_CollectionNotFound_ReturnsNotFound()
     {
         var c = CreateController();
@@ -226,5 +236,32 @@ public class SharesControllerTests
         var createdResult = Assert.IsType<CreatedAtActionResult>(r);
         var grant = Assert.IsType<ShareGrant>(createdResult.Value);
         Assert.Equal("peer123", grant.AudiencePeerId);
+    }
+
+    [Fact]
+    public async Task Create_TrimsAudienceFieldsBeforePersisting()
+    {
+        var c = CreateController();
+        var collectionId = Guid.NewGuid();
+        _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
+        _sharingMock.Setup(x => x.CreateShareGrantAsync(It.IsAny<ShareGrant>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShareGrant { Id = Guid.NewGuid(), CollectionId = collectionId });
+
+        var r = await c.Create(new CreateShareGrantRequest
+        {
+            CollectionId = collectionId,
+            AudienceType = " User ",
+            AudienceId = " bob ",
+            AudiencePeerId = " peer123 "
+        }, CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(r);
+        _sharingMock.Verify(x => x.CreateShareGrantAsync(
+            It.Is<ShareGrant>(g =>
+                g.AudienceType == "User" &&
+                g.AudienceId == "bob" &&
+                g.AudiencePeerId == "peer123"),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

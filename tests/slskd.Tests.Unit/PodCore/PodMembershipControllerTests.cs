@@ -6,7 +6,11 @@ namespace slskd.Tests.Unit.PodCore;
 
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using slskd.Core.Security;
+using slskd.PodCore;
 using slskd.PodCore.API.Controllers;
 using Xunit;
 
@@ -21,5 +25,81 @@ public class PodMembershipControllerTests
             .Single();
 
         Assert.Equal(AuthPolicy.Any, authorize.Policy);
+    }
+
+    [Fact]
+    public async Task ChangeRole_TrimsPodPeerAndRoleBeforeDispatch()
+    {
+        var membershipService = new Mock<IPodMembershipService>();
+        membershipService
+            .Setup(service => service.ChangeRoleAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MembershipPublishResult(true, "pod-1", "peer-1", "dht:key", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+
+        var controller = new PodMembershipController(
+            NullLogger<PodMembershipController>.Instance,
+            membershipService.Object);
+
+        var result = await controller.ChangeRole(" pod-1 ", " peer-1 ", new ChangeRoleRequest(" moderator "), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        membershipService.Verify(
+            service => service.ChangeRoleAsync("pod-1", "peer-1", "moderator", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishMembership_TrimsMemberPeerIdBeforeDispatch()
+    {
+        var membershipService = new Mock<IPodMembershipService>();
+        membershipService
+            .Setup(service => service.PublishMembershipAsync(It.IsAny<string>(), It.IsAny<PodMember>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MembershipPublishResult(true, "pod-1", "peer-1", "dht:key", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+
+        var controller = new PodMembershipController(
+            NullLogger<PodMembershipController>.Instance,
+            membershipService.Object);
+
+        var result = await controller.PublishMembership(
+            " pod-1 ",
+            new PodMember { PeerId = " peer-1 ", Role = " member " },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        membershipService.Verify(
+            service => service.PublishMembershipAsync(
+                "pod-1",
+                It.Is<PodMember>(member => member.PeerId == "peer-1" && member.Role == "member"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateMembership_TrimsMemberFieldsBeforeDispatch()
+    {
+        var membershipService = new Mock<IPodMembershipService>();
+        membershipService
+            .Setup(service => service.UpdateMembershipAsync(It.IsAny<string>(), It.IsAny<PodMember>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MembershipPublishResult(true, "pod-1", "peer-1", "dht:key", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+
+        var controller = new PodMembershipController(
+            NullLogger<PodMembershipController>.Instance,
+            membershipService.Object);
+
+        var result = await controller.UpdateMembership(
+            " pod-1 ",
+            " peer-1 ",
+            new PodMember { Role = " member ", PublicKey = " pub " },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        membershipService.Verify(
+            service => service.UpdateMembershipAsync(
+                "pod-1",
+                It.Is<PodMember>(member =>
+                    member.PeerId == "peer-1" &&
+                    member.Role == "member" &&
+                    member.PublicKey == "pub"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

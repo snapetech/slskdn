@@ -5488,3 +5488,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug patterns immediately in ADR-0001 and committed them as `8fded311` and `3c3e0761`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 20:54:25Z
+
+- Continued the broad controller-boundary bughunt into sharing, jobs, compatibility, and adjacent Pod membership surfaces:
+  - fixed `SharesController` so null bodies are rejected explicitly, share-grant audience/token fields are trimmed before persistence or validation, and E2E announce ingestion now validates required IDs/recipient values instead of accepting raw null/blank payloads
+  - fixed `ShareGroupsController` so create/update/member endpoints reject null or blank request bodies consistently, trim `PeerId`/`UserId` before membership updates, and reject blank `userId` route values on member removal
+  - fixed `JobsController` so `mb_release_id`, `artist_id`, label identifiers, sort/filter inputs, and job IDs are normalized at the API boundary before logging or dispatch, including release-id dedupe for discography jobs
+  - tightened adjacent compatibility/capability responses so user/version surfaces stop echoing raw blank usernames and native capabilities now advertise their `compat` contract explicitly
+  - folded in adjacent dirty Pod membership/join-leave unit coverage and normalized `PodMembershipController` update/ban inputs so update payload fields and ban reasons follow the same trim rules as the rest of PodCore
+  - added focused regressions for sharing/job boundary handling plus the adjacent dirty Pod/Mesh tests already present in the tree
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `4157e75b`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

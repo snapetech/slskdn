@@ -52,12 +52,25 @@ public class JobsController : ControllerBase
         [FromBody] MbReleaseJobRequest request,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Creating MB release job for {ReleaseId}", request.MbReleaseId);
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
 
-        var release = await musicBrainzClient.GetReleaseAsync(request.MbReleaseId, cancellationToken);
+        var releaseId = request.MbReleaseId?.Trim() ?? string.Empty;
+        var targetDir = request.TargetDir?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(releaseId))
+        {
+            return BadRequest("mb_release_id is required");
+        }
+
+        logger.LogInformation("Creating MB release job for {ReleaseId}", releaseId);
+
+        var release = await musicBrainzClient.GetReleaseAsync(releaseId, cancellationToken);
         if (release == null || string.IsNullOrWhiteSpace(release.MusicBrainzArtistId))
         {
-            return NotFound($"Unable to resolve release {request.MbReleaseId} into a SongID-ready MusicBrainz target.");
+            return NotFound($"Unable to resolve release {releaseId} into a SongID-ready MusicBrainz target.");
         }
 
         var jobId = await discographyJobService.CreateJobAsync(
@@ -65,8 +78,8 @@ public class JobsController : ControllerBase
             {
                 ArtistId = release.MusicBrainzArtistId,
                 Profile = DiscographyProfile.AllReleases,
-                TargetDirectory = request.TargetDir,
-                ReleaseIds = new List<string> { request.MbReleaseId },
+                TargetDirectory = targetDir,
+                ReleaseIds = new List<string> { releaseId },
             },
             cancellationToken);
 
@@ -87,6 +100,24 @@ public class JobsController : ControllerBase
         [FromBody] DiscographyJobRequest request,
         CancellationToken cancellationToken)
     {
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.ArtistId = request.ArtistId?.Trim() ?? string.Empty;
+        request.TargetDirectory = request.TargetDirectory?.Trim() ?? string.Empty;
+        request.ReleaseIds = request.ReleaseIds?
+            .Select(id => id?.Trim() ?? string.Empty)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (string.IsNullOrWhiteSpace(request.ArtistId))
+        {
+            return BadRequest("artist_id is required");
+        }
+
         logger.LogInformation("Creating discography job for {ArtistId}", request.ArtistId);
 
         var jobId = await discographyJobService.CreateJobAsync(request, cancellationToken);
@@ -108,7 +139,20 @@ public class JobsController : ControllerBase
         [FromBody] LabelCrateJobRequest request,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Creating label crate job for {Label}", request.LabelName);
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.LabelId = request.LabelId?.Trim();
+        request.LabelName = request.LabelName?.Trim();
+
+        if (string.IsNullOrWhiteSpace(request.LabelId) && string.IsNullOrWhiteSpace(request.LabelName))
+        {
+            return BadRequest("label_id or label_name is required");
+        }
+
+        logger.LogInformation("Creating label crate job for {Label}", request.LabelName ?? request.LabelId);
 
         var jobId = await labelCrateJobService.CreateJobAsync(request, cancellationToken);
 
@@ -134,6 +178,11 @@ public class JobsController : ControllerBase
         [FromQuery] string? sortOrder,
         CancellationToken cancellationToken)
     {
+        type = string.IsNullOrWhiteSpace(type) ? null : type.Trim();
+        status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
+        sortBy = string.IsNullOrWhiteSpace(sortBy) ? null : sortBy.Trim();
+        sortOrder = string.IsNullOrWhiteSpace(sortOrder) ? null : sortOrder.Trim();
+
         logger.LogDebug("Getting jobs with filters: type={Type}, status={Status}, limit={Limit}, offset={Offset}, sortBy={SortBy}, sortOrder={SortOrder}",
             type, status, limit, offset, sortBy, sortOrder);
 
@@ -257,6 +306,12 @@ public class JobsController : ControllerBase
         string id,
         CancellationToken cancellationToken)
     {
+        id = id?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
         logger.LogDebug("Getting job: {JobId}", id);
 
         // Try discography job first
