@@ -127,6 +127,43 @@ foreach (var pair in lastSeenTimestamps)
 
 **Why This Keeps Happening**: trimming is often treated as harmless cleanup, but it can change key identity. Any time a request dictionary or set is normalized after model binding, collisions have to be handled explicitly and turned into deterministic `400` responses. Otherwise the API skips validation and fails in the middle of normalization with an implementation-detail exception.
 
+### 0xA8. Share And Job Controllers Need The Same Null-Body And Trim Rules As The Rest Of The API Surface
+
+**The Bug**: several sharing and job endpoints still assumed model binding always produced a non-null body and already-normalized strings. That let blank `artist_id`, `label_name`, `AudienceType`, `PeerId`, or JWT-adjacent token values flow into service calls and logs as raw whitespace, while some endpoints would just dereference `req` directly on null bodies.
+
+**Files Affected**:
+- `src/slskd/Sharing/API/SharesController.cs`
+- `src/slskd/Sharing/API/ShareGroupsController.cs`
+- `src/slskd/API/Native/JobsController.cs`
+
+**Wrong**:
+```csharp
+logger.LogInformation("Creating discography job for {ArtistId}", request.ArtistId);
+var jobId = await discographyJobService.CreateJobAsync(request, cancellationToken);
+```
+
+**Correct**:
+```csharp
+if (request == null)
+{
+    return BadRequest("Request is required");
+}
+
+request.ArtistId = request.ArtistId?.Trim() ?? string.Empty;
+request.ReleaseIds = request.ReleaseIds?
+    .Select(id => id?.Trim() ?? string.Empty)
+    .Where(id => !string.IsNullOrWhiteSpace(id))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToList();
+
+if (string.IsNullOrWhiteSpace(request.ArtistId))
+{
+    return BadRequest("artist_id is required");
+}
+```
+
+**Why This Keeps Happening**: once most controller surfaces have been normalized, the remaining “simple” endpoints look harmless and get skipped. Those are exactly the places where raw DTOs and route/query strings keep leaking into service calls. Sharing and job APIs are still boundary code; they need the same null-body, trim, dedupe, and blank-value rules as the rest of the control plane.
+
 ### 0xA0. Legacy Fallback Auto-Activation Must Be Explicitly Opt-In, Even When `VirtualSoulfind.DisasterMode` Exists
 
 **The Bug**: The code already failed closed when the entire `VirtualSoulfind.DisasterMode` section was absent, but `DisasterModeOptions.Auto` still defaulted to `true`. That meant a partial config block like `virtualSoulfind.disasterMode: {}` silently turned on legacy auto-fallback and could flip search/runtime behavior away from the default Soulseek+mesh path.
