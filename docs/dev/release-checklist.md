@@ -60,6 +60,7 @@ Run these when the change touches the relevant surface:
 
 - Packaging/workflow changes:
   - `bash packaging/scripts/validate-packaging-metadata.sh`
+  - `bash packaging/scripts/run-nix-package-smoke.sh`
 - Frontend hosting/base-path changes:
   - `npm --prefix src/web run build`
   - `node src/web/scripts/verify-build-output.mjs`

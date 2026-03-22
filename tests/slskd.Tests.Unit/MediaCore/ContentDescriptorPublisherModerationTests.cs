@@ -145,12 +145,12 @@ namespace slskd.Tests.Unit.MediaCore
                 .Setup(x => x.PublishAsync(It.IsAny<ContentDescriptor>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException("sensitive publish detail"));
 
-        var result = await publisher.PublishAsync(descriptor);
+            var result = await publisher.PublishAsync(descriptor);
 
-        Assert.False(result.Success);
-        Assert.Equal("Failed to publish descriptor", result.ErrorMessage);
-        Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-    }
+            Assert.False(result.Success);
+            Assert.Equal("Failed to publish descriptor", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
 
         [Fact]
         public async Task UnpublishAsync_WhenTrackingThrows_ReturnsSanitizedErrorMessage()

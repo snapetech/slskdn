@@ -23,10 +23,16 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release-hardening follow-up after the broad runtime/read-side bughunt, focused on making the release gate exercise real subpath-hosted web behavior instead of only static asset-shape checks
+- **Current Task**: Release-hardening follow-up after the broad runtime/read-side bughunt, focused on closing the remaining packaging-smoke gaps after the stronger release gate landed
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Added a reusable Nix package/module smoke:
+    - new `packaging/scripts/run-nix-package-smoke.sh`
+    - builds `.#default`
+    - launches the packaged `bin/slskd`
+    - evaluates the minimal `services.slskd` NixOS module contract with the required `domain`, `environmentFile`, and `settings.shares.directories = [ ]` inputs
+  - Wired the Nix smoke into both `ci.yml` and `build-on-tag.yml`, including a post-stable-metadata-update smoke in the main-channel tag workflow
   - Added a real subpath-hosted web smoke:
     - new `src/web/scripts/smoke-subpath-build.mjs`
     - wired into `packaging/scripts/run-release-gate.sh`
@@ -84,9 +90,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Resume the broad runtime/read-side bughunt from the stronger green release gate.
+1. Resume the broad runtime/read-side bughunt from the stronger green release gate and packaging-smoke baseline.
 2. Prioritize remaining places where public APIs may still report success while backing work is impossible, silently filtered, or split across normalized-vs-raw boundary assumptions.
-3. Consider automating the remaining packaging-specific smokes called out in `memory-bank/tasks.md`, especially the NixOS VM smoke test.
+3. Consider whether any other channel-specific package install smokes need the same treatment after Nix.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

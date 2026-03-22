@@ -85,9 +85,27 @@ jobs:
           path: src/web/build
           retention-days: 7
 
+  nix-smoke:
+    name: Nix Package Smoke
+    needs: parse
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run Nix package smoke
+        run: bash packaging/scripts/run-nix-package-smoke.sh
+
   publish:
     name: Publish ${{ matrix.runtime }}
-    needs: [parse, build]
+    needs: [parse, build, nix-smoke]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1743,6 +1761,9 @@ jobs:
       - name: Verify Flake
         run: |
           nix flake check --no-build --no-write-lock-file || echo "⚠️ Flake check failed (non-fatal)"
+
+      - name: Run Nix package smoke
+        run: bash packaging/scripts/run-nix-package-smoke.sh
 
       - name: Commit and Push
         run: |

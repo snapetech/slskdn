@@ -5777,3 +5777,15 @@ Code quality improvements were completed as part of Option A:
   - it fetches the built page from that mount point and verifies the relative asset URLs actually return their expected content instead of falling back to HTML/404 responses
 - Wired the subpath-hosted smoke into [run-release-gate.sh](/home/keith/Documents/code/slskdn/packaging/scripts/run-release-gate.sh) so packaged-web regressions are caught in the normal release bar rather than as a separate optional check.
 - Updated [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) and [testing-policy.md](/home/keith/Documents/code/slskdn/docs/dev/testing-policy.md) so the documented release gate matches the stronger behavior.
+
+## 2026-03-22 17:04 - Nix package smoke automated
+
+- Added [run-nix-package-smoke.sh](/home/keith/Documents/code/slskdn/packaging/scripts/run-nix-package-smoke.sh) as a reusable packaging smoke instead of relying on one-off VM notes:
+  - builds `.#default`
+  - launches the packaged `bin/slskd`
+  - evaluates a minimal NixOS `services.slskd` configuration with the required `domain`, `environmentFile`, and `settings.shares.directories = [ ]` values
+- Wired the smoke into:
+  - [ci.yml](/home/keith/Documents/code/slskdn/.github/workflows/ci.yml) for pull requests
+  - [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) before publish
+  - the stable metadata update section in `build-on-tag.yml` so flake version/hash updates are smoked immediately after they are rewritten
+- Updated [testing-policy.md](/home/keith/Documents/code/slskdn/docs/dev/testing-policy.md) and [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) so the Nix package smoke is part of the documented packaging validation story.
