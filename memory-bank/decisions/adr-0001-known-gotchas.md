@@ -290,6 +290,27 @@ return Encoding.UTF8.GetBytes(json);
 
 **Why This Keeps Happening**: It feels harmless to duplicate a tiny protocol payload in a helper service, but duplicated protocol serialization always drifts. Capability ads need a single canonical generator so new fields like `mesh_seq_id` or changed feature flags do not diverge across endpoints.
 
+### 0x10. Sync Orchestration Must Not Report Success For Simulated Local-Only Flows
+
+**The Bug**: `MeshSyncService.TrySyncWithPeerAsync` logged a successful sync and updated counters after only reading local state. No HELLO/delta exchange ever left the process, so operators got a false success signal for a sync that never happened.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+result.Success = true;
+log.Information("[MESH] Sync with {Peer} complete: sent={Sent}", username, result.EntriesSent);
+```
+
+**Correct**:
+```csharp
+result.Error = $"Mesh sync transport is not implemented (local seq={hello.LatestSeqId})";
+log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is not implemented", username);
+```
+
+**Why This Keeps Happening**: During bring-up, local state simulation is useful for shaping the code path, but leaving the success branch intact teaches the rest of the system a lie. For distributed workflows, incomplete transport must surface as explicit failure until real request/response exchange is wired.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
