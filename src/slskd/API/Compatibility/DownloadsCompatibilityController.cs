@@ -101,7 +101,7 @@ public class DownloadsCompatibilityController : ControllerBase
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to enqueue download for {User}/{Path}", item.User, item.RemotePath);
-                failed.Add($"{item.User}/{item.RemotePath}: {ex.Message}");
+                failed.Add($"{item.User}/{item.RemotePath}: Failed to enqueue download");
             }
         }
 

@@ -56,6 +56,7 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("Request is required.");
         if (string.IsNullOrWhiteSpace(req.DisplayName)) return BadRequest("DisplayName is required.");
         var p = await _profile.UpdateMyProfileAsync(
             req.DisplayName.Trim(),
@@ -74,6 +75,8 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> GetProfile([FromRoute] string peerId, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        peerId = peerId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(peerId)) return BadRequest("PeerId is required.");
         var p = await _profile.GetProfileAsync(peerId, ct).ConfigureAwait(false);
         if (p == null) return NotFound();
         return Ok(p);
@@ -86,6 +89,11 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> CreateInvite([FromBody] CreateInviteRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null)
+        {
+            return BadRequest("Request is required.");
+        }
+
         try
         {
             var profile = await _profile.GetMyProfileAsync(ct).ConfigureAwait(false);
@@ -109,11 +117,11 @@ public class ProfileController : ControllerBase
             var link = $"slskdn://invite/{base64}";
             return Ok(new InviteResponse { InviteLink = link, FriendCode = _profile.GetFriendCode(profile.PeerId) });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Problem(
                 title: "Failed to create invite",
-                detail: $"Cannot create invite: {ex.Message}",
+                detail: "Cannot create invite.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
     }

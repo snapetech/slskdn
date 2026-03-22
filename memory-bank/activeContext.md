@@ -37,6 +37,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `ContactsController` and `SearchesController` now return stable sanitized invite/search failure contracts instead of exposing decode/start exceptions
     - `SolidController`, `UsersController`, `PodContentController`, `PodChannelController`, and native `PodsController` now stop surfacing raw policy/offline/service-validation exception text
     - `PortForwardingController`, `OptionsController`, and `SharesController` now return stable duplicate-forward/YAML-validation/download-enqueue error contracts instead of surfacing underlying exception text
+  - Continued with another pass focused on unstable controller-level catch/rethrow and spillover error contracts:
+    - `EventsController` now returns stable `500` contracts for list/raise failures instead of logging and rethrowing, and trims raised-event route/body input before parsing
+    - `ProfileController` now rejects null bodies for profile update/invite creation, trims `peerId` lookups, and no longer leaks thrown exception text from invite generation
+    - `DiscoveryController` now trims `SearchTerm` and rejects non-positive `size`, `limit`, and `minSources` queries before dispatch
+    - folded adjacent dirty spillover into the same batch so `DownloadsCompatibilityController`, `SearchActionsController`, and `SharesController` no longer surface raw exception messages in client-facing error lists/details
+  - Validation has still not been run in this pass.
   - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, the maintenance/status leak cleanup across native/hashdb/mesh/transfers, the identity/search helper cleanup, the Solid/users/PodCore error-contract fixes, and the final port-forward/options/share spillover.
   - Validation has still not been run in this pass.
 
@@ -84,11 +90,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 ### Next Steps
 1. If requested, run `dotnet test` and `./bin/lint` to validate the committed runtime/read-side cleanup.
 2. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
-3. Prioritize additional PodCore/VirtualSoulfind/MediaCore services that still expose mutable cached collections, placeholder validation logic, under-reported state, or raw route/query parsing drift.
+3. Prioritize remaining PodCore/native controller actions that still pass service-result `.ErrorMessage` values directly back to clients instead of stable public contracts.
 4. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, encoded payloads that still bypass boundary validation, or sanitized-error gaps on maintenance endpoints.
-5. Continue outward into remaining stats/status/search controllers and any lingering PodCore/Sharing APIs that still accept raw IDs, null bodies, or repeated list values without normalization.
-6. Keep widening into the remaining VirtualSoulfind, Search, and PodCore read-side/status surfaces for raw query drift, inconsistent pagination/filter contracts, or false-success status responses.
-7. Continue into the remaining API/controller surfaces and any nearby runtime helpers where repeated values, nondeterministic ordering, or raw route/query strings can still leak through to the service layer.
+5. Continue outward into remaining stats/status/search controllers and any lingering PodCore/Sharing APIs that still accept raw IDs, null bodies, repeated list values, or raw service result text without normalization.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

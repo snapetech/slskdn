@@ -85,6 +85,29 @@ public class DownloadsCompatibilityControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task CreateDownloads_WhenEnqueueThrows_DoesNotLeakExceptionMessage()
+    {
+        var downloadService = new Mock<IDownloadService>();
+        downloadService
+            .Setup(service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = CreateController(downloadService);
+
+        var result = await controller.CreateDownloads(
+            new DownloadRequest(new List<DownloadItem> { new("alice", "/music/song.flac", string.Empty) }),
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var text = ok.Value?.ToString() ?? string.Empty;
+        Assert.DoesNotContain("sensitive detail", text);
+        Assert.Contains("Failed to enqueue download", text);
+    }
+
     private static DownloadsCompatibilityController CreateController(Mock<IDownloadService> downloadService)
     {
         var optionsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();

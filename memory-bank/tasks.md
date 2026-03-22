@@ -147,6 +147,7 @@
 - [x] **Triage src/ TODO/FIXME/placeholder**: Triaged in `memory-bank/triage-todo-fixme.md`: ~13 accepted, ~100 defer, 7 task. Follow-up [ ] below. Done.
 - [x] **Triage follow-up (task)**: Options realm validation re-enabled (`Realm.Validate()`, `MultiRealm.Validate()` in Options.Validate). QuicDataServer TODO replaced with defer comment (IOverlayDataPayloadHandler). RescueService/Scene* remain in triage-todo-fixme as defer. Done.
 - [x] **Reconcile tasks-audit-gaps**: Phase 8 reconciled: T-1421, T-1422, T-1423, T-1425, T-1429 implemented (Ed25519, KeyedSigner/ControlSigner, QuicOverlayServer, QuicDataServer, ControlDispatcher). Tasks-audit-gaps.md updated. T-1424, T-1426, T-1427, T-1428 and Phases 1–6 remain as backlog; promote to [ ] when prioritizing.
+- [ ] **Controller contract cleanup follow-up**: After the ongoing broad controller normalization/error-contract sweep, run `dotnet test` and `./bin/lint` from the cleaned head and fix any regressions before the next release tag.
 
 ### Design / Backlog (ShareGroups, Collections, Streaming, Hybrid Search)
 

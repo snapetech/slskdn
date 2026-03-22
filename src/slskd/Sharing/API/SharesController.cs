@@ -529,7 +529,7 @@ public class SharesController : ControllerBase
                 {
                     _log.LogWarning(ex, "[Backfill] Failed to download {ContentId}", item.ContentId);
                     failed++;
-                    errors.Add($"Failed to download {item.ContentId.Substring(0, Math.Min(16, item.ContentId.Length))}...: {ex.Message}");
+                    errors.Add($"Failed to download {item.ContentId.Substring(0, Math.Min(16, item.ContentId.Length))}...");
                 }
             }
         }
@@ -581,7 +581,7 @@ public class SharesController : ControllerBase
                 {
                     _log.LogWarning(ex, "[Backfill] Failed to resolve ContentId {ContentId}", item.ContentId);
                     failed++;
-                    errors.Add($"Error resolving {item.ContentId.Substring(0, Math.Min(16, item.ContentId.Length))}...: {ex.Message}");
+                    errors.Add($"Error resolving {item.ContentId.Substring(0, Math.Min(16, item.ContentId.Length))}...");
                 }
             }
 

@@ -148,6 +148,31 @@
 - Push the reviewed anonymous-surface split to `master`.
 - Optionally add a second regression test focused on the intentionally-public ActivityPub/WebFinger/session/streaming/profile actions if we want the public protocol surface to be asserted as tightly as the internal control-plane surface.
 
+## 2026-03-22 15:52 - Controller catch/rethrow and spillover error-contract cleanup
+
+### Completed
+- Documented a new gotcha covering controller actions that log exceptions and then rethrow, which leaves public HTTP error behavior unstable and dependent on outer middleware instead of the controller contract.
+- Stabilized `EventsController` so list/raise failures now log privately and return fixed `500` contracts; also trimmed route/body event inputs before parsing.
+- Tightened `ProfileController` request boundaries by rejecting null invite/profile update bodies, trimming public `peerId` lookups, and returning a stable invite-creation failure contract without surfacing thrown exception text.
+- Tightened `DiscoveryController` boundaries by normalizing `SearchTerm` and rejecting invalid non-positive `size`, `limit`, and `minSources` query values before service dispatch.
+- Folded in adjacent dirty error-leak cleanup already in the tree:
+  - `DownloadsCompatibilityController` no longer appends raw exception messages into per-item failure lists
+  - `SearchActionsController` no longer returns pod/scene exception text in `ProblemDetails`
+  - `SharesController` backfill error lists no longer include raw exception messages from content resolution/download failures
+- Added focused regressions for the new stable contracts in:
+  - `EventsControllerTests`
+  - `DiscoveryControllerTests`
+  - `ProfileControllerTests`
+  - `DownloadsCompatibilityControllerTests`
+  - `SearchActionsControllerTests`
+  - `SharesControllerTests`
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue the broad controller/runtime sweep from the remaining identifier-boundary and result-error-message clusters, especially service-result `.ErrorMessage` passthrough in PodCore/native APIs.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

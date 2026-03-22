@@ -341,12 +341,12 @@ public class SearchActionsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[SearchActions] Pod download failed: {Message}", ex.Message);
+            _logger.LogError(ex, "[SearchActions] Pod download failed");
             return StatusCode(500, new ProblemDetails
             {
                 Type = "pod_download_exception",
                 Title = "Pod download exception",
-                Detail = ex.Message
+                Detail = "Pod download failed"
             });
         }
     }
@@ -392,12 +392,12 @@ public class SearchActionsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[SearchActions] Scene download failed: {Message}", ex.Message);
+            _logger.LogError(ex, "[SearchActions] Scene download failed");
             return StatusCode(500, new ProblemDetails
             {
                 Type = "download_exception",
                 Title = "Download exception",
-                Detail = ex.Message
+                Detail = "Scene download failed"
             });
         }
     }
