@@ -52,6 +52,44 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xAC. Utility Controllers Drift Too: Encoded Route Segments, Chat Room Names, And Security Admin Inputs Need The Same Normalization And Sanitized Error Contracts
+
+**The Bug**: several “small” utility controllers were left outside the broad boundary-hardening passes. That let invalid Base64 file route segments throw during decode, whitespace-padded room/user identifiers miss tracked state, blank chat payloads reach Soulseek service calls, and security admin/test endpoints leak raw exception text from config persistence or transport probes.
+
+**Files Affected**:
+- `src/slskd/Files/API/FilesController.cs`
+- `src/slskd/Messaging/API/Controllers/RoomsController.cs`
+- `src/slskd/Messaging/API/Controllers/ConversationsController.cs`
+- `src/slskd/Common/Security/API/SecurityController.cs`
+- `src/slskd/Relay/API/Controllers/RelayController.cs`
+
+**Wrong**:
+```csharp
+var requestedFilename = base64FileName.FromBase64();
+await Client.SendRoomMessageAsync(roomName, message);
+return StatusCode(500, $"Tor connectivity test failed: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+base64FileName = base64FileName?.Trim() ?? string.Empty;
+if (!TryDecodeRelativePath(base64FileName, out var requestedFilename))
+{
+    return BadRequest("Invalid file path");
+}
+
+roomName = roomName?.Trim() ?? string.Empty;
+message = message?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(roomName) || string.IsNullOrWhiteSpace(message))
+{
+    return BadRequest("message is required");
+}
+
+return StatusCode(500, new { error = "Tor connectivity test failed" });
+```
+
+**Why This Keeps Happening**: once the main CRUD/search/status surfaces are hardened, the remaining “utility” controllers look too simple to bother with. They are still public API boundaries. Encoded route segments, free-form chat payloads, and security admin endpoints need the same trim/null/range checks and sanitized error contracts as the rest of the control plane or they become the easiest place for drift to survive.
+
 ### 0xA6. Controller Boundaries Must Normalize Route Keys Before Looking Up Or Mutating Existing State
 
 **The Bug**: Multiple controllers trimmed request bodies but still trusted raw route IDs or ignored them entirely after parsing object IDs. That let whitespace-padded pod/channel/user names fall through to downstream services, and transfer endpoints could mutate or return a transfer by GUID even when the route username did not match the actual transfer owner.
