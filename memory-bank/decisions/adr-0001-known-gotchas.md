@@ -8012,6 +8012,54 @@ finally
 
 **Why This Keeps Happening**: A single-process service often “looks sequential” in code review, but any async publish path can be entered concurrently. Read-modify-write against a shared typed index is a lost-update bug unless the process serializes those mutations or the storage layer offers a real compare-and-swap primitive.
 
+### 0k39. Cached Membership List APIs Must Not Return Empty Placeholders When The Service Already Owns Live State
+
+**The Bug**: `PodMembershipService.ListPodMembershipsAsync(...)` always returned an empty list even though `PublishMembershipAsync(...)` and `RemoveMembershipAsync(...)` already maintained `_activeMemberships`. Anything that relied on the listing API saw pods as having no members until it queried individual keys manually.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodMembershipService.cs`
+
+**Wrong**:
+```csharp
+public async Task<IReadOnlyList<MembershipRetrievalResult>> ListPodMembershipsAsync(
+    string podId,
+    CancellationToken cancellationToken = default)
+{
+    // TODO: Implement listing all memberships for a pod
+    // This would require either:
+    // 1. A separate index key for pod memberships
+    // 2. Scanning DHT keys (not practical)
+    // 3. Maintaining a local cache
+    return await Task.FromResult<IReadOnlyList<MembershipRetrievalResult>>(new List<MembershipRetrievalResult>());
+}
+```
+
+**Correct**:
+```csharp
+var now = DateTimeOffset.UtcNow;
+var memberships = _activeMemberships.Values
+    .Where(membership => membership.PodId == podId && membership.ExpiresAt > now)
+    .OrderBy(membership => membership.PeerId, StringComparer.Ordinal)
+    .Select(membership => new MembershipRetrievalResult(
+        Found: true,
+        PodId: membership.PodId,
+        PeerId: membership.PeerId,
+        SignedRecord: new SignedMembershipRecord
+        {
+            PodId = membership.PodId,
+            PeerId = membership.PeerId,
+            Role = membership.Role,
+            Signature = membership.Signature,
+            PublicKey = membership.PublicKey,
+        },
+        RetrievedAt: now,
+        ExpiresAt: membership.ExpiresAt,
+        IsValidSignature: true))
+    .ToList();
+```
+
+**Why This Keeps Happening**: A service often starts with a cache for metrics or write-side bookkeeping, and the read-side list API gets left as a placeholder because a global index is “not designed yet.” Once the service already owns authoritative live state for active entries, returning an empty placeholder is a correctness bug, not an implementation detail. Prefer exposing the owned state immediately and only replace it later if a stronger cross-process index is added.
+
 ---
 
 *Last updated: 2026-03-22*
