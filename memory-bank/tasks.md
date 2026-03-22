@@ -753,3 +753,6 @@
 - [x] Normalize MediaCore registry/export/controller boundaries
   - Status: done
   - Notes: Trimmed ContentIdRegistry keys before storage/lookup, aligned domain/type queries with normalized MediaCore semantics, normalized MetadataPortability export dedupe/domain tracking, tightened DescriptorRetriever controller request validation, and added focused coverage for those read-side boundaries plus UrlEncodingModelBinder raw-target parsing.
+- [x] Normalize adjacent MediaCore controller request boundaries
+  - Status: done
+  - Notes: Trimmed ContentIdController route/body inputs before forwarding/logging, aligned domain/type controller normalization with service semantics, rejected blank-only metadata export payloads in MetadataPortabilityController, and added focused controller regressions for those boundaries.

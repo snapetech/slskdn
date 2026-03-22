@@ -5432,3 +5432,15 @@ Code quality improvements were completed as part of Option A:
 - Documented the new bug pattern immediately in ADR-0001 and committed it as `e4be9372`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 17:05:00Z
+
+- Continued the same boundary-normalization bughunt into adjacent MediaCore controllers:
+  - fixed `ContentIdController` so register/resolve/exists/external/domain/type/validate actions trim route and body values before logging or forwarding them
+  - fixed `ContentIdController.FindByDomainAndType(...)` to derive the normalized type from the normalized domain/type pair instead of mixing raw and normalized inputs
+  - fixed `MetadataPortabilityController.Export(...)` so blank-only `ContentIds` payloads are rejected instead of being treated as valid exports
+  - folded in the remaining dirty `UrlEncodingModelBinderTests` update so the test uses a path `RouteValueProvider` that matches the binder’s real activation path
+  - added focused controller regressions for trimmed ContentID registration/domain-type queries and blank-only metadata export requests
+- Documented the new bug pattern immediately in ADR-0001 and committed it as `40a07bbd`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Primitives;
 using slskd;
 using Xunit;
 
@@ -67,7 +69,7 @@ public class UrlEncodingModelBinderTests
             ModelMetadata = new EmptyModelMetadataProvider().GetMetadataForType(typeof(string)),
             ModelName = modelName,
             ModelState = new ModelStateDictionary(),
-            ValueProvider = new SimpleValueProvider(),
+            ValueProvider = new RouteValueProvider(BindingSource.Path, new RouteValueDictionary(), System.Globalization.CultureInfo.InvariantCulture),
         };
     }
 }

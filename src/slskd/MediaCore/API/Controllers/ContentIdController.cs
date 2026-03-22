@@ -47,24 +47,27 @@ public class ContentIdController : ControllerBase
             return BadRequest("ExternalId and ContentId are required");
         }
 
-        if (ContentIdParser.Parse(request.ContentId) == null)
+        var externalId = request.ExternalId.Trim();
+        var contentId = request.ContentId.Trim();
+
+        if (ContentIdParser.Parse(contentId) == null)
         {
             return BadRequest("Invalid ContentID format. Expected: content:<domain>:<type>:<id>");
         }
 
         try
         {
-            await _registry.RegisterAsync(request.ExternalId, request.ContentId, cancellationToken);
+            await _registry.RegisterAsync(externalId, contentId, cancellationToken);
 
             _logger.LogInformation(
                 "[ContentID] Registered mapping: {ExternalId} -> {ContentId}",
-                request.ExternalId, request.ContentId);
+                externalId, contentId);
 
             return Ok(new { message = "ContentID mapping registered successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[ContentID] Failed to register mapping: {ExternalId} -> {ContentId}", request.ExternalId, request.ContentId);
+            _logger.LogError(ex, "[ContentID] Failed to register mapping: {ExternalId} -> {ContentId}", externalId, contentId);
             return StatusCode(500, new { error = "Failed to register ContentID mapping" });
         }
     }
@@ -83,6 +86,7 @@ public class ContentIdController : ControllerBase
             return BadRequest("ExternalId is required");
         }
 
+        externalId = externalId.Trim();
         try
         {
             var contentId = await _registry.ResolveAsync(externalId, cancellationToken);
@@ -115,6 +119,7 @@ public class ContentIdController : ControllerBase
             return BadRequest("ExternalId is required");
         }
 
+        externalId = externalId.Trim();
         try
         {
             var exists = await _registry.IsRegisteredAsync(externalId, cancellationToken);
@@ -141,6 +146,7 @@ public class ContentIdController : ControllerBase
             return BadRequest("ContentId is required");
         }
 
+        contentId = contentId.Trim();
         try
         {
             var externalIds = await _registry.GetExternalIdsAsync(contentId, cancellationToken);
@@ -189,6 +195,7 @@ public class ContentIdController : ControllerBase
 
         try
         {
+            domain = domain.Trim();
             var normalizedDomain = ContentIdParser.NormalizeDomain(domain, string.Empty);
             var contentIds = await _registry.FindByDomainAsync(normalizedDomain, cancellationToken);
             return Ok(new { domain, normalizedDomain, contentIds });
@@ -222,8 +229,10 @@ public class ContentIdController : ControllerBase
 
         try
         {
+            domain = domain.Trim();
+            type = type.Trim();
             var normalizedDomain = ContentIdParser.NormalizeDomain(domain, type);
-            var normalizedType = ContentIdParser.NormalizeType(domain, type);
+            var normalizedType = ContentIdParser.NormalizeType(normalizedDomain, type);
             var contentIds = await _registry.FindByDomainAndTypeAsync(normalizedDomain, normalizedType, cancellationToken);
             return Ok(new { domain, type, normalizedDomain, normalizedType, contentIds });
         }
@@ -247,6 +256,7 @@ public class ContentIdController : ControllerBase
             return BadRequest("ContentID is required");
         }
 
+        contentId = contentId.Trim();
         try
         {
             var parsed = ContentIdParser.Parse(contentId);

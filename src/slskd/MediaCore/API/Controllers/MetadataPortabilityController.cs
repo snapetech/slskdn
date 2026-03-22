@@ -42,7 +42,7 @@ public class MetadataPortabilityController : ControllerBase
     [HttpPost("export")]
     public async Task<IActionResult> Export([FromBody] MetadataExportRequest request, CancellationToken cancellationToken = default)
     {
-        if (request?.ContentIds == null || !request.ContentIds.Any())
+        if (request?.ContentIds == null || !request.ContentIds.Any(contentId => !string.IsNullOrWhiteSpace(contentId)))
         {
             return BadRequest("At least one ContentID is required for export");
         }
