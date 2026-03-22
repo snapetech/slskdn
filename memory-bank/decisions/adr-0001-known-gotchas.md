@@ -11341,3 +11341,35 @@ await Discovery.StartDiscoveryAsync(normalizedSearchTerm, ...);
 ```
 
 **Why This Keeps Happening**: once normalization is added, later lines still read cleanly if they keep using `login.Username` or `request.SearchTerm`, so the bug is easy to miss in review. Promote normalized values to explicit locals and use those for every downstream comparison, dispatch, and token-generation step.
+
+### 0k72. Event Callbacks Should Hand Off To Observed Tasks Instead Of Keeping Large `async void` Bodies
+
+**The Bug**: `async void` is unavoidable for some .NET events, but once the handler body grows into real workflow logic it becomes another fire-and-forget execution path that can escape the normal task observation model. `Application.Client_LoggedIn` still contained the full post-login workflow inside the `async void` callback, so any future missed catch or refactor could turn login-side failures back into event-path crashes.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+private async void Client_LoggedIn(object? sender, EventArgs e)
+{
+    ...
+    await RefreshUserStatistics(force: true);
+    ...
+}
+```
+
+**Correct**:
+```csharp
+private void Client_LoggedIn(object? sender, EventArgs e)
+    => _ = ObserveBackgroundTaskAsync(HandleClientLoggedInAsync(), "Failed to execute post-login actions");
+
+private async Task HandleClientLoggedInAsync()
+{
+    ...
+    await RefreshUserStatistics(force: true);
+    ...
+}
+```
+
+**Why This Keeps Happening**: once a handler already has a top-level `try/catch`, it looks “safe enough,” so more work accumulates inside the `async void`. That keeps important workflow logic outside the normal task lifecycle and makes future edits riskier. Keep the event callback tiny and immediately hand off to an observed `Task` method instead.
