@@ -603,6 +603,47 @@ if (DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.A
 
 **Why This Keeps Happening**: HashDb is a long-lived local store, so read paths inevitably outlive the exact write format that created the data. If read code assumes one casing, one timestamp format, or one perfectly clean key shape, valid local state disappears after minor migrations or manual repair. Read paths should normalize keys, dedupe duplicate rows, and deserialize with compatibility options before concluding the state is absent.
 
+### 0xB0. HashDb Keyed Reads Must Normalize Blank/Padded Identifiers Before Hitting SQLite
+
+**The Bug**: several HashDb keyed reads and helper paths still trusted caller-supplied identifiers exactly as received. That meant padded or blank values triggered pointless database work and could make existing local state look missing. The same drift affected helper methods like file hashing and warm-cache deletion, where untrimmed inputs caused inconsistent read/write behavior.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+public async Task<HashDbEntry?> LookupHashAsync(string flacKey, ...)
+{
+    using var conn = GetConnection();
+    ...
+}
+...
+public async Task DeleteWarmCacheEntryAsync(string contentId, ...)
+{
+    if (string.IsNullOrWhiteSpace(contentId))
+    {
+        return;
+    }
+}
+```
+
+**Correct**:
+```csharp
+flacKey = flacKey?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(flacKey))
+{
+    return null;
+}
+...
+contentId = contentId?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(contentId))
+{
+    return;
+}
+```
+
+**Why This Keeps Happening**: HashDb sits behind many controllers, jobs, and background flows, so keyed lookups get called with IDs assembled from user input, deserialized payloads, and stored state. If normalization only happens at some call sites, the database layer becomes inconsistent and missing-state bugs appear nondeterministically. Normalize the identifier at the start of the HashDb method itself, not only at the edges.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
