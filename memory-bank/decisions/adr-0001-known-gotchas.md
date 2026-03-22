@@ -727,6 +727,7 @@ public async Task<PodRefreshResult> RefreshAsync(...)
 - `src/slskd/LibraryHealth/LibraryHealthService.cs`
 - `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
 - `src/slskd/PodCore/PodServices.cs`
+- `src/slskd/Common/Security/LocalPortForwarder.cs`
 
 **Wrong**:
 ```csharp
@@ -741,6 +742,8 @@ _ = Task.Run(() => PerformBackgroundWorkAsync(id, ct), CancellationToken.None);
 **Why This Keeps Happening**: The second parameter to `Task.Run` controls whether the task is queued at all, not just what token the delegate receives. It is easy to assume passing the caller token there is harmless, but for background work it couples scheduling to the request/startup lifetime. Use the real lifetime token inside the delegate, and only use the `Task.Run` token when the task itself should be suppressed if scheduling has not yet happened.
 
 In pod-management code this is especially sneaky because the foreground create/update call can still succeed locally while the background DHT publish never starts, leaving local state and discoverability out of sync.
+
+In transport code it can be worse: connection state may be marked as “mapped” before the worker tasks are queued, so a pre-canceled scheduler token can leave a tunnel stuck in a mapped-but-idle state with no background pumps running.
 
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
@@ -6010,6 +6013,26 @@ _ = ObserveBackgroundTaskAsync(
 ```
 
 **Why This Keeps Happening**: Fire-and-forget code often starts small and “obviously safe,” so it is easy to skip an observer because the current implementation catches internally. Later edits add awaits, new call sites, or early throws and the task becomes faultable from outside that assumed safe window. If the caller intentionally detaches from the task, it still owns failure observation and should route faults through one consistent helper.
+
+### 0k23. Refactors Must Update Property Reads When Model Shapes Change
+
+**The Bug**: `MusicContentDomainProvider` still read `HashDbEntry.IsAdvertisable` after the hash-db model no longer exposed that property. The code compiled until the provider was rebuilt, then failed with a missing-member error.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Core/Music/MusicContentDomainProvider.cs`
+- `src/slskd/HashDb/Models/HashDbEntry.cs`
+
+**Wrong**:
+```csharp
+var isAdvertisable = hashes.Any(entry => entry.IsAdvertisable);
+```
+
+**Correct**:
+```csharp
+var isAdvertisable = hashes.Any();
+```
+
+**Why This Keeps Happening**: Data-model refactors often remove or rename properties in one subsystem while dependent query code keeps compiling in a warm workspace or on partial builds. Any change to DTO/entity shape needs a repo-wide usage pass, especially in provider/query layers that derive booleans from now-removed fields.
 
 ---
 
