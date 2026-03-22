@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
+
+**The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
+
+**Files Affected**:
+- `src/slskd/Common/Security/TimedBatcher.cs`
+
+**Wrong**:
+```csharp
+if (_currentBatch.Count > 0 && _currentBatchTimer?.IsCancellationRequested == true)
+{
+    return;
+}
+```
+
+**Correct**:
+```csharp
+if (_currentBatch.Count > 0
+    && DateTimeOffset.UtcNow - _currentBatch[0].Timestamp >= TimeSpan.FromMilliseconds(_options.BatchWindowMs))
+{
+    return;
+}
+```
+
+**Why This Keeps Happening**: Cancellation and completion are separate states. A CTS only flips to cancelled when code explicitly cancels it; a timer finishing normally does not mutate the token. If readiness depends on elapsed time, compare timestamps or set an explicit expiry flag instead of reading cancellation state.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
@@ -615,6 +641,13 @@ var predictedEp = new IPEndPoint(remoteEp.Address, predictedPort);
 - `src/slskd/Mesh/Transport/TransportSelector.cs`
 - `src/slskd/Mesh/Overlay/QuicDataServer.cs`
 - `src/slskd/Mesh/Transport/DirectQuicDialer.cs`
+- `src/slskd/DhtRendezvous/NatDetectionService.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `src/slskd/Common/Security/RelayOnlyTransport.cs`
+- `src/slskd/PodCore/PeerResolutionService.cs`
+- `src/slskd/Mesh/Dht/MeshDirectory.cs`
+- `src/slskd/Mesh/Dht/ContentDirectory.cs`
 
 **Wrong**:
 ```csharp
@@ -644,6 +677,22 @@ if (parts.Length == 2 && int.TryParse(parts[1], out var port) && port is > 0 and
         Preference = 0,
         Cost = 0
     };
+}
+```
+
+```csharp
+var parts = stunServer.Split(':');
+if (parts.Length != 2 || !int.TryParse(parts[1], out var port) || port is <= 0 or > ushort.MaxValue)
+{
+    throw new FormatException($"Invalid STUN server format: {stunServer}");
+}
+```
+
+```csharp
+var parts = _options.SocksAddress.Split(':');
+if (parts.Length != 2 || !int.TryParse(parts[1], out var socksPort) || socksPort is <= 0 or > ushort.MaxValue)
+{
+    throw new FormatException($"Invalid SOCKS address: {_options.SocksAddress}");
 }
 ```
 
@@ -4992,6 +5041,43 @@ catch (OperationCanceledException) when (ct.IsCancellationRequested)
 ```
 
 **Why This Keeps Happening**: Cancellation can arrive in two forms: timeout-based linked-token cancellation and explicit caller cancellation. Guarding both paths keeps control flow consistent and avoids turning normal shutdown behavior into error handling.
+
+### 0k15. Validate Third-Party String Formats Before Numeric Conversion in Protocol Parsers
+
+**The Bug**: A few transport and telemetry parsers accepted data-only string forms with direct numeric conversion (`int.Parse`) and assumed parse/shape correctness, which could throw from malformed bridge lines or unexpected metrics text and interrupt startup/status paths.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityService.cs`
+- `src/slskd/Common/Security/Obfs4Transport.cs`
+- `src/slskd/Telemetry/PrometheusService.cs`
+
+**Wrong**:
+```csharp
+ProtocolVersion = int.Parse(match.Groups[1].Value);
+Port = int.Parse(match.Groups[2].Value);
+IatMode = int.Parse(match.Groups[5].Value);
+double.Parse(groups[3].Value);
+```
+
+**Correct**:
+```csharp
+if (!int.TryParse(..., out var protocolVersion))
+{
+    return null;
+}
+
+if (!int.TryParse(..., NumberStyles.Integer, CultureInfo.InvariantCulture, out var bridgePort) || bridgePort <= 0)
+{
+    return null;
+}
+
+if (!double.TryParse(..., NumberStyles.Float, CultureInfo.InvariantCulture, out var sampleValue))
+{
+    continue;
+}
+```
+
+**Why This Keeps Happening**: Regex and scraped-output parsers are fragile by nature: slight config drift or endpoint string churn can introduce values outside expected ranges or malformed syntax. Range checks plus `TryParse` keep parsing decisions deterministic and prevent one bad input line from crashing runtime features.
 
 ---
 
