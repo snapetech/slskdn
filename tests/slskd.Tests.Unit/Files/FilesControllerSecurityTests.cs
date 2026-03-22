@@ -88,9 +88,8 @@ namespace slskd.Tests.Unit.Files
             var result = await controller.DeleteDownloadFileAsync(invalidBase64);
 
             // Assert
-            // Should handle gracefully, not crash
-            Assert.NotNull(result);
-            // May return BadRequest or handle via exception
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Invalid file path", badRequest.Value);
         }
 
         [Fact]
@@ -112,8 +111,7 @@ namespace slskd.Tests.Unit.Files
             var result = await controller.DeleteDownloadFileAsync(base64Path);
 
             // Assert
-            Assert.NotNull(result);
-            // Should succeed for valid paths
+            Assert.IsType<NoContentResult>(result);
         }
 
         [Theory]
@@ -134,4 +132,3 @@ namespace slskd.Tests.Unit.Files
         }
     }
 }
-

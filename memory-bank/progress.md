@@ -5590,3 +5590,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `87d1b7c2`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 22:24:30Z
+
+- Continued the broad utility-controller boundary bughunt into file/chat/security helpers:
+  - fixed `FilesController` so invalid/blank Base64 route segments now fail cleanly with `400` instead of throwing during decode, while valid encoded paths still flow through the existing path-security checks
+  - fixed `RoomsController` so room names, messages, and member usernames are trimmed/rejected at the boundary before tracker lookup or Soulseek dispatch
+  - fixed `ConversationsController` so usernames are trimmed consistently, blank usernames/messages return explicit `400`s, and invalid message IDs are rejected before lookup
+  - fixed `SecurityController` so username/IP/admin inputs are normalized, missing `GET /api/v0/security/adversarial` is now actually routed, count/limit inputs are validated, and the remaining transport/config/circuit failure paths stop leaking raw exception messages
+  - fixed adjacent relay helper drift so controller file/share uploads trim token/header credentials, invalid Base64 relay filenames return `400`, and share-validation failures return sanitized error text
+  - added focused unit regressions for files, rooms, conversations, relay filename decoding, and the new security-controller seams
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `50d1f629`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

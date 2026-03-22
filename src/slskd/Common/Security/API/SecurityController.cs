@@ -97,6 +97,12 @@ public class SecurityController : ControllerBase
     [FromQuery] int count = 100,
     [FromQuery] string? minSeverity = null)
     {
+        if (count <= 0)
+        {
+            return BadRequest("count must be positive");
+        }
+
+        minSeverity = NormalizeOptionalValue(minSeverity);
         var severity = SecuritySeverity.Info;
         if (!string.IsNullOrEmpty(minSeverity) && Enum.TryParse<SecuritySeverity>(minSeverity, true, out var parsed))
         {
@@ -125,6 +131,14 @@ public class SecurityController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public ActionResult BanIp([FromBody] BanIpRequest request)
     {
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.IpAddress = NormalizeRequiredValue(request.IpAddress);
+        request.Reason = NormalizeOptionalValue(request.Reason);
+
         if (!IPAddress.TryParse(request.IpAddress, out var ip))
         {
             return BadRequest("Invalid IP address");
@@ -153,6 +167,7 @@ public class SecurityController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public ActionResult UnbanIp(string ipAddress)
     {
+        ipAddress = NormalizeRequiredValue(ipAddress);
         if (!IPAddress.TryParse(ipAddress, out var ip))
         {
             return BadRequest("Invalid IP address");
@@ -180,6 +195,14 @@ public class SecurityController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public ActionResult BanUsername([FromBody] BanUsernameRequest request)
     {
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.Username = NormalizeRequiredValue(request.Username);
+        request.Reason = NormalizeOptionalValue(request.Reason);
+
         if (string.IsNullOrWhiteSpace(request.Username))
         {
             return BadRequest("Username is required");
@@ -208,6 +231,12 @@ public class SecurityController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public ActionResult UnbanUsername(string username)
     {
+        username = NormalizeRequiredValue(username);
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest("Username is required");
+        }
+
         var result = _security?.ViolationTracker?.UnbanUsername(username) ?? false;
 
         if (result)
@@ -228,6 +257,12 @@ public class SecurityController : ControllerBase
     [HttpGet("reputation/{username}")]
     public ActionResult<PeerProfile> GetReputation(string username)
     {
+        username = NormalizeRequiredValue(username);
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest("Username is required");
+        }
+
         var profile = _security?.PeerReputation?.GetOrCreateProfile(username);
         return profile != null ? Ok(profile) : NotFound();
     }
@@ -240,6 +275,19 @@ public class SecurityController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public ActionResult SetReputation(string username, [FromBody] SetReputationRequest request)
     {
+        username = NormalizeRequiredValue(username);
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest("Username is required");
+        }
+
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.Reason = NormalizeOptionalValue(request.Reason);
+
         if (request.Score < 0 || request.Score > 100)
         {
             return BadRequest("Score must be between 0 and 100");
@@ -262,6 +310,11 @@ public class SecurityController : ControllerBase
     [HttpGet("reputation/suspicious")]
     public ActionResult<IEnumerable<PeerProfile>> GetSuspiciousPeers([FromQuery] int limit = 50)
     {
+        if (limit <= 0)
+        {
+            return BadRequest("limit must be positive");
+        }
+
         var peers = _security?.PeerReputation?.GetSuspiciousPeers(limit) ?? Array.Empty<PeerProfile>();
         return Ok(peers);
     }
@@ -272,6 +325,11 @@ public class SecurityController : ControllerBase
     [HttpGet("reputation/trusted")]
     public ActionResult<IEnumerable<PeerProfile>> GetTrustedPeers([FromQuery] int limit = 50)
     {
+        if (limit <= 0)
+        {
+            return BadRequest("limit must be positive");
+        }
+
         var peers = _security?.PeerReputation?.GetTrustedPeers(limit) ?? Array.Empty<PeerProfile>();
         return Ok(peers);
     }
@@ -292,6 +350,7 @@ public class SecurityController : ControllerBase
     [HttpGet("threats")]
     public ActionResult<IEnumerable<ThreatProfile>> GetThreats([FromQuery] string? minLevel = null)
     {
+        minLevel = NormalizeOptionalValue(minLevel);
         var level = ThreatLevel.Medium;
         if (!string.IsNullOrEmpty(minLevel) && Enum.TryParse<ThreatLevel>(minLevel, true, out var parsed))
         {
@@ -328,6 +387,12 @@ public class SecurityController : ControllerBase
     [HttpGet("disclosure/{username}")]
     public ActionResult<DisclosurePermissions> GetDisclosure(string username)
     {
+        username = NormalizeRequiredValue(username);
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest("Username is required");
+        }
+
         var permissions = _security?.AsymmetricDisclosure?.GetDisclosurePermissions(username);
         return permissions != null ? Ok(permissions) : NotFound();
     }
@@ -338,6 +403,19 @@ public class SecurityController : ControllerBase
     [HttpPut("disclosure/{username}")]
     public ActionResult SetTrustTier(string username, [FromBody] SetTrustTierRequest request)
     {
+        username = NormalizeRequiredValue(username);
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest("Username is required");
+        }
+
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.Reason = NormalizeOptionalValue(request.Reason);
+
         // Validate numeric tier value is a defined enum member
         if (!Enum.IsDefined(typeof(TrustTier), request.Tier))
         {
@@ -373,6 +451,11 @@ public class SecurityController : ControllerBase
     [HttpGet("network/top")]
     public ActionResult<IEnumerable<ConnectionInfo>> GetTopConnectors([FromQuery] int limit = 10)
     {
+        if (limit <= 0)
+        {
+            return BadRequest("limit must be positive");
+        }
+
         var connectors = _security?.NetworkGuard?.GetTopConnectors(limit) ?? Array.Empty<ConnectionInfo>();
         return Ok(connectors);
     }
@@ -383,10 +466,16 @@ public class SecurityController : ControllerBase
     [HttpGet("anomalies")]
     public ActionResult<IEnumerable<ServerAnomaly>> GetAnomalies([FromQuery] int count = 100)
     {
+        if (count <= 0)
+        {
+            return BadRequest("count must be positive");
+        }
+
         var anomalies = _security?.ParanoidMode?.GetRecentAnomalies(count) ?? Array.Empty<ServerAnomaly>();
         return Ok(anomalies);
     }
 
+    [HttpGet("adversarial")]
     public ActionResult<AdversarialOptions> GetAdversarialSettings()
     {
         if (_adversarialOptions == null)
@@ -427,7 +516,8 @@ public class SecurityController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, $"Tor connectivity test failed: {ex.Message}");
+            _logger?.LogError(ex, "Tor connectivity test failed");
+            return StatusCode(500, new { error = "Tor connectivity test failed" });
         }
     }
 
@@ -458,7 +548,7 @@ public class SecurityController : ControllerBase
             var configFile = Program.ConfigurationFile;
             if (string.IsNullOrEmpty(configFile) || !IOFile.Exists(configFile))
             {
-                return BadRequest($"Configuration file not found: {configFile}");
+                return NotFound("Configuration file not found");
             }
 
             // Read current YAML
@@ -529,7 +619,7 @@ public class SecurityController : ControllerBase
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to persist adversarial settings");
-            return StatusCode(500, $"Failed to persist settings: {ex.Message}");
+            return StatusCode(500, new { error = "Failed to persist settings" });
         }
     }
 
@@ -586,7 +676,8 @@ public class SecurityController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode((int)HttpStatusCode.InternalServerError, $"Connectivity test failed: {ex.Message}");
+            _logger?.LogError(ex, "Transport connectivity test failed");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { error = "Connectivity test failed" });
         }
     }
 
@@ -621,6 +712,13 @@ public class SecurityController : ControllerBase
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
         }
 
+        if (request == null)
+        {
+            return BadRequest("Request is required");
+        }
+
+        request.TargetPeerId = NormalizeRequiredValue(request.TargetPeerId);
+
         // Validate TargetPeerId is provided
         if (string.IsNullOrWhiteSpace(request.TargetPeerId))
         {
@@ -640,7 +738,8 @@ public class SecurityController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode((int)HttpStatusCode.BadRequest, $"Circuit building failed: {ex.Message}");
+            _logger?.LogWarning(ex, "Circuit building failed for {TargetPeerId}", request.TargetPeerId);
+            return StatusCode((int)HttpStatusCode.BadRequest, new { error = "Circuit building failed" });
         }
     }
 
@@ -650,6 +749,12 @@ public class SecurityController : ControllerBase
         if (_circuitBuilder == null)
         {
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Circuit builder not available");
+        }
+
+        circuitId = NormalizeRequiredValue(circuitId);
+        if (string.IsNullOrWhiteSpace(circuitId))
+        {
+            return BadRequest("circuitId is required");
         }
 
         _circuitBuilder.DestroyCircuit(circuitId);
@@ -690,4 +795,14 @@ public class SecurityController : ControllerBase
         }).ToList());
     }
 
+    private static string NormalizeRequiredValue(string? value)
+    {
+        return value?.Trim() ?? string.Empty;
+    }
+
+    private static string? NormalizeOptionalValue(string? value)
+    {
+        var normalized = value?.Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
 }

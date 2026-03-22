@@ -179,8 +179,12 @@ namespace slskd.Files.API
 
         private async Task<IActionResult> ListDirectoryAsync(string rootDirectory, string? base64SubdirectoryName = null, bool recursive = false)
         {
-            var requestedDir = (base64SubdirectoryName ?? string.Empty)
-                .FromBase64()
+            if (!TryDecodeRelativePath(base64SubdirectoryName, out var relativeDirectory))
+            {
+                return BadRequest("Invalid directory path");
+            }
+
+            var requestedDir = relativeDirectory
                 .Replace('\\', Path.DirectorySeparatorChar)
                 .Replace('/', Path.DirectorySeparatorChar);
 
@@ -219,8 +223,12 @@ namespace slskd.Files.API
                 return Forbid();
             }
 
-            var requestedDir = base64SubdirectoryName
-                .FromBase64()
+            if (!TryDecodeRelativePath(base64SubdirectoryName, out var decodedDirectory) || string.IsNullOrWhiteSpace(decodedDirectory))
+            {
+                return BadRequest("Invalid directory path");
+            }
+
+            var requestedDir = decodedDirectory
                 .Replace('\\', Path.DirectorySeparatorChar)
                 .Replace('/', Path.DirectorySeparatorChar)
                 .TrimStart(Path.DirectorySeparatorChar);
@@ -256,8 +264,12 @@ namespace slskd.Files.API
                 return Forbid();
             }
 
-            var requestedFilename = base64FileName
-                .FromBase64()
+            if (!TryDecodeRelativePath(base64FileName, out var decodedFilename) || string.IsNullOrWhiteSpace(decodedFilename))
+            {
+                return BadRequest("Invalid file path");
+            }
+
+            var requestedFilename = decodedFilename
                 .Replace('\\', Path.DirectorySeparatorChar)
                 .Replace('/', Path.DirectorySeparatorChar)
                 .TrimStart(Path.DirectorySeparatorChar);
@@ -283,6 +295,31 @@ namespace slskd.Files.API
             {
                 Log.Information("File '{File}' not found", requestedFilename);
                 return NotFound();
+            }
+        }
+
+        private static bool TryDecodeRelativePath(string? encodedPath, out string decodedPath)
+        {
+            decodedPath = string.Empty;
+
+            encodedPath = encodedPath?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(encodedPath))
+            {
+                return true;
+            }
+
+            try
+            {
+                decodedPath = encodedPath.FromBase64();
+                return decodedPath != null;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+            catch (ArgumentException)
+            {
+                return false;
             }
         }
     }

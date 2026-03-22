@@ -180,5 +180,22 @@ namespace slskd.Tests.Unit.Relay.API
             // Assert
             Assert.IsType<UnauthorizedResult>(result);
         }
+
+        [Fact]
+        public async Task DownloadFile_InvalidFilenameHeader_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var token = Guid.NewGuid().ToString();
+
+            controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+            controller.HttpContext.Request.Headers["X-Relay-Agent"] = "test-agent";
+            controller.HttpContext.Request.Headers["X-Relay-Credential"] = "test-credential";
+            controller.HttpContext.Request.Headers["X-Relay-Filename-Base64"] = "not-valid-base64!!!";
+
+            var result = await controller.DownloadFile(token);
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Filename is not in a valid format", badRequest.Value);
+        }
     }
 }

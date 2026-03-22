@@ -144,14 +144,29 @@ namespace slskd.Relay
                 return Task.FromResult<IActionResult>(Forbid());
             }
 
+            token = token?.Trim() ?? string.Empty;
             if (!Guid.TryParse(token, out var guid))
             {
                 return Task.FromResult<IActionResult>(BadRequest("Token is not in a valid format"));
             }
 
-            var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault();
-            var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault();
-            var filename = Request.Headers["X-Relay-Filename-Base64"].FirstOrDefault()?.FromBase64();
+            var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault()?.Trim();
+            var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault()?.Trim();
+            var encodedFilename = Request.Headers["X-Relay-Filename-Base64"].FirstOrDefault()?.Trim();
+            string? filename;
+
+            try
+            {
+                filename = encodedFilename?.FromBase64();
+            }
+            catch (FormatException)
+            {
+                return Task.FromResult<IActionResult>(BadRequest("Filename is not in a valid format"));
+            }
+            catch (ArgumentException)
+            {
+                return Task.FromResult<IActionResult>(BadRequest("Filename is not in a valid format"));
+            }
 
             if (string.IsNullOrEmpty(credential))
             {
@@ -213,6 +228,7 @@ namespace slskd.Relay
                 return Forbid();
             }
 
+            token = token?.Trim() ?? string.Empty;
             if (!Guid.TryParse(token, out var guid))
             {
                 return BadRequest("Token is not in a valid format");
@@ -225,8 +241,8 @@ namespace slskd.Relay
                 return new UnsupportedMediaTypeResult();
             }
 
-            var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault();
-            var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault();
+            var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault()?.Trim();
+            var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault()?.Trim();
 
             if (string.IsNullOrEmpty(credential))
             {
@@ -331,6 +347,7 @@ namespace slskd.Relay
                 return Forbid();
             }
 
+            token = token?.Trim() ?? string.Empty;
             if (!Guid.TryParse(token, out var guid))
             {
                 return BadRequest("Token is not a valid Guid");
@@ -343,8 +360,8 @@ namespace slskd.Relay
                 return new UnsupportedMediaTypeResult();
             }
 
-            var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault();
-            var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault();
+            var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault()?.Trim();
+            var credential = Request.Headers["X-Relay-Credential"].FirstOrDefault()?.Trim();
 
             if (string.IsNullOrEmpty(credential))
             {
@@ -398,7 +415,8 @@ namespace slskd.Relay
             }
             catch (ShareValidationException ex)
             {
-                return BadRequest(ex.Message);
+                Log.Warning(ex, "Share upload validation failed for agent {Agent}", GetAgentLogId(validatedAgentName));
+                return BadRequest("Share upload validation failed");
             }
             finally
             {

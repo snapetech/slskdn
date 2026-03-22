@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Normalize utility file/chat/security controller boundaries
+  - Status: done
+  - Notes: Hardened `FilesController`, `RoomsController`, `ConversationsController`, and `SecurityController` so encoded route segments, room/user identifiers, chat payloads, and security admin/test inputs are trimmed/validated at the boundary; sanitized remaining raw-exception contracts in security/relay helpers; added focused regressions for the new messaging/security seams.
 - [x] Normalize utility/native identifier boundaries and adjacent compatibility spillover
   - Status: done
   - Notes: Trimmed and validated now-playing track fields, user-route identifiers, DHT blocklist request targets, and relay streaming identifiers before dispatch; folded in adjacent compatibility/bridge sanitized-error changes already in the tree plus focused regressions for utility and compatibility surfaces.
