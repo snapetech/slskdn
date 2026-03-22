@@ -92,7 +92,7 @@ namespace slskd.Shares
         private Channel<T> Channel { get; }
         private Action<T> Handler { get; }
         private Action<Exception>? ExceptionHandler { get; }
-        private TaskCompletionSource TaskCompletionSource { get; } = new TaskCompletionSource();
+        private TaskCompletionSource TaskCompletionSource { get; } = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         private CancellationToken CancellationToken { get; }
         private object SyncRoot { get; } = new object();
 

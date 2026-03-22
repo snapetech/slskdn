@@ -151,14 +151,17 @@ namespace slskd.Mesh
                 try
                 {
                     var response = JsonSerializer.Deserialize<MeshRespKeyMessage>(payload);
-                    if (response != null && !string.IsNullOrEmpty(response.FlacKey))
+                    if (response != null && messageSigner.VerifyMessage(response) && !string.IsNullOrEmpty(response.FlacKey))
                     {
-                        // Find pending request by FlacKey (simplified - in production would use request IDs)
-                        var requestId = response.FlacKey;
+                        var requestId = $"{e.Username}:{response.FlacKey}";
                         if (pendingRequests.TryRemove(requestId, out var tcs))
                         {
                             tcs.SetResult(response);
                         }
+                    }
+                    else
+                    {
+                        log.Warning("[MESH] Rejected RESPKEY from {Peer}: invalid signature or missing key", e.Username);
                     }
                 }
                 catch (Exception ex)
@@ -166,7 +169,30 @@ namespace slskd.Mesh
                     log.Warning(ex, "[MESH] Failed to deserialize RESPKEY message from {Peer}", e.Username);
                 }
             }
-            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO")
+            else if (messageType == "RESPCHUNK")
+            {
+                try
+                {
+                    var response = JsonSerializer.Deserialize<MeshRespChunkMessage>(payload);
+                    if (response != null && messageSigner.VerifyMessage(response) && !string.IsNullOrEmpty(response.FlacKey))
+                    {
+                        var requestId = $"{e.Username}:{response.FlacKey}:{response.Offset}";
+                        if (pendingChunkRequests.TryRemove(requestId, out var tcs))
+                        {
+                            tcs.SetResult(response);
+                        }
+                    }
+                    else
+                    {
+                        log.Warning("[MESH] Rejected RESPCHUNK from {Peer}: invalid signature or missing key", e.Username);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[MESH] Failed to deserialize RESPCHUNK message from {Peer}", e.Username);
+                }
+            }
+            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO" || messageType == "REQCHUNK")
             {
                 // Handle incoming requests by routing to HandleMessageAsync
                 _ = Task.Run(async () =>
@@ -214,6 +240,13 @@ namespace slskd.Mesh
                 return;
             }
 
+            if (soulseekClient != null)
+            {
+                soulseekClient.PrivateMessageReceived -= SoulseekClient_PrivateMessageReceived;
+            }
+
+            CancelPendingRequests(pendingRequests);
+            CancelPendingRequests(pendingChunkRequests);
             syncLock.Dispose();
             _disposed = true;
         }
@@ -267,7 +300,7 @@ namespace slskd.Mesh
 
             var req = new MeshReqChunkMessage { FlacKey = flacKey, Offset = offset, Length = length };
             var key = $"{peer}:{flacKey}:{offset}";
-            var tcs = new TaskCompletionSource<MeshRespChunkMessage>();
+            var tcs = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (!pendingChunkRequests.TryAdd(key, tcs))
             {
                 log.Warning("[MESH] Duplicate chunk request for {Key} from {Peer}", key, peer);
@@ -365,25 +398,9 @@ namespace slskd.Mesh
                 await syncLock.WaitAsync(cancellationToken);
                 try
                 {
-                    // Generate HELLO
                     var hello = GenerateHelloMessage();
-                    log.Information("[MESH] Initiating sync with {Peer}, our seq={SeqId}", username, hello.LatestSeqId);
-
-                    // In a real implementation, we'd send this over a Soulseek connection
-                    // For now, we simulate with local state and API calls
-
-                    // Get entries we need from them (since their last known seq)
-                    var theirLastSeq = state.LastSeqSeen;
-                    var ourEntries = await hashDb.GetEntriesSinceSeqAsync(theirLastSeq, MaxEntriesPerSync, cancellationToken);
-                    result.EntriesSent = ourEntries.Count();
-
-                    // Update stats
-                    stats.TotalEntriesSent += result.EntriesSent;
-                    state.LastSyncTime = DateTime.UtcNow;
-                    state.IsMeshCapable = true;
-
-                    result.Success = true;
-                    log.Information("[MESH] Sync with {Peer} complete: sent={Sent}", username, result.EntriesSent);
+                    result.Error = $"Mesh sync transport is not implemented (local seq={hello.LatestSeqId})";
+                    log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is not implemented", username);
                 }
                 finally
                 {
@@ -708,8 +725,8 @@ namespace slskd.Mesh
             };
 
             // Create TaskCompletionSource to wait for response
-            var tcs = new TaskCompletionSource<MeshRespKeyMessage>();
-            var requestId = flacKey; // Use FlacKey as request ID for simplicity
+            var tcs = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var requestId = $"{username}:{flacKey}";
 
             // Register pending request
             if (!pendingRequests.TryAdd(requestId, tcs))
@@ -753,6 +770,15 @@ namespace slskd.Mesh
                 log.Warning(ex, "[MESH] Error querying peer {Peer} for key {Key}", username, flacKey);
                 pendingRequests.TryRemove(requestId, out _);
                 return null;
+            }
+        }
+
+        private static void CancelPendingRequests<TResponse>(ConcurrentDictionary<string, TaskCompletionSource<TResponse>> pending)
+        {
+            foreach (var (key, tcs) in pending)
+            {
+                pending.TryRemove(key, out _);
+                tcs.TrySetCanceled();
             }
         }
 

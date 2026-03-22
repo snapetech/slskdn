@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -56,22 +57,27 @@ public class ScenePubSubService : IScenePubSubService, IDisposable
     private readonly ILogger<ScenePubSubService> logger;
     private readonly VirtualSoulfind.ShadowIndex.IDhtClient dht;
     private readonly ConcurrentDictionary<string, DateTimeOffset> subscriptions = new();
-    private readonly System.Threading.Timer? pollTimer;
+    private readonly ConcurrentDictionary<string, DateTimeOffset> seenMessages = new();
+    private readonly CancellationTokenSource pollLoopCancellationTokenSource = new();
+    private readonly Task pollLoopTask;
     private bool disposed;
 
     public ScenePubSubService(
         ILogger<ScenePubSubService> logger,
         VirtualSoulfind.ShadowIndex.IDhtClient dht)
+        : this(logger, dht, TimeSpan.FromSeconds(30))
+    {
+    }
+
+    internal ScenePubSubService(
+        ILogger<ScenePubSubService> logger,
+        VirtualSoulfind.ShadowIndex.IDhtClient dht,
+        TimeSpan pollInterval)
     {
         this.logger = logger;
         this.dht = dht;
 
-        // Start polling timer for subscribed scenes (every 30 seconds)
-        pollTimer = new System.Threading.Timer(
-            async _ => await PollSubscribedScenesAsync(),
-            null,
-            TimeSpan.FromSeconds(30),
-            TimeSpan.FromSeconds(30));
+        pollLoopTask = Task.Run(() => RunPollLoopAsync(pollInterval, pollLoopCancellationTokenSource.Token), CancellationToken.None);
     }
 
     public event EventHandler<SceneMessageReceivedEventArgs>? MessageReceived;
@@ -102,11 +108,13 @@ public class ScenePubSubService : IScenePubSubService, IDisposable
         logger.LogDebug("[VSF-PUBSUB] Publishing message to scene {SceneId}: {Size} bytes",
             sceneId, message.Length);
 
-        // Phase 6C: T-816 - Store message in DHT with scene-specific key
-        var key = VirtualSoulfind.ShadowIndex.DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}:{Ulid.NewUlid()}");
+        // Phase 6C: T-816 - Store message in DHT with stable scene topic key so subscribers can query it
+        var key = VirtualSoulfind.ShadowIndex.DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}");
 
         // Store with short TTL (5 minutes) - messages are ephemeral
         await dht.PutAsync(key, message, ttlSeconds: 300, ct);
+
+        RememberMessage(sceneId, message);
 
         logger.LogInformation("[VSF-PUBSUB] Published message to scene {SceneId}", sceneId);
     }
@@ -126,38 +134,75 @@ public class ScenePubSubService : IScenePubSubService, IDisposable
 
         if (disposing)
         {
-            pollTimer?.Dispose();
+            pollLoopCancellationTokenSource.Cancel();
+
+            try
+            {
+                pollLoopTask.Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.All(inner => inner is OperationCanceledException))
+            {
+            }
+
+            pollLoopCancellationTokenSource.Dispose();
         }
 
         disposed = true;
     }
 
-    private async Task PollSubscribedScenesAsync()
+    private async Task RunPollLoopAsync(TimeSpan pollInterval, CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(pollInterval);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await PollSubscribedScenesAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task PollSubscribedScenesAsync(CancellationToken cancellationToken)
     {
         if (subscriptions.IsEmpty)
         {
             return;
         }
 
-        foreach (var (sceneId, subscribedAt) in subscriptions.ToList())
+        foreach (var (sceneId, _) in subscriptions.ToList())
         {
             try
             {
                 // Query DHT for recent messages in this scene
                 var sceneKey = VirtualSoulfind.ShadowIndex.DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}");
-                var messages = await dht.GetMultipleAsync(sceneKey, CancellationToken.None);
+                var messages = await dht.GetMultipleAsync(sceneKey, cancellationToken);
 
                 foreach (var messageData in messages)
                 {
+                    if (!ShouldDeliver(sceneId, messageData))
+                    {
+                        continue;
+                    }
+
+                    var peerId = TryExtractPeerId(messageData);
+
                     // Fire event for received message
                     OnMessageReceived(new SceneMessageReceivedEventArgs
                     {
                         SceneId = sceneId,
-                        PeerId = "unknown", // Would need to extract from message
+                        PeerId = peerId,
                         Message = messageData,
                         Timestamp = DateTimeOffset.UtcNow
                     });
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
             }
             catch (Exception ex)
             {
@@ -169,5 +214,43 @@ public class ScenePubSubService : IScenePubSubService, IDisposable
     protected virtual void OnMessageReceived(SceneMessageReceivedEventArgs e)
     {
         MessageReceived?.Invoke(this, e);
+    }
+
+    private bool ShouldDeliver(string sceneId, byte[] message)
+    {
+        var messageId = GetMessageFingerprint(sceneId, message);
+        return seenMessages.TryAdd(messageId, DateTimeOffset.UtcNow);
+    }
+
+    private void RememberMessage(string sceneId, byte[] message)
+    {
+        var cutoff = DateTimeOffset.UtcNow.AddMinutes(-10);
+        foreach (var entry in seenMessages)
+        {
+            if (entry.Value < cutoff)
+            {
+                seenMessages.TryRemove(entry.Key, out _);
+            }
+        }
+
+        seenMessages[GetMessageFingerprint(sceneId, message)] = DateTimeOffset.UtcNow;
+    }
+
+    private static string GetMessageFingerprint(string sceneId, byte[] message)
+    {
+        return $"{sceneId}:{Convert.ToHexString(SHA256.HashData(message))}";
+    }
+
+    private static string TryExtractPeerId(byte[] message)
+    {
+        try
+        {
+            var chatMessage = MessagePack.MessagePackSerializer.Deserialize<SceneChatMessage>(message);
+            return chatMessage?.PeerId ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 }

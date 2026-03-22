@@ -100,7 +100,13 @@ public class Z04012025_TransferStateMigration : IMigration
         while (reader.Read())
         {
             var state = reader.GetString(0);
-            dict[state] = (int)Enum.Parse(typeof(Z04012025_TransferStateMigration_TransferStates), state);
+            if (!Enum.TryParse(state, ignoreCase: true, out Z04012025_TransferStateMigration_TransferStates parsedState))
+            {
+                Log.Warning("Unknown transfer state '{State}' found in migration source; defaulting to None", state);
+                parsedState = Z04012025_TransferStateMigration_TransferStates.None;
+            }
+
+            dict[state] = (int)parsedState;
         }
 
         Log.Debug("State -> int map: {Map}", dict);

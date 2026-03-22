@@ -34,7 +34,8 @@ public class VirtualSoulfindOptions
     public ScenesOptions? Scenes { get; set; }
 
     /// <summary>
-    /// Disaster mode configuration.
+    /// Legacy fallback configuration for Soulseek outages and degraded states.
+    /// Normal out-of-the-box behavior remains Soulseek + mesh together.
     /// </summary>
     public DisasterModeOptions? DisasterMode { get; set; }
 

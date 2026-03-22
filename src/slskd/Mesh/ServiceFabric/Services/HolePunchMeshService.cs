@@ -50,7 +50,8 @@ public class HolePunchMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not implemented for hole punch service");
+        _logger.LogWarning("[HolePunch] Streaming requested by {PeerId}, but hole punch streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     public async Task<ServiceReply> HandleCallAsync(

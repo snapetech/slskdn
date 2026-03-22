@@ -13,6 +13,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
     private readonly List<BatchedMessage> _currentBatch = new();
     private readonly SemaphoreSlim _batchLock = new(1, 1);
     private readonly ILogger<TimedBatcher> _logger;
+    private static readonly TimeSpan BatchPollInterval = TimeSpan.FromMilliseconds(50);
 
     private CancellationTokenSource? _currentBatchTimer;
 
@@ -135,14 +136,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
         _currentBatchTimer?.Dispose();
         _currentBatchTimer = new CancellationTokenSource();
 
-        Task.Delay(_options.BatchWindowMs, _currentBatchTimer.Token)
-            .ContinueWith(t =>
-            {
-                if (!t.IsCanceled)
-                {
-                    _logger.LogDebug("Batch timer expired, batch ready for processing");
-                }
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+        _ = LogBatchTimerExpiryAsync(_currentBatchTimer.Token);
     }
 
     private async Task WaitForBatchAsync(CancellationToken cancellationToken)
@@ -158,7 +152,8 @@ public class TimedBatcher : IMessageBatcher, IDisposable
                     return;
                 }
 
-                if (_currentBatch.Count > 0 && _currentBatchTimer?.IsCancellationRequested == true)
+                if (_currentBatch.Count > 0
+                    && DateTimeOffset.UtcNow - _currentBatch[0].Timestamp >= TimeSpan.FromMilliseconds(_options.BatchWindowMs))
                 {
                     // Timer has expired
                     return;
@@ -170,7 +165,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             }
 
             // Wait a bit before checking again
-            await Task.Delay(50, cancellationToken);
+            await Task.Delay(BatchPollInterval, cancellationToken);
         }
     }
 
@@ -190,5 +185,17 @@ public class TimedBatcher : IMessageBatcher, IDisposable
         _currentBatchTimer?.Cancel();
         _currentBatchTimer?.Dispose();
         _batchLock.Dispose();
+    }
+
+    private async Task LogBatchTimerExpiryAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(_options.BatchWindowMs, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("Batch timer expired, batch ready for processing");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 }

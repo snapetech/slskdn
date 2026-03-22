@@ -69,9 +69,7 @@ namespace slskd.SocialFederation
         /// <inheritdoc/>
         protected override bool HasContentToShare()
         {
-            // For generic actors, assume content is available if the domain is enabled
-            // In a real implementation, this would check with the actual content providers
-            return true;
+            return false;
         }
 
         /// <inheritdoc/>

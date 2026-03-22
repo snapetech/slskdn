@@ -26,7 +26,7 @@ public interface IScenePeerDiscovery
 }
 
 /// <summary>
-/// Scene-based peer discovery for disaster mode.
+/// Scene-based peer discovery for the legacy fallback path.
 /// </summary>
 public class ScenePeerDiscovery : IScenePeerDiscovery
 {

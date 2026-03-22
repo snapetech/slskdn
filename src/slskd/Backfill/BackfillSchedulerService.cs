@@ -30,6 +30,7 @@ namespace slskd.Backfill
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh;
+    using slskd.Capabilities;
     using slskd.Transfers.MultiSource;
 
     /// <summary>
@@ -40,6 +41,7 @@ namespace slskd.Backfill
         private readonly IHashDbService hashDb;
         private readonly IMeshSyncService meshSync;
         private readonly ISoulseekClient soulseekClient;
+        private readonly ICapabilityService? capabilityService;
         private readonly ILogger<BackfillSchedulerService> logger;
 
         private readonly BackfillConfig config = new();
@@ -56,11 +58,13 @@ namespace slskd.Backfill
             IHashDbService hashDb,
             IMeshSyncService meshSync,
             ISoulseekClient soulseekClient,
+            ICapabilityService? capabilityService,
             ILogger<BackfillSchedulerService> logger)
         {
             this.hashDb = hashDb;
             this.meshSync = meshSync;
             this.soulseekClient = soulseekClient;
+            this.capabilityService = capabilityService;
             this.logger = logger;
         }
 
@@ -196,6 +200,17 @@ namespace slskd.Backfill
             foreach (var entry in entries)
             {
                 var backfillsToday = await hashDb.GetPeerBackfillCountTodayAsync(entry.PeerId, cancellationToken);
+                var isPeerOnline = false;
+
+                try
+                {
+                    var userStatus = await soulseekClient.GetUserStatusAsync(entry.PeerId);
+                    isPeerOnline = !string.Equals(userStatus.Presence.ToString(), "Offline", StringComparison.OrdinalIgnoreCase);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "[BACKFILL] Failed to resolve online status for {PeerId}", entry.PeerId);
+                }
 
                 candidates.Add(new BackfillCandidate
                 {
@@ -205,8 +220,8 @@ namespace slskd.Backfill
                     Size = entry.Size,
                     DiscoveredAt = entry.DiscoveredAtUtc,
                     PeerBackfillsToday = backfillsToday,
-                    IsPeerOnline = true, // TODO: Check actual online status
-                    IsPeerSlskdn = false, // TODO: Check capability service
+                    IsPeerOnline = isPeerOnline,
+                    IsPeerSlskdn = capabilityService?.GetPeerCapabilities(entry.PeerId)?.IsSlskdnClient == true,
                 });
             }
 

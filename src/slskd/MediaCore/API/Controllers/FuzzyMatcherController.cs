@@ -166,7 +166,9 @@ public class FuzzyMatcherController : ControllerBase
             return Enumerable.Empty<string>();
 
         // Get candidates from the same domain
-        var candidates = await _registry.FindByDomainAsync(parsed.Domain, cancellationToken);
+        var candidates = await _registry.FindByDomainAsync(
+            ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type),
+            cancellationToken);
 
         // Limit and randomize for performance (in a real implementation, this would be more sophisticated)
         return candidates

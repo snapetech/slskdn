@@ -91,7 +91,10 @@ namespace slskd.Capabilities
         /// <summary>
         ///     Gets a value indicating whether this peer is a slskdn client.
         /// </summary>
-        public bool IsSlskdnClient => Flags != PeerCapabilityFlags.None;
+        public bool IsSlskdnClient =>
+            Flags != PeerCapabilityFlags.None ||
+            ProtocolVersion > 0 ||
+            !string.IsNullOrWhiteSpace(ClientVersion);
 
         /// <summary>
         ///     Gets a value indicating whether this peer supports swarm downloads.

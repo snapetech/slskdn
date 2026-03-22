@@ -51,7 +51,10 @@ public class RoomsCompatibilityController : ControllerBase
                         if (json.TryGetProperty("room", out var roomProp))
                             roomName = roomProp.GetString();
                     }
-                    catch { }
+                    catch (System.Text.Json.JsonException ex)
+                    {
+                        logger.LogDebug(ex, "Failed to parse RoomsCompatibility join room request payload");
+                    }
                 }
             }
         }

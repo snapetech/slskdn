@@ -195,6 +195,46 @@ public class DhtMeshServiceDirectoryTests
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task FindByIdAsync_WithValidDescriptor_ReturnsValidatedDescriptor()
+    {
+        var descriptor = CreateTestDescriptor("test-service", "peer-by-id");
+        var serialized = MessagePackSerializer.Serialize(descriptor);
+
+        _dhtClientMock
+            .Setup(d => d.GetRawAsync($"svcid:{descriptor.ServiceId}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serialized);
+
+        _validatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<MeshServiceDescriptor>()))
+            .ReturnsAsync((true, string.Empty));
+
+        var result = await _directory.FindByIdAsync(descriptor.ServiceId, CancellationToken.None);
+
+        Assert.Single(result);
+        Assert.Equal(descriptor.ServiceId, result[0].ServiceId);
+        Assert.Equal("peer-by-id", result[0].OwnerPeerId);
+    }
+
+    [Fact]
+    public async Task FindByIdAsync_WithInvalidDescriptor_ReturnsEmpty()
+    {
+        var descriptor = CreateTestDescriptor("test-service", "peer-invalid");
+        var serialized = MessagePackSerializer.Serialize(descriptor);
+
+        _dhtClientMock
+            .Setup(d => d.GetRawAsync($"svcid:{descriptor.ServiceId}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(serialized);
+
+        _validatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<MeshServiceDescriptor>()))
+            .ReturnsAsync((false, "Invalid"));
+
+        var result = await _directory.FindByIdAsync(descriptor.ServiceId, CancellationToken.None);
+
+        Assert.Empty(result);
+    }
+
     private MeshServiceDescriptor CreateTestDescriptor(string serviceName, string ownerPeerId)
     {
         var now = DateTimeOffset.UtcNow;

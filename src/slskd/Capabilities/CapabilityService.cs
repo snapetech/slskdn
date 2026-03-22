@@ -24,6 +24,7 @@ namespace slskd.Capabilities
     using System.Text.Json;
     using System.Text.RegularExpressions;
     using Serilog;
+    using slskd.HashDb;
 
     /// <summary>
     ///     Service for managing slskdn peer capabilities.
@@ -46,6 +47,7 @@ namespace slskd.Capabilities
 
         private readonly ConcurrentDictionary<string, PeerCapabilities> peerCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly ILogger log = Log.ForContext<CapabilityService>();
+        private readonly IHashDbService? hashDb;
 
         // Regex to parse capability tag: slskdn_caps:v1;dht=1;mesh=1;swarm=1
         private static readonly Regex CapTagRegex = new(
@@ -54,8 +56,13 @@ namespace slskd.Capabilities
 
         // Regex to parse version string: slskdn/1.0.0+dht+mesh+swarm
         private static readonly Regex VersionRegex = new(
-            @"slskdn/(\d+\.\d+\.\d+)(\+.*)?",
+            @"slskdn/([^+\s]+)(\+.*)?",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        public CapabilityService(IHashDbService? hashDb = null)
+        {
+            this.hashDb = hashDb;
+        }
 
         /// <inheritdoc/>
         public string VersionString => $"{VersionPrefix}{SlskdnVersion}+dht+mesh+swarm";
@@ -109,9 +116,14 @@ namespace slskd.Capabilities
                 return null;
             }
 
+            if (!int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var protocolVersion))
+            {
+                return null;
+            }
+
             var caps = new PeerCapabilities
             {
-                ProtocolVersion = int.Parse(match.Groups[1].Value),
+                ProtocolVersion = protocolVersion,
                 LastCapCheck = DateTime.UtcNow,
                 LastSeen = DateTime.UtcNow,
             };
@@ -139,7 +151,7 @@ namespace slskd.Capabilities
                 }
             }
 
-            return caps.Flags != PeerCapabilityFlags.None ? caps : null;
+            return caps;
         }
 
         /// <inheritdoc/>
@@ -183,7 +195,7 @@ namespace slskd.Capabilities
                 }
             }
 
-            return caps.Flags != PeerCapabilityFlags.None ? caps : null;
+            return caps;
         }
 
         /// <inheritdoc/>
@@ -255,7 +267,7 @@ namespace slskd.Capabilities
                 features = GetFeatureList(),
                 protocol_version = ProtocolVersion,
                 capabilities = (int)OurCapabilities,
-                mesh_seq_id = 0L, // TODO: Get from hash DB when implemented
+                mesh_seq_id = hashDb?.CurrentSeqId ?? 0L,
             };
 
             return JsonSerializer.Serialize(caps, new JsonSerializerOptions

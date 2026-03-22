@@ -34,7 +34,7 @@ namespace slskd.SocialFederation
         private readonly IActivityPubKeyStore _keyStore;
         private readonly ILogger<ActivityDeliveryService> _logger;
         private readonly SemaphoreSlim _rateLimiter;
-        private readonly ConcurrentDictionary<string, DateTime> _recentDeliveries = new();
+        private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _recentDeliveries = new();
         private bool _disposed;
 
         /// <summary>
@@ -59,7 +59,8 @@ namespace slskd.SocialFederation
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             var pubOpts = _publishingOptions.CurrentValue;
-            _rateLimiter = new SemaphoreSlim(pubOpts.MaxActivitiesPerHour / 10, pubOpts.MaxActivitiesPerHour / 10);
+            var concurrentDeliveries = Math.Max(1, pubOpts.MaxActivitiesPerHour / 10);
+            _rateLimiter = new SemaphoreSlim(concurrentDeliveries, concurrentDeliveries);
             _httpClient.Timeout = TimeSpan.FromSeconds(pubOpts.DeliveryTimeoutSeconds);
         }
 
@@ -135,7 +136,7 @@ namespace slskd.SocialFederation
                     using var request = await CreateSignedRequestAsync(activity, inboxUrl, cancellationToken);
 
                     // Send the request
-                    var response = await _httpClient.SendAsync(request, cancellationToken);
+                    using var response = await _httpClient.SendAsync(request, cancellationToken);
                     response.EnsureSuccessStatusCode();
 
                     _logger.LogInformation("[Delivery] Successfully delivered activity {ActivityId} to {InboxUrl}",
@@ -270,17 +271,12 @@ namespace slskd.SocialFederation
             var pubOpts = _publishingOptions.CurrentValue;
             var cutoff = DateTime.UtcNow.AddMinutes(-60); // 1 hour window
 
-            // Clean old entries
-            foreach (var kvp in _recentDeliveries)
-            {
-                if (kvp.Value < cutoff)
-                {
-                    _recentDeliveries.TryRemove(kvp.Key, out _);
-                }
-            }
+            CleanupExpiredDeliveries(cutoff);
 
             // Count recent deliveries to this recipient
-            var recentCount = _recentDeliveries.Count(kvp => kvp.Key == inboxUrl && kvp.Value > cutoff);
+            var recentCount = _recentDeliveries.TryGetValue(inboxUrl, out var deliveries)
+                ? deliveries.Count
+                : 0;
             return recentCount >= pubOpts.MaxActivitiesPerHour;
         }
 
@@ -290,7 +286,31 @@ namespace slskd.SocialFederation
         /// <param name="inboxUrl">The inbox URL.</param>
         private void RecordDelivery(string inboxUrl)
         {
-            _recentDeliveries[inboxUrl] = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            var deliveries = _recentDeliveries.GetOrAdd(inboxUrl, static _ => new ConcurrentQueue<DateTime>());
+            deliveries.Enqueue(now);
+            TrimExpiredDeliveries(inboxUrl, deliveries, now.AddMinutes(-60));
+        }
+
+        private void CleanupExpiredDeliveries(DateTime cutoff)
+        {
+            foreach (var kvp in _recentDeliveries)
+            {
+                TrimExpiredDeliveries(kvp.Key, kvp.Value, cutoff);
+            }
+        }
+
+        private void TrimExpiredDeliveries(string inboxUrl, ConcurrentQueue<DateTime> deliveries, DateTime cutoff)
+        {
+            while (deliveries.TryPeek(out var deliveryTime) && deliveryTime < cutoff)
+            {
+                deliveries.TryDequeue(out _);
+            }
+
+            if (deliveries.IsEmpty)
+            {
+                _recentDeliveries.TryRemove(inboxUrl, out _);
+            }
         }
 
         /// <inheritdoc/>

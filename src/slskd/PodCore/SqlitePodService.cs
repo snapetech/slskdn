@@ -110,7 +110,7 @@ namespace slskd.PodCore
                         {
                             logger.LogWarning(ex, "Failed to publish pod to DHT");
                         }
-                    }, ct);
+                    }, CancellationToken.None);
                 }
 
                 return pod;
@@ -522,7 +522,7 @@ namespace slskd.PodCore
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                }, ct);
+                    }, CancellationToken.None);
             }
 
             logger.LogInformation("Created channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
@@ -579,7 +579,7 @@ namespace slskd.PodCore
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                }, ct);
+                    }, CancellationToken.None);
             }
 
             logger.LogInformation("Deleted channel {ChannelId} from pod {PodId}", channelId, podId);
@@ -656,7 +656,7 @@ namespace slskd.PodCore
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                }, ct);
+                    }, CancellationToken.None);
             }
 
             logger.LogInformation("Updated channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);

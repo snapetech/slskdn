@@ -24,6 +24,8 @@ public class BridgeProxyServer : BackgroundService
     private readonly ILogger<BridgeProxyServer> logger;
     private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private readonly IBridgeApi bridgeApi;
+    private readonly IBridgeDashboard bridgeDashboard;
+    private readonly ISoulfindBridgeService bridgeService;
     private readonly IHttpClientFactory httpClientFactory;
     private readonly SoulseekProtocolParser protocolParser;
     private readonly ITransferProgressProxy progressProxy;
@@ -35,6 +37,8 @@ public class BridgeProxyServer : BackgroundService
         ILogger<BridgeProxyServer> logger,
         IOptionsMonitor<OptionsModel> optionsMonitor,
         IBridgeApi bridgeApi,
+        IBridgeDashboard bridgeDashboard,
+        ISoulfindBridgeService bridgeService,
         IHttpClientFactory httpClientFactory,
         SoulseekProtocolParser protocolParser,
         ITransferProgressProxy progressProxy)
@@ -42,6 +46,8 @@ public class BridgeProxyServer : BackgroundService
         this.logger = logger;
         this.optionsMonitor = optionsMonitor;
         this.bridgeApi = bridgeApi;
+        this.bridgeDashboard = bridgeDashboard;
+        this.bridgeService = bridgeService;
         this.httpClientFactory = httpClientFactory;
         this.protocolParser = protocolParser;
         this.progressProxy = progressProxy;
@@ -113,7 +119,7 @@ public class BridgeProxyServer : BackgroundService
                             activeSessions.TryRemove(clientId, out _);
                             client?.Close();
                         }
-                    }, stoppingToken);
+                    }, CancellationToken.None);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -147,6 +153,12 @@ public class BridgeProxyServer : BackgroundService
             ConnectedAt = DateTimeOffset.UtcNow
         };
         activeSessions[clientId] = session;
+        bridgeService.RecordClientConnection(clientId);
+        bridgeDashboard.RecordConnection(
+            clientId,
+            client.Client.RemoteEndPoint is IPEndPoint ipEndpoint
+                ? ipEndpoint.Address.ToString()
+                : client.Client.RemoteEndPoint?.ToString() ?? string.Empty);
 
         var stream = client.GetStream();
 
@@ -244,7 +256,7 @@ public class BridgeProxyServer : BackgroundService
             {
                 try
                 {
-                    await progressProxy.StopProxyAsync(session.ActiveProxyId, ct);
+                    await progressProxy.StopProxyAsync(session.ActiveProxyId, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {
@@ -253,6 +265,8 @@ public class BridgeProxyServer : BackgroundService
             }
 
             clientIdToProxyId.TryRemove(clientId, out _);
+            bridgeService.RecordClientDisconnection(clientId);
+            bridgeDashboard.RecordDisconnection(clientId);
         }
     }
 
@@ -319,6 +333,7 @@ public class BridgeProxyServer : BackgroundService
 
             session.Username = loginRequest.Username;
             session.IsAuthenticated = true;
+            bridgeDashboard.RecordAuthentication(session.ClientId, session.Username);
 
             // Send login response (success)
             var responsePayload = protocolParser.BuildLoginResponse(true, "Login successful");
@@ -355,6 +370,7 @@ public class BridgeProxyServer : BackgroundService
 
         logger.LogInformation("[VSF-BRIDGE-PROXY] Search request from {ClientId}: {Query} (token: {Token})",
             session.ClientId, searchRequest.Query, searchRequest.Token);
+        bridgeDashboard.RecordRequest(session.ClientId, "search");
 
         try
         {
@@ -410,6 +426,7 @@ public class BridgeProxyServer : BackgroundService
 
         logger.LogInformation("[VSF-BRIDGE-PROXY] Download request from {ClientId}: {Username}/{Filename} (token: {Token})",
             session.ClientId, downloadRequest.Username, downloadRequest.Filename, downloadRequest.Token);
+        bridgeDashboard.RecordRequest(session.ClientId, "download");
 
         try
         {
@@ -447,7 +464,7 @@ public class BridgeProxyServer : BackgroundService
                 transferId, proxyId, session.ClientId);
 
             // Start background task to push progress updates (T-851.5)
-            _ = Task.Run(async () => await PushProgressUpdatesAsync(session, ct), ct);
+            _ = Task.Run(() => PushProgressUpdatesAsync(session, CancellationToken.None), CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -485,6 +502,7 @@ public class BridgeProxyServer : BackgroundService
         CancellationToken ct)
     {
         logger.LogDebug("[VSF-BRIDGE-PROXY] Room list request from {ClientId}", session.ClientId);
+        bridgeDashboard.RecordRequest(session.ClientId, "room");
 
         try
         {

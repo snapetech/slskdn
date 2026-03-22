@@ -173,6 +173,7 @@ public class MeekTransport : IAnonymityTransport, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
+                response.Dispose();
                 throw new Exception($"Meek tunnel request failed: {response.StatusCode}");
             }
 
@@ -336,10 +337,10 @@ public class MeekTransport : IAnonymityTransport, IDisposable
         public override void Flush() { }
 
         public override int Read(byte[] buffer, int offset, int count) =>
-            ReadAsync(buffer, offset, count).GetAwaiter().GetResult();
+            ReadAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override void Write(byte[] buffer, int offset, int count) =>
-            WriteAsync(buffer, offset, count).GetAwaiter().GetResult();
+            WriteAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();

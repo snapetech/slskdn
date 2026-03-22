@@ -30,6 +30,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
     using slskd.VirtualSoulfind.v2.Backends;
     using slskd.VirtualSoulfind.v2.Execution;
     using slskd.VirtualSoulfind.v2.Planning;
+    using slskd.VirtualSoulfind.v2.Sources;
 
     /// <summary>
     ///     Simple implementation of <see cref="IResolver"/>.
@@ -210,87 +211,159 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                 ? Path.GetTempPath()
                 : _options.CurrentValue.DownloadDirectory!;
 
-            // NativeMesh: fetch via MeshContent.GetByContentId RPC (def-5)
-            if (step.Backend == ContentBackendType.NativeMesh)
+            using var stepTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            if (step.Timeout > TimeSpan.Zero)
             {
-                if (_meshClient == null)
-                    return StepResult.Failure("NativeMesh fetch requires IMeshServiceClient (not injected)");
-                foreach (var candidate in step.Candidates.Take(step.MaxParallel))
-                {
-                    if (!TryParseMeshBackendRef(candidate.BackendRef, out var peerId, out var contentId))
-                        continue;
-                    if (string.IsNullOrWhiteSpace(peerId))
-                        continue;
-                    try
-                    {
-                        var payload = JsonSerializer.SerializeToUtf8Bytes(new { contentId });
-                        var call = new ServiceCall
-                        {
-                            ServiceName = "MeshContent",
-                            Method = "GetByContentId",
-                            CorrelationId = Guid.NewGuid().ToString("N"),
-                            Payload = payload,
-                        };
-                        var reply = await _meshClient.CallAsync(peerId, call, cancellationToken);
-                        if (reply.IsSuccess && reply.Payload != null && reply.Payload.Length > 0)
-                        {
-                            var tmpPath = Path.Combine(downloadDir, $"vs2_nativemesh_{Guid.NewGuid():N}.tmp");
-                            await File.WriteAllBytesAsync(tmpPath, reply.Payload, cancellationToken);
-                            return StepResult.Success(tmpPath);
-                        }
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-                }
-
-                return StepResult.Failure("NativeMesh GetByContentId failed for all candidates");
+                stepTimeoutCts.CancelAfter(step.Timeout);
             }
 
-            foreach (var candidate in step.Candidates.Take(step.MaxParallel))
+            var stepCancellationToken = stepTimeoutCts.Token;
+
+            if (step.FallbackMode == PlanStepFallbackMode.FanOut)
             {
-                try
+                return await ExecuteFanOutStepAsync(step, backend, downloadDir, stepCancellationToken);
+            }
+
+            return await ExecuteCascadeStepAsync(step, backend, downloadDir, stepCancellationToken);
+        }
+
+        private async Task<StepResult> ExecuteCascadeStepAsync(
+            PlanStep step,
+            IContentBackend backend,
+            string downloadDir,
+            CancellationToken cancellationToken)
+        {
+            foreach (var candidate in step.Candidates.Take(Math.Max(1, step.MaxParallel)))
+            {
+                var result = backend.Type == ContentBackendType.NativeMesh
+                    ? await ExecuteNativeMeshCandidateAsync(candidate, downloadDir, cancellationToken)
+                    : await ExecuteCandidateAsync(step.Backend, backend, candidate, downloadDir, cancellationToken);
+
+                if (result.IsSuccess)
                 {
-                    var validationResult = await backend.ValidateCandidateAsync(candidate, cancellationToken);
-                    if (!validationResult.IsValid)
-                        continue;
-
-                    string? fetchedPath = null;
-
-                    // IContentFetchBackend (Http, WebDav, S3): fetch to file
-                    if (backend is IContentFetchBackend fetchBackend)
-                    {
-                        var tmpPath = Path.Combine(downloadDir, $"vs2_{step.Backend}_{Guid.NewGuid():N}.tmp");
-                        await using (var fs = File.Create(tmpPath))
-                            await fetchBackend.FetchToStreamAsync(candidate, fs, cancellationToken);
-                        fetchedPath = tmpPath;
-                    }
-
-                    // Torrent: IBitTorrentBackend.FetchByInfoHashOrMagnetAsync (StubBitTorrentBackend returns null)
-                    else if (step.Backend == ContentBackendType.Torrent && _btBackend != null)
-                    {
-                        var path = await _btBackend.FetchByInfoHashOrMagnetAsync(candidate.BackendRef, downloadDir, cancellationToken);
-                        if (path == null)
-                            continue; // not supported or failed, try next candidate
-                        fetchedPath = path;
-                    }
-
-                    // LocalLibrary, Soulseek, MeshDht, Lan: no resolver fetch; success without path
-                    else
-                    {
-                        return StepResult.Success(null);
-                    }
-
-                    return StepResult.Success(fetchedPath);
-                }
-                catch (Exception)
-                {
-                    continue;
+                    return result;
                 }
             }
 
             return StepResult.Failure("All candidates in step failed");
+        }
+
+        private async Task<StepResult> ExecuteFanOutStepAsync(
+            PlanStep step,
+            IContentBackend backend,
+            string downloadDir,
+            CancellationToken cancellationToken)
+        {
+            var candidates = step.Candidates.ToList();
+            var chunkSize = Math.Max(1, step.MaxParallel);
+
+            for (var offset = 0; offset < candidates.Count; offset += chunkSize)
+            {
+                var chunk = candidates.Skip(offset).Take(chunkSize).ToList();
+                var tasks = chunk.Select(candidate =>
+                    backend.Type == ContentBackendType.NativeMesh
+                        ? ExecuteNativeMeshCandidateAsync(candidate, downloadDir, cancellationToken)
+                        : ExecuteCandidateAsync(step.Backend, backend, candidate, downloadDir, cancellationToken))
+                    .ToList();
+
+                var results = await Task.WhenAll(tasks);
+                var success = results.FirstOrDefault(result => result.IsSuccess);
+                if (success != null)
+                {
+                    return success;
+                }
+            }
+
+            return StepResult.Failure("All candidates in step failed");
+        }
+
+        private async Task<StepResult> ExecuteNativeMeshCandidateAsync(
+            SourceCandidate candidate,
+            string downloadDir,
+            CancellationToken cancellationToken)
+        {
+            if (_meshClient == null)
+            {
+                return StepResult.Failure("NativeMesh fetch requires IMeshServiceClient (not injected)");
+            }
+
+            if (!TryParseMeshBackendRef(candidate.BackendRef, out var peerId, out var contentId) ||
+                string.IsNullOrWhiteSpace(peerId))
+            {
+                return StepResult.Failure("Invalid NativeMesh candidate reference");
+            }
+
+            try
+            {
+                var payload = JsonSerializer.SerializeToUtf8Bytes(new { contentId });
+                var call = new ServiceCall
+                {
+                    ServiceName = "MeshContent",
+                    Method = "GetByContentId",
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Payload = payload,
+                };
+                var reply = await _meshClient.CallAsync(peerId, call, cancellationToken);
+                if (!reply.IsSuccess || reply.Payload == null || reply.Payload.Length == 0)
+                {
+                    return StepResult.Failure("NativeMesh GetByContentId failed");
+                }
+
+                var tmpPath = Path.Combine(downloadDir, $"vs2_nativemesh_{Guid.NewGuid():N}.tmp");
+                await File.WriteAllBytesAsync(tmpPath, reply.Payload, cancellationToken);
+                return StepResult.Success(tmpPath);
+            }
+            catch (Exception ex)
+            {
+                return StepResult.Failure(ex.Message);
+            }
+        }
+
+        private async Task<StepResult> ExecuteCandidateAsync(
+            ContentBackendType backendType,
+            IContentBackend backend,
+            SourceCandidate candidate,
+            string downloadDir,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var validationResult = await backend.ValidateCandidateAsync(candidate, cancellationToken);
+                if (!validationResult.IsValid)
+                {
+                    return StepResult.Failure("Candidate validation failed");
+                }
+
+                if (backend is IContentFetchBackend fetchBackend)
+                {
+                    var tmpPath = Path.Combine(downloadDir, $"vs2_{backendType}_{Guid.NewGuid():N}.tmp");
+                    await using (var fs = File.Create(tmpPath))
+                    {
+                        await fetchBackend.FetchToStreamAsync(candidate, fs, cancellationToken);
+                    }
+
+                    return StepResult.Success(tmpPath);
+                }
+
+                if (backendType == ContentBackendType.Torrent && _btBackend != null)
+                {
+                    var path = await _btBackend.FetchByInfoHashOrMagnetAsync(candidate.BackendRef, downloadDir, cancellationToken);
+                    return path == null
+                        ? StepResult.Failure("Torrent fetch failed")
+                        : StepResult.Success(path);
+                }
+
+                if (backendType == ContentBackendType.LocalLibrary)
+                {
+                    return StepResult.Success(candidate.BackendRef);
+                }
+
+                return StepResult.Failure($"Backend {backendType} has no fetch implementation");
+            }
+            catch (Exception ex)
+            {
+                return StepResult.Failure(ex.Message);
+            }
         }
 
         private PlanExecutionState UpdateState(PlanExecutionState newState)

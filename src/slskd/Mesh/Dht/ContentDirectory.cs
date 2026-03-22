@@ -106,7 +106,12 @@ public class ContentDirectory : IMeshDirectory
         if (parts.Length != 2) return (endpoint, null);
 
         var address = parts[0];
-        var port = int.TryParse(parts[1], out var p) ? p : (int?)null;
+        if (!int.TryParse(parts[1], out var p) || p is <= 0 or > ushort.MaxValue)
+        {
+            return (address, null);
+        }
+
+        var port = p;
         return (address, port);
     }
 }

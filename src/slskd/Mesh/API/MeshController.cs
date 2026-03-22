@@ -213,7 +213,12 @@ namespace slskd.Mesh.API
                 return BadRequest(new { error = "Message must have 'type' property" });
             }
 
-            var messageType = (MeshMessageType)typeElement.GetInt32();
+            if (!typeElement.TryGetInt32(out var messageTypeInt) || !Enum.IsDefined(typeof(MeshMessageType), messageTypeInt))
+            {
+                return BadRequest(new { error = "Unknown or invalid message type" });
+            }
+
+            var messageType = (MeshMessageType)messageTypeInt;
             MeshMessage? message = messageType switch
             {
                 MeshMessageType.Hello => JsonSerializer.Deserialize<MeshHelloMessage>(messageJson.GetRawText()),

@@ -69,35 +69,70 @@ namespace slskd.SocialFederation
             using var req = new HttpRequestMessage(HttpMethod.Get, uri);
             req.Headers.Add("Accept", "application/activity+json");
 
-            HttpResponseMessage? res = null;
             try
             {
-                res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                using var res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 res.EnsureSuccessStatusCode();
+
+                var finalUri = res.RequestMessage?.RequestUri;
+                if (finalUri == null ||
+                    !string.Equals(finalUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Final fetch URI was not HTTPS for {KeyId}", keyId);
+                    return null;
+                }
+
+                if (!await IsSafeHostAsync(finalUri, cts.Token))
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Final fetch URI resolved to forbidden host for {KeyId}", keyId);
+                    return null;
+                }
+
+                await using var stream = await res.Content.ReadAsStreamAsync(cts.Token);
+                var buf = new byte[MaxResponseBytes];
+                var total = 0;
+                int n;
+                while (total < buf.Length && (n = await stream.ReadAsync(buf.AsMemory(total, buf.Length - total), cts.Token)) > 0)
+                {
+                    total += n;
+                }
+
+                if (total >= MaxResponseBytes)
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
+                    return null;
+                }
+
+                var json = Encoding.UTF8.GetString(buf.AsSpan(0, total));
+                return ExtractPublicKeyPkixFromActorJson(json, keyId);
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "[HttpSignatureKeyFetcher] Fetch failed for {KeyId}", keyId);
                 return null;
             }
+        }
 
-            await using var stream = await res.Content.ReadAsStreamAsync(cts.Token);
-            var buf = new byte[MaxResponseBytes];
-            var total = 0;
-            int n;
-            while (total < buf.Length && (n = await stream.ReadAsync(buf.AsMemory(total, buf.Length - total), cts.Token)) > 0)
+        private async Task<bool> IsSafeHostAsync(Uri uri, CancellationToken cancellationToken)
+        {
+            try
             {
-                total += n;
-            }
+                var addrs = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);
+                foreach (var a in addrs)
+                {
+                    if (IPAddress.IsLoopback(a) || IsLinkLocal(a) || IsPrivate(a) || IsMulticast(a))
+                    {
+                        return false;
+                    }
+                }
 
-            if (total >= MaxResponseBytes)
+                return true;
+            }
+            catch (Exception ex)
             {
-                _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
-                return null;
+                _logger.LogDebug(ex, "[HttpSignatureKeyFetcher] DNS resolution failed for {Host}", uri.Host);
+                return false;
             }
-
-            var json = Encoding.UTF8.GetString(buf.AsSpan(0, total));
-            return ExtractPublicKeyPkixFromActorJson(json, keyId);
         }
 
         private static bool IsLinkLocal(IPAddress a)

@@ -107,7 +107,18 @@ public class MediaCoreStatsService : IMediaCoreStatsService
         var registryStats = await _contentRegistry.GetStatsAsync(cancellationToken);
 
         var mappingsByDomain = registryStats.MappingsByDomain.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        var mappingsByType = new Dictionary<string, int>(); // Would need to be tracked in registry
+        var mappingsByType = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var domain in mappingsByDomain.Keys)
+        {
+            var contentIds = await _contentRegistry.FindByDomainAsync(domain, cancellationToken);
+            foreach (var contentId in contentIds)
+            {
+                var type = ContentIdParser.GetType(contentId) ?? "unknown";
+                mappingsByType.TryGetValue(type, out var count);
+                mappingsByType[type] = count + 1;
+            }
+        }
 
         var averageMappingsPerDomain = registryStats.TotalDomains > 0
             ? (double)registryStats.TotalMappings / registryStats.TotalDomains
@@ -143,102 +154,162 @@ public class MediaCoreStatsService : IMediaCoreStatsService
     /// <inheritdoc/>
     public Task<FuzzyMatchingStats> GetFuzzyMatchingStatsAsync(CancellationToken cancellationToken = default)
     {
-        var accuracyByAlgorithm = new Dictionary<string, MatchAccuracyStats>
-        {
-            ["Levenshtein"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0), // Placeholder
-            ["Phonetic"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0),     // Placeholder
-            ["Perceptual"] = new MatchAccuracyStats(0, 0, 0, 0, 0.0, 0.0, 0.0) // Placeholder
-        };
-
+        var accuracyByAlgorithm = new Dictionary<string, MatchAccuracyStats>(StringComparer.OrdinalIgnoreCase);
         var matchesByDomain = _fuzzyMatchAttempts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         var successRate = _totalFuzzyMatches > 0 ? (double)_successfulFuzzyMatches / _totalFuzzyMatches : 0.0;
-        var averageConfidenceScore = 0.75; // Placeholder - would need to track actual scores
+        var averageConfidenceScore = successRate;
+
+        foreach (var (domain, attempts) in _fuzzyMatchAttempts)
+        {
+            _fuzzyMatchSuccesses.TryGetValue(domain, out var successes);
+            var ratio = attempts > 0 ? (double)successes / attempts : 0.0;
+            accuracyByAlgorithm[$"conservative:{domain}"] = new MatchAccuracyStats(
+                TotalAttempts: attempts,
+                CorrectMatches: successes,
+                FalsePositives: 0,
+                FalseNegatives: Math.Max(0, attempts - successes),
+                Precision: ratio,
+                Recall: ratio,
+                F1Score: ratio);
+        }
+
+        accuracyByAlgorithm["conservative"] = new MatchAccuracyStats(
+            TotalAttempts: _totalFuzzyMatches,
+            CorrectMatches: _successfulFuzzyMatches,
+            FalsePositives: 0,
+            FalseNegatives: Math.Max(0, _totalFuzzyMatches - _successfulFuzzyMatches),
+            Precision: successRate,
+            Recall: successRate,
+            F1Score: successRate);
 
         return Task.FromResult(new FuzzyMatchingStats(
             TotalMatches: _totalFuzzyMatches,
             SuccessfulMatches: _successfulFuzzyMatches,
             SuccessRate: successRate,
-            AverageMatchingTime: TimeSpan.FromMilliseconds(5), // Placeholder
+            AverageMatchingTime: TimeSpan.Zero,
             AccuracyByAlgorithm: accuracyByAlgorithm,
             MatchesByDomain: matchesByDomain,
             AverageConfidenceScore: averageConfidenceScore));
     }
 
     /// <inheritdoc/>
-    public Task<IpldMappingStats> GetIpldMappingStatsAsync(CancellationToken cancellationToken = default)
+    public async Task<IpldMappingStats> GetIpldMappingStatsAsync(CancellationToken cancellationToken = default)
     {
-        // This would need to be implemented in IpldMapper to track statistics
-        // For now, return placeholder stats
-        var linksByType = new Dictionary<string, int>
+        var registryStats = await _contentRegistry.GetStatsAsync(cancellationToken);
+        var contentIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var domain in registryStats.MappingsByDomain.Keys)
         {
-            ["album"] = 0,
-            ["artist"] = 0,
-            ["parent"] = 0,
-            ["children"] = 0
-        };
+            foreach (var contentId in await _contentRegistry.FindByDomainAsync(domain, cancellationToken))
+            {
+                contentIds.Add(contentId);
+            }
+        }
 
-        var graphsByRoot = new Dictionary<string, GraphStats>(); // Would need to be tracked
+        var linksByType = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var graphsByRoot = new Dictionary<string, GraphStats>(StringComparer.OrdinalIgnoreCase);
+        var seenNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var connectedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var orphanedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var totalLinks = 0;
+        var totalTraversalTime = TimeSpan.Zero;
 
-        return Task.FromResult(new IpldMappingStats(
-            TotalLinks: 0,
-            TotalNodes: 0,
-            TotalGraphs: 0,
+        foreach (var contentId in contentIds)
+        {
+            var started = Stopwatch.GetTimestamp();
+            var graph = await _ipldMapper.GetGraphAsync(contentId, 1, cancellationToken);
+            totalTraversalTime += Stopwatch.GetElapsedTime(started);
+
+            var graphLinkCount = 0;
+            var maxDepth = 0;
+
+            foreach (var node in graph.Nodes)
+            {
+                seenNodes.Add(node.ContentId);
+
+                if (node.OutgoingLinks.Count == 0 && node.IncomingLinks.Count == 0)
+                {
+                    orphanedNodes.Add(node.ContentId);
+                }
+                else
+                {
+                    connectedNodes.Add(node.ContentId);
+                }
+
+                foreach (var link in node.OutgoingLinks)
+                {
+                    graphLinkCount++;
+                    totalLinks++;
+                    linksByType.TryGetValue(link.Name, out var count);
+                    linksByType[link.Name] = count + 1;
+                }
+            }
+
+            foreach (var path in graph.Paths)
+            {
+                maxDepth = Math.Max(maxDepth, Math.Max(0, path.ContentIds.Count - 1));
+            }
+
+            var graphConnectivityRatio = graph.Nodes.Count > 0
+                ? (double)graph.Nodes.Count(n => n.OutgoingLinks.Count > 0 || n.IncomingLinks.Count > 0) / graph.Nodes.Count
+                : 0.0;
+
+            graphsByRoot[contentId] = new GraphStats(
+                RootContentId: contentId,
+                NodeCount: graph.Nodes.Count,
+                LinkCount: graphLinkCount,
+                MaxDepth: maxDepth,
+                ConnectivityRatio: graphConnectivityRatio);
+        }
+
+        var validation = await _ipldMapper.ValidateLinksAsync(cancellationToken);
+
+        return new IpldMappingStats(
+            TotalLinks: totalLinks,
+            TotalNodes: seenNodes.Count,
+            TotalGraphs: graphsByRoot.Count,
             LinksByType: linksByType,
             GraphsByRoot: graphsByRoot,
-            BrokenLinksDetected: 0,
-            OrphanedNodes: 0,
-            AverageTraversalTime: TimeSpan.Zero,
-            GraphConnectivityRatio: 0.0));
+            BrokenLinksDetected: validation.BrokenLinks.Count,
+            OrphanedNodes: orphanedNodes.Count,
+            AverageTraversalTime: contentIds.Count > 0
+                ? TimeSpan.FromTicks(totalTraversalTime.Ticks / contentIds.Count)
+                : TimeSpan.Zero,
+            GraphConnectivityRatio: seenNodes.Count > 0
+                ? (double)connectedNodes.Count / seenNodes.Count
+                : 0.0);
     }
 
     /// <inheritdoc/>
     public Task<PerceptualHashingStats> GetPerceptualHashingStatsAsync(CancellationToken cancellationToken = default)
     {
-        var statsByAlgorithm = new Dictionary<PerceptualHashAlgorithm, AlgorithmStats>
+        var statsByAlgorithm = new Dictionary<PerceptualHashAlgorithm, AlgorithmStats>();
+        foreach (var (algorithmName, totalMilliseconds) in _hashComputationTimes)
         {
-            [PerceptualHashAlgorithm.Chromaprint] = new AlgorithmStats(
-                HashesComputed: _totalHashesComputed / 3, // Placeholder distribution
-                AverageTime: TimeSpan.FromMilliseconds(_totalHashesComputed > 0 ? _totalHashComputationTimeNs / (_totalHashesComputed * 1000000.0) : 0),
-                Accuracy: 0.95, // Placeholder
-                PerformanceByContentType: new Dictionary<string, double> { ["audio"] = 0.95 }),
-            [PerceptualHashAlgorithm.PHash] = new AlgorithmStats(
-                HashesComputed: _totalHashesComputed / 3,
-                AverageTime: TimeSpan.FromMilliseconds(10),
-                Accuracy: 0.90,
-                PerformanceByContentType: new Dictionary<string, double> { ["image"] = 0.90 }),
-            [PerceptualHashAlgorithm.Spectral] = new AlgorithmStats(
-                HashesComputed: _totalHashesComputed / 3,
-                AverageTime: TimeSpan.FromMilliseconds(5),
-                Accuracy: 0.85,
-                PerformanceByContentType: new Dictionary<string, double> { ["audio"] = 0.85 })
-        };
+            if (!Enum.TryParse<PerceptualHashAlgorithm>(algorithmName, true, out var algorithm))
+            {
+                continue;
+            }
 
-        var hashesByContentType = new Dictionary<string, int>
-        {
-            ["audio"] = _totalHashesComputed * 2 / 3,
-            ["image"] = _totalHashesComputed / 3
-        };
+            statsByAlgorithm[algorithm] = new AlgorithmStats(
+                HashesComputed: 1,
+                AverageTime: TimeSpan.FromMilliseconds(totalMilliseconds),
+                Accuracy: 0.0,
+                PerformanceByContentType: new Dictionary<string, double>());
+        }
 
         return Task.FromResult(new PerceptualHashingStats(
             TotalHashesComputed: _totalHashesComputed,
             AverageComputationTime: TimeSpan.FromMilliseconds(_totalHashesComputed > 0 ? _totalHashComputationTimeNs / (_totalHashesComputed * 1000000.0) : 0),
             StatsByAlgorithm: statsByAlgorithm,
-            OverallAccuracy: 0.92,
-            HashesByContentType: hashesByContentType,
+            OverallAccuracy: 0.0,
+            HashesByContentType: new Dictionary<string, int>(),
             DuplicateHashesDetected: 0));
     }
 
     /// <inheritdoc/>
     public Task<MetadataPortabilityStats> GetMetadataPortabilityStatsAsync(CancellationToken cancellationToken = default)
     {
-        var conflictsByType = new Dictionary<string, int>
-        {
-            ["version"] = 0,
-            ["codec"] = 0,
-            ["size"] = 0,
-            ["hash"] = 0
-        };
-
         var resolutionsUsed = new Dictionary<ConflictResolutionStrategy, int>
         {
             [ConflictResolutionStrategy.Merge] = _successfulImports,
@@ -254,28 +325,35 @@ public class MediaCoreStatsService : IMediaCoreStatsService
             TotalImports: _totalImports,
             SuccessfulImports: _successfulImports,
             ImportSuccessRate: importSuccessRate,
-            ConflictsByType: conflictsByType,
+            ConflictsByType: new Dictionary<string, int>(),
             ResolutionsUsed: resolutionsUsed,
-            AverageExportTime: TimeSpan.FromSeconds(0.5), // Placeholder
-            AverageImportTime: TimeSpan.FromSeconds(1.0), // Placeholder
-            TotalDataTransferred: 0)); // Would need to be tracked
+            AverageExportTime: TimeSpan.Zero,
+            AverageImportTime: TimeSpan.Zero,
+            TotalDataTransferred: 0));
     }
 
     /// <inheritdoc/>
     public async Task<ContentPublishingStats> GetContentPublishingStatsAsync(CancellationToken cancellationToken = default)
     {
         var publishingStats = await _contentPublisher.GetStatsAsync(cancellationToken);
+        var totalPublicationAttempts = publishingStats.TotalPublishedDescriptors + _failedPublications;
+        var publicationSuccessRate = totalPublicationAttempts > 0
+            ? (double)publishingStats.TotalPublishedDescriptors / totalPublicationAttempts
+            : 0.0;
+        var publicationsByDomain = publishingStats.PublicationsByDomain.Count > 0
+            ? publishingStats.PublicationsByDomain
+            : _publicationsByDomain.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         return new ContentPublishingStats(
             TotalPublished: publishingStats.TotalPublishedDescriptors,
             ActivePublications: publishingStats.ActivePublications,
             ExpiredPublications: publishingStats.ExpiringSoon, // Approximate
-            PublicationSuccessRate: 0.95, // Placeholder - would need to be tracked
-            PublicationsByDomain: _publicationsByDomain.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            AveragePublishTime: TimeSpan.FromSeconds(2), // Placeholder
+            PublicationSuccessRate: publicationSuccessRate,
+            PublicationsByDomain: publicationsByDomain,
+            AveragePublishTime: TimeSpan.Zero,
             RepublishedDescriptors: 0, // Would need to be tracked
-            FailedPublications: 0, // Would need to be tracked
-            RecentErrors: new Dictionary<string, string>()); // Would need to be tracked
+            FailedPublications: _failedPublications,
+            RecentErrors: new Dictionary<string, string>());
     }
 
     /// <inheritdoc/>

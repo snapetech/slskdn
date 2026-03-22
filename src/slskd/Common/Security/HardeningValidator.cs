@@ -26,6 +26,11 @@ namespace slskd.Common.Security
         public const string RuleAuthDisabledNonLoopback = "AuthDisabledNonLoopback";
 
         /// <summary>
+        ///     Rule name for auth disabled with remote no-auth enabled but no CIDR restrictions.
+        /// </summary>
+        public const string RuleRemoteNoAuthWithoutCidrs = "RemoteNoAuthWithoutCidrs";
+
+        /// <summary>
         ///     Rule name for CORS AllowCredentials with wildcard/any origin.
         /// </summary>
         public const string RuleCorsCredentialsWithWildcard = "CorsCredentialsWithWildcard";
@@ -69,6 +74,16 @@ namespace slskd.Common.Security
                     throw new HardeningValidationException(RuleAuthDisabledNonLoopback, msg);
                 else
                     Log.Warning("[{Rule}] {Message}", RuleAuthDisabledNonLoopback, msg);
+            }
+
+            if (options.Web.Authentication.Disabled && options.Web.AllowRemoteNoAuth &&
+                string.IsNullOrWhiteSpace(options.Web.Authentication.Passthrough?.AllowedCidrs))
+            {
+                const string msg = "Web.AllowRemoteNoAuth is enabled without Web.Authentication.Passthrough.AllowedCidrs. Remote no-auth access must be constrained to explicit CIDRs.";
+                if (enforce)
+                    throw new HardeningValidationException(RuleRemoteNoAuthWithoutCidrs, msg);
+                else
+                    Log.Warning("[{Rule}] {Message}", RuleRemoteNoAuthWithoutCidrs, msg);
             }
 
             // 2. CORS: when Enabled, forbid AllowCredentials with wildcard/any origin. When !Enabled, no CORS middleware (PR-04) so skip.

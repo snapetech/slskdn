@@ -108,18 +108,7 @@ public class PodService : IPodService
         // Publish to DHT if publisher is available and pod is listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail pod creation if publishing fails
-                    System.Diagnostics.Debug.WriteLine($"[PodService] Failed to publish pod to DHT: {ex.Message}");
-                }
-            }, ct);
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod to DHT");
         }
 
         return Task.FromResult(pod);
@@ -153,18 +142,7 @@ public class PodService : IPodService
         // Re-publish pod to DHT if publisher available and visibility allows
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.UpdatePodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail pod update if publishing fails
-                    System.Diagnostics.Debug.WriteLine($"[PodService] Failed to update pod in DHT: {ex.Message}");
-                }
-            }, ct);
+            _ = PublishPodInBackgroundAsync(() => podPublisher.UpdatePodAsync(pod, ct), "update pod in DHT");
         }
 
         return Task.FromResult(pod);
@@ -365,18 +343,7 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail the operation
-                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
-                }
-            }, ct);
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod update to DHT");
         }
 
         return Task.FromResult(channel);
@@ -415,18 +382,7 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail the operation
-                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
-                }
-            }, ct);
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod update to DHT");
         }
 
         return Task.FromResult(true);
@@ -495,18 +451,7 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail the operation
-                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
-                }
-            }, ct);
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod update to DHT");
         }
 
         return Task.FromResult(true);
@@ -528,6 +473,18 @@ public class PodService : IPodService
         }
 
         return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
+    }
+
+    private static async Task PublishPodInBackgroundAsync(Func<Task> publishAsync, string operation)
+    {
+        try
+        {
+            await Task.Run(publishAsync, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PodService] Failed to {operation}: {ex.Message}");
+        }
     }
 
     public async Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default)

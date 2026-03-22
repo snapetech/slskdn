@@ -84,8 +84,9 @@ public class PodOpinionAggregator : IPodOpinionAggregator
             // Calculate weighted opinions and aggregates
             var variantAggregates = new List<VariantAggregate>();
             var memberContributions = new Dictionary<string, double>();
-            var allWeightedScores = new List<double>();
             var allUnweightedScores = new List<double>();
+            var totalWeightedScore = 0.0;
+            var totalWeight = 0.0;
 
             foreach (var variantGroup in variantGroups)
             {
@@ -115,15 +116,18 @@ public class PodOpinionAggregator : IPodOpinionAggregator
                     memberContributions[opinion.SenderPeerId] =
                         memberContributions.GetValueOrDefault(opinion.SenderPeerId, 0) + affinity.AffinityScore;
 
-                    allWeightedScores.Add(weightedOpinion.WeightedScore);
                     allUnweightedScores.Add(opinion.Score);
+                    totalWeightedScore += weightedOpinion.WeightedScore;
+                    totalWeight += affinity.AffinityScore;
                 }
 
                 // Calculate variant statistics
-                var weightedAvg = weightedOpinions.Average(wo => wo.WeightedScore);
+                var weightSum = weightedOpinions.Sum(wo => wo.AffinityWeight);
+                var weightedAvg = weightSum > 0
+                    ? weightedOpinions.Sum(wo => wo.WeightedScore) / weightSum
+                    : 0;
                 var unweightedAvg = variantOpinions.Average(o => o.Score);
                 var stdDev = CalculateStandardDeviation(variantOpinions.Select(o => o.Score));
-                var weightSum = weightedOpinions.Sum(wo => wo.AffinityWeight);
 
                 variantAggregates.Add(new VariantAggregate(
                     VariantHash: variantGroup.Key,
@@ -136,7 +140,7 @@ public class PodOpinionAggregator : IPodOpinionAggregator
             }
 
             // Calculate overall statistics
-            var weightedAverage = allWeightedScores.Any() ? allWeightedScores.Average() : 0;
+            var weightedAverage = totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
             var unweightedAverage = allUnweightedScores.Any() ? allUnweightedScores.Average() : 0;
             var consensusStrength = CalculateConsensusStrength(variantAggregates);
 

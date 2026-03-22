@@ -3,6 +3,7 @@ namespace slskd.Tests.Unit.Signals;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -252,6 +253,19 @@ public class SignalBusTests
         channelHandlerMock.Verify(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public void Dispose_ShouldCancelCleanupTask()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+        var cleanupTaskField = typeof(SignalBus).GetField("cleanupTask", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(cleanupTaskField);
+
+        signalBus.Dispose();
+
+        var cleanupTask = Assert.IsAssignableFrom<Task>(cleanupTaskField!.GetValue(signalBus));
+        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(1)));
+    }
+
     private static Signal CreateTestSignal(params SignalChannel[] channels)
     {
         return new Signal(
@@ -266,4 +280,3 @@ public class SignalBusTests
         );
     }
 }
-

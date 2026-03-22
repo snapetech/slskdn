@@ -21,18 +21,18 @@ public class BridgeController : ControllerBase
     private readonly ILogger<BridgeController> logger;
     private readonly IBridgeApi bridgeApi;
     private readonly ISoulfindBridgeService bridgeService;
-    private readonly ITransferProgressProxy progressProxy;
+    private readonly IBridgeDashboard bridgeDashboard;
 
     public BridgeController(
         ILogger<BridgeController> logger,
         IBridgeApi bridgeApi,
         ISoulfindBridgeService bridgeService,
-        ITransferProgressProxy progressProxy)
+        IBridgeDashboard bridgeDashboard)
     {
         this.logger = logger;
         this.bridgeApi = bridgeApi;
         this.bridgeService = bridgeService;
-        this.progressProxy = progressProxy;
+        this.bridgeDashboard = bridgeDashboard;
     }
 
     /// <summary>
@@ -115,6 +115,8 @@ public class BridgeController : ControllerBase
         try
         {
             var health = await bridgeService.GetHealthAsync(ct);
+            var stats = await bridgeDashboard.GetStatsAsync(ct);
+            health.ActiveConnections = stats.CurrentConnections;
             return Ok(health);
         }
         catch (Exception ex)
@@ -177,9 +179,7 @@ public class BridgeController : ControllerBase
 
         try
         {
-            // Try to find proxy ID from transfer ID
-            // In practice, we'd maintain a mapping, but for now we'll use transfer ID as proxy ID
-            var progress = await progressProxy.GetLegacyProgressAsync(transferId, ct);
+            var progress = await bridgeApi.GetTransferProgressAsync(transferId, ct);
 
             if (progress == null)
             {

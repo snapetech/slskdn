@@ -62,33 +62,34 @@ public class PerformanceOptimizer : IPerformanceOptimizer
     {
         logger.LogInformation("[VSF-PERF] Prefetching {Count} hot MBIDs", mbids.Count);
 
-        var prefetchTasks = new List<Task>();
-
-        foreach (var mbid in mbids)
+        using var semaphore = new SemaphoreSlim(8);
+        var prefetchTasks = mbids.Distinct(StringComparer.OrdinalIgnoreCase).Select(async mbid =>
         {
-            prefetchTasks.Add(Task.Run(async () =>
+            await semaphore.WaitAsync(ct);
+            try
             {
-                try
+                var cached = await cache.GetAsync(mbid, ct);
+                if (cached != null)
                 {
-                    // Check cache first
-                    var cached = await cache.GetAsync(mbid, ct);
-                    if (cached != null)
-                    {
-                        Interlocked.Increment(ref cacheHits);
-                        return;
-                    }
-
-                    Interlocked.Increment(ref cacheMisses);
-
-                    // Query and populate cache
-                    await shadowIndex.QueryAsync(mbid, ct);
+                    Interlocked.Increment(ref cacheHits);
+                    return;
                 }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "[VSF-PERF] Failed to prefetch {MBID}", mbid);
-                }
-            }, ct));
-        }
+
+                Interlocked.Increment(ref cacheMisses);
+                await shadowIndex.QueryAsync(mbid, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-PERF] Failed to prefetch {MBID}", mbid);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }).ToList();
 
         await Task.WhenAll(prefetchTasks);
 
@@ -97,8 +98,11 @@ public class PerformanceOptimizer : IPerformanceOptimizer
 
     public CacheStatistics GetCacheStatistics()
     {
+        var shardCacheStats = cache.GetStats();
         return new CacheStatistics
         {
+            CachedShardCount = shardCacheStats.EntryCount,
+            TotalCacheSizeBytes = shardCacheStats.ApproximateTotalSizeBytes,
             CacheHits = cacheHits,
             CacheMisses = cacheMisses
         };

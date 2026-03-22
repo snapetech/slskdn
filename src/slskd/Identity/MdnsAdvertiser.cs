@@ -47,21 +47,20 @@ public sealed class MdnsAdvertiser : IDisposable
             var instanceName = $"{serviceName}.{serviceType}.local";
             var hostnameLocal = $"{hostname}.local";
 
-            _announceCts = new CancellationTokenSource();
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _announceCts.Token);
+            _announceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
             // Send initial announcement
-            await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, linkedCts.Token).ConfigureAwait(false);
+            await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, _announceCts.Token).ConfigureAwait(false);
 
             // Send periodic announcements (mDNS requires this)
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    while (!linkedCts.Token.IsCancellationRequested)
+                    while (!_announceCts.Token.IsCancellationRequested)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(10), linkedCts.Token).ConfigureAwait(false);
-                        await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, linkedCts.Token).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromSeconds(10), _announceCts.Token).ConfigureAwait(false);
+                        await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, _announceCts.Token).ConfigureAwait(false);
                     }
                 }
                 catch (OperationCanceledException)
@@ -72,7 +71,7 @@ public sealed class MdnsAdvertiser : IDisposable
                 {
                     _log.LogWarning(ex, "[MdnsAdvertiser] Announcement loop error");
                 }
-            }, linkedCts.Token);
+            }, CancellationToken.None);
 
             _log.LogInformation("[MdnsAdvertiser] Started advertising {Instance} on {Hostname}:{Port}", instanceName, hostnameLocal, port);
         }
@@ -254,7 +253,10 @@ public sealed class MdnsAdvertiser : IDisposable
             _announceCts?.Cancel();
             _announceCts?.Dispose();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "[MdnsAdvertiser] Failed to dispose cancellation token source");
+        }
 
         try
         {
@@ -264,11 +266,18 @@ public sealed class MdnsAdvertiser : IDisposable
                 {
                     _udpClient.DropMulticastGroup(MulticastAddress);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _log.LogDebug(ex, "[MdnsAdvertiser] Failed to leave multicast group");
+                }
+
                 _udpClient.Dispose();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "[MdnsAdvertiser] Failed to dispose UDP client");
+        }
 
         _udpClient = null;
     }

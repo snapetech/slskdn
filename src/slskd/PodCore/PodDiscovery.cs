@@ -124,6 +124,10 @@ public class PodDiscovery : IPodDiscovery
             }
 
             results = filtered
+                .GroupBy(p => p.PodId, StringComparer.Ordinal)
+                .Select(group => group
+                    .OrderByDescending(p => p.PublishedAt)
+                    .First())
                 .OrderByDescending(p => p.PublishedAt)
                 .Take(limit)
                 .ToList();

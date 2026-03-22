@@ -175,7 +175,10 @@ public class RelayOnlyTransport : IAnonymityTransport
         }
 
         var host = hostPort[..idx];
-        var port = int.Parse(hostPort[(idx + 1)..]);
+        if (!int.TryParse(hostPort[(idx + 1)..], out var port) || port is <= 0 or > ushort.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(hostPort), hostPort, "Relay port must be between 1 and 65535");
+        }
 
         IPAddress ip;
         if (IPAddress.TryParse(host, out var a))

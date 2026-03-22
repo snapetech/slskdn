@@ -99,7 +99,10 @@ public class ContentIdRegistry : IContentIdRegistry
         var mappingsByDomain = new Dictionary<string, int>();
         foreach (var contentId in _externalToContent.Values)
         {
-            var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+            var parsed = ContentIdParser.Parse(contentId);
+            var domain = parsed == null
+                ? "unknown"
+                : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
             mappingsByDomain.TryGetValue(domain, out var count);
             mappingsByDomain[domain] = count + 1;
         }
@@ -124,7 +127,9 @@ public class ContentIdRegistry : IContentIdRegistry
         foreach (var (externalId, contentId) in _externalToContent)
         {
             var parsedContentId = ContentIdParser.Parse(contentId);
-            if (parsedContentId != null && parsedContentId.Domain.Equals(normalizedDomain, StringComparison.OrdinalIgnoreCase))
+            if (parsedContentId != null &&
+                ContentIdParser.NormalizeDomain(parsedContentId.Domain, parsedContentId.Type)
+                    .Equals(normalizedDomain, StringComparison.OrdinalIgnoreCase))
             {
                 results.Add(contentId);
             }
@@ -147,8 +152,10 @@ public class ContentIdRegistry : IContentIdRegistry
         {
             var parsedContentId = ContentIdParser.Parse(contentId);
             if (parsedContentId != null &&
-                parsedContentId.Domain.Equals(normalizedDomain, StringComparison.OrdinalIgnoreCase) &&
-                parsedContentId.Type.Equals(normalizedType, StringComparison.OrdinalIgnoreCase))
+                ContentIdParser.NormalizeDomain(parsedContentId.Domain, parsedContentId.Type)
+                    .Equals(normalizedDomain, StringComparison.OrdinalIgnoreCase) &&
+                ContentIdParser.NormalizeType(parsedContentId.Domain, parsedContentId.Type)
+                    .Equals(normalizedType, StringComparison.OrdinalIgnoreCase))
             {
                 results.Add(contentId);
             }

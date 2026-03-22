@@ -180,7 +180,10 @@ public class IpldMapper : IIpldMapper
 
         try
         {
-            var domains = new[] { "audio", "video", "image" };
+            var registryStats = await _registry.GetStatsAsync(cancellationToken);
+            var domains = registryStats.MappingsByDomain.Count > 0
+                ? registryStats.MappingsByDomain.Keys
+                : new[] { "audio", "video", "image" };
 
             foreach (var domain in domains)
             {
@@ -188,8 +191,41 @@ public class IpldMapper : IIpldMapper
                 foreach (var contentId in contentIds)
                 {
                     totalValidated++;
+                    List<IpldLink> outgoing;
+                    lock (_linksLock)
+                    {
+                        outgoing = _outgoingLinks.TryGetValue(contentId, out var stored)
+                            ? stored.ToList()
+                            : new List<IpldLink>();
+                    }
 
-                    // Basic validation logic would go here
+                    foreach (var link in outgoing)
+                    {
+                        if (!await _registry.IsContentIdRegisteredAsync(link.Target, cancellationToken))
+                        {
+                            brokenLinks.Add($"{contentId} -> {link.Target} ({link.Name})");
+                        }
+                    }
+                }
+            }
+
+            List<(string SourceContentId, List<IpldLink> Links)> allOutgoingLinks;
+            lock (_linksLock)
+            {
+                allOutgoingLinks = _outgoingLinks
+                    .Select(kvp => (kvp.Key, kvp.Value.ToList()))
+                    .ToList();
+            }
+
+            foreach (var (sourceContentId, links) in allOutgoingLinks)
+            {
+                foreach (var link in links)
+                {
+                    if (!string.IsNullOrWhiteSpace(link.Target) &&
+                        !await _registry.IsContentIdRegisteredAsync(sourceContentId, cancellationToken))
+                    {
+                        orphanedLinks.Add($"{sourceContentId} -> {link.Target} ({link.Name})");
+                    }
                 }
             }
         }
@@ -306,54 +342,13 @@ public class IpldMapper : IIpldMapper
                 storedCopy = stored.ToList();
         }
 
-        var outgoingLinks = storedCopy ?? (await GenerateMockLinksAsync(contentId, cancellationToken)).ToList();
+        var outgoingLinks = storedCopy ?? new List<IpldLink>();
         var incomingLinks = await FindInboundLinksAsync(contentId, linkName: null, cancellationToken);
 
         return new ContentGraphNode(
             ContentId: contentId,
             OutgoingLinks: outgoingLinks,
             IncomingLinks: incomingLinks);
-    }
-
-    private async Task<IReadOnlyList<IpldLink>> GenerateMockLinksAsync(string contentId, CancellationToken cancellationToken)
-    {
-        var links = new List<IpldLink>();
-        var parsed = ContentIdParser.Parse(contentId);
-
-        if (parsed == null)
-            return links;
-
-        // Generate realistic relationships based on content type
-        switch (parsed.Domain.ToLowerInvariant())
-        {
-            case "audio":
-                if (parsed.Type == "track")
-                {
-                    var albumId = ContentIdParser.Create("audio", "album", $"{parsed.Id}-album");
-                    var artistId = ContentIdParser.Create("audio", "artist", $"{parsed.Id}-artist");
-                    links.Add(new IpldLink(IpldLinkNames.Album, albumId));
-                    links.Add(new IpldLink(IpldLinkNames.Artist, artistId));
-                }
-                else if (parsed.Type == "album")
-                {
-                    var artistId = ContentIdParser.Create("audio", "artist", $"{parsed.Id}-artist");
-                    links.Add(new IpldLink(IpldLinkNames.Artist, artistId));
-                    links.Add(new IpldLink(IpldLinkNames.Tracks, $"{parsed.Id}-tracks"));
-                }
-
-                break;
-
-            case "video":
-                if (parsed.Type == "movie")
-                {
-                    var artworkId = ContentIdParser.Create("image", "artwork", $"{parsed.Id}-poster");
-                    links.Add(new IpldLink(IpldLinkNames.Artwork, artworkId));
-                }
-
-                break;
-        }
-
-        return await Task.FromResult(links);
     }
 
     private static bool IsInboundLink(string sourceContentId, string targetContentId, string? linkName)

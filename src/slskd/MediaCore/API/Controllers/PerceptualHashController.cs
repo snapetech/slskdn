@@ -55,7 +55,12 @@ public class PerceptualHashController : ControllerBase
 
         try
         {
-            var algorithm = Enum.Parse<PerceptualHashAlgorithm>(request.Algorithm ?? "ChromaPrint", ignoreCase: true);
+            var algorithmValue = request.Algorithm ?? "ChromaPrint";
+            if (!Enum.TryParse(algorithmValue, ignoreCase: true, out PerceptualHashAlgorithm algorithm))
+            {
+                return Task.FromResult<IActionResult>(BadRequest("Unsupported algorithm"));
+            }
+
             var hash = _hasher.ComputeAudioHash(request.Samples, request.SampleRate, algorithm);
 
             _logger.LogInformation(
@@ -92,7 +97,12 @@ public class PerceptualHashController : ControllerBase
 
         try
         {
-            var algorithm = Enum.Parse<PerceptualHashAlgorithm>(request.Algorithm ?? "PHash", ignoreCase: true);
+            var algorithmValue = request.Algorithm ?? "PHash";
+            if (!Enum.TryParse(algorithmValue, ignoreCase: true, out PerceptualHashAlgorithm algorithm))
+            {
+                return Task.FromResult<IActionResult>(BadRequest("Unsupported algorithm"));
+            }
+
             var hash = _hasher.ComputeImageHash(request.Pixels, request.Width, request.Height, algorithm);
 
             _logger.LogInformation(

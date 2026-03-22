@@ -14,11 +14,12 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
     private readonly Func<Task> _sendCoverMessageAsync;
     private readonly ILogger<CoverTrafficGenerator> _logger;
 
-    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _generationCts;
     private Task? _generationTask;
     private DateTimeOffset _lastTrafficTime = DateTimeOffset.UtcNow;
     private long _coverMessagesSent;
     private readonly object _statsLock = new();
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CoverTrafficGenerator"/> class.
@@ -46,11 +47,16 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
     /// <returns>A task that completes when generation starts.</returns>
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (_generationTask != null)
-            return Task.CompletedTask;
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
-        _generationTask = Task.Run(() => GenerateCoverTrafficAsync(linkedCts.Token), linkedCts.Token);
+        if (_generationTask != null && !_generationTask.IsCompleted)
+        {
+            return Task.CompletedTask;
+        }
+
+        _generationCts?.Dispose();
+        _generationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token), CancellationToken.None);
 
         _logger.LogInformation("Cover traffic generation started with interval {Interval}s", _options.IntervalSeconds);
         return Task.CompletedTask;
@@ -62,7 +68,12 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
     /// <returns>A task that completes when generation stops.</returns>
     public async Task StopAsync()
     {
-        _cts.Cancel();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _generationCts?.Cancel();
 
         if (_generationTask != null)
         {
@@ -77,6 +88,8 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
             finally
             {
                 _generationTask = null;
+                _generationCts?.Dispose();
+                _generationCts = null;
             }
         }
 
@@ -105,14 +118,23 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
             {
                 CoverMessagesSent = _coverMessagesSent,
                 TimeSinceLastTraffic = DateTimeOffset.UtcNow - _lastTrafficTime,
-                IsActive = _generationTask != null && !_cts.IsCancellationRequested,
+                IsActive = _generationTask != null && !_generationTask.IsCompleted && _generationCts?.IsCancellationRequested == false,
             };
         }
     }
 
     public void Dispose()
     {
-        _cts.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _generationCts?.Cancel();
+        _generationCts?.Dispose();
+        _generationTask = null;
+        _generationCts = null;
+        _disposed = true;
         GC.SuppressFinalize(this);
     }
 

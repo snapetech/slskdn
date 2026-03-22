@@ -124,7 +124,10 @@ public class ContentDomainProviderRegistry : IContentDomainProviderRegistry
     {
         lock (_lock)
         {
-            return _providers.Values.ToList();
+            return _providers.Values
+                .OrderBy(provider => provider.Domain)
+                .ThenBy(provider => provider.DisplayName)
+                .ToList();
         }
     }
 
@@ -133,7 +136,7 @@ public class ContentDomainProviderRegistry : IContentDomainProviderRegistry
     {
         lock (_lock)
         {
-            var provider = GetProvider(domain);
+            var provider = _providers.TryGetValue(domain, out var resolvedProvider) ? resolvedProvider : null;
             return provider != null ? new[] { provider } : Array.Empty<IContentDomainProvider>();
         }
     }

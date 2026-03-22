@@ -69,7 +69,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
         /// </summary>
         /// <remarks>
         ///     Find candidates via mesh/DHT (e.g. IMeshDirectory.FindPeersByContentAsync),
-        ///     fetch via overlay transfer. Use case: mesh-only, disaster mode, closed communities.
+        ///     fetch via overlay transfer. Use case: mesh-only deployments, legacy fallback, closed communities.
         /// </remarks>
         NativeMesh,
 

@@ -47,7 +47,11 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
         try
         {
             var members = await sceneTracker.GetMembersAsync(sceneId, ct);
-            var peers = members.Where(m => m.IsActive).Select(m => m.PeerId).ToList();
+            var peers = members
+                .Where(m => m.IsActive && !string.IsNullOrWhiteSpace(m.PeerId))
+                .Select(m => m.PeerId)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
 
             logger.LogInformation("[VSF-INTEGRATION] Found {PeerCount} peers in label scene {SceneId}",
                 peers.Count, sceneId);
@@ -68,7 +72,13 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
         try
         {
             var metadata = await sceneTracker.GetSceneMetadataAsync(sceneId, ct);
-            return metadata != null;
+            if (metadata != null)
+            {
+                return true;
+            }
+
+            var members = await sceneTracker.GetMembersAsync(sceneId, ct);
+            return members.Any(m => m.IsActive);
         }
         catch
         {
@@ -81,8 +91,16 @@ public class SceneLabelCrateIntegration : ISceneLabelCrateIntegration
         // "Warp Records" → "scene:label:warp-records"
         var normalized = labelName
             .ToLowerInvariant()
+            .Trim()
             .Replace(" ", "-")
             .Replace("_", "-");
+
+        normalized = string.Concat(normalized.Where(ch => char.IsLetterOrDigit(ch) || ch == '-'));
+        while (normalized.Contains("--", StringComparison.Ordinal))
+        {
+            normalized = normalized.Replace("--", "-", StringComparison.Ordinal);
+        }
+        normalized = normalized.Trim('-');
 
         return $"scene:label:{normalized}";
     }

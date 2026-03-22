@@ -151,6 +151,23 @@ namespace slskd.Tests.Unit.Common.Moderation
         }
 
         [Fact]
+        public async Task GetRecentEventsAsync_OnColdStore_LoadsPersistedDataBeforeReading()
+        {
+            var peerId = "cold-peer";
+
+            await _store.RecordEventAsync(new PeerReputationEvent(
+                peerId: peerId,
+                eventType: PeerReputationEventType.ProtocolViolation,
+                timestamp: DateTimeOffset.UtcNow));
+
+            using var coldStore = new PeerReputationStore(_loggerMock.Object, _dataProtectorMock.Object, _testStoragePath);
+
+            var events = await coldStore.GetRecentEventsAsync(peerId, maxEvents: 10, cancellationToken: CancellationToken.None);
+
+            Assert.Single(events);
+        }
+
+        [Fact]
         public async Task DecayAndCleanupAsync_WithOldEvents_DecaysAndRemovesOldEvents()
         {
             // Arrange
@@ -237,5 +254,4 @@ namespace slskd.Tests.Unit.Common.Moderation
         }
     }
 }
-
 

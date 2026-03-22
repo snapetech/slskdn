@@ -126,7 +126,15 @@ namespace slskd.VirtualSoulfind.v2.Processing
                 await _intentQueue.UpdateTrackStatusAsync(desiredTrackId, IntentStatus.InProgress, cancellationToken);
 
                 // Get track info from catalogue
-                var trackId = ContentItemId.Parse(intent.TrackId);
+                if (!ContentItemId.TryParse(intent.TrackId, out var trackId))
+                {
+                    _logger.LogWarning("Intent {IntentId} has invalid TrackId '{TrackId}', skipping", desiredTrackId, intent.TrackId);
+                    await _intentQueue.UpdateTrackStatusAsync(desiredTrackId, IntentStatus.Failed, cancellationToken);
+                    Interlocked.Increment(ref _failureCount);
+                    Interlocked.Increment(ref _totalProcessed);
+                    return false;
+                }
+
                 var track = await _catalogueStore.FindTrackByIdAsync(intent.TrackId, cancellationToken);
 
                 if (track == null)

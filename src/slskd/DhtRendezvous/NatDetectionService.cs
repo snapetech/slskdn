@@ -304,8 +304,12 @@ public sealed class NatDetectionService : IAsyncDisposable
             try
             {
                 var parts = stunServer.Split(':');
+                if (parts.Length != 2 || !int.TryParse(parts[1], out var port) || port is <= 0 or > ushort.MaxValue)
+                {
+                    throw new FormatException($"Invalid STUN server format: {stunServer}");
+                }
+
                 var host = parts[0];
-                var port = int.Parse(parts[1]);
 
                 var ip = await StunQueryAsync(host, port, cancellationToken);
                 if (ip is not null && !IsPrivateIp(ip))

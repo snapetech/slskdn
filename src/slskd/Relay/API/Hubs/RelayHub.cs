@@ -167,8 +167,9 @@ namespace slskd.Relay
             var configuredCidr = agentOptions?.Cidr ?? string.Empty;
 
             if (!configuredCidr.Split(',')
-                .Select(cidr => IPAddressRange.Parse(cidr))
-                .Any(range => RemoteIpAddress != null && range.Contains(RemoteIpAddress)))
+                .Select(cidr => cidr.Trim())
+                .Where(cidr => !string.IsNullOrWhiteSpace(cidr))
+                .Any(cidr => IPAddressRange.TryParse(cidr, out var range) && RemoteIpAddress != null && range.Contains(RemoteIpAddress)))
             {
                 Log.Warning("Unauthorized login attempt by Agent {Agent} (connection {Id}); remote IP address {IP} is not within the configured range {CIDR}", agent, Context.ConnectionId, RemoteIpAddress, configuredCidr);
                 throw new UnauthorizedAccessException();

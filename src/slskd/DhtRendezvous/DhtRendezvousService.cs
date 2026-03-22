@@ -86,56 +86,60 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         _logger.LogInformation("Starting DHT rendezvous service with MonoTorrent DHT");
 
         // Start the background service immediately to avoid blocking other hosted services
-        _ = base.StartAsync(cancellationToken).ContinueWith(startTask =>
-        {
-            if (startTask.IsFaulted)
-            {
-                _logger.LogError(startTask.Exception?.GetBaseException(), "Failed to start base DHT rendezvous service");
-                return;
-            }
-
-            // Initialize DHT in the background (non-blocking)
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    // Initialize MonoTorrent DHT
-                    await InitializeDhtAsync(cancellationToken);
-
-                    // Detect beacon capability
-                    IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken);
-
-                    if (IsBeaconCapable)
-                    {
-                        _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
-                        await _overlayServer.StartAsync(cancellationToken);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
-                    }
-
-                    _startedAt = DateTimeOffset.UtcNow;
-                    _logger.LogInformation("DHT rendezvous service initialization complete");
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogInformation("DHT rendezvous service initialization cancelled");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to initialize DHT rendezvous service in background");
-                }
-            }, cancellationToken).ContinueWith(initTask =>
-            {
-                if (initTask.IsFaulted)
-                {
-                    _logger.LogError(initTask.Exception?.GetBaseException(), "DHT initialization task failed");
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
-        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+        _ = StartBackgroundInitializationAsync(cancellationToken);
 
         return Task.CompletedTask;
+    }
+
+    private async Task StartBackgroundInitializationAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await base.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("DHT rendezvous service start cancelled");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start base DHT rendezvous service");
+            return;
+        }
+
+        try
+        {
+            await Task.Run(async () =>
+            {
+                // Initialize MonoTorrent DHT
+                await InitializeDhtAsync(cancellationToken).ConfigureAwait(false);
+
+                // Detect beacon capability
+                IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken).ConfigureAwait(false);
+
+                if (IsBeaconCapable)
+                {
+                    _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
+                    await _overlayServer.StartAsync(cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
+                }
+
+                _startedAt = DateTimeOffset.UtcNow;
+                _logger.LogInformation("DHT rendezvous service initialization complete");
+            }, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("DHT rendezvous service initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize DHT rendezvous service in background");
+        }
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken = default)

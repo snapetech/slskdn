@@ -8,25 +8,32 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using slskd.MediaCore;
 using slskd.Mesh.Dht;
+using slskd.Mesh.Transport;
 
 /// <summary>
 ///     Service for managing pod member opinions on content variants.
 /// </summary>
 public class PodOpinionService : IPodOpinionService
 {
+    private const string SignaturePrefix = "ed25519:";
+
     private readonly IPodService _podService;
     private readonly IMeshDhtClient _dhtClient;
-    private readonly IMessageSigner _messageSigner;
+    private readonly Ed25519Signer _ed25519;
     private readonly ILogger<PodOpinionService> _logger;
 
     // Cache for opinions (podId -> contentId -> opinions)
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<PodVariantOpinion>>> _opinionCache = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _knownContentIdsByPod = new();
 
     // Statistics tracking
     private long _totalOpinionsPublished;
@@ -36,12 +43,12 @@ public class PodOpinionService : IPodOpinionService
     public PodOpinionService(
         IPodService podService,
         IMeshDhtClient dhtClient,
-        IMessageSigner messageSigner,
+        Ed25519Signer ed25519,
         ILogger<PodOpinionService> logger)
     {
         _podService = podService;
         _dhtClient = dhtClient;
-        _messageSigner = messageSigner;
+        _ed25519 = ed25519;
         _logger = logger;
     }
 
@@ -57,12 +64,6 @@ public class PodOpinionService : IPodOpinionService
                     false, podId, opinion.ContentId, opinion.VariantHash, validation.ErrorMessage);
             }
 
-            // Ensure opinion is signed
-            if (string.IsNullOrWhiteSpace(opinion.Signature))
-            {
-                opinion = await SignOpinionAsync(opinion, ct);
-            }
-
             // Create DHT key: pod:<PodId>:opinions:<ContentId>
             var dhtKey = $"pod:{podId}:opinions:{opinion.ContentId}";
 
@@ -71,13 +72,11 @@ public class PodOpinionService : IPodOpinionService
             existingOpinions.Add(opinion);
 
             // Store updated opinions list in DHT
-            var jsonData = System.Text.Json.JsonSerializer.Serialize(existingOpinions);
-            await _dhtClient.PutAsync(dhtKey, jsonData, ttlSeconds: 3600, ct); // 1 hour TTL
+            await _dhtClient.PutAsync(dhtKey, existingOpinions, ttlSeconds: 3600, ct); // 1 hour TTL
 
             // Update local cache
-            var podCache = _opinionCache.GetOrAdd(podId, _ => new ConcurrentDictionary<string, List<PodVariantOpinion>>());
-            var contentOpinions = podCache.GetOrAdd(opinion.ContentId, _ => new List<PodVariantOpinion>());
-            contentOpinions.Add(opinion);
+            AddOpinionToCache(podId, opinion);
+            TrackKnownContentId(podId, opinion.ContentId);
 
             // Update statistics
             Interlocked.Increment(ref _totalOpinionsPublished);
@@ -104,8 +103,9 @@ public class PodOpinionService : IPodOpinionService
         if (_opinionCache.TryGetValue(podId, out var podCache) &&
             podCache.TryGetValue(contentId, out var cachedOpinions))
         {
-            Interlocked.Add(ref _totalOpinionsRetrieved, cachedOpinions.Count);
-            return cachedOpinions.AsReadOnly();
+            var snapshot = SnapshotOpinions(cachedOpinions);
+            Interlocked.Add(ref _totalOpinionsRetrieved, snapshot.Count);
+            return snapshot;
         }
 
         // Fetch from DHT
@@ -114,10 +114,12 @@ public class PodOpinionService : IPodOpinionService
 
         // Update cache
         var contentCache = _opinionCache.GetOrAdd(podId, _ => new ConcurrentDictionary<string, List<PodVariantOpinion>>());
-        contentCache[contentId] = opinions.ToList();
+        var opinionList = opinions.ToList();
+        contentCache[contentId] = opinionList;
+        TrackKnownContentId(podId, contentId);
 
         Interlocked.Add(ref _totalOpinionsRetrieved, opinions.Count);
-        return opinions;
+        return SnapshotOpinions(opinionList);
     }
 
     public async Task<IReadOnlyList<PodVariantOpinion>> GetVariantOpinionsAsync(string podId, string contentId, string variantHash, CancellationToken ct = default)
@@ -137,8 +139,8 @@ public class PodOpinionService : IPodOpinionService
 
         // Validate sender is pod member
         var members = await _podService.GetMembersAsync(podId, ct);
-        var isMember = members.Any(m => m.PeerId == opinion.SenderPeerId && !m.IsBanned);
-        if (!isMember)
+        var sender = members.FirstOrDefault(m => m.PeerId == opinion.SenderPeerId && !m.IsBanned);
+        if (sender == null)
         {
             return new OpinionValidationResult(false, $"Sender {opinion.SenderPeerId} is not a member of pod {podId}");
         }
@@ -166,25 +168,32 @@ public class PodOpinionService : IPodOpinionService
             return new OpinionValidationResult(false, "Sender peer ID is required");
         }
 
-        // If signature exists, validate it
-        if (!string.IsNullOrWhiteSpace(opinion.Signature))
+        if (string.IsNullOrWhiteSpace(opinion.Signature))
         {
-            // Create a PodMessage equivalent for signature verification
-            var messageForVerification = new PodMessage
-            {
-                MessageId = Guid.NewGuid().ToString(),
-                ChannelId = "opinion",
-                SenderPeerId = opinion.SenderPeerId,
-                Body = $"{opinion.ContentId}:{opinion.VariantHash}:{opinion.Score:F2}:{opinion.Note}",
-                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Signature = opinion.Signature
-            };
+            return new OpinionValidationResult(false, "Opinion signatures are required.");
+        }
 
-            var signatureValid = await _messageSigner.VerifyMessageAsync(messageForVerification, ct);
-            if (!signatureValid)
-            {
-                return new OpinionValidationResult(false, "Invalid signature");
-            }
+        if (string.IsNullOrWhiteSpace(sender.PublicKey))
+        {
+            return new OpinionValidationResult(false, $"Sender {opinion.SenderPeerId} has no public key");
+        }
+
+        if (!TryParseSignature(opinion.Signature, out var signatureBytes, out var signatureError))
+        {
+            return new OpinionValidationResult(false, signatureError);
+        }
+
+        if (!TryParsePublicKey(sender.PublicKey, out var publicKeyBytes, out var publicKeyError))
+        {
+            return new OpinionValidationResult(false, publicKeyError);
+        }
+
+        var payload = CreateCanonicalOpinionPayload(podId, opinion);
+        var payloadBytes = Encoding.UTF8.GetBytes(payload);
+        var isValidSignature = _ed25519.Verify(payloadBytes, signatureBytes!, publicKeyBytes!);
+        if (!isValidSignature)
+        {
+            return new OpinionValidationResult(false, "Opinion signature is invalid.");
         }
 
         return new OpinionValidationResult(true, ValidatedOpinion: opinion);
@@ -235,9 +244,11 @@ public class PodOpinionService : IPodOpinionService
             // Clear cache for this pod
             _opinionCache.TryRemove(podId, out _);
 
-            // Get all content IDs that this pod has opinions about
-            // This is a simplified approach - in practice, we'd need to track content IDs
-            var contentIds = new[] { "placeholder" }; // TODO: Implement content ID discovery
+            var contentIds = GetKnownContentIds(podId);
+            if (contentIds.Count == 0)
+            {
+                return new OpinionRefreshResult(true, podId, 0, 0, stopwatch.Elapsed);
+            }
 
             foreach (var contentId in contentIds)
             {
@@ -297,25 +308,87 @@ public class PodOpinionService : IPodOpinionService
         }
     }
 
-    private Task<PodVariantOpinion> SignOpinionAsync(PodVariantOpinion opinion, CancellationToken ct)
+    private void AddOpinionToCache(string podId, PodVariantOpinion opinion)
     {
-        _ = ct;
+        var podCache = _opinionCache.GetOrAdd(podId, _ => new ConcurrentDictionary<string, List<PodVariantOpinion>>());
+        var contentOpinions = podCache.GetOrAdd(opinion.ContentId, _ => new List<PodVariantOpinion>());
 
-        // For now, we'll generate a simple signature. In a real implementation,
-        // we'd need to get the user's private key and use proper signing
-        // TODO: Implement proper opinion signing with user keys
-        var signableData = $"{opinion.ContentId}:{opinion.VariantHash}:{opinion.Score:F2}:{opinion.Note}:{opinion.SenderPeerId}";
-        var signature = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(signableData));
-
-        return Task.FromResult(new PodVariantOpinion
+        lock (contentOpinions)
         {
-            ContentId = opinion.ContentId,
-            VariantHash = opinion.VariantHash,
-            Score = opinion.Score,
-            Note = opinion.Note,
-            SenderPeerId = opinion.SenderPeerId,
-            Signature = signature
-        });
+            contentOpinions.Add(opinion);
+        }
+    }
+
+    private static IReadOnlyList<PodVariantOpinion> SnapshotOpinions(List<PodVariantOpinion> opinions)
+    {
+        lock (opinions)
+        {
+            return opinions.ToList();
+        }
+    }
+
+    private static string CreateCanonicalOpinionPayload(string podId, PodVariantOpinion opinion)
+    {
+        var noteHash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(opinion.Note ?? string.Empty)));
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"1|{podId}|{opinion.ContentId}|{opinion.VariantHash}|{opinion.SenderPeerId}|{opinion.Score:G17}|{noteHash}");
+    }
+
+    private static bool TryParseSignature(string signature, out byte[]? signatureBytes, out string? errorMessage)
+    {
+        signatureBytes = null;
+        errorMessage = null;
+
+        if (!signature.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = "Opinion signature must use the ed25519: prefix.";
+            return false;
+        }
+
+        try
+        {
+            signatureBytes = Convert.FromBase64String(signature.Substring(SignaturePrefix.Length));
+        }
+        catch (FormatException)
+        {
+            errorMessage = "Opinion signature is not valid base64.";
+            return false;
+        }
+
+        if (signatureBytes.Length != 64)
+        {
+            errorMessage = "Opinion signature must be 64 bytes.";
+            signatureBytes = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryParsePublicKey(string publicKey, out byte[]? publicKeyBytes, out string? errorMessage)
+    {
+        publicKeyBytes = null;
+        errorMessage = null;
+
+        try
+        {
+            publicKeyBytes = Convert.FromBase64String(publicKey);
+        }
+        catch (FormatException)
+        {
+            errorMessage = "Sender public key is not valid base64.";
+            return false;
+        }
+
+        if (publicKeyBytes.Length != 32)
+        {
+            errorMessage = "Sender public key must be 32 bytes.";
+            publicKeyBytes = null;
+            return false;
+        }
+
+        return true;
     }
 
     private string ExtractPodIdFromKey(string dhtKey)
@@ -323,5 +396,21 @@ public class PodOpinionService : IPodOpinionService
         // Key format: pod:<PodId>:opinions:<ContentId>
         var parts = dhtKey.Split(':');
         return parts.Length >= 2 ? parts[1] : string.Empty;
+    }
+
+    private void TrackKnownContentId(string podId, string contentId)
+    {
+        var contentIds = _knownContentIdsByPod.GetOrAdd(podId, _ => new ConcurrentDictionary<string, byte>());
+        contentIds[contentId] = 0;
+    }
+
+    private IReadOnlyList<string> GetKnownContentIds(string podId)
+    {
+        if (_knownContentIdsByPod.TryGetValue(podId, out var contentIds))
+        {
+            return contentIds.Keys.ToList();
+        }
+
+        return Array.Empty<string>();
     }
 }

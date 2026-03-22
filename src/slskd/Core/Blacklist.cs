@@ -253,8 +253,16 @@ public class Blacklist
             }
 
             // grab the first octet of the first and last addresses in the range
-            var first = int.Parse(cidr!.Begin.ToString().Split('.')[0]);
-            var last = int.Parse(cidr.End.ToString().Split('.')[0]);
+            var firstBytes = cidr!.Begin.GetAddressBytes();
+            var lastBytes = cidr.End.GetAddressBytes();
+
+            if (firstBytes.Length != 4 || lastBytes.Length != 4)
+            {
+                throw new FormatException("Blacklist format only supports IPv4 CIDRs");
+            }
+
+            var first = firstBytes[0];
+            var last = lastBytes[0];
 
             var entry = (ToUint32(cidr.Begin), ToUint32(cidr.End));
 

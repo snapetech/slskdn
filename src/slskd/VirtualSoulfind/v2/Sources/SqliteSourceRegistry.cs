@@ -66,7 +66,11 @@ namespace slskd.VirtualSoulfind.v2.Sources
 
             while (await reader.ReadAsync(cancellationToken))
             {
-                candidates.Add(ReadCandidate(reader));
+                var candidate = await ReadCandidateAsync(conn, reader, cancellationToken);
+                if (candidate != null)
+                {
+                    candidates.Add(candidate);
+                }
             }
 
             return candidates;
@@ -97,7 +101,11 @@ namespace slskd.VirtualSoulfind.v2.Sources
 
             while (await reader.ReadAsync(cancellationToken))
             {
-                candidates.Add(ReadCandidate(reader));
+                var candidate = await ReadCandidateAsync(conn, reader, cancellationToken);
+                if (candidate != null)
+                {
+                    candidates.Add(candidate);
+                }
             }
 
             return candidates;
@@ -241,16 +249,37 @@ namespace slskd.VirtualSoulfind.v2.Sources
             }
         }
 
-        private SourceCandidate ReadCandidate(SqliteDataReader reader)
+        private async Task<SourceCandidate?> ReadCandidateAsync(
+            SqliteConnection conn,
+            SqliteDataReader reader,
+            CancellationToken cancellationToken)
         {
+            var candidateId = reader.GetString(0);
+
+            if (!ContentItemId.TryParse(reader.GetString(1), out var itemId))
+            {
+                await DeleteCandidateAsync(conn, candidateId, cancellationToken);
+                return null;
+            }
+
+            var backendValue = reader.GetInt32(2);
+            if (!Enum.IsDefined(typeof(ContentBackendType), backendValue))
+            {
+                await DeleteCandidateAsync(conn, candidateId, cancellationToken);
+                return null;
+            }
+
+            var expectedQuality = Math.Clamp(reader.GetFloat(4), 0.0f, 1.0f);
+            var trustScore = Math.Clamp(reader.GetFloat(5), 0.0f, 1.0f);
+
             return new SourceCandidate
             {
-                Id = reader.GetString(0),
-                ItemId = ContentItemId.Parse(reader.GetString(1)),
-                Backend = (ContentBackendType)reader.GetInt32(2),
+                Id = candidateId,
+                ItemId = itemId,
+                Backend = (ContentBackendType)backendValue,
                 BackendRef = reader.GetString(3),
-                ExpectedQuality = reader.GetFloat(4),
-                TrustScore = reader.GetFloat(5),
+                ExpectedQuality = expectedQuality,
+                TrustScore = trustScore,
                 LastValidatedAt = reader.IsDBNull(6)
                     ? null
                     : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(6)),
@@ -259,6 +288,18 @@ namespace slskd.VirtualSoulfind.v2.Sources
                     : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(7)),
                 IsPreferred = reader.GetInt32(8) != 0,
             };
+        }
+
+        private static async Task DeleteCandidateAsync(
+            SqliteConnection conn,
+            string candidateId,
+            CancellationToken cancellationToken)
+        {
+            using var cleanup = new SqliteCommand(
+                "DELETE FROM source_candidates WHERE id = @id",
+                conn);
+            cleanup.Parameters.AddWithValue("@id", candidateId);
+            await cleanup.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 }

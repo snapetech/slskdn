@@ -669,32 +669,7 @@ namespace slskd.Transfers.Uploads
                     Task.Run can fail due to thread pool exhaustion or OOM, and this *SHOULD* throw up the chain and
                     fail the enqueue request
                 */
-                _ = Task.Run(() => UploadAsync(transfer)).ContinueWith(task =>
-                {
-                    if (task.IsCompletedSuccessfully)
-                    {
-                        Log.Information("Task for upload of {Filename} to {Username} completed successfully", filename, username);
-                        return;
-                    }
-
-                    /*
-                        things that can cause us to arrive here:
-
-                        * file not found (moved, deleted somehow)
-                        * transfer record deleted somehow
-                        * transfer record updated so that it's no longer in Queued | Locally
-                        * Soulseek.NET already tracking an identical upload (slskd <> Soulseek.NET desync)
-                    */
-                    Log.Error(task.Exception, "Task for upload of {Filename} to {Username} did not complete successfully: {Error}", filename, username, task.Exception?.Message);
-
-                    Exception taskException = task.Exception is Exception ex
-                        ? ex
-                        : new InvalidOperationException("Upload task failed without an exception.");
-                    if (!TryFail(id, taskException))
-                    {
-                        Log.Error(taskException, "Failed to clean up transfer {Id} after failed execution: {Message}", id, taskException.Message);
-                    }
-                });
+                _ = ObserveUploadTaskAsync(Task.Run(() => UploadAsync(transfer)), id, filename, username);
 
                 return transfer;
             }
@@ -715,6 +690,32 @@ namespace slskd.Transfers.Uploads
                 if (Locks.TryRemove(lockName, out _))
                 {
                     Log.Debug("Released lock {LockName}", lockName);
+                }
+            }
+        }
+
+        private async Task ObserveUploadTaskAsync(Task uploadTask, Guid id, string filename, string username)
+        {
+            try
+            {
+                await uploadTask.ConfigureAwait(false);
+                Log.Information("Task for upload of {Filename} to {Username} completed successfully", filename, username);
+            }
+            catch (Exception ex)
+            {
+                /*
+                    things that can cause us to arrive here:
+
+                    * file not found (moved, deleted somehow)
+                    * transfer record deleted somehow
+                    * transfer record updated so that it's no longer in Queued | Locally
+                    * Soulseek.NET already tracking an identical upload (slskd <> Soulseek.NET desync)
+                */
+                Log.Error(ex, "Task for upload of {Filename} to {Username} did not complete successfully: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(id, ex))
+                {
+                    Log.Error(ex, "Failed to clean up transfer {Id} after failed execution: {Message}", id, ex.Message);
                 }
             }
         }

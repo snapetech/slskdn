@@ -88,6 +88,58 @@ namespace slskd.Tests.Unit.Mesh
                 peerReputation);
         }
 
+        [Fact]
+        public void Dispose_UnsubscribesFromPrivateMessageReceived()
+        {
+            var addCount = 0;
+            var removeCount = 0;
+            var soulseekClient = new Mock<ISoulseekClient>();
+            soulseekClient
+                .SetupAdd(x => x.PrivateMessageReceived += It.IsAny<EventHandler<PrivateMessageReceivedEventArgs>>())
+                .Callback(() => addCount++);
+            soulseekClient
+                .SetupRemove(x => x.PrivateMessageReceived -= It.IsAny<EventHandler<PrivateMessageReceivedEventArgs>>())
+                .Callback(() => removeCount++);
+
+            var service = new MeshSyncService(
+                mockHashDb.Object,
+                mockCapabilities.Object,
+                soulseekClient.Object,
+                mockMessageSigner.Object,
+                peerReputation);
+
+            service.Dispose();
+
+            Assert.Equal(1, addCount);
+            Assert.Equal(1, removeCount);
+        }
+
+        [Fact]
+        public void Dispose_CancelsPendingLookupAndChunkRequests()
+        {
+            var keyTcs = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var chunkTcs = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var pendingRequestsField = typeof(MeshSyncService).GetField("pendingRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var pendingChunkRequestsField = typeof(MeshSyncService).GetField("pendingChunkRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+            Assert.NotNull(pendingRequestsField);
+            Assert.NotNull(pendingChunkRequestsField);
+
+            var pendingRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>>)pendingRequestsField!.GetValue(meshSyncService)!;
+            var pendingChunkRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>>)pendingChunkRequestsField!.GetValue(meshSyncService)!;
+
+            pendingRequests["peer:key"] = keyTcs;
+            pendingChunkRequests["peer:key:0"] = chunkTcs;
+
+            meshSyncService.Dispose();
+
+            Assert.True(keyTcs.Task.IsCanceled);
+            Assert.True(chunkTcs.Task.IsCanceled);
+            Assert.Empty(pendingRequests);
+            Assert.Empty(pendingChunkRequests);
+        }
+
         #region Signature Verification Tests (T-1430)
 
         [Fact]
@@ -685,4 +737,3 @@ namespace slskd.Tests.Unit.Mesh
         }
     }
 }
-

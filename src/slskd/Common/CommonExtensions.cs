@@ -544,8 +544,20 @@ namespace slskd
         /// <param name="str">The string to cast.</param>
         /// <returns>The cast enum.</returns>
         public static T ToEnum<T>(this string str)
+            where T : struct, Enum
         {
-            return (T)Enum.Parse(typeof(T), str, ignoreCase: true);
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                throw new ArgumentNullException(nameof(str), $"Cannot parse empty value for {typeof(T).Name}.");
+            }
+
+            if (!Enum.TryParse(str, ignoreCase: true, out T value))
+            {
+                throw new ArgumentException(
+                    $"Unable to parse '{str}' as a valid value for {typeof(T).Name}.");
+            }
+
+            return value;
         }
 
         /// <summary>

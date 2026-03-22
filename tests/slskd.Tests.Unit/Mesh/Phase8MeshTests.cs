@@ -8,9 +8,12 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using MessagePack;
 using slskd.Mesh;
 using slskd.Mesh.Dht;
+using slskd.Mesh.Health;
 using slskd.Mesh.Nat;
+using slskd.VirtualSoulfind.ShadowIndex;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;
@@ -181,6 +184,43 @@ public class Phase8MeshTests
     }
 
     [Fact]
+    public async Task MeshHealthService_GetSnapshot_UsesInMemoryDhtMetrics()
+    {
+        var dhtLogger = Mock.Of<ILogger<InMemoryDhtClient>>();
+        var healthLogger = Mock.Of<ILogger<MeshHealthService>>();
+        var opts = Microsoft.Extensions.Options.Options.Create(new MeshOptions());
+        var dht = new InMemoryDhtClient(dhtLogger, opts);
+
+        dht.AddNode(Enumerable.Repeat((byte)0x01, 20).ToArray(), "udp://203.0.113.10:5000");
+
+        var hints = new ContentPeerHints
+        {
+            Peers = new List<ContentPeerHint>
+            {
+                new()
+                {
+                    PeerId = "peer-1",
+                    TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                }
+            }
+        };
+
+        await dht.PutAsync(
+            Enumerable.Repeat((byte)0xAB, 20).ToArray(),
+            MessagePackSerializer.Serialize(hints),
+            ttlSeconds: 3600,
+            ct: default);
+
+        var service = new MeshHealthService(healthLogger, dht);
+
+        var snapshot = service.GetSnapshot();
+
+        Assert.Equal(1, snapshot.RoutingNodes);
+        Assert.Equal(1, snapshot.StoredKeys);
+        Assert.Equal(1, snapshot.ContentPeerHints);
+    }
+
+    [Fact]
     public async Task StunNatDetector_DetectsDirect()
     {
         var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<StunNatDetector>>();
@@ -223,10 +263,15 @@ public class Phase8MeshTests
     {
         var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<MeshStatsCollector>>();
         var serviceProvider = new Mock<IServiceProvider>();
+        var dhtLogger = Mock.Of<Microsoft.Extensions.Logging.ILogger<InMemoryDhtClient>>();
+        var dht = new InMemoryDhtClient(dhtLogger, Microsoft.Extensions.Options.Options.Create(new MeshOptions()));
+        dht.AddNode(Enumerable.Repeat((byte)0x02, 20).ToArray(), "udp://203.0.113.11:5000");
 
         // Mock the services that MeshStatsCollector depends on
         serviceProvider.Setup(sp => sp.GetService(typeof(INatDetector)))
             .Returns(Mock.Of<INatDetector>());
+        serviceProvider.Setup(sp => sp.GetService(typeof(slskd.VirtualSoulfind.ShadowIndex.IDhtClient)))
+            .Returns(dht);
 
         var collector = new MeshStatsCollector(logger, serviceProvider.Object);
 
@@ -235,12 +280,14 @@ public class Phase8MeshTests
         collector.RecordMessageReceived();
         collector.RecordDhtOperation();
         collector.UpdateRoutingTableSize(15);
+        await Task.Delay(20);
 
         var stats = await collector.GetStatsAsync();
 
         Assert.Equal(1, stats.MessagesSent);
         Assert.Equal(1, stats.MessagesReceived);
-        Assert.True(stats.DhtOperationsPerSecond >= 0);
+        Assert.True(stats.DhtOperationsPerSecond > 0);
+        Assert.Equal(1, stats.ActiveDhtSessions);
         Assert.Equal(15, stats.RoutingTableSize);
     }
 
@@ -334,5 +381,54 @@ public class Phase8MeshTests
             It.IsAny<List<string>>(),
             It.IsAny<int>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ContentPeerPublisher_ConcurrentPublishes_DoNotDropPeerContentMappings()
+    {
+        var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<ContentPeerPublisher>>();
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshOptions
+        {
+            SelfPeerId = "self-peer",
+            SelfEndpoints = new List<string> { "udp://127.0.0.1:5000" }
+        });
+
+        var peerContentStore = new List<string>();
+        var dhtClient = new Mock<slskd.Mesh.Dht.IMeshDhtClient>();
+        dhtClient.Setup(d => d.GetAsync<List<string>>("mesh:peer-content:self-peer", It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                await Task.Delay(10);
+                lock (peerContentStore)
+                {
+                    return peerContentStore.ToList();
+                }
+            });
+        dhtClient.Setup(d => d.PutAsync(It.Is<string>(key => key.StartsWith("mesh:content-peers:", StringComparison.Ordinal)), It.IsAny<object?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        dhtClient.Setup(d => d.PutAsync("mesh:peer-content:self-peer", It.IsAny<object?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object?, int, CancellationToken>((_, value, _, _) =>
+            {
+                var contentIds = Assert.IsType<List<string>>(value);
+                lock (peerContentStore)
+                {
+                    peerContentStore.Clear();
+                    peerContentStore.AddRange(contentIds);
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var publisher = new ContentPeerPublisher(logger, dhtClient.Object, options);
+
+        await Task.WhenAll(
+            publisher.PublishAsync("content:test:one"),
+            publisher.PublishAsync("content:test:two"));
+
+        lock (peerContentStore)
+        {
+            Assert.Contains("content:test:one", peerContentStore);
+            Assert.Contains("content:test:two", peerContentStore);
+            Assert.Equal(2, peerContentStore.Count);
+        }
     }
 }

@@ -116,15 +116,26 @@ public class DisasterModeRecovery : IDisasterModeRecovery
 
     private async void OnHealthChanged(object? sender, SoulseekHealthChangedEventArgs e)
     {
-        if (e.NewHealth == SoulseekHealth.Healthy && disasterMode.IsDisasterModeActive)
+        try
         {
-            // Health improved, attempt recovery
-            await AttemptRecoveryAsync(CancellationToken.None);
+            if (e.NewHealth == SoulseekHealth.Healthy && disasterMode.IsDisasterModeActive)
+            {
+                // Health improved, attempt recovery
+                await AttemptRecoveryAsync(CancellationToken.None);
+            }
+            else if (e.NewHealth != SoulseekHealth.Healthy)
+            {
+                // Health degraded, reset recovery counter
+                consecutiveHealthyChecks = 0;
+            }
         }
-        else if (e.NewHealth != SoulseekHealth.Healthy)
+        catch (OperationCanceledException)
         {
-            // Health degraded, reset recovery counter
-            consecutiveHealthyChecks = 0;
+            logger.LogDebug("[VSF-RECOVERY] Health-change recovery processing cancelled");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[VSF-RECOVERY] Unhandled exception while processing health change");
         }
     }
 }

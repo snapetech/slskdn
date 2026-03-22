@@ -22,6 +22,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using slskd.MediaCore;
     using slskd.Shares;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Sources;
@@ -41,14 +42,19 @@ namespace slskd.VirtualSoulfind.v2.Backends
     public sealed class LocalLibraryBackend : IContentBackend
     {
         private readonly IShareRepository _shareRepository;
+        private readonly IContentIdRegistry _contentIdRegistry;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="LocalLibraryBackend"/> class.
         /// </summary>
         /// <param name="shareRepository">The share repository.</param>
-        public LocalLibraryBackend(IShareRepository shareRepository)
+        /// <param name="contentIdRegistry">The content ID registry.</param>
+        public LocalLibraryBackend(
+            IShareRepository shareRepository,
+            IContentIdRegistry contentIdRegistry)
         {
             _shareRepository = shareRepository ?? throw new ArgumentNullException(nameof(shareRepository));
+            _contentIdRegistry = contentIdRegistry ?? throw new ArgumentNullException(nameof(contentIdRegistry));
         }
 
         /// <inheritdoc/>
@@ -62,9 +68,11 @@ namespace slskd.VirtualSoulfind.v2.Backends
             ContentItemId itemId,
             CancellationToken cancellationToken = default)
         {
-            // For v2 Phase 1: We need to map ContentItemId to what the share repository expects
-            // The share repository uses contentId as string
-            var contentIdStr = itemId.ToString();
+            var contentIdStr = await ResolveContentIdAsync(itemId, cancellationToken);
+            if (string.IsNullOrWhiteSpace(contentIdStr))
+            {
+                return Array.Empty<SourceCandidate>();
+            }
 
             // Query the share repository for this content ID
             var contentItem = _shareRepository.FindContentItem(contentIdStr);
@@ -82,7 +90,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 ItemId = itemId,
                 Backend = ContentBackendType.LocalLibrary,
                 BackendRef = contentIdStr, // ContentId as reference
-                ExpectedQuality = 100, // Local files are highest quality (we scanned them)
+                ExpectedQuality = 1.0f, // Local files are highest quality on the normalized 0..1 scale
                 TrustScore = 1.0f, // Maximum trust (our own files)
                 LastValidatedAt = DateTimeOffset.UtcNow,
                 LastSeenAt = DateTimeOffset.UtcNow,
@@ -121,6 +129,18 @@ namespace slskd.VirtualSoulfind.v2.Backends
             // Local files are always valid if they exist and are advertisable
             return await Task.FromResult(
                 SourceCandidateValidationResult.Valid(1.0f, 1.0f));
+        }
+
+        private async Task<string?> ResolveContentIdAsync(ContentItemId itemId, CancellationToken cancellationToken)
+        {
+            var externalId = "mb:recording:" + itemId.Value;
+            var resolved = await _contentIdRegistry.ResolveAsync(externalId, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+
+            return ContentIdParser.Create("audio", "track", "mb-" + itemId.Value.ToString("N"));
         }
     }
 }

@@ -74,6 +74,13 @@ namespace slskd.VirtualSoulfind.v2.Intents
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        ///     Get release intent by ID.
+        /// </summary>
+        Task<DesiredRelease?> GetReleaseIntentAsync(
+            string desiredReleaseId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         ///     Count intents by status.
         /// </summary>
         Task<int> CountTracksByStatusAsync(

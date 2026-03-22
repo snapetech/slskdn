@@ -35,7 +35,7 @@ namespace slskd
         public override IPEndPoint? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             var value = reader.GetString();
-            return string.IsNullOrWhiteSpace(value) ? null : IPEndPoint.Parse(value);
+            return string.IsNullOrWhiteSpace(value) ? null : IPEndPoint.TryParse(value, out var endpoint) ? endpoint : null;
         }
 
         public override void Write(Utf8JsonWriter writer, IPEndPoint? value, JsonSerializerOptions options) => writer.WriteStringValue(value?.ToString());

@@ -227,6 +227,12 @@ namespace slskd.Integrations.MetadataFacade
 
             foreach (var h in hits)
             {
+                if (string.IsNullOrWhiteSpace(h.RecordingId))
+                {
+                    _log.LogDebug("Skipping metadata search hit without recording ID for query {Query}", query);
+                    continue;
+                }
+
                 yield return new MetadataResult(
                     h.Artist,
                     h.Title,

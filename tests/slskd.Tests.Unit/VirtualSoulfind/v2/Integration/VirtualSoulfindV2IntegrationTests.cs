@@ -230,7 +230,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             });
 
             var track = await catalogueStore.FindTrackByIdAsync(trackId);
-            var matchEngine = new SimpleMatchEngine();
+            var matchEngine = new SimpleMatchEngine(catalogueStore);
 
             // Candidate file with matching MBID and duration
             var goodCandidate = new CandidateFileMetadata

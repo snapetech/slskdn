@@ -20,6 +20,7 @@ public class PodDiscoveryService : IPodDiscoveryService
     private readonly ILogger<PodDiscoveryService> _logger;
     private readonly IMeshDhtClient _dhtClient;
     private readonly IPodDhtPublisher _podPublisher;
+    private readonly IPodService _podService;
 
     // Tracking registered pods and their discovery keys
     private readonly ConcurrentDictionary<string, PodRegistration> _registeredPods = new();
@@ -35,11 +36,13 @@ public class PodDiscoveryService : IPodDiscoveryService
     public PodDiscoveryService(
         ILogger<PodDiscoveryService> logger,
         IMeshDhtClient dhtClient,
-        IPodDhtPublisher podPublisher)
+        IPodDhtPublisher podPublisher,
+        IPodService podService)
     {
         _logger = logger;
         _dhtClient = dhtClient;
         _podPublisher = podPublisher;
+        _podService = podService;
     }
 
     /// <inheritdoc/>
@@ -133,9 +136,8 @@ public class PodDiscoveryService : IPodDiscoveryService
         {
             _logger.LogInformation("[PodDiscovery] Unregistering pod {PodId} from discovery", podId);
 
-            // Remove from DHT by publishing empty values to clear the entries.
             var removalTasks = registration.DiscoveryKeys.Select(key =>
-                _dhtClient.PutAsync(key, string.Empty, ttlSeconds: 300, cancellationToken));
+                RemovePodFromDiscoveryKeyAsync(key, podId, cancellationToken));
 
             await Task.WhenAll(removalTasks);
 
@@ -492,6 +494,17 @@ public class PodDiscoveryService : IPodDiscoveryService
         await _dhtClient.PutAsync(discoveryKey, updatedPodIds.ToList(), ttlSeconds: 24 * 60 * 60, cancellationToken);
     }
 
+    private async Task RemovePodFromDiscoveryKeyAsync(string discoveryKey, string podId, CancellationToken cancellationToken)
+    {
+        var podIds = await DiscoverPodIdsFromKeyAsync(discoveryKey, cancellationToken);
+        var updatedPodIds = podIds
+            .Where(existingPodId => !string.Equals(existingPodId, podId, StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        await _dhtClient.PutAsync(discoveryKey, updatedPodIds, ttlSeconds: 300, cancellationToken);
+    }
+
     private async Task<List<string>> DiscoverPodIdsFromKeyAsync(string discoveryKey, CancellationToken cancellationToken)
     {
         var result = await _dhtClient.GetAsync<List<string>>(discoveryKey, cancellationToken);
@@ -535,10 +548,7 @@ public class PodDiscoveryService : IPodDiscoveryService
 
     private Task<Pod?> GetPodFromPublisherAsync(string podId, CancellationToken cancellationToken)
     {
-        // This would need to be implemented - perhaps through a pod storage service
-        // For now, return null as placeholder
-        _logger.LogWarning("[PodDiscovery] GetPodFromPublisherAsync not implemented - using placeholder");
-        return Task.FromResult<Pod?>(null);
+        return _podService.GetPodAsync(podId, cancellationToken);
     }
 
     private void TrackSearch(string searchType, DateTimeOffset startTime)

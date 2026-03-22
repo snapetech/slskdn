@@ -51,13 +51,14 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
     {
         try
         {
+            var (socksHost, socksPort) = ParseSocksAddress(_options.SocksAddress);
+
             // Try to connect to the SOCKS proxy and perform a basic handshake
             using var client = new TcpClient();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
 
-            var connectTask = client.ConnectAsync(_options.SocksAddress.Split(':')[0],
-                                                int.Parse(_options.SocksAddress.Split(':')[1]));
+            var connectTask = client.ConnectAsync(socksHost, socksPort);
             await connectTask.WaitAsync(linkedCts.Token);
 
             if (client.Connected)
@@ -474,6 +475,8 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
     /// </summary>
     private Task<IsolationCircuit> CreateIsolationCircuitAsync(string circuitKey, CancellationToken cancellationToken)
     {
+        var (socksHost, socksPort) = ParseSocksAddress(_options.SocksAddress);
+
         if (_options.IsolateStreams)
         {
             // For stream isolation, we create circuits with different credentials
@@ -486,8 +489,8 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             // For now, use the same SOCKS port but with authentication
             // In production, this would use separate Tor instances or control port circuit isolation
             return Task.FromResult(new IsolationCircuit(
-                _options.SocksAddress.Split(':')[0],
-                int.Parse(_options.SocksAddress.Split(':')[1]),
+                socksHost,
+                socksPort,
                 username,
                 password,
                 circuitKey));
@@ -496,12 +499,33 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
         {
             // No isolation - use shared circuit
             return Task.FromResult(new IsolationCircuit(
-                _options.SocksAddress.Split(':')[0],
-                int.Parse(_options.SocksAddress.Split(':')[1]),
+                socksHost,
+                socksPort,
                 null,
                 null,
                 circuitKey));
         }
+    }
+
+    private static (string Host, int Port) ParseSocksAddress(string socksAddress)
+    {
+        if (string.IsNullOrWhiteSpace(socksAddress))
+        {
+            throw new InvalidOperationException("Tor SOCKS address is not configured");
+        }
+
+        var parts = socksAddress.Split(':');
+        if (parts.Length != 2)
+        {
+            throw new InvalidOperationException($"Invalid Tor SOCKS address format: {socksAddress}");
+        }
+
+        if (!int.TryParse(parts[1], out var socksPort) || socksPort is <= 0 or > ushort.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(socksAddress), socksAddress, "Tor SOCKS port must be between 1 and 65535");
+        }
+
+        return (parts[0], socksPort);
     }
 
     /// <summary>

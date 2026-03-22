@@ -71,7 +71,7 @@ public class NowPlayingController : ControllerBase
     [HttpPost("webhook")]
     [Authorize(Policy = AuthPolicy.Any)]
     [Consumes("application/json", "multipart/form-data", "application/x-www-form-urlencoded")]
-    public IActionResult Webhook()
+    public async Task<IActionResult> Webhook()
     {
         string json = string.Empty;
 
@@ -83,7 +83,7 @@ public class NowPlayingController : ControllerBase
         else
         {
             using var reader = new System.IO.StreamReader(Request.Body);
-            json = reader.ReadToEndAsync().GetAwaiter().GetResult();
+            json = await reader.ReadToEndAsync(HttpContext.RequestAborted);
         }
 
         if (string.IsNullOrWhiteSpace(json))
@@ -91,7 +91,7 @@ public class NowPlayingController : ControllerBase
 
         try
         {
-            var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
             // Detect Plex: has "event" and "Metadata" fields

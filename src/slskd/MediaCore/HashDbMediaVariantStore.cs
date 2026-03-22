@@ -45,6 +45,16 @@ namespace slskd.MediaCore
                 return MediaVariant.FromAudioVariant(audio);
             }
 
+            var recordingVariants = await _hashDb.GetVariantsByRecordingAsync(variantId, cancellationToken).ConfigureAwait(false);
+            var bestRecordingVariant = recordingVariants?
+                .OrderByDescending(v => v.QualityScore)
+                .ThenByDescending(v => v.SeenCount)
+                .FirstOrDefault();
+            if (bestRecordingVariant != null)
+            {
+                return MediaVariant.FromAudioVariant(bestRecordingVariant);
+            }
+
             lock (_nonMusicLock)
             {
                 return _nonMusic.TryGetValue(variantId, out var v) ? v : null;
@@ -93,7 +103,11 @@ namespace slskd.MediaCore
                     }
                 }
 
-                return results;
+                return results
+                    .GroupBy(v => v.VariantId, StringComparer.Ordinal)
+                    .Select(g => g.First())
+                    .Take(limit)
+                    .ToList();
             }
 
             lock (_nonMusicLock)

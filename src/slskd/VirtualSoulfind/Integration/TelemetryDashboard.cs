@@ -35,7 +35,7 @@ public class ShadowIndexStats
 }
 
 /// <summary>
-/// Disaster mode statistics.
+/// Legacy fallback statistics.
 /// </summary>
 public class DisasterModeStats
 {
@@ -85,23 +85,27 @@ public class TelemetryDashboardService : ITelemetryDashboard
     private readonly ILogger<TelemetryDashboardService> logger;
     private readonly IDisasterModeTelemetry disasterTelemetry;
     private readonly IPerformanceOptimizer perfOptimizer;
+    private readonly Scenes.ISceneService sceneService;
 
     public TelemetryDashboardService(
         ILogger<TelemetryDashboardService> logger,
         IDisasterModeTelemetry disasterTelemetry,
-        IPerformanceOptimizer perfOptimizer)
+        IPerformanceOptimizer perfOptimizer,
+        Scenes.ISceneService sceneService)
     {
         this.logger = logger;
         this.disasterTelemetry = disasterTelemetry;
         this.perfOptimizer = perfOptimizer;
+        this.sceneService = sceneService;
     }
 
-    public Task<TelemetryDashboard> GetDashboardDataAsync(CancellationToken ct)
+    public async Task<TelemetryDashboard> GetDashboardDataAsync(CancellationToken ct)
     {
         logger.LogDebug("[VSF-DASHBOARD] Generating telemetry dashboard");
 
         var disasterData = disasterTelemetry.GetTelemetry();
         var cacheStats = perfOptimizer.GetCacheStatistics();
+        var joinedScenes = await sceneService.GetJoinedScenesAsync(ct);
 
         var dashboard = new TelemetryDashboard
         {
@@ -120,9 +124,26 @@ public class TelemetryDashboardService : ITelemetryDashboard
                 CacheHits = cacheStats.CacheHits,
                 CacheMisses = cacheStats.CacheMisses,
                 CacheHitRate = cacheStats.HitRate
+            },
+            ShadowIndex = new ShadowIndexStats
+            {
+                TotalShards = cacheStats.CachedShardCount
+            },
+            Scenes = new SceneStats
+            {
+                JoinedSceneCount = joinedScenes.Count,
+                TotalSceneMembers = joinedScenes.Sum(scene => Math.Max(scene.MemberCount, 0)),
+                TopScenes = joinedScenes
+                    .OrderByDescending(scene => scene.MemberCount)
+                    .ThenBy(scene => scene.DisplayName ?? scene.SceneId)
+                    .Take(5)
+                    .Select(scene => string.IsNullOrWhiteSpace(scene.DisplayName) ? scene.SceneId : scene.DisplayName)
+                    .ToList()
             }
         };
 
-        return Task.FromResult(dashboard);
+        dashboard.Performance.AverageDhtQueryTime = TimeSpan.Zero;
+
+        return dashboard;
     }
 }

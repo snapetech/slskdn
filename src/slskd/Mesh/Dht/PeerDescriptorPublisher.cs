@@ -214,14 +214,12 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             {
                 try
                 {
-                    // Parse "host:port" format
-                    var parts = endpointStr.Split(':');
-                    if (parts.Length == 2 && int.TryParse(parts[1], out var port))
+                    if (TryParseAdvertisedEndpoint(endpointStr, out var host, out var port))
                     {
                         endpoints.Add(new TransportEndpoint
                         {
                             TransportType = TransportType.DirectQuic,
-                            Host = parts[0],
+                            Host = host,
                             Port = port,
                             Scope = TransportScope.ControlAndData,
                             Preference = 0, // Highest preference for direct
@@ -268,6 +266,41 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             endpoints.Count, string.Join(", ", endpoints.Select(e => $"{e.TransportType}({e.Preference})")));
 
         return endpoints;
+    }
+
+    private static bool TryParseAdvertisedEndpoint(string endpoint, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return false;
+        }
+
+        if (endpoint[0] == '[')
+        {
+            var closingBracketIndex = endpoint.IndexOf(']');
+            if (closingBracketIndex <= 1 ||
+                closingBracketIndex + 2 >= endpoint.Length ||
+                endpoint[closingBracketIndex + 1] != ':' ||
+                !int.TryParse(endpoint[(closingBracketIndex + 2)..], out port))
+            {
+                return false;
+            }
+
+            host = endpoint[1..closingBracketIndex];
+            return port is > 0 and <= ushort.MaxValue;
+        }
+
+        var separatorIndex = endpoint.LastIndexOf(':');
+        if (separatorIndex <= 0 || separatorIndex == endpoint.Length - 1)
+        {
+            return false;
+        }
+
+        host = endpoint[..separatorIndex];
+        return int.TryParse(endpoint[(separatorIndex + 1)..], out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     /// <summary>

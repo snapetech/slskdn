@@ -9,6 +9,7 @@ using slskd.Mesh.ServiceFabric;
 using slskd.Mesh.ServiceFabric.Services;
 using slskd.PodCore;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -549,5 +550,17 @@ public class PrivateGatewayMeshServiceTests
 
         Assert.Equal(ServiceStatusCodes.InvalidPayload, result.StatusCode);
         Assert.Contains("Invalid DestinationHost format", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Dispose_ShouldCancelCleanupTask()
+    {
+        var cleanupTaskField = typeof(PrivateGatewayMeshService).GetField("_cleanupTask", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(cleanupTaskField);
+
+        _service.Dispose();
+
+        var cleanupTask = Assert.IsAssignableFrom<Task>(cleanupTaskField!.GetValue(_service));
+        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(1)));
     }
 }

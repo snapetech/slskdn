@@ -375,17 +375,9 @@ namespace slskd
             Log.Information("Application started");
 
             // Start the actual initialization in the background to avoid blocking other hosted services
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await InitializeApplicationAsync(cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Failed to initialize application in background task");
-                }
-            }, cancellationToken);
+            _ = ObserveBackgroundTaskAsync(
+                Task.Run(() => InitializeApplicationAsync(cancellationToken), CancellationToken.None),
+                "Failed to initialize application in background task");
 
             return Task.CompletedTask;
         }
@@ -481,8 +473,14 @@ namespace slskd
                 writeBufferSize: OptionsAtStartup.Soulseek.Connection.Buffer.Transfer,
                 inactivityTimeout: OptionsAtStartup.Soulseek.Connection.Timeout.Transfer);
 
+            if (!IPAddress.TryParse(OptionsAtStartup.Soulseek.ListenIpAddress, out var startupListenAddress))
+            {
+                Log.Warning("Invalid Soulseek listen IP address '{Address}', defaulting to 0.0.0.0", OptionsAtStartup.Soulseek.ListenIpAddress);
+                startupListenAddress = IPAddress.Any;
+            }
+
             var patch = new SoulseekClientOptionsPatch(
-                listenIPAddress: IPAddress.Parse(OptionsAtStartup.Soulseek.ListenIpAddress),
+                listenIPAddress: startupListenAddress,
                 listenPort: OptionsAtStartup.Soulseek.ListenPort,
                 enableListener: true,
                 userEndPointCache: new UserEndPointCache(),
@@ -576,21 +574,7 @@ namespace slskd
             }
 
             // Register mesh services for DHT operations (non-blocking - run after startup completes)
-            _ = RegisterMeshServicesAsync(cancellationToken).ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    var baseException = task.Exception?.GetBaseException();
-                    if (baseException is OperationCanceledException)
-                    {
-                        Log.Information("Mesh service registration cancelled");
-                    }
-                    else
-                    {
-                        Log.Error(baseException, "Failed to register mesh services in background");
-                    }
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            _ = RegisterMeshServicesInBackgroundAsync(cancellationToken);
 
             Log.Information("[Application] Initialization complete");
         }
@@ -650,6 +634,22 @@ namespace slskd
             }
 
             return Task.CompletedTask;
+        }
+
+        private async Task RegisterMeshServicesInBackgroundAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await RegisterMeshServicesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                Log.Information("Mesh service registration cancelled");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to register mesh services in background");
+            }
         }
 
         Task IHostedService.StopAsync(CancellationToken cancellationToken)
@@ -1273,7 +1273,10 @@ namespace slskd
             // HARDENING: Handle PODMSG group pod messages
             if (args.Message.StartsWith("PODMSG:", StringComparison.Ordinal))
             {
-                _ = Task.Run(() => HandlePodMessageAsync(args.Username, args.Message));
+                _ = ObserveBackgroundTaskAsync(
+                    Task.Run(() => HandlePodMessageAsync(args.Username, args.Message), CancellationToken.None),
+                    "Failed to handle pod message from {Username}",
+                    args.Username);
                 return; // Don't process as regular PM
             }
 
@@ -1474,19 +1477,19 @@ namespace slskd
 
         private void Clock_EveryFiveMinutes(object? sender, ClockEventArgs e)
         {
-            _ = Task.Run(() => PruneSearches());
-            _ = Task.Run(() => PruneTransfers());
-            _ = Task.Run(() => PruneEvents());
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneSearches(), CancellationToken.None), "Failed to prune searches");
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneTransfers(), CancellationToken.None), "Failed to prune transfers");
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneEvents(), CancellationToken.None), "Failed to prune events");
         }
 
         private void Clock_EveryThirtyMinutes(object? sender, ClockEventArgs e)
         {
-            _ = Task.Run(() => PruneFiles());
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneFiles(), CancellationToken.None), "Failed to prune files");
         }
 
         private void Clock_EveryHour(object? sender, ClockEventArgs e)
         {
-            _ = Task.Run(() => MaybeRescanShares());
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => MaybeRescanShares(), CancellationToken.None), "Failed to evaluate scheduled share rescan");
         }
 
         private async Task MaybeRescanShares()
@@ -1522,7 +1525,7 @@ namespace slskd
                 Log.Information("Beginning scheduled re-scan of shares (previous scan is older than {Minutes} minutes)", ttl);
 
                 // fire and forget. if something slips through the underlying logic will log.
-                _ = Task.Run(() => Shares.ScanAsync());
+                _ = ObserveBackgroundTaskAsync(Task.Run(() => Shares.ScanAsync(), CancellationToken.None), "Failed to start scheduled share scan");
             }
         }
 
@@ -1886,8 +1889,17 @@ namespace slskd
                             inactivityTimeout: connection.Timeout.Transfer);
                     }
 
+                    IPAddress? updateListenIpAddress = null;
+                    if (!string.IsNullOrWhiteSpace(update.ListenIpAddress) && old.ListenIpAddress != update.ListenIpAddress)
+                    {
+                        if (!IPAddress.TryParse(update.ListenIpAddress, out updateListenIpAddress))
+                        {
+                            Log.Warning("Invalid Soulseek listen IP address '{Address}' in options update; keeping existing listen IP", update.ListenIpAddress);
+                        }
+                    }
+
                     var patch = new SoulseekClientOptionsPatch(
-                        listenIPAddress: old.ListenIpAddress == update.ListenIpAddress ? null : IPAddress.Parse(update.ListenIpAddress),
+                        listenIPAddress: updateListenIpAddress,
                         listenPort: old.ListenPort == update.ListenPort ? null : update.ListenPort,
                         enableDistributedNetwork: old.DistributedNetwork.Disabled == update.DistributedNetwork.Disabled ? null : !update.DistributedNetwork.Disabled,
                         distributedChildLimit: old.DistributedNetwork.ChildLimit == update.DistributedNetwork.ChildLimit ? null : update.DistributedNetwork.ChildLimit,
@@ -2124,11 +2136,13 @@ namespace slskd
 
                     if (Client.State.HasFlag(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn))
                     {
-                        _ = Task.Run(async () =>
-                        {
-                            await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
-                            await RefreshUserStatistics(force: true);
-                        });
+                        _ = ObserveBackgroundTaskAsync(
+                            Task.Run(async () =>
+                            {
+                                await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
+                                await RefreshUserStatistics(force: true);
+                            }, CancellationToken.None),
+                            "Failed to refresh shared counts after scan");
                     }
                 }
             }
@@ -2291,6 +2305,18 @@ namespace slskd
             {
                 Log.Warning(ex, "Failed to resolve user info: {Message}", ex.Message);
                 throw;
+            }
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate, params object[] propertyValues)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, messageTemplate, propertyValues);
             }
         }
     }

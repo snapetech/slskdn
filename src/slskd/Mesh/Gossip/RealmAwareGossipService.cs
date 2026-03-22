@@ -233,17 +233,21 @@ namespace slskd.Mesh.Gossip
             if (_realmSubscriptions.TryGetValue(realmId, out var realmSubscriptions) &&
                 realmSubscriptions.TryGetValue(message.Type, out var realmHandlers))
             {
-                await NotifyHandlersAsync(realmHandlers, message, cancellationToken);
+                await NotifyHandlersAsync(realmHandlers, message, realmId, cancellationToken);
             }
 
             // Also check global subscribers (for backwards compatibility)
             if (_globalSubscriptions.TryGetValue(message.Type, out var globalHandlers))
             {
-                await NotifyHandlersAsync(globalHandlers, message, cancellationToken);
+                await NotifyHandlersAsync(globalHandlers, message, realmId, cancellationToken);
             }
         }
 
-        private static async Task NotifyHandlersAsync(List<IGossipMessageHandler> handlers, GossipMessage message, CancellationToken cancellationToken)
+        private async Task NotifyHandlersAsync(
+            List<IGossipMessageHandler> handlers,
+            GossipMessage message,
+            string realmId,
+            CancellationToken cancellationToken)
         {
             var tasks = new List<Task>();
 
@@ -252,11 +256,37 @@ namespace slskd.Mesh.Gossip
                 // Create a copy to avoid modification during iteration.
                 foreach (var handler in handlers.ToList())
                 {
-                    tasks.Add(handler.HandleAsync(message, cancellationToken));
+                    tasks.Add(NotifyHandlerAsync(handler, message, realmId, cancellationToken));
                 }
             }
 
             await Task.WhenAll(tasks);
+        }
+
+        private async Task NotifyHandlerAsync(
+            IGossipMessageHandler handler,
+            GossipMessage message,
+            string realmId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await handler.HandleAsync(message, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "[Gossip] Handler {HandlerType} failed for message '{MessageId}' type '{Type}' realm '{RealmId}'",
+                    handler.GetType().Name,
+                    message.Id,
+                    message.Type,
+                    realmId);
+            }
         }
 
         private void Unsubscribe(string messageType, IGossipMessageHandler handler)

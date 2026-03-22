@@ -60,6 +60,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// </summary>
         Task UpsertArtistAsync(Artist artist, CancellationToken ct = default);
 
+        /// <summary>
+        ///     Lists artists in stable name order.
+        /// </summary>
+        Task<IReadOnlyList<Artist>> ListArtistsAsync(int offset = 0, int limit = 100, CancellationToken ct = default);
+
         // ========== Release Group Methods ==========
 
         /// <summary>
@@ -104,6 +109,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// </summary>
         Task UpsertReleaseAsync(Release release, CancellationToken ct = default);
 
+        /// <summary>
+        ///     Lists releases in stable order.
+        /// </summary>
+        Task<IReadOnlyList<Release>> ListReleasesAsync(int offset = 0, int limit = 100, CancellationToken ct = default);
+
         // ========== Track Methods ==========
 
         /// <summary>
@@ -125,6 +135,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         ///     Inserts or updates a track.
         /// </summary>
         Task UpsertTrackAsync(Track track, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Lists tracks in stable catalogue order.
+        /// </summary>
+        Task<IReadOnlyList<Track>> ListTracksAsync(int offset = 0, int limit = 100, CancellationToken ct = default);
 
         // ========== Bulk Operations ==========
 
@@ -171,6 +186,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         Task UpsertLocalFileAsync(LocalFile localFile, CancellationToken ct = default);
 
         /// <summary>
+        ///     Lists local files in stable recency order.
+        /// </summary>
+        Task<IReadOnlyList<LocalFile>> ListLocalFilesAsync(int offset = 0, int limit = 100, CancellationToken ct = default);
+
+        /// <summary>
         ///     Counts total local files in the catalogue.
         /// </summary>
         Task<int> CountLocalFilesAsync(CancellationToken ct = default);
@@ -189,6 +209,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         ///     Finds all verified copies for a specific track.
         /// </summary>
         Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesForTrackAsync(string trackId, CancellationToken ct = default);
+
+        /// <summary>
+        ///     Lists verified copies in stable recency order.
+        /// </summary>
+        Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesAsync(int offset = 0, int limit = 100, CancellationToken ct = default);
 
         /// <summary>
         ///     Finds a verified copy by its internal ID.

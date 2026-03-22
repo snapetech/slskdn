@@ -36,20 +36,20 @@ public class SceneAnnouncementService : ISceneAnnouncementService
     private readonly ILogger<SceneAnnouncementService> logger;
     private readonly IDhtClient dht;
     private readonly IDhtRateLimiter rateLimiter;
-    private readonly Identity.IProfileService? profileService;
+    private readonly Identity.IProfileService profileService;
     private readonly ISceneService? sceneService;
 
     public SceneAnnouncementService(
         ILogger<SceneAnnouncementService> logger,
         IDhtClient dht,
         IDhtRateLimiter rateLimiter,
-        Identity.IProfileService? profileService = null,
+        Identity.IProfileService profileService,
         ISceneService? sceneService = null)
     {
         this.logger = logger;
         this.dht = dht;
         this.rateLimiter = rateLimiter;
-        this.profileService = profileService;
+        this.profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
         this.sceneService = sceneService;
     }
 
@@ -126,34 +126,28 @@ public class SceneAnnouncementService : ISceneAnnouncementService
     private async Task<byte[]> CreateAnnouncementAsync(bool join, CancellationToken ct)
     {
         // Compact announcement format:
+        // Legacy format:
         // [1 byte: join/leave flag] [8 bytes: timestamp] [8 bytes: peer ID hint]
+        // Current format:
+        // [1 byte: join/leave flag] [8 bytes: timestamp] [2 bytes: peer ID length] [peer ID bytes]
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var buffer = new byte[17]; // 1 + 8 + 8
-
-        buffer[0] = (byte)(join ? 1 : 0);
-        BitConverter.GetBytes(timestamp).CopyTo(buffer, 1);
-
-        // Get actual peer ID hint (first 8 bytes of peer ID)
-        byte[] peerIdHint = new byte[8];
-        if (profileService != null)
+        var profile = await profileService.GetMyProfileAsync(ct);
+        if (string.IsNullOrWhiteSpace(profile.PeerId))
         {
-            try
-            {
-                var profile = await profileService.GetMyProfileAsync(ct);
-                if (!string.IsNullOrEmpty(profile.PeerId))
-                {
-                    // Extract first 8 bytes from peer ID (hex string)
-                    var peerIdBytes = System.Text.Encoding.UTF8.GetBytes(profile.PeerId);
-                    Array.Copy(peerIdBytes, 0, peerIdHint, 0, Math.Min(8, peerIdBytes.Length));
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "[VSF-SCENE-DHT] Failed to get peer ID for announcement, using placeholder");
-            }
+            throw new InvalidOperationException("Local peer profile does not have a peer ID.");
         }
 
-        Array.Copy(peerIdHint, 0, buffer, 9, 8);
+        var peerIdBytes = System.Text.Encoding.UTF8.GetBytes(profile.PeerId);
+        if (peerIdBytes.Length > ushort.MaxValue)
+        {
+            throw new InvalidOperationException("Local peer ID is too large to encode in scene announcements.");
+        }
+
+        var buffer = new byte[11 + peerIdBytes.Length];
+        buffer[0] = (byte)(join ? 1 : 0);
+        BitConverter.GetBytes(timestamp).CopyTo(buffer, 1);
+        BitConverter.GetBytes((ushort)peerIdBytes.Length).CopyTo(buffer, 9);
+        Array.Copy(peerIdBytes, 0, buffer, 11, peerIdBytes.Length);
         return buffer;
     }
 }

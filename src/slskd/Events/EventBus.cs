@@ -85,19 +85,15 @@ public class EventBus
         {
             Log.Debug("{Count} subscriber(s) for {Type}: {Names}", subscribers.Count, data.Type, string.Join(", ", subscribers.Keys));
 
-            // we don't care about any of these tasks; contractually we are only obligated to invoke them
-            _ = Task.WhenAll(subscribers.Select(subscriber =>
+            foreach (var subscriber in subscribers)
             {
                 if (subscriber.Value is not Func<T, Task> callback)
                 {
-                    return Task.CompletedTask;
+                    continue;
                 }
 
-                return Task.Run(() => callback(data))
-                    .ContinueWith(
-                        task => Log.Error(task.Exception, "Subscriber {Name} for {Type} encountered an error: {Message}", subscriber.Key, typeof(T), task.Exception?.Message ?? "Unknown error"),
-                        continuationOptions: TaskContinuationOptions.OnlyOnFaulted);
-            }));
+                _ = InvokeSubscriberAsync(() => callback(data), subscriber.Key, typeof(T), isCatchAllSubscriber: false);
+            }
         }
         else
         {
@@ -109,19 +105,34 @@ public class EventBus
         {
             Log.Debug("{Count} catch-all subscriber(s): {Names}", subscribers.Count, string.Join(", ", subscribers.Keys));
 
-            // we don't care about any of these tasks; contractually we are only obligated to invoke them
-            _ = Task.WhenAll(subscribers.Select(subscriber =>
+            foreach (var subscriber in subscribers)
             {
                 if (subscriber.Value is not Func<Event, Task> callback)
                 {
-                    return Task.CompletedTask;
+                    continue;
                 }
 
-                return Task.Run(() => callback(data))
-                    .ContinueWith(
-                        task => Log.Error(task.Exception, "Catch-All Subscriber {Name} for {Type} encountered an error: {Message}", subscriber.Key, typeof(Event), task.Exception?.Message ?? "Unknown error"),
-                        continuationOptions: TaskContinuationOptions.OnlyOnFaulted);
-            }));
+                _ = InvokeSubscriberAsync(() => callback(data), subscriber.Key, typeof(Event), isCatchAllSubscriber: true);
+            }
+        }
+    }
+
+    private async Task InvokeSubscriberAsync(Func<Task> callback, string subscriberName, Type eventType, bool isCatchAllSubscriber)
+    {
+        try
+        {
+            await Task.Run(callback).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            if (isCatchAllSubscriber)
+            {
+                Log.Error(ex, "Catch-All Subscriber {Name} for {Type} encountered an error: {Message}", subscriberName, eventType, ex.Message);
+            }
+            else
+            {
+                Log.Error(ex, "Subscriber {Name} for {Type} encountered an error: {Message}", subscriberName, eventType, ex.Message);
+            }
         }
     }
 

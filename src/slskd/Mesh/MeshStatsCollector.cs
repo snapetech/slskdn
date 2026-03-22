@@ -60,6 +60,7 @@ public class MeshStatsCollector : IMeshStatsCollector
 #pragma warning restore CA1416 // Runtime OS guards already gate QUIC-only service resolution.
         this.overlayClient = new Lazy<Overlay.QuicOverlayClient?>(() =>
             serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.QuicOverlayClient);
+        dhtOpsTimer.Start();
         this.logger.LogInformation("[MeshStatsCollector] Constructor completed");
     }
 

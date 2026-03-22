@@ -38,7 +38,7 @@ namespace slskd.VirtualSoulfind.Core.Music
         /// <param name="workId">The parent work ID (album).</param>
         /// <param name="trackEntry">The underlying track entry from the database.</param>
         /// <param name="isAdvertisable">Whether this item is advertisable (T-MCP03).</param>
-        public MusicItem(ContentItemId id, ContentWorkId workId, AlbumTargetTrackEntry trackEntry, bool isAdvertisable = false)
+        public MusicItem(ContentItemId id, ContentWorkId? workId, AlbumTargetTrackEntry trackEntry, bool isAdvertisable = false)
         {
             Id = id;
             WorkId = workId;
@@ -145,6 +145,29 @@ namespace slskd.VirtualSoulfind.Core.Music
             var workId = MusicDomainMapping.ReleaseIdToContentWorkId(trackEntry.ReleaseId);
 
             return new MusicItem(itemId, workId, trackEntry, isAdvertisable);
+        }
+
+        /// <summary>
+        ///     Creates a conservative <see cref="MusicItem"/> from recording-level fallback data.
+        /// </summary>
+        public static MusicItem FromRecordingFallback(
+            string recordingId,
+            string title,
+            string? artist,
+            int? durationMs,
+            bool isAdvertisable = false)
+        {
+            var itemId = MusicDomainMapping.RecordingIdToContentItemId(recordingId);
+            var fallbackTrack = new AlbumTargetTrackEntry
+            {
+                ReleaseId = string.Empty,
+                RecordingId = recordingId,
+                Title = string.IsNullOrWhiteSpace(title) ? recordingId : title,
+                Artist = artist ?? string.Empty,
+                DurationMs = durationMs,
+            };
+
+            return new MusicItem(itemId, null, fallbackTrack, isAdvertisable);
         }
     }
 }

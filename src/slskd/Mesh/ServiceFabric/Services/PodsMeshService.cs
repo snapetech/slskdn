@@ -84,7 +84,8 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not yet implemented for pods service");
+        _logger.LogWarning("[PodsMeshService] Streaming requested by {PeerId}, but pods streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     private async Task<ServiceReply> HandleListAsync(

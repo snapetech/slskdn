@@ -109,31 +109,10 @@ public class ContentLinkService : IContentLinkService
             return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
         }
 
-        var results = new List<ContentSearchResult>();
-
         try
         {
-            // Search MusicBrainz for audio content
-            if (domain == null || domain.Equals(ContentDomains.Audio, StringComparison.OrdinalIgnoreCase))
-            {
-                // For now, return placeholder results since we don't have a search API
-                // In a full implementation, this would search MusicBrainz, Discogs, etc.
-                results.AddRange(new[]
-                {
-                    new ContentSearchResult(
-                        ContentId: ContentIdParser.Create(ContentDomains.Audio, ContentDomains.AudioArtist, "search-placeholder"),
-                        Title: $"Search results for: {query}",
-                        Subtitle: "MusicBrainz integration pending",
-                        Type: ContentDomains.AudioArtist,
-                        Domain: ContentDomains.Audio,
-                        Metadata: new Dictionary<string, string>
-                        {
-["note"] = "Search integration requires additional API endpoints"
-                        })
-                });
-            }
-
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(results.Take(limit).ToList());
+            _logger.LogWarning("Content search requested for query '{Query}' (domain: {Domain}), but search integration is not implemented", query, domain ?? "all");
+            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
         }
         catch (Exception ex)
         {
@@ -209,20 +188,7 @@ public class ContentLinkService : IContentLinkService
 
     private Task<ContentMetadata?> GetVideoMetadataAsync(ContentId parsed, CancellationToken ct)
     {
-        // Placeholder for video content (IMDb, TMDB, etc.)
-        // For now, return basic metadata without external validation
-        return Task.FromResult<ContentMetadata?>(new ContentMetadata(
-            ContentId: parsed.FullId,
-            Title: $"{parsed.Type}: {parsed.Id}",
-            Artist: "Unknown",
-            Type: parsed.Type,
-            Domain: ContentDomains.Video,
-            AdditionalInfo: new Dictionary<string, string>
-            {
-                ["id"] = parsed.Id,
-                ["domain"] = ContentDomains.Video,
-                ["type"] = parsed.Type,
-                ["note"] = "Video metadata integration pending"
-            }));
+        _logger.LogWarning("Video metadata requested for {ContentId}, but video metadata integration is not implemented", parsed.FullId);
+        return Task.FromResult<ContentMetadata?>(null);
     }
 }

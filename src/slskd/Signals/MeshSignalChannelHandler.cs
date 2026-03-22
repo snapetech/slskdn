@@ -38,8 +38,13 @@ public class MeshSignalChannelHandler : ISignalChannelHandler
         if (!options.MeshChannel.Enabled)
             return false;
 
-        // TODO: Check if Mesh has a route to this peer
-        // For now, assume we can send if Mesh is enabled
+        if (string.IsNullOrWhiteSpace(peerId))
+            return false;
+
+        if (string.Equals(peerId, localPeerId, StringComparison.Ordinal))
+            return false;
+
+        // Route discovery is not exposed here, so only claim sendability for structurally valid remote peers.
         return true;
     }
 

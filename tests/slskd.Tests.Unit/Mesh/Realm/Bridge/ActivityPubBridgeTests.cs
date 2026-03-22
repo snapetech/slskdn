@@ -5,14 +5,19 @@
 namespace slskd.Tests.Unit.Mesh.Realm.Bridge
 {
     using System;
+    using System.Net;
     using System.Net.Http;
+    using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
+    using slskd.Common;
     using slskd.Mesh.Realm;
     using slskd.Mesh.Realm.Bridge;
     using slskd.SocialFederation;
+    using slskd.VirtualSoulfind.Core.Music;
     using Xunit;
 
     /// <summary>
@@ -56,15 +61,27 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
 
         private static FederationService CreateFederationService()
         {
-            var fedOpts = Mock.Of<IOptionsMonitor<slskd.Common.SocialFederationOptions>>(x => x.CurrentValue == new slskd.Common.SocialFederationOptions());
+            var fedOpts = Mock.Of<IOptionsMonitor<SocialFederationOptions>>(x => x.CurrentValue == new SocialFederationOptions
+            {
+                Enabled = true,
+                Mode = "Public",
+                BaseUrl = "https://local.example"
+            });
             var pubOpts = Mock.Of<IOptionsMonitor<FederationPublishingOptions>>(x => x.CurrentValue == new FederationPublishingOptions());
+            var relationshipStore = Mock.Of<IActivityPubRelationshipStore>();
             var keyStore = Mock.Of<IActivityPubKeyStore>();
             var loggerFactory = new LoggerFactory();
             var libLogger = loggerFactory.CreateLogger<LibraryActorService>();
-            var libActor = new LibraryActorService(fedOpts, keyStore, musicActor: null, libLogger, loggerFactory);
-            var http = new HttpClient();
+            var musicProvider = Mock.Of<IMusicContentDomainProvider>();
+            var musicActor = new MusicLibraryActor(
+                fedOpts,
+                keyStore,
+                musicProvider,
+                loggerFactory.CreateLogger<MusicLibraryActor>());
+            var libActor = new LibraryActorService(fedOpts, keyStore, musicActor, libLogger, loggerFactory);
+            var http = new HttpClient(new StubActivityPubHandler());
             var delivery = new ActivityDeliveryService(http, fedOpts, pubOpts, keyStore, Mock.Of<ILogger<ActivityDeliveryService>>());
-            return new FederationService(fedOpts, pubOpts, libActor, keyStore, delivery, Mock.Of<ILogger<FederationService>>());
+            return new FederationService(fedOpts, pubOpts, libActor, relationshipStore, keyStore, delivery, Mock.Of<ILogger<FederationService>>());
         }
 
         private static ActivityPubBridge CreateBridge(BridgeFlowEnforcer? enforcer = null)
@@ -80,7 +97,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
             var bridge = CreateBridge();
 
             // Act
-            var result = await bridge.FollowRemoteActorAsync("realm-a", "realm-b", "actor-123");
+            var result = await bridge.FollowRemoteActorAsync("realm-a", "realm-b", "https://remote.example/actors/alice");
 
             // Assert
             Assert.True(result.Success);
@@ -99,6 +116,20 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
             // Assert
             Assert.True(result.Success);
             Assert.NotNull(result.Data);
+        }
+
+        private sealed class StubActivityPubHandler : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                if (request.Method == HttpMethod.Post &&
+                    request.RequestUri?.ToString() == "https://remote.example/actors/alice/inbox")
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted));
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
         }
 
         [Fact]
@@ -198,5 +229,3 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
     }
 }
-
-

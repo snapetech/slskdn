@@ -38,6 +38,8 @@ namespace slskd.Transfers.Rescue
         private readonly IRescueService rescueService;
         private readonly IOptionsMonitor<slskd.Options> options;
         private readonly ILogger log = Log.ForContext<UnderperformanceDetectorHostedService>();
+        private CancellationTokenSource? loopCts;
+        private Task? loopTask;
 
         // For Stalled rule: transferId -> (lastBytesTransferred, first time we saw no progress)
         private readonly ConcurrentDictionary<Guid, (long LastBytes, DateTime? FirstNoProgressAt)> stalledState = new();
@@ -56,12 +58,33 @@ namespace slskd.Transfers.Rescue
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             log.Information("[RESCUE] Underperformance detector started");
-            _ = RunLoopAsync(cancellationToken);
+            loopCts?.Dispose();
+            loopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            loopTask = Task.Run(() => RunLoopAsync(loopCts.Token), CancellationToken.None);
             await Task.CompletedTask;
         }
 
         /// <inheritdoc />
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            loopCts?.Cancel();
+
+            if (loopTask != null)
+            {
+                try
+                {
+                    await loopTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown.
+                }
+            }
+
+            loopTask = null;
+            loopCts?.Dispose();
+            loopCts = null;
+        }
 
         private async Task RunLoopAsync(CancellationToken ct)
         {

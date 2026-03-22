@@ -17,15 +17,17 @@ public class MetadataPortabilityTests
 {
     private readonly MetadataPortability _portability;
     private readonly Mock<IContentIdRegistry> _registryMock;
+    private readonly Mock<IDescriptorRetriever> _descriptorRetrieverMock;
     private readonly Mock<IIpldMapper> _ipldMapperMock;
     private readonly Mock<ILogger<MetadataPortability>> _loggerMock;
 
     public MetadataPortabilityTests()
     {
         _registryMock = new Mock<IContentIdRegistry>();
+        _descriptorRetrieverMock = new Mock<IDescriptorRetriever>();
         _ipldMapperMock = new Mock<IIpldMapper>();
         _loggerMock = new Mock<ILogger<MetadataPortability>>();
-        _portability = new MetadataPortability(_registryMock.Object, _ipldMapperMock.Object, _loggerMock.Object);
+        _portability = new MetadataPortability(_registryMock.Object, _descriptorRetrieverMock.Object, _ipldMapperMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -36,6 +38,14 @@ public class MetadataPortabilityTests
 
         _registryMock.Setup(r => r.FindByDomainAsync(It.IsAny<string>(), default))
             .ReturnsAsync(Array.Empty<string>());
+        _descriptorRetrieverMock.Setup(r => r.RetrieveAsync(It.IsAny<string>(), false, default))
+            .ReturnsAsync(new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor(),
+                RetrievedAt: DateTimeOffset.UtcNow,
+                RetrievalDuration: TimeSpan.Zero,
+                FromCache: false,
+                Verification: null));
 
         // Act
         var package = await _portability.ExportAsync(contentIds, includeLinks: true);
@@ -266,4 +276,3 @@ public class MetadataPortabilityTests
         Assert.Equal(priority, source.Priority);
     }
 }
-

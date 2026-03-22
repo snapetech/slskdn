@@ -166,11 +166,8 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                 // Cancel active download task if exists
                                 if (activeDownloadTasks.TryRemove(chunkIndex, out var downloadTask))
                                 {
-                                    try
-                                    {
-                                        // Task will handle cancellation and re-queue the chunk
-                                    }
-                                    catch { }
+                                    // Task will handle cancellation and re-queue the chunk.
+                                    _ = downloadTask;
                                 }
 
                                 // Re-queue chunk for reassignment
@@ -441,7 +438,14 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 else
                 {
                     // Clean up partial file
-                    try { IOFile.Delete(tempFile); } catch { }
+                    try
+                    {
+                        IOFile.Delete(tempFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogDebug(ex, "[SwarmOrchestrator] Failed to delete partial chunk file {Path}", tempFile);
+                    }
 
                     return new ChunkResult
                     {
@@ -480,7 +484,17 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 chunk.Index, peerId);
 
             // Clean up on error
-            try { if (IOFile.Exists(tempFile)) IOFile.Delete(tempFile); } catch { }
+            try
+            {
+                if (IOFile.Exists(tempFile))
+                {
+                    IOFile.Delete(tempFile);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                logger.LogDebug(cleanupEx, "[SwarmOrchestrator] Failed to cleanup chunk file {Path}", tempFile);
+            }
 
             return new ChunkResult
             {

@@ -24,6 +24,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
     using Microsoft.Extensions.Logging;
     using Moq;
     using slskd.Common.Moderation;
+    using slskd.MediaCore;
     using slskd.Shares;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
@@ -109,7 +110,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             mockShareRepo.Setup(r => r.FindContentItem(trackId))
                 .Returns(("Music", releaseGroupId, "02_Paranoid_Android.flac", true, string.Empty, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
 
-            var localBackend = new LocalLibraryBackend(mockShareRepo.Object);
+            var contentIdRegistry = new ContentIdRegistry();
+            await contentIdRegistry.RegisterAsync("mb:recording:" + ContentItemId.Parse(trackId).Value, trackId);
+            var localBackend = new LocalLibraryBackend(mockShareRepo.Object, contentIdRegistry);
 
             var itemId = ContentItemId.Parse(trackId);
             var meshBackend = new MockContentBackend(ContentBackendType.MeshDht, ContentDomain.Music);
@@ -157,7 +160,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
                 PlanningMode.SoulseekFriendly);
 
             // 6. Match engine for verification
-            var matchEngine = new SimpleMatchEngine();
+            var matchEngine = new SimpleMatchEngine(catalogueStore);
 
             // ========== ACT: Full flow ==========
 

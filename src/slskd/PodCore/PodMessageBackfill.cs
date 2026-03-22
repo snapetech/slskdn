@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using slskd.Identity;
 using slskd.Mesh.Overlay;
 
 /// <summary>
@@ -22,6 +23,8 @@ public class PodMessageBackfill : IPodMessageBackfill
     private readonly IPodMessageStorage _messageStorage;
     private readonly IPodMessageRouter _messageRouter;
     private readonly IOverlayClient _overlayClient;
+    private readonly IPodService _podService;
+    private readonly IProfileService _profileService;
     private readonly ILogger<PodMessageBackfill> _logger;
 
     // Track last seen timestamps per pod/channel
@@ -32,6 +35,7 @@ public class PodMessageBackfill : IPodMessageBackfill
     private long _totalBackfillRequestsReceived;
     private long _totalMessagesBackfilled;
     private long _totalBackfillBytesTransferred;
+    private long _totalBackfillDurationMs;
     private readonly ConcurrentDictionary<string, long> _backfillRequestsByPod = new();
     private DateTimeOffset _lastBackfillOperation = DateTimeOffset.MinValue;
     private readonly object _statsLock = new();
@@ -46,11 +50,15 @@ public class PodMessageBackfill : IPodMessageBackfill
         IPodMessageStorage messageStorage,
         IPodMessageRouter messageRouter,
         IOverlayClient overlayClient,
+        IPodService podService,
+        IProfileService profileService,
         ILogger<PodMessageBackfill> logger)
     {
         _messageStorage = messageStorage;
         _messageRouter = messageRouter;
         _overlayClient = overlayClient;
+        _podService = podService;
+        _profileService = profileService;
         _logger = logger;
     }
 
@@ -106,7 +114,8 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             // Get pod members (excluding ourselves)
             var podMembers = await GetPodMembersAsync(podId, ct);
-            var targetPeers = podMembers.Where(m => m.PeerId != GetLocalPeerId()).ToList();
+            var localPeerId = await GetLocalPeerIdAsync(ct);
+            var targetPeers = podMembers.Where(m => m.PeerId != localPeerId).ToList();
 
             if (!targetPeers.Any())
             {
@@ -119,17 +128,13 @@ public class PodMessageBackfill : IPodMessageBackfill
             foreach (var peer in targetPeers.Take(3))
             {
                 await semaphore.WaitAsync(ct);
-                var task = Task.Run(async () =>
-                {
-                    try
-                    {
-                        return await RequestBackfillFromPeerAsync(podId, peer.PeerId, channelsNeedingBackfill, ct);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-                }, ct);
+                var task = RequestBackfillWithConcurrencyLimitAsync(
+                    semaphore,
+                    podId,
+                    peer.PeerId,
+                    channelsNeedingBackfill,
+                    localPeerId,
+                    ct);
                 backfillTasks.Add(task);
             }
 
@@ -147,6 +152,7 @@ public class PodMessageBackfill : IPodMessageBackfill
             }
 
             Interlocked.Add(ref _totalMessagesBackfilled, totalMessagesReceived);
+            Interlocked.Add(ref _totalBackfillDurationMs, (long)stopwatch.Elapsed.TotalMilliseconds);
             _lastBackfillOperation = DateTimeOffset.UtcNow;
 
             _logger.LogInformation("Backfill sync completed for pod {PodId}: {Channels} channels, {Messages} messages received in {Duration}ms",
@@ -159,6 +165,24 @@ public class PodMessageBackfill : IPodMessageBackfill
         {
             _logger.LogError(ex, "Error during backfill sync for pod {PodId}", podId);
             return new PodBackfillResult(false, podId, channelsRequested, totalMessagesReceived, stopwatch.Elapsed, ex.Message);
+        }
+    }
+
+    private async Task<PodBackfillProcessingResult> RequestBackfillWithConcurrencyLimitAsync(
+        SemaphoreSlim semaphore,
+        string podId,
+        string peerId,
+        Dictionary<string, MessageRange> channelsNeedingBackfill,
+        string localPeerId,
+        CancellationToken ct)
+    {
+        try
+        {
+            return await RequestBackfillFromPeerAsync(podId, peerId, channelsNeedingBackfill, localPeerId, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            semaphore.Release();
         }
     }
 
@@ -227,7 +251,7 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             var response = new PodBackfillResponse(
                 PodId: podId,
-                RespondingPeerId: GetLocalPeerId(),
+                RespondingPeerId: await GetLocalPeerIdAsync(ct),
                 ChannelMessages: channelMessages,
                 HasMoreData: hasMoreData,
                 ResponseTimestamp: DateTimeOffset.UtcNow);
@@ -340,7 +364,9 @@ public class PodMessageBackfill : IPodMessageBackfill
         lock (_statsLock)
         {
             // Calculate average duration (simplified - would need to track individual durations)
-            var avgDuration = _totalBackfillRequestsSent > 0 ? 5000.0 : 0.0; // Placeholder
+            var avgDuration = _totalBackfillRequestsSent > 0
+                ? (double)_totalBackfillDurationMs / _totalBackfillRequestsSent
+                : 0.0;
 
             return Task.FromResult(new PodBackfillStats(
                 TotalBackfillRequestsSent: _totalBackfillRequestsSent,
@@ -362,53 +388,68 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     private Task<IReadOnlyList<PodMember>> GetPodMembersAsync(string podId, CancellationToken ct)
     {
-        // This would need to be implemented to get pod members
-        // For now, return empty list - this needs integration with pod membership service
-        _logger.LogWarning("GetPodMembersAsync not implemented - needs integration with pod membership service");
-        return Task.FromResult<IReadOnlyList<PodMember>>(Array.Empty<PodMember>());
+        return _podService.GetMembersAsync(podId, ct);
     }
 
-    private string GetLocalPeerId()
+    private async Task<string> GetLocalPeerIdAsync(CancellationToken ct)
     {
-        // This should return the local peer ID
-        // For now, return a placeholder
-        return "local-peer";
+        var profile = await _profileService.GetMyProfileAsync(ct).ConfigureAwait(false);
+        return profile.PeerId;
     }
 
-    private Task<PodBackfillProcessingResult> RequestBackfillFromPeerAsync(
+    private async Task<PodBackfillProcessingResult> RequestBackfillFromPeerAsync(
         string podId,
         string peerId,
         Dictionary<string, MessageRange> channelRanges,
+        string localPeerId,
         CancellationToken ct)
     {
-        _ = ct;
-
         try
         {
             _logger.LogDebug("Requesting backfill from peer {PeerId} for pod {PodId}", peerId, podId);
+            _backfillRequestsByPod.AddOrUpdate(podId, 1, (_, count) => count + 1);
 
             // Create backfill request message
-            var requestMessage = CreateBackfillRequestMessage(podId, channelRanges);
+            var requestMessage = CreateBackfillRequestMessage(podId, channelRanges, localPeerId);
+            requestMessage.PodId = podId;
 
-            // Send via overlay network (this would need to be implemented)
-            // await _overlayClient.SendMessageAsync(peerId, requestMessage, ct);
+            var routing = await _messageRouter.RouteMessageToPeersAsync(requestMessage, new[] { peerId }, ct).ConfigureAwait(false);
+            if (!routing.Success)
+            {
+                return new PodBackfillProcessingResult(
+                    false,
+                    podId,
+                    peerId,
+                    0,
+                    0,
+                    0,
+                    TimeSpan.Zero,
+                    "Backfill request delivery failed.");
+            }
 
-            // For now, simulate a response (this needs proper overlay integration)
-            _logger.LogWarning("Backfill request sending not implemented - needs overlay client integration");
-
-            return Task.FromResult(new PodBackfillProcessingResult(
-                true, podId, peerId, 0, 0, 0, TimeSpan.Zero, "Not implemented"));
-
+            return new PodBackfillProcessingResult(
+                false,
+                podId,
+                peerId,
+                0,
+                0,
+                0,
+                TimeSpan.Zero,
+                "Backfill request delivery succeeded, but response handling is not implemented.");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error requesting backfill from peer {PeerId} for pod {PodId}", peerId, podId);
-            return Task.FromResult(new PodBackfillProcessingResult(
-                false, podId, peerId, 0, 0, 0, TimeSpan.Zero, ex.Message));
+            return new PodBackfillProcessingResult(
+                false, podId, peerId, 0, 0, 0, TimeSpan.Zero, ex.Message);
         }
     }
 
-    private PodMessage CreateBackfillRequestMessage(string podId, Dictionary<string, MessageRange> channelRanges)
+    private static PodMessage CreateBackfillRequestMessage(string podId, Dictionary<string, MessageRange> channelRanges, string localPeerId)
     {
         // Create a special message type for backfill requests
         var requestData = new
@@ -421,8 +462,9 @@ public class PodMessageBackfill : IPodMessageBackfill
         return new PodMessage
         {
             MessageId = $"backfill-request:{podId}:{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+            PodId = podId,
             ChannelId = "system", // Special system channel for backfill
-            SenderPeerId = GetLocalPeerId(),
+            SenderPeerId = localPeerId,
             Body = System.Text.Json.JsonSerializer.Serialize(requestData),
             TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             Signature = string.Empty, // Would need proper signing

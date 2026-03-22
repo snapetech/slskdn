@@ -54,7 +54,10 @@ public sealed class MeshContentMeshService : IMeshService
     public string ServiceName => "MeshContent";
 
     public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Streaming not implemented for MeshContent");
+    {
+        _logger.LogWarning("[MeshContent] Streaming requested by {PeerId}, but MeshContent streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
+    }
 
     public async Task<ServiceReply> HandleCallAsync(ServiceCall call, MeshServiceContext context, CancellationToken cancellationToken = default)
     {

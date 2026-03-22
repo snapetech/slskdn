@@ -6,6 +6,7 @@ namespace slskd.Tests.Unit.SocialFederation
 {
     using System;
     using System.Net.Http;
+    using System.Reflection;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -27,6 +28,7 @@ namespace slskd.Tests.Unit.SocialFederation
     {
         private readonly Mock<IOptionsMonitor<SocialFederationOptions>> _federationOptionsMock = new();
         private readonly Mock<IOptionsMonitor<FederationPublishingOptions>> _publishingOptionsMock = new();
+        private readonly Mock<IActivityPubRelationshipStore> _relationshipStoreMock = new();
         private readonly Mock<IActivityPubKeyStore> _keyStoreMock = new();
         private readonly Mock<ILogger<FederationService>> _loggerMock = new();
         private readonly HttpClient _httpClient = new();
@@ -70,6 +72,7 @@ namespace slskd.Tests.Unit.SocialFederation
                 _federationOptionsMock.Object,
                 _publishingOptionsMock.Object,
                 libraryActorService,
+                _relationshipStoreMock.Object,
                 _keyStoreMock.Object,
                 _deliveryService,
                 _loggerMock.Object);
@@ -204,7 +207,23 @@ namespace slskd.Tests.Unit.SocialFederation
             var result = service.CanPublishContent("music", true);
             Assert.False(result);
         }
+
+        [Fact]
+        public void GetLocalActorName_WithBlankBaseUrl_ReturnsNullInsteadOfThrowing()
+        {
+            _federationOptionsMock.Setup(x => x.CurrentValue).Returns(new SocialFederationOptions
+            {
+                Enabled = true,
+                Mode = "Public",
+                BaseUrl = string.Empty,
+            });
+
+            var service = CreateService();
+            var method = typeof(FederationService).GetMethod("GetLocalActorName", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            var result = method!.Invoke(service, new object[] { "https://example.com/actors/music" });
+
+            Assert.Null(result);
+        }
     }
 }
-
-

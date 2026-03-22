@@ -128,6 +128,37 @@ namespace slskd.Tests.Unit.Mesh.Gossip
         }
 
         [Fact]
+        public async Task PublishForRealmAsync_WithFailingHandler_StillInvokesOtherHandlers()
+        {
+            var service = CreateService();
+            var failingHandler = new Mock<IGossipMessageHandler>();
+            var successfulHandler = new Mock<IGossipMessageHandler>();
+            var message = new GossipMessage
+            {
+                Id = "fanout-message",
+                Type = "health",
+                Originator = "test-pod"
+            };
+
+            failingHandler
+                .Setup(x => x.HandleAsync(It.IsAny<GossipMessage>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("boom"));
+
+            successfulHandler
+                .Setup(x => x.HandleAsync(It.IsAny<GossipMessage>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            service.SubscribeForRealm("health", "test-realm", failingHandler.Object);
+            service.SubscribeForRealm("health", "test-realm", successfulHandler.Object);
+
+            await service.PublishForRealmAsync(message, "test-realm");
+
+            successfulHandler.Verify(
+                x => x.HandleAsync(It.Is<GossipMessage>(m => m.Id == "fanout-message"), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task HandleIncomingMessageAsync_WithUnknownRealm_IgnoresMessage()
         {
             // Arrange
@@ -336,5 +367,4 @@ namespace slskd.Tests.Unit.Mesh.Gossip
         }
     }
 }
-
 

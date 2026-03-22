@@ -54,7 +54,7 @@ public interface ISoulseekHealthMonitor
 }
 
 /// <summary>
-/// Monitors Soulseek server health and triggers disaster mode when unavailable.
+/// Monitors Soulseek server health and can trigger the opt-in legacy fallback when unavailable.
 /// Phase 6D: T-821 - Real implementation.
 /// </summary>
 public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
@@ -110,8 +110,9 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
             return monitoringTask;
         }
 
+        monitoringCts?.Dispose();
         monitoringCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        monitoringTask = Task.Run(async () => await MonitorLoopAsync(monitoringCts.Token), ct);
+        monitoringTask = Task.Run(() => MonitorLoopAsync(monitoringCts.Token), CancellationToken.None);
 
         logger.LogInformation("[VSF-HEALTH] Health monitoring started");
         return Task.CompletedTask;
@@ -122,10 +123,25 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
         return StartMonitoringAsync(cancellationToken);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         monitoringCts?.Cancel();
-        return Task.CompletedTask;
+
+        if (monitoringTask != null)
+        {
+            try
+            {
+                await monitoringTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+        }
+
+        monitoringTask = null;
+        monitoringCts?.Dispose();
+        monitoringCts = null;
     }
 
     private async Task MonitorLoopAsync(CancellationToken ct)
@@ -139,13 +155,24 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
                 var health = await CheckHealthAsync(ct);
                 CurrentHealth = health;
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "[VSF-HEALTH] Health check failed");
                 CurrentHealth = SoulseekHealth.Unavailable;
             }
 
-            await Task.Delay(checkInterval, ct);
+            try
+            {
+                await Task.Delay(checkInterval, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
         }
 
         logger.LogInformation("[VSF-HEALTH] Health monitoring stopped");

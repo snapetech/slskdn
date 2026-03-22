@@ -44,16 +44,16 @@ public class ShadowIndexDescriptorSource : IContentDescriptorSource
         try
         {
             var result = await shadowIndex.QueryAsync(mbid, ct);
-            if (result == null) return null;
-
-            var descriptor = new ContentDescriptor
+            if (result == null)
             {
-                ContentId = contentId,
+                return null;
+            }
 
-                // Hashes are unknown; we rely on content ID and confidence only.
-                Hashes = new List<ContentHash>(),
-                Confidence = 0.8 // heuristic: from shadow index
-            };
+            var descriptor = BuildDescriptor(contentId, result);
+            if (descriptor == null)
+            {
+                logger.LogDebug("[MediaCore] ShadowIndex returned no usable variant hints for {ContentId}", contentId);
+            }
 
             return descriptor;
         }
@@ -62,5 +62,39 @@ public class ShadowIndexDescriptorSource : IContentDescriptorSource
             logger.LogDebug(ex, "[MediaCore] ShadowIndex lookup failed for {ContentId}", contentId);
             return null;
         }
+    }
+
+    private static ContentDescriptor? BuildDescriptor(string contentId, ShadowIndexQueryResult result)
+    {
+        var variants = result.CanonicalVariants
+            .Where(variant => variant != null)
+            .OrderByDescending(variant => variant.QualityScore)
+            .ThenByDescending(variant => variant.SizeBytes)
+            .ToList();
+        if (variants.Count == 0)
+        {
+            return null;
+        }
+
+        var bestVariant = variants[0];
+        var hashes = variants
+            .Where(variant => variant.HashPrefix != null && variant.HashPrefix.Length > 0)
+            .Select(variant => new ContentHash("sha256-prefix16", Convert.ToHexString(variant.HashPrefix).ToLowerInvariant()))
+            .Distinct()
+            .ToList();
+        var confidence = Math.Min(0.98,
+            0.55 +
+            Math.Min(0.15, result.TotalPeerCount * 0.03) +
+            Math.Min(0.18, Math.Max(0.0, bestVariant.QualityScore) * 0.18));
+
+        return new ContentDescriptor
+        {
+            ContentId = contentId,
+            Hashes = hashes,
+            SizeBytes = bestVariant.SizeBytes > 0 ? bestVariant.SizeBytes : null,
+            Codec = string.IsNullOrWhiteSpace(bestVariant.Codec) ? null : bestVariant.Codec,
+            Confidence = confidence,
+            IsAdvertisable = true,
+        };
     }
 }

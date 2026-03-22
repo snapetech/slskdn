@@ -52,17 +52,9 @@ public sealed class ShareGrantAnnouncementService
 
         _log.LogInformation("[ShareGrantInbox] Received SHAREGRANT message from {User}", e.Username);
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await HandleAnnouncementAsync(e.Message.Substring(Prefix.Length), CancellationToken.None).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "[ShareGrantInbox] Failed to handle announcement from {User}", e.Username);
-            }
-        });
+        _ = ObserveBackgroundTaskAsync(
+            Task.Run(() => HandleAnnouncementAsync(e.Message.Substring(Prefix.Length), CancellationToken.None), CancellationToken.None),
+            e.Username);
     }
 
     private async Task HandleAnnouncementAsync(string payload, CancellationToken ct)
@@ -211,6 +203,18 @@ public sealed class ShareGrantAnnouncementService
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         _log.LogInformation("[ShareGrantInbox] Ingested incoming share {ShareId} for collection {CollectionId}", msg.ShareGrantId, msg.CollectionId);
+    }
+
+    private async Task ObserveBackgroundTaskAsync(Task task, string username)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[ShareGrantInbox] Failed to handle announcement from {User}", username);
+        }
     }
 }
 

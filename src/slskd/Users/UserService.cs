@@ -88,7 +88,7 @@ namespace slskd.Users
                 UpdateStatus(userStatus.Username, userStatus.ToStatus());
 
                 // the server doesn't send statistics events by itself, so when a user status changes, fetch stats at the same time.
-                _ = GetStatisticsAsync(userStatus.Username);
+                _ = ObserveBackgroundTaskAsync(GetStatisticsAsync(userStatus.Username), userStatus.Username);
             };
 
             // it's important for us to force a reconfig at login to discard any users that were previously tracked
@@ -286,9 +286,15 @@ namespace slskd.Users
             // check the user-curated list of blacklisted CIDRs that exists along with the list of
             // blacklisted usernames.  these CIDRs should be one-offs and would not be expected to appear in a
             // blacklist supplied by a third party (but might?)
-            if (ipAddress is not null && blacklist.Cidrs.Select(c => IPAddressRange.Parse(c)).Any(range => range.Contains(ipAddress)))
+            if (ipAddress is not null)
             {
-                return true;
+                foreach (var cidr in blacklist.Cidrs)
+                {
+                    if (!string.IsNullOrWhiteSpace(cidr) && IPAddressRange.TryParse(cidr, out var range) && range.Contains(ipAddress))
+                    {
+                        return true;
+                    }
+                }
             }
 
             // check the managed blacklist loaded from a third party blacklist file
@@ -464,6 +470,18 @@ namespace slskd.Users
                 key: username,
                 addValue: new User() { Status = status },
                 updateValueFactory: (key, user) => user with { Username = username, Status = status });
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string username)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to refresh statistics for user {Username} after status change", username);
+            }
         }
     }
 }

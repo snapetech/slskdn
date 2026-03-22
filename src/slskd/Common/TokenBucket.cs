@@ -80,7 +80,7 @@ namespace slskd
     /// </summary>
     public class TokenBucket : ITokenBucket, IDisposable
     {
-        private TaskCompletionSource<bool> waitForReset = new();
+        private TaskCompletionSource<bool> waitForReset = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="TokenBucket"/> class.
@@ -231,6 +231,6 @@ namespace slskd
         }
 
         private void Reset()
-            => Interlocked.Exchange(ref waitForReset, new TaskCompletionSource<bool>()).SetResult(true);
+            => Interlocked.Exchange(ref waitForReset, new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)).SetResult(true);
     }
 }

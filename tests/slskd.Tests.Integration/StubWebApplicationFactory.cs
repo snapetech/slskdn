@@ -643,6 +643,9 @@ internal class StubLibraryHealthService : ILibraryHealthService
 /// <summary>Configurable bridge API for integration tests. Resolve as StubBridgeApi to seed SearchResults/Rooms.</summary>
 internal class StubBridgeApi : IBridgeApi
 {
+    public Task<LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default) =>
+        Task.FromResult<LegacyTransferProgress?>(null);
+
     public List<BridgeUser> SearchResults { get; set; } = new();
     public List<BridgeRoom> Rooms { get; set; } = new();
 

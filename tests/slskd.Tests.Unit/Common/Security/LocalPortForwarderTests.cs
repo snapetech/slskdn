@@ -375,6 +375,37 @@ public class LocalPortForwarderTests : IDisposable
     }
 
     [Fact]
+    public async Task ForwarderConnection_MapToStream_WithPreCancelledToken_CompletesMappingCleanup()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+
+        using var client = new TcpClient();
+        var connectTask = client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+        using var acceptedClient = await listener.AcceptTcpClientAsync().ConfigureAwait(true);
+        await connectTask.ConfigureAwait(true);
+
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, _meshClientMock.Object);
+        using var connection = new ForwarderConnection(
+            "tunnel-123",
+            "pod-123",
+            "example.com",
+            80,
+            forwarder,
+            Mock.Of<ILogger>());
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        connection.MapToStream(acceptedClient.GetStream(), cts.Token);
+
+        using var waitTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await connection.WaitForStreamMappingAsync(waitTimeout.Token).ConfigureAwait(true);
+
+        Assert.False(connection.GetStats().IsStreamMapped);
+    }
+
+    [Fact]
     public async Task Dispose_CleansUpAllResources()
     {
         // Arrange

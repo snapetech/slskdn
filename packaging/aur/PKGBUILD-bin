@@ -12,6 +12,9 @@ depends=()
 makedepends=('unzip')
 optdepends=(
     'docker: for containerized deployment'
+    'ffmpeg: for audio decoding and SongID media handling'
+    'python: for SongID Python tooling'
+    'python-torchaudio: optional enhancement for advanced Python-based fingerprint and analysis workflows in SongID'
 )
 provides=('slskd' 'slskd-bin')
 conflicts=('slskd' 'slskd-bin' 'slskdN')

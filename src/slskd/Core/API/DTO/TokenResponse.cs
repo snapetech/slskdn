@@ -21,6 +21,7 @@
 namespace slskd.Core.API
 {
     using System;
+    using System.Globalization;
     using System.IdentityModel.Tokens.Jwt;
     using System.Linq;
     using System.Security.Claims;
@@ -52,7 +53,16 @@ namespace slskd.Core.API
         /// <summary>
         ///     Gets the value of the Not Before claim from the Access Token.
         /// </summary>
-        public long NotBefore => long.Parse(JwtSecurityToken.Claims.SingleOrDefault(c => c.Type == "nbf")?.Value ?? long.MaxValue.ToString());
+        public long NotBefore
+        {
+            get
+            {
+                var claim = JwtSecurityToken.Claims.SingleOrDefault(c => c.Type == "nbf")?.Value;
+                return long.TryParse(claim, NumberStyles.Integer, CultureInfo.InvariantCulture, out var nbf)
+                    ? nbf
+                    : long.MaxValue;
+            }
+        }
 
         /// <summary>
         ///     Gets the Access Token string.

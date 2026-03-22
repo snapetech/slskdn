@@ -194,8 +194,8 @@ public class MeshGatewayController : ControllerBase
                     try
                     {
                         var json = Encoding.UTF8.GetString(reply.Payload);
-                        var parsed = JsonDocument.Parse(json);
-                        return Ok(parsed.RootElement);
+                        using var parsed = JsonDocument.Parse(json);
+                        return Ok(parsed.RootElement.Clone());
                     }
                     catch
                     {

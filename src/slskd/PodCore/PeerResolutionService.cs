@@ -197,9 +197,47 @@ public class PeerResolutionService : IPeerResolutionService
 
         try
         {
-            // Support formats: "ip:port", "udp://ip:port", "tcp://ip:port"
-            var parts = endpointString.Replace("udp://", string.Empty).Replace("tcp://", string.Empty).Split(':');
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var ip) && int.TryParse(parts[1], out var port))
+            // Support formats: "ip:port", "[ipv6]:port", "udp://ip:port", "tcp://ip:port"
+            var normalized = endpointString;
+            if (normalized.StartsWith("udp://", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized["udp://".Length..];
+            }
+            else if (normalized.StartsWith("tcp://", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized["tcp://".Length..];
+            }
+
+            string hostPart;
+            string portPart;
+            if (normalized.StartsWith("[", StringComparison.Ordinal))
+            {
+                var closingBracketIndex = normalized.IndexOf(']');
+                if (closingBracketIndex <= 1 ||
+                    closingBracketIndex + 2 >= normalized.Length ||
+                    normalized[closingBracketIndex + 1] != ':')
+                {
+                    return null;
+                }
+
+                hostPart = normalized[1..closingBracketIndex];
+                portPart = normalized[(closingBracketIndex + 2)..];
+            }
+            else
+            {
+                var separatorIndex = normalized.LastIndexOf(':');
+                if (separatorIndex <= 0 || separatorIndex == normalized.Length - 1)
+                {
+                    return null;
+                }
+
+                hostPart = normalized[..separatorIndex];
+                portPart = normalized[(separatorIndex + 1)..];
+            }
+
+            if (IPAddress.TryParse(hostPart, out var ip) &&
+                int.TryParse(portPart, out var port) &&
+                port is > 0 and <= ushort.MaxValue)
             {
                 return new IPEndPoint(ip, port);
             }

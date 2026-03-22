@@ -45,6 +45,11 @@ namespace slskd.LibraryHealth.API
             [FromBody] LibraryHealthScanRequest request,
             CancellationToken ct)
         {
+            if (request == null)
+            {
+                return BadRequest(new { message = "request body is required" });
+            }
+
             log.LogInformation("Starting library health scan for path: {Path}", request.LibraryPath);
 
             var scanId = await libraryHealth.StartScanAsync(request, ct);

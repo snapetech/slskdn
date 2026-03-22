@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using slskd.DhtRendezvous.Messages;
 using slskd.DhtRendezvous.Security;
+using Serilog;
 
 using ProtocolViolationException = slskd.DhtRendezvous.Security.ProtocolViolationException;
 
@@ -489,7 +490,10 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         {
             await _sslStream.DisposeAsync();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[MeshOverlayConnection] SSL stream dispose failed for {RemoteEndpoint}", RemoteEndPoint);
+        }
 
         _tcpClient.Dispose();
     }

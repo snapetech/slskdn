@@ -86,6 +86,18 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyList<Artist>> ListArtistsAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            var results = _artists.Values
+                .OrderBy(a => a.SortName ?? a.Name)
+                .ThenBy(a => a.Name)
+                .Skip(offset)
+                .Take(limit)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<Artist>>(results);
+        }
+
         // ========== Release Group Methods ==========
         public Task<ReleaseGroup?> FindReleaseGroupByIdAsync(string releaseGroupId, CancellationToken ct = default)
         {
@@ -162,6 +174,18 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyList<Release>> ListReleasesAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            var results = _releases.Values
+                .OrderByDescending(r => r.Year ?? 0)
+                .ThenBy(r => r.Title)
+                .Skip(offset)
+                .Take(limit)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<Release>>(results);
+        }
+
         // ========== Track Methods ==========
         public Task<Track?> FindTrackByIdAsync(string trackId, CancellationToken ct = default)
         {
@@ -202,6 +226,20 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyList<Track>> ListTracksAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            var results = _tracks.Values
+                .OrderBy(t => t.ReleaseId)
+                .ThenBy(t => t.DiscNumber)
+                .ThenBy(t => t.TrackNumber)
+                .ThenBy(t => t.Title)
+                .Skip(offset)
+                .Take(limit)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<Track>>(results);
+        }
+
         // ========== Bulk Operations ==========
         public Task<int> CountArtistsAsync(CancellationToken ct = default)
         {
@@ -237,8 +275,14 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
 
         public Task<IReadOnlyList<LocalFile>> ListLocalFilesForTrackAsync(string trackId, CancellationToken ct = default)
         {
+            var verifiedLocalFileIds = _verifiedCopies.Values
+                .Where(vc => vc.TrackId == trackId)
+                .Select(vc => vc.LocalFileId)
+                .ToHashSet(StringComparer.Ordinal);
+
             var results = _localFiles.Values
-                .Where(lf => lf.InferredTrackId == trackId)
+                .Where(lf => lf.InferredTrackId == trackId || verifiedLocalFileIds.Contains(lf.LocalFileId))
+                .OrderByDescending(lf => lf.UpdatedAt)
                 .ToList();
 
             return Task.FromResult<IReadOnlyList<LocalFile>>(results);
@@ -258,6 +302,18 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             _localFiles[localFile.LocalFileId] = localFile;
             _localFilePathToId[localFile.Path] = localFile.LocalFileId;
             return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<LocalFile>> ListLocalFilesAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            var results = _localFiles.Values
+                .OrderByDescending(lf => lf.UpdatedAt)
+                .ThenBy(lf => lf.Path)
+                .Skip(offset)
+                .Take(limit)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<LocalFile>>(results);
         }
 
         public Task<int> CountLocalFilesAsync(CancellationToken ct = default)
@@ -281,6 +337,17 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             var results = _verifiedCopies.Values
                 .Where(vc => vc.TrackId == trackId)
                 .OrderByDescending(vc => vc.VerifiedAt)
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<VerifiedCopy>>(results);
+        }
+
+        public Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            var results = _verifiedCopies.Values
+                .OrderByDescending(vc => vc.VerifiedAt)
+                .Skip(offset)
+                .Take(limit)
                 .ToList();
 
             return Task.FromResult<IReadOnlyList<VerifiedCopy>>(results);

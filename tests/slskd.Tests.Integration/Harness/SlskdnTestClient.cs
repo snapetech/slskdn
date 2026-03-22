@@ -553,6 +553,9 @@ internal sealed class StubDisasterModeCoordinatorForTests : global::slskd.Virtua
 // Bridge service stubs for BridgeController and BridgeAdminController tests
 internal class StubBridgeApiForTests : global::slskd.VirtualSoulfind.Bridge.IBridgeApi
 {
+    public Task<global::slskd.VirtualSoulfind.Bridge.LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default) =>
+        Task.FromResult<global::slskd.VirtualSoulfind.Bridge.LegacyTransferProgress?>(null);
+
     public Task<global::slskd.VirtualSoulfind.Bridge.BridgeSearchResult> SearchAsync(string query, CancellationToken ct = default) =>
         Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeSearchResult
         {

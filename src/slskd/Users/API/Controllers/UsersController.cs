@@ -125,12 +125,9 @@ namespace slskd.Users.API
             try
             {
                 var result = await Client.BrowseAsync(username);
+                BrowseTracker.TryGet(username, out var completedProgress);
 
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(5000);
-                    BrowseTracker.TryRemove(username);
-                });
+                _ = ObserveBrowseCleanupAsync(username, completedProgress);
 
                 return Ok(result);
             }
@@ -162,6 +159,26 @@ namespace slskd.Users.API
             }
 
             return NotFound();
+        }
+
+        private async Task ObserveBrowseCleanupAsync(string username, BrowseProgressUpdatedEventArgs? completedProgress)
+        {
+            try
+            {
+                await Task.Delay(5000).ConfigureAwait(false);
+
+                if (completedProgress is null)
+                {
+                    BrowseTracker.TryRemove(username);
+                    return;
+                }
+
+                BrowseTracker.TryRemove(username, completedProgress);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to clean up browse tracker entry for {Username}", username);
+            }
         }
 
         /// <summary>

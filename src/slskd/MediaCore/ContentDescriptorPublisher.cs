@@ -85,10 +85,17 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 }
             }
 
-            // Ensure descriptor has proper signature
             if (descriptor.Signature == null)
             {
-                descriptor.Signature = CreateSignature(descriptor, version);
+                return new DescriptorPublishResult(
+                    Success: false,
+                    ContentId: descriptor.ContentId,
+                    Version: version,
+                    PublishedAt: startTime,
+                    Ttl: ttl,
+                    ErrorMessage: "Descriptor signature is required; automatic signing is not implemented.",
+                    WasUpdated: false,
+                    PreviousVersion: existingInfo?.Version);
             }
 
             // Publish using base publisher
@@ -205,31 +212,15 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
 
         try
         {
-            // This would need to retrieve the existing descriptor, apply updates, and republish
-            // For now, return a placeholder implementation
-            var appliedUpdates = new List<string>();
-
-            if (updates.NewCodec != null) appliedUpdates.Add("codec");
-            if (updates.NewSizeBytes.HasValue) appliedUpdates.Add("size");
-            if (updates.NewConfidence.HasValue) appliedUpdates.Add("confidence");
-            if (updates.AdditionalHashes?.Any() == true) appliedUpdates.Add("hashes");
-            if (updates.AdditionalPerceptualHashes?.Any() == true) appliedUpdates.Add("perceptualHashes");
-            if (!string.IsNullOrWhiteSpace(updates.Notes)) appliedUpdates.Add("notes");
-
-            var newVersion = GenerateVersionFromUpdates(contentId, updates);
             var previousVersion = _publishedDescriptors.TryGetValue(contentId, out var info) ? info.Version : "unknown";
-
-            // In a real implementation, this would create an updated descriptor and publish it
-            _logger.LogInformation(
-                "[ContentDescriptorPublisher] Updated {ContentId} from v{PreviousVersion} to v{NewVersion} ({Updates})",
-                contentId, previousVersion, newVersion, string.Join(", ", appliedUpdates));
-
+            _logger.LogWarning("[ContentDescriptorPublisher] Update requested for {ContentId}, but descriptor update/republish is not implemented", contentId);
             return Task.FromResult(new DescriptorUpdateResult(
-                Success: true,
+                Success: false,
                 ContentId: contentId,
-                NewVersion: newVersion,
+                NewVersion: previousVersion,
                 PreviousVersion: previousVersion,
-                AppliedUpdates: appliedUpdates));
+                AppliedUpdates: Array.Empty<string>(),
+                ErrorMessage: "Descriptor update/republish is not implemented."));
         }
         catch (Exception ex)
         {
@@ -267,23 +258,10 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
             {
                 if (info.ExpiresAt <= expiringThreshold)
                 {
-                    try
-                    {
-                        // In a real implementation, retrieve the descriptor and republish
-                        // For now, just update the expiry time
-                        var newInfo = info with { ExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(_options.MaxTtlMinutes) };
-                        _publishedDescriptors[contentId] = newInfo;
-                        republished++;
-
-                        _logger.LogInformation(
-                            "[ContentDescriptorPublisher] Republished {ContentId} (was expiring at {Expiry})",
-                            contentId, info.ExpiresAt);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "[ContentDescriptorPublisher] Failed to republish {ContentId}", contentId);
-                        failed++;
-                    }
+                    _logger.LogWarning(
+                        "[ContentDescriptorPublisher] Descriptor {ContentId} is expiring at {Expiry}, but republish is not implemented",
+                        contentId, info.ExpiresAt);
+                    failed++;
                 }
                 else
                 {
@@ -395,33 +373,10 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
         return $"{timestamp}-{versionHash}";
     }
 
-    private static string GenerateVersionFromUpdates(string contentId, DescriptorUpdates updates)
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var content = $"{contentId}:{updates.NewCodec}:{updates.NewSizeBytes}:{updates.NewConfidence}";
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
-        var versionHash = BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 8).ToLower();
-
-        return $"{timestamp}-{versionHash}";
-    }
-
     private static bool IsNewerVersion(string newVersion, string existingVersion)
     {
         // Simple version comparison - in practice, this might be more sophisticated
         return string.CompareOrdinal(newVersion, existingVersion) > 0;
-    }
-
-    private static DescriptorSignature CreateSignature(ContentDescriptor descriptor, string version)
-    {
-        // In a real implementation, this would create a cryptographic signature
-        // For now, create a mock signature
-        var signatureData = $"{descriptor.ContentId}:{version}:{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
-        var signatureHash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(signatureData));
-
-        return new DescriptorSignature(
-            PublicKey: "mock-public-key",
-            Signature: BitConverter.ToString(signatureHash).Replace("-", string.Empty).ToLower(),
-            TimestampUnixMs: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     }
 }
 

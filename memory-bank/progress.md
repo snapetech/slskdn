@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-03-22 03:08 - Background task scheduler-token hardening batch
+
+### Completed
+- Fixed DHT `Ping` follow-up routing-table updates so they still queue when the incoming request token is already canceled; the reply path no longer reports success while silently dropping the peer touch.
+- Hardened detached startup/background work in `HashDbOptimizationHostedService`, `MultiRealmHostedService`, and `SoulseekHealthMonitor` so background tasks are scheduled independently from short-lived startup tokens, observed, and stopped cleanly.
+- Added a focused regression test in `tests/slskd.Tests.Unit/Mesh/ServiceFabric/DhtMeshServiceTests.cs`.
+- Documented the recurring pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed the doc entry as `adfd985f` (`docs: Add gotcha for Task.Run scheduler tokens`).
+
+### Verification
+- `dotnet build src/slskd/slskd.csproj -v minimal` passed with `0 warnings / 0 errors`.
+- `dotnet test --no-restore tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal --filter "FullyQualifiedName~DhtMeshServiceTests"` passed (`1/1`).
+
+### Remaining
+- Continue the broader bughunt around detached background work and request/event paths that still lack explicit observers or clean shutdown semantics.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed
@@ -5374,3 +5389,23 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint` passed
 - Added the correct root-level ignore entry for the local backup file `mesh-overlay.key.prev`; the repo was only ignoring `/src/slskd/mesh-overlay.key.prev` before, so the root backup kept showing up as untracked noise.
 - Confirmed the current working branch is `e2e-fixture-fix2`, which is 16 commits ahead of `origin/master`; next release work should fast-forward `master` to this validated tip before creating the next `build-main-*` tag.
+
+## 2026-03-22 09:35:00Z
+
+- Continued the broad bughunt with a coordinated PodCore opinion-stack pass instead of a one-off fix:
+  - fixed `PodOpinionService` so opinion validation no longer rejects every signed opinion by construction; it now verifies `ed25519:` signatures against a stable canonical payload using pod member public keys
+  - fixed the DHT storage mismatch in `PodOpinionService`; it now stores typed `List<PodVariantOpinion>` values through the MessagePack-backed `IMeshDhtClient` instead of pre-serializing JSON strings
+  - fixed the opinion cache read path to return locked snapshots instead of live `AsReadOnly()` wrappers over mutable lists, preventing earlier callers from seeing later publishes
+  - fixed `PodOpinionAggregator` weighted averages to divide by total affinity weight instead of opinion count
+  - fixed a compile-drift blocker in `VirtualSoulfind/v2/Resolution/SimpleResolver.cs` by restoring the `SourceCandidate` namespace import
+- Added focused regressions in `tests/slskd.Tests.Unit/PodCore/PodOpinionServiceTests.cs` covering:
+  - typed opinion-list storage on publish
+  - cache snapshot stability across later publishes
+  - normalized weighted aggregation
+- Documented the new bug patterns immediately in ADR-0001 and committed the required docs entries as:
+  - `07a05fae` typed DHT payloads and cache snapshots
+  - `6afcf16a` unverifiable opinion signatures
+- Validation:
+  - `dotnet build src/slskd/slskd.csproj -v minimal` passed
+  - `dotnet test --no-restore tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal --filter "FullyQualifiedName~PodOpinionServiceTests"` passed (`3/3`)
+  - `bash ./bin/lint` currently fails on pre-existing whitespace-format debt in `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, and `SocialFederation/FederationService.cs`; this batch did not introduce those files

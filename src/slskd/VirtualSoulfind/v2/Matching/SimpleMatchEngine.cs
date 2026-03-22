@@ -18,6 +18,7 @@
 namespace slskd.VirtualSoulfind.v2.Matching
 {
     using System;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using slskd.VirtualSoulfind.v2.Catalogue;
@@ -37,8 +38,14 @@ namespace slskd.VirtualSoulfind.v2.Matching
     {
         private const int DurationToleranceSeconds = 5; // ±5 seconds is acceptable
         private const double MinimumMatchScore = 0.5;
+        private readonly ICatalogueStore _catalogueStore;
 
-        public Task<MatchResult> MatchAsync(
+        public SimpleMatchEngine(ICatalogueStore catalogueStore)
+        {
+            _catalogueStore = catalogueStore ?? throw new ArgumentNullException(nameof(catalogueStore));
+        }
+
+        public async Task<MatchResult> MatchAsync(
             Track track,
             CandidateFileMetadata candidate,
             CancellationToken cancellationToken = default)
@@ -60,68 +67,99 @@ namespace slskd.VirtualSoulfind.v2.Matching
 
             // Strategy 3: MBID + duration + size (Strong)
             if (candidate.Embedded?.MusicBrainzRecordingId != null &&
-                candidate.Embedded.MusicBrainzRecordingId == track.MusicBrainzRecordingId)
+                string.Equals(candidate.Embedded.MusicBrainzRecordingId, track.MusicBrainzRecordingId, StringComparison.OrdinalIgnoreCase))
             {
                 if (IsDurationMatch(track.DurationSeconds, candidate.DurationSeconds))
                 {
-                    return Task.FromResult(new MatchResult
+                    return new MatchResult
                     {
                         Confidence = MatchConfidence.Strong,
                         Score = 0.95,
                         Reason = "MBID + duration match",
-                    });
+                    };
                 }
                 else
                 {
-                    // MBID matches but duration doesn't = likely wrong file
-                    return Task.FromResult(new MatchResult
+                    return new MatchResult
                     {
                         Confidence = MatchConfidence.None,
                         Score = 0.0,
                         Reason = "MBID matches but duration mismatch",
-                    });
+                    };
                 }
             }
 
-            // Strategy 4: Title + artist + duration (Medium)
+            var context = await ResolveTrackContextAsync(track, cancellationToken);
+
+            // Strategy 4: Title + artist + duration (Strong/Medium)
             if (candidate.Embedded != null)
             {
                 var titleMatch = IsTextMatch(track.Title, candidate.Embedded.Title);
                 var durationMatch = IsDurationMatch(track.DurationSeconds, candidate.DurationSeconds);
+                var artistMatch = IsTextMatch(context.ArtistName, candidate.Embedded.Artist);
+                var albumMatch = IsTextMatch(context.ReleaseTitle, candidate.Embedded.Album) ||
+                    IsTextMatch(context.ReleaseGroupTitle, candidate.Embedded.Album);
+
+                if (titleMatch && artistMatch && durationMatch)
+                {
+                    return new MatchResult
+                    {
+                        Confidence = MatchConfidence.Strong,
+                        Score = 0.90,
+                        Reason = "Title + artist + duration match",
+                    };
+                }
+
+                if (titleMatch && albumMatch && durationMatch)
+                {
+                    return new MatchResult
+                    {
+                        Confidence = MatchConfidence.Medium,
+                        Score = 0.82,
+                        Reason = "Title + album + duration match",
+                    };
+                }
+
+                if (titleMatch && artistMatch)
+                {
+                    return new MatchResult
+                    {
+                        Confidence = MatchConfidence.Medium,
+                        Score = 0.78,
+                        Reason = "Title + artist match",
+                    };
+                }
 
                 if (titleMatch && durationMatch)
                 {
-                    // For v2 Phase 1: We don't have artist name in Track entity yet
-                    // (Track links to Release which links to Artist)
-                    // For now, accept title + duration as Medium
-                    return Task.FromResult(new MatchResult
+                    return new MatchResult
                     {
                         Confidence = MatchConfidence.Medium,
                         Score = 0.75,
                         Reason = "Title + duration match",
-                    });
+                    };
                 }
             }
 
             // Strategy 5: Filename heuristics (Weak)
-            var filenameScore = GetFilenameMatchScore(track.Title, candidate.Filename);
+            var filenameScore = GetFilenameMatchScore(track.Title, context.ArtistName, candidate.Filename);
             if (filenameScore > MinimumMatchScore)
             {
-                return Task.FromResult(new MatchResult
+                return new MatchResult
                 {
-                    Confidence = MatchConfidence.Weak,
+                    Confidence = filenameScore >= 0.7 ? MatchConfidence.Medium : MatchConfidence.Weak,
                     Score = filenameScore,
-                    Reason = "Filename similarity",
-                });
+                    Reason = filenameScore >= 0.7 ? "Filename title + artist similarity" : "Filename similarity",
+                };
             }
 
             // No match
-            return Task.FromResult(new MatchResult
+            return new MatchResult
             {
                 Confidence = MatchConfidence.None,
                 Score = 0.0,
                 Reason = "No match",
-            });
+            };
         }
 
         public async Task<MatchResult> VerifyAsync(
@@ -157,49 +195,91 @@ namespace slskd.VirtualSoulfind.v2.Matching
             return diff <= DurationToleranceSeconds;
         }
 
-        private static bool IsTextMatch(string expected, string? actual)
+        private async Task<TrackMatchContext> ResolveTrackContextAsync(Track track, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(actual))
+            string? releaseTitle = null;
+            string? releaseGroupTitle = null;
+            string? artistName = null;
+
+            if (!string.IsNullOrWhiteSpace(track.ReleaseId))
+            {
+                var release = await _catalogueStore.FindReleaseByIdAsync(track.ReleaseId, cancellationToken);
+                releaseTitle = release?.Title;
+
+                if (release != null && !string.IsNullOrWhiteSpace(release.ReleaseGroupId))
+                {
+                    var releaseGroup = await _catalogueStore.FindReleaseGroupByIdAsync(release.ReleaseGroupId, cancellationToken);
+                    releaseGroupTitle = releaseGroup?.Title;
+
+                    if (releaseGroup != null && !string.IsNullOrWhiteSpace(releaseGroup.ArtistId))
+                    {
+                        var artist = await _catalogueStore.FindArtistByIdAsync(releaseGroup.ArtistId, cancellationToken);
+                        artistName = artist?.Name;
+                    }
+                }
+            }
+
+            return new TrackMatchContext(artistName, releaseTitle, releaseGroupTitle);
+        }
+
+        private static bool IsTextMatch(string? expected, string? actual)
+        {
+            var normalizedExpected = NormalizeText(expected);
+            var normalizedActual = NormalizeText(actual);
+
+            if (string.IsNullOrWhiteSpace(normalizedExpected) || string.IsNullOrWhiteSpace(normalizedActual))
             {
                 return false;
             }
 
-            // Simple case-insensitive exact match
-            // Future: Levenshtein distance, fuzzy matching, etc.
-            return string.Equals(
-                expected?.Trim(),
-                actual?.Trim(),
-                StringComparison.OrdinalIgnoreCase);
+            return string.Equals(normalizedExpected, normalizedActual, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static double GetFilenameMatchScore(string trackTitle, string filename)
+        private static double GetFilenameMatchScore(string trackTitle, string? artistName, string filename)
         {
             if (string.IsNullOrWhiteSpace(filename) || string.IsNullOrWhiteSpace(trackTitle))
             {
                 return 0.0;
             }
 
-            // Remove extension and common separators
-            var cleanFilename = System.IO.Path.GetFileNameWithoutExtension(filename)
-                .Replace("_", " ")
-                .Replace("-", " ")
-                .Replace(".", " ")
-                .ToLowerInvariant()
-                .Trim();
+            var cleanFilename = NormalizeText(System.IO.Path.GetFileNameWithoutExtension(filename));
+            var cleanTitle = NormalizeText(trackTitle);
+            var cleanArtist = NormalizeText(artistName);
 
-            var cleanTitle = trackTitle
-                .ToLowerInvariant()
-                .Trim();
+            if (cleanFilename.Contains(cleanTitle, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(cleanArtist) &&
+                cleanFilename.Contains(cleanArtist, StringComparison.OrdinalIgnoreCase))
+            {
+                var coverage = (double)(cleanTitle.Length + cleanArtist.Length) / cleanFilename.Length;
+                return Math.Max(0.70, Math.Min(coverage, 0.92));
+            }
 
-            // Simple containment check
             if (cleanFilename.Contains(cleanTitle, StringComparison.OrdinalIgnoreCase))
             {
-                // Score based on how much of the filename is the title
                 var ratio = (double)cleanTitle.Length / cleanFilename.Length;
-                return Math.Max(0.51, Math.Min(ratio, 0.9)); // At least 0.51 to pass threshold
+                return Math.Max(0.51, Math.Min(ratio, 0.9));
             }
 
             return 0.0;
         }
+
+        private static string NormalizeText(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var chars = value
+                .Where(ch => char.IsLetterOrDigit(ch) || char.IsWhiteSpace(ch))
+                .Select(char.ToLowerInvariant)
+                .ToArray();
+
+            return string.Join(
+                " ",
+                new string(chars).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private sealed record TrackMatchContext(string? ArtistName, string? ReleaseTitle, string? ReleaseGroupTitle);
     }
 }

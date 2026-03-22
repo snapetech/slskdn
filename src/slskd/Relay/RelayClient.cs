@@ -79,7 +79,7 @@ namespace slskd.Relay
         private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayClient>();
         private bool LoggedIn { get; set; }
-        private TaskCompletionSource LoggedInTaskCompletionSource { get; set; } = new();
+        private TaskCompletionSource LoggedInTaskCompletionSource { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IShareService Shares { get; }
         private CancellationTokenSource? StartCancellationTokenSource { get; set; }
@@ -118,6 +118,7 @@ namespace slskd.Relay
                     throw new InvalidOperationException($"Relay client can only be started when operation mode is {RelayMode.Agent}");
                 }
 
+                StartCancellationTokenSource?.Dispose();
                 StartCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 StartRequested = true;
 
@@ -187,6 +188,9 @@ namespace slskd.Relay
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
             StartRequested = false;
+            var startCancellationTokenSource = StartCancellationTokenSource;
+            StartCancellationTokenSource = null;
+            startCancellationTokenSource?.Cancel();
 
             if (HubConnection != null)
             {
@@ -197,6 +201,8 @@ namespace slskd.Relay
 
                 Log.Information("Relay controller connection disconnected");
             }
+
+            startCancellationTokenSource?.Dispose();
         }
 
         /// <summary>
@@ -219,7 +225,22 @@ namespace slskd.Relay
             {
                 if (disposing)
                 {
-                    _ = HubConnection?.DisposeAsync().AsTask();
+                    StartCancellationTokenSource?.Cancel();
+                    StartCancellationTokenSource?.Dispose();
+
+                    try
+                    {
+                        using var disposeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        HubConnection?.DisposeAsync().AsTask().WaitAsync(disposeTimeout.Token).GetAwaiter().GetResult();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Log.Warning("[RelayClient] Timed out while disposing HubConnection");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "[RelayClient] Failed to dispose HubConnection");
+                    }
                 }
 
                 Disposed = true;
@@ -263,6 +284,8 @@ namespace slskd.Relay
                 // if the client is attempting a connection, cancel it it's going to be dropped when we create a new instance, but
                 // we need the retry loop around connection to stop.
                 StartCancellationTokenSource?.Cancel();
+                StartCancellationTokenSource?.Dispose();
+                StartCancellationTokenSource = null;
 
                 if (options.Relay.Controller.IgnoreCertificateErrors)
                 {
@@ -439,7 +462,8 @@ namespace slskd.Relay
                     request.Content = content;
 
                     Log.Information("Beginning upload of file {Filename} with ID {Id}", filename, token);
-                    var response = await CreateHttpClient().SendAsync(request);
+                    using var client = CreateHttpClient();
+                    using var response = await client.SendAsync(request);
 
                     if (!response.IsSuccessStatusCode)
                     {
@@ -576,7 +600,7 @@ namespace slskd.Relay
 
             var old = LoggedInTaskCompletionSource;
 
-            LoggedInTaskCompletionSource = new TaskCompletionSource();
+            LoggedInTaskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // in case someone was waiting on this, cancel it
             // _very important_ to avoid deadlocks

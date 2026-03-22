@@ -175,6 +175,20 @@ public class DnsSecurityServiceTests : IDisposable
     }
 
     [Fact]
+    public void PinTunnelIPs_CallerMutatesOriginalList_DoesNotChangePinnedIps()
+    {
+        var tunnelId = "tunnel-mutable";
+        var hostname = "example.com";
+        var ips = new List<string> { "1.2.3.4" };
+
+        _dnsSecurity.PinTunnelIPs(tunnelId, hostname, ips);
+        ips.Add("9.9.9.9");
+
+        Assert.True(_dnsSecurity.ValidateTunnelIP(tunnelId, "1.2.3.4"));
+        Assert.False(_dnsSecurity.ValidateTunnelIP(tunnelId, "9.9.9.9"));
+    }
+
+    [Fact]
     public void ValidateTunnelIP_UnknownTunnel_ReturnsFalse()
     {
         // Arrange
@@ -367,5 +381,4 @@ public class DnsSecurityServiceTests : IDisposable
         Assert.Contains(publicIp, result.AllowedIPs);
     }
 }
-
 

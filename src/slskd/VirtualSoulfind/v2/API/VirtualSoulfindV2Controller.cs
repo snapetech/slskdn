@@ -26,6 +26,8 @@ namespace slskd.VirtualSoulfind.v2.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.v2.Intents;
@@ -51,6 +53,8 @@ namespace slskd.VirtualSoulfind.v2.API
         private readonly IPlanner _planner;
         private readonly IResolver _resolver;
         private readonly IIntentQueueProcessor _processor;
+        private readonly IOptionsMonitor<VirtualSoulfindV2Options> _options;
+        private readonly ILogger<VirtualSoulfindV2Controller> _logger;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="VirtualSoulfindV2Controller"/> class.
@@ -60,13 +64,17 @@ namespace slskd.VirtualSoulfind.v2.API
             ICatalogueStore catalogueStore,
             IPlanner planner,
             IResolver resolver,
-            IIntentQueueProcessor processor)
+            IIntentQueueProcessor processor,
+            IOptionsMonitor<VirtualSoulfindV2Options> options,
+            ILogger<VirtualSoulfindV2Controller> logger)
         {
             _intentQueue = intentQueue ?? throw new ArgumentNullException(nameof(intentQueue));
             _catalogueStore = catalogueStore ?? throw new ArgumentNullException(nameof(catalogueStore));
             _planner = planner ?? throw new ArgumentNullException(nameof(planner));
             _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
             _processor = processor ?? throw new ArgumentNullException(nameof(processor));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>
@@ -82,6 +90,12 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromBody] EnqueueTrackRequest request,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -131,6 +145,12 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromBody] EnqueueReleaseRequest request,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -161,6 +181,12 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromQuery] int limit = 100,
             CancellationToken cancellationToken = default)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var intents = await _intentQueue.GetPendingTracksAsync(limit, cancellationToken);
             return Ok(intents);
         }
@@ -178,6 +204,12 @@ namespace slskd.VirtualSoulfind.v2.API
             string intentId,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
 
             if (intent == null)
@@ -192,14 +224,29 @@ namespace slskd.VirtualSoulfind.v2.API
         ///     Gets a release intent by ID.
         /// </summary>
         /// <param name="intentId">The intent ID.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The intent.</returns>
         [HttpGet("intents/releases/{intentId}")]
         [ProducesResponseType(typeof(DesiredRelease), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetReleaseIntent(string intentId)
+        public async Task<IActionResult> GetReleaseIntent(
+            string intentId,
+            CancellationToken cancellationToken)
         {
-            // TODO: Implement GetReleaseIntentAsync in IIntentQueue
-            return NotFound(new { Message = "Release intent retrieval not yet implemented" });
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
+            var intent = await _intentQueue.GetReleaseIntentAsync(intentId, cancellationToken);
+
+            if (intent == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(intent);
         }
 
         /// <summary>
@@ -217,6 +264,12 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromBody] UpdateIntentRequest request,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
 
             if (intent == null)
@@ -236,6 +289,12 @@ namespace slskd.VirtualSoulfind.v2.API
         [ProducesResponseType(typeof(IntentProcessorStats), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetStats()
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var stats = await _processor.GetStatsAsync();
             return Ok(stats);
         }
@@ -254,6 +313,12 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromQuery] int limit = 50,
             CancellationToken cancellationToken = default)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             if (string.IsNullOrWhiteSpace(query))
             {
                 return BadRequest(new { Message = "Query is required" });
@@ -276,6 +341,12 @@ namespace slskd.VirtualSoulfind.v2.API
             string artistId,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var artist = await _catalogueStore.FindArtistByIdAsync(artistId, cancellationToken);
 
             if (artist == null)
@@ -300,6 +371,12 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromQuery] int limit = 100,
             CancellationToken cancellationToken = default)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var releases = await _catalogueStore.ListReleaseGroupsForArtistAsync(artistId, cancellationToken);
 
             // Apply limit client-side
@@ -319,6 +396,12 @@ namespace slskd.VirtualSoulfind.v2.API
             string releaseId,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var tracks = await _catalogueStore.ListTracksForReleaseAsync(releaseId, cancellationToken);
             return Ok(tracks);
         }
@@ -336,14 +419,38 @@ namespace slskd.VirtualSoulfind.v2.API
             [FromBody] CreatePlanRequest request,
             CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
+            if (!VirtualSoulfindValidation.IsValidContentDomain(request.Domain, out var domainError))
+            {
+                return BadRequest(domainError);
+            }
+
+            if (!VirtualSoulfindValidation.ValidateRequiredFields(
+                request.Domain, request.TrackId, null, null, out var fieldError))
+            {
+                return BadRequest(fieldError);
+            }
+
+            if (!VirtualSoulfindValidation.ValidateTrackIdFormat(
+                request.Domain, request.TrackId, out var formatError))
+            {
+                return BadRequest(formatError);
+            }
+
             // Create a temporary DesiredTrack for planning
             var desiredTrack = new DesiredTrack
             {
+                Domain = request.Domain,
                 DesiredTrackId = Guid.NewGuid().ToString(),
                 TrackId = request.TrackId,
                 Priority = request.Priority ?? IntentPriority.Normal,
@@ -369,6 +476,12 @@ namespace slskd.VirtualSoulfind.v2.API
             string executionId,
             CancellationToken cancellationToken = default)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var state = await _resolver.GetExecutionStatusAsync(executionId, cancellationToken);
 
             if (state == null)
@@ -392,6 +505,12 @@ namespace slskd.VirtualSoulfind.v2.API
                     string intentId,
                     CancellationToken cancellationToken)
         {
+            var disabledResult = GetDisabledResult();
+            if (disabledResult != null)
+            {
+                return disabledResult;
+            }
+
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
 
             if (intent == null)
@@ -400,9 +519,30 @@ namespace slskd.VirtualSoulfind.v2.API
             }
 
             // Process asynchronously
-            _ = Task.Run(async () => await _processor.ProcessIntentAsync(intentId, cancellationToken), cancellationToken);
+            _ = ObserveBackgroundTaskAsync(
+                Task.Run(() => _processor.ProcessIntentAsync(intentId, CancellationToken.None), CancellationToken.None),
+                intentId);
 
             return Accepted(new { Message = "Processing started", IntentId = intentId });
+        }
+
+        private IActionResult? GetDisabledResult()
+        {
+            return _options.CurrentValue.Enabled
+                ? null
+                : StatusCode(StatusCodes.Status503ServiceUnavailable, "VirtualSoulfind v2 is disabled");
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string intentId)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to process intent {IntentId}", intentId);
+            }
         }
     }
 
@@ -480,6 +620,12 @@ namespace slskd.VirtualSoulfind.v2.API
     /// </summary>
     public sealed class CreatePlanRequest
     {
+        /// <summary>
+        ///     Gets or sets the content domain.
+        /// </summary>
+        [Required]
+        public ContentDomain Domain { get; set; } = ContentDomain.Music;
+
         /// <summary>
         ///     Gets or sets the track ID.
         /// </summary>

@@ -47,11 +47,9 @@ public class I2PTransport : IAnonymityTransport
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
 
             // Connect to SAM bridge
-            var parts = _options.SamAddress.Split(':');
-            var host = parts[0];
-            var port = int.Parse(parts[1]);
+            var (samHost, samPort) = ParseSamAddress(_options.SamAddress);
 
-            await client.ConnectAsync(host, port, linkedCts.Token);
+            await client.ConnectAsync(samHost, samPort, linkedCts.Token);
 
             if (client.Connected)
             {
@@ -149,9 +147,7 @@ public class I2PTransport : IAnonymityTransport
 #pragma warning restore CA2000
             var tcpClient = client;
 
-            var parts = _options.SamAddress.Split(':');
-            var samHost = parts[0];
-            var samPort = int.Parse(parts[1]);
+            var (samHost, samPort) = ParseSamAddress(_options.SamAddress);
 
             await tcpClient.ConnectAsync(samHost, samPort, cancellationToken);
             var stream = tcpClient.GetStream();
@@ -213,6 +209,27 @@ public class I2PTransport : IAnonymityTransport
             client?.Dispose();
             throw;
         }
+    }
+
+    private static (string Host, int Port) ParseSamAddress(string samAddress)
+    {
+        if (string.IsNullOrWhiteSpace(samAddress))
+        {
+            throw new InvalidOperationException("I2P SAM address is not configured");
+        }
+
+        var parts = samAddress.Split(':');
+        if (parts.Length != 2)
+        {
+            throw new InvalidOperationException($"Invalid I2P SAM address format: {samAddress}");
+        }
+
+        if (!int.TryParse(parts[1], out var samPort) || samPort is <= 0 or > ushort.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(samAddress), samAddress, "SAM port must be between 1 and 65535");
+        }
+
+        return (parts[0], samPort);
     }
 
     /// <summary>

@@ -115,12 +115,13 @@ namespace slskd.Transfers.MultiSource.Discovery
             searchCycles = 0;
             lastCycleNewFiles = 0;
 
+            cts?.Dispose();
             cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             log.Information("[Discovery] Starting continuous discovery for: {SearchTerm} (hash verification: {HashEnabled})",
                 searchTerm, enableHashVerification);
 
-            discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), cts.Token);
+            discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), CancellationToken.None);
 
             await Task.CompletedTask;
         }
@@ -148,6 +149,9 @@ namespace slskd.Transfers.MultiSource.Discovery
                 }
             }
 
+            discoveryTask = null;
+            cts?.Dispose();
+            cts = null;
             log.Information("[Discovery] Stopped. Total cycles: {Cycles}", searchCycles);
         }
 

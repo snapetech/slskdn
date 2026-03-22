@@ -207,7 +207,15 @@ public class ScriptService
                     var completed = await Task.WhenAny(exitTask, delayTask).ConfigureAwait(false);
                     if (completed == delayTask)
                     {
-                        try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                        try
+                        {
+                            process.Kill(entireProcessTree: true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "Failed to force-kill timed out script '{Script}' (id: {ProcessId})", script.Key, processId);
+                        }
+
                         await exitTask.ConfigureAwait(false);
                         var err = await stderrTask.ConfigureAwait(false);
                         var output = await stdoutTask.ConfigureAwait(false);

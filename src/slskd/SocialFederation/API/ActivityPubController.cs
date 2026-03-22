@@ -10,6 +10,7 @@ namespace slskd.SocialFederation.API
     using System.Net;
     using System.Security.Cryptography;
     using System.Text;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Authorization;
@@ -36,6 +37,10 @@ namespace slskd.SocialFederation.API
     public class ActivityPubController : ControllerBase
     {
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
+        private readonly IActivityPubInboxStore _inboxStore;
+        private readonly IActivityPubOutboxStore _outboxStore;
+        private readonly IActivityPubRelationshipStore _relationshipStore;
+        private readonly FederationService _federationService;
         private readonly IActivityPubKeyStore _keyStore;
         private readonly IHttpSignatureKeyFetcher _keyFetcher;
         private readonly LibraryActorService _libraryActorService;
@@ -53,6 +58,10 @@ namespace slskd.SocialFederation.API
         /// <param name="meshOptions">Optional mesh options for payload size limit (§8).</param>
         public ActivityPubController(
             IOptionsMonitor<SocialFederationOptions> federationOptions,
+            IActivityPubInboxStore inboxStore,
+            IActivityPubOutboxStore outboxStore,
+            IActivityPubRelationshipStore relationshipStore,
+            FederationService federationService,
             IActivityPubKeyStore keyStore,
             IHttpSignatureKeyFetcher keyFetcher,
             LibraryActorService libraryActorService,
@@ -60,6 +69,10 @@ namespace slskd.SocialFederation.API
             IOptions<MeshOptions>? meshOptions = null)
         {
             _federationOptions = federationOptions ?? throw new ArgumentNullException(nameof(federationOptions));
+            _inboxStore = inboxStore ?? throw new ArgumentNullException(nameof(inboxStore));
+            _outboxStore = outboxStore ?? throw new ArgumentNullException(nameof(outboxStore));
+            _relationshipStore = relationshipStore ?? throw new ArgumentNullException(nameof(relationshipStore));
+            _federationService = federationService ?? throw new ArgumentNullException(nameof(federationService));
             _keyStore = keyStore ?? throw new ArgumentNullException(nameof(keyStore));
             _keyFetcher = keyFetcher ?? throw new ArgumentNullException(nameof(keyFetcher));
             _libraryActorService = libraryActorService ?? throw new ArgumentNullException(nameof(libraryActorService));
@@ -133,7 +146,7 @@ namespace slskd.SocialFederation.API
         [HttpGet("{actorName}/inbox")]
         [AllowAnonymous]
         [Produces("application/activity+json")]
-        public Task<IActionResult> GetInbox(
+        public async Task<IActionResult> GetInbox(
             string actorName,
             [FromQuery] int? page = null,
             CancellationToken cancellationToken = default)
@@ -142,27 +155,31 @@ namespace slskd.SocialFederation.API
 
             if (!opts.Enabled || opts.IsHermit)
             {
-                return Task.FromResult<IActionResult>(NotFound());
+                return NotFound();
             }
 
             // Get the actor from the library actor service
             var libraryActor = _libraryActorService.GetActor(actorName);
             if (libraryActor == null)
             {
-                return Task.FromResult<IActionResult>(NotFound());
+                return NotFound();
             }
 
-            // For now, return empty inbox
-            // TODO: Implement actual inbox with received activities from the actor
-            var inbox = new ActivityPubOrderedCollection
+            var activities = await _inboxStore.GetActivitiesAsync(actorName, _federationOptions.CurrentValue.PageSize, cancellationToken);
+            var orderedItems = new List<object>(activities.Count);
+            foreach (var entry in activities)
+            {
+                using var document = JsonDocument.Parse(entry.RawJson);
+                orderedItems.Add(document.RootElement.Clone());
+            }
+
+            return Ok(new ActivityPubOrderedCollection
             {
                 Id = $"{libraryActor.ActorId}/inbox",
                 Type = "OrderedCollection",
-                TotalItems = 0,
-                OrderedItems = Array.Empty<object>()
-            };
-
-            return Task.FromResult<IActionResult>(Ok(inbox));
+                TotalItems = orderedItems.Count,
+                OrderedItems = orderedItems.ToArray()
+            });
         }
 
         /// <summary>
@@ -185,8 +202,11 @@ namespace slskd.SocialFederation.API
             if (!opts.Enabled || opts.IsHermit)
                 return NotFound();
 
-            if (!string.Equals(actorName, "library", StringComparison.OrdinalIgnoreCase))
+            var libraryActor = _libraryActorService.GetActor(actorName);
+            if (libraryActor == null)
+            {
                 return NotFound();
+            }
 
             var bodyBytes = HttpContext.Items["ActivityPubInboxBody"] as byte[];
             if (bodyBytes == null)
@@ -215,9 +235,10 @@ namespace slskd.SocialFederation.API
             }
 
             ActivityPubActivity? activity;
+            string json;
             try
             {
-                var json = Encoding.UTF8.GetString(bodyBytes);
+                json = Encoding.UTF8.GetString(bodyBytes);
                 activity = SecurityUtils.ParseJsonSafely<ActivityPubActivity>(json, _maxPayload, SecurityUtils.MaxParseDepth);
             }
             catch (ArgumentException)
@@ -232,8 +253,14 @@ namespace slskd.SocialFederation.API
             if (activity == null)
                 return BadRequest("Invalid activity");
 
-            _logger.LogInformation("[ActivityPub] Received activity {Type} from {Actor}", activity.Type, activity.Actor);
-            await ProcessActivityAsync(activity, cancellationToken);
+            await _inboxStore.StoreAsync(actorName, MapActivity(activity), json, cancellationToken);
+            var (processed, error) = await ProcessActivityAsync(actorName, activity, cancellationToken);
+            var storedActivityId = string.IsNullOrWhiteSpace(activity.Id) ? string.Empty : activity.Id;
+            if (!string.IsNullOrWhiteSpace(storedActivityId))
+            {
+                await _inboxStore.MarkProcessedAsync(actorName, storedActivityId, processed, error, cancellationToken);
+            }
+
             return Accepted();
         }
 
@@ -270,18 +297,96 @@ namespace slskd.SocialFederation.API
                 return NotFound();
             }
 
-            // Get recent activities from the actor
-            var activities = await libraryActor.GetRecentActivitiesAsync(opts.PageSize, cancellationToken);
+            var orderedItems = new List<object>();
+            var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var outbox = new ActivityPubOrderedCollection
+            var storedActivities = await _outboxStore.GetActivitiesAsync(actorName, opts.PageSize, cancellationToken).ConfigureAwait(false);
+            foreach (var entry in storedActivities)
+            {
+                using var document = JsonDocument.Parse(entry.RawJson);
+                orderedItems.Add(document.RootElement.Clone());
+                seenIds.Add(entry.ActivityId);
+            }
+
+            if (orderedItems.Count < opts.PageSize)
+            {
+                var activities = await libraryActor.GetRecentActivitiesAsync(opts.PageSize, cancellationToken);
+                foreach (var activity in activities)
+                {
+                    if (!seenIds.Add(activity.Id))
+                    {
+                        continue;
+                    }
+
+                    orderedItems.Add(activity);
+                    if (orderedItems.Count >= opts.PageSize)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return Ok(new ActivityPubOrderedCollection
             {
                 Id = $"{libraryActor.ActorId}/outbox",
                 Type = "OrderedCollection",
-                TotalItems = activities.Count,
-                OrderedItems = activities.Cast<object>().ToArray()
-            };
+                TotalItems = orderedItems.Count,
+                OrderedItems = orderedItems.ToArray()
+            });
+        }
 
-            return Ok(outbox);
+        [HttpGet("{actorName}/followers")]
+        [AllowAnonymous]
+        [Produces("application/activity+json")]
+        public async Task<IActionResult> GetFollowers(string actorName, CancellationToken cancellationToken = default)
+        {
+            var opts = _federationOptions.CurrentValue;
+            if (!opts.Enabled || opts.IsHermit)
+            {
+                return NotFound();
+            }
+
+            var libraryActor = _libraryActorService.GetActor(actorName);
+            if (libraryActor == null)
+            {
+                return NotFound();
+            }
+
+            var followers = await _relationshipStore.GetFollowersAsync(actorName, opts.PageSize, cancellationToken).ConfigureAwait(false);
+            return Ok(new ActivityPubOrderedCollection
+            {
+                Id = $"{libraryActor.ActorId}/followers",
+                Type = "OrderedCollection",
+                TotalItems = followers.Count,
+                OrderedItems = followers.Cast<object>().ToArray()
+            });
+        }
+
+        [HttpGet("{actorName}/following")]
+        [AllowAnonymous]
+        [Produces("application/activity+json")]
+        public async Task<IActionResult> GetFollowing(string actorName, CancellationToken cancellationToken = default)
+        {
+            var opts = _federationOptions.CurrentValue;
+            if (!opts.Enabled || opts.IsHermit)
+            {
+                return NotFound();
+            }
+
+            var libraryActor = _libraryActorService.GetActor(actorName);
+            if (libraryActor == null)
+            {
+                return NotFound();
+            }
+
+            var following = await _relationshipStore.GetFollowingAsync(actorName, opts.PageSize, cancellationToken).ConfigureAwait(false);
+            return Ok(new ActivityPubOrderedCollection
+            {
+                Id = $"{libraryActor.ActorId}/following",
+                Type = "OrderedCollection",
+                TotalItems = following.Count,
+                OrderedItems = following.Cast<object>().ToArray()
+            });
         }
 
         /// <summary>
@@ -298,14 +403,41 @@ namespace slskd.SocialFederation.API
         [HttpPost("{actorName}/outbox")]
         [AllowAnonymous]
         [Consumes("application/activity+json")]
-        public Task<IActionResult> PostToOutbox(
+        public async Task<IActionResult> PostToOutbox(
             string actorName,
             [FromBody] ActivityPubActivity activity,
             CancellationToken cancellationToken = default)
         {
-            // Outbox posting is typically restricted to the actor owner
-            // For now, return not implemented
-            return Task.FromResult<IActionResult>(StatusCode(501, "Outbox posting not yet implemented"));
+            var opts = _federationOptions.CurrentValue;
+            if (!opts.Enabled || opts.IsHermit)
+            {
+                return NotFound();
+            }
+
+            var libraryActor = _libraryActorService.GetActor(actorName);
+            if (libraryActor == null)
+            {
+                return NotFound();
+            }
+
+            if (activity == null || string.IsNullOrWhiteSpace(activity.Type))
+            {
+                return BadRequest("Activity type is required");
+            }
+
+            var (published, error) = await _federationService.PublishOutboxActivityAsync(actorName, MapActivity(activity), cancellationToken).ConfigureAwait(false);
+            if (published == null)
+            {
+                return BadRequest(error ?? "Unable to publish activity");
+            }
+
+            var rawJson = JsonSerializer.Serialize(published, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+            await _outboxStore.StoreAsync(actorName, published, rawJson, cancellationToken).ConfigureAwait(false);
+            return Ok(published);
         }
 
         private bool IsAuthorizedRequest()
@@ -315,9 +447,24 @@ namespace slskd.SocialFederation.API
                 return true;
             if (IsLoopback(HttpContext.Connection.RemoteIpAddress))
                 return true;
-            var host = Request.Host.Value;
-            if (!string.IsNullOrEmpty(host) && opts.ApprovedPeers != null && opts.ApprovedPeers.Length > 0
-                && opts.ApprovedPeers.Contains(host, StringComparer.OrdinalIgnoreCase))
+            var candidateHosts = new[]
+            {
+                Request.Headers["Origin"].FirstOrDefault(),
+                Request.Headers["Referer"].FirstOrDefault()
+            }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value =>
+                {
+                    if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
+                    {
+                        return uri.Host;
+                    }
+
+                    return value;
+                });
+            if (opts.ApprovedPeers != null && opts.ApprovedPeers.Length > 0
+                && candidateHosts.Any(host => !string.IsNullOrWhiteSpace(host)
+                    && opts.ApprovedPeers.Contains(host, StringComparer.OrdinalIgnoreCase)))
                 return true;
             return false;
         }
@@ -332,6 +479,8 @@ namespace slskd.SocialFederation.API
                 return false;
 
             if (!TryParseSignature(sig, out var keyId, out var algorithm, out var headersList, out var signatureB64))
+                return false;
+            if (_federationOptions.CurrentValue.IsFriendsOnly && !IsApprovedKeyHost(keyId))
                 return false;
             if (!string.Equals(algorithm, "ed25519", StringComparison.OrdinalIgnoreCase) && !string.Equals(algorithm, "hs2019", StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -373,6 +522,20 @@ namespace slskd.SocialFederation.API
             {
                 return false;
             }
+        }
+
+        private bool IsApprovedKeyHost(string keyId)
+        {
+            if (string.IsNullOrWhiteSpace(keyId) ||
+                !Uri.TryCreate(keyId, UriKind.Absolute, out var keyUri))
+            {
+                return false;
+            }
+
+            var approvedPeers = _federationOptions.CurrentValue.ApprovedPeers;
+            return approvedPeers != null &&
+                approvedPeers.Length > 0 &&
+                approvedPeers.Contains(keyUri.Host, StringComparer.OrdinalIgnoreCase);
         }
 
         private static bool TryParseSignature(string sig, out string keyId, out string algorithm, out string headersList, out string signatureB64)
@@ -418,12 +581,153 @@ namespace slskd.SocialFederation.API
             return sb.ToString();
         }
 
-        private Task ProcessActivityAsync(ActivityPubActivity activity, CancellationToken cancellationToken)
+        private async Task<(bool Processed, string? Error)> ProcessActivityAsync(string actorName, ActivityPubActivity activity, CancellationToken cancellationToken)
         {
-            // TODO: Implement activity processing based on type
-            // Handle Follow, Like, Announce, Create, etc.
-            _logger.LogDebug("[ActivityPub] Processing activity of type {Type}", activity.Type);
-            return Task.CompletedTask;
+            if (string.IsNullOrWhiteSpace(activity.Type))
+            {
+                return (false, "Missing activity type");
+            }
+
+            switch (activity.Type)
+            {
+                case "Follow":
+                {
+                    var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(remoteActorId))
+                    {
+                        return (false, "Follow activity missing actor");
+                    }
+
+                    await _relationshipStore.UpsertFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                    _logger.LogInformation("[ActivityPub] Recorded follower {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
+                    return (true, null);
+                }
+
+                case "Undo":
+                {
+                    if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return (true, null);
+                    }
+
+                    var remoteActorId = TryGetObjectActor(activity.Object) ?? activity.Actor?.ToString() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(remoteActorId))
+                    {
+                        return (false, "Undo follow missing actor");
+                    }
+
+                    await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                    _logger.LogInformation("[ActivityPub] Removed follower {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
+                    return (true, null);
+                }
+
+                case "Accept":
+                {
+                    if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                            activity.Type, actorName, activity.Actor);
+                        return (true, null);
+                    }
+
+                    var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(remoteActorId))
+                    {
+                        await _relationshipStore.UpsertFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    _logger.LogInformation("[ActivityPub] Accepted follow relationship with {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
+                    return (true, null);
+                }
+
+                case "Reject":
+                {
+                    if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                            activity.Type, actorName, activity.Actor);
+                        return (true, null);
+                    }
+
+                    var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(remoteActorId))
+                    {
+                        await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    _logger.LogInformation("[ActivityPub] Rejected follow relationship with {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
+                    return (true, null);
+                }
+
+                case "Create":
+                case "Update":
+                case "Delete":
+                case "Announce":
+                case "Like":
+                case "Add":
+                    _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                        activity.Type, actorName, activity.Actor);
+                    return (true, null);
+
+                case "Remove":
+                {
+                    if (string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var remoteActorId = TryGetObjectActor(activity.Object) ?? activity.Actor?.ToString() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(remoteActorId))
+                        {
+                            await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                            await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+
+                    _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                        activity.Type, actorName, activity.Actor);
+                    return (true, null);
+                }
+
+                default:
+                    _logger.LogWarning("[ActivityPub] Stored unsupported activity type {Type} for actor {ActorName}", activity.Type, actorName);
+                    return (false, $"Unsupported activity type '{activity.Type}'");
+            }
+        }
+
+        private static slskd.SocialFederation.ActivityPubActivity MapActivity(ActivityPubActivity activity)
+        {
+            return new slskd.SocialFederation.ActivityPubActivity
+            {
+                Context = activity.Context,
+                Id = activity.Id,
+                Type = activity.Type,
+                Actor = activity.Actor,
+                Object = activity.Object,
+            };
+        }
+
+        private static string? TryGetObjectType(object? value)
+        {
+            if (value is JsonElement element &&
+                element.ValueKind == JsonValueKind.Object &&
+                element.TryGetProperty("type", out var typeElement) &&
+                typeElement.ValueKind == JsonValueKind.String)
+            {
+                return typeElement.GetString();
+            }
+
+            return null;
+        }
+
+        private static string? TryGetObjectActor(object? value)
+        {
+            if (value is JsonElement element &&
+                element.ValueKind == JsonValueKind.Object &&
+                element.TryGetProperty("actor", out var actorElement) &&
+                actorElement.ValueKind == JsonValueKind.String)
+            {
+                return actorElement.GetString();
+            }
+
+            return null;
         }
 
         /// <summary>

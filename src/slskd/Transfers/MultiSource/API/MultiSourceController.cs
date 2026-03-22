@@ -506,8 +506,10 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest($"Not enough sources ({allSources.Count}). Need at least 2.");
             }
 
+            var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
+
             Log.Information("[SWARM] Starting REAL swarm with {Count} sources, {ChunkSize} byte chunks, skipVerification={Skip}",
-                allSources.Count, request.ChunkSize, request.SkipVerification);
+                allSources.Count, chunkSize, request.SkipVerification);
 
             List<VerifiedSource> verifiedSources;
             string? expectedHash = null;
@@ -556,7 +558,7 @@ namespace slskd.Transfers.MultiSource.API
             }
 
             // Calculate chunks for display
-            var numChunks = (int)Math.Ceiling((double)request.Size / request.ChunkSize);
+            var numChunks = (int)Math.Ceiling((double)request.Size / chunkSize);
 
             // Call the REAL swarm download service
             var targetFilename = IOPath.GetFileName(verifiedSources.First().FullPath);
@@ -569,7 +571,7 @@ namespace slskd.Transfers.MultiSource.API
                     FileSize = request.Size,
                     OutputPath = outputPath,
                     Sources = verifiedSources,
-                    ChunkSize = request.ChunkSize,
+                    ChunkSize = chunkSize,
                     TargetMusicBrainzRecordingId = verificationResult?.BestSemanticRecordingId,
                     TargetFingerprint = verificationResult?.BestSemanticFingerprint ?? expectedHash,
                     TargetSemanticKey = verificationResult?.BestSemanticKey,
@@ -583,8 +585,8 @@ namespace slskd.Transfers.MultiSource.API
                 success = downloadResult.Success,
                 fileSize = request.Size,
                 fileSizeMB = $"{request.Size / 1024.0 / 1024.0:F1} MB",
-                chunkSize = request.ChunkSize,
-                chunkSizeKB = request.ChunkSize / 1024,
+                chunkSize = chunkSize,
+                chunkSizeKB = chunkSize / 1024,
                 totalChunks = numChunks,
                 totalSources = allSources.Count,
                 sourcesUsed = downloadResult.SourcesUsed,
@@ -617,6 +619,7 @@ namespace slskd.Transfers.MultiSource.API
             }
 
             var allSources = new List<(string Username, string FullPath, int Speed)>();
+            var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
 
             if (request.UseDiscoveryDb)
             {
@@ -690,21 +693,13 @@ namespace slskd.Transfers.MultiSource.API
                 ExpectedHash = expectedHash,
                 OutputPath = outputPath,
                 Sources = verifiedSources,
-                ChunkSize = request.ChunkSize,
+                ChunkSize = chunkSize,
             };
 
             // Start in background - don't await
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await MultiSource.DownloadAsync(downloadRequest, System.Threading.CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "[SWARM ASYNC] Background download failed: {Message}", ex.Message);
-                }
-            });
+            _ = ObserveBackgroundTaskAsync(
+                Task.Run(() => MultiSource.DownloadAsync(downloadRequest, System.Threading.CancellationToken.None), System.Threading.CancellationToken.None),
+                "[SWARM ASYNC] Background download failed: {Message}");
 
             // Give it a moment to start
             await Task.Delay(500);
@@ -716,7 +711,7 @@ namespace slskd.Transfers.MultiSource.API
                 message = "Swarm download started in background. Poll /api/v0/multisource/jobs/{jobId} for status.",
                 totalSources = verifiedSources.Count,
                 verifiedSources = verifiedSources.Count,
-                totalChunks = (int)Math.Ceiling((double)request.Size / request.ChunkSize),
+                totalChunks = (int)Math.Ceiling((double)request.Size / chunkSize),
                 verificationEnabled = !request.SkipVerification,
                 expectedHash = expectedHash?.Substring(0, 16) + "...",
             });
@@ -926,6 +921,7 @@ namespace slskd.Transfers.MultiSource.API
                 IOPath.GetTempPath(),
                 "slskdn-test",
                 IOPath.GetFileName(request.Filename));
+            var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
 
             Log.Information(
                 "[MultiSource] Starting download of {Filename} from {Count} sources",
@@ -938,7 +934,7 @@ namespace slskd.Transfers.MultiSource.API
                 FileSize = request.FileSize,
                 ExpectedHash = request.ExpectedHash,
                 OutputPath = outputPath,
-                ChunkSize = request.ChunkSize,
+                ChunkSize = chunkSize,
                 Sources = request.Sources.Select(s => new VerifiedSource
                 {
                     Username = s.Username,
@@ -949,7 +945,7 @@ namespace slskd.Transfers.MultiSource.API
             };
 
             Log.Information("[SWARM] Starting with {Sources} sources, {ChunkSize}KB chunks",
-                request.Sources.Count, request.ChunkSize / 1024);
+                request.Sources.Count, chunkSize / 1024);
 
             var result = await MultiSource.DownloadAsync(downloadRequest, HttpContext.RequestAborted);
 
@@ -1104,6 +1100,18 @@ namespace slskd.Transfers.MultiSource.API
                 testResult.AverageSpeedMBps);
 
             return Ok(testResult);
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, messageTemplate, ex.Message);
+            }
         }
     }
 

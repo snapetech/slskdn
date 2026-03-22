@@ -28,6 +28,7 @@ namespace slskd.SocialFederation.API
     public class WebFingerController : ControllerBase
     {
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
+        private readonly LibraryActorService _libraryActorService;
         private readonly ILogger<WebFingerController> _logger;
 
         /// <summary>
@@ -37,9 +38,11 @@ namespace slskd.SocialFederation.API
         /// <param name="logger">The logger.</param>
         public WebFingerController(
             IOptionsMonitor<SocialFederationOptions> federationOptions,
+            LibraryActorService libraryActorService,
             ILogger<WebFingerController> logger)
         {
             _federationOptions = federationOptions ?? throw new ArgumentNullException(nameof(federationOptions));
+            _libraryActorService = libraryActorService ?? throw new ArgumentNullException(nameof(libraryActorService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -88,13 +91,6 @@ namespace slskd.SocialFederation.API
             if (!string.Equals(domain, opts.Domain, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogDebug("[WebFinger] Domain mismatch: {Domain} != {ExpectedDomain}", domain, opts.Domain);
-                return NotFound();
-            }
-
-            // For friends-only mode, check if this is an approved peer
-            if (opts.IsFriendsOnly && !opts.ApprovedPeers.Contains(domain, StringComparer.OrdinalIgnoreCase))
-            {
-                _logger.LogDebug("[WebFinger] Domain not in approved peers list: {Domain}", domain);
                 return NotFound();
             }
 
@@ -194,20 +190,7 @@ namespace slskd.SocialFederation.API
 
         private Task<bool> IsValidActorAsync(string username, CancellationToken cancellationToken)
         {
-            // For now, we only support a "library" actor for content federation
-            // This can be extended to support user actors in the future
-            var opts = _federationOptions.CurrentValue;
-
-            // Check if this is the library actor (content collection)
-            if (string.Equals(username, "library", StringComparison.OrdinalIgnoreCase))
-            {
-                // TODO: Check if library actor is enabled and has content
-                return Task.FromResult(true);
-            }
-
-            // TODO: Add support for user actors
-            // For now, only library actor is supported
-            return Task.FromResult(false);
+            return Task.FromResult(_libraryActorService.IsLibraryActor(username));
         }
 
         /// <summary>

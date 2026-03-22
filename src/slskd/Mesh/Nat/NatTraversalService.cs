@@ -92,7 +92,7 @@ public class NatTraversalService : INatTraversalService
         var parts = rest.Split(':', 2);
         if (parts.Length != 2) return false;
         if (!IPAddress.TryParse(parts[0], out var ip)) return false;
-        if (!int.TryParse(parts[1], out var port)) return false;
+        if (!int.TryParse(parts[1], out var port) || port is <= 0 or > ushort.MaxValue) return false;
         ep = new IPEndPoint(ip, port);
         return true;
     }
@@ -105,7 +105,7 @@ public class NatTraversalService : INatTraversalService
         var parts = rest.Split(':', 2);
         if (parts.Length != 2) return false;
         if (!IPAddress.TryParse(parts[0], out var ip)) return false;
-        if (!int.TryParse(parts[1], out var port)) return false;
+        if (!int.TryParse(parts[1], out var port) || port is <= 0 or > ushort.MaxValue) return false;
         ep = new IPEndPoint(ip, port);
         return true;
     }

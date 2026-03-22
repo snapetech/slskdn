@@ -32,6 +32,21 @@ public interface IBridgeDashboard
     void RecordRequest(string clientId, string requestType);
 
     /// <summary>
+    /// Record a newly connected legacy client.
+    /// </summary>
+    void RecordConnection(string clientId, string ipAddress);
+
+    /// <summary>
+    /// Record successful legacy client authentication.
+    /// </summary>
+    void RecordAuthentication(string clientId, string username);
+
+    /// <summary>
+    /// Record a disconnected legacy client.
+    /// </summary>
+    void RecordDisconnection(string clientId);
+
+    /// <summary>
     /// Record mesh benefit (avoided Soulseek traffic).
     /// </summary>
     void RecordMeshBenefit(long bytesViaMesh);
@@ -117,6 +132,7 @@ public class BridgeDashboard : IBridgeDashboard
 
         stats.CurrentConnections = clients.Count;
         stats.Uptime = DateTimeOffset.UtcNow - startTime;
+        health.ActiveConnections = stats.CurrentConnections;
 
         var dashboard = new BridgeDashboardData
         {
@@ -152,11 +168,9 @@ public class BridgeDashboard : IBridgeDashboard
         {
             client = new ConnectedClient
             {
-                ClientId = clientId,
-                ConnectedAt = DateTimeOffset.UtcNow
+                ClientId = clientId
             };
             clients[clientId] = client;
-            stats.TotalConnections++;
         }
 
         client.RequestCount++;
@@ -178,6 +192,54 @@ public class BridgeDashboard : IBridgeDashboard
 
         logger.LogDebug("[VSF-BRIDGE-DASHBOARD] Recorded {RequestType} from {ClientId}",
             requestType, clientId);
+    }
+
+    public void RecordConnection(string clientId, string ipAddress)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var added = false;
+        var client = clients.GetOrAdd(clientId, _ =>
+        {
+            added = true;
+            return new ConnectedClient
+            {
+                ClientId = clientId,
+                ClientType = "Soulseek Legacy",
+                ConnectedAt = now,
+                LastActivity = now,
+                IpAddress = ipAddress
+            };
+        });
+
+        if (added)
+        {
+            stats.TotalConnections++;
+        }
+
+        client.IpAddress = ipAddress;
+        client.LastActivity = now;
+        if (client.ConnectedAt == default)
+        {
+            client.ConnectedAt = now;
+        }
+    }
+
+    public void RecordAuthentication(string clientId, string username)
+    {
+        if (!clients.TryGetValue(clientId, out var client))
+        {
+            return;
+        }
+
+        client.ClientType = string.IsNullOrWhiteSpace(username)
+            ? client.ClientType
+            : $"Soulseek Legacy ({username})";
+        client.LastActivity = DateTimeOffset.UtcNow;
+    }
+
+    public void RecordDisconnection(string clientId)
+    {
+        clients.TryRemove(clientId, out _);
     }
 
     public void RecordMeshBenefit(long bytesViaMesh)

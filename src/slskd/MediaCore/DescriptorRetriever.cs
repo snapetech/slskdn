@@ -212,6 +212,10 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (string.IsNullOrWhiteSpace(domain))
             throw new ArgumentException("Domain cannot be empty", nameof(domain));
 
+        domain = domain.Trim().ToLowerInvariant();
+        type = string.IsNullOrWhiteSpace(type) ? null : type.Trim().ToLowerInvariant();
+        maxResults = Math.Max(1, maxResults);
+
         var startTime = DateTimeOffset.UtcNow;
         var results = new List<ContentDescriptor>();
         var hasMore = false;
@@ -225,8 +229,10 @@ public class DescriptorRetriever : IDescriptorRetriever
                 {
                     var parsed = ContentIdParser.Parse(contentId);
                     return parsed != null &&
-                           parsed.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase) &&
-                           (type == null || parsed.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
+                           ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type)
+                               .Equals(domain, StringComparison.OrdinalIgnoreCase) &&
+                           (type == null || ContentIdParser.NormalizeType(parsed.Domain, parsed.Type)
+                               .Equals(type, StringComparison.OrdinalIgnoreCase));
                 })
                 .Take(maxResults + 1) // +1 to check if there are more
                 .ToList();
@@ -245,6 +251,11 @@ public class DescriptorRetriever : IDescriptorRetriever
                     results.Add(cached.Descriptor);
                 }
             }
+
+            results = results
+                .GroupBy(descriptor => descriptor.ContentId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
         }
         catch (Exception ex)
         {

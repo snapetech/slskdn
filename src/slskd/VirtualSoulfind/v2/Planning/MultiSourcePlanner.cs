@@ -131,18 +131,14 @@ namespace slskd.VirtualSoulfind.v2.Planning
             // Step 2: Query source registry for existing candidates
             // Convert TrackId (string) to ContentItemId for v1 compatibility
             // Future: unified ID system
-            ContentItemId itemId;
-            try
-            {
-                itemId = ContentItemId.Parse(desiredTrack.TrackId);
-            }
-            catch
+            if (!ContentItemId.TryParse(desiredTrack.TrackId, out var itemId))
             {
                 // Invalid TrackId format
                 return new TrackAcquisitionPlan
                 {
                     TrackId = desiredTrack.TrackId,
                     Mode = effectiveMode,
+                    ErrorMessage = "Invalid track identifier format; expected a valid GUID",
                     Steps = Array.Empty<PlanStep>(),
                     CreatedAt = DateTimeOffset.UtcNow,
                 };
@@ -156,7 +152,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
             var backendCandidates = new List<SourceCandidate>();
             foreach (var backend in _backends)
             {
-                if (backend.SupportedDomain != domain)
+                if (backend.SupportedDomain.HasValue && backend.SupportedDomain != domain)
                 {
                     continue; // Skip backends that don't support this domain
                 }
@@ -299,8 +295,8 @@ namespace slskd.VirtualSoulfind.v2.Planning
                         return c.Backend == ContentBackendType.LocalLibrary;
 
                     case PlanningMode.MeshOnly:
-                        // No Soulseek
-                        return c.Backend != ContentBackendType.Soulseek;
+                        return c.Backend == ContentBackendType.NativeMesh ||
+                            c.Backend == ContentBackendType.MeshDht;
 
                     case PlanningMode.SoulseekFriendly:
                         // Everything allowed (with caps)
@@ -316,16 +312,19 @@ namespace slskd.VirtualSoulfind.v2.Planning
         {
             // Backend priority order:
             // 1. LocalLibrary (instant, free)
-            // 2. MeshDht (decentralized, scalable)
-            // 3. Http (reliable, direct)
+            // 2. NativeMesh / MeshDht (decentralized, scalable)
+            // 3. Http / WebDav / S3 (reliable, direct)
             // 4. Lan (fast, local network)
             // 5. Torrent (good for large files, slower startup)
             // 6. Soulseek (last resort for Music, with caps)
             var backendPriority = new Dictionary<ContentBackendType, int>
             {
                 { ContentBackendType.LocalLibrary, 1 },
+                { ContentBackendType.NativeMesh, 2 },
                 { ContentBackendType.MeshDht, 2 },
                 { ContentBackendType.Http, 3 },
+                { ContentBackendType.WebDav, 3 },
+                { ContentBackendType.S3, 3 },
                 { ContentBackendType.Lan, 4 },
                 { ContentBackendType.Torrent, 5 },
                 { ContentBackendType.Soulseek, 6 },

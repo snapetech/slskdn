@@ -41,6 +41,7 @@ namespace slskd
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Net.Sockets;
     using System.Net.Http;
     using System.Reflection;
     using System.Security.Cryptography;
@@ -600,10 +601,19 @@ namespace slskd
                     ? webAddressSection.Value
                     : OptionsAtStartup.Web.Address; // Fallback to OptionsAtStartup if not in config
 
-                var listenAddress = webAddress == "*" ? IPAddress.Any : IPAddress.Parse(webAddress);
+                var configuredAddress = webAddress == "*" ? IPAddress.Any.ToString() : webAddress;
+                if (!IPAddress.TryParse(configuredAddress, out var listenAddress))
+                {
+                    Log.Warning("Invalid web bind address '{Address}', defaulting to 0.0.0.0", configuredAddress);
+                    listenAddress = IPAddress.Any;
+                }
+
+                var listenAddressUrl = listenAddress.AddressFamily == AddressFamily.InterNetworkV6
+                    ? $"[{listenAddress}]"
+                    : listenAddress.ToString();
 
                 builder.WebHost
-                    .UseUrls($"http://{webAddress}:{webPort}")
+                    .UseUrls($"http://{listenAddressUrl}:{webPort}")
                     .UseKestrel(options =>
                     {
                         // PR-09: Global body size cap; configurable via Web.MaxRequestBodySize (default 10 MB). MeshGateway and others may enforce lower per-route.
@@ -615,7 +625,7 @@ namespace slskd
                             builder.Configuration.GetValue<string>($"{AppName}:{AppName}:Web:Port") ?? "null",
                             webPort);
 
-                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{webAddress}:{webPort}/ (from config: port={webPortSection.Exists()}, address={webAddressSection.Exists()})");
+                        Log.Information($"[Kestrel] Configuring HTTP listener at http://{listenAddressUrl}:{webPort}/ (from config: port={webPortSection.Exists()}, address={webAddressSection.Exists()})");
                         options.Listen(listenAddress, webPort);
                         Log.Information($"[Kestrel] HTTP listener configured");
 
@@ -858,10 +868,15 @@ namespace slskd
                     try
                     {
                         var discovery = app.Services.GetService<Identity.ILanDiscoveryService>();
-                        discovery?.StopAdvertisingAsync().GetAwaiter().GetResult();
+                        if (discovery is not null)
+                        {
+                            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                            discovery.StopAdvertisingAsync().WaitAsync(timeout.Token).GetAwaiter().GetResult();
+                        }
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Log.Warning(ex, "[Program] Failed to stop LAN discovery advertising on host stopping");
                     }
                 });
 
@@ -1275,7 +1290,19 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Capture.ITrafficObserver, VirtualSoulfind.Capture.TrafficObserver>();
             services.AddSingleton<VirtualSoulfind.Capture.INormalizationPipeline, VirtualSoulfind.Capture.NormalizationPipeline>();
             services.AddSingleton<VirtualSoulfind.Capture.IUsernamePseudonymizer, VirtualSoulfind.Capture.UsernamePseudonymizer>();
-            services.AddSingleton<VirtualSoulfind.Capture.IObservationStore, VirtualSoulfind.Capture.InMemoryObservationStore>();
+            services.AddSingleton<VirtualSoulfind.Capture.IObservationStore>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptionsMonitor<slskd.Options>>();
+                if (options.CurrentValue.VirtualSoulfind?.Privacy?.PersistRawObservations == true)
+                {
+                    return new VirtualSoulfind.Capture.SqliteObservationStore(
+                        sp.GetRequiredService<ILogger<VirtualSoulfind.Capture.SqliteObservationStore>>(),
+                        options);
+                }
+
+                return new VirtualSoulfind.Capture.InMemoryObservationStore(
+                    sp.GetRequiredService<ILogger<VirtualSoulfind.Capture.InMemoryObservationStore>>());
+            });
             services.AddSingleton<VirtualSoulfind.Capture.TrafficObserverIntegrationService>();
             services.AddSingleton<VirtualSoulfind.ShadowIndex.IShadowIndexBuilder, VirtualSoulfind.ShadowIndex.ShadowIndexBuilder>();
 
@@ -1300,7 +1327,7 @@ namespace slskd
                     sp.GetRequiredService<ILogger<VirtualSoulfind.Scenes.SceneAnnouncementService>>(),
                     sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtClient>(),
                     sp.GetRequiredService<VirtualSoulfind.ShadowIndex.IDhtRateLimiter>(),
-                    sp.GetService<Identity.IProfileService>(),
+                    sp.GetRequiredService<Identity.IProfileService>(),
                     sp.GetService<VirtualSoulfind.Scenes.ISceneService>()));
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneMembershipTracker, VirtualSoulfind.Scenes.SceneMembershipTracker>();
             services.AddSingleton<VirtualSoulfind.Scenes.IScenePubSubService>(sp =>
@@ -1313,7 +1340,7 @@ namespace slskd
                     sp.GetRequiredService<ILogger<VirtualSoulfind.Scenes.SceneChatService>>(),
                     sp.GetRequiredService<VirtualSoulfind.Scenes.IScenePubSubService>(),
                     sp.GetRequiredService<IOptionsMonitor<slskd.Options>>(),
-                    sp.GetService<Identity.IProfileService>()));
+                    sp.GetRequiredService<Identity.IProfileService>()));
             services.AddSingleton<VirtualSoulfind.Scenes.ISceneModerationService, VirtualSoulfind.Scenes.SceneModerationService>();
             services.AddSingleton<VirtualSoulfind.DisasterMode.ISoulseekClient>(sp =>
                 new VirtualSoulfind.DisasterMode.SoulseekClientWrapper(sp.GetRequiredService<Soulseek.ISoulseekClient>()));
@@ -1365,6 +1392,92 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Core.Movie.IMovieContentDomainProvider, VirtualSoulfind.Core.Movie.MovieContentDomainProvider>();
             services.AddSingleton<VirtualSoulfind.Core.Tv.ITvContentDomainProvider, VirtualSoulfind.Core.Tv.TvContentDomainProvider>();
             services.AddSingleton<VirtualSoulfind.Core.Book.IBookContentDomainProvider, VirtualSoulfind.Core.Book.BookContentDomainProvider>();
+
+            // VirtualSoulfind v2 core graph
+            services.AddOptions<VirtualSoulfind.v2.VirtualSoulfindV2Options>();
+            services.AddOptions<VirtualSoulfind.v2.Resolution.ResolverOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Processing.IntentQueueProcessorOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.HttpBackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.WebDavBackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.S3BackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.TorrentBackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.MeshDhtBackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.LanBackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.NativeMeshBackendOptions>();
+            services.AddOptions<VirtualSoulfind.v2.Backends.SoulseekBackendOptions>();
+
+            services.AddSingleton<IOptionsMonitor<VirtualSoulfind.v2.Resolution.ResolverOptions>>(sp =>
+            {
+                var root = sp.GetRequiredService<IOptionsMonitor<Options>>().CurrentValue.VirtualSoulfindV2;
+                var wrapped = Microsoft.Extensions.Options.Options.Create(new VirtualSoulfind.v2.Resolution.ResolverOptions
+                {
+                    MaxConcurrentExecutions = Math.Max(1, root.MaxConcurrentExecutions),
+                    DefaultStepTimeoutSeconds = new VirtualSoulfind.v2.Resolution.ResolverOptions().DefaultStepTimeoutSeconds,
+                });
+                return new Common.Moderation.WrappedOptionsMonitor<VirtualSoulfind.v2.Resolution.ResolverOptions>(wrapped);
+            });
+
+            services.AddSingleton<IOptionsMonitor<VirtualSoulfind.v2.Processing.IntentQueueProcessorOptions>>(sp =>
+            {
+                var root = sp.GetRequiredService<IOptionsMonitor<Options>>().CurrentValue.VirtualSoulfindV2;
+                var wrapped = Microsoft.Extensions.Options.Options.Create(new VirtualSoulfind.v2.Processing.IntentQueueProcessorOptions
+                {
+                    Enabled = root.Enabled,
+                    BatchSize = Math.Max(1, root.ProcessorBatchSize),
+                    ProcessingIntervalSeconds = Math.Max(1, root.ProcessorIntervalMs / 1000),
+                    StartupDelaySeconds = 10,
+                });
+                return new Common.Moderation.WrappedOptionsMonitor<VirtualSoulfind.v2.Processing.IntentQueueProcessorOptions>(wrapped);
+            });
+
+            services.AddSingleton<IOptionsMonitor<VirtualSoulfind.v2.Backends.SoulseekBackendOptions>>(sp =>
+            {
+                var root = sp.GetRequiredService<IOptionsMonitor<Options>>().CurrentValue.VirtualSoulfindV2;
+                var wrapped = Microsoft.Extensions.Options.Options.Create(new VirtualSoulfind.v2.Backends.SoulseekBackendOptions
+                {
+                    Enabled = root.Enabled,
+                    SearchTimeoutSeconds = Math.Max(1, root.Backends.Soulseek.SearchTimeoutMs / 1000),
+                    MinimumUploadSpeed = Math.Max(0, root.Backends.Soulseek.MinUploadSpeedBytesPerSec),
+                });
+                return new Common.Moderation.WrappedOptionsMonitor<VirtualSoulfind.v2.Backends.SoulseekBackendOptions>(wrapped);
+            });
+
+            var virtualSoulfindV2CataloguePath = Path.Combine(Program.AppDirectory, "virtualsoulfind-v2-catalogue.db");
+            var virtualSoulfindV2SourcesPath = Path.Combine(Program.AppDirectory, "virtualsoulfind-v2-sources.db");
+
+            services.AddSingleton<VirtualSoulfind.v2.Catalogue.ICatalogueStore>(_ =>
+                new VirtualSoulfind.v2.Catalogue.SqliteCatalogueStore(virtualSoulfindV2CataloguePath));
+            services.AddSingleton<VirtualSoulfind.v2.Sources.ISourceRegistry>(_ =>
+                new VirtualSoulfind.v2.Sources.SqliteSourceRegistry($"Data Source={virtualSoulfindV2SourcesPath};"));
+            services.AddSingleton<VirtualSoulfind.v2.Intents.IIntentQueue, VirtualSoulfind.v2.Intents.InMemoryIntentQueue>();
+            services.AddSingleton<VirtualSoulfind.v2.Matching.IMatchEngine, VirtualSoulfind.v2.Matching.SimpleMatchEngine>();
+            services.AddSingleton<VirtualSoulfind.v2.Fingerprinting.IAudioFingerprintService, VirtualSoulfind.v2.Fingerprinting.NoopAudioFingerprintService>();
+            services.AddSingleton<VirtualSoulfind.v2.Planning.IPlanner>(sp =>
+            {
+                var root = sp.GetRequiredService<IOptionsMonitor<Options>>().CurrentValue.VirtualSoulfindV2;
+                return new VirtualSoulfind.v2.Planning.MultiSourcePlanner(
+                    sp.GetRequiredService<VirtualSoulfind.v2.Catalogue.ICatalogueStore>(),
+                    sp.GetRequiredService<VirtualSoulfind.v2.Sources.ISourceRegistry>(),
+                    sp.GetRequiredService<IEnumerable<VirtualSoulfind.v2.Backends.IContentBackend>>(),
+                    sp.GetRequiredService<Common.Moderation.IModerationProvider>(),
+                    sp.GetRequiredService<Common.Moderation.PeerReputationService>(),
+                    root.DefaultMode);
+            });
+            services.AddSingleton<VirtualSoulfind.v2.Resolution.IResolver, VirtualSoulfind.v2.Resolution.SimpleResolver>();
+            services.AddSingleton<VirtualSoulfind.v2.Processing.IIntentQueueProcessor, VirtualSoulfind.v2.Processing.IntentQueueProcessor>();
+            services.AddSingleton<VirtualSoulfind.v2.Reconciliation.ILibraryReconciliationService, VirtualSoulfind.v2.Reconciliation.LibraryReconciliationService>();
+            services.AddSingleton<VirtualSoulfind.v2.Processing.IntentQueueProcessorBackgroundService>();
+            services.AddHostedService(sp => sp.GetRequiredService<VirtualSoulfind.v2.Processing.IntentQueueProcessorBackgroundService>());
+
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.LocalLibraryBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.NativeMeshBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.MeshDhtBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.HttpBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.WebDavBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.S3Backend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.TorrentBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.LanBackend>();
+            services.AddSingleton<VirtualSoulfind.v2.Backends.IContentBackend, VirtualSoulfind.v2.Backends.SoulseekBackend>();
 
             // Content Domain Provider Registry (P3: Custom Domain Matching Logic)
             services.AddContentDomainProviders();
@@ -1595,10 +1708,14 @@ namespace slskd
                 var messageStorage = sp.GetRequiredService<PodCore.IPodMessageStorage>();
                 var messageRouter = sp.GetRequiredService<PodCore.IPodMessageRouter>();
                 var overlayClient = sp.GetRequiredService<Mesh.Overlay.IOverlayClient>();
+                var podService = sp.GetRequiredService<PodCore.IPodService>();
+                var profileService = sp.GetRequiredService<Identity.IProfileService>();
                 return new PodCore.PodMessageBackfill(
                     messageStorage,
                     messageRouter,
                     overlayClient,
+                    podService,
+                    profileService,
                     sp.GetRequiredService<ILogger<PodCore.PodMessageBackfill>>());
             });
 
@@ -1607,11 +1724,10 @@ namespace slskd
             {
                 var podService = sp.GetRequiredService<PodCore.IPodService>();
                 var dhtClient = sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>();
-                var messageSigner = sp.GetRequiredService<PodCore.IMessageSigner>();
                 return new PodCore.PodOpinionService(
                     podService,
                     dhtClient,
-                    messageSigner,
+                    sp.GetRequiredService<Mesh.Transport.Ed25519Signer>(),
                     sp.GetRequiredService<ILogger<PodCore.PodOpinionService>>());
             });
 

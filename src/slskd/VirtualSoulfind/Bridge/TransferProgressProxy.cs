@@ -117,20 +117,40 @@ public class TransferProgressProxy : ITransferProgressProxy
         var meshStatus = await meshTransfer.GetTransferStatusAsync(session.MeshTransferId, ct);
         if (meshStatus == null)
         {
-            return null;
+            return session.LastProgress;
         }
 
         // Convert to legacy format
         var username = await peerAnonymizer.GetAnonymizedUsernameAsync(meshStatus.PeerId, ct);
+        var filename = session.CachedFilename;
+        if (string.IsNullOrWhiteSpace(filename))
+        {
+            filename = System.IO.Path.GetFileName(meshStatus.TargetPath);
+            if (string.IsNullOrWhiteSpace(filename))
+            {
+                filename = session.MeshTransferId;
+            }
+
+            session.CachedFilename = filename;
+        }
 
         var legacyProgress = new LegacyTransferProgress
         {
             ProxyId = proxyId,
             Username = username,
-            Filename = session.CachedFilename ?? "Unknown",
+            Filename = filename,
             BytesTransferred = meshStatus.BytesTransferred,
-            FileSize = meshStatus.FileSize,
-            PercentComplete = (int)meshStatus.ProgressPercent,
+            FileSize = meshStatus.FileSize > 0
+                ? meshStatus.FileSize
+                : session.LastProgress?.FileSize ?? 0,
+            PercentComplete = (int)Math.Clamp(
+                (meshStatus.FileSize > 0
+                    ? meshStatus.ProgressPercent
+                    : session.LastProgress?.FileSize > 0
+                        ? (meshStatus.BytesTransferred * 100.0) / session.LastProgress.FileSize
+                        : meshStatus.ProgressPercent),
+                0,
+                100),
             AverageSpeed = meshStatus.TransferRateBps,
             State = MapMeshStateToLegacy(meshStatus.State),
             QueuePosition = 0 // No queue in mesh transfers
@@ -159,9 +179,14 @@ public class TransferProgressProxy : ITransferProgressProxy
             return;
         }
 
+        var fileSize = session.LastProgress?.FileSize ?? 0L;
+        var percent = fileSize > 0
+            ? (int)(update.BytesTransferred * 100.0 / fileSize)
+            : 0;
+
         logger.LogDebug("[VSF-BRIDGE-PROXY] {ProxyId}: {Percent}% ({Bytes}/{Total}) @ {Rate} Bps",
             proxyId,
-            (int)(update.BytesTransferred * 100.0 / session.LastProgress?.FileSize ?? 1),
+            percent,
             update.BytesTransferred,
             session.LastProgress?.FileSize ?? 0,
             update.TransferRateBps);

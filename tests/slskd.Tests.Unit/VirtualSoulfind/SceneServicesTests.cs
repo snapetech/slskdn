@@ -1,0 +1,180 @@
+// <copyright file="SceneServicesTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+#nullable enable
+
+using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
+using slskd.Identity;
+using slskd.VirtualSoulfind.Scenes;
+using slskd.VirtualSoulfind.ShadowIndex;
+
+namespace slskd.Tests.Unit.VirtualSoulfind;
+
+public class SceneServicesTests
+{
+    [Fact]
+    public async Task SceneModerationService_IsPeerMutedAsync_TreatsPeerIdsCaseInsensitively()
+    {
+        var service = new SceneModerationService(NullLogger<SceneModerationService>.Instance);
+
+        await service.MutePeerAsync("scene:test", "Peer-One", "test", CancellationToken.None);
+
+        Assert.True(await service.IsPeerMutedAsync("scene:test", "peer-one", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SceneMembershipTracker_GetMembersAsync_ExcludesPeersMarkedInactiveInCache()
+    {
+        var tracker = new SceneMembershipTracker(
+            NullLogger<SceneMembershipTracker>.Instance,
+            new StubDhtClient());
+
+        await tracker.TrackJoinAsync("scene:test", "peer-1", CancellationToken.None);
+        await tracker.TrackLeaveAsync("scene:test", "peer-1", CancellationToken.None);
+
+        var members = await tracker.GetMembersAsync("scene:test", CancellationToken.None);
+
+        Assert.Empty(members);
+    }
+
+    [Fact]
+    public async Task SceneChatService_OnPubSubFallbackMessage_PreservesSceneIdFromEnvelope()
+    {
+        var pubsub = new StubScenePubSubService();
+        var profileService = new Mock<IProfileService>();
+        profileService
+            .Setup(service => service.GetMyProfileAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerProfile { PeerId = "local-peer" });
+
+        var service = new SceneChatService(
+            NullLogger<SceneChatService>.Instance,
+            pubsub,
+            CreateOptionsMonitor(),
+            profileService.Object);
+
+        pubsub.RaiseMessageReceived(new SceneMessageReceivedEventArgs
+        {
+            SceneId = "scene:test",
+            PeerId = "remote-peer",
+            Message = System.Text.Encoding.UTF8.GetBytes("plain text fallback"),
+            Timestamp = DateTimeOffset.UtcNow,
+        });
+
+        var messages = await service.GetMessagesAsync("scene:test", 100, CancellationToken.None);
+
+        var message = Assert.Single(messages);
+        Assert.Equal("scene:test", message.SceneId);
+        Assert.Equal("remote-peer", message.PeerId);
+        Assert.Equal("plain text fallback", message.Content);
+    }
+
+    [Fact]
+    public async Task ScenePubSubService_PollLoop_DoesNotOverlapWhenPollTakesLongerThanInterval()
+    {
+        using var dht = new BlockingDhtClient();
+        using var service = new ScenePubSubService(
+            NullLogger<ScenePubSubService>.Instance,
+            dht,
+            TimeSpan.FromMilliseconds(10));
+
+        await service.SubscribeAsync("scene:test", CancellationToken.None);
+
+        Assert.True(await dht.FirstCallStarted.Task.WaitAsync(TimeSpan.FromSeconds(1)));
+
+        await Task.Delay(80);
+
+        Assert.Equal(1, dht.MaxConcurrentCalls);
+
+        dht.AllowCallsToComplete.Set();
+    }
+
+    private static IOptionsMonitor<slskd.Options> CreateOptionsMonitor()
+    {
+        var options = new slskd.Options
+        {
+            VirtualSoulfind = new slskd.Core.VirtualSoulfindOptions
+            {
+                Scenes = new slskd.Core.ScenesOptions
+                {
+                    EnableChat = true,
+                },
+            },
+        };
+
+        var monitor = new Mock<IOptionsMonitor<slskd.Options>>();
+        monitor.SetupGet(m => m.CurrentValue).Returns(options);
+        return monitor.Object;
+    }
+
+    private sealed class StubScenePubSubService : IScenePubSubService
+    {
+        public event EventHandler<SceneMessageReceivedEventArgs>? MessageReceived;
+
+        public Task PublishAsync(string sceneId, byte[] message, CancellationToken ct = default) => Task.CompletedTask;
+
+        public void RaiseMessageReceived(SceneMessageReceivedEventArgs args)
+        {
+            MessageReceived?.Invoke(this, args);
+        }
+
+        public Task SubscribeAsync(string sceneId, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task UnsubscribeAsync(string sceneId, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubDhtClient : IDhtClient
+    {
+        public Task<byte[]?> GetAsync(byte[] key, CancellationToken ct = default) => Task.FromResult<byte[]?>(null);
+
+        public Task<List<byte[]>> GetMultipleAsync(byte[] key, CancellationToken ct = default) => Task.FromResult(new List<byte[]>());
+
+        public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class BlockingDhtClient : IDhtClient, IDisposable
+    {
+        private int _activeCalls;
+
+        public BlockingDhtClient()
+        {
+            FirstCallStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public ManualResetEventSlim AllowCallsToComplete { get; } = new(false);
+
+        public TaskCompletionSource<bool> FirstCallStarted { get; }
+
+        public int MaxConcurrentCalls { get; private set; }
+
+        public Task<byte[]?> GetAsync(byte[] key, CancellationToken ct = default) => Task.FromResult<byte[]?>(null);
+
+        public Task<List<byte[]>> GetMultipleAsync(byte[] key, CancellationToken ct = default)
+        {
+            var current = Interlocked.Increment(ref _activeCalls);
+            MaxConcurrentCalls = Math.Max(MaxConcurrentCalls, current);
+            FirstCallStarted.TrySetResult(true);
+
+            try
+            {
+                AllowCallsToComplete.Wait(ct);
+                return Task.FromResult(new List<byte[]>());
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeCalls);
+            }
+        }
+
+        public Task PutAsync(byte[] key, byte[] value, int ttlSeconds, CancellationToken ct = default) => Task.CompletedTask;
+
+        public void Dispose()
+        {
+            AllowCallsToComplete.Set();
+            AllowCallsToComplete.Dispose();
+        }
+    }
+}

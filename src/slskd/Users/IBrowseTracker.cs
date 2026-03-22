@@ -53,5 +53,13 @@ namespace slskd.Users
         /// </summary>
         /// <param name="username"></param>
         void TryRemove(string username);
+
+        /// <summary>
+        ///     Removes a tracked browse operation only if the current tracked progress still matches the expected instance.
+        /// </summary>
+        /// <param name="username">The username whose browse should be removed.</param>
+        /// <param name="progress">The expected tracked progress instance.</param>
+        /// <returns><c>true</c> if the browse was removed; otherwise <c>false</c>.</returns>
+        bool TryRemove(string username, BrowseProgressUpdatedEventArgs progress);
     }
 }

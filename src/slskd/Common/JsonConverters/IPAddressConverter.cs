@@ -35,7 +35,7 @@ namespace slskd
         public override IPAddress? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             var value = reader.GetString();
-            return string.IsNullOrWhiteSpace(value) ? null : IPAddress.Parse(value);
+            return string.IsNullOrWhiteSpace(value) ? null : IPAddress.TryParse(value, out var address) ? address : null;
         }
 
         public override void Write(Utf8JsonWriter writer, IPAddress? value, JsonSerializerOptions options) => writer.WriteStringValue(value?.ToString());

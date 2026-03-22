@@ -149,14 +149,14 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         }
     }
 
-    public Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
+    public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
         string serviceId,
         CancellationToken cancellationToken = default)
     {
-        return FindByIdAsync(serviceId, requestPeerId: null, cancellationToken);
+        return await FindByIdAsync(serviceId, requestPeerId: null, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
+    public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
         string serviceId,
         string? requestPeerId,
         CancellationToken cancellationToken = default)
@@ -164,7 +164,7 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         if (string.IsNullOrWhiteSpace(serviceId))
         {
             _logger.LogWarning("[ServiceDirectory] FindById called with empty service ID");
-            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+            return Array.Empty<MeshServiceDescriptor>();
         }
 
         // Track discovery metrics if peer ID provided
@@ -175,24 +175,60 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
 
         try
         {
-            // Service ID format: hash("svc:" + ServiceName + ":" + OwnerPeerId)
-            // We need to query DHT by scanning service names or use a reverse index
-            // For now, this is a stub - full implementation would require additional DHT structures
-            _logger.LogDebug("[ServiceDirectory] FindById not yet fully implemented: {ServiceId}", serviceId);
+            var rawValue = await _dhtClient.GetRawAsync($"svcid:{serviceId}", cancellationToken).ConfigureAwait(false);
+            if (rawValue == null || rawValue.Length == 0)
+            {
+                _logger.LogDebug("[ServiceDirectory] No DHT value found for service ID: {ServiceId}", serviceId);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
 
-            // Deferred: Implement efficient FindById
-            // See memory-bank/triage-todo-fixme.md (defer section) for details
-            // Options:
-            // 1. Maintain a separate DHT key: svcid:<ServiceId> -> descriptor
-            // 2. Scan known service names (inefficient but works for now)
-            // 3. Use DHT FindValue with serviceId directly
-            // Current implementation returns empty array (service not found)
-            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+            if (rawValue.Length > _options.MaxDhtValueBytes)
+            {
+                _logger.LogWarning(
+                    "[ServiceDirectory] DHT value too large for service ID {ServiceId}: {Size} > {Max}",
+                    serviceId,
+                    rawValue.Length,
+                    _options.MaxDhtValueBytes);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            MeshServiceDescriptor? descriptor;
+            try
+            {
+                descriptor = SecurityUtils.ParseMessagePackSafely<MeshServiceDescriptor>(rawValue, _maxPayload);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "[ServiceDirectory] Payload too large or invalid for service ID {ServiceId}", serviceId);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[ServiceDirectory] Failed to deserialize descriptor for service ID {ServiceId}", serviceId);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            if (descriptor == null)
+            {
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            var (isValid, reason) = await _validator.ValidateAsync(descriptor).ConfigureAwait(false);
+            if (!isValid)
+            {
+                _logger.LogDebug(
+                    "[ServiceDirectory] Invalid descriptor for service ID {ServiceId}: {Reason}",
+                    serviceId,
+                    reason);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            return new[] { descriptor };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[ServiceDirectory] Error finding service by ID: {ServiceId}", serviceId);
-            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+            return Array.Empty<MeshServiceDescriptor>();
         }
     }
 

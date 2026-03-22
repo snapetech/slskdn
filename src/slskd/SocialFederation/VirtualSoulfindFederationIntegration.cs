@@ -23,8 +23,10 @@ namespace slskd.SocialFederation
     /// </remarks>
     public sealed class VirtualSoulfindFederationIntegration
     {
+        private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
         private readonly IOptionsMonitor<FederationPublishingOptions> _publishingOptions;
         private readonly FederationService _federationService;
+        private readonly LibraryActorService _libraryActorService;
         private readonly ILogger<VirtualSoulfindFederationIntegration> _logger;
 
         /// <summary>
@@ -34,12 +36,16 @@ namespace slskd.SocialFederation
         /// <param name="federationService">The federation service.</param>
         /// <param name="logger">The logger.</param>
         public VirtualSoulfindFederationIntegration(
+            IOptionsMonitor<SocialFederationOptions> federationOptions,
             IOptionsMonitor<FederationPublishingOptions> publishingOptions,
             FederationService federationService,
+            LibraryActorService libraryActorService,
             ILogger<VirtualSoulfindFederationIntegration> logger)
         {
+            _federationOptions = federationOptions ?? throw new ArgumentNullException(nameof(federationOptions));
             _publishingOptions = publishingOptions ?? throw new ArgumentNullException(nameof(publishingOptions));
             _federationService = federationService ?? throw new ArgumentNullException(nameof(federationService));
+            _libraryActorService = libraryActorService ?? throw new ArgumentNullException(nameof(libraryActorService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -165,10 +171,47 @@ namespace slskd.SocialFederation
             string domain,
             CancellationToken cancellationToken = default)
         {
-            // TODO: Implement tombstone activities for removed content
-            // For now, just log
-            _logger.LogDebug("[VSFederation] Content {ContentId} removed from domain {Domain}", contentId, domain);
-            await Task.CompletedTask;
+            var opts = _publishingOptions.CurrentValue;
+            if (!opts.Enabled ||
+                string.IsNullOrWhiteSpace(contentId) ||
+                string.IsNullOrWhiteSpace(domain))
+            {
+                return;
+            }
+
+            var actor = _libraryActorService.GetActor(domain);
+            if (actor == null)
+            {
+                _logger.LogDebug("[VSFederation] Skipping removal publish for {ContentId} - no actor for domain {Domain}", contentId, domain);
+                return;
+            }
+
+            var workRefId = CreateWorkRefId(domain, contentId);
+            var tombstone = new
+            {
+                id = workRefId,
+                type = "Tombstone",
+                formerType = "WorkRef",
+                deleted = DateTimeOffset.UtcNow,
+            };
+            var deleteActivity = new ActivityPubActivity
+            {
+                Id = $"{actor.ActorId}/activities/delete-{SanitizeId(contentId)}",
+                Type = "Delete",
+                Actor = actor.ActorId,
+                Object = tombstone,
+                Published = DateTimeOffset.UtcNow,
+                To = new[] { "https://www.w3.org/ns/activitystreams#Public" }
+            };
+
+            var (_, error) = await _federationService.PublishOutboxActivityAsync(actor.ActorName, deleteActivity, cancellationToken).ConfigureAwait(false);
+            if (error == null)
+            {
+                _logger.LogInformation("[VSFederation] Published tombstone for removed content {ContentId} in domain {Domain}", contentId, domain);
+                return;
+            }
+
+            _logger.LogWarning("[VSFederation] Failed to publish tombstone for {ContentId}: {Error}", contentId, error);
         }
 
         /// <summary>
@@ -195,7 +238,7 @@ namespace slskd.SocialFederation
                     case "music":
                         if (contentItem is MusicItem musicItem)
                         {
-                            workRef = WorkRef.FromMusicItem(musicItem, "https://localhost:5000");
+                            workRef = WorkRef.FromMusicItem(musicItem, BaseUrl);
                         }
 
                         break;
@@ -221,7 +264,8 @@ namespace slskd.SocialFederation
                 }
 
                 // Set attribution to the appropriate library actor
-                workRef.AttributedTo = $"/actors/{contentItem.Domain}";
+                var actor = _libraryActorService.GetActor(contentItem.Domain.ToString());
+                workRef.AttributedTo = actor?.ActorId ?? $"{BaseUrl}/actors/{contentItem.Domain}";
 
                 return workRef;
             }
@@ -248,5 +292,17 @@ namespace slskd.SocialFederation
                 .Trim('-')
                 .ToLowerInvariant();
         }
+
+        private string CreateWorkRefId(string domain, string contentId)
+        {
+            if (string.Equals(domain, "music", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{BaseUrl}/works/music/{SanitizeId(contentId)}";
+            }
+
+            return $"work:{domain}:{SanitizeId(contentId)}";
+        }
+
+        private string BaseUrl => _federationOptions.CurrentValue.BaseUrl ?? "https://localhost:5000";
     }
 }

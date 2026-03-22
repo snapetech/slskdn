@@ -306,7 +306,7 @@ namespace slskd.Search
                 throw new InvalidOperationException(message);
             }
 
-            // T-823: Check if disaster mode is active - if so, route to mesh-only search
+            // T-823: Check if the legacy fallback is active; default behavior remains Soulseek + mesh together.
             if (DisasterModeCoordinator?.IsDisasterModeActive == true)
             {
                 return await StartMeshOnlySearchAsync(id, query, options);
@@ -506,7 +506,7 @@ namespace slskd.Search
                         rateLimiter.Dispose();
                         CancellationTokens.TryRemove(id, out _);
                     }
-                }, cancellationToken: cancellationTokenSource.Token);
+                }, cancellationToken: CancellationToken.None);
 
                 // broadcast and return the _newly created_ search; it will continue to be updated in the background
                 await SearchHub.BroadcastUpdateAsync(search);
@@ -621,7 +621,7 @@ namespace slskd.Search
         }
 
         /// <summary>
-        ///     Performs a mesh-only search when disaster mode is active (T-823).
+        ///     Performs a mesh-only search when the legacy fallback is active (T-823).
         ///     Resolves query to MBIDs, queries DHT for overlay descriptors.
         /// </summary>
         /// <param name="id">A unique identifier for the search.</param>

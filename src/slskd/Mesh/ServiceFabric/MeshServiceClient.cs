@@ -95,27 +95,33 @@ public class MeshServiceClient : IMeshServiceClient
         // Increment per-peer counter
         _perPeerCallCounts.AddOrUpdate(targetPeerId, 1, (_, count) => count + 1);
 
-        // Create task completion source for this call
-        var tcs = new TaskCompletionSource<ServiceReply>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        if (!_pendingCalls.TryAdd(call.CorrelationId, tcs))
-        {
-            _logger.LogWarning(
-                "[ServiceClient] Duplicate correlation ID: {CorrelationId}",
-                call.CorrelationId);
-            throw new InvalidOperationException("Duplicate correlation ID");
-        }
-
-        if (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogDebug(
-                "[ServiceClient] Call cancelled: {Service}.{Method}",
-                call.ServiceName, call.Method);
-            return Task.FromCanceled<ServiceReply>(cancellationToken);
-        }
-
         try
         {
+            // Create task completion source for this call
+            var tcs = new TaskCompletionSource<ServiceReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (!_pendingCalls.TryAdd(call.CorrelationId, tcs))
+            {
+                _logger.LogWarning(
+                    "[ServiceClient] Duplicate correlation ID: {CorrelationId}",
+                    call.CorrelationId);
+                return Task.FromResult(new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Duplicate correlation ID"
+                });
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug(
+                    "[ServiceClient] Call cancelled: {Service}.{Method}",
+                    call.ServiceName, call.Method);
+                _pendingCalls.TryRemove(call.CorrelationId, out _);
+                return Task.FromCanceled<ServiceReply>(cancellationToken);
+            }
+
             var callBytes = MessagePackSerializer.Serialize(call, cancellationToken: CancellationToken.None);
             var envelope = new ControlEnvelope
             {
@@ -127,12 +133,15 @@ public class MeshServiceClient : IMeshServiceClient
             _signer.Sign(envelope);
             _statsCollector?.RecordMessageSent();
 
-            var exception = new FeatureNotImplementedException("Mesh service calls are not yet implemented. This feature will be available in a future version.");
-            _logger.LogError(
-                exception,
-                "[ServiceClient] Error calling service: {Service}.{Method} to {PeerId}",
+            _logger.LogWarning(
+                "[ServiceClient] Mesh service transport is not implemented for {Service}.{Method} to {PeerId}",
                 call.ServiceName, call.Method, targetPeerId);
-            return Task.FromException<ServiceReply>(exception);
+            return Task.FromResult(new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                ErrorMessage = "Mesh service transport is not implemented."
+            });
         }
         finally
         {

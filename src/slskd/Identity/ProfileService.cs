@@ -26,14 +26,20 @@ public sealed class ProfileService : IProfileService
     private readonly Ed25519Signer _signer;
     private readonly IOptionsMonitor<slskd.Options> _options;
     private readonly ILogger<ProfileService> _log;
+    private readonly IContactService? _contacts;
     private PeerProfile? _cachedMyProfile;
     private readonly object _cacheLock = new();
 
-    public ProfileService(Ed25519Signer signer, IOptionsMonitor<slskd.Options> options, ILogger<ProfileService> log)
+    public ProfileService(
+        Ed25519Signer signer,
+        IOptionsMonitor<slskd.Options> options,
+        ILogger<ProfileService> log,
+        IContactService? contacts = null)
     {
         _signer = signer ?? throw new ArgumentNullException(nameof(signer));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _log = log ?? throw new ArgumentNullException(nameof(log));
+        _contacts = contacts;
     }
 
     private string ProfileFilePath
@@ -53,10 +59,17 @@ public sealed class ProfileService : IProfileService
         var keyFile = Path.ChangeExtension(ProfileFilePath, ".key");
         if (File.Exists(keyFile))
         {
-            var keyData = JsonSerializer.Deserialize<KeyPairData>(File.ReadAllText(keyFile));
-            if (keyData != null && keyData.PrivateKey != null && keyData.PublicKey != null)
+            try
             {
-                return (Convert.FromBase64String(keyData.PrivateKey), Convert.FromBase64String(keyData.PublicKey));
+                var keyData = JsonSerializer.Deserialize<KeyPairData>(File.ReadAllText(keyFile));
+                if (keyData != null && keyData.PrivateKey != null && keyData.PublicKey != null)
+                {
+                    return (Convert.FromBase64String(keyData.PrivateKey), Convert.FromBase64String(keyData.PublicKey));
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "[ProfileService] Failed to load keypair from {KeyFile}, generating a new keypair", keyFile);
             }
         }
 
@@ -144,11 +157,47 @@ public sealed class ProfileService : IProfileService
 
     public async Task<PeerProfile?> GetProfileAsync(string peerId, CancellationToken ct = default)
     {
-        // For MVP, only return own profile. Later: fetch from endpoint or cache.
         var myProfile = await GetMyProfileAsync(ct).ConfigureAwait(false);
         if (myProfile.PeerId == peerId)
+        {
             return myProfile;
-        return null;
+        }
+
+        if (_contacts == null)
+        {
+            return null;
+        }
+
+        var contact = await _contacts.GetByPeerIdAsync(peerId, ct).ConfigureAwait(false);
+        if (contact == null)
+        {
+            return null;
+        }
+
+        List<PeerEndpoint> endpoints = new();
+        if (!string.IsNullOrWhiteSpace(contact.CachedEndpointsJson))
+        {
+            try
+            {
+                endpoints = JsonSerializer.Deserialize<List<PeerEndpoint>>(contact.CachedEndpointsJson) ?? new List<PeerEndpoint>();
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "[ProfileService] Failed to parse cached endpoints for peer {PeerId}", peerId);
+            }
+        }
+
+        return new PeerProfile
+        {
+            PeerId = contact.PeerId,
+            DisplayName = string.IsNullOrWhiteSpace(contact.Nickname) ? contact.PeerId : contact.Nickname,
+            Endpoints = endpoints,
+            CreatedAt = contact.CreatedAt,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            Capabilities = 0,
+            PublicKey = string.Empty,
+            Signature = string.Empty
+        };
     }
 
     public bool VerifyProfile(PeerProfile profile)
@@ -218,14 +267,36 @@ public sealed class ProfileService : IProfileService
 
     public string? DecodeFriendCode(string code)
     {
-        // For MVP: simple lookup by matching friend codes. Later: fuzzy match.
-        // Remove dashes and decode
         var clean = code.Replace("-", string.Empty).ToUpperInvariant();
         if (clean.Length < 16) return null;
 
-        // This is a simplified version - in practice you'd need to store a mapping
-        // or do fuzzy matching against all known PeerIds
-        // For now, return null (caller should use full PeerId lookup)
+        try
+        {
+            var myProfile = GetMyProfileAsync().GetAwaiter().GetResult();
+            if (string.Equals(GetFriendCode(myProfile.PeerId).Replace("-", string.Empty), clean, StringComparison.OrdinalIgnoreCase))
+            {
+                return myProfile.PeerId;
+            }
+
+            if (_contacts == null)
+            {
+                return null;
+            }
+
+            var contacts = _contacts.GetAllAsync().GetAwaiter().GetResult();
+            foreach (var contact in contacts)
+            {
+                if (string.Equals(GetFriendCode(contact.PeerId).Replace("-", string.Empty), clean, StringComparison.OrdinalIgnoreCase))
+                {
+                    return contact.PeerId;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[ProfileService] Failed to decode friend code");
+        }
+
         return null;
     }
 

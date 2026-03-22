@@ -177,6 +177,25 @@ public class TransportSelectorTests
     }
 
     [Fact]
+    public void GetCandidateEndpoints_WithLegacyIpv6Endpoint_ReturnsParsedEndpoint()
+    {
+        var descriptor = new MeshPeerDescriptor
+        {
+            Endpoints = new List<string>
+            {
+                "quic://[2001:db8::42]:443",
+            },
+        };
+
+        var candidates = _selector.GetCandidateEndpoints(descriptor, TransportScope.Control);
+
+        Assert.Single(candidates);
+        Assert.Equal(TransportType.DirectQuic, candidates[0].TransportType);
+        Assert.Equal("2001:db8::42", candidates[0].Host);
+        Assert.Equal(443, candidates[0].Port);
+    }
+
+    [Fact]
     public void IsEndpointCompatible_WithDisabledTransport_ReturnsFalse()
     {
         // Arrange
@@ -256,5 +275,4 @@ public class TransportSelectorTests
         public DialerStatistics GetStatistics() => new DialerStatistics { TransportType = TransportType };
     }
 }
-
 

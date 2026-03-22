@@ -25,6 +25,7 @@ namespace slskd.VirtualSoulfind.Core.Music
     {
         private readonly ILogger<MusicContentDomainProvider> _logger;
         private readonly IHashDbService _hashDb;
+        private const int VariantBackfillScanLimit = 256;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MusicContentDomainProvider"/> class.
@@ -72,30 +73,28 @@ namespace slskd.VirtualSoulfind.Core.Music
         /// <inheritdoc/>
         public Task<MusicWork?> TryGetWorkByTitleArtistAsync(string title, string artist, int? year = null, CancellationToken cancellationToken = default)
         {
-            // T-VC02: Basic implementation - fuzzy matching by title/artist would require
-            // additional HashDb search capabilities. For now, return null.
-            // This could be implemented by adding search methods to IHashDbService.
-            _logger.LogDebug("Title/artist matching not yet implemented for: {Title} / {Artist}", title, artist);
-            return Task.FromResult<MusicWork?>(null);
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(artist))
+            {
+                return Task.FromResult<MusicWork?>(null);
+            }
+
+            return TryGetWorkByTitleArtistInternalAsync(title, artist, year, cancellationToken);
         }
 
         /// <inheritdoc/>
         public Task<MusicItem?> TryGetItemByRecordingIdAsync(string recordingId, CancellationToken cancellationToken = default)
         {
-            // T-VC02: Basic implementation - direct track lookup by MBID would require
-            // additional HashDb capabilities. For now, return null.
-            // This could be implemented by adding track search methods to IHashDbService
-            // or by iterating through all albums/tracks (expensive).
-            _logger.LogDebug("Direct track lookup by MusicBrainz Recording ID not yet implemented: {RecordingId}", recordingId);
-            return Task.FromResult<MusicItem?>(null);
+            if (string.IsNullOrWhiteSpace(recordingId))
+            {
+                return Task.FromResult<MusicItem?>(null);
+            }
+
+            return TryGetItemByRecordingIdInternalAsync(recordingId, cancellationToken);
         }
 
         /// <inheritdoc/>
         public async Task<MusicItem?> TryGetItemByLocalMetadataAsync(LocalFileMetadata fileMetadata, AudioTags tags, CancellationToken cancellationToken = default)
         {
-            // This is a simplified implementation - in practice this would use sophisticated
-            // fuzzy matching against the HashDb catalog using title/artist/album metadata
-            // For T-VC02 implementation, we'll use basic tag matching
             if (tags == null || string.IsNullOrWhiteSpace(tags.Title) || string.IsNullOrWhiteSpace(tags.Artist))
             {
                 _logger.LogDebug("Insufficient metadata for local file matching: {SanitizedPath}", LoggingSanitizer.SanitizeFilePath(fileMetadata.Id));
@@ -114,10 +113,44 @@ namespace slskd.VirtualSoulfind.Core.Music
                     }
                 }
 
-                // Fall back to fuzzy matching by title/artist/album
-                // This would require implementing fuzzy matching logic in HashDb
-                // For now, return null - this would be implemented in a full version
-                _logger.LogDebug("Fuzzy matching not yet implemented for local metadata: {Title} / {Artist}", tags.Title, tags.Artist);
+                var albums = await _hashDb.GetAlbumTargetsAsync(cancellationToken).ConfigureAwait(false);
+                var normalizedTitle = NormalizeText(tags.Title);
+                var normalizedArtist = NormalizeText(tags.Artist);
+                var normalizedAlbum = NormalizeText(tags.Album);
+
+                foreach (var album in albums)
+                {
+                    if (!string.IsNullOrWhiteSpace(normalizedAlbum) &&
+                        !string.Equals(NormalizeText(album.Title), normalizedAlbum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var tracks = await _hashDb.GetAlbumTracksAsync(album.ReleaseId, cancellationToken).ConfigureAwait(false);
+                    var track = tracks.FirstOrDefault(candidate =>
+                        string.Equals(NormalizeText(candidate.Title), normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(NormalizeText(candidate.Artist), normalizedArtist, StringComparison.OrdinalIgnoreCase));
+
+                    if (track == null)
+                    {
+                        continue;
+                    }
+
+                    var isAdvertisable = (await _hashDb.LookupHashesByRecordingIdAsync(track.RecordingId, cancellationToken).ConfigureAwait(false)).Any();
+                    return MusicItem.FromTrackEntry(track, isAdvertisable);
+                }
+
+                var fallbackItem = await TryGetFallbackItemByVariantAsync(
+                    normalizedTitle,
+                    normalizedArtist,
+                    normalizedAlbum,
+                    cancellationToken).ConfigureAwait(false);
+                if (fallbackItem != null)
+                {
+                    return fallbackItem;
+                }
+
+                _logger.LogDebug("No exact metadata match found for local file: {Title} / {Artist}", tags.Title, tags.Artist);
                 return null;
             }
             catch (Exception ex)
@@ -137,11 +170,7 @@ namespace slskd.VirtualSoulfind.Core.Music
 
             try
             {
-                // Query HashDb for tracks matching the Chromaprint fingerprint
-                // This would require Chromaprint integration in HashDb
-                // For T-VC02 implementation, we'll return null until Chromaprint is migrated
-                _logger.LogDebug("Chromaprint fingerprint matching not yet implemented");
-                return Task.FromResult<MusicItem?>(null);
+                return TryMatchTrackByFingerprintInternalAsync(fingerprint, durationSeconds, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -153,11 +182,45 @@ namespace slskd.VirtualSoulfind.Core.Music
         /// <summary>
         ///     Gets recently added music items.
         /// </summary>
-        public Task<IReadOnlyList<MusicItem>> GetRecentItemsAsync(int count = 50, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<MusicItem>> GetRecentItemsAsync(int count = 50, CancellationToken cancellationToken = default)
         {
-            // TODO: Implement recent items retrieval from HashDb
-            // For now, return empty list to satisfy interface
-            return Task.FromResult<IReadOnlyList<MusicItem>>(Array.Empty<MusicItem>());
+            if (count <= 0)
+            {
+                return Array.Empty<MusicItem>();
+            }
+
+            try
+            {
+                var items = new List<MusicItem>(count);
+                var albums = await _hashDb.GetAlbumTargetsAsync(cancellationToken).ConfigureAwait(false);
+
+                foreach (var album in albums.OrderByDescending(entry => entry.CreatedAt))
+                {
+                    if (items.Count >= count)
+                    {
+                        break;
+                    }
+
+                    var tracks = await _hashDb.GetAlbumTracksAsync(album.ReleaseId, cancellationToken).ConfigureAwait(false);
+                    foreach (var track in tracks.OrderBy(track => track.Position))
+                    {
+                        var isAdvertisable = (await _hashDb.LookupHashesByRecordingIdAsync(track.RecordingId, cancellationToken).ConfigureAwait(false)).Any();
+                        items.Add(MusicItem.FromTrackEntry(track, isAdvertisable));
+
+                        if (items.Count >= count)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                return items;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve recent music items");
+                return Array.Empty<MusicItem>();
+            }
         }
 
         /// <summary>
@@ -177,6 +240,165 @@ namespace slskd.VirtualSoulfind.Core.Music
             }
 
             return null;
+        }
+
+        private async Task<MusicWork?> TryGetWorkByTitleArtistInternalAsync(string title, string artist, int? year, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var normalizedTitle = NormalizeText(title);
+                var normalizedArtist = NormalizeText(artist);
+                var albums = await _hashDb.GetAlbumTargetsAsync(cancellationToken).ConfigureAwait(false);
+
+                var match = albums.FirstOrDefault(album =>
+                    string.Equals(NormalizeText(album.Title), normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(NormalizeText(album.Artist), normalizedArtist, StringComparison.OrdinalIgnoreCase) &&
+                    (!year.HasValue || ParseYearFromReleaseDate(album.ReleaseDate) == year));
+
+                if (match == null)
+                {
+                    _logger.LogDebug("No exact work match found for {Title} / {Artist} ({Year})", title, artist, year);
+                    return null;
+                }
+
+                return MusicWork.FromAlbumEntry(match);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resolve work by title/artist: {Title} / {Artist}", title, artist);
+                return null;
+            }
+        }
+
+        private async Task<MusicItem?> TryGetItemByRecordingIdInternalAsync(string recordingId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var hashes = await _hashDb.LookupHashesByRecordingIdAsync(recordingId, cancellationToken).ConfigureAwait(false);
+                var isAdvertisable = hashes.Any();
+                var variants = await _hashDb.GetVariantsByRecordingAsync(recordingId, cancellationToken).ConfigureAwait(false);
+
+                var albums = await _hashDb.GetAlbumTargetsAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var album in albums)
+                {
+                    var tracks = await _hashDb.GetAlbumTracksAsync(album.ReleaseId, cancellationToken).ConfigureAwait(false);
+                    var track = tracks.FirstOrDefault(candidate =>
+                        string.Equals(candidate.RecordingId, recordingId, StringComparison.OrdinalIgnoreCase));
+
+                    if (track != null)
+                    {
+                        return MusicItem.FromTrackEntry(track, isAdvertisable);
+                    }
+                }
+
+                var bestVariant = variants
+                    .OrderByDescending(variant => variant.QualityScore)
+                    .ThenByDescending(variant => variant.SeenCount)
+                    .FirstOrDefault();
+                if (bestVariant != null)
+                {
+                    return MusicItem.FromRecordingFallback(
+                        recordingId,
+                        DeriveFallbackTitle(bestVariant),
+                        null,
+                        bestVariant.DurationMs > 0 ? bestVariant.DurationMs : null,
+                        isAdvertisable);
+                }
+
+                _logger.LogDebug("No track entry found for MusicBrainz Recording ID: {RecordingId}", recordingId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resolve item for MusicBrainz Recording ID: {RecordingId}", recordingId);
+                return null;
+            }
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim().ToLowerInvariant();
+        }
+
+        private async Task<MusicItem?> TryGetFallbackItemByVariantAsync(
+            string title,
+            string artist,
+            string? album,
+            CancellationToken cancellationToken)
+        {
+            var recordingIds = await _hashDb.GetRecordingIdsWithVariantsAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var recordingId in recordingIds.Take(VariantBackfillScanLimit))
+            {
+                var variants = await _hashDb.GetVariantsByRecordingAsync(recordingId, cancellationToken).ConfigureAwait(false);
+                var bestVariant = variants
+                    .OrderByDescending(variant => variant.QualityScore)
+                    .ThenByDescending(variant => variant.SeenCount)
+                    .FirstOrDefault();
+                if (bestVariant == null)
+                {
+                    continue;
+                }
+
+                var candidateTitle = NormalizeText(DeriveFallbackTitle(bestVariant));
+                if (!string.Equals(candidateTitle, title, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var isAdvertisable = true;
+                return MusicItem.FromRecordingFallback(
+                    recordingId,
+                    DeriveFallbackTitle(bestVariant),
+                    artist,
+                    bestVariant.DurationMs > 0 ? bestVariant.DurationMs : null,
+                    isAdvertisable);
+            }
+
+            return null;
+        }
+
+        private static string DeriveFallbackTitle(slskd.Audio.AudioVariant variant)
+        {
+            if (!string.IsNullOrWhiteSpace(variant.VariantId))
+            {
+                return variant.VariantId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(variant.FlacKey))
+            {
+                return variant.FlacKey;
+            }
+
+            return variant.MusicBrainzRecordingId;
+        }
+
+        private async Task<MusicItem?> TryMatchTrackByFingerprintInternalAsync(
+            string fingerprint,
+            int durationSeconds,
+            CancellationToken cancellationToken)
+        {
+            var matches = await _hashDb.LookupHashesByAudioFingerprintAsync(fingerprint, cancellationToken).ConfigureAwait(false);
+            var bestMatch = matches
+                .Where(match => !string.IsNullOrWhiteSpace(match.MusicBrainzId))
+                .OrderBy(match =>
+                {
+                    var durationMs = match.DurationMs ?? 0;
+                    var deltaSeconds = Math.Abs((durationMs / 1000) - durationSeconds);
+                    return deltaSeconds;
+                })
+                .ThenByDescending(match => match.QualityScore ?? 0.0)
+                .ThenByDescending(match => match.UseCount)
+                .FirstOrDefault();
+
+            if (bestMatch == null)
+            {
+                _logger.LogDebug("No fingerprint match found for duration {DurationSeconds}s", durationSeconds);
+                return null;
+            }
+
+            return await TryGetItemByRecordingIdInternalAsync(bestMatch.MusicBrainzId, cancellationToken).ConfigureAwait(false);
         }
     }
 }

@@ -140,9 +140,9 @@ public class ShadowIndexQuery : IShadowIndexQuery
 
     private string? DecodePeerIdHint(byte[] hint)
     {
-        // This is a compact 8-byte hint, not the full peer ID
-        // In practice, we'd need to look up the full peer ID from our pseudonym table
-        // For now, just return a placeholder
-        return $"peer:vsf:{Convert.ToHexString(hint).ToLowerInvariant()}";
+        // This is only an 8-byte routing hint, not a routable full peer ID.
+        // Returning a fabricated peer:vsf value makes downstream callers believe
+        // they can route downloads to a peer that does not actually exist.
+        return null;
     }
 }

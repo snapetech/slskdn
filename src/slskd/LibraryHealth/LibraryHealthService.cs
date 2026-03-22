@@ -59,11 +59,31 @@ namespace slskd.LibraryHealth
 
         public async Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default)
         {
+            request ??= new LibraryHealthScanRequest();
+
+            var requestedExtensions = request.FileExtensions?.Count > 0
+                ? request.FileExtensions
+                    .Where(ext => !string.IsNullOrWhiteSpace(ext))
+                    .Select(ext => ext.Trim())
+                    .Select(ext => ext.StartsWith('.') ? ext.ToLowerInvariant() : $".{ext.ToLowerInvariant()}")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+                : new List<string> { ".flac", ".mp3", ".m4a", ".ogg" };
+
+            if (requestedExtensions.Count == 0)
+            {
+                requestedExtensions = new List<string> { ".flac", ".mp3", ".m4a", ".ogg" };
+            }
+
             var libraryPath = ResolveLibraryPath(request.LibraryPath);
             if (libraryPath == null)
             {
                 throw new UnauthorizedException("Library Health scans must target a configured share directory");
             }
+
+            var maxConcurrentFiles = request.MaxConcurrentFiles > 0
+                ? request.MaxConcurrentFiles
+                : 4;
 
             var scanId = Guid.NewGuid().ToString();
             var scan = new LibraryHealthScan
@@ -83,12 +103,12 @@ namespace slskd.LibraryHealth
             {
                 LibraryPath = libraryPath,
                 IncludeSubdirectories = request.IncludeSubdirectories,
-                FileExtensions = request.FileExtensions,
+                FileExtensions = requestedExtensions,
                 SkipPreviouslyScanned = request.SkipPreviouslyScanned,
-                MaxConcurrentFiles = request.MaxConcurrentFiles,
+                MaxConcurrentFiles = maxConcurrentFiles,
             };
 
-            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, ct), ct);
+            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, ct), CancellationToken.None);
             return scanId;
         }
 

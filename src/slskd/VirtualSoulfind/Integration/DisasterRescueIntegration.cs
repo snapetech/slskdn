@@ -7,7 +7,7 @@ namespace slskd.VirtualSoulfind.Integration;
 using slskd.VirtualSoulfind.DisasterMode;
 
 /// <summary>
-/// Integrates disaster mode with rescue mode.
+/// Integrates the legacy fallback state with rescue mode.
 /// </summary>
 public interface IDisasterRescueIntegration
 {
@@ -23,7 +23,7 @@ public interface IDisasterRescueIntegration
 }
 
 /// <summary>
-/// Disaster mode integration with rescue mode.
+/// Legacy fallback integration with rescue mode.
 /// </summary>
 public class DisasterRescueIntegration : IDisasterRescueIntegration
 {
@@ -43,17 +43,17 @@ public class DisasterRescueIntegration : IDisasterRescueIntegration
 
     public bool ShouldUseRescueMode()
     {
-        // In disaster mode, all transfers are "rescue" (mesh-only)
+        // When the legacy fallback is active, all transfers are "rescue" (mesh-only).
         if (disasterMode.IsDisasterModeActive)
         {
-            logger.LogDebug("[VSF-INTEGRATION] Rescue mode active (disaster mode)");
+            logger.LogDebug("[VSF-INTEGRATION] Rescue mode active (legacy fallback)");
             return true;
         }
 
-        // Also use rescue mode if Soulseek is degraded
-        if (healthMonitor.CurrentHealth == SoulseekHealth.Degraded)
+        // Also use rescue mode whenever Soulseek is not fully healthy
+        if (healthMonitor.CurrentHealth != SoulseekHealth.Healthy)
         {
-            logger.LogDebug("[VSF-INTEGRATION] Rescue mode active (degraded health)");
+            logger.LogDebug("[VSF-INTEGRATION] Rescue mode active ({Health})", healthMonitor.CurrentHealth);
             return true;
         }
 
@@ -64,12 +64,17 @@ public class DisasterRescueIntegration : IDisasterRescueIntegration
     {
         if (disasterMode.IsDisasterModeActive)
         {
-            return "Disaster mode active - Soulseek unavailable";
+            return "Legacy fallback active - Soulseek unavailable";
         }
 
         if (healthMonitor.CurrentHealth == SoulseekHealth.Degraded)
         {
             return "Soulseek connection degraded";
+        }
+
+        if (healthMonitor.CurrentHealth == SoulseekHealth.Unavailable)
+        {
+            return "Soulseek unavailable";
         }
 
         return null;

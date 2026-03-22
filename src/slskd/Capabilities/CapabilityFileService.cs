@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Soulseek;
+using slskd.Transfers.MultiSource;
 
 /// <summary>
 /// Service for sharing and requesting capability files via Soulseek.
@@ -57,30 +58,7 @@ public sealed class CapabilityFileService
     /// </summary>
     public byte[] GenerateCapabilityFile()
     {
-        var caps = new CapabilityFileContent
-        {
-            Client = "slskdn",
-            Version = Program.SemanticVersion,
-            ProtocolVersion = 1,
-            Capabilities = PeerCapabilityFlags.SupportsDHT | PeerCapabilityFlags.SupportsMeshSync | PeerCapabilityFlags.SupportsSwarm | PeerCapabilityFlags.SupportsFlacHashDb,
-            Features = new[]
-            {
-                "dht",
-                "mesh_sync",
-                "swarm_download",
-                "flac_hash_db",
-                "multipart",
-            },
-            OverlayPort = 50305, // TODO: Get from config
-            Timestamp = DateTimeOffset.UtcNow,
-        };
-
-        var json = JsonSerializer.Serialize(caps, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-
+        var json = _capabilityService.GetCapabilityFileContent();
         return Encoding.UTF8.GetBytes(json);
     }
 
@@ -137,11 +115,7 @@ public sealed class CapabilityFileService
             {
                 _logger.LogDebug("Requesting capability file from {Username} at {Path}", username, path);
 
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(TimeSpan.FromSeconds(30));
-
-                // Try to download the file
-                var data = await DownloadSmallFileAsync(username, path, maxBytes: 4096, cts.Token);
+                var data = await DownloadSmallFileWithTimeoutAsync(username, path, 4096, TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
 
                 if (data is not null && data.Length > 0)
                 {
@@ -178,8 +152,55 @@ public sealed class CapabilityFileService
             }
         }
 
+        try
+        {
+            var userInfo = await GetUserInfoWithTimeoutAsync(username, TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
+            var parsedCaps = _capabilityService.ParseCapabilityTag(userInfo?.Description ?? string.Empty);
+            if (parsedCaps != null)
+            {
+                parsedCaps.Username = username;
+                _capabilityService.SetPeerCapabilities(username, parsedCaps);
+
+                var fallback = BuildCapabilityFileFromPeerCapabilities(parsedCaps);
+                _cache[username] = new CachedCapabilityFile
+                {
+                    Content = fallback,
+                    FetchedAt = DateTimeOffset.UtcNow,
+                };
+
+                _logger.LogInformation("Recovered capabilities for {Username} from UserInfo description tags", username);
+                return fallback;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Failed to recover capabilities from UserInfo for {Username}", username);
+        }
+
         _logger.LogDebug("No capability file available from {Username}", username);
         return null;
+    }
+
+    private async Task<byte[]?> DownloadSmallFileWithTimeoutAsync(
+        string username,
+        string filename,
+        int maxBytes,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout);
+        return await DownloadSmallFileAsync(username, filename, maxBytes, cts.Token).ConfigureAwait(false);
+    }
+
+    private async Task<UserInfo?> GetUserInfoWithTimeoutAsync(
+        string username,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout);
+        return await _soulseekClient.GetUserInfoAsync(username, cts.Token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -190,10 +211,28 @@ public sealed class CapabilityFileService
         try
         {
             var json = Encoding.UTF8.GetString(data);
-            return JsonSerializer.Deserialize<CapabilityFileContent>(json, new JsonSerializerOptions
+            var content = JsonSerializer.Deserialize<CapabilityFileContent>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
             });
+
+            if (content == null ||
+                string.IsNullOrWhiteSpace(content.Client) ||
+                string.IsNullOrWhiteSpace(content.Version) ||
+                content.ProtocolVersion <= 0 ||
+                content.Capabilities == PeerCapabilityFlags.None)
+            {
+                _logger.LogDebug("Rejected malformed capability file");
+                return null;
+            }
+
+            if (content.OverlayPort < 0 || content.OverlayPort > 65535)
+            {
+                _logger.LogDebug("Rejected capability file with invalid overlay port {Port}", content.OverlayPort);
+                return null;
+            }
+
+            return content;
         }
         catch (Exception ex)
         {
@@ -218,29 +257,101 @@ public sealed class CapabilityFileService
         _cache.Clear();
     }
 
-    private Task<byte[]?> DownloadSmallFileAsync(
+    private static CapabilityFileContent BuildCapabilityFileFromPeerCapabilities(PeerCapabilities capabilities)
+    {
+        return new CapabilityFileContent
+        {
+            Client = "slskdn",
+            Version = string.IsNullOrWhiteSpace(capabilities.ClientVersion) ? "unknown" : capabilities.ClientVersion,
+            ProtocolVersion = capabilities.ProtocolVersion,
+            Capabilities = capabilities.Flags,
+            Features = GetFeatures(capabilities.Flags),
+            OverlayPort = 0,
+            Timestamp = DateTimeOffset.UtcNow,
+        };
+    }
+
+    private static string[] GetFeatures(PeerCapabilityFlags flags)
+    {
+        var features = new List<string>();
+
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsDHT))
+            features.Add("dht");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsHashExchange))
+            features.Add("hash_exchange");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsPartialDownload))
+            features.Add("partial_download");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsMeshSync))
+            features.Add("mesh_sync");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsFlacHashDb))
+            features.Add("flac_hash_db");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsSwarm))
+            features.Add("swarm_download");
+
+        return features.ToArray();
+    }
+
+    private async Task<byte[]?> DownloadSmallFileAsync(
         string username,
         string filename,
         int maxBytes,
         CancellationToken cancellationToken)
     {
-        // Note: This is a simplified implementation
-        // In practice, you'd use the Soulseek client's download functionality
-        // with a limited byte count
         try
         {
-            // Queue a download request for the capability file
-            // The actual implementation would need to hook into the Soulseek download flow
-            // For now, we return null to indicate not implemented
-            // TODO: Implement via ISoulseekClient download APIs
-            _logger.LogDebug("Capability file download not yet implemented for {Username}/{Path}",
-                username, filename);
-            return Task.FromResult<byte[]?>(null);
+            var browseResult = await _soulseekClient.BrowseAsync(username, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var remoteFile = browseResult.Directories
+                .SelectMany(directory => directory.Files.Select(file => new
+                {
+                    RemoteFilename = string.IsNullOrWhiteSpace(directory.Name)
+                        ? file.Filename
+                        : $"{directory.Name}\\{file.Filename}",
+                    file.Size,
+                }))
+                .FirstOrDefault(file =>
+                    string.Equals(file.RemoteFilename, filename, StringComparison.OrdinalIgnoreCase) ||
+                    file.RemoteFilename.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
+            if (remoteFile == null)
+            {
+                _logger.LogDebug("Capability file {Path} not exposed by {Username} browse result", filename, username);
+                return null;
+            }
+
+            if (remoteFile.Size <= 0 || remoteFile.Size > maxBytes)
+            {
+                _logger.LogDebug("Capability file {Path} from {Username} has unsupported size {Size}", filename, username, remoteFile.Size);
+                return null;
+            }
+
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            using var memoryStream = new MemoryStream((int)remoteFile.Size);
+            using var limitedStream = new LimitedWriteStream(memoryStream, maxBytes, linkedCts);
+
+            try
+            {
+                await _soulseekClient.DownloadAsync(
+                    username: username,
+                    remoteFilename: remoteFile.RemoteFilename,
+                    outputStreamFactory: () => Task.FromResult<Stream>(limitedStream),
+                    size: remoteFile.Size,
+                    startOffset: 0,
+                    cancellationToken: linkedCts.Token,
+                    options: new TransferOptions(
+                        maximumLingerTime: 1000,
+                        disposeOutputStreamOnCompletion: false)).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (limitedStream.LimitReached)
+            {
+                _logger.LogDebug("Capability file download from {Username} reached size limit after {Bytes} bytes", username, limitedStream.BytesWritten);
+            }
+
+            var bytes = memoryStream.ToArray();
+            return bytes.Length == 0 ? null : bytes;
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Error downloading capability file");
-            return Task.FromResult<byte[]?>(null);
+            return null;
         }
     }
 

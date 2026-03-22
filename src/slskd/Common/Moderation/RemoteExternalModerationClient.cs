@@ -200,7 +200,7 @@ Be conservative - when in doubt, choose 'Allowed' with low confidence."
                 MaxTokens = 300
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
+            using var response = await _httpClient.PostAsJsonAsync(
                 opts.Endpoint!.TrimEnd('/') + "/chat/completions",
                 openAiRequest,
                 cancellationToken);
@@ -254,7 +254,9 @@ Be conservative - when in doubt, choose 'Allowed' with low confidence."
 
                 return new ModerationAnalysis
                 {
-                    Verdict = Enum.Parse<ModerationVerdict>(verdictStr),
+                    Verdict = Enum.TryParse(verdictStr, ignoreCase: true, out ModerationVerdict verdict)
+                        ? verdict
+                        : ModerationVerdict.Unknown,
                     Confidence = Math.Clamp(confidence, 0.0, 1.0),
                     Reasoning = reasoning.Length > 200 ? reasoning.Substring(0, 200) : reasoning,
                     Categories = categories

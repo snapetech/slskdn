@@ -51,7 +51,8 @@ public class DhtMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not implemented for DHT service");
+        _logger.LogWarning("[DHT] Streaming requested by {PeerId}, but DHT streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     public async Task<ServiceReply> HandleCallAsync(
@@ -380,9 +381,14 @@ public class DhtMeshService : IMeshService
             return Task.FromResult(pingErr);
 
         // Update routing table with the pinging peer
-        _ = Task.Run(() => _routingTable.TouchAsync(
-            pingReq?.RequesterId ?? Array.Empty<byte>(),
-            context.RemotePeerId), cancellationToken);
+        _ = ObserveBackgroundTaskAsync(
+            Task.Run(
+                () => _routingTable.TouchAsync(
+                    pingReq?.RequesterId ?? Array.Empty<byte>(),
+                    context.RemotePeerId),
+                CancellationToken.None),
+            "[DHT] Failed to update routing table for ping from {PeerId}",
+            context.RemotePeerId);
 
         var response = new PingResponse
         {
@@ -399,6 +405,18 @@ public class DhtMeshService : IMeshService
             StatusCode = ServiceStatusCodes.OK,
             Payload = payload
         });
+    }
+
+    private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate, params object[] propertyValues)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, messageTemplate, propertyValues);
+        }
     }
 }
 

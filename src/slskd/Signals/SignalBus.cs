@@ -17,10 +17,12 @@ public class SignalBus : ISignalBus, IDisposable
     private readonly ILogger<SignalBus> logger;
     private readonly SignalSystemOptions options;
     private readonly ConcurrentDictionary<SignalChannel, ISignalChannelHandler> channelHandlers = new();
+    private readonly CancellationTokenSource cleanupCancellationTokenSource = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> seenSignalIds = new(); // LRU cache for deduplication
     private readonly SemaphoreSlim seenSignalIdsLock = new(1, 1);
     private readonly List<Func<Signal, CancellationToken, Task>> subscribers = new();
     private readonly SemaphoreSlim subscribersLock = new(1, 1);
+    private readonly Task cleanupTask;
     private bool disposed;
 
     // Statistics
@@ -37,7 +39,7 @@ public class SignalBus : ISignalBus, IDisposable
         options = optionsMonitor?.CurrentValue ?? throw new ArgumentNullException(nameof(optionsMonitor));
 
         // Start cleanup task for expired signal IDs
-        _ = Task.Run(CleanupExpiredSignalIdsAsync);
+        cleanupTask = Task.Run(CleanupExpiredSignalIdsAsync);
     }
 
     /// <inheritdoc />
@@ -181,13 +183,13 @@ public class SignalBus : ISignalBus, IDisposable
     /// </summary>
     private async Task CleanupExpiredSignalIdsAsync()
     {
-        while (!disposed)
+        while (!cleanupCancellationTokenSource.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(5), CancellationToken.None);
+                await Task.Delay(TimeSpan.FromMinutes(5), cleanupCancellationTokenSource.Token);
 
-                await seenSignalIdsLock.WaitAsync();
+                await seenSignalIdsLock.WaitAsync(cleanupCancellationTokenSource.Token);
                 try
                 {
                     var now = DateTimeOffset.UtcNow;
@@ -229,6 +231,10 @@ public class SignalBus : ISignalBus, IDisposable
                     seenSignalIdsLock.Release();
                 }
             }
+            catch (OperationCanceledException) when (cleanupCancellationTokenSource.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error in signal ID cleanup task");
@@ -263,6 +269,17 @@ public class SignalBus : ISignalBus, IDisposable
 
         if (disposing)
         {
+            cleanupCancellationTokenSource.Cancel();
+
+            try
+            {
+                cleanupTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.All(inner => inner is OperationCanceledException))
+            {
+            }
+
+            cleanupCancellationTokenSource.Dispose();
             seenSignalIdsLock.Dispose();
             subscribersLock.Dispose();
         }

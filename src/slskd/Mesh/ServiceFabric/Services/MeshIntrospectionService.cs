@@ -75,7 +75,8 @@ public class MeshIntrospectionService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not implemented for mesh-introspect service");
+        _logger.LogWarning("[MeshIntrospect] Streaming requested by {PeerId}, but mesh introspection streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     private ServiceReply HandleGetStatus(ServiceCall call, MeshServiceContext context)

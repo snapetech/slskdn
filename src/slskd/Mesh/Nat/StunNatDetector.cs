@@ -139,7 +139,7 @@ public class StunNatDetector : INatDetector
     private async Task<MappingResult?> ProbeServer(string server, CancellationToken ct, bool forceNewLocal = false)
     {
         var parts = server.Split(':', 2);
-        if (parts.Length != 2 || !int.TryParse(parts[1], out var port))
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var port) || port is <= 0 or > ushort.MaxValue)
         {
             return null;
         }
@@ -161,37 +161,43 @@ public class StunNatDetector : INatDetector
 
         await udp.SendAsync(request, request.Length, endpoint);
 
-        var receiveTask = udp.ReceiveAsync();
-        if (await Task.WhenAny(receiveTask, Task.Delay(2000, ct)) != receiveTask)
+        using var receiveTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        receiveTimeout.CancelAfter(2000);
+
+        try
         {
+            var response = await udp.ReceiveAsync(receiveTimeout.Token);
+            var mapped = ParseMappedAddress(response.Buffer, txn);
+            if (mapped == null)
+            {
+                return null;
+            }
+
+            var localEp = (IPEndPoint)udp.Client.LocalEndPoint!;
+            var isDirect = mapped.Address.Equals(localEp.Address) && mapped.Port == localEp.Port;
+
+            return new MappingResult(mapped, localEp, isDirect);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogDebug("[NAT] Timed out waiting for STUN response from {Server}", server);
             return null;
         }
-
-        var response = receiveTask.Result;
-        var mapped = ParseMappedAddress(response.Buffer, txn);
-        if (mapped == null)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            logger.LogDebug("[NAT] STUN probe canceled for {Server}", server);
             return null;
         }
-
-        var localEp = (IPEndPoint)udp.Client.LocalEndPoint!;
-        var isDirect = mapped.Address.Equals(localEp.Address) && mapped.Port == localEp.Port;
-
-        return new MappingResult(mapped, localEp, isDirect);
     }
 
     private async Task<IPAddress?> ResolveHostAsync(string host, CancellationToken ct)
     {
         try
         {
-            var resolveTask = Dns.GetHostAddressesAsync(host, ct);
-            var completed = await Task.WhenAny(resolveTask, Task.Delay(DnsResolveTimeout, ct));
-            if (completed != resolveTask)
-            {
-                return null;
-            }
+            using var resolveTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            resolveTimeout.CancelAfter(DnsResolveTimeout);
 
-            var addresses = await resolveTask;
+            var addresses = await Dns.GetHostAddressesAsync(host, resolveTimeout.Token);
             return addresses.FirstOrDefault();
         }
         catch (OperationCanceledException)

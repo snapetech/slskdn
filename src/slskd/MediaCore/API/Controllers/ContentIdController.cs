@@ -47,6 +47,11 @@ public class ContentIdController : ControllerBase
             return BadRequest("ExternalId and ContentId are required");
         }
 
+        if (ContentIdParser.Parse(request.ContentId) == null)
+        {
+            return BadRequest("Invalid ContentID format. Expected: content:<domain>:<type>:<id>");
+        }
+
         try
         {
             await _registry.RegisterAsync(request.ExternalId, request.ContentId, cancellationToken);
@@ -184,8 +189,9 @@ public class ContentIdController : ControllerBase
 
         try
         {
-            var contentIds = await _registry.FindByDomainAsync(domain, cancellationToken);
-            return Ok(new { domain, contentIds });
+            var normalizedDomain = ContentIdParser.NormalizeDomain(domain, string.Empty);
+            var contentIds = await _registry.FindByDomainAsync(normalizedDomain, cancellationToken);
+            return Ok(new { domain, normalizedDomain, contentIds });
         }
         catch (Exception ex)
         {
@@ -216,8 +222,10 @@ public class ContentIdController : ControllerBase
 
         try
         {
-            var contentIds = await _registry.FindByDomainAndTypeAsync(domain, type, cancellationToken);
-            return Ok(new { domain, type, contentIds });
+            var normalizedDomain = ContentIdParser.NormalizeDomain(domain, type);
+            var normalizedType = ContentIdParser.NormalizeType(domain, type);
+            var contentIds = await _registry.FindByDomainAndTypeAsync(normalizedDomain, normalizedType, cancellationToken);
+            return Ok(new { domain, type, normalizedDomain, normalizedType, contentIds });
         }
         catch (Exception ex)
         {
@@ -258,6 +266,8 @@ public class ContentIdController : ControllerBase
                 isValid = true,
                 domain = parsed.Domain,
                 type = parsed.Type,
+                normalizedDomain = ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type),
+                normalizedType = ContentIdParser.NormalizeType(parsed.Domain, parsed.Type),
                 id = parsed.Id,
                 fullId = parsed.FullId,
                 isAudio = parsed.IsAudio,

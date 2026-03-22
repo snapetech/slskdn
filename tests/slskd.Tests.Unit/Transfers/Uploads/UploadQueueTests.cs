@@ -363,6 +363,19 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             }
         }
 
+        [Fact]
+        public async Task AwaitStartAsync_ContinuationCanCompleteUploadWithoutDeadlockingQueue()
+        {
+            var (queue, _) = GetFixture();
+
+            queue.Enqueue("user", "file.mp3");
+
+            var completion = queue.AwaitStartAsync("user", "file.mp3")
+                .ContinueWith(_ => queue.Complete("user", "file.mp3"));
+
+            await completion.WaitAsync(TimeSpan.FromSeconds(1));
+        }
+
         public class Enqueue
         {
             [Theory, AutoData]

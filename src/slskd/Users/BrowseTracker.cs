@@ -28,6 +28,8 @@ namespace slskd.Users
     /// </summary>
     public class BrowseTracker : IBrowseTracker
     {
+        private readonly object _syncRoot = new();
+
         /// <summary>
         ///     Tracked browse operations.
         /// </summary>
@@ -39,14 +41,43 @@ namespace slskd.Users
         /// <param name="username"></param>
         /// <param name="progress"></param>
         public void AddOrUpdate(string username, BrowseProgressUpdatedEventArgs progress)
-            => Browses.AddOrUpdate(username, progress, (user, oldprogress) => progress);
+        {
+            lock (_syncRoot)
+            {
+                Browses.AddOrUpdate(username, progress, (user, oldprogress) => progress);
+            }
+        }
 
         /// <summary>
         ///     Removes a tracked browse operation for the specified user.
         /// </summary>
         /// <param name="username"></param>
         public void TryRemove(string username)
-            => Browses.TryRemove(username, out _);
+        {
+            lock (_syncRoot)
+            {
+                Browses.TryRemove(username, out _);
+            }
+        }
+
+        /// <summary>
+        ///     Removes a tracked browse operation only if the current tracked progress still matches the expected instance.
+        /// </summary>
+        /// <param name="username">The username.</param>
+        /// <param name="progress">The expected progress instance.</param>
+        /// <returns><c>true</c> if the browse was removed; otherwise <c>false</c>.</returns>
+        public bool TryRemove(string username, BrowseProgressUpdatedEventArgs progress)
+        {
+            lock (_syncRoot)
+            {
+                if (!Browses.TryGetValue(username, out var currentProgress) || !ReferenceEquals(currentProgress, progress))
+                {
+                    return false;
+                }
+
+                return Browses.TryRemove(username, out _);
+            }
+        }
 
         /// <summary>
         ///     Gets the browse progress for the specified user.
@@ -55,6 +86,11 @@ namespace slskd.Users
         /// <param name="progress"></param>
         /// <returns></returns>
         public bool TryGet(string username, out BrowseProgressUpdatedEventArgs? progress)
-            => Browses.TryGetValue(username, out progress);
+        {
+            lock (_syncRoot)
+            {
+                return Browses.TryGetValue(username, out progress);
+            }
+        }
     }
 }

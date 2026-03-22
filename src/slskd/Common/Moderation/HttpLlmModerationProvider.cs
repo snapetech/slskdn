@@ -229,7 +229,7 @@ namespace slskd.Common.Moderation
                 MaxTokens = 500
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
+            using var response = await _httpClient.PostAsJsonAsync(
                 _options.CurrentValue.Endpoint.TrimEnd('/') + "/chat/completions",
                 openAiRequest,
                 cancellationToken);
@@ -335,8 +335,12 @@ Respond with JSON as described above.",
 
                 return new ModerationAnalysis
                 {
-                    Verdict = Enum.Parse<ModerationVerdict>(verdictStr),
-                    Severity = Enum.Parse<LlmModeration.SeverityLevel>(severityStr),
+                    Verdict = Enum.TryParse(verdictStr, ignoreCase: true, out ModerationVerdict verdict)
+                        ? verdict
+                        : ModerationVerdict.Unknown,
+                    Severity = Enum.TryParse(severityStr, ignoreCase: true, out LlmModeration.SeverityLevel severity)
+                        ? severity
+                        : LlmModeration.SeverityLevel.Safe,
                     Categories = categories,
                     Confidence = Math.Clamp(confidence, 0.0, 1.0),
                     Reasoning = reasoning,

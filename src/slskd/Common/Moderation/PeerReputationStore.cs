@@ -141,24 +141,26 @@ namespace slskd.Common.Moderation
         }
 
         /// <inheritdoc/>
-        public Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(string peerId, int maxEvents = 50, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(string peerId, int maxEvents = 50, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(peerId))
             {
-                return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
+                return Array.Empty<PeerReputationEvent>();
             }
+
+            await EnsureDataLoadedAsync(cancellationToken);
 
             if (!_eventCache.TryGetValue(peerId, out var events))
             {
-                return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
+                return Array.Empty<PeerReputationEvent>();
             }
 
             lock (events)
             {
-                return Task.FromResult<IEnumerable<PeerReputationEvent>>(events
+                return events
                     .OrderByDescending(e => e.Timestamp)
                     .Take(maxEvents)
-                    .ToList());
+                    .ToList();
             }
         }
 
@@ -232,6 +234,7 @@ namespace slskd.Common.Moderation
         public void Dispose()
         {
             _fileLock.Dispose();
+            _loadLock.Dispose();
         }
 
         /// <summary>

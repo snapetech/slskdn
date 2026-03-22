@@ -104,6 +104,10 @@ public class SoulseekProtocolParser
                 Payload = payload
             };
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "[SOULSEEK-PROTO] Error reading message");
@@ -157,6 +161,10 @@ public class SoulseekProtocolParser
             }
 
             await stream.FlushAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

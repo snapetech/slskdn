@@ -168,6 +168,15 @@ public class MeshServicePublisher : BackgroundService
                 _options.DescriptorTtlSeconds,
                 cancellationToken);
 
+            foreach (var descriptor in descriptors)
+            {
+                await _dhtClient.PutAsync(
+                    $"svcid:{descriptor.ServiceId}",
+                    descriptor,
+                    _options.DescriptorTtlSeconds,
+                    cancellationToken);
+            }
+
             _logger.LogDebug(
                 "[ServicePublisher] Published {Count} descriptor(s) for service: {ServiceName} (TTL: {Ttl}s)",
                 descriptors.Count, serviceName, _options.DescriptorTtlSeconds);
