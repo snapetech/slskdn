@@ -268,7 +268,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         var validation = MessageValidator.ValidateMeshHelloAck(ack);
         if (!validation.IsValid)
         {
-            throw new ProtocolViolationException($"Invalid HELLO_ACK: {validation.Error}");
+            throw new ProtocolViolationException("Invalid HELLO_ACK");
         }
 
         // Verify nonce echo (optional but recommended)
@@ -304,7 +304,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         var validation = MessageValidator.ValidateMeshHello(hello);
         if (!validation.IsValid)
         {
-            throw new ProtocolViolationException($"Invalid HELLO: {validation.Error}");
+            throw new ProtocolViolationException("Invalid HELLO");
         }
 
         // Send ACK

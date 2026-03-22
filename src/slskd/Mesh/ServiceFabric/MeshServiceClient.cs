@@ -174,7 +174,7 @@ public class MeshServiceClient : IMeshServiceClient
             {
                 CorrelationId = Guid.NewGuid().ToString(),
                 StatusCode = ServiceStatusCodes.ServiceNotFound,
-                ErrorMessage = $"No providers for '{serviceName}'"
+                ErrorMessage = "No providers available for requested service"
             };
         }
 

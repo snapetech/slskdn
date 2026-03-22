@@ -74,7 +74,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown hole punch method: {call.Method}",
+                    ErrorMessage = "Unknown hole punch method",
                     Payload = Array.Empty<byte>()
                 }
             };

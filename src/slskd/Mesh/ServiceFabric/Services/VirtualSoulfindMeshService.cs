@@ -58,7 +58,7 @@ public class VirtualSoulfindMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}"
+                    ErrorMessage = "Unknown method"
                 }
             };
         }

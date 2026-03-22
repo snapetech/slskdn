@@ -16,6 +16,30 @@ using Xunit;
 public class HolePunchMeshServiceTests
 {
     [Fact]
+    public async Task HandleCallAsync_UnknownMethod_ReturnsSanitizedMethodNotFound()
+    {
+        var service = new HolePunchMeshService(
+            Mock.Of<ILogger<HolePunchMeshService>>(),
+            Mock.Of<IUdpHolePuncher>(),
+            Mock.Of<IMeshServiceClient>());
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "hole-punch",
+                Method = "RequestPunchButActuallySensitive",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = Array.Empty<byte>()
+            },
+            new MeshServiceContext { RemotePeerId = "peer-origin" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.MethodNotFound, reply.StatusCode);
+        Assert.Equal("Unknown hole punch method", reply.ErrorMessage);
+        Assert.DoesNotContain("Sensitive", reply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task HandleCallAsync_RequestPunch_WhenTargetReplyFails_ReturnsSanitizedError()
     {
         var meshClient = new Mock<IMeshServiceClient>();
