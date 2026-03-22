@@ -626,6 +626,7 @@ finally
 - `tests/slskd.Tests.Unit/Mesh/Realm/Bridge/ActivityPubBridgeTests.cs`
 - `src/slskd/SocialFederation/FederationService.cs`
 - `src/slskd/Users/BrowseTracker.cs`
+- `src/slskd/MediaCore/IpldMapper.cs`
 
 **Wrong**:
 ```csharp
@@ -641,7 +642,7 @@ return Task.FromResult<(bool Processed, string? Error)>((false, "Missing activit
 return BridgeOperationResult.Failed("Failed to follow remote actor.");
 ```
 
-**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, nullability contracts, configuration assumptions, fixture prerequisites, or synchronization primitives at the same time, but the import list, helper invocations, generic return expressions, config parsing, target-framework compatibility, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, synchronization types, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit and make sure the chosen APIs actually exist on the project’s current target.
+**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, nullability contracts, collection interface types, configuration assumptions, fixture prerequisites, or synchronization primitives at the same time, but the import list, helper invocations, generic return expressions, `Count`/`Keys` usage, async locking boundaries, target-framework compatibility, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, synchronization types, dictionary interfaces, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit and make sure the chosen APIs actually exist on the project’s current target and async code is no longer inside synchronous locks.
 
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
