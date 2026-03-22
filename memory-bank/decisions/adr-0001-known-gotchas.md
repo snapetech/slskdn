@@ -644,6 +644,40 @@ if (string.IsNullOrWhiteSpace(contentId))
 
 **Why This Keeps Happening**: HashDb sits behind many controllers, jobs, and background flows, so keyed lookups get called with IDs assembled from user input, deserialized payloads, and stored state. If normalization only happens at some call sites, the database layer becomes inconsistent and missing-state bugs appear nondeterministically. Normalize the identifier at the start of the HashDb method itself, not only at the edges.
 
+### 0xB1. HashDb Write Paths Must Normalize Keys Too, Or Read-Side Fixes Only Mask The Drift
+
+**The Bug**: after normalizing several HashDb reads, a second bug remained: multiple writes and keyed fetches were still accepting padded identifiers and storing them as-is. That left the database internally inconsistent even though some reads had started trimming on lookup. Album targets, FLAC inventory lookups, warm-cache upserts, and label-crate release-job writes all needed the same normalization treatment.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+cmd.Parameters.AddWithValue("@cid", entry.ContentId);
+cmd.Parameters.AddWithValue("@path", entry.Path ?? string.Empty);
+...
+if (release == null || string.IsNullOrWhiteSpace(release.ReleaseId))
+{
+    continue;
+}
+cmd.Parameters.AddWithValue("@release_id", release.ReleaseId);
+```
+
+**Correct**:
+```csharp
+entry.ContentId = entry.ContentId.Trim();
+entry.Path = entry.Path?.Trim() ?? string.Empty;
+...
+var releaseId = release.ReleaseId.Trim();
+if (string.IsNullOrWhiteSpace(releaseId))
+{
+    continue;
+}
+cmd.Parameters.AddWithValue("@release_id", releaseId);
+```
+
+**Why This Keeps Happening**: once read paths are fixed, the app appears healthier, but the underlying store can still accumulate inconsistent keys unless writes are normalized too. That creates a slow-motion regression where new bad rows keep being added and future readers need more and more cleanup logic. Normalize the key at both ends: before querying and before persisting.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
