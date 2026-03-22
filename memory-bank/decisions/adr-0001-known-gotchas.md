@@ -7462,6 +7462,30 @@ public async Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(...)
 
 **Why This Keeps Happening**: Lazy-load designs usually get wired into write paths and the most obvious read methods first, then one “simple” read skips the load because it looks like a pure cache access. Any public API that exposes persisted state must either guarantee prior initialization or trigger the same lazy-load guard itself.
 
+### 0k30. Test Fixtures Must Be Updated When Constructor Signatures Gain New Required Dependencies
+
+**The Bug**: v2 tests still constructed `SimpleMatchEngine()` and `SoulseekBackend(...)` with older signatures after those classes gained required `ICatalogueStore` and `ILogger<SoulseekBackend>` dependencies. The runtime project built, but the unit project failed as soon as those tests were compiled again.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Matching/SimpleMatchEngineTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Backends/SoulseekBackendTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Integration/CompleteV2FlowTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Integration/VirtualSoulfindV2IntegrationTests.cs`
+
+**Wrong**:
+```csharp
+var engine = new SimpleMatchEngine();
+var backend = new SoulseekBackend(client, limiter, options, logger);
+```
+
+**Correct**:
+```csharp
+var engine = new SimpleMatchEngine(catalogueStore);
+var backend = new SoulseekBackend(client, limiter, catalogueStore, options, logger);
+```
+
+**Why This Keeps Happening**: Constructor changes often land in production code first, and tests keep compiling in warm workspaces or are skipped behind narrower validation commands. When a service gains a required dependency, grep the test tree for all constructor call sites in the same edit or the next full unit-project build will break far away from the original change.
+
 ---
 
 *Last updated: 2026-03-22*
