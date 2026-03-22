@@ -10987,3 +10987,37 @@ contentId = contentId?.Trim() ?? string.Empty;
 ```
 
 **Why This Keeps Happening**: the thinner an endpoint looks, the easier it is to assume the service layer will “just handle it.” That is exactly how raw identifiers and padded payload fields keep re-entering the system after bigger boundary cleanups. Even when an action is just a pass-through, normalize route/query/body strings before the service call or the API contract depends on transport formatting instead of logical identity.
+
+### 0k66. Service `ErrorMessage` Fields Are Not Stable Public HTTP Contracts
+
+**The Bug**: PodCore-style controllers often receive rich service result objects with `Success`, `Found`, and `ErrorMessage` fields. It is tempting to forward `result.ErrorMessage` straight to the client in `400`/`404`/`500` responses. That leaks internal service wording, validation details, or backend failure text directly into the public API and makes controller behavior drift whenever internal result messages change.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodMembershipController.cs`
+- `src/slskd/PodCore/API/Controllers/PodDiscoveryController.cs`
+- `src/slskd/PodCore/API/Controllers/PodDhtController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageRoutingController.cs`
+
+**Wrong**:
+```csharp
+return StatusCode(500, new { error = result.ErrorMessage });
+```
+
+```csharp
+return NotFound(new { podId, peerId, found = false, error = result.ErrorMessage ?? "Membership not found" });
+```
+
+**Correct**:
+```csharp
+_logger.LogWarning("[PodMembership] Failed to publish membership for {PeerId} in {PodId}: {Error}",
+    result.PeerId,
+    result.PodId,
+    result.ErrorMessage);
+return StatusCode(500, new { error = "Failed to publish membership" });
+```
+
+```csharp
+return NotFound(new { podId, peerId, found = false, error = "Membership not found" });
+```
+
+**Why This Keeps Happening**: service result types look structured and “API-ready,” but their `ErrorMessage` fields are still internal diagnostics. A controller boundary must translate those into stable, documented public error strings and only keep the detailed text in logs.
