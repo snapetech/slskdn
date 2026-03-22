@@ -131,6 +131,32 @@ return DnsLeakVerificationResult.Failure("DNS leak verification failed");
 
 **Why This Keeps Happening**: security/helper services often feel “internal enough” that detailed exception text seems harmless, especially when they already wrap failures in result DTOs instead of throwing. But these DTOs are still observable contracts and can expose environment details. Log the exception privately and keep the result text stable and sanitized.
 
+### 0xB9. File-Safety And Transfer-Status Helpers Need The Same Sanitized Error Contract
+
+**The Bug**: path/content safety helpers and mesh-transfer status updates were still copying raw `ex.Message` text into result objects. That exposed filesystem and runtime details through validation/status APIs even though higher layers had already been hardened.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/PathGuard.cs`
+- `src/slskd/DhtRendezvous/Security/ContentSafety.cs`
+- `src/slskd/Common/Security/ContentSafety.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshTransferService.cs`
+
+**Wrong**:
+```csharp
+return PathValidationResult.Fail($"Invalid path: {ex.Message}", PathViolationType.InvalidComponent);
+return ContentVerificationResult.Fail($"Could not read file: {ex.Message}", ContentThreatLevel.Unknown);
+status.ErrorMessage = ex.Message;
+```
+
+**Correct**:
+```csharp
+return PathValidationResult.Fail("Invalid path", PathViolationType.InvalidComponent);
+return ContentVerificationResult.Fail("Could not read file", ContentThreatLevel.Unknown);
+status.ErrorMessage = "Mesh transfer failed";
+```
+
+**Why This Keeps Happening**: helper-layer result objects look less “public” than controllers, so it is easy to leave detailed exception strings in them during implementation. But these results still bubble into user-visible status, diagnostics, or API payloads. The rule is the same: log privately, return stable sanitized text.
+
 ### 0xB1. Detached Startup Work Must Not Keep The `StartAsync` Token As Its Real Lifetime
 
 **The Bug**: several hosted services and startup tasks returned from `StartAsync`, but the detached work they queued still ran on the startup coordination token. Once host startup completed or shutdown raced in, accepted initialization and detector loops could be cancelled before they ever really became service-owned background work.
