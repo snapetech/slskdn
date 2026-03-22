@@ -426,6 +426,32 @@ var inboxUri = new Uri(actorUri.AbsoluteUri.TrimEnd('/') + "/inbox", UriKind.Abs
 
 **Why This Keeps Happening**: It is easy to accidentally encode our own actor URL conventions into federation code because local test actors all follow the same route shape. That breaks interoperability immediately once a remote server uses a different actor path. Similarly, SSRF checks often validate the first URL and forget that the effective fetch target may change after redirects. Federation code must treat remote actor URLs as foreign inputs, not local route templates, and must validate the final network destination, not just the initial string.
 
+### 0x19. Do Not Advertise Empty Generic Actors, Do Not Invent Scene Peer IDs From Hints, And Failed Observation Rows Must Leave The Retry Queue
+
+**The Bug**: Generic federation actors for books/movies/tv/software/games reported themselves as available even though they always returned an empty recent-work list. Scene membership tracking also converted 8-byte peer hints into fake `peer:vsf:*` IDs, which looked like real members. Separately, failed observation processing wrote `Processed = 0`, so the same broken row stayed in the “unprocessed” query forever and could loop indefinitely.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/GenericLibraryActor.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneMembershipTracker.cs`
+- `src/slskd/VirtualSoulfind/Capture/ObservationStore.cs`
+
+**Wrong**:
+```csharp
+return true;
+return $"peer:vsf:{Convert.ToHexString(peerIdHint).ToLowerInvariant()}";
+SET Processed = @processed
+```
+
+**Correct**:
+```csharp
+return false;
+return null;
+SET Processed = 1,
+    ProcessingError = @error
+```
+
+**Why This Keeps Happening**: Scaffolding code often defaults to “available”, “best-effort peer string”, or “leave it pending so we can retry later.” Those defaults are dangerous when there is no real backend behind them. If a domain has no provider, do not expose the actor. If a hint is not a routable identity, do not promote it into one. If a failed row should be retained for inspection, mark it processed-with-error instead of keeping it in the live retry queue forever.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
