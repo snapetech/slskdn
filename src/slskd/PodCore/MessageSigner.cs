@@ -285,9 +285,9 @@ public class MessageSigner : IMessageSigner
     // PR-12 canonical: SigVersion|PodId|ChannelId|MessageId|SenderPeerId|TimestampUnixMs|BodySha256 (base64)
     private string CreateCanonicalPayload(PodMessage message)
     {
-        var bodySha256 = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(message.Body ?? "")));
+        var bodySha256 = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(message.Body ?? string.Empty)));
         var podId = GetPodId(message);
-        return $"{CanonicalVersion}|{podId}|{message.ChannelId ?? ""}|{message.MessageId ?? ""}|{message.SenderPeerId ?? ""}|{message.TimestampUnixMs}|{bodySha256}";
+        return $"{CanonicalVersion}|{podId}|{message.ChannelId ?? string.Empty}|{message.MessageId ?? string.Empty}|{message.SenderPeerId ?? string.Empty}|{message.TimestampUnixMs}|{bodySha256}";
     }
 
     private static string GetPodId(PodMessage message)
@@ -295,8 +295,8 @@ public class MessageSigner : IMessageSigner
         if (!string.IsNullOrEmpty(message.PodId))
             return message.PodId;
         if (string.IsNullOrEmpty(message.ChannelId))
-            return "";
+            return string.Empty;
         var parts = message.ChannelId.Split(':', 2);
-        return parts.Length > 0 ? (parts[0] ?? "") : "";
+        return parts.Length > 0 ? (parts[0] ?? string.Empty) : string.Empty;
     }
 }

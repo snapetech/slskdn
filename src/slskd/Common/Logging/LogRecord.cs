@@ -25,9 +25,9 @@ namespace slskd
     public record LogRecord
     {
         public DateTime Timestamp { get; init; }
-        public string Context { get; init; }
-        public string SubContext { get; init; }
-        public string Level { get; init; }
-        public string Message { get; init; }
+        public string Context { get; init; } = string.Empty;
+        public string SubContext { get; init; } = string.Empty;
+        public string Level { get; init; } = string.Empty;
+        public string Message { get; init; } = string.Empty;
     }
 }

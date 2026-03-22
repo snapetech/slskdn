@@ -12,7 +12,7 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the MusicBrainz release identifier.
         /// </summary>
-        public string ReleaseId { get; set; }
+        public string ReleaseId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the position of the track within the release.
@@ -22,17 +22,17 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the MusicBrainz recording identifier.
         /// </summary>
-        public string RecordingId { get; set; }
+        public string RecordingId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the track title.
         /// </summary>
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the credited artist.
         /// </summary>
-        public string Artist { get; set; }
+        public string Artist { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the expected duration in milliseconds.
@@ -42,7 +42,7 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the primary ISRC.
         /// </summary>
-        public string Isrc { get; set; }
+        public string Isrc { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the genre.

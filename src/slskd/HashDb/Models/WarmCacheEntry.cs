@@ -6,9 +6,9 @@ namespace slskd.HashDb.Models
 {
     public class WarmCacheEntry
     {
-        public string ContentId { get; set; }
+        public string ContentId { get; set; } = string.Empty;
 
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         public long SizeBytes { get; set; }
 

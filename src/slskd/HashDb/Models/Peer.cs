@@ -28,7 +28,7 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the peer's Soulseek username (primary key).
         /// </summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the capability flags bitfield.
@@ -38,7 +38,7 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the detected client version.
         /// </summary>
-        public string ClientVersion { get; set; }
+        public string ClientVersion { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets when this peer was last seen (Unix timestamp).

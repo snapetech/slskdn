@@ -25,10 +25,10 @@ namespace slskd.Core.API
 
     public class ServerState
     {
-        public string Address { get; set; }
-        public IPEndPoint IPEndPoint { get; set; }
+        public string Address { get; set; } = string.Empty;
+        public IPEndPoint? IPEndPoint { get; set; }
         public SoulseekClientStates State { get; set; }
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public bool IsConnected => State.HasFlag(SoulseekClientStates.Connected);
         public bool IsLoggedIn => State.HasFlag(SoulseekClientStates.LoggedIn);
         public bool IsTransitioning => State.HasFlag(SoulseekClientStates.Connecting) || State.HasFlag(SoulseekClientStates.Disconnecting) || State.HasFlag(SoulseekClientStates.LoggingIn);

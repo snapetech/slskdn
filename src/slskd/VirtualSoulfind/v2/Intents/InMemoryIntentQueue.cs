@@ -22,9 +22,8 @@ namespace slskd.VirtualSoulfind.v2.Intents
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
-    using slskd.VirtualSoulfind.Core;
-    using slskd.VirtualSoulfind.Core;
     using System.Threading.Tasks;
+    using slskd.VirtualSoulfind.Core;
 
     /// <summary>
     ///     In-memory implementation of <see cref="IIntentQueue"/>.

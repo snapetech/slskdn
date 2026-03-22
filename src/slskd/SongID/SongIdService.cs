@@ -2912,7 +2912,7 @@ public sealed class SongIdService : ISongIdService
                     PerturbationId = probe.Id,
                     Label = probe.Label,
                     Path = outputPath,
-                    BaselineDelta = Math.Round(Math.Abs((baseline.ArtifactScore - heuristics.ArtifactScore)), 4),
+                    BaselineDelta = Math.Round(Math.Abs(baseline.ArtifactScore - heuristics.ArtifactScore), 4),
                     Heuristics = heuristics,
                 });
             }
@@ -2991,7 +2991,7 @@ public sealed class SongIdService : ISongIdService
 
     private async Task<CommandResult> RunToolAsync(string fileName, IEnumerable<string> arguments, CancellationToken cancellationToken)
     {
-        var process = new Process
+        using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {

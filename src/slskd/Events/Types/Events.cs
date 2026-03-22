@@ -81,7 +81,7 @@ public sealed record DownloadFileFailedEvent : Event
     public override int Version { get; } = 0;
     public required string RemoteFilename { get; init; }
     public required Transfer Transfer { get; init; }
-    public string ErrorMessage { get; init; }
+    public string ErrorMessage { get; init; } = string.Empty;
 }
 
 public sealed record DownloadDirectoryCompleteEvent : Event
@@ -90,7 +90,7 @@ public sealed record DownloadDirectoryCompleteEvent : Event
     public override int Version { get; } = 0;
     public required string LocalDirectoryName { get; init; }
     public required string RemoteDirectoryName { get; init; }
-    public string Username { get; init; }
+    public string Username { get; init; } = string.Empty;
 }
 
 public sealed record UploadFileCompleteEvent : Event

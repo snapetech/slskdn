@@ -31,12 +31,12 @@ namespace slskd.Files
         /// <summary>
         ///     The name of the file.
         /// </summary>
-        public string Name { get; init; }
+        public string Name { get; init; } = string.Empty;
 
         /// <summary>
         ///     The fully qualified name of the file.
         /// </summary>
-        public string FullName { get; init; }
+        public string FullName { get; init; } = string.Empty;
 
         /// <summary>
         ///     The size of the file, in bytes.

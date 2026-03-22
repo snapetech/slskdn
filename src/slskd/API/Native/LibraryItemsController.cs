@@ -147,6 +147,11 @@ public class LibraryItemsController : ControllerBase
         int limit,
         CancellationToken cancellationToken)
     {
+        if (options == null)
+        {
+            return new List<LibraryItemResponse>();
+        }
+
         var shareDirs = options.Value.Shares.Directories
             .Select(raw => new Share(raw))
             .Where(share => !share.IsExcluded)
@@ -420,7 +425,7 @@ public class LibraryItemsController : ControllerBase
                 repo.UpsertContentItem(
                     contentId,
                     ContentDomain.GenericFile.ToString(),
-                    null,
+                    string.Empty,
                     maskedFilename,
                     true,
                     string.Empty,

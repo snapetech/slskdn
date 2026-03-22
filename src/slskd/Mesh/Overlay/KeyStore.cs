@@ -29,10 +29,10 @@ public class FileKeyStore : IKeyStore
     {
         this.logger = logger;
         this.options = options.Value;
-        (current, var previous) = LoadOrCreate();
-        if (previous != null)
+        (current, var previousKey) = LoadOrCreate();
+        if (previousKey != null)
         {
-            verifyKeys.Add(previous.PublicKey);
+            verifyKeys.Add(previousKey.PublicKey);
         }
 
         verifyKeys.Add(current.PublicKey);

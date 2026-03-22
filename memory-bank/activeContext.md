@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Warning cleanup still in progress; integration hosts repaired and the warning floor has been pushed down through several additional broad passes
+- **Current Task**: Warning cleanup still in progress; warning floor pushed down through repeated broad passes and the remaining backlog is now mostly analyzers/disposables plus a smaller `Common/*` nullability seam
 - **Branch**: `e2e-fixture-fix2`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -104,7 +104,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. Continue the large warning-reduction pass from the current seam instead of doing isolated one-offs:
-   the heaviest remaining buckets are now `Common/*` nullability helpers plus `Mesh/Overlay/*` platform/disposable analyzers and the broader `CA2000`/`CA2016`/StyleCop backlog.
+   the heaviest remaining buckets are now `Program`, `MultiSource*`, and `Common/Security/*` disposal/token analyzers plus the smaller remaining `Common/*` helper nullability seam.
 2. Re-run the slow full-instance `DisasterModeTests` class separately if that harness is needed for CI confidence; the lighter `DisasterModeIntegrationTests` and `LoadTests` are green after the stub-host DI repair.
 3. If release workflows start warning on other third-party actions, repeat the same direct-release audit used here with `gh api repos/<owner>/<repo>/releases/latest`.
 

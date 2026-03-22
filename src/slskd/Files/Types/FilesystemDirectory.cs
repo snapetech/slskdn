@@ -32,12 +32,12 @@ namespace slskd.Files
         /// <summary>
         ///     The name of the directory.
         /// </summary>
-        public string Name { get; init; }
+        public string Name { get; init; } = string.Empty;
 
         /// <summary>
         ///     The fully qualified name of the directory.
         /// </summary>
-        public string FullName { get; init; }
+        public string FullName { get; init; } = string.Empty;
 
         /// <summary>
         ///     The directories' attributes.
@@ -57,12 +57,12 @@ namespace slskd.Files
         /// <summary>
         ///     The files within the directory.
         /// </summary>
-        public IEnumerable<FilesystemFile> Files { get; init; }
+        public IEnumerable<FilesystemFile> Files { get; init; } = Array.Empty<FilesystemFile>();
 
         /// <summary>
         ///     The directories within the directory.
         /// </summary>
-        public IEnumerable<FilesystemDirectory> Directories { get; init; }
+        public IEnumerable<FilesystemDirectory> Directories { get; init; } = Array.Empty<FilesystemDirectory>();
 
         /// <summary>
         ///     Maps a <see cref="FilesystemDirectory"/> from the specified <see cref="DirectoryInfo"/>.

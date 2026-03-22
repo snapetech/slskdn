@@ -102,7 +102,7 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             // Send backfill requests to pod members
             var backfillTasks = new List<Task<PodBackfillProcessingResult>>();
-            var semaphore = new SemaphoreSlim(MaxConcurrentBackfillRequests);
+            using var semaphore = new SemaphoreSlim(MaxConcurrentBackfillRequests);
 
             // Get pod members (excluding ourselves)
             var podMembers = await GetPodMembersAsync(podId, ct);
@@ -422,7 +422,7 @@ public class PodMessageBackfill : IPodMessageBackfill
             SenderPeerId = GetLocalPeerId(),
             Body = System.Text.Json.JsonSerializer.Serialize(requestData),
             TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            Signature = "" // Would need proper signing
+            Signature = string.Empty, // Would need proper signing
         };
     }
 

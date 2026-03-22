@@ -99,14 +99,16 @@ namespace slskd
         /// <returns>A list of differences between the two objects.</returns>
         public static IEnumerable<(PropertyInfo Property, string FQN, object? Left, object? Right)> DiffWith(this object left, object right, string? parentFqn = null)
         {
-            if (left?.GetType() != right?.GetType())
+            var leftType = left.GetType();
+            var rightType = right.GetType();
+            if (leftType != rightType)
             {
-                throw new InvalidCastException($"Unable to diff types {left?.GetType()} and {right?.GetType()}");
+                throw new InvalidCastException($"Unable to diff types {leftType} and {rightType}");
             }
 
             var differences = new List<(PropertyInfo Property, string FQN, object? Left, object? Right)>();
 
-            foreach (var prop in left?.GetType().GetProperties())
+            foreach (var prop in leftType.GetProperties())
             {
                 try
                 {
@@ -123,7 +125,7 @@ namespace slskd
 
                     if (propType.IsArray || (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Dictionary<,>)))
                     {
-                        if (leftVal.ToJson() != rightVal.ToJson())
+                        if (leftVal?.ToJson() != rightVal?.ToJson())
                         {
                             differences.Add((prop, fqn, leftVal, rightVal));
                         }
@@ -137,6 +139,16 @@ namespace slskd
                     }
                     else
                     {
+                        if (leftVal == null || rightVal == null)
+                        {
+                            if (!Equals(leftVal, rightVal))
+                            {
+                                differences.Add((prop, fqn, leftVal, rightVal));
+                            }
+
+                            continue;
+                        }
+
                         differences.AddRange(DiffWith(leftVal, rightVal, fqn));
                     }
                 }
@@ -203,7 +215,7 @@ namespace slskd
         ///     Safely disposes this object without throwing if it is already exposed.
         /// </summary>
         /// <param name="obj">The object.</param>
-        public static void TryDispose(this IDisposable obj)
+        public static void TryDispose(this IDisposable? obj)
         {
             try
             {
@@ -502,8 +514,10 @@ namespace slskd
         public static string GetErrorAndOrExceptionMessage(this ModelError error)
         {
             var ex = error?.Exception?.Message;
-            return string.IsNullOrEmpty(error?.ErrorMessage) ? ex :
-                string.IsNullOrEmpty(ex) ? error?.ErrorMessage : $"{error?.ErrorMessage} ({ex})";
+            var errorMessage = error?.ErrorMessage;
+
+            return string.IsNullOrEmpty(errorMessage) ? ex ?? string.Empty :
+                string.IsNullOrEmpty(ex) ? errorMessage : $"{errorMessage} ({ex})";
         }
 
         /// <summary>
@@ -540,7 +554,7 @@ namespace slskd
         /// <typeparam name="T">The type to which to deserialize the string.</typeparam>
         /// <param name="str">The string to deserialize.</param>
         /// <returns>The new object deserialized from the string.</returns>
-        public static T FromJson<T>(this string str) => JsonSerializer.Deserialize<T>(str, GetJsonSerializerOptions());
+        public static T? FromJson<T>(this string str) => JsonSerializer.Deserialize<T>(str, GetJsonSerializerOptions());
 
         private static JsonSerializerOptions GetJsonSerializerOptions()
         {

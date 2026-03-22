@@ -87,8 +87,12 @@ public class ContentNegotiationOperationFilter : IOperationFilter
     private MediaTypeCollection GetContentTypes(ProducesResponseTypeAttribute attribute)
     {
         var contentTypesField = typeof(ProducesResponseTypeAttribute).GetField("_contentTypes", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (contentTypesField == null)
+        {
+            return [];
+        }
 
-        MediaTypeCollection value = (MediaTypeCollection)contentTypesField.GetValue(attribute);
+        var value = contentTypesField.GetValue(attribute) as MediaTypeCollection;
 
         if (value is null)
         {

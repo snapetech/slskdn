@@ -3,6 +3,7 @@
 // </copyright>
 
 #pragma warning disable CA2252 // Preview features - QUIC APIs require preview features
+#pragma warning disable CA1416 // Runtime IsSupported guards already gate QUIC-only code paths
 
 namespace slskd.Mesh.Overlay;
 

@@ -19,7 +19,6 @@ namespace slskd.VirtualSoulfind.v2.Intents
 {
     using System;
     using slskd.VirtualSoulfind.Core;
-    using slskd.VirtualSoulfind.Core;
 
     /// <summary>
     ///     Represents a user's intent to acquire a specific track.

@@ -112,7 +112,9 @@ namespace slskd.Configuration
                     {
                         var shortName = ((char?)attribute.ConstructorArguments[0].Value)?.ToString() ?? string.Empty;
                         var longName = (string?)attribute.ConstructorArguments[1].Value;
-                        var arguments = new[] { shortName, longName }.Where(i => !string.IsNullOrEmpty(i));
+                        var arguments = new[] { shortName, longName }
+                            .Where(argument => !string.IsNullOrEmpty(argument))
+                            .Cast<string>();
 
                         foreach (var argument in arguments.Where(argument => dictionary.ContainsKey(argument)))
                         {

@@ -28,12 +28,16 @@ namespace slskd
     /// <summary>
     ///     Serializes IPAddress instances.
     /// </summary>
-    public class IPAddressConverter : JsonConverter<IPAddress>
+    public class IPAddressConverter : JsonConverter<IPAddress?>
     {
         public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(IPAddress);
 
-        public override IPAddress Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => IPAddress.Parse(reader.GetString());
+        public override IPAddress? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var value = reader.GetString();
+            return string.IsNullOrWhiteSpace(value) ? null : IPAddress.Parse(value);
+        }
 
-        public override void Write(Utf8JsonWriter writer, IPAddress value, JsonSerializerOptions options) => writer.WriteStringValue(value.ToString());
+        public override void Write(Utf8JsonWriter writer, IPAddress? value, JsonSerializerOptions options) => writer.WriteStringValue(value?.ToString());
     }
 }

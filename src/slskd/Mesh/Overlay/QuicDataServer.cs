@@ -3,6 +3,7 @@
 // </copyright>
 
 #pragma warning disable CA2252 // Preview features - QUIC APIs require preview features
+#pragma warning disable CA1416 // Runtime IsSupported guards already gate QUIC-only code paths
 
 namespace slskd.Mesh.Overlay;
 
@@ -70,7 +71,7 @@ public class QuicDataServer : BackgroundService
         try
         {
             // Generate self-signed certificate for QUIC/TLS
-            var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic-data");
+            using var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic-data");
 
             var listenerOptions = new QuicListenerOptions
             {

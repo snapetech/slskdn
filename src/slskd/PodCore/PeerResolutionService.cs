@@ -198,7 +198,7 @@ public class PeerResolutionService : IPeerResolutionService
         try
         {
             // Support formats: "ip:port", "udp://ip:port", "tcp://ip:port"
-            var parts = endpointString.Replace("udp://", "").Replace("tcp://", "").Split(':');
+            var parts = endpointString.Replace("udp://", string.Empty).Replace("tcp://", string.Empty).Split(':');
             if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var ip) && int.TryParse(parts[1], out var port))
             {
                 return new IPEndPoint(ip, port);

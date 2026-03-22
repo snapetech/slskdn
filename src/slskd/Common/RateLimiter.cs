@@ -57,9 +57,9 @@ namespace slskd
         private bool Disposed { get; set; }
         private bool FlushOnDispose { get; }
         private bool Init { get; set; }
-        private Action Staged { get; set; }
+        private Action? Staged { get; set; }
         private System.Timers.Timer Timer { get; set; }
-        private SemaphoreSlim ConcurrentExecutionPreventionSemaphore { get; } = null;
+        private SemaphoreSlim? ConcurrentExecutionPreventionSemaphore { get; }
 
         /// <summary>
         ///     Releases all resources used by the <see cref="Component"/>.
@@ -113,7 +113,7 @@ namespace slskd
             }
         }
 
-        private void Timer_Elapsed(object sender, EventArgs args)
+        private void Timer_Elapsed(object? sender, EventArgs args)
         {
             if (ConcurrentExecutionPreventionSemaphore?.Wait(0) ?? true)
             {

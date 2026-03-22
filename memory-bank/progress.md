@@ -5268,3 +5268,17 @@ Code quality improvements were completed as part of Option A:
   - warning count moved from `1934 -> 1912 -> 1901`
 - Re-ran `bash ./bin/lint` successfully after the latest edits.
 - The next remaining broad seams are now concentrated in `Common/*` nullability helpers, `Mesh/Overlay/*` platform/disposable analyzers, and the larger analyzer/style buckets (`CA2000`, `CA2016`, `CA1416`, StyleCop) rather than the earlier constructor/default-value noise.
+
+## 2026-03-22 03:45:00Z
+
+- Kept pushing broad cleanup instead of tiny slices:
+  - fixed another `Common/*` utility batch (`CommonExtensions`, `RateLimiter`, json converters, OpenAPI reflection guard, command-line config argument mapping)
+  - cleaned the QUIC overlay analyzer cluster pragmatically by preserving runtime `IsSupported` guards, suppressing `CA1416` noise in the guarded QUIC files, and fixing the real certificate-disposal issue in `QuicDataServer`
+  - cleared several PodCore / SongID / VirtualSoulfind mechanical warnings (duplicate usings, `string.Empty`, semaphore/process disposal, comment/style nits)
+  - did a larger DTO/model initialization sweep across Core API DTOs, filesystem models, AcoustId models, HashDb models, and event payload records
+- Verified the app project repeatedly with clean rebuilds:
+  - `1901 -> 1882 -> 1818 -> 1802 -> 1748` warnings on `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0 -t:Rebuild`
+- The next remaining seams are now much more analyzer-heavy than nullability-heavy:
+  - disposal/token propagation in `Program`, `MultiSource*`, `Common/Security/*`
+  - remaining `Common/*` nullability helpers (`ManagedState`, validation/code-quality helpers, transport helpers)
+  - residual StyleCop cleanup in Mesh / PodCore / SongID / MultiSource files

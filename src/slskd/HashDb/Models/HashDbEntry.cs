@@ -29,13 +29,13 @@ namespace slskd.HashDb.Models
         ///     Gets or sets the FLAC key (content-addressable identifier).
         ///     Format: SHA256 of (normalized_filename + ':' + size) truncated to 64 bits.
         /// </summary>
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the SHA256 hash of the first 32KB bytes.
         ///     This is used for byte-identical verification in multi-source downloads.
         /// </summary>
-        public string ByteHash { get; set; }
+        public string ByteHash { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size in bytes.
@@ -70,22 +70,22 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the SHA256 hash of the entire file (for complete post-download verification).
         /// </summary>
-        public string FullFileHash { get; set; }
+        public string FullFileHash { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the audio fingerprint (AcoustID/Chromaprint) for future music identification.
         /// </summary>
-        public string AudioFingerprint { get; set; }
+        public string AudioFingerprint { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the MusicBrainz recording ID for future music identification.
         /// </summary>
-        public string MusicBrainzId { get; set; }
+        public string MusicBrainzId { get; set; } = string.Empty;
 
         // Variant metadata (canonical scoring)
-        public string VariantId { get; set; }
-        public string Codec { get; set; }
-        public string Container { get; set; }
+        public string VariantId { get; set; } = string.Empty;
+        public string Codec { get; set; } = string.Empty;
+        public string Container { get; set; } = string.Empty;
         public int? SampleRateHz { get; set; }
         public int? BitDepth { get; set; }
         public int? Channels { get; set; }
@@ -93,19 +93,19 @@ namespace slskd.HashDb.Models
         public int? BitrateKbps { get; set; }
         public double? QualityScore { get; set; }
         public bool? TranscodeSuspect { get; set; }
-        public string TranscodeReason { get; set; }
+        public string TranscodeReason { get; set; } = string.Empty;
         public double? DynamicRangeDr { get; set; }
         public double? LoudnessLufs { get; set; }
         public bool? HasClipping { get; set; }
-        public string EncoderSignature { get; set; }
+        public string EncoderSignature { get; set; } = string.Empty;
         public int? SeenCount { get; set; }
-        public string FileSha256 { get; set; }
-        public string AudioSketchHash { get; set; }
-        public string AnalyzerVersion { get; set; }
+        public string FileSha256 { get; set; } = string.Empty;
+        public string AudioSketchHash { get; set; } = string.Empty;
+        public string AnalyzerVersion { get; set; } = string.Empty;
 
         // FLAC-specific
-        public string FlacStreamInfoHash42 { get; set; }
-        public string FlacPcmMd5 { get; set; }
+        public string FlacStreamInfoHash42 { get; set; } = string.Empty;
+        public string FlacPcmMd5 { get; set; } = string.Empty;
         public int? FlacMinBlockSize { get; set; }
         public int? FlacMaxBlockSize { get; set; }
         public int? FlacMinFrameSize { get; set; }
@@ -113,9 +113,9 @@ namespace slskd.HashDb.Models
         public long? FlacTotalSamples { get; set; }
 
         // MP3-specific
-        public string Mp3StreamHash { get; set; }
-        public string Mp3Encoder { get; set; }
-        public string Mp3EncoderPreset { get; set; }
+        public string Mp3StreamHash { get; set; } = string.Empty;
+        public string Mp3Encoder { get; set; } = string.Empty;
+        public string Mp3EncoderPreset { get; set; } = string.Empty;
         public int? Mp3FramesAnalyzed { get; set; }
 
         // Shared lossy spectral features
@@ -125,14 +125,14 @@ namespace slskd.HashDb.Models
         public double? HfEnergyRatio { get; set; }
 
         // Opus-specific
-        public string OpusStreamHash { get; set; }
+        public string OpusStreamHash { get; set; } = string.Empty;
         public int? OpusNominalBitrateKbps { get; set; }
-        public string OpusApplication { get; set; }
-        public string OpusBandwidthMode { get; set; }
+        public string OpusApplication { get; set; } = string.Empty;
+        public string OpusBandwidthMode { get; set; } = string.Empty;
 
         // AAC-specific
-        public string AacStreamHash { get; set; }
-        public string AacProfile { get; set; }
+        public string AacStreamHash { get; set; } = string.Empty;
+        public string AacProfile { get; set; } = string.Empty;
         public bool? AacSbrPresent { get; set; }
         public bool? AacPsPresent { get; set; }
         public int? AacNominalBitrateKbps { get; set; }

@@ -31,7 +31,7 @@ public record EventRecord
 {
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     public EventType Type { get; private set; }
-    public string Data { get; init; }
+    public string Data { get; init; } = string.Empty;
     [Key]
     public Guid Id { get; private set; }
 
