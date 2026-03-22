@@ -11034,3 +11034,58 @@ return NotFound(new { podId, peerId, found = false, error = "Membership not foun
 ```
 
 **Why This Keeps Happening**: service result types look structured and “API-ready,” but their `ErrorMessage` fields are still internal diagnostics. The leak reappears whenever a controller handles both `400` and `500` outcomes from the same result DTO and assumes the embedded message is already safe for clients. A controller boundary must translate those into stable, documented public error strings and only keep the detailed text in logs.
+
+### 0k67. MediaCore And Gateway Controllers Must Not Echo Retrieval Or Service Reply Error Text
+
+**The Bug**: MediaCore and mesh gateway endpoints can look “safe” because their error text comes from typed result DTOs like `DescriptorRetrievalResult`, `DescriptorPublishResult`, `DescriptorUpdateResult`, or `ServiceReply`, not directly from thrown exceptions. That is still an API leak. Those fields contain backend wording and protocol details that should stay in logs, not in public `400`/`404` responses.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/DescriptorRetrieverController.cs`
+- `src/slskd/MediaCore/API/Controllers/ContentDescriptorPublisherController.cs`
+- `src/slskd/API/Mesh/MeshGatewayController.cs`
+
+**Wrong**:
+```csharp
+return NotFound(new { contentId, found = false, error = result.ErrorMessage ?? "Descriptor not found" });
+```
+
+```csharp
+return BadRequest(result);
+```
+
+```csharp
+return StatusCode(httpStatus, new
+{
+    error = "service_error",
+    statusCode = reply.StatusCode,
+    message = reply.ErrorMessage ?? "Service returned error"
+});
+```
+
+**Correct**:
+```csharp
+return NotFound(new { contentId, found = false, error = "Descriptor not found" });
+```
+
+```csharp
+_logger.LogWarning("[ContentDescriptorPublisher] Failed to publish {ContentId}: {Error}",
+    result.ContentId,
+    result.ErrorMessage);
+return BadRequest(new { error = "Failed to publish descriptor" });
+```
+
+```csharp
+_logger.LogWarning("[GatewayController] Service call failed: {ServiceName}/{Method} - Status={StatusCode}, Error={Error}",
+    serviceName,
+    method,
+    reply.StatusCode,
+    reply.ErrorMessage);
+return StatusCode(httpStatus, new
+{
+    error = "service_error",
+    statusCode = reply.StatusCode,
+    message = "Service returned an error"
+});
+```
+
+**Why This Keeps Happening**: once a service layer starts returning typed results instead of exceptions, it is easy to treat the whole DTO as a client-ready response and forward it unchanged. That shortcut is still boundary slop. Log the detailed service text, then translate the HTTP response into a stable public contract.
