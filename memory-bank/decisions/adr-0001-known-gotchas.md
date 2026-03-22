@@ -173,6 +173,34 @@ return stream.CloseAsync(cancellationToken);
 
 **Why This Keeps Happening**: Interface comments that say “throw if unsupported” are easy to follow literally, but once the service is reachable over a network protocol, throws become remote crash surfaces. For unsupported protocol features, log once, close cleanly, and let the caller observe a normal unsupported-path failure instead of an exception.
 
+### 0x5. Descriptor And Discovery Services Must Not Invent Search Hits, Signatures, Or Republish Success
+
+**The Bug**: Content discovery and MediaCore publishing code returned placeholder search results, auto-generated fake signatures, and claimed successful descriptor updates/republishes even though no real search backend or signing/republish pipeline existed.
+
+**Files Affected**:
+- `src/slskd/PodCore/ContentLinkService.cs`
+- `src/slskd/MediaCore/ContentDescriptorPublisher.cs`
+- `src/slskd/MediaCore/MediaCoreStatsService.cs`
+
+**Wrong**:
+```csharp
+descriptor.Signature = CreateSignature(descriptor, version);
+return Task.FromResult(new DescriptorUpdateResult(Success: true, ...));
+```
+
+**Correct**:
+```csharp
+return new DescriptorPublishResult(
+    Success: false,
+    ContentId: descriptor.ContentId,
+    Version: version,
+    PublishedAt: startTime,
+    Ttl: ttl,
+    ErrorMessage: "Descriptor signature is required; automatic signing is not implemented.");
+```
+
+**Why This Keeps Happening**: Placeholder data is tempting when wiring dashboards and public APIs because it keeps the feature surface looking alive. In publishing and discovery code that is actively harmful: fake search results waste operator time, fake signatures destroy trust boundaries, and fake stats hide missing instrumentation. If the backing system is not implemented, return empty/failed results and log the gap explicitly.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
