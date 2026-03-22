@@ -5572,6 +5572,52 @@ return Ok(parsed.RootElement.Clone());
 
 **Why This Keeps Happening**: It is easy to treat `JsonElement` as standalone and forget it is a view over its owning `JsonDocument`. When the document is disposed while an endpoint still references it, response serialization can fail. Clone the element or return an owned structure.
 
+### 0k20. Do Not Use `ContinueWith` With Caller Cancellation Tokens To “Absorb” Child Task Failures
+
+**The Bug**: Several orchestration paths wrapped async work in `ContinueWith(...)` just to log or map failures, while also passing the caller cancellation token to the continuation or startup scheduler. If the caller token was canceled first, the continuation itself could be skipped or marked canceled, so `Task.WhenAll(...)` or service startup observed cancellation instead of the intended “log and continue” behavior.
+
+**Files Affected**:
+- `src/slskd/Search/Providers/SearchAggregator.cs`
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `src/slskd/Mesh/Realm/RealmHostedService.cs`
+
+**Wrong**:
+```csharp
+var tasks = providers.Select(provider =>
+    provider.StartSearchAsync(request, sink, ct)
+        .ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+            {
+                _logger.Debug(t.Exception, "Provider failed");
+            }
+        }, ct));
+```
+
+**Correct**:
+```csharp
+var tasks = providers.Select(provider => RunProviderSearchAsync(provider, request, sink, ct));
+
+private async Task RunProviderSearchAsync(...)
+{
+    try
+    {
+        await provider.StartSearchAsync(request, sink, ct);
+    }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+        throw;
+    }
+    catch (Exception ex)
+    {
+        _logger.Debug(ex, "Provider failed");
+    }
+}
+```
+
+**Why This Keeps Happening**: `ContinueWith` looks like a compact way to “handle errors later,” but its cancellation token controls the continuation task, not the antecedent. That means the wrapper can silently change success/failure/cancellation semantics and make higher-level coordination do the wrong thing. In modern async code, prefer `await` with explicit `try`/`catch`; for fire-and-forget startup work, catch inside the background task instead of relying on a continuation to observe faults.
+
 ---
 
 *Last updated: 2026-03-22*
