@@ -12323,3 +12323,22 @@ return BridgeOperationResult.Failed("Metadata read failed");
 ```
 
 **Why This Keeps Happening**: wrapper layers feel “one step removed” from the response boundary, especially when they only return domain result objects instead of MVC responses. Treat any failure string on a shared result type as potentially user-visible unless you have proven it stays internal.
+
+### 0k80. Consumer-Side Result Wrappers Must Not Relay Remote Service Errors Verbatim
+
+**The Bug**: even when the remote mesh service has been sanitized, consumer-side wrappers can still leak protocol details by copying `reply.ErrorMessage` into a local result object. That local result often flows into search, download, or streaming APIs and becomes the new public boundary.
+
+**Files Affected**:
+- `src/slskd/Streaming/MeshContentFetcher.cs`
+
+**Wrong**:
+```csharp
+Error = reply.ErrorMessage ?? $"Mesh service returned status {reply.StatusCode}",
+```
+
+**Correct**:
+```csharp
+Error = "Mesh content fetch failed",
+```
+
+**Why This Keeps Happening**: once one layer receives a “safe enough” error string from another component, it feels natural to pass it through. But protocol error text is still externally influenced data. Consumer-facing result objects need their own stable failure strings instead of relaying upstream messages.
