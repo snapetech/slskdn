@@ -87,6 +87,31 @@ var albumMatch = IsTextMatch(context.ReleaseTitle, candidate.Embedded.Album);
 
 **Why This Keeps Happening**: v2 content IDs are internal correlation keys, not user-facing discovery terms. When a backend already has a catalogue layer, search should be built from canonical metadata and matching should use the same context. Falling back to opaque IDs or title-only matching makes the feature look implemented while quietly discarding the only evidence that could make it work conservatively and correctly.
 
+### 0x9A. VirtualSoulfind v2 "Supports All Domains" Backends Must Not Be Filtered Out By A Strict Domain Equality Check
+
+**The Bug**: `MultiSourcePlanner` treated `SupportedDomain == null` as a mismatch and skipped the backend entirely. Most v2 backends use `null` specifically to mean "supports all domains", so the planner quietly filtered out LocalLibrary, HTTP, WebDAV, S3, Torrent, MeshDht, and LAN candidates before planning ever happened.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Planning/MultiSourcePlanner.cs`
+
+**Wrong**:
+```csharp
+if (backend.SupportedDomain != domain)
+{
+    continue;
+}
+```
+
+**Correct**:
+```csharp
+if (backend.SupportedDomain.HasValue && backend.SupportedDomain != domain)
+{
+    continue;
+}
+```
+
+**Why This Keeps Happening**: Nullable enum capability flags are easy to misread during planner work. In this codebase, `null` is not "unknown" or "unsupported"; it is the wildcard case. Any backend-selection filter has to preserve that semantic or the system looks wired while most of the backends are effectively dead.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
