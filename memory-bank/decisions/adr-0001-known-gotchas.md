@@ -405,6 +405,69 @@ if (ip.AddressFamily == AddressFamily.InterNetworkV6)
 
 **Why This Keeps Happening**: low-level protocol helpers often start as “minimal implementations,” and then the optimistic assumptions harden into production behavior. Wire-format code must validate field sizes before narrowing casts, exact packet loops need `<=` boundary logic, and NAT/public-address helpers must be explicit about IPv6 rather than treating it as “not handled.” Otherwise the failures only appear in real networks, where they are expensive to diagnose.
 
+### 0xAC. Search And SongID Helpers Must Be Strict About User-Facing IDs But Tolerant Of Tool Output
+
+**The Bug**: user-facing routing helpers and tool-output parsers drifted in opposite bad directions. `SearchActionsController.TryParseItemId(...)` accepted negative response indexes and `DownloadItem(...)` silently fell back to the first file when an explicit file index was out of range. Meanwhile `SongIdService.ParseSongRecFinding(...)` threw on non-JSON stdout instead of treating it as a miss, `ResolveCorpusFingerprintPath(...)` allowed relative paths to escape the metadata directory, and `FindNewestFileOnPath(...)` let unreadable `PATH` entries abort discovery.
+
+**Files Affected**:
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+- `src/slskd/SongID/SongIdService.cs`
+- `tests/slskd.Tests.Unit/Search/API/SearchActionsControllerTests.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+
+**Wrong**:
+```csharp
+if (int.TryParse(parts[0], out responseIndex))
+{
+    fileIndex = 0;
+    return true;
+}
+...
+var file = fileIndex >= 0 && fileIndex < response.Files.Count
+    ? response.Files.ElementAt(fileIndex)
+    : response.Files.FirstOrDefault();
+...
+using var doc = JsonDocument.Parse(stdout);
+...
+var relativeToMetadata = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(metadataPath) ?? string.Empty, entry.FingerprintPath));
+...
+foreach (var candidate in Directory.EnumerateFiles(directory, fileName, SearchOption.TopDirectoryOnly))
+```
+
+**Correct**:
+```csharp
+if (int.TryParse(parts[0], out responseIndex) && responseIndex >= 0)
+{
+    fileIndex = 0;
+    return true;
+}
+...
+var explicitFileIndex = itemParts.Length == 2;
+var file = fileIndex >= 0 && fileIndex < response.Files.Count
+    ? response.Files.ElementAt(fileIndex)
+    : explicitFileIndex ? null : response.Files.FirstOrDefault();
+...
+catch (JsonException)
+{
+    return null;
+}
+...
+if (!relativeToMetadata.StartsWith(metadataRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+    !string.Equals(relativeToMetadata, metadataRoot, StringComparison.OrdinalIgnoreCase))
+{
+    return null;
+}
+...
+catch (UnauthorizedAccessException)
+{
+}
+catch (IOException)
+{
+}
+```
+
+**Why This Keeps Happening**: API-boundary helpers need to be strict because callers rely on exact semantics, while external-tool parsers need to be forgiving because those tools drift and fail in messy ways. Mixing those instincts produces the worst combination: invalid client input is accepted, but noisy subprocess output crashes the analysis path. Keep the distinction sharp: fail closed on user-facing identifiers, fail soft on external recognizer output.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
