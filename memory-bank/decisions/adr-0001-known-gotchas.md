@@ -260,6 +260,53 @@ if (track != null)
 return null;
 ```
 
+### 0xA9. Compatibility And Read-Side APIs Must Fail Closed On Missing Input Instead Of Inventing Defaults
+
+**The Bug**: several compatibility/read-side paths looked successful while either accepting malformed input or scanning stale state. The rooms compatibility controller silently joined `"default"` when no room was supplied, the perceptual-hash similarity endpoint accepted invalid thresholds and rejected common `0x...` hex inputs, bridge download heuristics always returned `null` for filename-derived hash/size metadata, and descriptor domain queries walked expired cache entries without pruning them.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/RoomsCompatibilityController.cs`
+- `src/slskd/MediaCore/API/Controllers/PerceptualHashController.cs`
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+- `src/slskd/MediaCore/DescriptorRetriever.cs`
+
+**Wrong**:
+```csharp
+roomName ??= "default";
+...
+var areSimilar = _hasher.AreSimilar(hashA, hashB, request.Threshold);
+...
+private string? ExtractHashFromFilename(string filename) => null;
+private long? ExtractSizeFromFilename(string filename) => null;
+...
+var matchingContentIds = _cache.Keys.Where(...);
+```
+
+**Correct**:
+```csharp
+if (string.IsNullOrWhiteSpace(roomName))
+{
+    return BadRequest(new { error = "Room is required" });
+}
+...
+if (request.Threshold is < 0 or > 1)
+{
+    return BadRequest("Threshold must be between 0 and 1");
+}
+...
+var normalizedHashA = NormalizeHexHash(request.HashA);
+...
+var match = FilenameHashRegex.Matches(fileNameOnly) ... FirstOrDefault();
+...
+if (IsExpired(kvp.Value))
+{
+    _cache.TryRemove(kvp.Key, out _);
+    return false;
+}
+```
+
+**Why This Keeps Happening**: compatibility shims and read-side endpoints are easy to treat as “best effort,” so placeholders survive because they look harmless. They are not harmless: silent defaults hide bad client input, overly strict parsing breaks compatible callers, and stale cache scans or `null` heuristics under-report state the system could already derive locally. If the app cannot determine an answer, reject the request or return the strongest real local state it has, but do not fabricate a success path.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
