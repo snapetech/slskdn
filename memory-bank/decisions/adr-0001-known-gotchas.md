@@ -7266,6 +7266,93 @@ var isAdvertisable = hashes.Any();
 
 **Why This Keeps Happening**: Data-model refactors often remove or rename properties in one subsystem while dependent query code keeps compiling in a warm workspace or on partial builds. Any change to DTO/entity shape needs a repo-wide usage pass, especially in provider/query layers that derive booleans from now-removed fields.
 
+### 0k24. Cached Mutable Lists Must Return Locked, Semantically Filtered Snapshots
+
+**The Bug**: Scene services cached mutable `List<T>` instances in concurrent dictionaries and then returned `cached.ToList()` without locking or reapplying the method’s semantic filters. That let local leave operations mark a member inactive in cache while `GetMembersAsync(...)` still returned that peer, and concurrent readers could enumerate while writers were mutating the same list.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/SceneMembershipTracker.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneChatService.cs`
+
+**Wrong**:
+```csharp
+if (memberCache.TryGetValue(sceneId, out var cached))
+{
+    return cached.ToList();
+}
+```
+
+**Correct**:
+```csharp
+if (memberCache.TryGetValue(sceneId, out var cached))
+{
+    lock (cached)
+    {
+        return cached.Where(member => member.IsActive).ToList();
+    }
+}
+```
+
+**Why This Keeps Happening**: `ConcurrentDictionary` only protects the dictionary, not the mutable objects stored inside it. Once a value is a shared `List<T>` or similar collection, every read/write path still needs a consistent lock and should return a snapshot that preserves the method contract, not just whatever happens to be in the backing list.
+
+### 0k25. Fallback Payload Parsing Must Preserve Envelope Context
+
+**The Bug**: Scene chat fell back from MessagePack to plain UTF-8 text, but the fallback object left `SceneId` empty. The receiving path stored that message under an empty cache key instead of the scene that delivered it, so fallback messages could disappear from the intended scene view.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/SceneChatService.cs`
+
+**Wrong**:
+```csharp
+return new SceneChatMessage
+{
+    SceneId = string.Empty,
+    Content = content,
+};
+```
+
+**Correct**:
+```csharp
+if (string.IsNullOrWhiteSpace(message.SceneId))
+{
+    message.SceneId = e.SceneId;
+}
+```
+
+**Why This Keeps Happening**: Fallback parsers tend to focus on recovering the payload body and forget that the transport envelope still carries critical routing metadata. When a decode path falls back, restore missing context from the envelope before caching or dispatching the message.
+
+### 0k26. `async` Timer Callbacks Need Owned Loop Lifetime, Not Fire-And-Forget Overlap
+
+**The Bug**: `ScenePubSubService` used `new Timer(async _ => await PollSubscribedScenesAsync(), ...)`. Each tick detached a new async callback, so slow polls could overlap, disposal had no owned task to stop, and in-flight DHT reads outlived service shutdown.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/ScenePubSubService.cs`
+
+**Wrong**:
+```csharp
+pollTimer = new System.Threading.Timer(
+    async _ => await PollSubscribedScenesAsync(),
+    null,
+    TimeSpan.FromSeconds(30),
+    TimeSpan.FromSeconds(30));
+```
+
+**Correct**:
+```csharp
+pollLoopTask = Task.Run(() => RunPollLoopAsync(pollInterval, pollLoopCancellationTokenSource.Token), CancellationToken.None);
+
+private async Task RunPollLoopAsync(TimeSpan pollInterval, CancellationToken cancellationToken)
+{
+    using var timer = new PeriodicTimer(pollInterval);
+    while (await timer.WaitForNextTickAsync(cancellationToken))
+    {
+        await PollSubscribedScenesAsync(cancellationToken);
+    }
+}
+```
+
+**Why This Keeps Happening**: `System.Threading.Timer` accepts synchronous callbacks, so it is deceptively easy to pass an async lambda and forget that it becomes fire-and-forget on every tick. For async periodic work, own a loop task plus cancellation source so polling cannot overlap silently and shutdown can cancel the exact work it started.
+
 ---
 
 *Last updated: 2026-03-22*
