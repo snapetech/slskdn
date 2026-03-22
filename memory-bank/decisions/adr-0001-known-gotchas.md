@@ -240,6 +240,56 @@ isPeerOnline = !string.Equals(userStatus.Presence.ToString(), "Offline", StringC
 
 **Why This Keeps Happening**: Boolean readiness flags are easy to stub during scheduler bring-up because they make the queue move. In scheduling code, though, a fake `true` is not harmless; it changes who gets probed and when. If live presence data exists anywhere in the app, use it. Otherwise default to conservative unknown/offline behavior instead of optimistic availability.
 
+### 0x8. Mesh Response Dispatchers Must Verify Signatures And Wire Every Advertised Response Type
+
+**The Bug**: The private-message dispatcher accepted `RESPKEY` messages without signature verification, ignored `RESPCHUNK` entirely, and never routed `REQCHUNK` into the request handler despite supporting chunk requests elsewhere in the service.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+if (messageType == "RESPKEY")
+{
+    var response = JsonSerializer.Deserialize<MeshRespKeyMessage>(payload);
+    tcs.SetResult(response);
+}
+```
+
+**Correct**:
+```csharp
+if (response != null && messageSigner.VerifyMessage(response))
+{
+    tcs.SetResult(response);
+}
+```
+
+**Why This Keeps Happening**: Response paths often get treated as “trusted” because they are tied to local pending requests, but on a mesh protocol they are still untrusted network input. Every response type needs the same signature and routing discipline as request messages, and adding a new protocol message requires updating both the sender and dispatcher tables.
+
+### 0x9. Capability File Generators Must Reuse The Canonical Capability Payload Source
+
+**The Bug**: `CapabilityFileService` hand-built a second capability JSON document with its own static feature list, version, mesh sequence, and overlay defaults instead of reusing `CapabilityService`. That creates drift between two advertised views of the same node.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+var caps = new CapabilityFileContent
+{
+    OverlayPort = 50305,
+    Timestamp = DateTimeOffset.UtcNow
+};
+```
+
+**Correct**:
+```csharp
+var json = _capabilityService.GetCapabilityFileContent();
+return Encoding.UTF8.GetBytes(json);
+```
+
+**Why This Keeps Happening**: It feels harmless to duplicate a tiny protocol payload in a helper service, but duplicated protocol serialization always drifts. Capability ads need a single canonical generator so new fields like `mesh_seq_id` or changed feature flags do not diverge across endpoints.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
