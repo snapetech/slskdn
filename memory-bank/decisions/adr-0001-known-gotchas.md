@@ -10233,6 +10233,45 @@ channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : ch
 
 **Why This Keeps Happening**: pod/channel APIs look simple enough that it is easy to assume route keys arrive in canonical form. They do not. If a controller does existence checks, storage queries, or updates keyed by `podId` / `channelId`, trim those strings first or storage behavior depends on transport formatting rather than the real logical identifier.
 
+### 0k62. Sharing Controllers Must Normalize Optional Fields Consistently Across Create And Update Paths
+
+**The Bug**: sharing controllers had drifted into inconsistent canonicalization rules. `SharesController.Create(...)` clamped `MaxConcurrentStreams` to at least `1`, but `Update(...)` allowed `0` or negative values through, so the same share-grant could become invalid after an update. `CollectionsController.UpdateItem(...)` already converted whitespace-only `MediaKind` and `ContentHash` to `null`, but `AddItem(...)` stored trimmed empty strings instead. `CollectionsController.Create(...)` had the same mismatch for whitespace-only descriptions.
+
+**Files Affected**:
+- `src/slskd/Sharing/API/SharesController.cs`
+- `src/slskd/Sharing/API/CollectionsController.cs`
+- `tests/slskd.Tests.Unit/Sharing/API/SharesControllerTests.cs`
+- `tests/slskd.Tests.Unit/Sharing/API/CollectionsControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (req.MaxConcurrentStreams != null) g.MaxConcurrentStreams = req.MaxConcurrentStreams.Value;
+```
+
+```csharp
+var item = new CollectionItem
+{
+    ContentId = req.ContentId.Trim(),
+    MediaKind = req.MediaKind?.Trim(),
+    ContentHash = req.ContentHash?.Trim()
+};
+```
+
+**Correct**:
+```csharp
+if (req.MaxConcurrentStreams != null)
+{
+    g.MaxConcurrentStreams = req.MaxConcurrentStreams.Value <= 0 ? 1 : req.MaxConcurrentStreams.Value;
+}
+```
+
+```csharp
+MediaKind = string.IsNullOrWhiteSpace(req.MediaKind) ? null : req.MediaKind.Trim(),
+ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHash.Trim()
+```
+
+**Why This Keeps Happening**: create and update actions often evolve separately, and optional strings are easy to normalize in one path and forget in the other. When a controller owns the public contract, its create/update endpoints must share the same canonicalization rules or persisted sharing state depends on which endpoint the client used.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
