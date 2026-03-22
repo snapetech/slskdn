@@ -321,6 +321,41 @@ results = results
 
 **Why This Keeps Happening**: read paths often start life as “best effort” plumbing and then become user-facing without getting a second pass. Once a surface is used for UI, planning, or compatibility APIs, it must normalize inputs, deduplicate existing state, and summarize what the system already knows rather than exposing raw cache/storage noise or empty placeholders.
 
+### 0xA8. Scene State Must Fall Back To Local Membership And Joined-Scene State When DHT Metadata Is Missing
+
+**The Bug**: scene code treated missing DHT metadata as “scene not found” even when the app already had active local members or a joined-scene record for that scene. That made scene state disappear during partial DHT outages and caused avoidable nulls in search, join, and dashboard flows.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/SceneMembershipTracker.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneService.cs`
+- `src/slskd/VirtualSoulfind/Core/ContentDomainProviderRegistry.cs`
+
+**Wrong**:
+```csharp
+if (data == null)
+{
+    logger.LogDebug("[VSF-SCENE-TRACK] No metadata found for scene {SceneId}", sceneId);
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+if (data == null)
+{
+    if (memberCache.TryGetValue(sceneId, out var cachedMembers))
+    {
+        var synthesized = CreateFallbackMetadata(sceneId, activeCount);
+        metadataCache[sceneId] = synthesized;
+        return synthesized;
+    }
+
+    return null;
+}
+```
+
+**Why This Keeps Happening**: distributed scene state arrives through multiple channels: DHT metadata, member announcements, and the local joined-scene set. It is easy to accidentally make the richest remote path mandatory and ignore the other two. For read-side scene APIs, prefer a degraded-but-real synthesized scene over `null` whenever local membership or joined state already proves the scene exists.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
