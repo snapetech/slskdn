@@ -11456,3 +11456,52 @@ _ = Task.Run(
 ```
 
 **Why This Keeps Happening**: once the scheduler token is fixed to `CancellationToken.None`, the inner delegate token still looks innocuous and is easy to leave unchanged. But for detached work, that inner token controls the actual operation lifetime. If the work should survive the request, use `CancellationToken.None` or a service-owned shutdown token instead of the caller token.
+
+### 0k74. Hosted-Service Background Initialization Needs A Service-Owned CTS, Not The `StartAsync` Token
+
+**The Bug**: some hosted services intentionally detach initialization work from `StartAsync` so startup can proceed, but they still pass the `StartAsync` cancellation token into the detached initialization path. That token represents startup coordination, not the ongoing service lifetime, so background initialization can be canceled for the wrong reason once it has already been handed off.
+
+**Files Affected**:
+- `src/slskd/HashDb/Optimization/HashDbOptimizationHostedService.cs`
+- `src/slskd/Mesh/Realm/RealmHostedService.cs`
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+
+**Wrong**:
+```csharp
+_startupOptimizationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+```
+
+```csharp
+_ = Task.Run(async () =>
+{
+    await _realmService.InitializeAsync(cancellationToken).ConfigureAwait(false);
+}, CancellationToken.None);
+```
+
+```csharp
+_ = StartBackgroundInitializationAsync(cancellationToken);
+...
+await InitializeDhtAsync(cancellationToken).ConfigureAwait(false);
+```
+
+**Correct**:
+```csharp
+_startupOptimizationCts = new CancellationTokenSource();
+```
+
+```csharp
+_initializationCts = new CancellationTokenSource();
+_initializationTask = Task.Run(async () =>
+{
+    await _realmService.InitializeAsync(_initializationCts.Token).ConfigureAwait(false);
+}, CancellationToken.None);
+```
+
+```csharp
+_backgroundInitializationCts = new CancellationTokenSource();
+_backgroundInitializationTask = StartBackgroundInitializationAsync(_backgroundInitializationCts.Token);
+...
+await InitializeDhtAsync(cancellationToken).ConfigureAwait(false);
+```
+
+**Why This Keeps Happening**: `StartAsync` is the most convenient token in scope, so it gets threaded into detached work by habit. But once initialization is intentionally decoupled from `StartAsync`, it needs its own lifecycle token that is canceled on service stop, not on startup coordination.
