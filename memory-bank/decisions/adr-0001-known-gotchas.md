@@ -86,6 +86,9 @@ _ = ObserveBackgroundTaskAsync(
 **Files Affected**:
 - `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
 - `src/slskd/Transfers/Downloads/DownloadService.cs`
+- `src/slskd/SongID/SongIdService.cs`
+- `src/slskd/Users/UserService.cs`
+- `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
 
 **Wrong**:
 ```csharp
