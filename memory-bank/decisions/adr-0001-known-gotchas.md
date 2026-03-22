@@ -100,7 +100,14 @@ return StatusCode(500, new { error = "Tor connectivity test failed" });
 - `src/slskd/HashDb/API/HashDbController.cs`
 - `src/slskd/Identity/API/ContactsController.cs`
 - `src/slskd/Mesh/API/MeshController.cs`
+- `src/slskd/Solid/API/SolidController.cs`
 - `src/slskd/Search/API/Controllers/SearchesController.cs`
+- `src/slskd/Sharing/API/SharesController.cs`
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+- `src/slskd/Core/API/Controllers/OptionsController.cs`
+- `src/slskd/PodCore/API/Controllers/PodContentController.cs`
+- `src/slskd/PodCore/API/Controllers/PodChannelController.cs`
+- `src/slskd/API/Native/PodsController.cs`
 - `src/slskd/Transfers/API/Controllers/TransfersController.cs`
 - `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
 
