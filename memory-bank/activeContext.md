@@ -27,14 +27,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into core status/config endpoints after finishing the auxiliary controller cluster.
+  - Continued the broad controller-boundary bughunt into core status/config endpoints, then folded the remaining native Pod spillover back to a clean tree.
   - Normalized additional controller behavior:
     - `SessionController` now validates and trims login bodies before headless-mode logging or JWT generation
     - `OptionsController` now treats missing overlay/YAML bodies as explicit request errors and sanitizes YAML write failures
     - `LogsController` now returns a stable snapshot array instead of the live log queue
     - `ServerController` now normalizes blank disconnect messages
-    - `PodDhtController` now trims nested member/external-binding/private-service-policy fields before publication
-  - Added focused unit regressions for session/options/logs boundaries and extended Pod DHT normalization coverage.
+    - `PodDhtController` and `PodsController` now trim nested member/external-binding/private-service-policy fields before publication/create-update dispatch
+  - Added focused unit regressions for session/options/logs boundaries and extended Pod DHT/native Pod normalization coverage.
   - Validation has still not been run in this pass.
 
 ---

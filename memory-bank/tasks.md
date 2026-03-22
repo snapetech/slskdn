@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Fold deeper Pod nested normalization into native Pod endpoints
+  - Status: done
+  - Notes: Extended native `PodsController` payload normalization so nested members, external bindings, and private-service-policy fields are trimmed before create/update dispatch, and added regression coverage proving the normalized pod shape reaches the service layer.
 - [x] Normalize core status and configuration controller boundaries
   - Status: done
   - Notes: Fixed null-safe credential handling in `SessionController`, explicit missing-body handling in `OptionsController`, snapshot log output in `LogsController`, trimmed disconnect messages in `ServerController`, and folded in deeper Pod DHT request normalization plus focused regressions for core API boundaries.

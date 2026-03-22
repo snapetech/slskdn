@@ -136,7 +136,7 @@ public class PodsController : ControllerBase
             }
 
             request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
-            request.Pod.PodId = request.Pod.PodId?.Trim() ?? string.Empty;
+            request.Pod = NormalizePod(request.Pod);
 
             if (string.IsNullOrWhiteSpace(request.RequestingPeerId))
             {
@@ -194,7 +194,7 @@ public class PodsController : ControllerBase
 
             podId = podId?.Trim() ?? string.Empty;
             request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
-            request.Pod.PodId = request.Pod.PodId?.Trim() ?? string.Empty;
+            request.Pod = NormalizePod(request.Pod);
 
             if (request.Pod.PodId != podId)
             {
@@ -622,6 +622,103 @@ public class PodsController : ControllerBase
             logger.LogError(ex, "Failed to unbind pod {PodId} channel {ChannelId}", podId, channelId);
             return StatusCode(500, new { error = "Failed to unbind room" });
         }
+    }
+
+    private static Pod NormalizePod(Pod pod)
+    {
+        ArgumentNullException.ThrowIfNull(pod);
+
+        return new Pod
+        {
+            PodId = pod.PodId?.Trim() ?? string.Empty,
+            Name = pod.Name?.Trim() ?? string.Empty,
+            Description = string.IsNullOrWhiteSpace(pod.Description) ? null : pod.Description.Trim(),
+            Visibility = pod.Visibility,
+            IsPublic = pod.IsPublic,
+            MaxMembers = pod.MaxMembers,
+            AllowGuests = pod.AllowGuests,
+            RequireApproval = pod.RequireApproval,
+            UpdatedAt = pod.UpdatedAt,
+            FocusContentId = string.IsNullOrWhiteSpace(pod.FocusContentId) ? null : pod.FocusContentId.Trim(),
+            Tags = pod.Tags?
+                .Select(tag => tag?.Trim() ?? string.Empty)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.Ordinal)
+                .ToList()
+                ?? new List<string>(),
+            Channels = pod.Channels?
+                .Select(channel => new PodChannel
+                {
+                    ChannelId = channel.ChannelId?.Trim() ?? string.Empty,
+                    Kind = channel.Kind,
+                    Name = channel.Name?.Trim() ?? string.Empty,
+                    BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim(),
+                    Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim(),
+                })
+                .ToList()
+                ?? new List<PodChannel>(),
+            Members = pod.Members?
+                .Select(member => new PodMember
+                {
+                    PeerId = member.PeerId?.Trim() ?? string.Empty,
+                    Role = member.Role?.Trim() ?? string.Empty,
+                    IsBanned = member.IsBanned,
+                    PublicKey = string.IsNullOrWhiteSpace(member.PublicKey) ? null : member.PublicKey.Trim(),
+                    JoinedAt = member.JoinedAt,
+                    LastSeen = member.LastSeen,
+                })
+                .ToList(),
+            ExternalBindings = pod.ExternalBindings?
+                .Select(binding => new ExternalBinding
+                {
+                    Kind = binding.Kind?.Trim() ?? string.Empty,
+                    Mode = binding.Mode?.Trim() ?? string.Empty,
+                    Identifier = binding.Identifier?.Trim() ?? string.Empty,
+                })
+                .ToList()
+                ?? new List<ExternalBinding>(),
+            Capabilities = pod.Capabilities,
+            PrivateServicePolicy = pod.PrivateServicePolicy == null ? null : new PodPrivateServicePolicy
+            {
+                Enabled = pod.PrivateServicePolicy.Enabled,
+                MaxMembers = pod.PrivateServicePolicy.MaxMembers,
+                GatewayPeerId = pod.PrivateServicePolicy.GatewayPeerId?.Trim() ?? string.Empty,
+                RegisteredServices = pod.PrivateServicePolicy.RegisteredServices?
+                    .Select(service => new RegisteredService
+                    {
+                        Name = service.Name?.Trim() ?? string.Empty,
+                        Description = service.Description?.Trim() ?? string.Empty,
+                        Host = service.Host?.Trim() ?? string.Empty,
+                        Port = service.Port,
+                        Protocol = service.Protocol?.Trim() ?? string.Empty,
+                        Kind = service.Kind,
+                    })
+                    .ToList()
+                    ?? new List<RegisteredService>(),
+                AllowedDestinations = pod.PrivateServicePolicy.AllowedDestinations?
+                    .Select(destination => new AllowedDestination
+                    {
+                        HostPattern = destination.HostPattern?.Trim() ?? string.Empty,
+                        Port = destination.Port,
+                        Protocol = destination.Protocol?.Trim() ?? string.Empty,
+                        AllowPublic = destination.AllowPublic,
+                        Kind = destination.Kind,
+                    })
+                    .ToList()
+                    ?? new List<AllowedDestination>(),
+                AllowPrivateRanges = pod.PrivateServicePolicy.AllowPrivateRanges,
+                AllowPublicDestinations = pod.PrivateServicePolicy.AllowPublicDestinations,
+                MaxConcurrentTunnelsPerPeer = pod.PrivateServicePolicy.MaxConcurrentTunnelsPerPeer,
+                MaxConcurrentTunnelsPod = pod.PrivateServicePolicy.MaxConcurrentTunnelsPod,
+                MaxNewTunnelsPerMinutePerPeer = pod.PrivateServicePolicy.MaxNewTunnelsPerMinutePerPeer,
+                MaxBytesPerDayPerPeer = pod.PrivateServicePolicy.MaxBytesPerDayPerPeer,
+                IdleTimeout = pod.PrivateServicePolicy.IdleTimeout,
+                MaxLifetime = pod.PrivateServicePolicy.MaxLifetime,
+                DialTimeout = pod.PrivateServicePolicy.DialTimeout,
+                MaxBufferedBytesPerTunnel = pod.PrivateServicePolicy.MaxBufferedBytesPerTunnel,
+                MaxFrameSize = pod.PrivateServicePolicy.MaxFrameSize,
+            },
+        };
     }
 }
 

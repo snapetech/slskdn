@@ -5552,3 +5552,11 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `fc311132`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:35:10Z
+
+- Folded the remaining dirty native Pod spillover into a clean follow-up commit:
+  - extended `PodsController` nested pod normalization already in progress so create/update requests trim members, external bindings, and private-service-policy fields before dispatch
+  - added a focused native pod regression proving the fully normalized nested pod shape reaches `IPodService.CreateAsync(...)`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
