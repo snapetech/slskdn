@@ -84,6 +84,31 @@ existingOpinions.Add(opinion);
 
 **Why This Keeps Happening**: `ConcurrentDictionary.GetOrAdd(...)` is convenient enough that it gets used even in read paths, but it is still a write. Likewise, append-only caches feel safe for “history,” but pod opinions are current member state, not an event log. Read helpers should use `TryGetValue(...)` when “missing” is a valid state, and opinion upserts should key on sender + variant instead of appending duplicates.
 
+### 0xB7. VSF v2 Execution And Validation Results Must Not Echo Raw Backend Exception Text
+
+**The Bug**: VirtualSoulfind v2 resolver/backend code caught exceptions but then copied `ex.Message` straight into execution or validation result objects. Those results are API-facing state, so transport and HTTP internals leaked back out through otherwise structured failure contracts.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Resolution/SimpleResolver.cs`
+- `src/slskd/VirtualSoulfind/v2/Backends/HttpBackend.cs`
+- `src/slskd/VirtualSoulfind/v2/Backends/WebDavBackend.cs`
+
+**Wrong**:
+```csharp
+ErrorMessage = $"Unexpected error: {ex.Message}",
+return StepResult.Failure(ex.Message);
+return SourceCandidateValidationResult.Invalid($"HTTP error: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+ErrorMessage = "Unexpected resolver failure",
+return StepResult.Failure("NativeMesh fetch failed");
+return SourceCandidateValidationResult.Invalid("HTTP validation failed");
+```
+
+**Why This Keeps Happening**: once a path already “handles” exceptions by turning them into result DTOs, it is tempting to preserve the exact exception text for debugging. But these DTOs are part of the public/runtime contract, not private logs. Keep the detailed exception in logs/debug output and return stable sanitized failure strings instead.
+
 ### 0xB1. Detached Startup Work Must Not Keep The `StartAsync` Token As Its Real Lifetime
 
 **The Bug**: several hosted services and startup tasks returned from `StartAsync`, but the detached work they queued still ran on the startup coordination token. Once host startup completed or shutdown raced in, accepted initialization and detector loops could be cancelled before they ever really became service-owned background work.
