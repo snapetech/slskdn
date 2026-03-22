@@ -363,6 +363,30 @@ var track = tracks.FirstOrDefault(candidate => ...exact normalized match...);
 ```
 
 **Why This Keeps Happening**: Provider interfaces often get designed ahead of the “ideal” fuzzy matching algorithm, and it is tempting to leave them returning `null` until the full scorer exists. That throws away usable catalog data and makes higher-level features look empty. If the repo already has authoritative exact-match data, implement the conservative path first and reserve fuzzy matching for later.
+
+### 0xC. Poll-Based PubSub Must Publish And Poll The Same Topic Key
+
+**The Bug**: Scene pubsub published each message under a unique DHT key with a ULID suffix, while subscribers polled a different base scene key. That meant published scene messages were never observed by subscribers. Polling also lacked duplicate suppression, so any future key alignment would replay the same payload forever.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/ScenePubSubService.cs`
+
+**Wrong**:
+```csharp
+var key = DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}:{Ulid.NewUlid()}");
+var sceneKey = DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}");
+```
+
+**Correct**:
+```csharp
+var key = DhtKeyDerivation.DeriveSceneKey($"scene:pubsub:{sceneId}");
+if (!ShouldDeliver(sceneId, messageData))
+{
+    continue;
+}
+```
+
+**Why This Keeps Happening**: Topic-based systems often mix “message identity” and “topic identity” when the transport is still being prototyped. If subscribers query by topic, publishers must store under that same topic key, and polling implementations need a local fingerprint cache so stable-key retrieval does not duplicate deliveries.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
