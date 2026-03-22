@@ -252,6 +252,29 @@ protected virtual void Dispose(bool disposing)
 
 **Why This Keeps Happening**: Background maintenance loops are easy to treat as harmless fire-and-forget work, but they still own timers, locks, and semaphores. Any component that starts a long-lived loop must keep a cancellation handle and stop the loop before disposing the resources it uses.
 
+### 0w. Network And Coordination Waiters Should Default To `RunContinuationsAsynchronously`
+
+**The Bug**: Several runtime waiters still used default `TaskCompletionSource` instances in relay login, mesh sync request/response tracking, download enqueue coordination, token-bucket resets, and channel completion. Those waiters can be completed from event handlers, locks, or scheduler paths, allowing arbitrary continuations to run inline on sensitive coordination threads.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+- `src/slskd/Mesh/MeshSyncService.cs`
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+- `src/slskd/Common/ChannelReader.cs`
+- `src/slskd/Common/TokenBucket.cs`
+
+**Wrong**:
+```csharp
+var tcs = new TaskCompletionSource<Response>();
+```
+
+**Correct**:
+```csharp
+var tcs = new TaskCompletionSource<Response>(TaskCreationOptions.RunContinuationsAsynchronously);
+```
+
+**Why This Keeps Happening**: Default `TaskCompletionSource` is convenient and usually works in tests, but runtime completion often happens under callbacks, locks, semaphores, or transport handlers. When the continuation inlines there, it can create re-entrancy, hidden latency spikes, or deadlocks. For cross-component handoff signals, asynchronous continuations should be the default, not the exception.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
