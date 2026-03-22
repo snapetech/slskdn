@@ -345,6 +345,31 @@ var descriptor = retrieval.Descriptor;
 
 **Why This Keeps Happening**: Portability/export code is easy to scaffold with fake placeholders because it needs a descriptor-shaped object to serialize. That placeholder then becomes user-visible data and quietly corrupts downstream import/merge behavior. For export surfaces, either serialize the real retrieved descriptor or skip the entry entirely; never fill the gap with invented metadata.
 
+### 0x16. MediaCore Must Not Fabricate Similarity Or Graph Edges, And Registry Stats Must Use Normalized Domains
+
+**The Bug**: `FuzzyMatcher` fell back to simulated/random perceptual similarity when no real perceptual hashes existed. `IpldMapper` generated mock album/artist/artwork links when no stored links were present. `ContentIdRegistry` also counted raw parsed domains in stats, which drifted from the normalized domain model used everywhere else (`content:mb:*` versus `audio`).
+
+**Files Affected**:
+- `src/slskd/MediaCore/FuzzyMatcher.cs`
+- `src/slskd/MediaCore/IpldMapper.cs`
+- `src/slskd/MediaCore/ContentIdRegistry.cs`
+
+**Wrong**:
+```csharp
+return await ComputeSimulatedPerceptualSimilarityAsync(...);
+var outgoingLinks = storedCopy ?? (await GenerateMockLinksAsync(contentId, cancellationToken)).ToList();
+var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+```
+
+**Correct**:
+```csharp
+return 0.0;
+var outgoingLinks = storedCopy ?? new List<IpldLink>();
+var domain = parsed == null ? "unknown" : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
+```
+
+**Why This Keeps Happening**: Search, graph, and stats code often starts with “helpful” simulated fallbacks so APIs return something early. Those placeholders then leak into production behavior and silently look like real data. In MediaCore, synthetic similarity, synthetic graph edges, and raw-vs-normalized domain drift all create the same class of bug: the system claims knowledge it does not actually have. If the data is unknown, return none/zero and keep the semantics aligned with the normalized ID model.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
