@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
+
+**The Bug**: Several Pod and mesh workflows returned placeholder success values, synthetic IDs, fake local peer IDs, or hardcoded stats even though the underlying transport or lookup path was not implemented. This made broken features look healthy and pushed failures downstream into harder-to-debug places.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+- `src/slskd/PodCore/PodDiscoveryService.cs`
+- `src/slskd/PodCore/PodDhtPublisher.cs`
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+return Task.FromResult(new PodBackfillProcessingResult(
+    true, podId, peerId, 0, 0, 0, TimeSpan.Zero, "Not implemented"));
+```
+
+**Correct**:
+```csharp
+return Task.FromResult(new PodBackfillProcessingResult(
+    false, podId, peerId, 0, 0, 0, TimeSpan.Zero,
+    "Backfill request delivery is not implemented."));
+```
+
+**Why This Keeps Happening**: Placeholder implementations are tempting during feature bring-up because they keep call sites moving. In distributed code they are worse than an explicit failure: they corrupt state, poison metrics, and make operators think the network path worked. If a dependency is missing, either wire an existing real service or fail clearly and immediately.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
@@ -274,6 +299,43 @@ var tcs = new TaskCompletionSource<Response>(TaskCreationOptions.RunContinuation
 ```
 
 **Why This Keeps Happening**: Default `TaskCompletionSource` is convenient and usually works in tests, but runtime completion often happens under callbacks, locks, semaphores, or transport handlers. When the continuation inlines there, it can create re-entrancy, hidden latency spikes, or deadlocks. For cross-component handoff signals, asynchronous continuations should be the default, not the exception.
+
+### 0x. Singleton Services Must Not Launch Infinite Cleanup Loops Without A Disposal Hook
+
+**The Bug**: `PrivateGatewayMeshService` is registered as a singleton and started an infinite `CleanupExpiredTunnelsAsync` loop with `Task.Run(...)`, `while (true)`, and `Task.Delay(...)` but exposed no `Dispose()` path to cancel it. That leaves a permanent background task with live references to service state until process exit.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(CleanupExpiredTunnelsAsync);
+
+private async Task CleanupExpiredTunnelsAsync()
+{
+    while (true)
+    {
+        await RunOneCleanupIterationAsync();
+        await Task.Delay(TimeSpan.FromMinutes(5));
+    }
+}
+```
+
+**Correct**:
+```csharp
+_cleanupTask = Task.Run(CleanupExpiredTunnelsAsync);
+
+private async Task CleanupExpiredTunnelsAsync()
+{
+    while (!_cleanupCancellationTokenSource.IsCancellationRequested)
+    {
+        await RunOneCleanupIterationAsync();
+        await Task.Delay(TimeSpan.FromMinutes(5), _cleanupCancellationTokenSource.Token);
+    }
+}
+```
+
+**Why This Keeps Happening**: Cleanup work often feels “daemon-like,” so it gets launched as fire-and-forget during construction. But singleton services are still owned objects, and DI can only shut them down cleanly if they expose a disposal lifecycle that cancels and joins their background work.
 
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
