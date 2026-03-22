@@ -86,6 +86,9 @@ await _outboxStore.StoreAsync(actorName, published, rawJson, cancellationToken);
 - `src/slskd/Common/Security/CoverTrafficGenerator.cs`
 - `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
 - `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
+- `src/slskd/Search/SearchService.cs`
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+- `src/slskd/PodCore/SqlitePodService.cs`
 
 **Wrong**:
 ```csharp
@@ -111,6 +114,7 @@ _ = ObserveBackgroundTaskAsync(
 - `src/slskd/SongID/SongIdService.cs`
 - `src/slskd/Users/UserService.cs`
 - `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
+- `src/slskd/Messaging/ConversationService.cs`
 
 **Wrong**:
 ```csharp
