@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
+
+**The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SocialFederation/FederationService.cs`
+- `src/slskd/SocialFederation/ActivityPubOutboxStore.cs`
+
+**Wrong**:
+```csharp
+return Task.FromResult<IActionResult>(StatusCode(501, "Outbox posting not yet implemented"));
+```
+
+**Correct**:
+```csharp
+var (published, error) = await _federationService.PublishOutboxActivityAsync(actorName, activity, cancellationToken);
+await _outboxStore.StoreAsync(actorName, published, rawJson, cancellationToken);
+```
+
+**Why This Keeps Happening**: It is easy to implement actor documents and inboxes first, leave the outbox as a placeholder, and assume generated recent activities are "good enough." They are not. Once an actor advertises an outbox, clients expect a real posting path, stable local history, and real fan-out semantics for public follower delivery. If those pieces are missing, either do not expose the outbox contract yet or wire the minimal durable path completely.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
