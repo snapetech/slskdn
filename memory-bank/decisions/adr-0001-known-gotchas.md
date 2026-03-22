@@ -9504,6 +9504,30 @@ var normalizedType = ContentIdParser.NormalizeType(normalizedDomain, type);
 
 **Why This Keeps Happening**: once service methods become robust to trimming and filtering, controllers can look “good enough” while quietly accepting malformed-but-repairable input. That creates an API contract mismatch: the endpoint claims the raw payload is valid even though the real behavior only works because lower layers silently normalize it. Validate the effective input shape at the controller boundary so controller behavior, service behavior, and tests all agree.
 
+### 0k57. Localhost-Origin Checks Must Normalize Bracketed IPv6 Hosts Before Comparison
+
+**The Bug**: `MeshGatewayAuthMiddleware.IsLocalhostOrigin(...)` parsed the origin with `new Uri(origin)` and compared `uri.Host` directly against `"::1"`. For IPv6 localhost origins like `https://[::1]:3000`, the host can be represented in bracketed form, so same-machine browser requests could be rejected as cross-origin even though they were local.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshGatewayAuthMiddleware.cs`
+
+**Wrong**:
+```csharp
+return uri.Host == "localhost" ||
+       uri.Host == "127.0.0.1" ||
+       uri.Host == "::1";
+```
+
+**Correct**:
+```csharp
+var host = uri.Host.Trim('[', ']');
+return host == "localhost" ||
+       host == "127.0.0.1" ||
+       host == "::1";
+```
+
+**Why This Keeps Happening**: localhost checks are often written against the textual forms developers type most often (`localhost`, `127.0.0.1`, `::1`) and forget that URI formatting rules add brackets around IPv6 literals. Any origin or host comparison that wants semantic host equality should normalize bracketed IPv6 text before comparing.
+
 ---
 
 *Last updated: 2026-03-22*
