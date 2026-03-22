@@ -9045,6 +9045,31 @@ return Task.FromResult<PeerPerformanceMetrics?>(null);
 
 **Why This Keeps Happening**: It is easy to preserve pre-nullability method signatures and then “cheat” with `null!` once a missing-row case appears. That silences the compiler but creates a worse bug: downstream code now has an impossible contract and has to guess whether absence can really happen. If a service has a legitimate “not found” outcome, make that nullable in the interface and let callers handle it intentionally.
 
+### 0k49. Tests Must Not Construct Private Nested Helper Types Directly
+
+**The Bug**: `SongIdServiceTests` tried to instantiate `SongIdCorpusEntry` directly even though the service keeps that helper as a private nested type. Once encapsulation tightened, the test project stopped compiling with “type or namespace name could not be found.”
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+var entry = new SongIdCorpusEntry
+{
+    FingerprintPath = Path.Combine("..", "outside.fpcalc"),
+};
+```
+
+**Correct**:
+```csharp
+var entryType = typeof(SongIdService).GetNestedType("SongIdCorpusEntry", BindingFlags.NonPublic);
+var entry = Activator.CreateInstance(entryType!);
+entryType!.GetProperty("FingerprintPath")!.SetValue(entry, Path.Combine("..", "outside.fpcalc"));
+```
+
+**Why This Keeps Happening**: Tests often grow around internal implementation details during rapid iteration. That works until the production code tightens visibility or reshapes helper types, at which point the test suite starts depending on names it was never supposed to reference directly. If a test must exercise a private helper contract, use reflection or drive it through the containing public API instead of taking a direct compile-time dependency on the private type.
+
 ---
 
 *Last updated: 2026-03-22*
