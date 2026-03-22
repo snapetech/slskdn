@@ -9167,6 +9167,30 @@ entryType!.GetProperty("FingerprintPath")!.SetValue(entry, Path.Combine("..", "o
 
 **Why This Keeps Happening**: Tests often grow around internal implementation details during rapid iteration. That works until the production code tightens visibility or reshapes helper types, at which point the test suite starts depending on names it was never supposed to reference directly. If a test must exercise a private helper contract, use reflection or drive it through the containing public API instead of taking a direct compile-time dependency on the private type.
 
+### 0k50. Optional Query-Type Normalization Must Fail Closed Before Domain Normalization
+
+**The Bug**: `DescriptorRetriever.QueryByDomainAsync(...)` passed `type?.Trim()` straight into `ContentIdParser.NormalizeDomain(...)` even though `type` is optional. For `mb` queries, `NormalizeDomain(...)` reads the type value to map `recording` or `release` into `audio`, so `/api/.../query?domain=mb` could hit a null dereference instead of returning an empty result set.
+
+**Files Affected**:
+- `src/slskd/MediaCore/DescriptorRetriever.cs`
+
+**Wrong**:
+```csharp
+domain = ContentIdParser.NormalizeDomain(domain.Trim(), type?.Trim());
+type = string.IsNullOrWhiteSpace(type) ? null : ContentIdParser.NormalizeType(domain, type.Trim());
+```
+
+**Correct**:
+```csharp
+var trimmedDomain = domain.Trim();
+var trimmedType = string.IsNullOrWhiteSpace(type) ? null : type.Trim();
+
+domain = ContentIdParser.NormalizeDomain(trimmedDomain, trimmedType ?? string.Empty);
+type = trimmedType == null ? null : ContentIdParser.NormalizeType(domain, trimmedType);
+```
+
+**Why This Keeps Happening**: Normalization helpers often start life assuming both domain and type are present, then later get reused from query APIs where one parameter is optional. If the code normalizes the optional parameter too late, the helper sees a null it was never designed to accept. Normalize optional inputs into explicit empty-or-null states before passing them to stricter domain/type helpers.
+
 ---
 
 *Last updated: 2026-03-22*
