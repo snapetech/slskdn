@@ -376,6 +376,27 @@ var parsedCaps = _capabilityService.ParseCapabilityTag(userInfo?.Description ?? 
 
 **Why This Keeps Happening**: Helper services often get built around the “ideal” transport first and forget the lower-fidelity signal that already exists elsewhere in the app. If the preferred fetch path is not implemented, fall back to another real source of peer capability truth instead of silently turning discovery off.
 
+### 0x14. Domain Providers Must Use Existing Catalog Queries Before Falling Back To Hard `null`
+
+**The Bug**: The VirtualSoulfind music provider returned `null` for direct recording-ID lookups and title/artist work resolution even though the required album and track data was already stored in HashDb.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Core/Music/MusicContentDomainProvider.cs`
+
+**Wrong**:
+```csharp
+_logger.LogDebug("Direct track lookup by MusicBrainz Recording ID not yet implemented");
+return Task.FromResult<MusicItem?>(null);
+```
+
+**Correct**:
+```csharp
+var tracks = await _hashDb.GetAlbumTracksAsync(album.ReleaseId, cancellationToken);
+var track = tracks.FirstOrDefault(candidate => candidate.RecordingId == recordingId);
+```
+
+**Why This Keeps Happening**: Feature code often assumes a dedicated query method is required and gives up when that exact API does not exist. Before returning a permanent `null`, check whether the existing persistence layer already contains the needed data and whether a bounded lookup can assemble the answer from current interfaces.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
