@@ -257,6 +257,48 @@ return new PodDiscoveryResult(
 
 **Why This Keeps Happening**: once a service uses typed result records instead of throwing, it is easy to stop thinking about API exposure at the service layer. But when controllers return those results directly, the service record is the API contract. Treat service-level `ErrorMessage` fields exactly like controller payloads: stable public text only, detailed exception text only in logs.
 
+### 0xB5A. MediaCore Result Records Must Not Carry Backend Exception Text Across `200 OK` Boundaries
+
+**The Bug**: MediaCore retrieval and publishing code still looked “safe” because failures were wrapped in typed records like `DescriptorRetrievalResult`, `DescriptorValidationResult`, and `DescriptorPublishResult`. But the controllers return those records directly from `200 OK` endpoints, so `ex.Message` inside the record still leaked DHT, validation, and publisher internals to clients.
+
+**Files Affected**:
+- `src/slskd/MediaCore/DescriptorRetriever.cs`
+- `src/slskd/MediaCore/ContentDescriptorPublisher.cs`
+
+**Wrong**:
+```csharp
+return new DescriptorRetrievalResult(
+    Descriptor: null,
+    Source: "dht",
+    RetrievedAt: DateTimeOffset.UtcNow,
+    IsVerified: false,
+    ErrorMessage: ex.Message);
+
+return new DescriptorPublishResult(
+    Success: false,
+    ContentId: descriptor.ContentId,
+    PublishedAt: DateTimeOffset.UtcNow,
+    ErrorMessage: ex.Message);
+```
+
+**Correct**:
+```csharp
+return new DescriptorRetrievalResult(
+    Descriptor: null,
+    Source: "dht",
+    RetrievedAt: DateTimeOffset.UtcNow,
+    IsVerified: false,
+    ErrorMessage: "Failed to retrieve descriptor");
+
+return new DescriptorPublishResult(
+    Success: false,
+    ContentId: descriptor.ContentId,
+    PublishedAt: DateTimeOffset.UtcNow,
+    ErrorMessage: "Failed to publish descriptor");
+```
+
+**Why This Keeps Happening**: typed result records feel more formal than raw exceptions, so they slip past leak reviews. But if a controller returns the record directly, every embedded error string is public API surface. In MediaCore especially, batch and verification endpoints often reply with `Ok(result)` even on per-item failures, so sanitization has to happen inside the result-producing service, not only at the controller boundary.
+
 ### 0xB6. Local JSON Persistence Must Use Explicit DTOs Instead Of Depending On Runtime Constructor Binding
 
 **The Bug**: the peer reputation store wrote runtime `PeerReputationEvent` objects straight to disk and tried to read them back into the same type. Cold-load reads silently came back empty because the persisted JSON contract drifted into a shape that `System.Text.Json` constructor binding did not reliably rehydrate for that runtime type.
