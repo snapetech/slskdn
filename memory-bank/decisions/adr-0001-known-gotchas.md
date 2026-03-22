@@ -223,6 +223,32 @@ new Regex(@"slskdn/([^+\\s]+)(\\+.*)?", ...)
 
 **Why This Keeps Happening**: Parsers often start from a stable release example and quietly hard-code that shape. Capability/version strings are compatibility inputs, so they need to accept the real version forms the project emits in dev and prerelease builds instead of only idealized semver triples.
 
+### 0x11. Bridge Transfer Progress Must Preserve The Requested Filename Instead Of Trusting TargetPath Alone
+
+**The Bug**: The bridge progress API built the legacy filename from `Path.GetFileName(status.TargetPath)`. If the transfer target path was empty, directory-shaped, or otherwise not a usable final file path yet, legacy clients got an empty or meaningless filename even though the original requested filename was known at download start.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+
+**Wrong**:
+```csharp
+Filename = Path.GetFileName(status.TargetPath),
+```
+
+**Correct**:
+```csharp
+transferMetadata[transferId] = new BridgeTransferMetadata
+{
+    RequestedFilename = filename,
+};
+...
+Filename = string.IsNullOrWhiteSpace(filenameFromStatus)
+    ? metadata.RequestedFilename
+    : filenameFromStatus,
+```
+
+**Why This Keeps Happening**: Progress/readback paths often assume the execution layer will always have a clean final path ready. In bridge code that assumption is fragile because callers may pass a directory, a temporary path, or no target path at all. Preserve the user-facing filename at request time and use it as the fallback presentation value.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
