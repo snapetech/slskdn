@@ -10355,6 +10355,42 @@ request = request with
 
 **Why This Keeps Happening**: large facade controllers often start with a couple of top-level validations and then assume downstream services will canonicalize the rest. That is not safe when the same aggregate is accepted by multiple entry points. If a controller accepts a `Pod`, normalize the full pod graph before persistence so all pod-ingest paths produce the same stored shape.
 
+### 0k66. Boundary Helpers Must Respect Inclusive Ranges And Case-Insensitive Identifier Deduping
+
+**The Bug**: two native helper endpoints had contract drift at the boundary. `PortForwardingController.GetAvailablePorts(...)` rejected `startPort == endPort`, even though a single-port inclusive range is a valid query. `WarmCacheController.SubmitHints(...)` deduplicated MBIDs with `StringComparer.Ordinal`, so the same MusicBrainz identifier submitted with different casing counted multiple times and recorded duplicate popularity hits.
+
+**Files Affected**:
+- `src/slskd/API/Native/PortForwardingController.cs`
+- `src/slskd/API/Native/WarmCacheController.cs`
+- `tests/slskd.Tests.Unit/API/Native/PortForwardingControllerTests.cs`
+- `tests/slskd.Tests.Unit/API/Native/WarmCacheControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || startPort >= endPort)
+{
+    return BadRequest(...);
+}
+```
+
+```csharp
+.Distinct(StringComparer.Ordinal)
+```
+
+**Correct**:
+```csharp
+if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || startPort > endPort)
+{
+    return BadRequest(...);
+}
+```
+
+```csharp
+.Distinct(StringComparer.OrdinalIgnoreCase)
+```
+
+**Why This Keeps Happening**: these look like “small helper” endpoints, so it is easy to hand-wave the exact boundary semantics. But helpers still define API contracts. If a range is documented as inclusive, allow a single-point range. If identifiers come from external ecosystems like MusicBrainz, dedupe with the comparison semantics clients actually expect.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
