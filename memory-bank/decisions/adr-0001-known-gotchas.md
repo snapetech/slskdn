@@ -10272,6 +10272,33 @@ ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHas
 
 **Why This Keeps Happening**: create and update actions often evolve separately, and optional strings are easy to normalize in one path and forget in the other. When a controller owns the public contract, its create/update endpoints must share the same canonicalization rules or persisted sharing state depends on which endpoint the client used.
 
+### 0k63. Job Listing And Job-Creation Boundaries Must Enforce Their Published Limits And Canonical Null Semantics
+
+**The Bug**: `JobsController.GetJobs(...)` documented a default and “max reasonable” limit, but only applied the default. Large caller-provided limits still flowed through unbounded. In the same controller, `CreateLabelCrateJob(...)` trimmed `LabelId` and `LabelName` but left whitespace-only values as empty strings instead of canonical `null`, so downstream code had to treat both `null` and `""` as “not provided”.
+
+**Files Affected**:
+- `src/slskd/API/Native/JobsController.cs`
+- `tests/slskd.Tests.Unit/API/Native/JobsControllerBoundaryTests.cs`
+- `tests/slskd.Tests.Unit/API/Native/JobsControllerPaginationTests.cs`
+
+**Wrong**:
+```csharp
+request.LabelId = request.LabelId?.Trim();
+request.LabelName = request.LabelName?.Trim();
+
+var effectiveLimit = limit > 0 ? limit.Value : 100;
+```
+
+**Correct**:
+```csharp
+request.LabelId = string.IsNullOrWhiteSpace(request.LabelId) ? null : request.LabelId.Trim();
+request.LabelName = string.IsNullOrWhiteSpace(request.LabelName) ? null : request.LabelName.Trim();
+
+var effectiveLimit = limit > 0 ? Math.Min(limit.Value, 100) : 100;
+```
+
+**Why This Keeps Happening**: controller comments and DTO cleanup often drift separately from runtime enforcement. If an endpoint advertises a hard cap or treats an optional string as “absent”, enforce that at the boundary instead of relying on service-layer callers to rediscover the intended contract.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
