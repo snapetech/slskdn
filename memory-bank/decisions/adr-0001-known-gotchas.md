@@ -311,6 +311,30 @@ log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is
 
 **Why This Keeps Happening**: During bring-up, local state simulation is useful for shaping the code path, but leaving the success branch intact teaches the rest of the system a lie. For distributed workflows, incomplete transport must surface as explicit failure until real request/response exchange is wired.
 
+### 0x11. Capability File Parsers Must Reject Default-Filled Partial JSON
+
+**The Bug**: Capability-file parsing deserialized remote JSON into a model with permissive defaults and then accepted the result without validating required fields. A malformed or partial document could therefore masquerade as a valid peer capability advertisement.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+return JsonSerializer.Deserialize<CapabilityFileContent>(json, options);
+```
+
+**Correct**:
+```csharp
+if (content == null ||
+    string.IsNullOrWhiteSpace(content.Client) ||
+    content.Capabilities == PeerCapabilityFlags.None)
+{
+    return null;
+}
+```
+
+**Why This Keeps Happening**: DTO defaults are convenient for local generation but dangerous for remote parsing. When a protocol object has defaults like `"slskdn"` or `"1.0.0"`, deserialization can hide missing fields unless the parser explicitly validates the post-deserialize object. Remote capability documents need strict field validation after JSON parse, not just successful deserialization.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
