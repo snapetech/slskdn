@@ -10994,6 +10994,7 @@ contentId = contentId?.Trim() ?? string.Empty;
 
 **Files Affected**:
 - `src/slskd/PodCore/API/Controllers/PodMembershipController.cs`
+- `src/slskd/PodCore/API/Controllers/PodJoinLeaveController.cs`
 - `src/slskd/PodCore/API/Controllers/PodDiscoveryController.cs`
 - `src/slskd/PodCore/API/Controllers/PodDhtController.cs`
 - `src/slskd/PodCore/API/Controllers/PodMessageRoutingController.cs`
@@ -11001,6 +11002,10 @@ contentId = contentId?.Trim() ?? string.Empty;
 **Wrong**:
 ```csharp
 return StatusCode(500, new { error = result.ErrorMessage });
+```
+
+```csharp
+return BadRequest(new { error = result.ErrorMessage });
 ```
 
 ```csharp
@@ -11017,7 +11022,15 @@ return StatusCode(500, new { error = "Failed to publish membership" });
 ```
 
 ```csharp
+_logger.LogWarning("[PodJoinLeave] Join request failed for {PeerId} to {PodId}: {Error}",
+    result.PeerId,
+    result.PodId,
+    result.ErrorMessage);
+return BadRequest(new { error = "Join request could not be processed" });
+```
+
+```csharp
 return NotFound(new { podId, peerId, found = false, error = "Membership not found" });
 ```
 
-**Why This Keeps Happening**: service result types look structured and “API-ready,” but their `ErrorMessage` fields are still internal diagnostics. A controller boundary must translate those into stable, documented public error strings and only keep the detailed text in logs.
+**Why This Keeps Happening**: service result types look structured and “API-ready,” but their `ErrorMessage` fields are still internal diagnostics. The leak reappears whenever a controller handles both `400` and `500` outcomes from the same result DTO and assumes the embedded message is already safe for clients. A controller boundary must translate those into stable, documented public error strings and only keep the detailed text in logs.
