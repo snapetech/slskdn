@@ -4431,6 +4431,7 @@ services.AddSingleton<global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuer
 
 **Files Affected**:
 - `src/slskd/API/Native/JobsController.cs`
+- `src/slskd/API/Native/WarmCacheController.cs`
 
 **Wrong**:
 ```csharp
@@ -4448,9 +4449,38 @@ public record MbReleaseJobRequest(
     [property: JsonPropertyName("target_dir")] string TargetDir,
     [property: JsonPropertyName("tracks")] string Tracks = "all",
     [property: JsonPropertyName("constraints")] JobConstraints? Constraints = null);
+
+public record WarmCacheHintsRequest(
+    [property: JsonPropertyName("mb_release_ids")] List<string>? MbReleaseIds = null,
+    [property: JsonPropertyName("mb_artist_ids")] List<string>? MbArtistIds = null,
+    [property: JsonPropertyName("mb_label_ids")] List<string>? MbLabelIds = null);
 ```
 
 **Why This Keeps Happening**: ASP.NET Core JSON binding is case-insensitive, but it does not translate underscore-delimited names into PascalCase automatically. Compatibility-facing DTOs need explicit `JsonPropertyName` attributes anywhere the request contract is `snake_case`.
+
+### 0n1. Persisted Local JSON Stores Need Case-Insensitive Reads Too
+
+**The Bug**: local persistence layers reused the strict default JSON serializer on readback. That let saved data deserialize fine when it was written by the exact current serializer, but silently dropped persisted state when property casing drifted across versions or test fixtures.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/PeerReputationStore.cs`
+
+**Wrong**:
+```csharp
+var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PeerReputationEvent>>>(json);
+```
+
+**Correct**:
+```csharp
+var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PeerReputationEvent>>>(
+    json,
+    new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true,
+    });
+```
+
+**Why This Keeps Happening**: the JSON-compatibility rule is easy to remember for network payloads and long-lived caches like HashDb, but local encrypted stores are compatibility surfaces too. If the app persists JSON to disk for later reload, read it back with compatibility options instead of assuming the exact current serializer casing forever.
 
 ### 0o. Host Shutdown Hooks Need Logged Failures for Non-Cancellation Paths
 
