@@ -12079,3 +12079,30 @@ return new OpinionPublishResult(
 ```
 
 **Why This Keeps Happening**: once code is written in a “return result object, don’t throw” style, it stops feeling like response construction even though the DTO often crosses the HTTP boundary unchanged. Treat result records with error fields as public response models unless you have proven they are internal-only.
+
+### 0k76. Tooling And Migration Result Objects Need The Same Error Sanitization As Controllers
+
+**The Bug**: internal tooling code often feels “operator-only,” so it is easy to copy raw exception text into `ErrorMessage` or `Errors` result fields. But those result objects still become public output in controllers, CLI wrappers, logs, or admin tooling. Exception text there leaks implementation details just as much as a controller payload does.
+
+**Files Affected**:
+- `src/slskd/Mesh/Realm/Migration/RealmMigrationTool.cs`
+
+**Wrong**:
+```csharp
+result.ErrorMessage = ex.Message;
+```
+
+```csharp
+result.Errors.Add($"Import failed: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+result.ErrorMessage = "Migration export failed";
+```
+
+```csharp
+result.Errors.Add("Import failed");
+```
+
+**Why This Keeps Happening**: migration and admin-tool code sits outside the main request pipeline, so it gets mentally categorized as “not API code.” But if the return type is a structured result object consumed by humans or other layers, its error fields are still part of the public contract and must be sanitized.
