@@ -178,6 +178,41 @@ var contentItem = _shareRepository.FindContentItem(contentIdStr);
 
 **Why This Keeps Happening**: VirtualSoulfind v2 track IDs and MediaCore content IDs are related, but they are not interchangeable. Backends that cross from catalogue/planning into the shared content layer must do the ID translation explicitly. If they do not, the backend will quietly return empty candidate lists while looking perfectly reasonable in code review.
 
+### 0x9D. VirtualSoulfind v2 Controllers Must Fail Closed When Disabled And Must Carry Domain Through Manual Plan Creation
+
+**The Bug**: The v2 controller exposed all endpoints unconditionally even though the options contract says disabled mode should return `503`. It also accepted manual plan creation requests without a `Domain`, then built a `DesiredTrack` with the default enum value, so non-music plan requests silently planned against the wrong domain.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+
+**Wrong**:
+```csharp
+public sealed class CreatePlanRequest
+{
+    public string TrackId { get; set; } = string.Empty;
+}
+...
+var desiredTrack = new DesiredTrack
+{
+    DesiredTrackId = Guid.NewGuid().ToString(),
+    TrackId = request.TrackId,
+};
+```
+
+**Correct**:
+```csharp
+if (!_options.CurrentValue.VirtualSoulfindV2.Enabled)
+{
+    return StatusCode(StatusCodes.Status503ServiceUnavailable, "VirtualSoulfind v2 is disabled");
+}
+...
+public ContentDomain Domain { get; set; } = ContentDomain.Music;
+...
+Domain = request.Domain,
+```
+
+**Why This Keeps Happening**: API shells often get built before option gating is wired, especially when the underlying services exist in DI. That makes disabled features appear live. Separately, manual/test plan endpoints often omit metadata that the queue path already carries, which means they default to whatever enum zero happens to be. Keep controller contracts aligned with the documented runtime gate, and require the same planner-critical fields on manual plan creation that the real intent path carries.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
