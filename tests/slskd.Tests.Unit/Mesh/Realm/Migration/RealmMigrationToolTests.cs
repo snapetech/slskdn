@@ -129,6 +129,35 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
         }
 
         [Fact]
+        public async Task ExportPodDataAsync_WhenExportThrows_ReturnsSanitizedError()
+        {
+            var exportPath = Path.Combine(_tempDirectory, "bad\0path");
+
+            var result = await _tool.ExportPodDataAsync(exportPath);
+
+            Assert.False(result.Success);
+            Assert.Equal("Migration export failed", result.ErrorMessage);
+            Assert.DoesNotContain("null", result.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task ImportPodDataAsync_WhenManifestReadThrows_ReturnsSanitizedError()
+        {
+            var importPath = Path.Combine(_tempDirectory, "invalid-manifest");
+            Directory.CreateDirectory(importPath);
+            await File.WriteAllTextAsync(
+                Path.Combine(importPath, "migration-manifest.json"),
+                "{ invalid json");
+
+            var result = await _tool.ImportPodDataAsync(importPath, "target-realm");
+
+            Assert.False(result.Success);
+            var error = Assert.Single(result.Errors);
+            Assert.Equal("Import failed", error);
+            Assert.DoesNotContain("invalid", error, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
         public void GenerateMigrationGuide_WithValidRealms_CreatesComprehensiveGuide()
         {
             // Arrange
@@ -221,5 +250,4 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
         }
     }
 }
-
 

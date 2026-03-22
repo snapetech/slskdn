@@ -84,4 +84,25 @@ public class PodJoinLeaveControllerTests
         Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
         Assert.Contains("Join request could not be processed", error.Value?.ToString() ?? string.Empty);
     }
+
+    [Fact]
+    public async Task RequestLeave_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.RequestLeaveAsync(It.IsAny<PodLeaveRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodLeaveResult(false, "pod-1", "peer-1", "sensitive detail"));
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.RequestLeave(
+            new PodLeaveRequest("pod-1", "peer-1", "pub", 1, "sig"),
+            CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Leave request could not be processed", error.Value?.ToString() ?? string.Empty);
+    }
 }

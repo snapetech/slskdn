@@ -69,6 +69,9 @@ public class PodOpinionService : IPodOpinionService
 
             // Get existing opinions for this content
             var existingOpinions = await GetOpinionsFromDhtAsync(dhtKey, ct);
+            existingOpinions.RemoveAll(existing =>
+                string.Equals(existing.SenderPeerId, opinion.SenderPeerId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(existing.VariantHash, opinion.VariantHash, StringComparison.OrdinalIgnoreCase));
             existingOpinions.Add(opinion);
 
             // Store updated opinions list in DHT
@@ -93,7 +96,7 @@ public class PodOpinionService : IPodOpinionService
         {
             _logger.LogError(ex, "Error publishing opinion for pod {PodId}", podId);
             return new OpinionPublishResult(
-                false, podId, opinion.ContentId, opinion.VariantHash, ex.Message);
+                false, podId, opinion.ContentId, opinion.VariantHash, "Failed to publish opinion");
         }
     }
 
@@ -241,6 +244,18 @@ public class PodOpinionService : IPodOpinionService
 
         try
         {
+            var previousCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (_opinionCache.TryGetValue(podId, out var existingCache))
+            {
+                foreach (var entry in existingCache)
+                {
+                    lock (entry.Value)
+                    {
+                        previousCounts[entry.Key] = entry.Value.Count;
+                    }
+                }
+            }
+
             // Clear cache for this pod
             _opinionCache.TryRemove(podId, out _);
 
@@ -260,6 +275,14 @@ public class PodOpinionService : IPodOpinionService
                     var cache = _opinionCache.GetOrAdd(podId, _ => new ConcurrentDictionary<string, List<PodVariantOpinion>>());
                     cache[contentId] = opinions.ToList();
                     refreshedCount += opinions.Count;
+
+                    var previousCount = previousCounts.TryGetValue(contentId, out var count)
+                        ? count
+                        : 0;
+                    if (opinions.Count > previousCount)
+                    {
+                        newOpinionsCount += opinions.Count - previousCount;
+                    }
                 }
             }
 
@@ -315,6 +338,9 @@ public class PodOpinionService : IPodOpinionService
 
         lock (contentOpinions)
         {
+            contentOpinions.RemoveAll(existing =>
+                string.Equals(existing.SenderPeerId, opinion.SenderPeerId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(existing.VariantHash, opinion.VariantHash, StringComparison.OrdinalIgnoreCase));
             contentOpinions.Add(opinion);
         }
     }

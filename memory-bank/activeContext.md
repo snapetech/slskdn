@@ -23,10 +23,16 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release-hardening follow-up after the broad runtime/read-side bughunt, focused on closing the remaining packaging-smoke gaps after the stronger release gate landed
+- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on PodCore and MediaCore paths that still over-report success or drift on normalized state
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed another PodCore/MediaCore runtime cluster:
+    - `MetadataPortability` now registers imported entries with normalized external IDs instead of raw domain values
+    - `PodMessageRouter` now deduplicates/normalizes target peer IDs and no longer counts privacy-batched payloads as already routed
+    - `PodOpinionService` now upserts per-sender/per-variant opinions instead of appending duplicates forever, and refresh counts now track real deltas
+    - `PodJoinLeaveService` no longer fabricates empty pending-request buckets on read/cancel helpers and now compares peer IDs consistently
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Added a reusable Nix package/module smoke:
     - new `packaging/scripts/run-nix-package-smoke.sh`
     - builds `.#default`
@@ -90,9 +96,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Resume the broad runtime/read-side bughunt from the stronger green release gate and packaging-smoke baseline.
+1. Continue the broad runtime/read-side bughunt from the stronger green release gate and packaging-smoke baseline.
 2. Prioritize remaining places where public APIs may still report success while backing work is impossible, silently filtered, or split across normalized-vs-raw boundary assumptions.
-3. Consider whether any other channel-specific package install smokes need the same treatment after Nix.
+3. Sweep the remaining dirty PodCore/MediaCore test files that appeared alongside this runtime cluster.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

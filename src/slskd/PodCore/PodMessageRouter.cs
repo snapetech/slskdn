@@ -174,7 +174,7 @@ public class PodMessageRouter : IPodMessageRouter
                 SuccessfullyRoutedCount: 0,
                 FailedRoutingCount: 0,
                 RoutingDuration: DateTimeOffset.UtcNow - startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to route message");
         }
     }
 
@@ -182,7 +182,11 @@ public class PodMessageRouter : IPodMessageRouter
     public async Task<PodMessageRoutingResult> RouteMessageToPeersAsync(PodMessage message, IEnumerable<string> targetPeerIds, CancellationToken cancellationToken = default)
     {
         var startTime = DateTimeOffset.UtcNow;
-        var targetList = targetPeerIds.ToList();
+        var targetList = targetPeerIds
+            .Where(peerId => !string.IsNullOrWhiteSpace(peerId))
+            .Select(peerId => peerId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         var successCount = 0;
         var failureCount = 0;
         var failedPeers = new List<string>();
@@ -326,8 +330,8 @@ public class PodMessageRouter : IPodMessageRouter
                 if (payload.Length == 0)
                 {
                     // Message was queued for batching, not ready to send yet
-                    _logger.LogTrace("[PodMessageRouter] Message queued for batching, not sending immediately");
-                    return true; // Not an error, just delayed
+                    _logger.LogTrace("[PodMessageRouter] Message {MessageId} queued for privacy batching, not sent yet", message.MessageId);
+                    return false;
                 }
 
                 _logger.LogTrace("[PodMessageRouter] Applied outbound privacy transforms to message {MessageId}", message.MessageId);

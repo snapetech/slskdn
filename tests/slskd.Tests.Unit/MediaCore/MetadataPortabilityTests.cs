@@ -173,6 +173,67 @@ public class MetadataPortabilityTests
     }
 
     [Fact]
+    public async Task ImportAsync_WhenEntryImportThrows_SanitizesErrorMessage()
+    {
+        var package = new MetadataPackage(
+            "1.0",
+            DateTimeOffset.UtcNow,
+            "test-source",
+            new[]
+            {
+                new MetadataEntry(
+                    "content:audio:track:mb-12345",
+                    new ContentDescriptor { ContentId = "content:audio:track:mb-12345" },
+                    new MetadataSourceInfo("test", DateTimeOffset.UtcNow, "1.0", new Dictionary<string, string>()))
+            },
+            Array.Empty<IpldLink>(),
+            new MetadataPackageMetadata(1, 0, new Dictionary<string, int>(), "checksum"));
+
+        _registryMock
+            .Setup(r => r.IsContentIdRegisteredAsync("content:audio:track:mb-12345", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _registryMock
+            .Setup(r => r.RegisterAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var result = await _portability.ImportAsync(package);
+
+        Assert.False(result.Success);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("Failed to import content:audio:track:mb-12345", error);
+        Assert.DoesNotContain("sensitive detail", error);
+    }
+
+    [Fact]
+    public async Task ImportAsync_RegistersNormalizedExternalIdForMusicBrainzContent()
+    {
+        var package = new MetadataPackage(
+            "1.0",
+            DateTimeOffset.UtcNow,
+            "test-source",
+            new[]
+            {
+                new MetadataEntry(
+                    "content:mb:recording:12345",
+                    new ContentDescriptor { ContentId = "content:mb:recording:12345" },
+                    new MetadataSourceInfo("test", DateTimeOffset.UtcNow, "1.0", new Dictionary<string, string>()))
+            },
+            Array.Empty<IpldLink>(),
+            new MetadataPackageMetadata(1, 0, new Dictionary<string, int>(), "checksum"));
+
+        _registryMock
+            .Setup(r => r.IsContentIdRegisteredAsync("content:mb:recording:12345", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var result = await _portability.ImportAsync(package);
+
+        Assert.True(result.Success);
+        _registryMock.Verify(
+            r => r.RegisterAsync("audio:recording:12345", "content:mb:recording:12345", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task AnalyzeConflictsAsync_ValidPackage_ReturnsAnalysis()
     {
         // Arrange

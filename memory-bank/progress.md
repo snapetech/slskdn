@@ -5789,3 +5789,11 @@ Code quality improvements were completed as part of Option A:
   - [build-on-tag.yml](/home/keith/Documents/code/slskdn/.github/workflows/build-on-tag.yml) before publish
   - the stable metadata update section in `build-on-tag.yml` so flake version/hash updates are smoked immediately after they are rewritten
 - Updated [testing-policy.md](/home/keith/Documents/code/slskdn/docs/dev/testing-policy.md) and [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) so the Nix package smoke is part of the documented packaging validation story.
+
+## 2026-03-22 17:14 - PodCore and MediaCore state-drift bughunt pass
+
+- Fixed `MetadataPortability.ImportNewEntryAsync(...)` so imported metadata registers through normalized external IDs instead of raw parsed domains, keeping MediaCore portability imports aligned with the registry's normalized domain model.
+- Fixed `PodMessageRouter.RouteMessageToPeersAsync(...)` and `RouteMessageToPeerAsync(...)` so routing normalizes/deduplicates peer targets and no longer reports privacy-batched zero-length payloads as already-sent successes.
+- Fixed `PodOpinionService` so publishing/updating an opinion replaces the prior sender+variant record instead of appending duplicates forever, and so refresh statistics report real new-opinion deltas instead of staying stuck at zero.
+- Fixed `PodJoinLeaveService` so read/cancel helpers use `TryGetValue(...)` instead of `GetOrAdd(...)` and stop fabricating empty pending-request buckets, while peer-ID matching now stays case-consistent across join/leave flows.
+- Added and immediately committed the new gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for read-side cache mutation and append-only opinion drift.

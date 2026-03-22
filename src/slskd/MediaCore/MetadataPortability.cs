@@ -201,7 +201,7 @@ public class MetadataPortability : IMetadataPortability
             }
             catch (Exception ex)
             {
-                var error = $"Failed to import {entry.ContentId}: {ex.Message}";
+                var error = $"Failed to import {entry.ContentId}";
                 errors.Add(error);
                 _logger.LogError(ex, "[MetadataPortability] {Error}", error);
             }
@@ -369,7 +369,8 @@ public class MetadataPortability : IMetadataPortability
         var parsed = ContentIdParser.Parse(entry.ContentId);
         if (parsed != null)
         {
-            var externalId = $"{parsed.Domain}:{parsed.Type}:{parsed.Id}";
+            var normalizedDomain = ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
+            var externalId = $"{normalizedDomain}:{parsed.Type}:{parsed.Id}";
             await _registry.RegisterAsync(externalId, entry.ContentId, cancellationToken);
 
             _logger.LogInformation(

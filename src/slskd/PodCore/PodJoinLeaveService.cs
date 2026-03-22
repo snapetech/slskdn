@@ -102,7 +102,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // 3. Check if already a member
             var members = await _podService.GetMembersAsync(joinRequest.PodId, cancellationToken);
-            if (members.Any(m => m.PeerId == joinRequest.PeerId))
+            if (members.Any(m => string.Equals(m.PeerId, joinRequest.PeerId, StringComparison.OrdinalIgnoreCase)))
             {
                 return new PodJoinResult(
                     Success: false,
@@ -113,7 +113,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // 4. Check if already has pending request
             var pendingRequests = _pendingJoinRequests.GetOrAdd(joinRequest.PodId, _ => new ConcurrentBag<PodJoinRequest>());
-            if (pendingRequests.Any(r => r.PeerId == joinRequest.PeerId))
+            if (pendingRequests.Any(r => string.Equals(r.PeerId, joinRequest.PeerId, StringComparison.OrdinalIgnoreCase)))
             {
                 return new PodJoinResult(
                     Success: false,
@@ -140,7 +140,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
                 Success: false,
                 PodId: joinRequest.PodId,
                 PeerId: joinRequest.PeerId,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to process join request");
         }
     }
 
@@ -178,7 +178,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // 3. Find and remove the pending request
             var pendingRequests = _pendingJoinRequests.GetOrAdd(acceptance.PodId, _ => new ConcurrentBag<PodJoinRequest>());
-            var request = pendingRequests.FirstOrDefault(r => r.PeerId == acceptance.PeerId);
+            var request = pendingRequests.FirstOrDefault(r => string.Equals(r.PeerId, acceptance.PeerId, StringComparison.OrdinalIgnoreCase));
             if (request == null)
             {
                 return new PodMembershipOperationResult(
@@ -191,7 +191,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // Remove from pending (simplified - in production would be more robust)
             var newRequests = new ConcurrentBag<PodJoinRequest>();
-            foreach (var r in pendingRequests.Where(r => r.PeerId != acceptance.PeerId))
+            foreach (var r in pendingRequests.Where(r => !string.Equals(r.PeerId, acceptance.PeerId, StringComparison.OrdinalIgnoreCase)))
             {
                 newRequests.Add(r);
             }
@@ -245,7 +245,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
                 PodId: acceptance.PodId,
                 PeerId: acceptance.PeerId,
                 Operation: "join_acceptance",
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to process join acceptance");
         }
     }
 
@@ -269,7 +269,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // 2. Check if actually a member
             var members = await _podService.GetMembersAsync(leaveRequest.PodId, cancellationToken);
-            if (!members.Any(m => m.PeerId == leaveRequest.PeerId))
+            if (!members.Any(m => string.Equals(m.PeerId, leaveRequest.PeerId, StringComparison.OrdinalIgnoreCase)))
             {
                 return new PodLeaveResult(
                     Success: false,
@@ -280,7 +280,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // 3. For regular members, process immediately
             // For owners/mods, require acceptance
-            var member = members.First(m => m.PeerId == leaveRequest.PeerId);
+            var member = members.First(m => string.Equals(m.PeerId, leaveRequest.PeerId, StringComparison.OrdinalIgnoreCase));
             if (member.Role == PodRoles.Member)
             {
                 // Regular member can leave immediately
@@ -309,7 +309,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             {
                 // Owner/mod leave requires acceptance - store as pending
                 var pendingRequests = _pendingLeaveRequests.GetOrAdd(leaveRequest.PodId, _ => new ConcurrentBag<PodLeaveRequest>());
-                if (pendingRequests.Any(r => r.PeerId == leaveRequest.PeerId))
+                if (pendingRequests.Any(r => string.Equals(r.PeerId, leaveRequest.PeerId, StringComparison.OrdinalIgnoreCase)))
                 {
                     return new PodLeaveResult(
                         Success: false,
@@ -336,7 +336,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
                 Success: false,
                 PodId: leaveRequest.PodId,
                 PeerId: leaveRequest.PeerId,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to process leave request");
         }
     }
 
@@ -374,7 +374,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // 3. Find and remove the pending request
             var pendingRequests = _pendingLeaveRequests.GetOrAdd(acceptance.PodId, _ => new ConcurrentBag<PodLeaveRequest>());
-            var request = pendingRequests.FirstOrDefault(r => r.PeerId == acceptance.PeerId);
+            var request = pendingRequests.FirstOrDefault(r => string.Equals(r.PeerId, acceptance.PeerId, StringComparison.OrdinalIgnoreCase));
             if (request == null)
             {
                 return new PodMembershipOperationResult(
@@ -387,7 +387,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
 
             // Remove from pending (simplified)
             var newRequests = new ConcurrentBag<PodLeaveRequest>();
-            foreach (var r in pendingRequests.Where(r => r.PeerId != acceptance.PeerId))
+            foreach (var r in pendingRequests.Where(r => !string.Equals(r.PeerId, acceptance.PeerId, StringComparison.OrdinalIgnoreCase)))
             {
                 newRequests.Add(r);
             }
@@ -427,34 +427,46 @@ public class PodJoinLeaveService : IPodJoinLeaveService
                 PodId: acceptance.PodId,
                 PeerId: acceptance.PeerId,
                 Operation: "leave_acceptance",
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to process leave acceptance");
         }
     }
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<PodJoinRequest>> GetPendingJoinRequestsAsync(string podId, CancellationToken cancellationToken = default)
     {
-        var pendingRequests = _pendingJoinRequests.GetOrAdd(podId, _ => new ConcurrentBag<PodJoinRequest>());
-        return Task.FromResult<IReadOnlyList<PodJoinRequest>>(pendingRequests.ToList());
+        if (_pendingJoinRequests.TryGetValue(podId, out var pendingRequests))
+        {
+            return Task.FromResult<IReadOnlyList<PodJoinRequest>>(pendingRequests.ToList());
+        }
+
+        return Task.FromResult<IReadOnlyList<PodJoinRequest>>(Array.Empty<PodJoinRequest>());
     }
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<PodLeaveRequest>> GetPendingLeaveRequestsAsync(string podId, CancellationToken cancellationToken = default)
     {
-        var pendingRequests = _pendingLeaveRequests.GetOrAdd(podId, _ => new ConcurrentBag<PodLeaveRequest>());
-        return Task.FromResult<IReadOnlyList<PodLeaveRequest>>(pendingRequests.ToList());
+        if (_pendingLeaveRequests.TryGetValue(podId, out var pendingRequests))
+        {
+            return Task.FromResult<IReadOnlyList<PodLeaveRequest>>(pendingRequests.ToList());
+        }
+
+        return Task.FromResult<IReadOnlyList<PodLeaveRequest>>(Array.Empty<PodLeaveRequest>());
     }
 
     /// <inheritdoc/>
     public Task<bool> CancelJoinRequestAsync(string podId, string peerId, CancellationToken cancellationToken = default)
     {
-        var pendingRequests = _pendingJoinRequests.GetOrAdd(podId, _ => new ConcurrentBag<PodJoinRequest>());
+        if (!_pendingJoinRequests.TryGetValue(podId, out var pendingRequests))
+        {
+            return Task.FromResult(false);
+        }
+
         var newRequests = new ConcurrentBag<PodJoinRequest>();
         var found = false;
 
         foreach (var request in pendingRequests)
         {
-            if (request.PeerId != peerId)
+            if (!string.Equals(request.PeerId, peerId, StringComparison.OrdinalIgnoreCase))
             {
                 newRequests.Add(request);
             }
@@ -476,13 +488,17 @@ public class PodJoinLeaveService : IPodJoinLeaveService
     /// <inheritdoc/>
     public Task<bool> CancelLeaveRequestAsync(string podId, string peerId, CancellationToken cancellationToken = default)
     {
-        var pendingRequests = _pendingLeaveRequests.GetOrAdd(podId, _ => new ConcurrentBag<PodLeaveRequest>());
+        if (!_pendingLeaveRequests.TryGetValue(podId, out var pendingRequests))
+        {
+            return Task.FromResult(false);
+        }
+
         var newRequests = new ConcurrentBag<PodLeaveRequest>();
         var found = false;
 
         foreach (var request in pendingRequests)
         {
-            if (request.PeerId != peerId)
+            if (!string.Equals(request.PeerId, peerId, StringComparison.OrdinalIgnoreCase))
             {
                 newRequests.Add(request);
             }
