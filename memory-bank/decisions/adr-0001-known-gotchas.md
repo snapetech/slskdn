@@ -245,6 +245,32 @@ ExpectedQuality = 1.0f,
 
 **Why This Keeps Happening**: Candidate and planner code often evolve separately. One side adds new backends or score semantics, while the other side still assumes the old set. The result is not a crash; it is silent mis-ordering that makes the planner behave irrationally. Keep `SourceCandidate` scores normalized consistently and update the planner’s explicit backend order whenever a new backend becomes real.
 
+### 0x9F. VirtualSoulfind v2 DI Must Bind Runtime Services To Root `Options.VirtualSoulfindV2`, Not Constructor Defaults
+
+**The Bug**: The v2 services were registered with `AddOptions<T>()` only, so resolver timeouts, processor cadence, planner default mode, and Soulseek backend limits were running on type defaults instead of the actual nested root config under `Options.VirtualSoulfindV2`.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+services.AddOptions<VirtualSoulfind.v2.Resolution.ResolverOptions>();
+services.AddSingleton<VirtualSoulfind.v2.Planning.IPlanner, VirtualSoulfind.v2.Planning.MultiSourcePlanner>();
+```
+
+**Correct**:
+```csharp
+var root = sp.GetRequiredService<IOptionsMonitor<Options>>().CurrentValue.VirtualSoulfindV2;
+return new WrappedOptionsMonitor<ResolverOptions>(Options.Create(new ResolverOptions
+{
+    DefaultStepTimeoutSeconds = root.PlanTimeoutSeconds,
+}));
+...
+return new MultiSourcePlanner(..., root.DefaultMode);
+```
+
+**Why This Keeps Happening**: nested option objects in the main `Options` model look like ordinary `IOptions<T>` registrations, but `AddOptions<T>()` alone does not map them from the already-bound parent object. That leaves the feature "configured" on paper while runtime services silently use library defaults. When a subsystem derives its settings from `Options.SomeNestedObject`, explicitly bridge that nested object into the option type or constructor that the subsystem actually consumes.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
