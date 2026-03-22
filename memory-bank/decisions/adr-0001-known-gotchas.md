@@ -458,6 +458,50 @@ var pathScript = FindNewestFileOnPath("audfprint.py");
 ```
 
 **Why This Keeps Happening**: Dev environments often colocate helper repos, so discovery code gets written around that one layout. Production and user machines do not. If a feature relies on external tools, search explicit env-vars first, then normal install locations, and only then fall back to repo-relative development paths.
+
+### 0x10. Scene Membership Protocols Must Carry Full Peer Identity Once Membership Tracking Depends On It
+
+**The Bug**: Scene membership announcements only carried an 8-byte peer hint, so membership tracking had to fabricate synthetic peer IDs like `peer:vsf:...`. That made scene member identity inconsistent with the real profile/chat identity even when the sender had a full peer ID available locally.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/SceneAnnouncementService.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneMembershipTracker.cs`
+
+**Wrong**:
+```csharp
+// [1 byte flag] [8 bytes timestamp] [8 bytes peer hint]
+var peerId = $"peer:vsf:{Convert.ToHexString(peerIdHint).ToLowerInvariant()}";
+```
+
+**Correct**:
+```csharp
+// [1 byte flag] [8 bytes timestamp] [2 bytes peer-id length] [peer-id bytes]
+return Encoding.UTF8.GetString(data, 11, peerIdLength);
+```
+
+**Why This Keeps Happening**: Early wire formats often optimize for compactness before downstream consumers are written. Once membership tracking, moderation, or UI starts depending on stable peer IDs, hints are no longer sufficient. Carry the full peer identity in the protocol and keep the old hint-only path only as backward-compatible fallback.
+
+### 0x11. Actor Documents Must Not Advertise Collection Endpoints That The Server Never Serves
+
+**The Bug**: ActivityPub actor documents advertised `/followers` and `/following` URLs, but there were no corresponding controller routes. Remote peers could discover links that always 404ed even though the actor document claimed they existed.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SocialFederation/LibraryActor.cs`
+
+**Wrong**:
+```csharp
+Followers = $"{ActorId}/followers",
+Following = $"{ActorId}/following",
+```
+
+**Correct**:
+```csharp
+[HttpGet("{actorName}/followers")]
+[HttpGet("{actorName}/following")]
+```
+
+**Why This Keeps Happening**: It is common to build actor documents first and postpone collection endpoints. In federation, advertised URLs are part of the contract. If an actor document exposes a collection URL, the server must return a syntactically valid collection there, even if it is empty for now.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
