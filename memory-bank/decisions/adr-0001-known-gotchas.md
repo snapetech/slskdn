@@ -414,6 +414,27 @@ await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com
 
 **Why This Keeps Happening**: Connection-refused tests are only deterministic if the endpoint state is deterministic. A "random closed port" can become an open but silent endpoint on another machine or CI worker, and transports without a bounded connect/handshake timeout will then hang forever in network reads.
 
+### 0j8. Tuple Member Renames Must Be Updated In Tests Too, Or `dotnet test` Will Fail At Compile Time
+
+**The Bug**: Root `dotnet test` still failed after the integration fixes because a unit test was reading a tuple member as `.totalKeys` after the production API had been normalized to PascalCase tuple names `(int TotalKeys, int ContentHintKeys)`.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Mesh/Phase8MeshTests.cs`
+
+**Wrong**:
+```csharp
+var stored = dht.GetStoreStats();
+Assert.True(stored.totalKeys >= 1);
+```
+
+**Correct**:
+```csharp
+var stored = dht.GetStoreStats();
+Assert.True(stored.TotalKeys >= 1);
+```
+
+**Why This Keeps Happening**: Tuple element names are part of the compile-time API surface even though they look lightweight. When cleanup work renames tuple elements for consistency, stale tests won’t fail until the affected project is rebuilt, so always grep the test tree for the old element name after changing a returned tuple signature.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
