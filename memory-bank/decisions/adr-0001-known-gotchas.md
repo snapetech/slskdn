@@ -10362,3 +10362,68 @@ if (string.IsNullOrWhiteSpace(request.Pod.PodId))
 ```
 
 **Why This Keeps Happening**: these endpoints feel like thin wrappers around internal services, so it is easy to skip the same boundary work enforced elsewhere. That is exactly how config drift, padded IDs, and misleading status output get back into the public API. Treat helper/status controllers the same as any other external boundary: normalize request objects, enforce documented ranges, and derive status from actual enabled config instead of DI presence alone.
+
+### 0k63. Core Status And Configuration Controllers Need The Same Boundary Discipline As Feature Controllers
+
+**The Bug**: core utility endpoints looked “simple” enough that they escaped the broader controller-boundary hardening. `SessionController.Login(...)` logged `login.Username` in headless mode before checking for a null body, so a null request crashed the action. `OptionsController` treated missing YAML/overlay bodies as no-ops or rethrown exceptions instead of explicit request failures. `LogsController` returned the live concurrent queue object instead of a stable snapshot.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/SessionController.cs`
+- `src/slskd/Core/API/Controllers/OptionsController.cs`
+- `src/slskd/Core/API/Controllers/LogsController.cs`
+
+**Wrong**:
+```csharp
+if (OptionsAtStartup.Headless)
+{
+    Log.Warning("Login from {User} rejected; web UI is DISABLED when running in headless mode", login.Username);
+    return Forbid();
+}
+
+if (login == default)
+{
+    return BadRequest();
+}
+```
+
+```csharp
+if (overlay is null)
+{
+    return NoContent();
+}
+```
+
+```csharp
+return Ok(Program.LogBuffer);
+```
+
+**Correct**:
+```csharp
+if (login == null)
+{
+    return BadRequest();
+}
+
+login.Username = login.Username?.Trim() ?? string.Empty;
+login.Password = login.Password?.Trim() ?? string.Empty;
+```
+
+```csharp
+if (overlay is null)
+{
+    return BadRequest("Options overlay is required");
+}
+```
+
+```csharp
+if (yaml == null)
+{
+    return BadRequest("YAML is required");
+}
+```
+
+```csharp
+return Ok(Program.LogBuffer.ToArray());
+```
+
+**Why This Keeps Happening**: controllers that mostly expose application state or configuration feel less risky than write-heavy feature endpoints, so it is easy to leave them on older conventions. That is exactly where null-body crashes, ambiguous no-op responses, and mutable live-state leaks survive. Treat status/config surfaces as external API boundaries too: validate bodies before logging, make missing request payloads explicit `400`s, and return snapshots instead of live collections.
