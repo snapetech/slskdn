@@ -60,6 +60,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 - `src/slskd/Application.cs`
 - `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
 - `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
 
 **Wrong**:
 ```csharp
