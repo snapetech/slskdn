@@ -688,6 +688,47 @@ var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
 ```
 
 **Why This Keeps Happening**: Ranking pipelines often assume canonical IDs exist by the time candidates are formed. Real metadata providers do not guarantee that. If a hit has strong human-meaningful identity data, keep it in the candidate set with a stable synthetic ID so downstream ranking can still compare and present it.
+
+### 0x18. Inbound `Accept`/`Reject` For Follow Activities Must Reconcile Local `following` State
+
+**The Bug**: After outbound follow state was added, inbound `Accept` and `Reject` responses for follow activities still behaved like generic stored activities. That left local `following` state optimistic and stale when a remote actor rejected a follow.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+
+**Wrong**:
+```csharp
+case "Reject":
+    return (true, null);
+```
+
+**Correct**:
+```csharp
+await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken);
+```
+
+**Why This Keeps Happening**: Once protocol state starts to exist locally, generic “store and ignore” handling is no longer sufficient for response activities. `Accept` and `Reject` are state transitions, not just log events, so they need to reconcile local relationship state.
+
+### 0x19. Corpus Entries Should Not Promote Synthetic Metadata IDs To Canonical Recording IDs
+
+**The Bug**: After metadata-only segment candidates were allowed with stable synthetic IDs, corpus registration could persist those synthetic `metadata:` IDs as if they were canonical recording identifiers.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+RecordingId = topTrack?.RecordingId,
+```
+
+**Correct**:
+```csharp
+RecordingId = topTrack != null && !topTrack.RecordingId.StartsWith("metadata:", StringComparison.OrdinalIgnoreCase)
+    ? topTrack.RecordingId
+    : null,
+```
+
+**Why This Keeps Happening**: Once fallback IDs enter a ranking pipeline, later persistence code can accidentally treat them as canonical identifiers. Any synthetic ID scheme used to keep candidates alive in-memory needs an explicit filter before writing durable corpus or interoperability state.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
