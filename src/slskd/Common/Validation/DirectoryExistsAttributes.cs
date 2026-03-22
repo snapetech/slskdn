@@ -57,7 +57,7 @@ namespace slskd.Validation
             {
                 if (Path.IsPathRooted(stringValue))
                 {
-                    return new ValidationResult($"The {validationContext.DisplayName} field specifies a non-relative directory path: '{value}'.");
+                    return new ValidationResult($"The {validationContext.DisplayName} field specifies a non-relative directory path.");
                 }
 
                 stringValue = Path.Combine(AppContext.BaseDirectory, stringValue);
@@ -80,7 +80,7 @@ namespace slskd.Validation
 
             if (!Directory.Exists(dir))
             {
-                return new ValidationResult($"The {validationContext.DisplayName} field specifies a non-existent directory '{dir}'.");
+                return new ValidationResult($"The {validationContext.DisplayName} field specifies a non-existent directory.");
             }
 
             if (EnsureWriteable)
@@ -94,7 +94,7 @@ namespace slskd.Validation
                 }
                 catch (Exception)
                 {
-                    return new ValidationResult($"The {validationContext.DisplayName} field specifies a directory '{dir}' that exists, but is not writeable.");
+                    return new ValidationResult($"The {validationContext.DisplayName} field specifies a directory that exists, but is not writeable.");
                 }
             }
 

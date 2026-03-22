@@ -38,7 +38,7 @@ namespace slskd.Validation
                 {
                     if (File.Exists(file))
                     {
-                        return new ValidationResult($"The {validationContext.DisplayName} field specifies an existing file '{file}'.");
+                        return new ValidationResult($"The {validationContext.DisplayName} field specifies an existing file.");
                     }
                 }
             }
