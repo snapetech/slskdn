@@ -10648,6 +10648,34 @@ catch (Exception ex)
 
 **Why This Keeps Happening**: “validation” endpoints tempt people to surface raw parser messages because the client already supplied bad input. That still couples the API contract to parser implementation details and leaks internals that change across library versions. Return a stable validation message, and keep the parser detail in logs only.
 
+### 0k73. Conflict And Batch-Failure Paths Need The Same Error Sanitization As 500s
+
+**The Bug**: some endpoints stopped leaking internals on the happy-path failure handlers but still forwarded raw exception text in “expected” conflict or batch-enqueue branches. `PortForwardingController` returned the underlying `InvalidOperationException` text for duplicate forwards, and `SharesController` surfaced the download-service exception text when share backfill enqueue failed. Those are still contract-boundary leaks even though the status is `409` or the failure happens mid-batch.
+
+**Files Affected**:
+- `src/slskd/API/Native/PortForwardingController.cs`
+- `src/slskd/Sharing/API/SharesController.cs`
+- `tests/slskd.Tests.Unit/API/Native/PortForwardingControllerTests.cs`
+- `tests/slskd.Tests.Unit/Sharing/API/SharesControllerTests.cs`
+
+**Wrong**:
+```csharp
+catch (InvalidOperationException ex)
+{
+    return Conflict(new { Error = ex.Message });
+}
+```
+
+**Correct**:
+```csharp
+catch (InvalidOperationException)
+{
+    return Conflict(new { Error = "Port forwarding is already configured for this local port" });
+}
+```
+
+**Why This Keeps Happening**: exception-leak cleanup often focuses on obvious `500` handlers first, while conflict and partial-batch branches get treated as “safe” because the operation already failed in a known way. They still expose runtime wording and backend details unless they return stable public messages just like every other boundary path.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
