@@ -1753,6 +1753,32 @@ BrowseTracker.TryRemove(username, completedProgress);
 
 **Why This Keeps Happening**: Delayed cleanup often captures only the lookup key and assumes the keyed state is still the same object later. That assumption breaks as soon as the same key can be reused for a newer operation. When cleanup is deferred, capture an operation/version/token or compare the exact tracked instance before removing it.
 
+### 0ac. Rate-Limit State Must Store A Window Of Events, Not Just The Latest Timestamp Per Key
+
+**The Bug**: Two rate-limiters kept only one timestamp per key. In federation delivery, that meant `MaxActivitiesPerHour > 1` was never really enforced because each inbox URL had at most one stored entry. In notifications, concurrent callers could both pass the check-then-set window and send duplicate notifications.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/ActivityDeliveryService.cs`
+- `src/slskd/Integrations/Notifications/NotificationService.cs`
+
+**Wrong**:
+```csharp
+private readonly ConcurrentDictionary<string, DateTime> _recentDeliveries = new();
+...
+var recentCount = _recentDeliveries.Count(kvp => kvp.Key == inboxUrl && kvp.Value > cutoff);
+_recentDeliveries[inboxUrl] = DateTime.UtcNow;
+```
+
+**Correct**:
+```csharp
+private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _recentDeliveries = new();
+...
+deliveries.Enqueue(now);
+TrimExpiredDeliveries(inboxUrl, deliveries, cutoff);
+```
+
+**Why This Keeps Happening**: “Rate limit by key” is easy to model as a single last-seen timestamp, but any limit larger than one event per window needs a real sliding window, queue, or token bucket. Separate check-then-set logic also looks harmless until concurrent callers hit it at once. If the rule is “N events per window,” store N-window state and update/check it atomically enough for the workload.
+
 ### 0x. Singleton Services Must Not Launch Infinite Cleanup Loops Without A Disposal Hook
 
 **The Bug**: `PrivateGatewayMeshService` is registered as a singleton and started an infinite `CleanupExpiredTunnelsAsync` loop with `Task.Run(...)`, `while (true)`, and `Task.Delay(...)` but exposed no `Dispose()` path to cancel it. That leaves a permanent background task with live references to service state until process exit.
