@@ -10619,6 +10619,35 @@ catch (Exception)
 
 **Why This Keeps Happening**: developers often assume client-caused paths are safe places to expose raw error text because the failure is already “expected.” In practice, parser, token, and service-start exceptions still contain library wording, internal state, or transient backend details. Map them to stable public messages by status/category, not by exception text.
 
+### 0k72. Config Validation Endpoints Must Not Echo Parser Internals
+
+**The Bug**: config APIs often feel like an admin-only debugging surface, so parser exceptions get forwarded directly to help diagnose bad input. `OptionsController` did that in two places: runtime overlay application exposed raw exception text on `500`, and YAML validation returned parser internals from `TryValidateYaml(...)`. That leaks serializer details and inconsistent low-level wording through a public API.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/OptionsController.cs`
+- `tests/slskd.Tests.Unit/Core/API/OptionsControllerTests.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    error = ex.Message;
+    return false;
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    Log.Warning(ex, "Configuration validation failed");
+    error = "Invalid YAML configuration";
+    return false;
+}
+```
+
+**Why This Keeps Happening**: “validation” endpoints tempt people to surface raw parser messages because the client already supplied bad input. That still couples the API contract to parser implementation details and leaks internals that change across library versions. Return a stable validation message, and keep the parser detail in logs only.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
