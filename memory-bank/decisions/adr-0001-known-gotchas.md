@@ -12496,6 +12496,25 @@ return (false, "Failed to serialize descriptor");
 
 **Why This Keeps Happening**: validation/report code often feels “safe” because it is already building human-readable failure messages. But those strings are still part of the external contract. For catch-all validation failures, log the exception and return a stable public message instead.
 
+### 0k83. Structured Result Details Can Leak Just As Easily As Top-Level Errors
+
+**The Bug**: `HttpLlmModerationProvider` sanitized its top-level request failure, but its parse fallback still copied `ex.Message` into `response.Details["parse_error"]`. The result looked structured and diagnostic, but it still flowed back to callers as part of the public moderation response.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/HttpLlmModerationProvider.cs`
+
+**Wrong**:
+```csharp
+Details = new Dictionary<string, string> { ["parse_error"] = ex.Message }
+```
+
+**Correct**:
+```csharp
+Details = new Dictionary<string, string> { ["parse_error"] = "LLM response parsing failed" }
+```
+
+**Why This Keeps Happening**: once top-level `Error` and `Reasoning` fields are sanitized, it is easy to forget that nested `Details` dictionaries are equally public. Treat every returned string field, including structured diagnostics, as contract surface.
+
 ### 0k83. Config Validators And Protocol Framers Must Not Echo Parser Internals
 
 **The Bug**: both configuration validators and wire-protocol framers were still appending raw parser exception text into externally visible validation errors and protocol violations. That leaked implementation details like CIDR parser messages and JSON byte offsets into public contracts.
