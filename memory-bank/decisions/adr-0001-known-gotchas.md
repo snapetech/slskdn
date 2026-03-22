@@ -11987,3 +11987,63 @@ await InitializeDhtAsync(cancellationToken).ConfigureAwait(false);
 ```
 
 **Why This Keeps Happening**: `StartAsync` is the most convenient token in scope, so it gets threaded into detached work by habit. But once initialization is intentionally decoupled from `StartAsync`, it needs its own lifecycle token that is canceled on service stop, not on startup coordination.
+
+### 0k75. Structured Result Objects Must Not Smuggle Backend Exceptions Through `Errors` Lists Or Catch-All DTO Fields
+
+**The Bug**: a service may avoid throwing and instead return a structured result object with `Error`, `ErrorMessage`, or `Errors` fields. That is still a public API surface if the controller returns `Ok(result)`. Raw `ex.Message` copied into those fields leaks backend details just as badly as putting exception text into a controller response directly.
+
+**Files Affected**:
+- `src/slskd/MediaCore/MetadataPortability.cs`
+- `src/slskd/PodCore/PodJoinLeaveService.cs`
+- `src/slskd/PodCore/PodMessageRouter.cs`
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+errors.Add($"Failed to import {entry.ContentId}: {ex.Message}");
+```
+
+```csharp
+return new PodMessageRoutingResult(
+    Success: false,
+    ...,
+    ErrorMessage: ex.Message);
+```
+
+```csharp
+return new PodJoinResult(
+    Success: false,
+    ...,
+    ErrorMessage: ex.Message);
+```
+
+```csharp
+return new OpinionPublishResult(
+    false, podId, opinion.ContentId, opinion.VariantHash, ex.Message);
+```
+
+**Correct**:
+```csharp
+errors.Add($"Failed to import {entry.ContentId}");
+```
+
+```csharp
+return new PodMessageRoutingResult(
+    Success: false,
+    ...,
+    ErrorMessage: "Failed to route message");
+```
+
+```csharp
+return new PodJoinResult(
+    Success: false,
+    ...,
+    ErrorMessage: "Failed to process join request");
+```
+
+```csharp
+return new OpinionPublishResult(
+    false, podId, opinion.ContentId, opinion.VariantHash, "Failed to publish opinion");
+```
+
+**Why This Keeps Happening**: once code is written in a “return result object, don’t throw” style, it stops feeling like response construction even though the DTO often crosses the HTTP boundary unchanged. Treat result records with error fields as public response models unless you have proven they are internal-only.
