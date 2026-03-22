@@ -218,6 +218,41 @@ Directory.CreateDirectory(contentDir);
 
 **Why This Keeps Happening**: `SLSKD_APP_DIR` and `WorkingDirectory` do not control this option. The validator and `Program` both explicitly combine `OptionsAtStartup.Web.ContentPath` with `AppContext.BaseDirectory`, so tests must place any temporary relative content directory under the built app output directory.
 
+### 0j2. `FileExistsAttribute` Must Treat Empty Strings As "Not Configured", Not As A Path To Validate
+
+**The Bug**: Full-startup invalid-config tests were still being preempted before hardening validation because optional config fields that default to `string.Empty` hit `Path.GetFullPath("")` inside `FileExistsAttribute`, throwing `ArgumentException` instead of cleanly skipping validation for an unset optional path.
+
+**Files Affected**:
+- `src/slskd/Common/Validation/FileExistsAttribute.cs`
+- `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
+- `src/slskd/Core/Options.cs`
+
+**Wrong**:
+```csharp
+if (value != null)
+{
+    var file = Path.GetFullPath(value.ToString()!);
+    if (!string.IsNullOrEmpty(file))
+    {
+        // validate file
+    }
+}
+```
+
+**Correct**:
+```csharp
+var rawPath = value?.ToString();
+if (string.IsNullOrWhiteSpace(rawPath))
+{
+    return ValidationResult.Success;
+}
+
+var file = Path.GetFullPath(rawPath);
+// validate file
+```
+
+**Why This Keeps Happening**: Many optional path settings in `Options` intentionally default to `string.Empty`. Validation attributes must distinguish "unset optional value" from "configured path" before normalizing or resolving the path, or they will fail startup for the wrong reason and mask the real validation behavior being tested.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
