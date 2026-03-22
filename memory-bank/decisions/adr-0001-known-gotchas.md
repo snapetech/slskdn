@@ -155,8 +155,10 @@ await MultiSource.SelectCanonicalSourcesAsync(result, cancellationToken);
 - `src/slskd/Common/Security/CoverTrafficGenerator.cs`
 - `src/slskd/Relay/RelayClient.cs`
 - `src/slskd/Transfers/Downloads/DownloadService.cs`
+- `src/slskd/Transfers/Rescue/RescueService.cs`
 - `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
 - `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+- `src/slskd/PodCore/SqlitePodService.cs`
 
 **Wrong**:
 ```csharp
@@ -180,6 +182,9 @@ await Retry.Do(..., StartCancellationTokenSource.Token);
 
 var cts = new CancellationTokenSource();
 CancellationTokens.TryAdd(transfer.Id, cts);
+
+await multiSource.DownloadAsync(multiSourceRequest, CancellationToken.None);
+await podPublisher.PublishPodAsync(pod, CancellationToken.None);
 ```
 
 **Why This Keeps Happening**: detached work is easy to reason about only in hosted services, but the same rule applies to user-triggered or helper-managed background loops. If the operation should continue after the initiating call returns, it needs a service-owned CTS and an explicit stop path, not a linked copy of the caller token.
