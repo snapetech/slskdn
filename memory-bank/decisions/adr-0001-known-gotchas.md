@@ -8716,6 +8716,40 @@ if (TryExtractHostAndPort(endpoint, out var host, out var port) &&
 
 **Why This Keeps Happening**: Colons are overloaded across the codebase: they separate labels from data, delimit ports, and appear inside IPv6 literals. Small helper code often assumes only one of those meanings is present in a given string. Any parser touching endpoint-like or label-plus-payload formats needs to define which colon is structural and parse accordingly instead of using the first split that “works” on IPv4-only samples.
 
+### 0k46. SongID Clip Profile Parsers Must Reject Non-Positive Durations And Steps Before Scheduling Work
+
+**The Bug**: `SongIdService.ParseProfiles(...)` accepted clip profiles with zero or negative clip lengths or step sizes. Those bad values then flowed into clip scheduling, where they could distort focus windows or hand invalid extraction durations to ffmpeg instead of being discarded as malformed config.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+if (!int.TryParse(parts[0], out var clipLength)
+    || !int.TryParse(parts[1], out var step))
+{
+    continue;
+}
+
+profiles.Add((clipLength, step));
+```
+
+**Correct**:
+```csharp
+if (!int.TryParse(parts[0], out var clipLength)
+    || !int.TryParse(parts[1], out var step))
+{
+    continue;
+}
+
+if (clipLength <= 0 || step <= 0)
+{
+    continue;
+}
+```
+
+**Why This Keeps Happening**: Config parsers often stop at “is it an integer?” and leave semantic validation to downstream code. That works until the downstream path tries to schedule, bound, or execute work using values that are syntactically valid but physically meaningless. Any parser for durations, lengths, or step sizes needs explicit positivity checks at the parse boundary, not just defensive math later.
+
 ---
 
 *Last updated: 2026-03-22*
