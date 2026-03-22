@@ -130,6 +130,35 @@ catch (Exception ex)
 
 **Why This Keeps Happening**: admin/maintenance endpoints feel “internal”, so they get a pass on error hygiene. They are still exposed over HTTP and often touch the most failure-prone subsystems. If they are not given the same sanitized error contract as user-facing endpoints, they become the place where environment details and internal exception text keep leaking back out.
 
+### 0xAE. Catch-Log-Rethrow In Controllers Is Still An Unstable Public API Contract
+
+**The Bug**: some controllers were already inside explicit `try/catch`, but still logged and rethrew on failure. That looks “handled” in code review, but it means the actual HTTP response comes from whichever global exception middleware happens to run later, not from the controller. The result is unstable 500 behavior and potential detail leakage even when the controller appears to own the endpoint contract.
+
+**Files Affected**:
+- `src/slskd/Events/API/EventsController.cs`
+- `src/slskd/Identity/API/ProfileController.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/API/DiscoveryController.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    Log.Error(ex, "Failed to list events: {Message}", ex.Message);
+    throw;
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    Log.Error(ex, "Failed to list events");
+    return StatusCode(500, "Failed to list events");
+}
+```
+
+**Why This Keeps Happening**: once a controller already has a `try/catch`, it feels like error handling is “done.” But rethrowing from there means the controller no longer defines its own contract. For public HTTP endpoints, either let exceptions bubble with no local catch, or catch and return a stable sanitized response. The half-state is the bug.
+
 ### 0xA6. Controller Boundaries Must Normalize Route Keys Before Looking Up Or Mutating Existing State
 
 **The Bug**: Multiple controllers trimmed request bodies but still trusted raw route IDs or ignored them entirely after parsing object IDs. That let whitespace-padded pod/channel/user names fall through to downstream services, and transfer endpoints could mutate or return a transfer by GUID even when the route username did not match the actual transfer owner.
