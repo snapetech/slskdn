@@ -11,7 +11,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 /// <summary>
 /// Membership of a user in a share group.
 /// - UserId: Soulseek username (legacy, v1)
-/// - PeerId: Contact PeerId (Identity & Friends, v2) - optional, takes precedence when set
+/// - PeerId: Contact PeerId (Identity &amp; Friends, v2) - optional, takes precedence when set
 /// </summary>
 [Table("ShareGroupMembers")]
 public class ShareGroupMember
@@ -24,7 +24,7 @@ public class ShareGroupMember
     [MaxLength(256)]
     public string UserId { get; set; } = string.Empty;
 
-    /// <summary>Contact PeerId (Identity & Friends). When set, this member is Contact-based rather than Soulseek-based.</summary>
+    /// <summary>Contact PeerId (Identity &amp; Friends). When set, this member is Contact-based rather than Soulseek-based.</summary>
     [MaxLength(128)]
     public string? PeerId { get; set; }
 }

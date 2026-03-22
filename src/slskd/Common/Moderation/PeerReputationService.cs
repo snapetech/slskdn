@@ -13,7 +13,7 @@ namespace slskd.Common.Moderation
     ///     Service for managing peer reputation and enforcement.
     /// </summary>
     /// <remarks>
-    ///     T-MCP04: Peer Reputation & Enforcement.
+    ///     T-MCP04: Peer Reputation &amp; Enforcement.
     ///     Provides high-level interface for reputation management.
     ///     Integrates with VirtualSoulfind planner and work budget systems.
     /// </remarks>

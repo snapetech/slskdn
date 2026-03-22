@@ -8,7 +8,7 @@ namespace slskd.Common.Moderation
     ///     Types of peer reputation events that affect reputation scoring.
     /// </summary>
     /// <remarks>
-    ///     T-MCP04: Peer Reputation & Enforcement.
+    ///     T-MCP04: Peer Reputation &amp; Enforcement.
     ///     Each event type has a negative impact on peer reputation.
     ///     Multiple events can lead to temporary or permanent bans.
     /// </remarks>

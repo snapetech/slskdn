@@ -14,7 +14,7 @@ namespace slskd.Mesh.Realm
     ///     Realm configuration for single-realm pods.
     /// </summary>
     /// <remarks>
-    ///     T-REALM-01: RealmConfig & RealmID Plumbing.
+    ///     T-REALM-01: RealmConfig &amp; RealmID Plumbing.
     ///     Defines the realm identity and policies for mesh isolation and governance.
     /// </remarks>
     public class RealmConfig

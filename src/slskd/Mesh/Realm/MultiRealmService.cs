@@ -16,7 +16,7 @@ namespace slskd.Mesh.Realm
     ///     Service for managing multi-realm operations and bridge enforcement.
     /// </summary>
     /// <remarks>
-    ///     T-REALM-02: MultiRealmConfig & Bridge Skeleton.
+    ///     T-REALM-02: MultiRealmConfig &amp; Bridge Skeleton.
     ///     Coordinates multiple realm services and enforces cross-realm flow policies.
     /// </remarks>
     public sealed class MultiRealmService : IDisposable

@@ -25,12 +25,12 @@ public class ShareGrant
     [MaxLength(32)]
     public string AudienceType { get; set; } = AudienceTypes.User;
 
-    /// <summary>Username, ShareGroup.Id.ToString(), or Contact PeerId (Identity & Friends).</summary>
+    /// <summary>Username, ShareGroup.Id.ToString(), or Contact PeerId (Identity &amp; Friends).</summary>
     [Required]
     [MaxLength(256)]
     public string AudienceId { get; set; } = string.Empty;
 
-    /// <summary>Contact PeerId when AudienceType is User and audience is Contact-based (Identity & Friends). Optional.</summary>
+    /// <summary>Contact PeerId when AudienceType is User and audience is Contact-based (Identity &amp; Friends). Optional.</summary>
     [MaxLength(128)]
     public string? AudiencePeerId { get; set; }
 

@@ -17,7 +17,7 @@ namespace slskd.Common.CodeQuality
     ///     Regression testing harness for critical system paths.
     /// </summary>
     /// <remarks>
-    ///     H-CODE03: Test Coverage & Regression Harness.
+    ///     H-CODE03: Test Coverage &amp; Regression Harness.
     ///     Automated regression testing for critical functionality.
     /// </remarks>
     public static class RegressionHarness

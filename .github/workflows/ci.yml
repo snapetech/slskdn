@@ -27,13 +27,13 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up .NET (GitHub-hosted)
         if: ${{ !contains(runner.name, 'keith') }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload Static Web Content
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-content
           path: src/web/build
@@ -142,13 +142,13 @@ jobs:
           - "osx-arm64"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up .NET (GitHub-hosted)
         if: ${{ !contains(runner.name, 'keith') }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -161,7 +161,7 @@ jobs:
           echo "VERSION=${{ needs.build.outputs.version }}" >> $GITHUB_ENV
 
       - name: Download Static Web Content
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-content
           path: src/slskd/wwwroot
@@ -170,7 +170,7 @@ jobs:
         run: bin/publish --no-prebuild --runtime ${{ matrix.runtime }} --version ${{ env.VERSION }}
 
       - name: Upload Binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: slskdn-${{ env.VERSION }}-${{ matrix.runtime }}
           path: dist/${{ matrix.runtime }}
@@ -185,7 +185,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -259,7 +259,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -269,7 +269,7 @@ jobs:
           echo "VERSION=${{ needs.build.outputs.version }}" >> $GITHUB_ENV
 
       - name: Download All Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: slskdn-*

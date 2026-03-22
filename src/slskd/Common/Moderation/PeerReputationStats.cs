@@ -8,7 +8,7 @@ namespace slskd.Common.Moderation
     ///     Statistics about peer reputation system.
     /// </summary>
     /// <remarks>
-    ///     T-MCP04: Peer Reputation & Enforcement.
+    ///     T-MCP04: Peer Reputation &amp; Enforcement.
     ///     Provides insights into reputation system health and effectiveness.
     /// </remarks>
     public sealed class PeerReputationStats

@@ -10,7 +10,7 @@ namespace slskd.Common.Moderation
     ///     Represents a reputation event for a peer.
     /// </summary>
     /// <remarks>
-    ///     T-MCP04: Peer Reputation & Enforcement.
+    ///     T-MCP04: Peer Reputation &amp; Enforcement.
     ///     Tracks negative events that affect peer reputation and lead to bans.
     /// </remarks>
     public sealed class PeerReputationEvent

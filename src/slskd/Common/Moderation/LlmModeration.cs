@@ -11,7 +11,7 @@ namespace slskd.Common.Moderation
     ///     LLM-powered moderation capabilities for slskdN.
     /// </summary>
     /// <remarks>
-    ///     T-MCP-LM01: LLM Moderation Abstractions & Config.
+    ///     T-MCP-LM01: LLM Moderation Abstractions &amp; Config.
     ///     Provides AI-powered content analysis for advanced moderation decisions.
     /// </remarks>
     public static class LlmModeration

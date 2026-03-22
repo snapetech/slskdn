@@ -16,7 +16,7 @@ namespace slskd.Mesh.Realm
     ///     Service for managing realm operations and isolation.
     /// </summary>
     /// <remarks>
-    ///     T-REALM-01: RealmConfig & RealmID Plumbing.
+    ///     T-REALM-01: RealmConfig &amp; RealmID Plumbing.
     ///     Manages realm identity, mesh isolation, and governance scoping.
     /// </remarks>
     public sealed class RealmService : IRealmService, IDisposable

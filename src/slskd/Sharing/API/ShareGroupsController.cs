@@ -226,6 +226,6 @@ public class AddMemberRequest
 {
     /// <summary>Soulseek username (legacy).</summary>
     public string? UserId { get; set; }
-    /// <summary>Contact PeerId (Identity & Friends). Takes precedence over UserId when set.</summary>
+    /// <summary>Contact PeerId (Identity &amp; Friends). Takes precedence over UserId when set.</summary>
     public string? PeerId { get; set; }
 }

@@ -14,7 +14,7 @@ namespace slskd.VirtualSoulfind.Core
     ///     Validation utilities for VirtualSoulfind input validation and domain gating.
     /// </summary>
     /// <remarks>
-    ///     H-VF01: VirtualSoulfind Input Validation & Domain Gating.
+    ///     H-VF01: VirtualSoulfind Input Validation &amp; Domain Gating.
     ///     Ensures ContentDomain is properly validated and domain isolation is enforced.
     /// </remarks>
     public static class VirtualSoulfindValidation

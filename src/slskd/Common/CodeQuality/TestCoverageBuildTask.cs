@@ -16,7 +16,7 @@ namespace slskd.Common.CodeQuality
     ///     MSBuild task for test coverage analysis.
     /// </summary>
     /// <remarks>
-    ///     H-CODE03: Test Coverage & Regression Harness.
+    ///     H-CODE03: Test Coverage &amp; Regression Harness.
     ///     Integrates test coverage analysis into the build pipeline.
     /// </remarks>
     public class TestCoverageBuildTask : Task

@@ -17,7 +17,7 @@ namespace slskd.Common.CodeQuality
     ///     MSBuild task for regression testing.
     /// </summary>
     /// <remarks>
-    ///     H-CODE03: Test Coverage & Regression Harness.
+    ///     H-CODE03: Test Coverage &amp; Regression Harness.
     ///     Integrates regression testing into the build pipeline.
     /// </remarks>
     public class RegressionBuildTask : Microsoft.Build.Utilities.Task

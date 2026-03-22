@@ -12,7 +12,7 @@ namespace slskd.Common.Moderation
     ///     Interface for storing and retrieving peer reputation data.
     /// </summary>
     /// <remarks>
-    ///     T-MCP04: Peer Reputation & Enforcement.
+    ///     T-MCP04: Peer Reputation &amp; Enforcement.
     ///     Provides encrypted persistence of peer reputation events and scoring.
     ///     Implements ban threshold logic and reputation decay.
     /// </remarks>

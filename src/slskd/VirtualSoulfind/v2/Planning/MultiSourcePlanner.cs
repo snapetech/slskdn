@@ -48,7 +48,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
     ///     - Orders by: LocalLibrary → Mesh/DHT → HTTP → Soulseek (if allowed)
     ///     - Within backend: order by TrustScore DESC, then ExpectedQuality DESC
     ///
-    ///     **Caps & Budgets:**
+    ///     **Caps &amp; Budgets:**
     ///     - No plan validation against caps yet (future: integrate work budget checker)
     ///     - Relies on resolver/executor to respect H-08 Soulseek caps
     ///

@@ -17,7 +17,7 @@ namespace slskd.Common.Moderation
     ///     LLM-powered moderation provider that implements <see cref="IModerationProvider"/>.
     /// </summary>
     /// <remarks>
-    ///     T-MCP-LM02: LlmModerationProvider & Composite Integration.
+    ///     T-MCP-LM02: LlmModerationProvider &amp; Composite Integration.
     ///     Bridges the main moderation system with AI-powered content analysis.
     ///     Used as the final check in the moderation pipeline after deterministic providers.
     /// </remarks>

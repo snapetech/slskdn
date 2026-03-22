@@ -22,7 +22,7 @@ namespace slskd.Common.Moderation
     ///     Encrypted persistent store for peer reputation data.
     /// </summary>
     /// <remarks>
-    ///     T-MCP04: Peer Reputation & Enforcement.
+    ///     T-MCP04: Peer Reputation &amp; Enforcement.
     ///     Implements encrypted persistence with DataProtection API.
     ///     Features ban threshold logic, reputation decay, and Sybil resistance.
     /// </remarks>

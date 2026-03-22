@@ -17,7 +17,7 @@ namespace slskd.Common.CodeQuality
     ///     Test coverage analysis and regression harness.
     /// </summary>
     /// <remarks>
-    ///     H-CODE03: Test Coverage & Regression Harness.
+    ///     H-CODE03: Test Coverage &amp; Regression Harness.
     ///     Provides comprehensive test coverage analysis and automated regression testing.
     /// </remarks>
     public static class TestCoverage

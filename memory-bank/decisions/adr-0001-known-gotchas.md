@@ -332,6 +332,31 @@ placeholder={
 
 **Why This Keeps Happening**: E2E harness code often grows around local developer assumptions, but CI already provides a built Release app and is much less tolerant of redundant startup work. Even when using the prebuilt app, the runtime still validates `Web.ContentPath` as a relative directory under the app base, so the harness has to stage fresh web assets into `wwwroot` instead of pointing at arbitrary absolute paths, and that staging helper has to recreate the destination root explicitly before copying nested asset trees. On the frontend, boot-time state objects can be transiently missing even when the route eventually succeeds, so route components must normalize optional props before reading nested fields.
 
+### 0n. XML Doc Comments Must Escape `&` Or CI Will Emit CS1570 Warnings
+
+**The Bug**: Several XML documentation comments used raw ampersands in phrases like `Identity & Friends` or `Test Coverage & Regression Harness`, which made the generated XML invalid and caused repeated `CS1570` warnings in CI.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/*.cs`
+- `src/slskd/Common/CodeQuality/*.cs`
+- `src/slskd/Mesh/Realm/*.cs`
+- `src/slskd/Sharing/*.cs`
+- `src/slskd/VirtualSoulfind/**/*.cs`
+
+**Wrong**:
+```csharp
+///     T-MCP04: Peer Reputation & Enforcement.
+/// <summary>Contact PeerId (Identity & Friends).</summary>
+```
+
+**Correct**:
+```csharp
+///     T-MCP04: Peer Reputation &amp; Enforcement.
+/// <summary>Contact PeerId (Identity &amp; Friends).</summary>
+```
+
+**Why This Keeps Happening**: XML doc comments are real XML, not plain text. Any raw `&` inside `///` comments has to be escaped or the compiler will produce malformed-doc warnings that bury real CI signal.
+
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 
 **The Bug**: `SongIdService` treated `TrackTarget` like `AlbumTarget` and tried to read `MusicBrainzArtistId` from it, which broke the build because `TrackTarget` does not expose that property.
