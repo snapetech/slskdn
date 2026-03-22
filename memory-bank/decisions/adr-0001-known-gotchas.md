@@ -257,6 +257,35 @@ return new PodDiscoveryResult(
 
 **Why This Keeps Happening**: once a service uses typed result records instead of throwing, it is easy to stop thinking about API exposure at the service layer. But when controllers return those results directly, the service record is the API contract. Treat service-level `ErrorMessage` fields exactly like controller payloads: stable public text only, detailed exception text only in logs.
 
+### 0xB6. Local JSON Persistence Must Use Explicit DTOs Instead Of Depending On Runtime Constructor Binding
+
+**The Bug**: the peer reputation store wrote runtime `PeerReputationEvent` objects straight to disk and tried to read them back into the same type. Cold-load reads silently came back empty because the persisted JSON contract drifted into a shape that `System.Text.Json` constructor binding did not reliably rehydrate for that runtime type.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/PeerReputationStore.cs`
+- `src/slskd/Common/Moderation/PeerReputationEvent.cs`
+
+**Wrong**:
+```csharp
+var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PeerReputationEvent>>>(json, PersistenceJsonOptions);
+data[kvp.Key] = new List<PeerReputationEvent>(kvp.Value);
+```
+
+**Correct**:
+```csharp
+var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PersistedPeerReputationEvent>>>(json, PersistenceJsonOptions);
+
+_eventCache[kvp.Key] = kvp.Value
+    .Select(e => e.ToRuntimeEvent())
+    .ToList();
+
+data[kvp.Key] = kvp.Value
+    .Select(PersistedPeerReputationEvent.FromRuntimeEvent)
+    .ToList();
+```
+
+**Why This Keeps Happening**: runtime domain types are tempting to reuse for persistence because it looks simpler, but JSON on disk is a compatibility boundary. Constructor changes, init-only properties, attribute drift, and serializer defaults all make that boundary brittle. For long-lived local persistence, use a dedicated persistence DTO with plain settable properties and map explicitly to runtime objects.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
