@@ -122,6 +122,35 @@ var results = await connection.QueryAsync<LocalFile>(
 
 **Why This Keeps Happening**: The model docs and the storage query drifted apart. Once a service interface says “local link means inferred or verified,” every implementation and every reconciliation flow must preserve that stronger semantic. Otherwise the system looks healthy in unit-level happy paths but undercounts real local ownership wherever verification is the only link.
 
+### 0xA2. Bridge Health And Source Registry Reads Must Not Quietly Under-Report Live State
+
+**The Bug**: `SoulfindBridgeService.GetHealthAsync()` always returned `ActiveConnections = 0`, so any caller that used the service directly got stale health even while clients were connected. Separately, `SqliteSourceRegistry` silently skipped malformed `itemId` rows on read, so bad persisted candidates stayed in the database forever and kept disappearing from query results without any cleanup.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/SoulfindBridgeService.cs`
+- `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
+- `src/slskd/VirtualSoulfind/v2/Sources/SqliteSourceRegistry.cs`
+
+**Wrong**:
+```csharp
+ActiveConnections = 0,
+...
+var candidate = ReadCandidate(reader);
+if (candidate != null)
+{
+    candidates.Add(candidate);
+}
+```
+
+**Correct**:
+```csharp
+ActiveConnections = connectedClients.Count,
+...
+var candidate = await ReadCandidateAsync(conn, reader, cancellationToken);
+```
+
+**Why This Keeps Happening**: health/reporting paths often get treated as “just for the dashboard,” so stale placeholders survive even after the runtime has the real events needed to maintain correct state. The same thing happens with persistence reads: skipping malformed rows feels safe, but it leaves permanent garbage that keeps degrading behavior. If a service owns live connection state, keep it current at the source. If a persisted row is unreadable and cannot be repaired, clean it up where it is detected.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
