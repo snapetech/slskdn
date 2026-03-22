@@ -77,6 +77,29 @@ return Task.FromResult(new PodBackfillProcessingResult(
 
 **Why This Keeps Happening**: Placeholder implementations are tempting during feature bring-up because they keep call sites moving. In distributed code they are worse than an explicit failure: they corrupt state, poison metrics, and make operators think the network path worked. If a dependency is missing, either wire an existing real service or fail clearly and immediately.
 
+### 0x1. Friends-Only Federation Must Validate Remote Identity, Not Our Own Hostname
+
+**The Bug**: Friends-only federation checks used `Request.Host` or the requested local WebFinger domain as the authorization key. Both values describe our server, not the remote caller, so approved-peer checks either never worked or authorized the wrong thing.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SocialFederation/API/WebFingerController.cs`
+- `src/slskd/SocialFederation/FederationService.cs`
+
+**Wrong**:
+```csharp
+var host = Request.Host.Value;
+return opts.ApprovedPeers.Contains(host, StringComparer.OrdinalIgnoreCase);
+```
+
+**Correct**:
+```csharp
+var keyUri = new Uri(keyId, UriKind.Absolute);
+return opts.ApprovedPeers.Contains(keyUri.Host, StringComparer.OrdinalIgnoreCase);
+```
+
+**Why This Keeps Happening**: In inbound federation code it is easy to grab the most convenient host string and forget whether it identifies the caller or the local service. Friends-only checks must key off verified remote identity material such as the HTTP signature `keyId` host or an explicitly supplied remote origin, and helper methods must refuse to fabricate remote inbox URLs from arbitrary strings.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
