@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace slskd.Tests.Unit.VirtualSoulfind.Core;
 
 using System;
@@ -426,4 +428,3 @@ public class ContentInterfacesTests
         Assert.Null(item.Duration);
     }
 }
-

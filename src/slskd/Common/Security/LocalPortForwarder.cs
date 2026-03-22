@@ -539,6 +539,11 @@ internal class ForwarderInstance : IDisposable
         }
         finally
         {
+            if (tunnelConnection != null)
+            {
+                Interlocked.Add(ref _bytesForwarded, tunnelConnection.GetStats().TotalBytesTransferred);
+            }
+
             // Clean up tunnel connection
             if (tunnelConnection != null)
             {

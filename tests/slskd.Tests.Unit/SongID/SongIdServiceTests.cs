@@ -2,6 +2,8 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+#nullable enable
+
 namespace slskd.Tests.Unit.SongID;
 
 using System.Net.Http;
