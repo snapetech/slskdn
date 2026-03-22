@@ -11373,3 +11373,46 @@ private async Task HandleClientLoggedInAsync()
 ```
 
 **Why This Keeps Happening**: once a handler already has a top-level `try/catch`, it looks “safe enough,” so more work accumulates inside the `async void`. That keeps important workflow logic outside the normal task lifecycle and makes future edits riskier. Keep the event callback tiny and immediately hand off to an observed `Task` method instead.
+
+### 0k73. Detached Background Work Must Not Keep Request-Scoped Cancellation Tokens
+
+**The Bug**: several services queue work intentionally meant to continue after the initiating request or API call returns, but they were still passing the request-scoped cancellation token into the detached delegate. That means the work can abort immediately when the HTTP request finishes or the mesh call returns, even though the service reported that the job or tunnel had started successfully.
+
+**Files Affected**:
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+- `src/slskd/LibraryHealth/Remediation/LibraryHealthRemediationService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, ct), CancellationToken.None);
+```
+
+```csharp
+_ = ObserveBackgroundTaskAsync(
+    Task.Run(() => multiSourceDownloads.DownloadAsync(downloadRequest, ct), CancellationToken.None),
+    recordingId);
+```
+
+```csharp
+_ = Task.Run(() => ForwardTunnelDataAsync(tunnelId, stream, cancellationToken), CancellationToken.None);
+```
+
+**Correct**:
+```csharp
+_ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, CancellationToken.None), CancellationToken.None);
+```
+
+```csharp
+_ = ObserveBackgroundTaskAsync(
+    Task.Run(() => multiSourceDownloads.DownloadAsync(downloadRequest, CancellationToken.None), CancellationToken.None),
+    recordingId);
+```
+
+```csharp
+_ = Task.Run(
+    () => ForwardTunnelDataAsync(tunnelId, stream, _cleanupCancellationTokenSource.Token),
+    CancellationToken.None);
+```
+
+**Why This Keeps Happening**: once the scheduler token is fixed to `CancellationToken.None`, the inner delegate token still looks innocuous and is easy to leave unchanged. But for detached work, that inner token controls the actual operation lifetime. If the work should survive the request, use `CancellationToken.None` or a service-owned shutdown token instead of the caller token.
