@@ -48,6 +48,18 @@ public class OptionsControllerTests
     }
 
     [Fact]
+    public void ValidateYamlFile_WithInvalidOptions_DoesNotLeakValidationMessage()
+    {
+        var controller = CreateController();
+
+        var result = controller.ValidateYamlFile("soulseek:\n  listenPort: 1");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("1024", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Invalid YAML configuration", ok.Value);
+    }
+
+    [Fact]
     public void ApplyOverlay_WithInvalidOverlay_DoesNotLeakValidationMessage()
     {
         var controller = CreateController();

@@ -297,7 +297,7 @@ public class SearchActionsController : ControllerBase
                 {
                     Type = "pod_fetch_failed",
                     Title = "Pod content fetch failed",
-                    Detail = fetchResult.Error ?? "Failed to fetch content from pod peer"
+                    Detail = "Failed to fetch content from pod peer"
                 });
             }
 

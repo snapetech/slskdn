@@ -45,7 +45,34 @@ public class SessionControllerTests
         security.Verify(service => service.GenerateJwt("admin", Role.Administrator, It.IsAny<int?>()), Times.Once);
     }
 
-    private static SessionController CreateController(bool headless = false, Mock<ISecurityService>? security = null)
+    [Fact]
+    public void Login_TrimsConfiguredCredentialsBeforeComparison()
+    {
+        var security = new Mock<ISecurityService>();
+        security
+            .Setup(service => service.GenerateJwt(It.IsAny<string>(), It.IsAny<Role>(), It.IsAny<int?>()))
+            .Returns(new JwtSecurityToken());
+
+        var controller = CreateController(
+            security: security,
+            configuredUsername: " admin ",
+            configuredPassword: " secret ");
+
+        var result = controller.Login(new LoginRequest
+        {
+            Username = "admin",
+            Password = "secret",
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        security.Verify(service => service.GenerateJwt("admin", Role.Administrator, It.IsAny<int?>()), Times.Once);
+    }
+
+    private static SessionController CreateController(
+        bool headless = false,
+        Mock<ISecurityService>? security = null,
+        string configuredUsername = "admin",
+        string configuredPassword = "secret")
     {
         security ??= new Mock<ISecurityService>();
 
@@ -56,8 +83,8 @@ public class SessionControllerTests
                 Authentication = new slskd.Options.WebOptions.WebAuthenticationOptions
                 {
                     Disabled = false,
-                    Username = "admin",
-                    Password = "secret",
+                    Username = configuredUsername,
+                    Password = configuredPassword,
                 },
             },
         };

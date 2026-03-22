@@ -78,8 +78,8 @@ namespace slskd.Transfers.MultiSource.Discovery.API
                 return BadRequest("SearchTerm is required");
             }
 
-            request.SearchTerm = request.SearchTerm?.Trim();
-            if (string.IsNullOrWhiteSpace(request.SearchTerm))
+            var normalizedSearchTerm = request.SearchTerm?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedSearchTerm))
             {
                 return BadRequest("SearchTerm is required");
             }
@@ -94,17 +94,17 @@ namespace slskd.Transfers.MultiSource.Discovery.API
                 });
             }
 
-            Log.Information("[Discovery API] Starting discovery for: {SearchTerm}", request.SearchTerm);
+            Log.Information("[Discovery API] Starting discovery for: {SearchTerm}", normalizedSearchTerm);
 
             await Discovery.StartDiscoveryAsync(
-                request.SearchTerm,
+                normalizedSearchTerm,
                 request.EnableHashVerification ?? true, // Default ON for FLAC testing
                 HttpContext.RequestAborted);
 
             return Ok(new
             {
                 message = "Discovery started",
-                searchTerm = request.SearchTerm,
+                searchTerm = normalizedSearchTerm,
                 hashVerificationEnabled = request.EnableHashVerification ?? true,
             });
         }

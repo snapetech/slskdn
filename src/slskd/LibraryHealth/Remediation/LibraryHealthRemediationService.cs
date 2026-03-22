@@ -296,7 +296,7 @@ namespace slskd.LibraryHealth.Remediation
 
                     // Start download asynchronously (fire and forget for now)
                     _ = ObserveBackgroundTaskAsync(
-                        Task.Run(() => multiSourceDownloads.DownloadAsync(downloadRequest, ct), CancellationToken.None),
+                        Task.Run(() => multiSourceDownloads.DownloadAsync(downloadRequest, CancellationToken.None), CancellationToken.None),
                         recordingId);
 
                     downloadJobs.Add(downloadRequest.Id);

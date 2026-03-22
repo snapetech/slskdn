@@ -147,6 +147,10 @@ namespace slskd.Core.API
                 return BadRequest("Username and/or Password missing or invalid");
             }
 
+            var normalizedUsername = login.Username;
+            var normalizedPassword = login.Password;
+            var configuredUsername = OptionsSnapshot.Value.Web.Authentication.Username?.Trim() ?? string.Empty;
+            var configuredPassword = OptionsSnapshot.Value.Web.Authentication.Password?.Trim() ?? string.Empty;
             var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             // Check for active lockout
@@ -157,10 +161,10 @@ namespace slskd.Core.API
             }
 
             // only admin login for now
-            var storedUser = System.Text.Encoding.UTF8.GetBytes(OptionsSnapshot.Value.Web.Authentication.Username ?? string.Empty);
-            var storedPass = System.Text.Encoding.UTF8.GetBytes(OptionsSnapshot.Value.Web.Authentication.Password ?? string.Empty);
-            var inputUser = System.Text.Encoding.UTF8.GetBytes(login.Username ?? string.Empty);
-            var inputPass = System.Text.Encoding.UTF8.GetBytes(login.Password ?? string.Empty);
+            var storedUser = System.Text.Encoding.UTF8.GetBytes(configuredUsername);
+            var storedPass = System.Text.Encoding.UTF8.GetBytes(configuredPassword);
+            var inputUser = System.Text.Encoding.UTF8.GetBytes(normalizedUsername);
+            var inputPass = System.Text.Encoding.UTF8.GetBytes(normalizedPassword);
 
             // Pad to same length to prevent length oracle (always compare full buffers)
             static bool ConstantTimeEqual(byte[] a, byte[] b)
@@ -177,7 +181,7 @@ namespace slskd.Core.API
             {
                 // Successful login: clear failed attempt counter
                 _loginAttempts.TryRemove(remoteIp, out _);
-                return Ok(new TokenResponse(Security.GenerateJwt(login.Username, Role.Administrator)));
+                return Ok(new TokenResponse(Security.GenerateJwt(normalizedUsername, Role.Administrator)));
             }
 
             // Failed login: increment counter and potentially lock out

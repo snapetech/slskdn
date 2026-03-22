@@ -108,7 +108,7 @@ namespace slskd.LibraryHealth
                 MaxConcurrentFiles = maxConcurrentFiles,
             };
 
-            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, ct), CancellationToken.None);
+            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, CancellationToken.None), CancellationToken.None);
             return scanId;
         }
 

@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using slskd.Mesh;
+using slskd.Search;
 using slskd.Search.Providers;
 using slskd.Streaming;
 using slskd.Transfers.Downloads;
@@ -48,10 +50,13 @@ public class SearchActionsControllerTests
     {
         var meshFetcher = new Mock<IMeshContentFetcher>();
         meshFetcher
-            .Setup(fetcher => fetcher.FetchContentAsync(
+            .Setup(fetcher => fetcher.FetchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<long?>(),
+                It.IsAny<string?>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive detail"));
 
@@ -74,6 +79,47 @@ public class SearchActionsControllerTests
         var details = Assert.IsType<ProblemDetails>(error.Value);
         Assert.DoesNotContain("sensitive detail", details.Detail ?? string.Empty);
         Assert.Equal("Pod download failed", details.Detail);
+    }
+
+    [Fact]
+    public async Task HandlePodDownloadAsync_WhenFetcherReturnsError_DoesNotLeakErrorMessage()
+    {
+        var meshFetcher = new Mock<IMeshContentFetcher>();
+        meshFetcher
+            .Setup(fetcher => fetcher.FetchAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<long?>(),
+                It.IsAny<string?>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MeshContentFetchResult
+            {
+                Error = "sensitive detail",
+                Data = null
+            });
+
+        var controller = CreateController(meshFetcher: meshFetcher);
+        var method = typeof(SearchActionsController).GetMethod("HandlePodDownloadAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        var task = (Task<IActionResult>)method!.Invoke(
+            controller,
+            new object[]
+            {
+                "sha256:test",
+                new slskd.Search.File { Filename = "song.flac", Size = 1234 },
+                "peer-1",
+                CancellationToken.None
+            })!;
+
+        var result = await task;
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(502, error.StatusCode);
+        var details = Assert.IsType<ProblemDetails>(error.Value);
+        Assert.DoesNotContain("sensitive detail", details.Detail ?? string.Empty);
+        Assert.Equal("Failed to fetch content from pod peer", details.Detail);
     }
 
     [Fact]
@@ -114,7 +160,7 @@ public class SearchActionsControllerTests
         var options = new Mock<IOptionsMonitor<slskd.Options>>();
         options.SetupGet(x => x.CurrentValue).Returns(new slskd.Options
         {
-            Directories = new slskd.Options.DirectoryOptions { Downloads = "/tmp" }
+            Directories = new slskd.Options.DirectoriesOptions { Downloads = "/tmp" }
         });
 
         return new SearchActionsController(

@@ -5712,3 +5712,23 @@ Code quality improvements were completed as part of Option A:
 - Added/folded focused regressions for all of the above, including new `CapabilitiesControllerTests`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 23:59:10Z
+
+- Continued the same controller-contract cleanup into downstream helper/error passthrough seams:
+  - `ApplicationController` now logs dumper failure details privately and returns a stable `507 Insufficient space to create memory dump.` contract instead of echoing the dumper error string
+  - `OptionsController` no longer returns raw YAML validator/parser detail for invalid config; detailed validation stays in logs and the HTTP contract stays `Invalid YAML configuration`
+  - `SessionController` now trims configured credentials before constant-time comparison and JWT issuance, matching the already-normalized request credentials
+  - `SearchActionsController` no longer returns raw mesh fetch failure text in pod-download `ProblemDetails`
+  - `ActivityPubController` no longer echoes `PublishOutboxActivityAsync(...)` failure strings back to clients on outbox publish failure
+  - `MultiSourceController` no longer returns raw swarm-download failure text in the response payload and now logs it privately
+  - `DiscoveryController` now keeps the normalized search term separate instead of mutating the request object directly
+- Added/folded focused regressions for the same batch:
+  - `OptionsControllerTests`
+  - `SessionControllerTests`
+  - `SearchActionsControllerTests`
+  - `MultiSourceControllerTests`
+- Validation:
+  - `dotnet test` still fails in the existing hardening/auth cluster (`HardeningValidatorTests`, `DumpTests`, `MeshGatewayControllerTests`) and in older test-project compile drift under `tests/slskd.Tests.Integration` / `tests/slskd.Tests.Unit`
+  - `dotnet build` still fails on the same standing test-project compile drift, including missing bridge/dashboard interface method implementations in integration stubs and older unit-test constructor/signature mismatches
+  - `./bin/lint` was not executable as a direct file on this machine (`Permission denied`); `bash ./bin/lint` ran and failed on existing formatting debt in `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, `SocialFederation/FederationService.cs`, and `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`

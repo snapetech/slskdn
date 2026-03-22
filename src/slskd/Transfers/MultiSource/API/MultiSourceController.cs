@@ -580,6 +580,11 @@ namespace slskd.Transfers.MultiSource.API
                 },
                 HttpContext.RequestAborted);
 
+            if (!downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.Error))
+            {
+                Log.Warning("Swarm download failed for {Filename}: {Error}", request.Filename, downloadResult.Error);
+            }
+
             return Ok(new
             {
                 mode = "SWARM",
@@ -599,7 +604,7 @@ namespace slskd.Transfers.MultiSource.API
                     : "N/A",
                 outputPath = downloadResult.OutputPath,
                 finalHash = downloadResult.FinalHash,
-                error = downloadResult.Error,
+                error = downloadResult.Success ? null : "Swarm download failed",
                 chunks = downloadResult.Chunks?.GroupBy(c => c.Username)
                     .Select(g => new { User = g.Key, ChunksCompleted = g.Count(c => c.Success), ChunksFailed = g.Count(c => !c.Success) })
                     .OrderByDescending(g => g.ChunksCompleted),

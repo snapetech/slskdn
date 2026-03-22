@@ -200,7 +200,7 @@ namespace slskd.Core.API
 
             if (!TryValidateYaml(yaml, out var error))
             {
-                Log.Error(error, "Failed to validate YAML configuration");
+                Log.Error("Failed to validate YAML configuration: {Error}", error);
                 return BadRequest(error);
             }
 
@@ -263,7 +263,8 @@ namespace slskd.Core.API
 
                 if (!options.TryValidate(out var result))
                 {
-                    error = result.GetResultView();
+                    Log.Warning("Configuration validation failed: {Message}", result.GetResultString());
+                    error = "Invalid YAML configuration";
                     return false;
                 }
             }

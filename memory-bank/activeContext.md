@@ -27,6 +27,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the controller/runtime bughunt into downstream helper error passthrough:
+    - `ApplicationController`, `OptionsController`, `SearchActionsController`, `ActivityPubController`, and `MultiSourceController` now log detailed downstream/tool/service failures privately and return stable client-safe contracts instead of echoing raw error strings
+    - `SessionController` now trims configured credentials before constant-time comparison so padded config values do not break otherwise-valid login requests
+    - `DiscoveryController` now uses a normalized local search-term value instead of mutating the request object before dispatch
+    - added/folded focused regressions in `OptionsControllerTests`, `SessionControllerTests`, `SearchActionsControllerTests`, and `MultiSourceControllerTests`
+  - Ran the user-requested validation pass:
+    - `dotnet test` still fails in the standing hardening/auth cluster (`HardeningValidatorTests`, `DumpTests`, `MeshGatewayControllerTests`) and also stops on older compile drift in integration/unit test projects
+    - `dotnet build` still fails on the same standing test-project compile drift (`SlskdnTestClient`/`StubWebApplicationFactory` bridge interface changes, older `EventsControllerTests`, `SecurityControllerTests`, `RoomsControllerTests`, PodCore test constructor/signature drift)
+    - `./bin/lint` is not executable directly on this machine; `bash ./bin/lint` runs and currently fails on pre-existing formatting debt in `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, `SocialFederation/FederationService.cs`, and `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`
   - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers, identity/search, Solid, Users, PodCore, and final port-forward/options/share spillover into the same working sweep.
   - Normalized additional controller behavior:
     - `FilesController` now validates encoded route segments before Base64 decode/path resolution and returns explicit `400`s for invalid file/directory paths
@@ -103,11 +112,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. If requested, run `dotnet test` and `./bin/lint` to validate the committed runtime/read-side cleanup.
-2. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
-3. Prioritize remaining controller actions that still treat service result objects, validation helper output, or caller-supplied identifiers as client-safe response bodies.
-4. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, encoded payloads that still bypass boundary validation, or sanitized-error gaps on maintenance endpoints.
-5. Continue outward into remaining stats/status/search controllers and any lingering PodCore/Sharing APIs that still accept raw IDs, null bodies, repeated list values, or raw service result text without normalization.
+1. Repair the standing validation drift in test projects first:
+   - bridge/dashboard integration stubs missing new interface members
+   - hardening/auth expectation drift in `HardeningValidatorTests`, `DumpTests`, and `MeshGatewayControllerTests`
+   - older unit-test constructor/signature mismatches in `EventsControllerTests`, `SecurityControllerTests`, `RoomsControllerTests`, and several PodCore tests
+2. Clear the existing formatting debt reported by `bash ./bin/lint`, starting with `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, `SocialFederation/FederationService.cs`, and `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`.
+3. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
+4. Prioritize remaining controller actions that still treat service result objects, validation helper output, or caller-supplied identifiers as client-safe response bodies.
+5. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, encoded payloads that still bypass boundary validation, or sanitized-error gaps on maintenance endpoints.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

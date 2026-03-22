@@ -428,7 +428,8 @@ namespace slskd.SocialFederation.API
             var (published, error) = await _federationService.PublishOutboxActivityAsync(actorName, MapActivity(activity), cancellationToken).ConfigureAwait(false);
             if (published == null)
             {
-                return BadRequest(error ?? "Unable to publish activity");
+                _logger.LogWarning("[ActivityPub] Failed to publish outbox activity for {Actor}: {Error}", actorName, error ?? "Unknown error");
+                return BadRequest("Unable to publish activity");
             }
 
             var rawJson = JsonSerializer.Serialize(published, new JsonSerializerOptions

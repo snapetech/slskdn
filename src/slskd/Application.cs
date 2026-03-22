@@ -1208,54 +1208,50 @@ namespace slskd
             }
         }
 
-        private async void Client_LoggedIn(object? sender, EventArgs e)
+        private void Client_LoggedIn(object? sender, EventArgs e)
+            => _ = ObserveBackgroundTaskAsync(HandleClientLoggedInAsync(), "Failed to execute post-login actions");
+
+        private async Task HandleClientLoggedInAsync()
         {
             Log.Information("Logged in to the Soulseek server as {Username}", Client.Username);
 
-            try
+            // send whatever counts we have currently. we'll probably connect before the cache is primed, so these will be zero
+            // initially, but we'll update them when the cache is filled.
+            await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
+
+            // fetch our average upload speed from the server, so we can provide it along with search results
+            await RefreshUserStatistics(force: true);
+
+            // we previously saved a list of all of the download ids that were active at the previous shutdown; fetch the latest
+            // record for those transfers from the db and ensure they haven't been removed from the UI while the application was offline
+            // the user doesn't want those transfers anymore and we don't want to add them back.
+            var resumableDownloads = Transfers.Downloads.List(t => !t.Removed && ActiveDownloadIdsAtPreviousShutdown.Contains(t.Id));
+
+            if (resumableDownloads.Any())
             {
-                // send whatever counts we have currently. we'll probably connect before the cache is primed, so these will be zero
-                // initially, but we'll update them when the cache is filled.
-                await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
+                Log.Information("Attempting to re-enqueue previously active downloads...");
 
-                // fetch our average upload speed from the server, so we can provide it along with search results
-                await RefreshUserStatistics(force: true);
+                var groups = resumableDownloads.GroupBy(d => d.Username);
 
-                // we previously saved a list of all of the download ids that were active at the previous shutdown; fetch the latest
-                // record for those transfers from the db and ensure they haven't been removed from the UI while the application was offline
-                // the user doesn't want those transfers anymore and we don't want to add them back.
-                var resumableDownloads = Transfers.Downloads.List(t => !t.Removed && ActiveDownloadIdsAtPreviousShutdown.Contains(t.Id));
-
-                if (resumableDownloads.Any())
+                // re-request downloads. we use a try/catch here because there's a very good chance that the other user is offline.
+                foreach (var group in groups)
                 {
-                    Log.Information("Attempting to re-enqueue previously active downloads...");
+                    var username = group.Key;
+                    var files = group.Select(f => (f.Filename, f.Size));
 
-                    var groups = resumableDownloads.GroupBy(d => d.Username);
-
-                    // re-request downloads. we use a try/catch here because there's a very good chance that the other user is offline.
-                    foreach (var group in groups)
+                    try
                     {
-                        var username = group.Key;
-                        var files = group.Select(f => (f.Filename, f.Size));
-
-                        try
-                        {
-                            await Transfers.Downloads.EnqueueAsync(username, files);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning("Failed to re-enqueue {Count} file(s) from {Username}: {Message}", files.Count(), username, ex.Message);
-                        }
+                        await Transfers.Downloads.EnqueueAsync(username, files);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("Failed to re-enqueue {Count} file(s) from {Username}: {Message}", files.Count(), username, ex.Message);
                     }
                 }
+            }
 
-                // clear the ids we saved at startup; we don't want to re-request these again if the connection is cycled
-                ActiveDownloadIdsAtPreviousShutdown = [];
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to execute post-login actions");
-            }
+            // clear the ids we saved at startup; we don't want to re-request these again if the connection is cycled
+            ActiveDownloadIdsAtPreviousShutdown = [];
         }
 
         private void Client_PrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs args)
