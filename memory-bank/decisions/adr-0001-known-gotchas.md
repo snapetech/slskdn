@@ -52,6 +52,47 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xA0. Legacy Fallback Auto-Activation Must Be Explicitly Opt-In, Even When `VirtualSoulfind.DisasterMode` Exists
+
+**The Bug**: The code already failed closed when the entire `VirtualSoulfind.DisasterMode` section was absent, but `DisasterModeOptions.Auto` still defaulted to `true`. That meant a partial config block like `virtualSoulfind.disasterMode: {}` silently turned on legacy auto-fallback and could flip search/runtime behavior away from the default Soulseek+mesh path.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/GracefulDegradation.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/DisasterModeCoordinator.cs`
+- `src/slskd/Core/VirtualSoulfindOptions.cs`
+- `src/slskd/API/VirtualSoulfind/DisasterModeController.cs`
+- `src/slskd/VirtualSoulfind/Integration/DisasterRescueIntegration.cs`
+
+**Wrong**:
+```csharp
+public class DisasterModeOptions
+{
+    public bool Auto { get; set; } = true;
+}
+...
+if (disasterOptions?.Auto != true)
+{
+    logger.LogDebug("[VSF-DISASTER] Auto disaster mode disabled, ignoring health change");
+    return;
+}
+```
+
+**Correct**:
+```csharp
+public class DisasterModeOptions
+{
+    public bool Auto { get; set; } = false;
+}
+...
+if (disasterOptions?.Auto != true)
+{
+    logger.LogDebug("[VSF-DISASTER] Legacy auto-fallback disabled, ignoring health change");
+    return;
+}
+```
+
+**Why This Keeps Happening**: Nullable option sections and per-property defaults interact badly. It is easy to think “the section is optional, so the feature is opt-in,” but a nested object with permissive defaults flips that behavior as soon as any config binder materializes the object. For legacy fallback paths, keep the entire feature explicit: absent section should be off, present-but-empty section should also be off, and user-facing API text should say this is fallback behavior rather than the normal operating mode.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
