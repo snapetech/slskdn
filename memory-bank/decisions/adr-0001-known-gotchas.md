@@ -8650,6 +8650,37 @@ else
 
 **Why This Keeps Happening**: Networking code often grows in layers. One layer emits URI-like endpoint metadata, another reads it as if it were a raw socket address, and then IPv6 support lands later on only one side. Any place that consumes endpoints needs to be validated against the exact serialized format already used elsewhere in the system, including scheme prefixes and bracketed IPv6 literals.
 
+### 0k44. NAT Traversal And STUN Parsers Must Treat Bracketed IPv6 As A First-Class Endpoint Format
+
+**The Bug**: `NatDetectionService`, `StunNatDetector`, and `NatTraversalService` all assumed NAT endpoints were simple `host:port` strings split on the first colon. That made bracketed IPv6 STUN servers and traversal targets like `[2001:db8::30]:3478` or `udp://[2001:db8::10]:4100` fail to parse, so IPv6-capable NAT probing and traversal silently skipped valid endpoints.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/NatDetectionService.cs`
+- `src/slskd/Mesh/Nat/StunNatDetector.cs`
+- `src/slskd/Mesh/Nat/NatTraversalService.cs`
+
+**Wrong**:
+```csharp
+var parts = rest.Split(':', 2);
+if (parts.Length != 2) return false;
+if (!IPAddress.TryParse(parts[0], out var ip)) return false;
+```
+
+**Correct**:
+```csharp
+if (!TryParseHostAndPort(rest, out var host, out var port))
+{
+    return false;
+}
+
+if (!IPAddress.TryParse(host, out var ip))
+{
+    return false;
+}
+```
+
+**Why This Keeps Happening**: NAT code often starts from IPv4-only assumptions because early tests use loopback or public IPv4 literals. Once IPv6 support arrives, the failure is easy to miss because the parser doesn’t throw in most paths; it just returns “no endpoint” and the traversal stack falls back or reports failure. Any NAT or STUN endpoint parser needs explicit bracketed IPv6 handling and dedicated tests for both direct and relay-style prefixes.
+
 ---
 
 *Last updated: 2026-03-22*
