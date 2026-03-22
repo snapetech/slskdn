@@ -9407,6 +9407,30 @@ if (maxResults < 1 || maxResults > 500)
 
 **Why This Keeps Happening**: once a lower-level service starts normalizing IDs and domain/type semantics correctly, nearby registries, export paths, and API controllers often keep their older raw-string assumptions. That creates a quiet split-brain: one layer trims, dedupes, and maps `mb` to `audio`, while the next layer still treats whitespace, case variants, and widened ranges as distinct or valid. Fixing only the core service is not enough. When semantics change, update the registry, export/readback layer, controller validation, and tests in the same patch.
 
+### 0k55. Route Binders Must Not Reparse Raw Targets Through `new Uri(...)` Just To Drop Query Strings
+
+**The Bug**: `UrlEncodingModelBinder` rebuilt the raw request target as `new Uri($"{scheme}://{host}{rawTarget}")` and used `.AbsolutePath` to strip the query string. That meant a malformed query portion in `RawTarget` could crash route binding even when the encoded path segment itself was valid and extractable.
+
+**Files Affected**:
+- `src/slskd/Common/Middleware/UrlEncodingModelBinder.cs`
+
+**Wrong**:
+```csharp
+var rawValue = new Uri($"{request.Scheme}://{request.Host}{rawUrl}").AbsolutePath
+    .Split('/', StringSplitOptions.RemoveEmptyEntries)
+    .ElementAtOrDefault(index);
+```
+
+**Correct**:
+```csharp
+var rawPath = rawUrl.Split('?', 2)[0];
+var rawValue = rawPath
+    .Split('/', StringSplitOptions.RemoveEmptyEntries)
+    .ElementAtOrDefault(index);
+```
+
+**Why This Keeps Happening**: It is tempting to treat the raw target as a full URI and let the framework separate path from query for you, but `RawTarget` is intentionally unprocessed client input. Re-parsing it introduces a second, stricter validation step that can fail for reasons unrelated to the route segment you actually need. If the binder only needs the path portion, split the raw target directly instead of round-tripping through `Uri`.
+
 ---
 
 *Last updated: 2026-03-22*
