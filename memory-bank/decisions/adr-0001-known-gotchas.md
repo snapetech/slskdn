@@ -614,6 +614,30 @@ var artist = TryGetSongRecArtist(track.Value);
 ```
 
 **Why This Keeps Happening**: Tool integrations usually start from one example output captured during development. Recognition tools then evolve or emit multiple shapes depending on CLI mode and version. Parse the stable semantic fields conservatively across the known variants instead of binding the whole feature to a single sample payload.
+
+### 0x15. Federation Inbox Admission Must Follow The Same Actor Registry As Actor Discovery
+
+**The Bug**: Even after actor discovery and actor documents were aligned to `LibraryActorService`, inbox POST still hardcoded `library` as the only accepted actor name. Remote delivery to real published actors like `music` or `books` would 404 despite those actors existing.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+
+**Wrong**:
+```csharp
+if (!string.Equals(actorName, "library", StringComparison.OrdinalIgnoreCase))
+    return NotFound();
+```
+
+**Correct**:
+```csharp
+var libraryActor = _libraryActorService.GetActor(actorName);
+if (libraryActor == null)
+{
+    return NotFound();
+}
+```
+
+**Why This Keeps Happening**: Federation endpoint work often starts with one actor and then grows into a registry-based model later. It is easy to update discovery and forget admission checks. Any endpoint that operates on actor names must validate against the shared actor registry, not legacy hardcoded names.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
