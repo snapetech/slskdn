@@ -398,6 +398,34 @@ if (healthMonitor.CurrentHealth != SoulseekHealth.Healthy)
 
 **Why This Keeps Happening**: Compact hints, telemetry counters, and degraded-mode feature gates all tempt “close enough” implementations: invent a peer ID from the hint, report zero because real cache stats are awkward, or only handle the middle degraded state and forget the hard-down state. Those shortcuts create deeper bugs because downstream code treats the output as authoritative. If a hint is not routable, do not present it as a peer. If a cache backs dashboard features, expose real cache stats. If a feature depends on service health, handle the full state machine, not one intermediate state.
 
+### 0x18. Federation Must Not Assume Remote Actors Use slskdN-Style `/actors/{name}` URLs, And Signature-Key Fetchers Must Revalidate The Final URL
+
+**The Bug**: Outbound federation delivery resolved inbox URLs only for actors whose URLs matched the local `https://host/actors/{name}` pattern, so ordinary remote ActivityPub actors like `/users/alice` never resolved. Separately, the HTTP-signature key fetcher validated only the original `keyId` host, not the final response URL after redirects, which left a gap between the documented SSRF policy and the actual enforcement.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/FederationService.cs`
+- `src/slskd/SocialFederation/HttpSignatureKeyFetcher.cs`
+
+**Wrong**:
+```csharp
+if (segments.Length != 2 || !string.Equals(segments[0], "actors", ...))
+{
+    return Task.FromResult<string?>(null);
+}
+return Task.FromResult<string?>($"{actorUri.Scheme}://{actorUri.Authority}/actors/{segments[1]}/inbox");
+```
+
+**Correct**:
+```csharp
+if (actorUri.AbsolutePath.EndsWith("/inbox", StringComparison.OrdinalIgnoreCase))
+{
+    return Task.FromResult<string?>(actorUri.AbsoluteUri);
+}
+var inboxUri = new Uri(actorUri.AbsoluteUri.TrimEnd('/') + "/inbox", UriKind.Absolute);
+```
+
+**Why This Keeps Happening**: It is easy to accidentally encode our own actor URL conventions into federation code because local test actors all follow the same route shape. That breaks interoperability immediately once a remote server uses a different actor path. Similarly, SSRF checks often validate the first URL and forget that the effective fetch target may change after redirects. Federation code must treat remote actor URLs as foreign inputs, not local route templates, and must validate the final network destination, not just the initial string.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
