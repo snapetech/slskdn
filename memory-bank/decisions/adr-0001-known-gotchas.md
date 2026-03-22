@@ -52,6 +52,43 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
+
+**The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/DisasterModeCoordinator.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/DisasterModeRecovery.cs`
+
+**Wrong**:
+```csharp
+private async void OnHealthChanged(object? sender, SoulseekHealthChangedEventArgs e)
+{
+    await AttemptRecoveryAsync(CancellationToken.None);
+}
+```
+
+**Correct**:
+```csharp
+private async void OnHealthChanged(object? sender, SoulseekHealthChangedEventArgs e)
+{
+    try
+    {
+        await AttemptRecoveryAsync(CancellationToken.None);
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogDebug("Health-change recovery processing cancelled");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unhandled exception while processing health change");
+    }
+}
+```
+
+**Why This Keeps Happening**: .NET event handlers often force `void`, which makes `async void` tempting. Unlike `Task`-returning methods, exceptions do not flow back to a caller that can observe them. If an event must remain `async void`, the entire body needs its own `try/catch` and explicit logging.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
@@ -519,6 +556,66 @@ var streamHash = v.Codec switch
 
 **Why This Keeps Happening**: Nullability cleanup often replaces nullable strings with `string.Empty`, but any fallback logic that relied on `??` now changes behavior silently. When a value is semantically "missing", use `string.IsNullOrWhiteSpace`-aware fallback helpers instead of null-coalescing chains.
 
+### 0k3. `GetReleaseIntent` Must Be Wired Through The Queue Contract
+
+**The Bug**: `VirtualSoulfindV2Controller.GetReleaseIntent` always returned `NotFound` with a fixed message even when a release intent existed, making release intent reads unusable for clients that rely on POST->GET workflow validation.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+- `src/slskd/VirtualSoulfind/v2/Intents/IIntentQueue.cs`
+- `src/slskd/VirtualSoulfind/v2/Intents/InMemoryIntentQueue.cs`
+
+**Wrong**:
+```csharp
+public IActionResult GetReleaseIntent(string intentId)
+{
+    // TODO: Implement GetReleaseIntentAsync in IIntentQueue
+    return NotFound(new { Message = "Release intent retrieval not yet implemented" });
+}
+```
+
+**Correct**:
+```csharp
+Task<DesiredRelease?> GetReleaseIntentAsync(string desiredReleaseId, CancellationToken cancellationToken = default);
+
+public async Task<IActionResult> GetReleaseIntent(string intentId, CancellationToken cancellationToken)
+{
+    var intent = await _intentQueue.GetReleaseIntentAsync(intentId, cancellationToken);
+    return intent is null ? NotFound() : Ok(intent);
+}
+```
+
+**Why This Keeps Happening**: TODO scaffolding in a live controller can outlive upstream stubs and become a user-visible regression after feature gating changes, especially when routes are referenced by existing frontend/client flows that expect full CRUD behavior.
+
+### 0k4. AUR Fix Script Should Not Be Hardcoded to a Single Helper Name or Version Pattern
+
+**The Bug**: The local torchaudio downloader script assumed `yay` and a specific `v2.10.0` tarball pattern, which broke on hosts using `paru` and/or on future torchaudio versions.
+
+**Files Affected**:
+- `scripts/fix-python-torchaudio-no-resume.sh`
+
+**Wrong**:
+```bash
+if [[ ! -x /usr/bin/yay ]]; then
+  echo "yay is required..."
+fi
+
+find "$cache_dir" -name '*v2.10.0*'
+```
+
+**Correct**:
+```bash
+if command -v yay >/dev/null 2>&1; then
+  aur_helper=$(command -v yay)
+elif command -v paru >/dev/null 2>&1; then
+  aur_helper=$(command -v paru)
+fi
+
+find "$cache_dir" -type f \( -name '*.tar.gz' -o -name '*.part' \)
+```
+
+**Why This Keeps Happening**: Small deployment helpers accumulate assumptions about one machine and one package version. If those assumptions are not kept in sync with upstream package churn or user tool choice, the helper becomes the blocker instead of the dependency itself.
+
 ### 0k1. SOCKS5 CONNECT Parsing Must Consume ATYP-Dependent Binds Before Returning Connected Stream
 
 **The Bug**: Several SOCKS5 dialers read a fixed 10-byte CONNECT response regardless of `ATYP`, so variable-length domain-name responses left trailing bytes (address bytes plus port) in the TCP stream and leaked into application reads as garbled preamble bytes.
@@ -638,6 +735,118 @@ public record MbReleaseJobRequest(
 ```
 
 **Why This Keeps Happening**: ASP.NET Core JSON binding is case-insensitive, but it does not translate underscore-delimited names into PascalCase automatically. Compatibility-facing DTOs need explicit `JsonPropertyName` attributes anywhere the request contract is `snake_case`.
+
+### 0o. Host Shutdown Hooks Need Logged Failures for Non-Cancellation Paths
+
+**The Bug**: A lifecycle cleanup callback swallowed all exceptions when stopping LAN discovery advertising during shutdown, which made shutdown telemetry look successful while resource cleanup could still be failing silently.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+catch
+{
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    Log.Warning(ex, "[Program] Failed to stop LAN discovery advertising during shutdown");
+}
+```
+
+**Why This Keeps Happening**: Shutdown hooks are often written as "best effort", but missing exception logging turns deterministic cleanup failures into ghost issues that only appear as random resource leftovers in later test runs.
+
+### 0p. Stream Mapping Cancellation Sources Need Disposal During Forwarder Teardown
+
+**The Bug**: `ForwarderConnection` waited for stream mapping completion but did not dispose the linked `CancellationTokenSource`, leaving native wait handles and token registrations alive across repeated connection churn.
+
+**Files Affected**:
+- `src/slskd/Common/Security/LocalPortForwarder.cs`
+
+**Wrong**:
+```csharp
+_streamMappingCts?.Cancel();
+if (_streamMappingCts != null)
+{
+    await WaitForStreamMappingAsync(timeout.Token);
+}
+```
+
+**Correct**:
+```csharp
+var streamMappingCts = _streamMappingCts;
+if (streamMappingCts != null)
+{
+    streamMappingCts.Cancel();
+    try
+    {
+        await WaitForStreamMappingAsync(timeout.Token);
+    }
+    finally
+    {
+        _streamMappingCts = null;
+        streamMappingCts.Dispose();
+    }
+}
+```
+
+**Why This Keeps Happening**: Cleanup code often focuses on signaling cancellation but forgets to dispose the `CancellationTokenSource`. Under repeated failures and closes this can retain resources long after the socket work is gone.
+
+### 0q. Timeout Branches Should Handle Both `OperationCanceledException` and `TimeoutException`
+
+**The Bug**: Verification timeout handling only caught `OperationCanceledException`, so libraries that surface timeouts as `TimeoutException` still fell into generic error handling and were labeled as unexpected verification errors.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/PeerVerificationService.cs`
+
+**Wrong**:
+```csharp
+catch (OperationCanceledException)
+{
+    return VerificationResult.Failed("Verification timed out");
+}
+```
+
+**Correct**:
+```csharp
+catch (TimeoutException)
+{
+    return VerificationResult.Failed("Verification timed out");
+}
+catch (OperationCanceledException)
+{
+    return VerificationResult.Failed("Verification timed out");
+}
+```
+
+**Why This Keeps Happening**: Cancellation and timeout signals are not perfectly consistent across dependent APIs, so handling only one exception class can incorrectly downgrade a known, expected operational timeout into a generic failure path.
+
+### 0r. Best-Effort Cleanup Catch-Alls Should Capture Logs for Post-Mortem Signal
+
+**The Bug**: Best-effort cleanup blocks swallowed process/manager shutdown errors without capturing context, making operational cleanup bugs invisible when they happened during failures.
+
+**Files Affected**:
+- `src/slskd/Integrations/Scripts/ScriptService.cs`
+- `src/slskd/Signals/Swarm/MonoTorrentBitTorrentBackend.cs`
+
+**Wrong**:
+```csharp
+catch { /* ignore */ }
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    _logger.LogDebug(ex, "Cleanup failed ...");
+}
+```
+
+**Why This Keeps Happening**: Cleanup paths are frequently treated as non-critical, but losing exceptions there also loses the root cause of stalled process trees, partial resource reuse, or half-finished transactions that can hurt long-running services.
 
 **The Bug**: The scheduled `E2E Tests` workflow treated downloaded media as mandatory baseline fixtures, so a transient fetch failure aborted the whole suite before any real UI coverage ran.
 
@@ -4343,6 +4552,228 @@ catch (Exception ex)
 ```
 
 **Why This Keeps Happening**: Cleanup code often runs during stop/error windows where engineers are reluctant to add logging. Without explicit tracing, transient OS/socket errors and partial-cleanup failures vanish, making subsequent lifecycle issues look nondeterministic.
+
+### 3j. Sync Shutdown Paths Should Never Fire-and-Forget Async Disposal
+
+**The Bug**: Synchronous shutdown/dispose paths can return before async cleanup completes when disposal is fire-and-forget or detached, allowing resource teardown failures to be lost and leaving stop logic timing-dependent.
+
+**Files Affected**:
+- `src/slskd/Mesh/Transport/DirectQuicDialer.cs`
+- `src/slskd/Relay/RelayClient.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+_ = _connection.DisposeAsync().AsTask();
+_ = HubConnection?.DisposeAsync().AsTask();
+_ = Task.Run(async () => await discovery.StopAdvertisingAsync().WaitAsync(timeout.Token));
+```
+
+**Correct**:
+```csharp
+try
+{
+    _connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "[RelayClient] Failed to dispose HubConnection");
+}
+```
+
+**Why This Keeps Happening**: Shutdown hooks often prioritize not blocking over correctness. In async-heavy transport code, unawaited disposal can appear faster but creates nondeterministic races and drops errors when the process tears down immediately after dispose requests.
+
+### 0k5. Request Cancellation Tokens Should Not Cancel Background Fire-and-Forget Work in `VirtualSoulfindV2Controller`
+
+**The Bug**: `ProcessIntent` launched intent processing with `Task.Run(..., cancellationToken)` from an API request. In ASP.NET, request cancellation can occur as soon as the response is sent, canceling the background processor before work starts.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(async () => await _processor.ProcessIntentAsync(intentId, cancellationToken), cancellationToken);
+```
+
+**Correct**:
+```csharp
+_ = Task.Run(async () => await _processor.ProcessIntentAsync(intentId, CancellationToken.None));
+```
+
+**Why This Keeps Happening**: API action cancellation tokens are request-scoped. Passing them to long-running fire-and-forget tasks couples UI request lifecycle to background work and causes hard-to-reproduce cancellation races.
+
+### 0k6. `MeshTransferService` Should Not Tie Async Transfer Startup to Caller Request Token
+
+**The Bug**: `StartTransferAsync` started transfer execution with the caller token. When bridge requests used `RequestAborted`, the transfer task could be canceled by HTTP lifecycle before transfer setup completed.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshTransferService.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(async () => await ExecuteTransferAsync(transferId, ct), ct);
+```
+
+**Correct**:
+```csharp
+if (ct.IsCancellationRequested)
+{
+    return Task.FromCanceled<string>(ct);
+}
+
+_ = Task.Run(async () => await ExecuteTransferAsync(transferId, CancellationToken.None));
+```
+
+**Why This Keeps Happening**: Long-lived background operations that manage their own cancellation need token decoupling from request scope, otherwise HTTP aborts and gateway timeouts can leave partially started tasks.
+
+### 0k7. Normalize `ChunkSize` Before `Math.Ceiling(file/size / chunkSize)` in Swarm Endpoints
+
+**The Bug**: `SwarmDownload` and `SwarmDownloadAsync` used `request.ChunkSize` directly for chunk-count math and request payloads. A caller-supplied zero chunk size could divide by zero and fail the endpoint even though the download service could have defaulted it.
+
+**Files Affected**:
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+
+**Wrong**:
+```csharp
+var totalChunks = (int)Math.Ceiling((double)request.Size / request.ChunkSize);
+ChunkSize = request.ChunkSize;
+```
+
+**Correct**:
+```csharp
+var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
+var totalChunks = (int)Math.Ceiling((double)request.Size / chunkSize);
+ChunkSize = chunkSize;
+```
+
+**Why This Keeps Happening**: API models allow clients to send unsafe values (including 0) while controller-level math assumes service defaults will be applied later. Validation/normalization must happen before arithmetic, not only in deep services.
+
+### 0k8. LibraryHealth Scan Should Handle Missing or Invalid Request Data Safely
+
+**The Bug**: `StartScanAsync` and `LibraryHealthController.StartScan` assumed a non-null request with non-empty file extensions and positive concurrency. A null request or caller-supplied `FileExtensions: null`/`MaxConcurrentFiles <= 0` could crash at startup and block scans from starting.
+
+**Files Affected**:
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+- `src/slskd/LibraryHealth/API/LibraryHealthController.cs`
+
+**Wrong**:
+```csharp
+request ??= null; // not handled
+...
+FileExtensions = request.FileExtensions, // may be null
+MaxConcurrentFiles = request.MaxConcurrentFiles, // may be <= 0
+```
+
+**Correct**:
+```csharp
+request ??= new LibraryHealthScanRequest();
+var requestedExtensions = request.FileExtensions?.Count > 0
+    ? request.FileExtensions.Select(ext => NormalizedLowerCaseExtension(ext)).ToList()
+    : new() { ".flac", ".mp3", ".m4a", ".ogg" };
+MaxConcurrentFiles = request.MaxConcurrentFiles > 0 ? request.MaxConcurrentFiles : 4;
+```
+
+**Why This Keeps Happening**: API inputs are often considered “validated” by default constructors, but null or malformed JSON overrides defaults in runtime objects. Guarding at service/controller boundary prevents avoidable `NullReferenceException` and unbounded runtime behavior.
+
+### 0k11. Bridge Progress Proxies Must Be Created at the Call-Site That Polls Them
+
+**The Bug**: `BridgeApi.DownloadAsync` started a progress proxy for every mesh transfer and stored it under a separate proxy id, while `BridgeController.GetTransferProgress` looked up progress by `transferId`. API clients therefore always saw missing progress even for active transfers, and the legacy proxy path created a second redundant proxy for the same transfer.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+- `src/slskd/API/VirtualSoulfind/BridgeController.cs`
+
+**Wrong**:
+```csharp
+var transferId = await meshTransfer.StartTransferAsync(...);
+var proxyId = await progressProxy.StartProxyAsync(transferId, username, ct);
+transferIdToProxyId[transferId] = proxyId;
+
+// ...
+var progress = await progressProxy.GetLegacyProgressAsync(transferId, ct);
+```
+
+**Correct**:
+```csharp
+var transferId = await meshTransfer.StartTransferAsync(...);
+return transferId;
+
+// ...
+var progress = await bridgeApi.GetTransferProgressAsync(transferId, ct);
+```
+
+**Why This Keeps Happening**: Background progress fan-out and HTTP polling use different lifecycles. If a transport abstraction creates sessions implicitly, callers must either consume that same key everywhere or map it correctly; otherwise the progress endpoint and the transport can diverge from day one.
+
+### 0k12. `StartTransferAsync` Must Validate Cancellation Before Mutating Shared Transfer State
+
+**The Bug**: `StartTransferAsync` inserted a new transfer into active maps before checking for a caller-canceled token and returning a canceled task, leaving orphaned transfer and proxy entries.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshTransferService.cs`
+
+**Wrong**:
+```csharp
+var transferId = Ulid.NewUlid().ToString();
+
+activeTransfers[transferId] = status;
+progressSubjects[transferId] = new Subject<TransferProgressUpdate>();
+
+if (ct.IsCancellationRequested)
+{
+    return Task.FromCanceled<string>(ct);
+}
+
+_ = Task.Run(async () => await ExecuteTransferAsync(transferId, CancellationToken.None));
+```
+
+**Correct**:
+```csharp
+if (ct.IsCancellationRequested)
+{
+    return Task.FromCanceled<string>(ct);
+}
+
+var transferId = Ulid.NewUlid().ToString();
+
+activeTransfers[transferId] = status;
+progressSubjects[transferId] = new Subject<TransferProgressUpdate>();
+
+_ = Task.Run(async () => await ExecuteTransferAsync(transferId, CancellationToken.None));
+```
+
+**Why This Keeps Happening**: Early return patterns are often checked after state mutation; with request-scoped tokens, cancellation must be evaluated before shared state is allocated, otherwise short-circuited requests leak background-tracked work.
+
+### 0k13. Test Stubs Must Mirror Interface Contract Changes
+
+**The Bug**: `IBridgeApi` grew `GetTransferProgressAsync`, but integration stubs were not updated, allowing compile/runtime DI mismatches as soon as the new contract was consumed.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs`
+- `tests/slskd.Tests.Integration/Harness/SlskdnTestClient.cs`
+
+**Wrong**:
+```csharp
+internal class StubBridgeApi : IBridgeApi
+{
+    public Task<BridgeSearchResult> SearchAsync(...) => ...
+    public Task<string> DownloadAsync(...) => ...
+    public Task<List<BridgeRoom>> GetRoomsAsync(...) => ...
+}
+```
+
+**Correct**:
+```csharp
+internal class StubBridgeApi : IBridgeApi
+{
+    public Task<BridgeSearchResult> SearchAsync(...) => ...
+    public Task<string> DownloadAsync(...) => ...
+    public Task<List<BridgeRoom>> GetRoomsAsync(...) => ...
+    public Task<LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default) =>
+        Task.FromResult<LegacyTransferProgress?>(null);
+}
+```
+
+**Why This Keeps Happening**: Test doubles are often updated late; when production interfaces change, every stub and fake implementing them must be updated before DI/container validation or compile catches the mismatch.
 
 ---
 
