@@ -9814,6 +9814,87 @@ if (normalizedRequests.Any(r => string.IsNullOrWhiteSpace(r.Filename)))
 
 **Why This Keeps Happening**: route segments, JSON arrays, and DTO properties all look “already validated” once model binding succeeds. They are not. If a controller forwards identifiers, usernames, peer IDs, or filenames to another subsystem, define the canonical form at the controller boundary first. Otherwise behavior depends on accidental downstream trimming and malformed-but-shaped input can leak into routing, ranking, or transfer operations.
 
+### 0k62. Dictionary And Entry Payloads Must Validate Each Element, Not Just Collection Presence
+
+**The Bug**: some request handlers were validating only that a collection existed and had at least one element, then forwarding malformed inner values to service code. `PodMessageBackfillController.SyncOnRejoin(...)` accepted maps with blank channel IDs or non-positive timestamps. `MeshController.PublishHash(...)` and `MeshController.MergeEntries(...)` also trusted padded or blank `FlacKey`/`ByteHash` values and merge entries with invalid sizes as long as the outer request object was present.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodMessageBackfillController.cs`
+- `src/slskd/Mesh/API/MeshController.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodMessageBackfillControllerTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/API/MeshControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (lastSeenTimestamps == null || lastSeenTimestamps.Count == 0)
+{
+    return BadRequest("Last seen timestamps are required");
+}
+
+if (request?.Entries == null || !request.Entries.Any())
+{
+    return BadRequest(new { error = "entries required" });
+}
+
+await MeshSync.PublishHashAsync(request.FlacKey, request.ByteHash, request.Size, request.MetaFlags);
+```
+
+**Correct**:
+```csharp
+var normalizedLastSeenTimestamps = lastSeenTimestamps
+    .ToDictionary(pair => pair.Key?.Trim() ?? string.Empty, pair => pair.Value);
+if (normalizedLastSeenTimestamps.Any(pair => string.IsNullOrWhiteSpace(pair.Key) || pair.Value <= 0))
+{
+    return BadRequest("Each last seen timestamp requires a non-empty channel ID and positive timestamp");
+}
+
+request.FlacKey = request.FlacKey?.Trim() ?? string.Empty;
+request.ByteHash = request.ByteHash?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(request.FlacKey) || string.IsNullOrWhiteSpace(request.ByteHash) || request.Size <= 0)
+{
+    return BadRequest(new { error = "flacKey, byteHash, and size are required" });
+}
+
+var normalizedEntries = request.Entries
+    .Select(entry => new MeshHashEntry
+    {
+        FlacKey = entry.FlacKey?.Trim() ?? string.Empty,
+        ByteHash = entry.ByteHash?.Trim() ?? string.Empty,
+        Size = entry.Size,
+        MetaFlags = entry.MetaFlags,
+        SeqId = entry.SeqId
+    })
+    .ToArray();
+if (normalizedEntries.Any(entry => string.IsNullOrWhiteSpace(entry.FlacKey) ||
+                                   string.IsNullOrWhiteSpace(entry.ByteHash) ||
+                                   entry.Size <= 0))
+{
+    return BadRequest(new { error = "each entry requires flacKey, byteHash, and positive size" });
+}
+```
+
+**Why This Keeps Happening**: collection presence checks are easy to mistake for payload validation. They are not. Any endpoint that accepts dictionaries or arrays of structured elements must define the valid shape of each element after trimming and reject the whole request when any element is malformed.
+
+### 0k63. Compatibility Controllers Drift Easily When They Target DTO Shapes That No Longer Exist
+
+**The Bug**: `LibraryCompatibilityController` was still trying to trim `ScanId` and `RootPath` on `LibraryHealthScanRequest`, even though the current DTO exposes `LibraryPath` and has no compatibility-only scan identifier. That turned a previously hidden refactor mismatch into a hard compile break.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/LibraryCompatibilityController.cs`
+
+**Wrong**:
+```csharp
+request.ScanId = request.ScanId?.Trim();
+request.RootPath = request.RootPath?.Trim();
+```
+
+**Correct**:
+```csharp
+request.LibraryPath = request.LibraryPath?.Trim() ?? string.Empty;
+```
+
+**Why This Keeps Happening**: compatibility wrappers often sit outside the main feature area, so they are easy to miss during DTO refactors. If a compatibility endpoint forwards a shared request model, re-check the current shape of that model instead of assuming legacy property names still exist.
+
 ### 0k59. Controllers Must Validate Null Bodies Before Logging Or Relying On Attribute Validation, And Must Trim Required String Fields Explicitly
 
 **The Bug**: two controller boundaries still assumed framework/model validation had already normalized the request. `SearchCompatibilityController` logged `request.Query` before checking whether `request` was null, so a null JSON body could throw before returning a proper `400`. `PortForwardingController` relied on `[Required]`/`[StringLength]` for `PodId` and `DestinationHost`, but whitespace-only strings still made it through to forwarding logic because attribute validation does not automatically trim them into the effective required shape.
