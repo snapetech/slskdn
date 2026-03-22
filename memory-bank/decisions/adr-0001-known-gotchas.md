@@ -123,6 +123,32 @@ return JsonSerializer.Deserialize<ArtistReleaseGraph>(json, new JsonSerializerOp
 
 **Why This Keeps Happening**: Cache and persistence blobs are long-lived compatibility surfaces, not short-lived in-memory objects. They often outlive serializer defaults and move between versions. When reading back our own stored JSON, prefer case-insensitive deserialization unless there is a strong reason not to.
 
+### 0xD. Federation Removal Hooks Must Publish Real Tombstones, Not Just Log Content Deletion
+
+**The Bug**: VirtualSoulfind removal hooks only logged that content disappeared locally. Federation consumers never received a `Delete` activity or tombstone object, so remote state stayed stale forever even though addition paths were already publishing.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/VirtualSoulfindFederationIntegration.cs`
+
+**Wrong**:
+```csharp
+_logger.LogDebug("[VSFederation] Content {ContentId} removed from domain {Domain}", contentId, domain);
+await Task.CompletedTask;
+```
+
+**Correct**:
+```csharp
+var deleteActivity = new ActivityPubActivity
+{
+    Type = "Delete",
+    Object = tombstone,
+    To = new[] { "https://www.w3.org/ns/activitystreams#Public" }
+};
+await _federationService.PublishOutboxActivityAsync(actor.ActorName, deleteActivity, cancellationToken);
+```
+
+**Why This Keeps Happening**: Add/create flows are usually built first, and removal hooks get left as logging because deletion semantics feel secondary. In federation they are not secondary: if a feature publishes creations, it also needs a deletion path or remote state will rot. When wiring publishing integrations, treat add/update/remove as one contract.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
