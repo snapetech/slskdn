@@ -8388,6 +8388,41 @@ var descriptor = SecurityUtils.ParseMessagePackSafely<MeshServiceDescriptor>(raw
 
 **Why This Keeps Happening**: Deterministic IDs can create the illusion that lookup is “already solved” because the ID can be recomputed, but discovery still needs a storage key that can be queried directly. If the public interface exposes ID-based lookup, the publisher and directory must evolve together: write the reverse index when publishing and validate that exact payload on read.
 
+### 0k3F. Long-Lived Message Services Must Unsubscribe And Cancel Pending Waiters During Dispose
+
+**The Bug**: `MeshSyncService` subscribed to `ISoulseekClient.PrivateMessageReceived` and tracked pending key/chunk request waiters, but `Dispose()` only released `syncLock`. Disposed instances could keep receiving private messages and any outstanding request `TaskCompletionSource` entries stayed alive forever.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+protected virtual void Dispose(bool disposing)
+{
+    if (_disposed || !disposing)
+    {
+        return;
+    }
+
+    syncLock.Dispose();
+    _disposed = true;
+}
+```
+
+**Correct**:
+```csharp
+if (soulseekClient != null)
+{
+    soulseekClient.PrivateMessageReceived -= SoulseekClient_PrivateMessageReceived;
+}
+
+CancelPendingRequests(pendingRequests);
+CancelPendingRequests(pendingChunkRequests);
+syncLock.Dispose();
+```
+
+**Why This Keeps Happening**: Event subscriptions and `TaskCompletionSource` maps are easy to treat as “just runtime plumbing,” so disposal gets written around the obvious semaphore or stream and forgets the service’s external hooks. Any long-lived service that both subscribes to external events and tracks pending async replies needs teardown to sever both: unsubscribe first, then fail or cancel all outstanding waiters so callers and GC can move on.
+
 ---
 
 *Last updated: 2026-03-22*
