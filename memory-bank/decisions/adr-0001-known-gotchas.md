@@ -101,6 +101,28 @@ var fingerprintPath = ResolveCorpusFingerprintPath(metadataPath, entry);
 
 **Why This Keeps Happening**: Local corpus formats evolve slowly and often get copied between machines or edited by tools outside the app. Assuming the exact latest serializer casing and an unchanged absolute path makes the corpus brittle for no good reason. Treat local metadata as compatibility data: deserialize case-insensitively and resolve relative artifact paths relative to the metadata file.
 
+### 0xC. HashDb JSON Cache Reads Must Be Case-Insensitive For Stored Compatibility Blobs
+
+**The Bug**: `HashDb` stored JSON snapshots like artist release graphs and then deserialized them with the strict default serializer settings. If the stored JSON used a different property casing, the read path dropped the whole cached object and returned `null` even though the payload was otherwise valid.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+return JsonSerializer.Deserialize<ArtistReleaseGraph>(json);
+```
+
+**Correct**:
+```csharp
+return JsonSerializer.Deserialize<ArtistReleaseGraph>(json, new JsonSerializerOptions
+{
+    PropertyNameCaseInsensitive = true,
+});
+```
+
+**Why This Keeps Happening**: Cache and persistence blobs are long-lived compatibility surfaces, not short-lived in-memory objects. They often outlive serializer defaults and move between versions. When reading back our own stored JSON, prefer case-insensitive deserialization unless there is a strong reason not to.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
