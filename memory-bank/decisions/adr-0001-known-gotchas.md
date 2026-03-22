@@ -78,6 +78,27 @@ if (_currentBatch.Count > 0
 
 **Why This Keeps Happening**: Cancellation and completion are separate states. A CTS only flips to cancelled when code explicitly cancels it; a timer finishing normally does not mutate the token. If readiness depends on elapsed time, compare timestamps or set an explicit expiry flag instead of reading cancellation state.
 
+### 0q. Linked Cancellation Sources For Long-Running Services Must Be Owned By The Service, Not A Local Scope
+
+**The Bug**: `CoverTrafficGenerator.StartAsync` created a linked `CancellationTokenSource` in a local `using` scope and launched the generation loop with that token. The link was disposed immediately after start, so later shutdown no longer had a reliable cancellation path and `StopAsync` could stall until timeout.
+
+**Files Affected**:
+- `src/slskd/Common/Security/CoverTrafficGenerator.cs`
+
+**Wrong**:
+```csharp
+using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+_generationTask = Task.Run(() => GenerateCoverTrafficAsync(linkedCts.Token), linkedCts.Token);
+```
+
+**Correct**:
+```csharp
+_generationCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+_generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token), _generationCts.Token);
+```
+
+**Why This Keeps Happening**: Linked CTS instances look like one-line plumbing, but once their token is handed to a background loop they become part of the component lifecycle. If the service must stop that loop later, it must keep and dispose the linked CTS alongside the task instead of letting a local scope tear it down.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
@@ -221,6 +242,42 @@ catch (Exception ex)
 ```
 
 **Why This Keeps Happening**: Validation checks often get inserted above the original assignment line during hardening work. Any later logging or cleanup path that assumes assignment already happened must be updated to tolerate the pre-assignment failure path as well.
+
+### 0p. Untrusted Identifiers and Enums Must Parse Defensively Before Entering Core Pipelines
+
+**The Bug**: Several paths converted identifier and enum strings directly with `Parse(...)` from persisted/cached data or request payloads (for example content IDs, run IDs, and moderation verdicts), which could throw and halt background processing instead of failing a single row/entry cleanly.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+- `src/slskd/VirtualSoulfind/v2/Sources/SqliteSourceRegistry.cs`
+- `src/slskd/VirtualSoulfind/v2/Planning/MultiSourcePlanner.cs`
+- `src/slskd/VirtualSoulfind/v2/Processing/IntentQueueProcessor.cs`
+- `src/slskd/Common/CommonExtensions.cs`
+- `src/slskd/Common/Moderation/RemoteExternalModerationClient.cs`
+- `src/slskd/Common/Moderation/HttpLlmModerationProvider.cs`
+
+**Wrong**:
+```csharp
+var trackId = ContentItemId.Parse(intent.TrackId); // throws on invalid DB/request value
+// ...
+public static T ToEnum<T>(this string str) => (T)Enum.Parse(typeof(T), str);
+```
+
+**Correct**:
+```csharp
+if (!ContentItemId.TryParse(intent.TrackId, out var trackId))
+{
+    // mark failed / skip row
+    return false;
+}
+
+if (!Enum.TryParse(str, ignoreCase: true, out T value))
+{
+    throw new ArgumentException($"Unable to parse '{str}' as {typeof(T).Name}");
+}
+```
+
+**Why This Keeps Happening**: Parsing into strongly typed IDs/enums is often treated as a validation concern earlier in the stack, but data can become stale/corrupted in storage, or originate from API clients/3rd-party responses. Any pipeline that assumes perfect inputs can still abort on a single bad value unless it handles parse failure explicitly.
 
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
