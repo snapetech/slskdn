@@ -149,6 +149,27 @@ await _federationService.PublishOutboxActivityAsync(actor.ActorName, deleteActiv
 
 **Why This Keeps Happening**: Add/create flows are usually built first, and removal hooks get left as logging because deletion semantics feel secondary. In federation they are not secondary: if a feature publishes creations, it also needs a deletion path or remote state will rot. When wiring publishing integrations, treat add/update/remove as one contract.
 
+### 0xE. Capability File Discovery Must Not Stop At UserInfo Fallback When Browse And Download APIs Already Exist
+
+**The Bug**: Capability-file discovery exposed reserved virtual paths and iterated candidate filenames, but the actual small-file fetch helper always returned `null`. The code then fell back to parsing `slskdn_caps:` tags from user descriptions, which made the advertised file-based path dead even when the peer actually exposed the file.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+_logger.LogDebug("Capability file download not yet implemented for {Username}/{Path}", username, filename);
+return Task.FromResult<byte[]?>(null);
+```
+
+**Correct**:
+```csharp
+var browseResult = await _soulseekClient.BrowseAsync(username, cancellationToken);
+await _soulseekClient.DownloadAsync(...);
+```
+
+**Why This Keeps Happening**: Helper methods around transfer flows are easy to stub during initial feature wiring because there is already a weaker fallback path. That fallback then hides the fact that the primary mechanism never worked. If the repo already has browse/download primitives for the same client, wire them before accepting a fallback-only implementation.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
