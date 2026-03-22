@@ -94,7 +94,7 @@ namespace slskd.Core.API
 
             if (overlay is null)
             {
-                return NoContent();
+                return BadRequest("Options overlay is required");
             }
 
             if (!overlay.TryValidate(out var result))
@@ -174,6 +174,11 @@ namespace slskd.Core.API
                 return Forbid();
             }
 
+            if (string.IsNullOrWhiteSpace(Program.ConfigurationFile) || !IOFile.Exists(Program.ConfigurationFile))
+            {
+                return NotFound();
+            }
+
             var yaml = IOFile.ReadAllText(Program.ConfigurationFile);
             return Ok(yaml);
         }
@@ -186,6 +191,11 @@ namespace slskd.Core.API
             if (!OptionsSnapshot.Value.RemoteConfiguration)
             {
                 return Forbid();
+            }
+
+            if (yaml is null)
+            {
+                return BadRequest("YAML is required");
             }
 
             if (!TryValidateYaml(yaml, out var error))
@@ -210,7 +220,8 @@ namespace slskd.Core.API
             }
             catch (Exception ex)
             {
-                throw new IOException($"Failed to update configuration file: {ex.Message}");
+                Log.Error(ex, "Failed to update configuration file");
+                return StatusCode(500, "Failed to update configuration file");
             }
         }
 
@@ -222,6 +233,11 @@ namespace slskd.Core.API
             if (!OptionsSnapshot.Value.RemoteConfiguration)
             {
                 return Forbid();
+            }
+
+            if (yaml is null)
+            {
+                return BadRequest("YAML is required");
             }
 
             if (!TryValidateYaml(yaml, out var error))

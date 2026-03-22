@@ -111,6 +111,7 @@ namespace slskd.Core.API
 
             // stop the watchdog so that it will exit any retry logic
             ConnectionWatchdog.Stop(abortReconnect: true);
+            message = string.IsNullOrWhiteSpace(message) ? "Disconnected by user" : message.Trim();
 
             if (Client.State.HasFlag(SoulseekClientStates.Connected))
             {

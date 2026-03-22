@@ -282,10 +282,67 @@ public class PodDhtController : ControllerBase
                 })
                 .ToList()
                 ?? new List<PodChannel>(),
-            Members = pod.Members,
-            ExternalBindings = pod.ExternalBindings,
+            Members = pod.Members?
+                .Select(member => new PodMember
+                {
+                    PeerId = member.PeerId?.Trim() ?? string.Empty,
+                    Role = member.Role?.Trim() ?? string.Empty,
+                    IsBanned = member.IsBanned,
+                    PublicKey = string.IsNullOrWhiteSpace(member.PublicKey) ? null : member.PublicKey.Trim(),
+                    JoinedAt = member.JoinedAt,
+                    LastSeen = member.LastSeen,
+                })
+                .ToList(),
+            ExternalBindings = pod.ExternalBindings?
+                .Select(binding => new ExternalBinding
+                {
+                    Kind = binding.Kind?.Trim() ?? string.Empty,
+                    Mode = binding.Mode?.Trim() ?? string.Empty,
+                    Identifier = binding.Identifier?.Trim() ?? string.Empty,
+                })
+                .ToList()
+                ?? new List<ExternalBinding>(),
             Capabilities = pod.Capabilities,
-            PrivateServicePolicy = pod.PrivateServicePolicy,
+            PrivateServicePolicy = pod.PrivateServicePolicy == null ? null : new PodPrivateServicePolicy
+            {
+                Enabled = pod.PrivateServicePolicy.Enabled,
+                MaxMembers = pod.PrivateServicePolicy.MaxMembers,
+                GatewayPeerId = pod.PrivateServicePolicy.GatewayPeerId?.Trim() ?? string.Empty,
+                RegisteredServices = pod.PrivateServicePolicy.RegisteredServices?
+                    .Select(service => new RegisteredService
+                    {
+                        Name = service.Name?.Trim() ?? string.Empty,
+                        Description = service.Description?.Trim() ?? string.Empty,
+                        Host = service.Host?.Trim() ?? string.Empty,
+                        Port = service.Port,
+                        Protocol = service.Protocol?.Trim() ?? string.Empty,
+                        Kind = service.Kind,
+                    })
+                    .ToList()
+                    ?? new List<RegisteredService>(),
+                AllowedDestinations = pod.PrivateServicePolicy.AllowedDestinations?
+                    .Select(destination => new AllowedDestination
+                    {
+                        HostPattern = destination.HostPattern?.Trim() ?? string.Empty,
+                        Port = destination.Port,
+                        Protocol = destination.Protocol?.Trim() ?? string.Empty,
+                        AllowPublic = destination.AllowPublic,
+                        Kind = destination.Kind,
+                    })
+                    .ToList()
+                    ?? new List<AllowedDestination>(),
+                AllowPrivateRanges = pod.PrivateServicePolicy.AllowPrivateRanges,
+                AllowPublicDestinations = pod.PrivateServicePolicy.AllowPublicDestinations,
+                MaxConcurrentTunnelsPerPeer = pod.PrivateServicePolicy.MaxConcurrentTunnelsPerPeer,
+                MaxConcurrentTunnelsPod = pod.PrivateServicePolicy.MaxConcurrentTunnelsPod,
+                MaxNewTunnelsPerMinutePerPeer = pod.PrivateServicePolicy.MaxNewTunnelsPerMinutePerPeer,
+                MaxBytesPerDayPerPeer = pod.PrivateServicePolicy.MaxBytesPerDayPerPeer,
+                IdleTimeout = pod.PrivateServicePolicy.IdleTimeout,
+                MaxLifetime = pod.PrivateServicePolicy.MaxLifetime,
+                DialTimeout = pod.PrivateServicePolicy.DialTimeout,
+                MaxBufferedBytesPerTunnel = pod.PrivateServicePolicy.MaxBufferedBytesPerTunnel,
+                MaxFrameSize = pod.PrivateServicePolicy.MaxFrameSize,
+            },
         };
     }
 }

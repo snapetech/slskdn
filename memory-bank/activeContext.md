@@ -23,17 +23,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt across `src/slskd`, focused on controller-boundary normalization, truthful status/read-side reporting, and keeping adjacent dirty files/tests committed in coherent batches
+- **Current Task**: Broad runtime/read-side bughunt across `src/slskd`, focused on controller-boundary normalization, truthful status/config reporting, and keeping adjacent dirty files/tests committed in coherent batches
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into auxiliary status and PodCore helper endpoints instead of only the main controllers.
+  - Continued the broad controller-boundary bughunt into core status/config endpoints after finishing the auxiliary controller cluster.
   - Normalized additional controller behavior:
-    - `SignalSystemController` now reports active channels from actual enabled config instead of DI presence
-    - `PodMessageStorageController` now enforces the documented `1..500` search limit
-    - `PodChannelController` now rejects blank channel IDs/names after trimming
-    - `PodMessageSigningController` and `PodDhtController` now normalize nested request objects before they become service-layer keys
-  - Folded in adjacent dirty request-boundary fixes already present in the tree for `JobsController`, `CollectionsController`, and `SharesController`, plus aligned the new unit regressions for signal and PodCore controller boundaries.
+    - `SessionController` now validates and trims login bodies before headless-mode logging or JWT generation
+    - `OptionsController` now treats missing overlay/YAML bodies as explicit request errors and sanitizes YAML write failures
+    - `LogsController` now returns a stable snapshot array instead of the live log queue
+    - `ServerController` now normalizes blank disconnect messages
+    - `PodDhtController` now trims nested member/external-binding/private-service-policy fields before publication
+  - Added focused unit regressions for session/options/logs boundaries and extended Pod DHT normalization coverage.
   - Validation has still not been run in this pass.
 
 ---

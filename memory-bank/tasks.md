@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Normalize core status and configuration controller boundaries
+  - Status: done
+  - Notes: Fixed null-safe credential handling in `SessionController`, explicit missing-body handling in `OptionsController`, snapshot log output in `LogsController`, trimmed disconnect messages in `ServerController`, and folded in deeper Pod DHT request normalization plus focused regressions for core API boundaries.
 - [x] Normalize auxiliary signal and PodCore controller boundaries
   - Status: done
   - Notes: Fixed SignalSystem status reporting so active channels reflect enabled config instead of DI presence, enforced documented search-limit bounds in Pod message storage, normalized pod/message payload objects before signing and DHT publication, tightened Pod channel create/update validation, and folded in adjacent dirty job/sharing boundary fixes plus focused regressions.

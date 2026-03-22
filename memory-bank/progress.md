@@ -5539,3 +5539,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `b4504895`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:29:05Z
+
+- Continued the broad controller-boundary bughunt into core status/config endpoints:
+  - fixed `SessionController` so null login bodies no longer crash in headless mode logging, and login credentials are trimmed before comparison/JWT generation
+  - fixed `OptionsController` so null overlay/YAML bodies now return explicit `400`s, missing config files return `404`, and YAML write failures return sanitized `500`s instead of rethrowing
+  - fixed `LogsController` so it returns a snapshot array instead of the live concurrent log queue object
+  - fixed `ServerController` so disconnect requests normalize blank messages before disconnect exceptions are created
+  - folded in deeper `PodDhtController` payload normalization already in progress so members, external bindings, and private-service policy fields are trimmed before publication
+  - added focused unit regressions for session/options/logs controller boundaries plus the expanded Pod DHT normalization checks
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `fc311132`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

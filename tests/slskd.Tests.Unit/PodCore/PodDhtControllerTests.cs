@@ -36,6 +36,26 @@ public class PodDhtControllerTests
                     Description = "  late night room  ",
                     FocusContentId = " content:mb:recording:abc ",
                     Tags = new List<string> { " electronic ", "electronic", " ambient " },
+                    Members = new List<PodMember>
+                    {
+                        new() { PeerId = " peer-1 ", Role = " owner ", PublicKey = " key-1 " }
+                    },
+                    ExternalBindings = new List<ExternalBinding>
+                    {
+                        new() { Kind = " soulseek-room ", Mode = " readonly ", Identifier = " ambient-room " }
+                    },
+                    PrivateServicePolicy = new PodPrivateServicePolicy
+                    {
+                        GatewayPeerId = " peer-1 ",
+                        RegisteredServices = new List<RegisteredService>
+                        {
+                            new() { Name = " web ui ", Description = " home server ", Host = " example.local ", Protocol = " tcp " }
+                        },
+                        AllowedDestinations = new List<AllowedDestination>
+                        {
+                            new() { HostPattern = " 192.168.1.10 ", Protocol = " tcp " }
+                        }
+                    },
                     Channels = new List<PodChannel>
                     {
                         new() { ChannelId = " general ", Name = " Main ", BindingInfo = " soulseek-room:ambient ", Description = "  room  " },
@@ -56,7 +76,26 @@ public class PodDhtControllerTests
                     pod.Channels[0].ChannelId == "general" &&
                     pod.Channels[0].Name == "Main" &&
                     pod.Channels[0].BindingInfo == "soulseek-room:ambient" &&
-                    pod.Channels[0].Description == "room"),
+                    pod.Channels[0].Description == "room" &&
+                    pod.Members != null &&
+                    pod.Members.Count == 1 &&
+                    pod.Members[0].PeerId == "peer-1" &&
+                    pod.Members[0].Role == "owner" &&
+                    pod.Members[0].PublicKey == "key-1" &&
+                    pod.ExternalBindings.Count == 1 &&
+                    pod.ExternalBindings[0].Kind == "soulseek-room" &&
+                    pod.ExternalBindings[0].Mode == "readonly" &&
+                    pod.ExternalBindings[0].Identifier == "ambient-room" &&
+                    pod.PrivateServicePolicy != null &&
+                    pod.PrivateServicePolicy.GatewayPeerId == "peer-1" &&
+                    pod.PrivateServicePolicy.RegisteredServices.Count == 1 &&
+                    pod.PrivateServicePolicy.RegisteredServices[0].Name == "web ui" &&
+                    pod.PrivateServicePolicy.RegisteredServices[0].Description == "home server" &&
+                    pod.PrivateServicePolicy.RegisteredServices[0].Host == "example.local" &&
+                    pod.PrivateServicePolicy.RegisteredServices[0].Protocol == "tcp" &&
+                    pod.PrivateServicePolicy.AllowedDestinations.Count == 1 &&
+                    pod.PrivateServicePolicy.AllowedDestinations[0].HostPattern == "192.168.1.10" &&
+                    pod.PrivateServicePolicy.AllowedDestinations[0].Protocol == "tcp"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

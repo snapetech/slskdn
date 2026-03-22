@@ -1,0 +1,54 @@
+// <copyright file="OptionsControllerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+namespace slskd.Tests.Unit.Core.API;
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Moq;
+using slskd.Core.API;
+using Xunit;
+
+public class OptionsControllerTests
+{
+    [Fact]
+    public void ApplyOverlay_WithNullBody_ReturnsBadRequest()
+    {
+        var controller = CreateController();
+
+        var result = controller.ApplyOverlay(null!);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Options overlay is required", badRequest.Value);
+    }
+
+    [Fact]
+    public void ValidateYamlFile_WithNullBody_ReturnsBadRequest()
+    {
+        var controller = CreateController();
+
+        var result = controller.ValidateYamlFile(null!);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("YAML is required", badRequest.Value);
+    }
+
+    private static OptionsController CreateController(bool remoteConfiguration = true)
+    {
+        var options = new Options
+        {
+            RemoteConfiguration = remoteConfiguration,
+        };
+
+        var optionsSnapshot = new Mock<IOptionsSnapshot<Options>>();
+        optionsSnapshot.SetupGet(snapshot => snapshot.Value).Returns(options);
+
+        var stateMutator = new Mock<IStateMutator<State>>();
+
+        return new OptionsController(
+            new OptionsAtStartup(),
+            optionsSnapshot.Object,
+            stateMutator.Object);
+    }
+}

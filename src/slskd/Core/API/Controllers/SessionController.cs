@@ -128,15 +128,18 @@ namespace slskd.Core.API
         [ProducesResponseType(typeof(string), 500)]
         public IActionResult Login([FromBody] LoginRequest login)
         {
+            if (login == default)
+            {
+                return BadRequest();
+            }
+
+            login.Username = login.Username?.Trim() ?? string.Empty;
+            login.Password = login.Password?.Trim() ?? string.Empty;
+
             if (OptionsAtStartup.Headless)
             {
                 Log.Warning("Login from {User} rejected; web UI is DISABLED when running in headless mode", login.Username);
                 return Forbid();
-            }
-
-            if (login == default)
-            {
-                return BadRequest();
             }
 
             if (string.IsNullOrWhiteSpace(login.Username) || string.IsNullOrWhiteSpace(login.Password))
@@ -174,7 +177,7 @@ namespace slskd.Core.API
             {
                 // Successful login: clear failed attempt counter
                 _loginAttempts.TryRemove(remoteIp, out _);
-                return Ok(new TokenResponse(Security.GenerateJwt(login.Username ?? string.Empty, Role.Administrator)));
+                return Ok(new TokenResponse(Security.GenerateJwt(login.Username, Role.Administrator)));
             }
 
             // Failed login: increment counter and potentially lock out
