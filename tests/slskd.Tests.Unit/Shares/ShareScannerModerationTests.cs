@@ -156,6 +156,21 @@ public class ShareRepositoryModerationTests : IDisposable
     }
 
     [Fact]
+    public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
+    {
+        using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");
+
+        var backingField = typeof(SqliteShareRepository).GetField("<ConnectionString>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        backingField!.SetValue(repository, "Data Source=/definitely/missing/share-validation/path/db.sqlite;Mode=ReadOnly");
+
+        var isValid = repository.TryValidate(out var problems);
+
+        Assert.False(isValid);
+        var problem = Assert.Single(problems);
+        Assert.Equal("Failed to validate database", problem);
+    }
+
+    [Fact]
     public void ListFiles_ShouldExcludeBlockedFiles()
     {
         // Arrange - Insert both blocked and allowed files
@@ -315,4 +330,3 @@ public class McpSecurityComplianceTests
         }
     }
 }
-

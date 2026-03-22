@@ -737,7 +737,7 @@ namespace slskd.Shares
             catch (Exception ex)
             {
                 Log.Debug(ex, $"Failed to validate database: {ex.Message}");
-                list.Add($"Failed to validate database: {ex.Message}");
+                list.Add("Failed to validate database");
                 return false;
             }
         }

@@ -196,3 +196,7 @@ dotnet test
 # Build release
 ./bin/build
 ```
+
+## 2026-03-22 17:28
+- Folded in remaining dirty share/validator spillover and restored a clean head.
+- Next: continue broad bughunt from the remaining runtime/read-side clusters.

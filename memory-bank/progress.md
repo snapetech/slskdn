@@ -5926,3 +5926,7 @@ Code quality improvements were completed as part of Option A:
   - sanitized content safety file-read failures
   - sanitized mesh transfer failure status
 - Added and immediately committed the corresponding gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for file-safety and transfer-status result passthrough.
+
+## 2026-03-22 17:28 - Share validation spillover cleanup
+
+- Folded in the remaining dirty share and validator spillover: `SqliteShareRepository` now returns a stable validation problem string instead of appending backend exception text, and focused tests now assert the sanitized contract for share validation and mesh descriptor serialization failures.
