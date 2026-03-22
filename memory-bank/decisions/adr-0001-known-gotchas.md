@@ -468,6 +468,55 @@ catch (IOException)
 
 **Why This Keeps Happening**: API-boundary helpers need to be strict because callers rely on exact semantics, while external-tool parsers need to be forgiving because those tools drift and fail in messy ways. Mixing those instincts produces the worst combination: invalid client input is accepted, but noisy subprocess output crashes the analysis path. Keep the distinction sharp: fail closed on user-facing identifiers, fail soft on external recognizer output.
 
+### 0xAD. Shared Stream Wrappers And Integration Tests Must Be Kept In Sync With Tightened Runtime Semantics
+
+**The Bug**: one transport wrapper and one integration surface were lagging behind earlier fixes. `I2PTransport.TrackedStream` still used the older dispose pattern that called the lifecycle callback before safe inner-stream teardown and lacked async/span delegation, while `SearchActionsController` integration tests still assumed only obviously malformed IDs were rejected and did not cover the newer “negative response index” and “explicit file index out of range” behavior.
+
+**Files Affected**:
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `tests/slskd.Tests.Integration/Search/SearchActionsControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (!_disposed)
+{
+    _disposed = true;
+    _onDispose();
+    _innerStream.Dispose();
+}
+...
+POST /items/-1/download
+// no integration coverage
+...
+POST /items/0:5/download
+// no integration coverage
+```
+
+**Correct**:
+```csharp
+_disposed = true;
+try
+{
+    if (disposing)
+    {
+        _innerStream.Dispose();
+    }
+}
+finally
+{
+    _onDispose();
+    base.Dispose(disposing);
+}
+...
+Assert.Equal(HttpStatusCode.BadRequest, downloadResponse.StatusCode);
+Assert.Equal("invalid_item_id", problemDetails.Type);
+...
+Assert.Equal(HttpStatusCode.NotFound, downloadResponse.StatusCode);
+Assert.Equal("file_not_found", problemDetails.Type);
+```
+
+**Why This Keeps Happening**: once one transport wrapper or one controller path gets corrected, sibling implementations and higher-level tests often stay on the old contract. That creates false confidence: unit-level behavior says one thing while integration coverage and sibling wrappers still encode the old assumptions. When you tighten a runtime contract, update the sibling wrappers and the end-to-end tests in the same pass.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
