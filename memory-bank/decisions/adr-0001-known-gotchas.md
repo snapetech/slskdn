@@ -374,6 +374,44 @@ _ = Task.Run(() => PushProgressUpdatesAsync(session, CancellationToken.None), Ca
 
 **Why This Keeps Happening**: Request handlers often spin off follow-up work after sending an acknowledgement and accidentally pass the same request token into the detached loop. That token describes the request lifetime, not the transfer/session lifetime. Detached progress or cleanup loops need their own lifetime conditions.
 
+### 0x18. Bridge Search Results Must Deduplicate Per User/File And Merge The Best Metadata
+
+**The Bug**: Bridge search could add the same filename multiple times for one user when multiple sources or lookup strategies surfaced the same file. The client then saw duplicate search hits while the bridge also threw away stronger metadata from the better duplicate.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+
+**Wrong**:
+```csharp
+user.Files.Add(new BridgeFile { Path = filename, ... });
+```
+
+**Correct**:
+```csharp
+UpsertBridgeFile(user.Files, new BridgeFile { Path = filename, ... });
+```
+
+**Why This Keeps Happening**: Search aggregation is usually written as an append-only pass first. Once multiple strategies feed the same output list, append-only behavior turns into duplicate rows and metadata drift. Aggregation layers need a stable dedupe key and merge policy from the start.
+
+### 0x19. Bridge Session Cleanup Must Not Depend On A Potentially Canceled Outer Token
+
+**The Bug**: Bridge session cleanup stopped per-client progress proxies using the outer session/server token. If that token was already canceled, the cleanup call could be short-circuited and leave proxy state behind during disconnect or shutdown.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
+
+**Wrong**:
+```csharp
+await progressProxy.StopProxyAsync(session.ActiveProxyId, ct);
+```
+
+**Correct**:
+```csharp
+await progressProxy.StopProxyAsync(session.ActiveProxyId, CancellationToken.None);
+```
+
+**Why This Keeps Happening**: Cleanup paths are easy to write with “whatever token is in scope,” but teardown often runs after cancellation has already started. If the cleanup work is required to release local state, use a non-cancelable token or a dedicated shutdown budget instead of the already-expired request/session token.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
