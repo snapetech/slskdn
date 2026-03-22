@@ -339,6 +339,47 @@ if (enableBridge)
 
 **Why This Keeps Happening**: Some test-only or deadlock-guarded features are gated by environment variables in addition to config. If a harness expects a hosted service to exist, it must mirror the same startup gate the application uses, or tests will silently wait on a port that the process was never allowed to bind.
 
+### 0j6. Startup Fallbacks Must Treat Blank Static Path Settings As Unset, And Test Harnesses Must Pass `APP_DIR`
+
+**The Bug**: Full-instance bridge tests still failed before config load with `Filesystem exception: Directory  does not exist...` because the child process never received an app directory, while `Program` used `??=` on static string properties initialized to `string.Empty`. A blank `AppDirectory` or `ConfigurationFile` therefore stayed blank instead of falling back to the defaults.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+
+**Wrong**:
+```csharp
+AppDirectory ??= DefaultAppDirectory;
+ConfigurationFile ??= DefaultConfigurationFile;
+```
+
+```csharp
+var startInfo = new ProcessStartInfo
+{
+    FileName = binaryPath,
+    Arguments = $"--config \"{configPath}\"",
+};
+```
+
+**Correct**:
+```csharp
+if (string.IsNullOrWhiteSpace(AppDirectory))
+{
+    AppDirectory = DefaultAppDirectory;
+}
+
+if (string.IsNullOrWhiteSpace(ConfigurationFile))
+{
+    ConfigurationFile = DefaultConfigurationFile;
+}
+```
+
+```csharp
+startInfo.Environment["APP_DIR"] = appDir;
+```
+
+**Why This Keeps Happening**: Several startup path fields are modeled as empty strings, not nulls. `??=` only fixes null, so blank values can leak into filesystem setup and explode before logging/config are fully online. Test harnesses that expect isolated app state must also pass `APP_DIR` explicitly instead of assuming `WorkingDirectory` or the config file location will set it indirectly.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
